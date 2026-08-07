@@ -547,6 +547,7 @@ fun LanguageFrontend<*, *>.memberCall(
         holder += node
     } else if (holder is ArgumentHolder) {
         holder += node
+        holder -= base
     }
 
     return node
@@ -1066,7 +1067,6 @@ context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.ref(
     name: CharSequence,
     type: Type = unknownType(),
-    makeMagic: Boolean = true,
     init: (Reference.() -> Unit)? = null,
 ): Reference {
     val node = newReference(name).apply { this.location = getCallerFileAndLine() }
@@ -1077,11 +1077,9 @@ fun LanguageFrontend<*, *>.ref(
         init(node)
     }
 
-    if (makeMagic) {
-        // Only add this to an argument holder if the nearest holder is an argument holder
-        if (holder is ArgumentHolder) {
-            holder += node
-        }
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    if (holder is ArgumentHolder) {
+        holder += node
     }
 
     return node
@@ -1105,6 +1103,12 @@ fun Expression.line(i: Int): Expression {
     return this
 }
 
+private object DiscardHolder : Holder<Expression> {
+    override fun replace(old: Expression, new: Expression) = false
+
+    override fun plusAssign(node: Expression) {}
+}
+
 /**
  * Creates a new [MemberAccess] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of
  * the nearest enclosing [Holder], but only if it is an [ArgumentHolder]. If the [name] doesn't
@@ -1113,8 +1117,11 @@ fun Expression.line(i: Int): Expression {
 context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.member(
     name: CharSequence,
-    base: Expression? = null,
     operatorCode: String = ".",
+    base:
+        (context(Holder<out Expression>)
+        () -> Expression)? =
+        null,
 ): MemberAccess {
     val parsedName = parseName(name)
     val type =
@@ -1128,14 +1135,15 @@ fun LanguageFrontend<*, *>.member(
             val scopeType = scope?.name?.let { this.t(it) } ?: unknownType()
             scopeType
         }
-    val memberBase = base ?: this.memberOrRef(parsedName.parent ?: this.parseName("this"), type)
+    val memberBase =
+        base?.let { with(DiscardHolder) { it() } }
+            ?: this.memberOrRef(parsedName.parent ?: this.parseName("this"), type)
 
     val node =
         newMemberAccess(name, memberBase, operatorCode = operatorCode).apply {
             this.location = getCallerFileAndLine()
         }
 
-    // Only add this to an argument holder if the nearest holder is an argument holder
     if (holder is ArgumentHolder) {
         holder += node
     }

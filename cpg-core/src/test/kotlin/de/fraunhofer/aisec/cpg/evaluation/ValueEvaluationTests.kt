@@ -69,10 +69,12 @@ class ValueEvaluationTests {
                                                 variable("i", t("int")) { literal(0, t("int")) }
                                             }
                                         }
-                                        forCondition { ref("i") lt member("length", ref("array")) }
+                                        forCondition {
+                                            ref("i") lt member("length") { ref("array") }
+                                        }
                                         forIteration { ref("i").inc() }
                                     }
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         subscriptExpr {
                                             ref("array")
                                             literal(1, t("int"))
@@ -85,7 +87,7 @@ class ValueEvaluationTests {
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         ref("str")
                                     }
                                     returnStmt {}
@@ -126,9 +128,13 @@ class ValueEvaluationTests {
 
                                     ref("i").inc()
 
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("s")
+                                    }
 
-                                    memberCall("println", member("out", ref("System"))) { ref("i") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("i")
+                                    }
                                     returnStmt {}
                                 }
                             }

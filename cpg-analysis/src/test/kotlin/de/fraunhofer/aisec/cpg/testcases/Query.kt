@@ -63,7 +63,9 @@ class Query {
                             method("print", void()) {
                                 param("s", t("string"))
                                 body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("s")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -84,9 +86,7 @@ class Query {
                                         }
                                     }
                                     memberCall("print", ref("sc")) { ref("s") }
-                                    memberCall("print", ref("sc")) {
-                                        memberCall("test", ref("sc", makeMagic = false))
-                                    }
+                                    memberCall("print", ref("sc")) { memberCall("test", ref("sc")) }
                                 }
                             }
                         }
@@ -120,7 +120,9 @@ class Query {
                                 isStatic = true
                                 param("s", t("string"))
                                 body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("s")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -135,7 +137,7 @@ class Query {
                                         }
                                     }
 
-                                    member("a", ref("sc")) assign literal(5, t("int"))
+                                    member("a") { ref("sc") } assign literal(5, t("int"))
 
                                     memberCall(
                                         "highlyCriticalOperation",
@@ -145,21 +147,18 @@ class Query {
                                         },
                                     ) {
                                         this@memberCall.isStatic = true
-                                        memberCall(
-                                            "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false),
-                                        ) {
+                                        memberCall("toString", ref("Integer", t("Integer"))) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
                                             isStatic = true
-                                            member("a", ref("sc", makeMagic = false))
+                                            member("a") { ref("sc") }
                                         }
                                     }
 
                                     memberCall("log", ref("logger")) {
-                                        member("INFO", ref("Level", makeMagic = false))
+                                        member("INFO") { ref("Level") }
                                         literal("put ", t("string")) +
-                                            member("a", ref("sc", makeMagic = false)) +
+                                            member("a") { ref("sc") } +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
                                     returnStmt {}
@@ -198,7 +197,9 @@ class Query {
                                 isStatic = true
                                 param("s", t("string"))
                                 body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("s")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -213,12 +214,12 @@ class Query {
                                         }
                                     }
 
-                                    member("a", ref("sc")) assign literal(5, t("int"))
+                                    member("a") { ref("sc") } assign literal(5, t("int"))
 
                                     memberCall("log", ref("logger")) {
-                                        member("INFO", ref("Level", makeMagic = false))
+                                        member("INFO") { ref("Level") }
                                         literal("put ", t("string")) +
-                                            member("a", ref("sc", makeMagic = false)) +
+                                            member("a") { ref("sc") } +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
 
@@ -230,14 +231,11 @@ class Query {
                                         },
                                     ) {
                                         this@memberCall.isStatic = true
-                                        memberCall(
-                                            "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false),
-                                        ) {
+                                        memberCall("toString", ref("Integer", t("Integer"))) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
                                             isStatic = true
-                                            member("a", ref("sc", makeMagic = false))
+                                            member("a") { ref("sc") }
                                         }
                                     }
                                     returnStmt {}
@@ -273,7 +271,9 @@ class Query {
                                 isStatic = true
                                 param("s", t("string"))
                                 body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("s")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -288,16 +288,16 @@ class Query {
                                         }
                                     }
 
-                                    member("a", ref("sc")) assign literal(5, t("int"))
+                                    member("a") { ref("sc") } assign literal(5, t("int"))
 
                                     memberCall("log", ref("logger")) {
-                                        member("INFO", ref("Level", makeMagic = false))
+                                        member("INFO") { ref("Level") }
                                         literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
+                                            member("a") { ref("a") } +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
 
-                                    member("a", ref("sc")) assign literal(3, t("int"))
+                                    member("a") { ref("sc") } assign literal(3, t("int"))
 
                                     memberCall(
                                         "highlyCriticalOperation",
@@ -307,14 +307,11 @@ class Query {
                                         },
                                     ) {
                                         this@memberCall.isStatic = true
-                                        memberCall(
-                                            "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false),
-                                        ) {
+                                        memberCall("toString", ref("Integer", t("Integer"))) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
                                             isStatic = true
-                                            member("a", ref("sc", makeMagic = false))
+                                            member("a") { ref("sc") }
                                         }
                                     }
                                     returnStmt {}

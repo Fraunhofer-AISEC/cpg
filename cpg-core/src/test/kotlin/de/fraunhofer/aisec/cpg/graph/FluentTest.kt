@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
@@ -359,6 +360,54 @@ class FluentTest {
         assertIs<Reference>(compExpr.iterable)
         assertLocalName("someIterable", compExpr.iterable)
         assertNotNull(compExpr.predicate)
+    }
+
+    @Test
+    fun testMemberWithBaseAttachesExactlyOnce() {
+        val result =
+            testFrontend { it.registerLanguage<TestLanguage>() }
+                .build {
+                    translationResult {
+                        translationUnit("member_test.c") {
+                            function("main", t("void")) {
+                                body {
+                                    call("doSomething") { member("field1") { ref("s1") } }
+
+                                    call("useNested") {
+                                        member("field") { member("in") { ref("o") } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        val main = result.functions["main"]
+        assertNotNull(main)
+
+        val doSomething = (main.body as? Block)?.statements?.filterIsInstance<Call>()?.get(0)
+        assertNotNull(doSomething)
+        assertEquals(
+            1,
+            doSomething.arguments.size,
+            "doSomething must have exactly 1 argument (the MemberAccess, no phantom ref)",
+        )
+        val fieldAccess = doSomething.arguments.single()
+        assertIs<MemberAccess>(fieldAccess)
+        assertLocalName("field1", fieldAccess)
+        val s1Ref = fieldAccess.base
+        assertIs<Reference>(s1Ref)
+        assertLocalName("s1", s1Ref)
+
+        val useNested = (main.body as? Block)?.statements?.filterIsInstance<Call>()?.get(1)
+        assertNotNull(useNested)
+        assertEquals(1, useNested.arguments.size, "useNested must have exactly 1 argument")
+        val outerMember = useNested.arguments.single()
+        assertIs<MemberAccess>(outerMember)
+        assertLocalName("field", outerMember)
+        val innerMember = outerMember.base
+        assertIs<MemberAccess>(innerMember)
+        assertLocalName("in", innerMember)
     }
 
     @Test
