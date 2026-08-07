@@ -484,8 +484,9 @@ class ChatService(
                             }
                         }
                         onToolCallCompleted { ctx ->
+                            val args = ctx.toolArgs.toKotlinxJsonElement()
                             val content = ctx.toolResult?.toKotlinxJsonElement() ?: JsonNull
-                            send(Events.toolResult(ctx.toolName, content))
+                            send(Events.toolResult(ctx.toolName, args, content))
                         }
                         onToolCallFailed { ctx -> send(Events.text("Tool failed: ${ctx.message}")) }
                     }
