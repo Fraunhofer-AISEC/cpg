@@ -88,6 +88,7 @@ dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "
 dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "2.2.0"}
 kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.3" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
+javacpp-gradle = { module = "org.bytedeco:gradle-javacpp", version = "1.5.10" }
 
 # Served by JitPack, so the group is com.github.KuechA.SootUp (the fork's
 # com.github.<owner>.<repo>); the artifactIds are unchanged (sootup.*).
