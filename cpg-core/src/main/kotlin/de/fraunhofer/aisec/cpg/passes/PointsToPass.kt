@@ -1723,6 +1723,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return ConcurrentHashMap.newKeySet<NodeWithPropertiesKey>().apply { addAll(lastWrites) }
     }
 
+    /**
+     * Removes duplicate [PreprocessedFSEntry] entries based on a logical key derived from the
+     * entry's fields (dstValueDepth, subAccessName, srcNode, srcValueDepth, shortFS, propertySet).
+     * When a duplicate is found, the `prev` list of the existing entry is extended with the
+     * duplicate's `prev`.
+     *
+     * @param entries list to deduplicate
+     * @return new list containing unique entries
+     */
     private fun deduplicatePreprocessedFSEntries(
         entries: List<PreprocessedFSEntry>
     ): List<PreprocessedFSEntry> {
@@ -2317,19 +2326,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return true
         }
 
-        fun insertIfNew(
-            context: DestinationContext,
-            dedupKey: AddEntryDedupKey,
-            sources: ConcurrentIdentitySet<Node?>,
-            source: Node?,
-            entry: () -> MapDstToSrcEntry,
-        ) {
-            if (sources.add(source)) {
-                context.currentSet += entry()
-                context.dedupCache.buckets[dedupKey]?.sources?.add(source)
-            }
-        }
-
+        /**
+         * Inserts a new map entry into [context.currentSet] or merges the provided [newLastWrites]
+         * into an existing entry that matches the same logical key (srcNode, param, propertySet,
+         * dst).
+         *
+         * @param context the destination context holding the current set of entries
+         * @param source the source node that the entry points from (compared by reference)
+         * @param newLastWrites collection of keys to add to the matching entry's `lastWrites`
+         * @param entry factory that creates a new `MapDstToSrcEntry` when no match is found
+         */
         fun insertOrMerge(
             context: DestinationContext,
             source: Node?,
