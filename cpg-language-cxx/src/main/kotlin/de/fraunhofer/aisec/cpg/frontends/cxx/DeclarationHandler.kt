@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
-import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -36,9 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
-import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -429,47 +425,26 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * The [DeclarationContext] the frontend is currently building a declaration in, derived from
-     * the active scope. This is exactly the information a [HasKeywordSemantics] language needs in
-     * order to interpret a context-dependent keyword such as `static`: the same keyword means
-     * different things at file/namespace scope, inside a record, or within a function body.
-     */
-    private val currentDeclarationContext: DeclarationContext
-        get() =
-            when (frontend.scopeManager.currentScope) {
-                is RecordScope -> DeclarationContext.RECORD
-                is GlobalScope,
-                is NamespaceScope -> DeclarationContext.GLOBAL
-                else -> DeclarationContext.LOCAL
-            }
-
-    /**
-     * Interprets the `static` storage-class specifier of [declSpecifier] for the freshly-built
-     * [declaration] and projects the resulting canonical semantics onto the declaration.
+     * Records the `static` storage-class specifier of [declSpecifier] on the freshly-built
+     * [declaration] and lets the language project it onto the declaration's canonical properties.
      *
-     * The raw keyword is recorded losslessly in [Declaration.modifiers]; its *meaning* — internal
+     * The raw keyword is kept losslessly in [Declaration.modifiers]; its *meaning* — internal
      * linkage at file scope, a static (class-level) member inside a record, or nothing
-     * resolution-relevant inside a function — is delegated to the language's [HasKeywordSemantics]
-     * trait, so that this handler only has to supply the syntactic [currentDeclarationContext] and
-     * store the outcome in [Declaration.visibility] and [ValueDeclaration.isStatic].
+     * resolution-relevant inside a function — depends on *where* the declaration appears and is
+     * therefore delegated to the language's
+     * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the current scope
+     * and sets [Declaration.visibility] and [ValueDeclaration.isStatic] accordingly.
      */
     private fun handleStorageClass(
         declaration: ValueDeclaration,
         declSpecifier: IASTDeclSpecifier?,
     ) {
-        val language = language
-        if (
-            language !is HasKeywordSemantics ||
-                declSpecifier?.storageClass != IASTDeclSpecifier.sc_static
-        ) {
+        if (declSpecifier?.storageClass != IASTDeclSpecifier.sc_static) {
             return
         }
 
         declaration.modifiers = declaration.modifiers + STATIC
-
-        val semantics = language.interpretKeyword(STATIC, currentDeclarationContext)
-        semantics.visibility?.let { declaration.visibility = it }
-        semantics.isStatic?.let { declaration.isStatic = it }
+        language.applyModifiers(declaration, frontend.scopeManager.currentScope)
     }
 
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {

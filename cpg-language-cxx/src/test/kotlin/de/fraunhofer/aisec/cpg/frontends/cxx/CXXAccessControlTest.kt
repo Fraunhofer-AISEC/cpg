@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -38,6 +40,9 @@ import kotlin.test.assertTrue
  * access specifiers onto the canonical [Visibility], and the
  * [de.fraunhofer.aisec.cpg.passes. SymbolResolver] must take that visibility into account when
  * resolving a member by name, dropping candidates that are inaccessible from the point of access.
+ *
+ * The C counter-example ([testCModelsNoAccessControl]) pins down the deliberate asymmetry: C
+ * records visibility for nothing, since [CLanguage] does not declare [HasVisibilityModifiers].
  */
 class CXXAccessControlTest {
     private fun analyze() =
@@ -124,5 +129,26 @@ class CXXAccessControlTest {
         val call = tu.calls["ping"]
         assertNotNull(call)
         assertEquals(speakerPing, call.invokes.singleOrNull())
+    }
+
+    @Test
+    fun testCModelsNoAccessControl() {
+        val file = File("src/test/resources/c/access_control.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        // C is not a `HasVisibilityModifiers` language, so it must never restrict member access.
+        assertFalse(CLanguage() is HasVisibilityModifiers)
+
+        val point = tu.records["Point"]
+        assertNotNull(point)
+
+        // The struct members stay at the neutral UNKNOWN visibility ("no restriction"), even though
+        // the frontend records a default `public` specifier while walking them.
+        assertEquals(Visibility.UNKNOWN, point.fields["x"]?.visibility)
+        assertEquals(Visibility.UNKNOWN, point.fields["y"]?.visibility)
     }
 }

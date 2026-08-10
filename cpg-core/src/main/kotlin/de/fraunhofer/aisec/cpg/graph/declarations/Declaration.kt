@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasModifiers
-import de.fraunhofer.aisec.cpg.graph.HasVisibility
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -44,7 +43,7 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
  * currently have two [Function] nodes. This is very similar to the behaviour of clang, however
  * clang does establish a connection between those nodes, we currently do not.
  */
-abstract class Declaration : AstNode(), HasModifiers, HasVisibility {
+abstract class Declaration : AstNode(), HasModifiers {
     @DoNotPersist
     val symbol: Symbol
         get() {
@@ -59,7 +58,17 @@ abstract class Declaration : AstNode(), HasModifiers, HasVisibility {
 
     override var modifiers: Set<String> = setOf()
 
-    override var visibility: Visibility = Visibility.UNKNOWN
+    /**
+     * The canonical, language-independent [Visibility] of this declaration. While [modifiers] keeps
+     * the raw, language-specific spelling (e.g. the strings `public` or `static`), this exposes the
+     * *interpreted* visibility that passes such as the
+     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] can reason about without knowing any
+     * language's concrete keywords. A language frontend maps the relevant [modifiers] onto this
+     * value (see [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]). The default
+     * [Visibility.UNKNOWN] must be treated as "no restriction", so languages that do not model
+     * visibility are unaffected.
+     */
+    var visibility: Visibility = Visibility.UNKNOWN
 
     override fun getExitNextEOG(): Collection<Node> {
         return setOf()

@@ -45,24 +45,27 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  * - **Access control** ([PUBLIC], [PROTECTED], [PRIVATE]) restricts access relative to the
  *   *declaring [Record]* and only applies to record members.
  * - **Module visibility** ([PACKAGE]) restricts access relative to the *enclosing module/package*
- *   (Java's package, Go's package, Kotlin's module, a Rust crate), independently of any record.
+ *   (e.g. Java's or Go's package), independently of any record.
  * - **Linkage** ([INTERNAL]) restricts access relative to the *translation unit* and only applies
  *   to non-member (file- or namespace-scope) declarations.
  *
  * Static-vs-instance "membership" is an orthogonal axis and is intentionally *not* modeled here; it
  * is captured by [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration.isStatic].
  *
- * These values cover the visibility concepts of the currently supported languages:
- * - **C**: external linkage → [PUBLIC]-equivalent (left [UNKNOWN], as C has no access control),
- *   file-scope `static` → [INTERNAL].
- * - **C++**: `public`/`protected`/`private` members; file-scope `static` and anonymous namespaces →
- *   [INTERNAL].
- * - **Java**: `public`/`protected`/`private` members; the default (no modifier) → [PACKAGE].
- * - **Kotlin**: `public`/`protected`/`private` members; `internal` → [PACKAGE] (module-scoped).
- * - **Go**: exported (upper-case) identifiers → [PUBLIC]; unexported (lower-case) → [PACKAGE].
- * - **TypeScript**: `public`/`protected`/`private` members.
- * - **Ruby**: `public`/`protected`/`private` methods.
- * - **JavaScript**: `#private` fields → [PRIVATE]; everything else → [PUBLIC].
+ * Only the **C/C++** frontend currently populates this property. The remaining entries document the
+ * *intended* canonical mapping for the other languages, to be wired up as each frontend starts
+ * interpreting its modifiers (see [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]);
+ * until then those languages leave every declaration at [UNKNOWN].
+ * - **C** (implemented): external linkage → left [UNKNOWN] (C has no access control); file-scope
+ *   `static` → [INTERNAL].
+ * - **C++** (implemented): `public`/`protected`/`private` members; file-scope `static` and
+ *   anonymous namespaces → [INTERNAL].
+ * - **Java** (intended): `public`/`protected`/`private` members; the default (no modifier) →
+ *   [PACKAGE].
+ * - **Go** (intended): exported (upper-case) identifiers → [PUBLIC]; unexported (lower-case) →
+ *   [PACKAGE].
+ * - **TypeScript** (intended): `public`/`protected`/`private` members.
+ * - **Ruby** (intended): `public`/`protected`/`private` methods.
  */
 enum class Visibility {
     /** Visible everywhere the declaring scope is reachable. This is the most permissive value. */
@@ -77,9 +80,10 @@ enum class Visibility {
     /**
      * Module/package visibility: a declaration that is visible only within its own enclosing module
      * or package, but (unlike [PRIVATE]/[PROTECTED]) not tied to a [Record]. Java's package-private
-     * default, Kotlin's `internal`, and Go's unexported (lower-case) identifiers produce this
-     * visibility. Note this differs from [INTERNAL] linkage, which is confined to a single
-     * translation unit rather than to a whole module/package.
+     * default and Go's unexported (lower-case) identifiers are each intended to map to this
+     * visibility once those frontends are wired up; no frontend populates it yet. Note this differs
+     * from [INTERNAL] linkage, which is confined to a single translation unit rather than to a
+     * whole module/package.
      */
     PACKAGE,
 

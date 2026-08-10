@@ -329,88 +329,27 @@ interface HasRedeclarations : LanguageTrait {
 }
 
 /**
- * The syntactic position in which a declaration appears. The *meaning* of a storage-class or
- * visibility keyword such as C/C++'s `static` depends entirely on this context, so a frontend must
- * classify a declaration before asking a [HasKeywordSemantics] language to interpret its keywords.
+ * A language trait marking languages that *enforce* member access control, i.e. where a
+ * [Declaration.visibility] of [Visibility.PRIVATE] or [Visibility.PROTECTED] genuinely restricts
+ * *from where* a record member may be accessed (as C++, Java or TypeScript do with `public` /
+ * `protected` / `private`).
  *
- * This is a small, deliberately coarse projection of the frontend's active
- * [de.fraunhofer.aisec.cpg.graph.scopes.Scope] and is *not* a competing model of it: a
- * [de.fraunhofer.aisec.cpg.graph.scopes.Scope] models lexical nesting and name lookup (which names
- * are reachable from where), whereas this enum only distinguishes the three positions that change
- * what a keyword *means*. Frontends therefore derive it directly from the current scope kind
- * (record vs. file/namespace vs. block); collapsing the full scope hierarchy to these three cases
- * keeps the language trait decoupled from the scope classes, which the core graph module owns.
- */
-enum class DeclarationContext {
-    /** File or namespace scope, i.e. a non-member, top-level declaration. */
-    GLOBAL,
-
-    /** The body of a function or a nested block, i.e. a local declaration. */
-    LOCAL,
-
-    /** A member of a record (class, struct, union, ...). */
-    RECORD,
-}
-
-/**
- * The canonical semantics that a single declaration keyword implies, as returned by
- * [HasKeywordSemantics.interpretKeyword].
+ * This is deliberately distinct from merely *recording* a visibility: every [Declaration] carries a
+ * [Declaration.visibility], but only a language with this trait has the [SymbolResolver] act on it,
+ * dropping members that are inaccessible from the point of access while resolving a member by name
+ * (see [SymbolResolver.resolveMemberByName]). A language may therefore record visibility *without*
+ * declaring this trait: consider a language that maps a naming convention such as Python's `__x` to
+ * [Visibility.PRIVATE] purely for documentation, without actually forbidding access — enforcing
+ * that would wrongly hide reachable members, so such a frontend records the visibility but omits
+ * the trait.
  *
- * Every property is nullable and defaults to `null`, meaning "this keyword says nothing about this
- * axis". This lets a frontend fold the results of several keywords together (e.g. with [merge])
- * without one keyword's silence overwriting another keyword's opinion.
+ * The trait only gates *record-relative* access control ([Visibility.PRIVATE] /
+ * [Visibility.PROTECTED]). Linkage- and module-level visibility ([Visibility.INTERNAL],
+ * [Visibility.PACKAGE]) is enforced by a separate mechanism in the [SymbolResolver] independently
+ * of this trait, so a language whose only restriction is package/linkage visibility (e.g. Go's
+ * unexported identifiers) does not declare it.
  */
-data class KeywordSemantics(
-    /** The [Visibility] the keyword implies, or `null` if it does not affect visibility. */
-    val visibility: Visibility? = null,
-
-    /**
-     * Whether the keyword marks the declaration as a static (class-level rather than per-instance)
-     * member, or `null` if it says nothing about member binding.
-     */
-    val isStatic: Boolean? = null,
-) {
-    /**
-     * Combines this with [other], where any axis [other] has an opinion on (a non-`null` value)
-     * takes precedence. Used to accumulate the semantics of all keywords on a declaration.
-     */
-    fun merge(other: KeywordSemantics): KeywordSemantics {
-        return KeywordSemantics(
-            visibility = other.visibility ?: this.visibility,
-            isStatic = other.isStatic ?: this.isStatic,
-        )
-    }
-}
-
-/**
- * A language trait for languages in which a declaration keyword's meaning depends on *where* it
- * appears — most notably C/C++'s `static`, which denotes internal linkage at file scope, mere
- * static storage duration inside a function, and a class-level member inside a record.
- *
- * Frontends keep the raw keyword in [HasModifiers.modifiers] and additionally call
- * [interpretKeyword] to obtain the canonical [KeywordSemantics], which they then project onto
- * [HasVisibility.visibility] and
- * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration.isStatic]. Centralizing the mapping
- * behind this trait keeps the per-language knowledge of "what does this keyword mean in this
- * position" in a single place, instead of scattering it across the frontend's handlers.
- */
-interface HasKeywordSemantics : LanguageTrait {
-    /** Interprets [keyword] appearing in the given [context] into canonical [KeywordSemantics]. */
-    fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics
-}
-
-/**
- * A language trait for languages that enforce *access control* on record members, i.e. that
- * restrict from where a member may be accessed based on an access specifier such as C++'s `public`
- * / `protected` / `private`.
- *
- * When a language declares this trait, the [SymbolResolver] takes the canonical
- * [de.fraunhofer.aisec.cpg.graph.HasVisibility.visibility] of a member into account while resolving
- * a member by name, preferring members that are actually accessible from the point of access over
- * inaccessible ones (see [SymbolResolver.resolveMemberByName]). Languages without this trait are
- * left completely unaffected and keep resolving members regardless of visibility.
- */
-interface HasAccessControl : LanguageTrait
+interface HasVisibilityModifiers : LanguageTrait
 
 /**
  * Creates a [Pair] of class and operator code used in

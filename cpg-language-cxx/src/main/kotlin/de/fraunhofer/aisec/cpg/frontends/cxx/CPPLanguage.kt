@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.matchesSignature
@@ -62,24 +63,23 @@ open class CPPLanguage :
     HasFunctionOverloading,
     HasOperatorOverloading,
     HasImplicitReceiver,
-    HasAccessControl {
+    HasVisibilityModifiers {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
     /**
-     * Interprets a C++ declaration keyword into its canonical [KeywordSemantics]. In addition to
-     * the context-dependent `static` handled by [CLanguage.interpretKeyword], C++ has genuine
-     * member access control, so the access specifiers `public`/`protected`/`private` map onto the
-     * corresponding [Visibility] (they only ever occur on record members). Every other keyword is
-     * delegated to the C interpretation.
+     * Applies C++'s declaration modifiers to [declaration]. In addition to the context-dependent
+     * `static` handled by [CLanguage.applyModifiers], C++ has genuine member access control, so the
+     * access specifiers `public`/`protected`/`private` map onto the corresponding [Visibility]
+     * (they only ever occur on record members).
      */
-    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
-        return when (keyword) {
-            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
-            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
-            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
-            else -> super.interpretKeyword(keyword, context)
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        super.applyModifiers(declaration, scope)
+        when {
+            PUBLIC in declaration.modifiers -> declaration.visibility = Visibility.PUBLIC
+            PROTECTED in declaration.modifiers -> declaration.visibility = Visibility.PROTECTED
+            PRIVATE in declaration.modifiers -> declaration.visibility = Visibility.PRIVATE
         }
     }
 
