@@ -30,8 +30,24 @@ import de.fraunhofer.aisec.cpg.graph.FrontendProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 
-class JVMFrontendConfiguration(val packagesToIgnore: List<String> = listOf()) :
-    FrontendConfiguration<JVMLanguageFrontend>() {
+/**
+ * @param packagesToIgnore Fully-qualified package prefixes whose method bodies should not be
+ *   parsed.
+ * @param useJimpleTextPositions When true, every class is round-tripped through its textual Jimple
+ *   representation (see `sootup.jimple.frontend.JimpleTextPositions`) before translation, so that
+ *   statements and values receive per-line, column-precise positions into the reprinted Jimple text
+ *   instead of the coarse, frequently collapsed line numbers a compiled artifact (`.class`/dex)
+ *   carries. The reprinted text is written to a `.jimple` file (under a temporary directory) and
+ *   used as the location's file name so that "the node on line N" resolves to a real, readable
+ *   line.
+ *
+ *   This trades the original source file name (e.g. `MainActivity.kt`, only recoverable from dex
+ *   debug info) for coherent per-node positions, which is why it is opt-in and defaults to false.
+ */
+class JVMFrontendConfiguration(
+    val packagesToIgnore: List<String> = listOf(),
+    val useJimpleTextPositions: Boolean = false,
+) : FrontendConfiguration<JVMLanguageFrontend>() {
     /**
      * Determines whether the body of a function should NOT be parsed.
      *

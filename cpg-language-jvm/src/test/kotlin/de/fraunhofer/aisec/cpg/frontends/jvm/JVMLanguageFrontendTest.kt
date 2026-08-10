@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
+import java.io.File
 import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.Disabled
@@ -1231,6 +1232,84 @@ class JVMLanguageFrontendTest {
             locatedFields.isNotEmpty(),
             "Expected at least one user field declaration with a source location from the APK, " +
                 "but none of ${userFields.size} user fields had one",
+        )
+    }
+
+    /**
+     * Verifies the opt-in [JVMFrontendConfiguration.useJimpleTextPositions] mode. Instead of the
+     * coarse, frequently collapsed line numbers a compiled artifact carries (many statements
+     * sharing one line, no columns), every class is round-tripped through its textual Jimple
+     * representation so that each statement lands on its own, distinct line of a written `.jimple`
+     * file. This is the "pick the node on line N" guarantee: the reported line resolves to a real,
+     * readable line of a real file.
+     */
+    @Test
+    fun testJimpleTextPositions() {
+        val topLevel = Path.of("src", "test", "resources", "class", "operators")
+        val result =
+            analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(useJimpleTextPositions = true)
+                )
+            }
+        assertNotNull(result)
+
+        val testArithmetic = result.methods["testArithmetic"]
+        assertNotNull(testArithmetic)
+
+        // (1) Every located statement points into a real `.jimple` file, and the line it reports is
+        //     a real, non-blank line of that file -- i.e. "line N" actually resolves to content.
+        val assigns = testArithmetic.allChildren<Assign>()
+        val located = assigns.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(located.isNotEmpty(), "Expected located assignments in text-position mode")
+
+        located.forEach { assign ->
+            val region = assign.location?.region
+            assertNotNull(region)
+            val fileName = assign.location?.artifactLocation?.uri?.path
+            assertNotNull(fileName, "text-position nodes must carry a file URI")
+            assertTrue(
+                fileName.endsWith(".jimple"),
+                "in text-position mode the location file must be the reprinted .jimple, was $fileName",
+            )
+            val lines = File(fileName).readLines()
+            assertTrue(
+                region.startLine <= lines.size,
+                "reported line ${region.startLine} is outside the ${lines.size}-line file",
+            )
+            assertTrue(
+                lines[region.startLine - 1].isNotBlank(),
+                "statement reported on blank line ${region.startLine} of $fileName",
+            )
+        }
+
+        // (2) Statements land on DISTINCT lines -- the whole point of the round-trip (the compiled
+        //     artifact collapses many onto one). No two of our assignments share a start line.
+        val startLines = located.mapNotNull { it.location?.region?.startLine }
+        assertEquals(
+            startLines.size,
+            startLines.toSet().size,
+            "statements must occupy distinct lines in text-position mode, but some collapsed: " +
+                startLines.sorted(),
+        )
+
+        // (3) Line bases are reconciled: a value-level node (binary operator) reports the SAME line
+        //     as its enclosing statement (no 0-/1-based off-by-one), while still carrying real
+        //     columns -- so the line matches the file and the columns pinpoint the sub-expression.
+        val assignWithBinop = located.firstOrNull { it.allChildren<BinaryOperator>().isNotEmpty() }
+        assertNotNull(assignWithBinop, "expected an assignment containing a binary operator")
+        val binop = assignWithBinop.allChildren<BinaryOperator>().first()
+        assertEquals(
+            assignWithBinop.location?.region?.startLine,
+            binop.location?.region?.startLine,
+            "a value's line must match its enclosing statement's line (no off-by-one)",
+        )
+        val binopRegion = binop.location?.region
+        assertNotNull(binopRegion)
+        assertTrue(
+            binopRegion.startColumn >= 0 && binopRegion.endColumn > binopRegion.startColumn,
+            "a value should carry a real, non-degenerate column span, was $binopRegion",
         )
     }
 }
