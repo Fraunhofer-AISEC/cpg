@@ -1618,7 +1618,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val param: Node?, // From which parameter entry in the functionSummary did we gather the
         // information
         val srcNode: Node?,
-        val lastWrites: ConcurrentIdentitySet<NodeWithPropertiesKey>,
+        val lastWrites: MutableSet<NodeWithPropertiesKey>,
         val propertySet: EqualLinkedHashSet<Any>,
         val dst: IdentitySet<Node> = identitySetOf(),
     ) {
@@ -1718,9 +1718,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     private fun concurrentCopyOfLastWrites(
-        lastWrites: Collection<NodeWithPropertiesKey>
-    ): ConcurrentIdentitySet<NodeWithPropertiesKey> {
-        return concurrentIdentitySetOf<NodeWithPropertiesKey>().apply { addAll(lastWrites) }
+        lastWrites: MutableSet<NodeWithPropertiesKey>
+    ): MutableSet<NodeWithPropertiesKey> {
+        return ConcurrentHashMap.newKeySet<NodeWithPropertiesKey>().apply { addAll(lastWrites) }
     }
 
     private fun deduplicatePreprocessedFSEntries(
