@@ -1624,7 +1624,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) {
         override fun equals(other: Any?): Boolean {
             return other is MapDstToSrcEntry &&
-                param == other.param &&
+                param === other.param &&
                 srcNode === other.srcNode &&
                 // Skip checking for lastWrites b/c we change that
                 propertySet == other.propertySet &&
