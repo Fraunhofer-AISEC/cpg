@@ -35,7 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.PassConfiguration
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -51,6 +53,8 @@ import java.util.WeakHashMap
 @DependsOn(SymbolResolver::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, true)
 @DependsOn(PointsToPass::class, true)
+@DependsOn(DFGPass::class, true)
+@DependsOn(EvaluationOrderGraphPass::class)
 @Description("Tags overlay nodes to underlying nodes based on a tagging context.")
 open class TagOverlaysPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
