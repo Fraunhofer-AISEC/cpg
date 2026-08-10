@@ -562,6 +562,7 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
         )
         put("dateTime", ClassName("java.time", "ZonedDateTime"))
         put("listString", ClassName("kotlin.collections", "List").parameterizedBy(STRING))
+        put("cpgNode", ClassName("de.fraunhofer.aisec.cpg.graph", "Node"))
     }
 
 private val objectPropertyBooleanTypes =
