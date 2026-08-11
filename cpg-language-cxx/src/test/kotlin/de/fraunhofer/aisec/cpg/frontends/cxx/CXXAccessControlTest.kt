@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
 /**
  * Tests member access control (C++ `public` / `protected` / `private`): the frontend must map the
  * access specifiers onto the canonical [Visibility], and the
- * [de.fraunhofer.aisec.cpg.passes. SymbolResolver] must take that visibility into account when
+ * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] must take that visibility into account when
  * resolving a member by name, dropping candidates that are inaccessible from the point of access.
  *
  * The C counter-example ([testCModelsNoAccessControl]) pins down the deliberate asymmetry: C
