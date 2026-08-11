@@ -276,6 +276,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             candidates = resolveMemberByName(ref.name.localName, setOf(record.toType()))
         }
 
+        // Drop candidates that are invisible to this reference because of internal linkage: a
+        // declaration with [Visibility.INTERNAL] (e.g. a file-scope `static` in C/C++) is confined
+        // to its own translation unit and must not be resolved from another one.
+        candidates = candidates.onlyVisibleFrom(ref)
+
         // Store the candidates in the reference
         ref.candidates = candidates
 
@@ -325,6 +330,39 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         ref.markClean()
+    }
+
+    /**
+     * Narrows this set of resolution candidates to those that are *visible* from [ref] given their
+     * linkage — the linkage-level counterpart to the access-control filter [onlyAccessibleFrom].
+     * Currently the only linkage restriction modeled is internal linkage: a declaration with
+     * [Visibility.INTERNAL] (in C/C++ a file-scope `static`, mapped by the frontend via
+     * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]) is confined to its own
+     * translation unit, so it must not be resolved from a reference in a different one. This is
+     * what makes cross-translation-unit lookups of `static` globals and functions fail, as the
+     * language semantics require. The name is intentionally kept general so that further linkage
+     * kinds (should another language need them) can be folded in here without renaming.
+     *
+     * Candidates without internal linkage are always kept, so languages that never assign
+     * [Visibility.INTERNAL] are completely unaffected. As internal linkage is comparatively rare,
+     * we avoid resolving [ref]'s translation unit unless at least one candidate actually has it.
+     *
+     * Unlike the access-control filter [onlyAccessibleFrom], this one is intentionally *not* gated
+     * behind a language trait: the meaning of [Visibility.INTERNAL] — "confined to its own
+     * translation unit" — is language-independent, so a frontend only ever assigns it when it truly
+     * holds. Enforcing it unconditionally therefore cannot wrongly hide a reachable declaration the
+     * way enforcing a merely *recorded* `private` could, which is why access control needs the
+     * [HasVisibilityModifiers] opt-in and linkage does not.
+     */
+    private fun Set<Declaration>.onlyVisibleFrom(ref: Reference): Set<Declaration> {
+        if (none { it.hasInternalLinkage }) {
+            return this
+        }
+
+        val referencingUnit = ref.translationUnit
+        return filterTo(mutableSetOf()) { candidate ->
+            !candidate.hasInternalLinkage || candidate.translationUnit == referencingUnit
+        }
     }
 
     /**
@@ -527,8 +565,93 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             }
         )
 
-        return candidates
+        // Drop members that are inaccessible from where the access happens (e.g. a `private` member
+        // reached from outside its record), for languages that model access control.
+        return candidates.onlyAccessibleFrom(scopeManager.currentRecord)
     }
+
+    /**
+     * Narrows this set of member-resolution candidates to those that are accessible from the record
+     * [from] in which the access syntactically occurs, honoring member access control (e.g. C/C++
+     * `private` / `protected`) for languages that declare it via [HasVisibilityModifiers].
+     * Candidates in languages without that trait, and members whose visibility is
+     * [Visibility.UNKNOWN] or [Visibility.PUBLIC], are always accessible, so unrelated languages
+     * remain unaffected.
+     *
+     * The filter is intentionally conservative and only ever *narrows* an ambiguous candidate set:
+     * if it would remove every candidate — for instance because the code genuinely performs an
+     * access the source language forbids — the original set is returned unchanged. We would rather
+     * resolve a technically-illegal access than silently drop the only edge and leave the reference
+     * unresolvable. As access control only restricts [Visibility.PRIVATE] and
+     * [Visibility.PROTECTED] members, we skip the work entirely unless at least one candidate
+     * carries such a visibility.
+     */
+    private fun Set<Declaration>.onlyAccessibleFrom(from: Record?): Set<Declaration> {
+        if (none { it.hasRestrictedVisibility }) {
+            return this
+        }
+
+        val accessible = filterTo(mutableSetOf()) { it.isAccessibleFrom(from) }
+        return accessible.ifEmpty { this }
+    }
+
+    /**
+     * Whether this member declaration is accessible from the record [from] in which the access
+     * occurs. A [Visibility.PRIVATE] member is only accessible from within its own declaring
+     * record, a [Visibility.PROTECTED] member additionally from records that (transitively) inherit
+     * from the declaring one. Any other visibility (including [Visibility.UNKNOWN]), and any
+     * language without the [HasVisibilityModifiers] trait, imposes no restriction.
+     *
+     * "Access relationship" here means the structural relation between the record [from] where the
+     * access is written and the record that declares the member, which is what decides whether the
+     * access is legal. We model exactly the two that every access-controlled language shares and
+     * that are derivable from [from] and the declaring record alone:
+     * 1. **same record** — `from` *is* the declaring record (grants access to `private` members),
+     *    e.g. a method of `class C` reading `C`'s own `private` field;
+     * 2. **subclass** — `from` (transitively) inherits from the declaring record (additionally
+     *    grants access to `protected` members), e.g. a method of `class D : C` reading a
+     *    `protected` field declared in `C`.
+     *
+     * We stop at these two rather than "any number" because every further way access can be granted
+     * requires modeling a *different* relationship that is not expressible from `from` and the
+     * declaring record alone, and is often language-specific: a C++ `friend` declaration names an
+     * unrelated grantee, a nested class reaches into its lexically enclosing one, Java adds
+     * package/module membership, and so on. Those grants are *not* recognized here and such a
+     * member is reported as inaccessible. That is safe because [onlyAccessibleFrom] never removes
+     * the last candidate: an unambiguous access (e.g. a friend call with a single candidate) still
+     * resolves; only a genuinely ambiguous candidate set could be narrowed too aggressively.
+     */
+    private fun Declaration.isAccessibleFrom(from: Record?): Boolean {
+        if (language !is HasVisibilityModifiers) {
+            return true
+        }
+
+        return when (visibility) {
+            Visibility.PRIVATE -> from != null && declaringRecord == from
+            Visibility.PROTECTED -> from != null && declaringRecord in from.ancestorRecords
+            else -> true
+        }
+    }
+
+    /**
+     * The [Record] that declares this member. For any member that is *lexically* nested in its
+     * record this is simply the closest enclosing [Record] in the AST ([firstParentOrNull], which
+     * walks [Node.astParent]); the surrounding [de.fraunhofer.aisec.cpg.graph.scopes.RecordScope]
+     * would give the same answer for those.
+     *
+     * A [Method], however, may be *defined out-of-line* (e.g. C++ `void C::foo() {}`), where its
+     * AST parent and its scope are the enclosing namespace or translation unit, not the record. We
+     * therefore prefer its explicitly-tracked [Method.recordDeclaration], which points at the
+     * record even for such definitions. Returns `null` for non-members.
+     */
+    private val Declaration.declaringRecord: Record?
+        get() = (this as? Method)?.recordDeclaration ?: firstParentOrNull<Record>()
+
+    /** This [Record] and all records in its transitive super-type chain. */
+    private val Record.ancestorRecords: Set<Record>
+        get() {
+            return toType().ancestors.mapNotNullTo(mutableSetOf()) { it.type.recordDeclaration }
+        }
 
     protected open fun handleConstruction(constructExpression: Construction) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)
