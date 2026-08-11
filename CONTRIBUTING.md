@@ -146,6 +146,19 @@ JavaDoc generation via Dokka is currently disabled.
 
 Note that distribution archives (distZip, distTar) and shadow JARs are not built in CI, since they are currently not needed. 
 
+## Native binaries (JavaCPP)
+
+The LLVM frontend depends on `org.bytedeco:llvm-platform`, which ships native binaries for nine platforms (~2.2 GB in total). We apply the 
+[JavaCPP platform plugin](https://github.com/bytedeco/gradle-javacpp) so that a build only resolves the natives for the platform it runs on. 
+To build for other platforms - e.g. when assembling a distribution archive that has to run elsewhere - pass the platforms explicitly:
+
+```
+./gradlew -PjavacppPlatform=linux-x86_64,linux-arm64,macosx-arm64,windows-x86_64 installDist
+```
+
+This filtering only affects how *we* resolve the dependency. The published POMs still declare plain `llvm-platform`, so consumers keep 
+getting the natives for every platform unless they apply the same plugin themselves.
+
 ## Publishing
 
 To publish a release, push a tag that contains the version number beginning with `v`, i.e. `v2.0.0`. The GitHub Actions workflow will 
