@@ -69,9 +69,10 @@ const val STATIC = "static"
  * enforces access control on record members, this language declares [HasVisibilityModifiers]. See
  * [applyModifiers] for how the raw access flags are projected onto the canonical model.
  */
+
 open class JVMLanguage :
     Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading, HasVisibilityModifiers {
-    override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
+    override val fileExtensions: List<String> = listOf("class", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
 
