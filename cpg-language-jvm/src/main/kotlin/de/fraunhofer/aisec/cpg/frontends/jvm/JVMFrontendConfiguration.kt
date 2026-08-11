@@ -46,7 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Method
  */
 class JVMFrontendConfiguration(
     val packagesToIgnore: List<String> = listOf(),
-    val useJimpleTextPositions: Boolean = false,
+    val useJimpleTextPositions: Boolean = true,
 ) : FrontendConfiguration<JVMLanguageFrontend>() {
     /**
      * Determines whether the body of a function should NOT be parsed.
