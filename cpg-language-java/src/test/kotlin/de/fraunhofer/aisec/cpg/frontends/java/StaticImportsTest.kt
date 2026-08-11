@@ -105,10 +105,10 @@ internal class StaticImportsTest : BaseTest() {
         // and a method, so the JavaImportResolver must INFER both members on the target record. We
         // look them up with UNIQUE to also assert that exactly one of each was inferred (i.e. the
         // resolver is idempotent and does not create duplicates).
-        val inferredField = provider.fields["doesNotExist", SearchModifier.UNIQUE]
-        assertNotNull(inferredField)
-        assertTrue(inferredField.isInferred)
-
+val inferredField = provider.fields["doesNotExist", SearchModifier.UNIQUE]
+assertNotNull(inferredField)
+assertTrue(inferredField.isInferred)
+assertTrue(inferredField.isStatic)
         val inferredMethod = provider.methods["doesNotExist", SearchModifier.UNIQUE]
         assertNotNull(inferredMethod)
         assertTrue(inferredMethod.isInferred)
