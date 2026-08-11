@@ -82,7 +82,6 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         this.handleModifiers(field, node)
 
-
         this.frontend.processAnnotations(field, node)
 
         return field
