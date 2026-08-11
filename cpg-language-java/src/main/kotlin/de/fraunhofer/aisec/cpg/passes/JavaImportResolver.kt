@@ -148,7 +148,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     setOf(),
                     initializer = null,
                     implicitInitializerAllowed = false,
-+                   isStatic = true,
+                    +isStatic = true,
                 )
             targetField.language = base.language
             targetField.isInferred = true
