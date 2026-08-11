@@ -647,7 +647,6 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private val Declaration.declaringRecord: Record?
         get() = (this as? Method)?.recordDeclaration ?: firstParentOrNull<Record>()
 
-
     /** This [Record] and all records in its transitive super-type chain. */
     private val Record.ancestorRecords: Set<Record>
         get() {
