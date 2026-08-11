@@ -628,8 +628,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         return when (visibility) {
             Visibility.PRIVATE -> from != null && declaringRecord == from
-            Visibility.PROTECTED ->
-                from != null && (declaringRecord == from || declaringRecord in from.allSuperclasses)
+            Visibility.PROTECTED -> from != null && declaringRecord in from.ancestorRecords
             else -> true
         }
     }
@@ -648,22 +647,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private val Declaration.declaringRecord: Record?
         get() = (this as? Method)?.recordDeclaration ?: firstParentOrNull<Record>()
 
-    /**
-     * All (transitively) inherited super-records of this [Record] — the transitive closure of
-     * [Record.superTypeDeclarations] (which only holds the *direct* super-records), excluding the
-     * record itself.
-     */
-    private val Record.allSuperclasses: Set<Record>
+    /** This [Record] and all records in its transitive super-type chain. */
+    private val Record.ancestorRecords: Set<Record>
         get() {
-            val result = mutableSetOf<Record>()
-            val worklist = ArrayDeque(superTypeDeclarations)
-            while (worklist.isNotEmpty()) {
-                val next = worklist.removeFirst()
-                if (result.add(next)) {
-                    worklist.addAll(next.superTypeDeclarations)
-                }
-            }
-            return result
+            return toType().ancestors.mapNotNullTo(mutableSetOf()) { it.type.recordDeclaration }
         }
 
     protected open fun handleConstruction(constructExpression: Construction) {
