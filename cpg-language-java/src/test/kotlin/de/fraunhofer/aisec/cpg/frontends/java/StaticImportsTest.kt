@@ -108,7 +108,7 @@ internal class StaticImportsTest : BaseTest() {
         val inferredField = provider.fields["doesNotExist", SearchModifier.UNIQUE]
         assertNotNull(inferredField)
         assertTrue(inferredField.isInferred)
-
+        assertTrue(inferredField.isStatic)
         val inferredMethod = provider.methods["doesNotExist", SearchModifier.UNIQUE]
         assertNotNull(inferredMethod)
         assertTrue(inferredMethod.isInferred)
