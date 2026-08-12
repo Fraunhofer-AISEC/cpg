@@ -59,7 +59,15 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
-        val field = newField(name, type, setOf(), null, false, rawNode = node)
+        val field =
+            newField(
+                name,
+                type,
+                setOf(),
+                initializer = null,
+                implicitInitializerAllowed = false,
+                rawNode = node,
+            )
 
         this.frontend.processAnnotations(field, node)
 

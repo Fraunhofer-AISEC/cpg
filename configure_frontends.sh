@@ -66,5 +66,5 @@ answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getPropert
 setProperty "enableINIFrontend" $answerINI
 answerCodyzeConsole=$(ask "Do you want to enable codyze-console? (currently $(getProperty "enableCodyzeConsole"))")
 setProperty "enableCodyzeConsole" $answerCodyzeConsole
-answerMCP=$(ask "Do you want to enable the MCP module? (currently $(getProperty "enableMCPModule"))")
-setProperty "enableMCPModule" $answerMCP
+answerAI=$(ask "Do you want to enable the AI module (MCP server, skills, chat integration)? Required for codyze-console's AI chat. (currently $(getProperty "enableAIModule"))")
+setProperty "enableAIModule" $answerAI
