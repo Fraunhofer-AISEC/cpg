@@ -34,9 +34,23 @@ import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 
 /**
- * Deconstructs an object of a specified type, if the [components] are [NamedDeconstruction], the
- * name will define how deconstruction is done, i.e. data flows based on names, if not it will be
- * done based on position.
+ * Deconstructs an object of a specified [type] into its [components]. If a component is a
+ * [NamedDeconstruction], its name defines which field of the object it is bound to (data flows by
+ * name); otherwise components are matched by position (data flows by index, e.g. tuple/array/
+ * tuple-struct elements).
+ *
+ * In Rust, this models struct, tuple, tuple-struct, enum-variant, and slice/array patterns, e.g.
+ *
+ * ```rust
+ * match shape {
+ *     Point { x, y } => ...,       // named components -> bind by field name
+ *     Circle(radius) => ...,       // positional component -> bind by position
+ *     [first, .., last] => ...,    // positional components of a slice pattern
+ * }
+ * ```
+ *
+ * `Point { x, y }` and `Circle(radius)` each become one [ObjectDeconstruction], typed to `Point` /
+ * `Circle` respectively, with one [components] entry per bound field/element.
  */
 class ObjectDeconstruction : Deconstruction(), ArgumentHolder, HasType.TypeObserver {
     @Relationship("COMPONENTS") var componentEdges = astEdgesOf<Expression>()

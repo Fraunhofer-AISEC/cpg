@@ -72,11 +72,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
      * Handles a `fn` item, i.e. a free function or (if `self` is present) a method inside an
      * `impl`/`trait` block, including its parameter list, return type and body.
      *
-     * AST:
-     * [ast::Fn](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Fn.html)
+     * AST: [ast::Fn](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Fn.html)
      *
-     * Reference:
-     * [Functions](https://doc.rust-lang.org/reference/items/functions.html)
+     * Reference: [Functions](https://doc.rust-lang.org/reference/items/functions.html)
      */
     private fun handleFunctionDeclaration(fn: RsFn): Function {
         val name = frontend.scopeManager.currentNamespace.fqn(fn.name ?: "")
@@ -147,8 +145,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     /**
      * Handles a single function parameter (name pattern + type) of a `fn` parameter list.
      *
-     * AST:
-     * [ast::Param](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Param.html)
+     * AST: [ast::Param](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Param.html)
      *
      * Reference:
      * [Function parameters](https://doc.rust-lang.org/reference/items/functions.html#function-parameters)
@@ -175,11 +172,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
      * Handles a `mod` item, translated into a [Namespace] whose nested items are recursively
      * handled and registered in a new scope.
      *
-     * AST:
-     * [ast::Module](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Module.html)
+     * AST: [ast::Module](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Module.html)
      *
-     * Reference:
-     * [Modules](https://doc.rust-lang.org/reference/items/modules.html)
+     * Reference: [Modules](https://doc.rust-lang.org/reference/items/modules.html)
      */
     private fun handleModule(module: RsModule): Declaration {
         val namespace =
@@ -204,11 +199,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
      * Handles a `struct` item (named-field, tuple, or unit struct) as a [Record] with its fields
      * translated from either the record or tuple field list.
      *
-     * AST:
-     * [ast::Struct](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Struct.html)
+     * AST: [ast::Struct](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Struct.html)
      *
-     * Reference:
-     * [Structs](https://doc.rust-lang.org/reference/items/structs.html)
+     * Reference: [Structs](https://doc.rust-lang.org/reference/items/structs.html)
      */
     private fun handleStruct(struct: RsStruct): Declaration {
         val raw = RsAst.RustItem(RsItem.Struct(struct))
@@ -257,14 +250,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a `trait` item as a [Record] of kind `"trait"`, translating its associated
-     * functions, constants and type aliases.
+     * Handles a `trait` item as a [Record] of kind `"trait"`, translating its associated functions,
+     * constants and type aliases.
      *
-     * AST:
-     * [ast::Trait](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Trait.html)
+     * AST: [ast::Trait](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Trait.html)
      *
-     * Reference:
-     * [Traits](https://doc.rust-lang.org/reference/items/traits.html)
+     * Reference: [Traits](https://doc.rust-lang.org/reference/items/traits.html)
      */
     private fun handleTrait(trait: RsTrait): Declaration {
         val raw = RsAst.RustItem(RsItem.Trait(trait))
@@ -314,15 +305,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles an `impl` block (inherent impl or trait impl) as an [Extension] of the target
-     * record; if a trait is implemented, it is added to the target record's
-     * `implementedInterfaces`.
+     * Handles an `impl` block (inherent impl or trait impl) as an [Extension] of the target record;
+     * if a trait is implemented, it is added to the target record's `implementedInterfaces`.
      *
-     * AST:
-     * [ast::Impl](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Impl.html)
+     * AST: [ast::Impl](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Impl.html)
      *
-     * Reference:
-     * [Implementations](https://doc.rust-lang.org/reference/items/implementations.html)
+     * Reference: [Implementations](https://doc.rust-lang.org/reference/items/implementations.html)
      */
     private fun handleImpl(impl: RsImpl): Declaration {
         val implTarget = impl.pathTypes.last()
@@ -404,8 +392,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
      * Handles a `use` item, flattening its (possibly nested/grouped) use-tree into one or more
      * [Import] declarations.
      *
-     * AST:
-     * [ast::Use](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Use.html)
+     * AST: [ast::Use](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Use.html)
      *
      * Reference:
      * [Use declarations](https://doc.rust-lang.org/reference/items/use-declarations.html)
@@ -475,14 +462,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Handles an `enum` item as a [Record] of kind `"enum"`, with each variant translated into a
-     * nested sub-record implementing the enum's type (discriminants and named/tuple variant
-     * fields become fields of that sub-record).
+     * nested sub-record implementing the enum's type (discriminants and named/tuple variant fields
+     * become fields of that sub-record).
      *
-     * AST:
-     * [ast::Enum](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Enum.html)
+     * AST: [ast::Enum](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Enum.html)
      *
-     * Reference:
-     * [Enumerations](https://doc.rust-lang.org/reference/items/enumerations.html)
+     * Reference: [Enumerations](https://doc.rust-lang.org/reference/items/enumerations.html)
      */
     fun handleEnum(enum: RsEnum): Declaration {
         val raw = RsAst.RustItem(RsItem.Enum(enum))
@@ -563,11 +548,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
      * Resolves a (possibly qualified) [RsPath] used inside a `use` tree into a dotted [Name],
      * without needing to consider generic args or return types as a normal path expression would.
      *
-     * AST:
-     * [ast::Path](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Path.html)
+     * AST: [ast::Path](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Path.html)
      *
-     * Reference:
-     * [Paths](https://doc.rust-lang.org/reference/paths.html)
+     * Reference: [Paths](https://doc.rust-lang.org/reference/paths.html)
      */
     private fun handlePathForImport(rsPath: RsPath): Name? {
         // In the case of imports we do not have to handle return type, type args, type anchor and
@@ -584,11 +567,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     /**
      * Handles a `const` item as a [Variable] declaration with its initializer expression.
      *
-     * AST:
-     * [ast::Const](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Const.html)
+     * AST: [ast::Const](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Const.html)
      *
-     * Reference:
-     * [Constant items](https://doc.rust-lang.org/reference/items/constant-items.html)
+     * Reference: [Constant items](https://doc.rust-lang.org/reference/items/constant-items.html)
      */
     private fun handleConst(const: RsConst): Declaration {
         val raw = RsAst.RustItem(RsItem.Const(const))

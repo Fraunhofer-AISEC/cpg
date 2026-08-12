@@ -94,8 +94,8 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     /**
      * Handles an identifier (binding) pattern: `name`, `ref mut name`, or `name @ subpattern`. If
      * the name already resolves to a [Variable] in scope (e.g. reused as a loop/match binding
-     * inside the same scope), it produces a [Reference] to it (or an [Assign] if there is a
-     * nested `@` subpattern); otherwise it declares a fresh [Variable].
+     * inside the same scope), it produces a [Reference] to it (or an [Assign] if there is a nested
+     * `@` subpattern); otherwise it declares a fresh [Variable].
      *
      * AST:
      * [ast::IdentPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.IdentPat.html)
@@ -151,11 +151,10 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a (nightly-only) box pattern `box subpattern`, used to match through a `Box<T>`,
-     * into an [ObjectDeconstruction] wrapping the inner pattern.
+     * Handles a (nightly-only) box pattern `box subpattern`, used to match through a `Box<T>`, into
+     * an [ObjectDeconstruction] wrapping the inner pattern.
      *
-     * AST:
-     * [ast::BoxPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BoxPat.html)
+     * AST: [ast::BoxPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BoxPat.html)
      *
      * Reference: not part of stable Rust; see the general
      * [patterns](https://doc.rust-lang.org/reference/patterns.html) overview.
@@ -171,8 +170,8 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a `const { ... }` block used in pattern position, delegating to the block
-     * expression handler for its inner const context.
+     * Handles a `const { ... }` block used in pattern position, delegating to the block expression
+     * handler for its inner const context.
      *
      * AST:
      * [ast::ConstBlockPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ConstBlockPat.html)
@@ -211,14 +210,13 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a macro invocation used in pattern position; not currently supported, macro
-     * expansion would need to happen before translation.
+     * Handles a macro invocation used in pattern position; not currently supported, macro expansion
+     * would need to happen before translation.
      *
      * AST:
      * [ast::MacroPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MacroPat.html)
      *
-     * Reference:
-     * [Macros](https://doc.rust-lang.org/reference/macros.html)
+     * Reference: [Macros](https://doc.rust-lang.org/reference/macros.html)
      */
     fun handleMacroPat(macroPat: RsMacroPat): Expression {
         val raw = RsAst.RustPat(RsPat.MacroPat(macroPat))
@@ -230,11 +228,9 @@ class PatternHandler(frontend: RustLanguageFrontend) :
      * Handles an or-pattern `pat1 | pat2 | ...` into an [AlternativeDeconstruction] listing each
      * alternative.
      *
-     * AST:
-     * [ast::OrPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.OrPat.html)
+     * AST: [ast::OrPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.OrPat.html)
      *
-     * Reference:
-     * [Or-patterns](https://doc.rust-lang.org/reference/patterns.html#or-patterns)
+     * Reference: [Or-patterns](https://doc.rust-lang.org/reference/patterns.html#or-patterns)
      */
     fun handleOrPat(orPat: RsOrPat): Expression {
         val raw = RsAst.RustPat(RsPat.OrPat(orPat))
@@ -247,8 +243,8 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a parenthesized pattern `(pat)`, unwrapped and translated directly (parentheses
-     * carry no separate CPG representation).
+     * Handles a parenthesized pattern `(pat)`, unwrapped and translated directly (parentheses carry
+     * no separate CPG representation).
      *
      * AST:
      * [ast::ParenPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ParenPat.html)
@@ -270,11 +266,9 @@ class PatternHandler(frontend: RustLanguageFrontend) :
      * Handles a path pattern referring to a unit struct, enum variant, or constant by path (e.g.
      * `None`, `MyEnum::Variant`), into a [Reference].
      *
-     * AST:
-     * [ast::PathPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.PathPat.html)
+     * AST: [ast::PathPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.PathPat.html)
      *
-     * Reference:
-     * [Path patterns](https://doc.rust-lang.org/reference/patterns.html#path-patterns)
+     * Reference: [Path patterns](https://doc.rust-lang.org/reference/patterns.html#path-patterns)
      */
     fun handlePathPat(pathPat: RsPathPat): Expression {
         val raw = RsAst.RustPat(RsPat.PathPat(pathPat))
@@ -290,14 +284,13 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a range pattern (`a..=b`, `a..b`, `..=b`, ...) into a [Range] with floor/ceiling
-     * and the range operator preserved.
+     * Handles a range pattern (`a..=b`, `a..b`, `..=b`, ...) into a [Range] with floor/ceiling and
+     * the range operator preserved.
      *
      * AST:
      * [ast::RangePat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RangePat.html)
      *
-     * Reference:
-     * [Range patterns](https://doc.rust-lang.org/reference/patterns.html#range-patterns)
+     * Reference: [Range patterns](https://doc.rust-lang.org/reference/patterns.html#range-patterns)
      */
     fun handleRangePat(rangePat: RsRangePat): Expression {
         val raw = RsAst.RustPat(RsPat.RangePat(rangePat))
@@ -318,8 +311,8 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a struct/record pattern with named fields (`Path { field, other: pat, .. }`) into
-     * an [ObjectDeconstruction] typed to the matched path, with each field handled by
+     * Handles a struct/record pattern with named fields (`Path { field, other: pat, .. }`) into an
+     * [ObjectDeconstruction] typed to the matched path, with each field handled by
      * [handleRecordPatField].
      *
      * AST:
@@ -354,8 +347,7 @@ class PatternHandler(frontend: RustLanguageFrontend) :
      * Handles a reference pattern (`&pat`, `&mut pat`) by wrapping the inner pattern in an
      * [ObjectDeconstruction] when `&` is present, or passing it through unwrapped otherwise.
      *
-     * AST:
-     * [ast::RefPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RefPat.html)
+     * AST: [ast::RefPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RefPat.html)
      *
      * Reference:
      * [Reference patterns](https://doc.rust-lang.org/reference/patterns.html#reference-patterns)
@@ -378,14 +370,12 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles the rest pattern `..` inside a tuple/slice/struct pattern into an [Empty]
-     * expression, since it binds nothing and only skips remaining elements/fields.
+     * Handles the rest pattern `..` inside a tuple/slice/struct pattern into an [Empty] expression,
+     * since it binds nothing and only skips remaining elements/fields.
      *
-     * AST:
-     * [ast::RestPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RestPat.html)
+     * AST: [ast::RestPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RestPat.html)
      *
-     * Reference:
-     * [Rest patterns](https://doc.rust-lang.org/reference/patterns.html#rest-patterns)
+     * Reference: [Rest patterns](https://doc.rust-lang.org/reference/patterns.html#rest-patterns)
      */
     fun handleRestPat(restPat: RsRestPat): Expression {
         val raw = RsAst.RustPat(RsPat.RestPat(restPat))
@@ -399,8 +389,7 @@ class PatternHandler(frontend: RustLanguageFrontend) :
      * AST:
      * [ast::SlicePat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.SlicePat.html)
      *
-     * Reference:
-     * [Slice patterns](https://doc.rust-lang.org/reference/patterns.html#slice-patterns)
+     * Reference: [Slice patterns](https://doc.rust-lang.org/reference/patterns.html#slice-patterns)
      */
     fun handleSlicePat(slicePat: RsSlicePat): Expression {
         val raw = RsAst.RustPat(RsPat.SlicePat(slicePat))
@@ -411,14 +400,13 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a tuple pattern (`(a, b, c)`) into an [ObjectDeconstruction] whose components are
-     * the translated element patterns.
+     * Handles a tuple pattern (`(a, b, c)`) into an [ObjectDeconstruction] whose components are the
+     * translated element patterns.
      *
      * AST:
      * [ast::TuplePat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.TuplePat.html)
      *
-     * Reference:
-     * [Tuple patterns](https://doc.rust-lang.org/reference/patterns.html#tuple-patterns)
+     * Reference: [Tuple patterns](https://doc.rust-lang.org/reference/patterns.html#tuple-patterns)
      */
     fun handleTuplePat(tuplePat: RsTuplePat): Expression {
         val raw = RsAst.RustPat(RsPat.TuplePat(tuplePat))
@@ -459,8 +447,8 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles the wildcard pattern `_`, which matches any value and binds nothing, into an
-     * [Empty] expression.
+     * Handles the wildcard pattern `_`, which matches any value and binds nothing, into an [Empty]
+     * expression.
      *
      * AST:
      * [ast::WildcardPat](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.WildcardPat.html)

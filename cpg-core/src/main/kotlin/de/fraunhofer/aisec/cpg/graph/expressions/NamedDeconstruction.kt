@@ -31,6 +31,23 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 
+/**
+ * Represents a single named component of an [ObjectDeconstruction], i.e. one `name: value` (or
+ * shorthand `name`) entry of a struct/record pattern. The [name] identifies which field of the
+ * matched object is being deconstructed, and [value] is the (sub-)pattern that field is bound to —
+ * either a fresh variable, or a further nested [Deconstruction].
+ *
+ * In Rust, this models the fields of a struct pattern, e.g. in
+ *
+ * ```rust
+ * match point {
+ *     Point { x, y: y_coord } => ...,
+ * }
+ * ```
+ *
+ * both `x` (shorthand for `x: x`) and `y: y_coord` become a [NamedDeconstruction] inside the
+ * [ObjectDeconstruction] for `Point { .. }`.
+ */
 class NamedDeconstruction : Deconstruction(), ArgumentHolder {
 
     @Relationship("VALUE") var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"))

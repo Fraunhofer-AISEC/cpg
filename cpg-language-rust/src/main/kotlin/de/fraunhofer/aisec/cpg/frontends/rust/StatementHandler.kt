@@ -61,12 +61,11 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Handles a `let` statement. A `let-else` (see [handleLetElse]) is delegated separately; a
-     * simple identifier pattern becomes a [DeclarationStatement] with a single [Variable];
-     * any other (destructuring) pattern is modeled as an [Assign] whose LHS is the deconstructed
+     * simple identifier pattern becomes a [DeclarationStatement] with a single [Variable]; any
+     * other (destructuring) pattern is modeled as an [Assign] whose LHS is the deconstructed
      * pattern (see [PatternHandler]) and whose RHS is the initializer expression.
      *
-     * AST:
-     * [ast::LetStmt](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LetStmt.html)
+     * AST: [ast::LetStmt](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LetStmt.html)
      *
      * Reference:
      * [`let` statements](https://doc.rust-lang.org/reference/statements.html#let-statements)
@@ -136,14 +135,13 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles a `let PAT = expr else { diverge }` statement. It is modeled as an [Assign] whose
-     * RHS is a synthetic [Switch] with one [Case] matching the pattern (its bindings are
-     * collected into an [InitializerList] and returned via a [BreakStatement]) and a `default`
-     * case running the diverging else-block; the LHS re-declares the pattern's bindings in the
-     * enclosing scope so they stay alive after the statement.
+     * Handles a `let PAT = expr else { diverge }` statement. It is modeled as an [Assign] whose RHS
+     * is a synthetic [Switch] with one [Case] matching the pattern (its bindings are collected into
+     * an [InitializerList] and returned via a [BreakStatement]) and a `default` case running the
+     * diverging else-block; the LHS re-declares the pattern's bindings in the enclosing scope so
+     * they stay alive after the statement.
      *
-     * AST:
-     * [ast::LetStmt](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LetStmt.html)
+     * AST: [ast::LetStmt](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LetStmt.html)
      * (`let_else` field)
      *
      * Reference:
@@ -225,8 +223,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Handles an expression statement (an expression followed by `;`, whose value is discarded)
-     * by translating the inner expression and marking it as not used as an expression.
+     * Handles an expression statement (an expression followed by `;`, whose value is discarded) by
+     * translating the inner expression and marking it as not used as an expression.
      *
      * AST:
      * [ast::ExprStmt](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ExprStmt.html)
@@ -253,11 +251,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
      * Handles an item (e.g. a nested `fn`, `struct`, `impl`, ...) that appears as a statement
      * inside a block, wrapping the result of [DeclarationHandler] in a [DeclarationStatement].
      *
-     * AST:
-     * [ast::Item](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/enum.Item.html)
+     * AST: [ast::Item](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/enum.Item.html)
      *
-     * Reference: part of
-     * [Statements](https://doc.rust-lang.org/reference/statements.html) (item declarations)
+     * Reference: part of [Statements](https://doc.rust-lang.org/reference/statements.html) (item
+     * declarations)
      */
     fun handleItem(item: RsItem): Expression {
 
