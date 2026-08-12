@@ -110,6 +110,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Handles a `{ ... }` block, translating its statements and optional tail expression into a
+     * [Block].
+     *
+     * AST:
+     * [ast::BlockExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BlockExpr.html)
+     *
+     * Reference:
+     * [Block expressions](https://doc.rust-lang.org/reference/expressions/block-expr.html)
+     */
     fun handleBlockExpr(blockExpr: RsBlockExpr): Expression {
 
         val block = newBlock(RsAst.RustExpr(RsExpr.BlockExpr(blockExpr)))
@@ -128,6 +138,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return block.also { it.usedAsExpression = true }
     }
 
+    /**
+     * Handles a literal token (char, string, byte, C-string, integer, byte-string, float, or the
+     * `true`/`false` keywords) into a [Literal] of the matching built-in type.
+     *
+     * AST:
+     * [ast::Literal](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Literal.html)
+     *
+     * Reference:
+     * [Literal expressions](https://doc.rust-lang.org/reference/expressions/literal-expr.html)
+     */
     fun handleLiteral(literal: RsLiteral): Expression {
         val stringValue = literal.astNode.text
         val raw = RsAst.RustExpr(RsExpr.Literal(literal))
@@ -277,6 +297,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         )
     }
 
+    /**
+     * Handles a function-call expression `callee(args...)` into a [Call].
+     *
+     * AST:
+     * [ast::CallExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.CallExpr.html)
+     *
+     * Reference:
+     * [Call expressions](https://doc.rust-lang.org/reference/expressions/call-expr.html)
+     */
     fun handleCallExpr(callExpr: RsCallExpr): Call {
 
         val callee: Expression? = callExpr.expr.getOrNull(0)?.let { handleNode(it) }
@@ -290,6 +319,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return call
     }
 
+    /**
+     * Handles a method-call expression `receiver.method(args...)` into a [MemberCall] whose
+     * callee is a [MemberAccess] on the receiver.
+     *
+     * AST:
+     * [ast::MethodCallExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MethodCallExpr.html)
+     *
+     * Reference:
+     * [Method-call expressions](https://doc.rust-lang.org/reference/expressions/method-call-expr.html)
+     */
     fun handleMethodCallExpr(methodCallExpr: RsMethodCallExpr): MemberCall {
 
         val callee: Expression? =
@@ -314,6 +353,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return method
     }
 
+    /**
+     * Handles a macro invocation used in expression position (e.g. `println!(...)`), translated
+     * as a [Call] to a reference named after the macro path, with the raw macro token string as
+     * its single argument.
+     *
+     * AST:
+     * [ast::MacroExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MacroExpr.html)
+     *
+     * Reference:
+     * [Macro invocation](https://doc.rust-lang.org/reference/macros.html#macro-invocation)
+     */
     fun handleMacroExpr(macroExpr: RsMacroExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.MacroExpr(macroExpr))
         macroExpr.macroCall?.let {
@@ -329,6 +379,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newProblemExpression("MacroExpression missing Macro Call", rawNode = raw)
     }
 
+    /**
+     * Handles a path used as an expression (e.g. a variable name, or a qualified item path like
+     * `Foo::bar`) into a [Reference].
+     *
+     * AST:
+     * [ast::PathExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.PathExpr.html)
+     *
+     * Reference:
+     * [Path expressions](https://doc.rust-lang.org/reference/expressions/path-expr.html)
+     */
     fun handlePathExpr(pathExpr: RsPathExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.PathExpr(pathExpr))
 
@@ -342,6 +402,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newProblemExpression("PathExpression missing path to name", rawNode = raw)
     }
 
+    /**
+     * Handles a borrow expression `&expr` / `&mut expr` as a prefix `&` [UnaryOperator] (`const`
+     * / `mut` mutability of the borrow is not modeled, as it has no direct effect on control or
+     * data flow); a raw-pointer borrow (`&raw`) is passed through unwrapped.
+     *
+     * AST:
+     * [ast::RefExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RefExpr.html)
+     *
+     * Reference:
+     * [Borrow operators](https://doc.rust-lang.org/reference/expressions/operator-expr.html#borrow-operators)
+     */
     fun handleRefExpr(refExpr: RsRefExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.RefExpr(refExpr))
 
@@ -361,6 +432,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newProblemExpression("Reference expressions missing expr", rawNode = raw)
     }
 
+    /**
+     * Handles a unary prefix operator expression (`-x`, `!x`, `*x`) as a prefix [UnaryOperator].
+     *
+     * AST:
+     * [ast::PrefixExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.PrefixExpr.html)
+     *
+     * Reference:
+     * [Negation operators](https://doc.rust-lang.org/reference/expressions/operator-expr.html#negation-operators),
+     * [The dereference operator](https://doc.rust-lang.org/reference/expressions/operator-expr.html#the-dereference-operator)
+     */
     fun handlePrefixExpr(prefixExpr: RsPrefixExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.PrefixExpr(prefixExpr))
         return newUnaryOperator(prefixExpr.operator, postfix = false, prefix = true, rawNode = raw)
@@ -370,6 +451,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
     }
 
+    /**
+     * Handles a binary operator expression, distinguishing assignment/compound-assignment
+     * operators (translated to [Assign]) from arithmetic/logical/comparison operators (translated
+     * to [BinaryOperator]).
+     *
+     * AST:
+     * [ast::BinExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BinExpr.html)
+     *
+     * Reference:
+     * [Arithmetic and logical binary operators](https://doc.rust-lang.org/reference/expressions/operator-expr.html#arithmetic-and-logical-binary-operators),
+     * [Assignment expressions](https://doc.rust-lang.org/reference/expressions/operator-expr.html#assignment-expressions)
+     */
     fun handleBinExpr(binExpr: RsBinExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.BinExpr(binExpr))
         if (binExpr.expressions.size == 2) {
@@ -391,6 +484,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newProblemExpression("BinExpr has fewer than 2 operands", rawNode = raw)
     }
 
+    /**
+     * Handles an `if`/`else if`/`else` expression into an [IfStatement]; `if let` conditions are
+     * handled via [handleLetExpr], which models the pattern match as an [Assign].
+     *
+     * AST:
+     * [ast::IfExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.IfExpr.html)
+     *
+     * Reference:
+     * [If expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html)
+     */
     fun handleIfExpr(ifExpr: RsIfExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.IfExpr(ifExpr))
         val ifElse = newIfElse(raw)
@@ -414,6 +517,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return ifElse.also { it.usedAsExpression = true }
     }
 
+    /**
+     * Handles a `let` expression used as a condition (`if let PAT = expr`, `while let PAT =
+     * expr`), modeled as an [Assign] whose LHS is the deconstructed pattern (see
+     * [PatternHandler]) and whose RHS is the scrutinee expression.
+     *
+     * AST:
+     * [ast::LetExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LetExpr.html)
+     *
+     * Reference:
+     * [`let` expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html#let-expressions)
+     */
     fun handleLetExpr(letExpr: RsLetExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.LetExpr(letExpr))
 
@@ -438,6 +552,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return assign
     }
 
+    /**
+     * Handles a `while` loop, including `while let`, into a [WhileStatement]; if the condition is
+     * a `let` expression the resulting [DeclarationStatement] is unpacked so the declared
+     * variable becomes `conditionDeclaration`.
+     *
+     * AST:
+     * [ast::WhileExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.WhileExpr.html)
+     *
+     * Reference:
+     * [Predicate loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html#predicate-loops)
+     */
     fun handleWhileExpr(whileExpr: RsWhileExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.WhileExpr(whileExpr))
 
@@ -466,6 +591,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return whileExpression.also { it.usedAsExpression = true }
     }
 
+    /**
+     * Handles an infinite `loop { ... }` expression, modeled as a [WhileStatement] with an
+     * implicit `true` literal condition.
+     *
+     * AST:
+     * [ast::LoopExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LoopExpr.html)
+     *
+     * Reference:
+     * [Infinite loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html#infinite-loops)
+     */
     fun handleLoopExpr(loopExpr: RsLoopExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.LoopExpr(loopExpr))
         val whileExpression = newWhile(raw)
@@ -488,6 +623,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return whileExpression.also { it.usedAsExpression = true }
     }
 
+    /**
+     * Handles a `for pat in iterable { ... }` loop into a [ForEachStatement].
+     *
+     * AST:
+     * [ast::ForExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ForExpr.html)
+     *
+     * Reference:
+     * [Iterator loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html#iterator-loops)
+     */
     fun handleForExpr(forExpr: RsForExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.ForExpr(forExpr))
         val forEach = newForEach(rawNode = raw)
@@ -515,6 +659,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return forEach.also { it.usedAsExpression = true }
     }
 
+    /**
+     * Handles a `break` (with optional loop label and/or value expression) into a [BreakStatement].
+     *
+     * AST:
+     * [ast::BreakExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BreakExpr.html)
+     *
+     * Reference:
+     * [Break expressions](https://doc.rust-lang.org/reference/expressions/loop-expr.html#break-expressions)
+     */
     fun handleBreakExpr(breakExpr: RsBreakExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.BreakExpr(breakExpr))
 
@@ -530,6 +683,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return breakExpression
     }
 
+    /**
+     * Handles a `continue` (with optional loop label) into a [ContinueStatement].
+     *
+     * AST:
+     * [ast::ContinueExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ContinueExpr.html)
+     *
+     * Reference:
+     * [Continue expressions](https://doc.rust-lang.org/reference/expressions/loop-expr.html#continue-expressions)
+     */
     fun handleContinueExpr(continueExpr: RsContinueExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.ContinueExpr(continueExpr))
 
@@ -540,6 +702,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return continueExpression
     }
 
+    /**
+     * Handles a range expression (`a..b`, `a..=b`, `a..`, `..b`, `..`) into a [Range] with the
+     * bounds and operator (inclusive/exclusive) preserved.
+     *
+     * AST:
+     * [ast::RangeExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RangeExpr.html)
+     *
+     * Reference:
+     * [Range expressions](https://doc.rust-lang.org/reference/expressions/range-expr.html)
+     */
     fun handleRangeExpr(rangeExpr: RsRangeExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.RangeExpr(rangeExpr))
         val range = newRange(rawNode = raw)
@@ -556,6 +728,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return range
     }
 
+    /**
+     * Handles a field-access expression `base.field` into a [MemberAccess].
+     *
+     * AST:
+     * [ast::FieldExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.FieldExpr.html)
+     *
+     * Reference:
+     * [Field access expressions](https://doc.rust-lang.org/reference/expressions/field-expr.html)
+     */
     fun handleFieldExpr(fieldExpr: RsFieldExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.FieldExpr(fieldExpr))
 
@@ -569,6 +750,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newProblemExpression("FieldExpression missing subexpr", rawNode = raw)
     }
 
+    /**
+     * Handles a type-cast expression `expr as Type` into a [Cast].
+     *
+     * AST:
+     * [ast::CastExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.CastExpr.html)
+     *
+     * Reference:
+     * [Type cast expressions](https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions)
+     */
     fun handleCastExpr(castExpr: RsCastExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.CastExpr(castExpr))
 
@@ -582,6 +772,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Handles an indexing expression `array[index]` into a [Subscription].
+     *
+     * AST:
+     * [ast::IndexExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.IndexExpr.html)
+     *
+     * Reference:
+     * [Array and slice indexing expressions](https://doc.rust-lang.org/reference/expressions/array-expr.html#array-and-slice-indexing-expressions)
+     */
     fun handleIndexExpr(indexExpr: RsIndexExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.IndexExpr(indexExpr))
 
@@ -602,6 +801,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newProblemExpression("Index expressions missing 2 subexpr", rawNode = raw)
     }
 
+    /**
+     * Handles an array expression, both the list form `[a, b, c]` and the repeat form `[x; n]`,
+     * into an [ArrayCreationExpression] with an [InitializerList].
+     *
+     * AST:
+     * [ast::ArrayExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ArrayExpr.html)
+     *
+     * Reference:
+     * [Array expressions](https://doc.rust-lang.org/reference/expressions/array-expr.html)
+     */
     fun handleArrayExpr(arrayExpr: RsArrayExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.ArrayExpr(arrayExpr))
 
@@ -626,6 +835,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return arrayConstruction
     }
 
+    /**
+     * Handles a struct-literal expression `Path { field: value, .. }`, including the functional
+     * update `..base` syntax, into a [Construction] whose arguments are synthetic [Assign]s onto
+     * the fields (there is no real constructor call to model here).
+     *
+     * AST:
+     * [ast::RecordExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RecordExpr.html)
+     *
+     * Reference:
+     * [Struct expressions](https://doc.rust-lang.org/reference/expressions/struct-expr.html)
+     */
     fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
 
@@ -669,6 +889,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return construction
     }
 
+    /**
+     * Handles a tuple expression `(a, b, c)` into an [InitializerList] of its elements.
+     *
+     * AST:
+     * [ast::TupleExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.TupleExpr.html)
+     *
+     * Reference:
+     * [Tuple expressions](https://doc.rust-lang.org/reference/expressions/tuple-expr.html)
+     */
     fun handleTupleExpr(tupleExpr: RsTupleExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.TupleExpr(tupleExpr))
 
@@ -681,6 +910,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return tupleConstruction
     }
 
+    /**
+     * Handles a `return` (with optional value expression) into a [Return].
+     *
+     * AST:
+     * [ast::ReturnExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ReturnExpr.html)
+     *
+     * Reference:
+     * [Return expressions](https://doc.rust-lang.org/reference/expressions/return-expr.html)
+     */
     fun handleReturnExpr(returnExpr: RsReturnExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.ReturnExpr(returnExpr))
         val ret = newReturn(raw)
@@ -690,6 +928,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return ret
     }
 
+    /**
+     * Handles a `match` expression into a [Switch] whose selector is the scrutinee and whose
+     * arms are translated by [handleMatchArm]. This overapproximates control flow versus real
+     * Rust `match` semantics, since fallthrough between EOG cases can reach guards that would
+     * never actually be evaluated (a failing pattern match skips straight to the next arm).
+     *
+     * AST:
+     * [ast::MatchExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MatchExpr.html)
+     *
+     * Reference:
+     * [Match expressions](https://doc.rust-lang.org/reference/expressions/match-expr.html)
+     */
     fun handleMatchExpr(matchExpr: RsMatchExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.MatchExpr(matchExpr))
 
@@ -725,11 +975,31 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return switchStatement
     }
 
+    /**
+     * Handles the placeholder expression `_` (e.g. used on the LHS of an assignment to discard a
+     * value) into an [Empty] expression.
+     *
+     * AST:
+     * [ast::UnderscoreExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.UnderscoreExpr.html)
+     *
+     * Reference:
+     * [Underscore expressions](https://doc.rust-lang.org/reference/expressions/underscore-expr.html)
+     */
     fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
         return newEmpty(raw).also { it.usedAsExpression = true }
     }
 
+    /**
+     * Handles a parenthesized expression `(expr)` by unwrapping it and translating the inner
+     * expression directly (parentheses carry no separate CPG representation).
+     *
+     * AST:
+     * [ast::ParenExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ParenExpr.html)
+     *
+     * Reference:
+     * [Grouped expressions](https://doc.rust-lang.org/reference/expressions/grouped-expr.html)
+     */
     fun handleParenExpr(parenExpr: RsParenExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.ParenExpr(parenExpr))
 
@@ -739,6 +1009,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newEmpty(raw).also { it.usedAsExpression = true }
     }
 
+    /**
+     * Handles the `?` operator, desugaring it into a synthetic `match expr { Ok(val) => val,
+     * Err(err) => return err }` modeled as a [Switch]. This does not depict the actual desugaring
+     * (which depends on the `Try`/`FromResidual` trait impl), but is sufficient to reproduce the
+     * same EOG/DFG shape.
+     *
+     * AST:
+     * [ast::TryExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.TryExpr.html)
+     *
+     * Reference:
+     * [The question mark operator](https://doc.rust-lang.org/reference/expressions/operator-expr.html#the-question-mark-operator)
+     */
     fun handleTryExpr(tryExpr: RsTryExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.TryExpr(tryExpr))
         tryExpr.expr.firstOrNull()?.let {
@@ -821,6 +1103,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newProblemExpression("Try expression missing subexpr", rawNode = raw)
     }
 
+    /**
+     * Handles a single arm of a `match` expression (`pattern [if guard] => body`), translated
+     * into a [Case] holding the deconstructed pattern followed by a [BreakStatement] carrying the
+     * arm's body value, wrapped in an [IfStatement] when a guard is present.
+     *
+     * AST:
+     * [ast::MatchArm](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MatchArm.html)
+     *
+     * Reference:
+     * part of [Match expressions](https://doc.rust-lang.org/reference/expressions/match-expr.html)
+     * (match arms / match guards)
+     */
     private fun handleMatchArm(arm: RsMatchArm): List<Expression> {
         val raw = RsAst.RustExpr(RsExpr.MatchArm(arm))
         // Deconstruct the pattern and create a case statement
@@ -865,6 +1159,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return caseExpressions
     }
 
+    /**
+     * Handles a closure expression `|params| body` into a [Lambda] wrapping a synthetic anonymous
+     * [Function] with the closure's parameters and body.
+     *
+     * AST:
+     * [ast::ClosureExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ClosureExpr.html)
+     *
+     * Reference:
+     * [Closure expressions](https://doc.rust-lang.org/reference/expressions/closure-expr.html)
+     */
     fun handleClosureExpr(closureExpr: RsClosureExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.ClosureExpr(closureExpr))
 

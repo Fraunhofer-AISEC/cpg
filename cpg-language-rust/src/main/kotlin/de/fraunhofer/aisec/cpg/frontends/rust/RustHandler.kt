@@ -32,6 +32,12 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import uniffi.rustast.RsAst
 
+/**
+ * Common base class for the Rust frontend's handlers ([DeclarationHandler], [StatementHandler],
+ * [ExpressionHandler], [PatternHandler]). It has no feature-specific `handle...()` functions of
+ * its own; those live in the subclasses, one per Rust AST node kind, dispatched via Kotlin
+ * `when` on the `ra_ap_syntax` AST enums (`RsItem`, `RsStmt`, `RsExpr`, `RsPat`).
+ */
 abstract class RustHandler<ResultNode : Node, HandlerNode : RsAst>(
     configConstructor: Supplier<ResultNode>,
     lang: RustLanguageFrontend,
