@@ -190,10 +190,7 @@ class GoLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val tu = result.components["application"]?.translationUnits?.firstOrNull()
-        assertNotNull(tu)
-
-        val p = tu.namespaces["p"]
+        val p = result.namespaces["p"]
         assertNotNull(p)
 
         val a = p.variables["a"]
@@ -201,26 +198,26 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(a.location)
 
         assertLocalName("a", a)
-        assertEquals(tu.primitiveType("int"), a.type)
+        assertEquals(result.primitiveType("int"), a.type)
 
         val s = p.variables["s"]
         assertNotNull(s)
         assertLocalName("s", s)
-        assertEquals(tu.primitiveType("string"), s.type)
+        assertEquals(result.primitiveType("string"), s.type)
 
         val f = p.variables["f"]
         assertNotNull(f)
         assertLocalName("f", f)
-        assertEquals(tu.primitiveType("float64"), f.type)
+        assertEquals(result.primitiveType("float64"), f.type)
 
         val f32 = p.variables["f32"]
         assertNotNull(f32)
         assertLocalName("f32", f32)
-        assertEquals(tu.primitiveType("float32"), f32.type)
+        assertEquals(result.primitiveType("float32"), f32.type)
 
         val n = p.variables["n"]
         assertNotNull(n)
-        assertEquals(tu.primitiveType("int").pointer(), n.type)
+        assertEquals(result.primitiveType("int").pointer(), n.type)
 
         val nil = n.initializer as? Literal<*>
         assertNotNull(nil)
@@ -243,7 +240,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(o)
         assertLocalName("MyStruct[]", o.type)
 
-        val myStruct = tu.records["MyStruct"]
+        val myStruct = result.records["MyStruct"]
         assertNotNull(myStruct)
 
         val field = myStruct.fields["Field"]
@@ -277,7 +274,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertRefersTo(keyValue.key, field)
         assertLiteralValue(10, keyValue.value)
 
-        val rr = tu.variables["rr"]
+        val rr = result.variables["rr"]
         assertNotNull(rr)
 
         var init = rr.initializer
@@ -293,7 +290,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(zero)
         assertRefersTo(key, zero)
 
-        val mapr = tu.variables["mapr"]
+        val mapr = result.variables["mapr"]
         assertNotNull(mapr)
 
         init = mapr.initializer
@@ -968,8 +965,8 @@ class GoLanguageFrontendTest : BaseTest() {
     fun testResolveStdLibImport() {
         val stdLib = Path.of("src", "test", "resources", "golang-std")
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu =
-            analyzeAndGetFirstTU(
+        val result =
+            analyze(
                 listOf(topLevel.resolve("function.go").toFile(), stdLib.resolve("fmt").toFile()),
                 topLevel,
                 true,
@@ -978,9 +975,7 @@ class GoLanguageFrontendTest : BaseTest() {
                 it.includePath(stdLib)
             }
 
-        assertNotNull(tu)
-
-        val p = tu.namespaces["p"]
+        val p = result.namespaces["p"]
         assertNotNull(p)
 
         val main = p.functions["main"]
@@ -1017,7 +1012,6 @@ class GoLanguageFrontendTest : BaseTest() {
             analyze(files, topLevel, true) {
                 it.registerLanguage<GoLanguage>()
                 it.includePath(stdLib)
-                it.useParallelFrontends(false)
                 it.symbols(mapOf("GOOS" to "darwin", "GOARCH" to "arm64"))
             }
 

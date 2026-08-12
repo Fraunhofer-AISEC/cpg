@@ -44,6 +44,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @DependsOn(NonLocalVariablesIdentificationPass::class)
 @Description("Adds DFG edges to the graph but without considering the control flow.")
 open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
+    class Configuration(var alwaysOverapproximateRefDFG: Boolean = false) : PassConfiguration()
+
     private val callsInferredFunctions = mutableListOf<Call>()
 
     override fun accept(component: Component) {
@@ -52,10 +54,19 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             config.functionSummaries.functionToDFGEntryMap.size,
         )
 
+        val alwaysOverapproximateRefDFG =
+            passConfig<Configuration>()?.alwaysOverapproximateRefDFG ?: false
+
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         val walker = IterativeGraphWalker(Strategy::AST_FORWARD)
         walker.registerOnNodeVisit { node, parent ->
-            handle(node, parent, inferDfgForUnresolvedCalls, config.functionSummaries)
+            handle(
+                node,
+                parent,
+                inferDfgForUnresolvedCalls,
+                config.functionSummaries,
+                alwaysOverapproximateRefDFG,
+            )
         }
         for (tu in component.translationUnits) {
             walker.iterate(tu)
@@ -111,6 +122,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         parent: Node?,
         inferDfgForUnresolvedSymbols: Boolean,
         functionSummaries: DFGFunctionSummaries,
+        alwaysOverapproximateRefDFG: Boolean,
     ) {
         when (node) {
             // Expressions
@@ -126,7 +138,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is MemberAccess -> handleMemberAccess(node)
             is PointerReference -> handlePointerReference(node)
             is PointerDereference -> handlePointerDereference(node)
-            is Reference -> handleReference(node)
+            is Reference -> handleReference(node, alwaysOverapproximateRefDFG)
             is ExpressionList -> handleExpressionList(node)
             is New -> handleNew(node)
             // We keep the logic for the InitializerList in that class because the
@@ -469,10 +481,10 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - If the variable is read from, data flows from the variable declaration to this node.
      * - For a combined read and write, both edges for data flows are added.
      */
-    protected fun handleReference(node: Reference) {
+    protected fun handleReference(node: Reference, alwaysOverapproximateRefDFG: Boolean) {
         // We only do this for global references, the rest will be done by the PointsToPass
         node.refersTo?.let {
-            if (isGlobal(it)) {
+            if (isGlobal(it) || alwaysOverapproximateRefDFG) {
                 when (node.access) {
                     AccessValues.WRITE -> node.nextDFGEdges += it
                     AccessValues.READ -> node.prevDFGEdges += Dataflow(start = it, end = node)
