@@ -109,10 +109,11 @@ class PatternHandler(frontend: RustLanguageFrontend) :
                     .firstOrNull()
             }
 
-        variable?.let {
-            val lhsRef =
-                newReference(identPat.name, rawNode = raw).also { it.access = AccessValues.WRITE }
-            // If identPat has a nested pattern, translate it as an assignment
+        variable?.let { existing ->
+            val lhsRef = newReference(identPat.name, rawNode = raw).also {
+                it.access = AccessValues.WRITE
+                it.refersTo = existing
+            }
             identPat.pat.firstOrNull()?.let { nestedPat ->
                 val rhs = handleNode(nestedPat)
                 return newAssign("=", listOf(lhsRef), listOf(rhs), rawNode = raw)
