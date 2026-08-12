@@ -248,15 +248,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             if (literal.endsWith(suffix)) {
                 val literalValue: Any =
                     when (suffix) {
-                        "i64", "u64", "isize", "usize" -> value.toLong()
-                        "i128", "u128" -> value
+                        "i64",
+                        "u64",
+                        "isize",
+                        "usize" -> value.toLong()
+                        "i128",
+                        "u128" -> value
                         else -> value.toInt()
                     }
-                return newLiteral(
-                    literalValue,
-                    language.builtInTypes[suffix] ?: unknownType(),
-                    raw,
-                )
+                return newLiteral(literalValue, language.builtInTypes[suffix] ?: unknownType(), raw)
             }
         }
 

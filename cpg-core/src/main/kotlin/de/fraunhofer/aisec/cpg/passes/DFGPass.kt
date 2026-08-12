@@ -797,7 +797,9 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     ): Field? {
         val type = objectDeconstruction.type
         if (type is ObjectType) {
-            return type.recordDeclaration?.fields?.firstOrNull { it.name == namedDeconstruction.name }
+            return type.recordDeclaration?.fields?.firstOrNull {
+                it.name == namedDeconstruction.name
+            }
         }
         return null
     }
