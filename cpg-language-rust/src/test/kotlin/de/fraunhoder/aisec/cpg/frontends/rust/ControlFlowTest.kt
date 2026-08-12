@@ -46,7 +46,6 @@ import de.fraunhofer.aisec.cpg.graph.forEachLoops
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.refs
-import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.switches
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.graph.whileLoops
@@ -90,8 +89,6 @@ class ControlFlowTest {
 
         var body = while1.statement
 
-        assertNotNull(body)
-
         assertIs<Block>(body)
 
         assertEquals(body.statements.size, 2)
@@ -101,8 +98,6 @@ class ControlFlowTest {
         assertIs<BinaryOperator>(while2.condition)
 
         body = while2.statement
-
-        assertNotNull(body)
 
         assertIs<Block>(body)
 
@@ -135,7 +130,6 @@ class ControlFlowTest {
         assertIs<Assign>(whileLet1.condition)
 
         var body = whileLet1.statement
-        assertNotNull(body)
         assertIs<Block>(body)
         assertEquals(body.statements.size, 1)
 
@@ -146,7 +140,6 @@ class ControlFlowTest {
         val whileLet2 = whiles[1]
         assertIs<Assign>(whileLet2.condition)
         body = whileLet2.statement
-        assertNotNull(body)
         assertIs<Block>(body)
         assertEquals(body.statements.size, 1)
         assertNotNull(whileLet2.variables["item"])
@@ -176,13 +169,11 @@ class ControlFlowTest {
         val loop1 = loops[0]
         assertIs<Literal<Boolean>>(loop1.condition)
         var body = loop1.statement
-        assertNotNull(body)
         assertIs<Block>(body)
         assertEquals(body.statements.size, 3)
 
         val loop2 = loops[1]
         body = loop2.statement
-        assertNotNull(body)
         assertIs<Block>(body)
         assertEquals(body.statements.size, 3)
     }
@@ -212,7 +203,6 @@ class ControlFlowTest {
         val if1 = ifs[0]
         assertIs<BinaryOperator>(if1.condition)
         var then = if1.thenStatement
-        assertNotNull(then)
         assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
 
@@ -223,12 +213,10 @@ class ControlFlowTest {
 
         assertIs<BinaryOperator>(if2.condition)
         then = if2.thenStatement
-        assertNotNull(then)
         assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
 
         elseStmt = if2.elseStatement
-        assertNotNull(elseStmt)
         assertIs<Block>(elseStmt)
         assertEquals(elseStmt.statements.size, 1)
 
@@ -236,7 +224,6 @@ class ControlFlowTest {
 
         assertIs<BinaryOperator>(if3.condition)
         then = if3.thenStatement
-        assertNotNull(then)
         assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
 
@@ -248,14 +235,12 @@ class ControlFlowTest {
 
         assertIs<BinaryOperator>(if5.condition)
         then = if5.thenStatement
-        assertNotNull(then)
         assertIs<Block>(then)
         assertEquals(then.statements.size, 2)
 
         assertTrue(then.statements[1] is IfElse)
 
         elseStmt = if5.elseStatement
-        assertNotNull(elseStmt)
         assertIs<Block>(elseStmt)
         assertEquals(elseStmt.statements.size, 1)
 
@@ -263,12 +248,10 @@ class ControlFlowTest {
 
         assertIs<BinaryOperator>(if7.condition)
         then = if7.thenStatement
-        assertNotNull(then)
         assertIs<Block>(then)
         assertEquals(then.statements.size, 2)
 
         elseStmt = if7.elseStatement
-        assertNotNull(elseStmt)
         assertIs<Block>(elseStmt)
         assertEquals(elseStmt.statements.size, 2)
 
@@ -301,7 +284,6 @@ class ControlFlowTest {
         val ifLet = ifLets[0]
         assertIs<Assign>(ifLet.condition)
         var then = ifLet.thenStatement
-        assertNotNull(then)
         assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
     }

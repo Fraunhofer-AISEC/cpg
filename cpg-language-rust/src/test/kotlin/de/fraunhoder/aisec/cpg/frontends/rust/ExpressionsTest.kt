@@ -59,14 +59,12 @@ class ExpressionsTest {
 
         // The switch should have a selector (the result being checked)
         val selector = trySwitch.selector
-        assertNotNull(selector, "Try expression switch should have a selector")
 
         // Selector should be a reference to the result expression
         assertIs<Reference>(selector)
 
         // The switch statement should have a block with cases
         val switchStatement = trySwitch.statement
-        assertNotNull(switchStatement, "Try expression switch should have a statement")
         assertIs<Block>(switchStatement)
 
         val block = switchStatement
