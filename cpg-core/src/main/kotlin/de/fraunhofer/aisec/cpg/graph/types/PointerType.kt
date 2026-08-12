@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * PointerTypes represent all references to other Types. For C/CPP this includes pointers, as well

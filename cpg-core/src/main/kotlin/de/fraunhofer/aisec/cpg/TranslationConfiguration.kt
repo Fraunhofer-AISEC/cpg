@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -43,6 +44,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
@@ -107,31 +109,42 @@ private constructor(
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
      * annotation on a [LanguageFrontend].
      */
+    @JsonIgnore
     val replacedPasses:
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
-    languages: List<KClass<out Language<*>>>,
+    languages: Set<KClass<out Language<*>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
     useUnityBuild: Boolean,
     useParallelFrontends: Boolean,
-    useParallelPasses: Boolean,
     inferenceConfiguration: InferenceConfiguration,
     compilationDatabase: CompilationDatabase?,
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    frontendConfigurations:
+        Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration<out LanguageFrontend<*, *>>>,
+    /** The maximum number a pass will get executed, in order to prevent loops. */
+    val maxPassExecutions: Int,
     /** A list of exclusion patterns used to filter files and directories. */
     val exclusionPatternsByString: List<String>,
     /** A list of exclusion patterns using regular expressions to filter files and directories. */
     val exclusionPatternsByRegex: List<Regex>,
     /** Whether the type propagation system using [TypeObserver] should be disabled. */
     val disableTypeObserver: Boolean,
+    /**
+     * The external environment (operating system, architecture, environment variables) the analyzed
+     * project is assumed to run on. Language frontends can use this to configure
+     * environment-specific behaviour, such as built-in preprocessor macros (C/C++) or build
+     * constraints (Go). Defaults to the environment of the current host.
+     */
+    val targetEnvironment: TargetEnvironment,
 ) {
     /** This list contains all languages which we want to translate. */
-    @JsonIgnore val languages: List<KClass<out Language<*>>>
+    @JsonIgnore val languages: Set<KClass<out Language<*>>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -159,8 +172,6 @@ private constructor(
      * graph enrichment algorithms remain correct.
      */
     val useParallelFrontends: Boolean
-
-    val useParallelPasses: Boolean
 
     /**
      * This is the data structure for storing the compilation database. It stores a mapping from the
@@ -197,8 +208,9 @@ private constructor(
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
-
     val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
+    val frontendConfigurations:
+        Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration<out LanguageFrontend<*, *>>>
 
     init {
         this.registeredPasses = passes
@@ -209,12 +221,12 @@ private constructor(
         this.disableCleanup = disableCleanup
         this.useUnityBuild = useUnityBuild
         this.useParallelFrontends = useParallelFrontends
-        this.useParallelPasses = useParallelPasses
         this.inferenceConfiguration = inferenceConfiguration
         this.compilationDatabase = compilationDatabase
         this.matchCommentsToNodes = matchCommentsToNodes
         this.addIncludesToGraph = addIncludesToGraph
         this.passConfigurations = passConfigurations
+        this.frontendConfigurations = frontendConfigurations
     }
 
     /** Returns a list of all analyzed files. */
@@ -243,7 +255,7 @@ private constructor(
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
-        private val languages = mutableListOf<KClass<out Language<*>>>()
+        private val languages = mutableSetOf<KClass<out Language<*>>>()
         private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
@@ -261,17 +273,25 @@ private constructor(
         private var disableCleanup = false
         private var useUnityBuild = false
         private var useParallelFrontends = false
-        private var useParallelPasses = false
         private var inferenceConfiguration = InferenceConfiguration.Builder().build()
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
         private var useDefaultPasses = false
+        private var enablePointsToPass = true
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
+        private var frontendConfigurations:
+            MutableMap<
+                KClass<out LanguageFrontend<*, *>>,
+                FrontendConfiguration<out LanguageFrontend<*, *>>,
+            > =
+            mutableMapOf()
+        private var maxPassExecutions = 5
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
         private var disableTypeObserver = false
+        private var targetEnvironment = TargetEnvironment.host()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -467,6 +487,38 @@ private constructor(
             return this
         }
 
+        /**
+         * Configures a [LanguageFrontend] with a [FrontendConfiguration] [config]. This allows us
+         * to pass additional information to the frontend, such methods which should not be analyzed
+         * to save memory (e.g., library methods).
+         *
+         * @param clazz The class of the [LanguageFrontend] for which the configuration should be
+         *   applied.
+         * @param config The configuration to apply for the specified [LanguageFrontend].
+         * @return this
+         */
+        fun <T : LanguageFrontend<*, *>> configureFrontend(
+            clazz: KClass<T>,
+            config: FrontendConfiguration<T>,
+        ): Builder {
+            this.frontendConfigurations[clazz] = config
+            return this
+        }
+
+        /**
+         * Configures a [LanguageFrontend] with the [FrontendConfiguration] [config]. This allows us
+         * to pass additional information to the frontend, such methods which should not be analyzed
+         * to save memory (e.g., library methods).
+         *
+         * @param config The configuration to apply for the specified [LanguageFrontend].
+         * @return this
+         */
+        inline fun <reified T : LanguageFrontend<*, *>> configureFrontend(
+            config: FrontendConfiguration<T>
+        ): Builder {
+            return this.configureFrontend(T::class, config)
+        }
+
         fun <T : Pass<*>> configurePass(clazz: KClass<T>, config: PassConfiguration): Builder {
             this.passConfigurations[clazz] = config
             return this
@@ -474,6 +526,15 @@ private constructor(
 
         inline fun <reified T : Pass<*>> configurePass(config: PassConfiguration): Builder {
             return this.configurePass(T::class, config)
+        }
+
+        /**
+         * Sets the maximum number of times a pass will be executed. This is useful to prevent
+         * infinite loops in the pass execution, when one pass triggers the execution of another.
+         */
+        fun maxPassExecutions(max: Int): Builder {
+            this.maxPassExecutions = max
+            return this
         }
 
         /**
@@ -542,9 +603,10 @@ private constructor(
          * - [EvaluationOrderGraphPass]
          * - [DynamicInvokeResolver]
          * - [TypeResolver]
-         * - [ControlFlowSensitiveDFGPass]
-         * - [ResolveCallExpressionAmbiguityPass]
-         * - [ResolveMemberExpressionAmbiguityPass]
+         * - either [PointsToPass] (if [enablePointsToPass] is set to `true`) or
+         *   [ControlFlowSensitiveDFGPass] if [enablePointsToPass] is set to `false`.
+         * - [ResolveCallAmbiguityPass]
+         * - [ResolveMemberAmbiguityPass]
          *
          * to be executed in the order specified by their annotations.
          */
@@ -556,10 +618,25 @@ private constructor(
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
-            registerPass<ControlFlowSensitiveDFGPass>()
-            registerPass<ResolveCallExpressionAmbiguityPass>()
-            registerPass<ResolveMemberExpressionAmbiguityPass>()
+
+            if (enablePointsToPass) registerPass<PointsToPass>()
+            else registerPass<ControlFlowSensitiveDFGPass>()
+
+            registerPass<ResolveCallAmbiguityPass>()
+            registerPass<ResolveMemberAmbiguityPass>()
+            registerPass<BasicBlockCollectorPass>()
+            registerPass<SccPass>()
             useDefaultPasses = true
+            return this
+        }
+
+        fun disablePointsToAnalysis(): Builder {
+            enablePointsToPass = false
+            return this
+        }
+
+        fun enablePointsToAnalysis(): Builder {
+            enablePointsToPass = true
             return this
         }
 
@@ -666,13 +743,17 @@ private constructor(
             return this
         }
 
-        fun useParallelPasses(b: Boolean): Builder {
-            useParallelPasses = b
+        fun inferenceConfiguration(configuration: InferenceConfiguration): Builder {
+            inferenceConfiguration = configuration
             return this
         }
 
-        fun inferenceConfiguration(configuration: InferenceConfiguration): Builder {
-            inferenceConfiguration = configuration
+        /**
+         * Sets the external environment (operating system, architecture, environment variables) the
+         * analyzed project is assumed to run on. Defaults to the environment of the current host.
+         */
+        fun targetEnvironment(environment: TargetEnvironment): Builder {
+            targetEnvironment = environment
             return this
         }
 
@@ -699,15 +780,17 @@ private constructor(
                 disableCleanup,
                 useUnityBuild,
                 useParallelFrontends,
-                useParallelPasses,
                 inferenceConfiguration,
                 compilationDatabase,
                 matchCommentsToNodes,
                 addIncludesToGraph,
                 passConfigurations,
+                frontendConfigurations,
+                maxPassExecutions,
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
                 disableTypeObserver,
+                targetEnvironment,
             )
         }
 

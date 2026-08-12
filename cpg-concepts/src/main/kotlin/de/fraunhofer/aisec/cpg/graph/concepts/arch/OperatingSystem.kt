@@ -42,11 +42,11 @@ abstract class OperatingSystemArchitecture(underlyingNode: Node?) :
 }
 
 /** Represents an agnostic architecture, which is not tied to a specific operating system. */
-class Agnostic(underlyingNode: Node? = null) :
+open class Agnostic(underlyingNode: Node? = null) :
     OperatingSystemArchitecture(underlyingNode = underlyingNode)
 
 /** Represents a Win32 architecture, commonly found on Windows systems. */
-class Win32(underlyingNode: Node? = null) :
+open class Win32(underlyingNode: Node? = null) :
     OperatingSystemArchitecture(underlyingNode = underlyingNode)
 
 /** Represents a POSIX architecture, commonly found on Linux systems, */
@@ -57,4 +57,4 @@ open class POSIX(underlyingNode: Node? = null) :
  * Represents a Darwin architecture, commonly found on macOS systems. macOS is a certified
  * [UNIX](https://www.opengroup.org/openbrand/register/apple.htm) and is (mostly) POSIX compatible.
  */
-class Darwin(underlyingNode: Node? = null) : POSIX(underlyingNode = underlyingNode)
+open class Darwin(underlyingNode: Node? = null) : POSIX(underlyingNode = underlyingNode)

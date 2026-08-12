@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.processing
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -33,11 +32,12 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.test.*
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 import kotlin.test.Test
@@ -49,9 +49,9 @@ class VisitorTest : BaseTest() {
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
-        val tu = TranslationUnitDeclaration()
-        val name = NamespaceDeclaration()
-        val func = FunctionDeclaration()
+        val tu = TranslationUnit()
+        val name = Namespace()
+        val func = Function()
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)
@@ -60,8 +60,8 @@ class VisitorTest : BaseTest() {
         // Let's visit
         tu.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     visited += t
                 }
             },
@@ -81,7 +81,7 @@ class VisitorTest : BaseTest() {
         assertNotNull(method)
 
         // the "first" statement includes the block itself, so we need to get index 1 instead of 0
-        val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.statements.Statement>(0)
+        val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.expressions.Expression>(0)
         assertNotNull(firstStmt)
 
         firstStmt.accept(
@@ -104,34 +104,34 @@ class VisitorTest : BaseTest() {
         val nodeList = mutableListOf<Node>()
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
             },
         )
-        // TODO: It seems to expect a FieldDeclaration for "System" but that's contrary to other
+        // TODO: It seems to expect a Field for "System" but that's contrary to other
         // tests where it shouldn't exist.
         // Please double check. Until then, I'll change the expected number.
         assertEquals(37, nodeList.size)
     }
 
-    /** Visits only ReturnStatement nodes. */
+    /** Visits only Return nodes. */
     @Test
     fun testReturnStmtVisitor() {
-        val returnStatements: MutableList<ReturnStatement> = ArrayList()
+        val returns: MutableList<Return> = ArrayList()
         assertNotNull(recordDeclaration)
 
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                fun visit(r: ReturnStatement) {
-                    returnStatements.add(r)
+            object : IVisitor<AstNode>() {
+                fun visit(r: Return) {
+                    returns.add(r)
                 }
             },
         )
-        assertEquals(2, returnStatements.size)
+        assertEquals(2, returns.size)
     }
 
     @Test
@@ -167,8 +167,8 @@ class VisitorTest : BaseTest() {
     fun testFallbackTULeastImported() {
         val component = Component()
 
-        val tr1 = TranslationUnitDeclaration().also { it.name = Name("tr1") }
-        val tr2 = TranslationUnitDeclaration().also { it.name = Name("tr2") }
+        val tr1 = TranslationUnit().also { it.name = Name("tr1") }
+        val tr2 = TranslationUnit().also { it.name = Name("tr2") }
 
         component.translationUnits += tr1
         component.translationUnits += tr2
@@ -178,7 +178,7 @@ class VisitorTest : BaseTest() {
         assertEquals(listOf(tr1, tr2), fallback)
 
         component.translationUnitDependencies =
-            ImportDependencies<TranslationUnitDeclaration>(component.translationUnits).also {
+            ImportDependencies<TranslationUnit>(component.translationUnits).also {
                 it.add(tr1, tr2)
                 it
             }
@@ -190,7 +190,7 @@ class VisitorTest : BaseTest() {
     }
 
     companion object {
-        private var recordDeclaration: RecordDeclaration? = null
+        private var recordDeclaration: Record? = null
 
         @BeforeAll
         @JvmStatic

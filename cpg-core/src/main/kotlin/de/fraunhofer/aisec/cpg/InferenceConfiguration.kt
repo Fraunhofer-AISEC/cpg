@@ -46,6 +46,9 @@ private constructor(
     /** Enables the inference of function declarations. */
     val inferFunctions: Boolean,
 
+    /** Enables the inference of field declarations. */
+    val inferFields: Boolean,
+
     /** Enables the inference of variables, such as global variables. */
     val inferVariables: Boolean,
 
@@ -65,6 +68,7 @@ private constructor(
         private var enabled: Boolean = true,
         private var inferNamespaces: Boolean = true,
         private var inferRecords: Boolean = true,
+        private var inferFields: Boolean = true,
         private var inferFunctions: Boolean = true,
         private var inferVariables: Boolean = true,
         private var inferReturnTypes: Boolean = false,
@@ -77,6 +81,8 @@ private constructor(
         fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
 
         fun inferFunctions(infer: Boolean) = apply { this.inferFunctions = infer }
+
+        fun inferFields(infer: Boolean) = apply { this.inferFields = infer }
 
         fun inferVariables(infer: Boolean) = apply { this.inferVariables = infer }
 
@@ -92,6 +98,7 @@ private constructor(
                 inferNamespaces,
                 inferRecords,
                 inferFunctions,
+                inferFields,
                 inferVariables,
                 inferReturnTypes,
                 inferDfgForUnresolvedCalls,

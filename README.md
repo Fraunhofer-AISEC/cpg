@@ -94,22 +94,20 @@ configuration is set through a builder pattern.
 #### InferenceConfiguration
 
 The class `InferenceConfiguration` can be used to affect the behavior or the passes if they identify missing nodes.
-Currently, there are three flags which can be enabled:
+Currently, there are flags which can be enabled, the most important ones are:
 
-* `guessCastExpression` enables guessing if a CPP expression is a cast or a call expression if it is not clear.
 * `inferRecords` enables the inference of missing record declarations (i.e., classes and structs)
-* `inferDfgForUnresolvedSymbols` adds DFG edges to method calls represent all potential data flows if the called function
+* `inferDfgForUnresolvedCalls` adds DFG edges to method calls represent all potential data flows if the called function
   is not present in the source code under analysis.
 
-Only `inferDfgForUnresolvedSymbols` is turned on by default.
+Only `inferDfgForUnresolvedCalls` is turned on by default.
 
 The configuration can be made through a builder pattern and is set in the `TranslationConfiguration` as follows:
 ```kt
 val inferenceConfig = InferenceConfiguration
     .builder()
-    .guessCastExpression(true)
     .inferRecords(true)
-    .inferDfgForUnresolvedSymbols(true)
+    .inferDfgForUnresolvedCalls(true)
     .build()
 
 val translationConfig = TranslationConfiguration
@@ -143,6 +141,8 @@ The current state of languages is:
 | Ruby                     | cpg-language-ruby                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
 | {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
 
+Note that several languages can be compiled to LLVM IR and thus, can be analyzed using the `cpg-language-llvm` module (see [7]). This includes, but is not limited to, Rust, Swift, Objective-C, and Haskell (see https://llvm.org/ for more information). 
+
 ### Languages and Configuration
 `cpg-core` contains the graph nodes, language-independent passes that add semantics to the cpg-AST. Languages are developed in separate gradle submodules. 
 To include the desired language submodules, simply toggle them on in your local `gradle.properties` file by setting the properties to `true`, e.g., (`enableGoFrontend=true`).
@@ -156,8 +156,7 @@ In the case of Golang, additional native code, [libgoast](https://github.com/Fra
 #### Python
 
 You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
-
-Currently, only Python 3.{9,10,11,12,13} is supported.
+Currently, only Python 3.{10,11,12,13,14,15} is supported.
 
 ##### System Wide
 
@@ -174,6 +173,14 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 #### TypeScript
 
 For parsing TypeScript, the necessary TypeScript-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically. The bundles script will be placed inside the jar's resources and should work out of the box.
+
+#### AI
+
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality, together with other AI components such as skills and chat integration, is provided via the optional `cpg-ai` module. It can be enabled/disabled via the `gradle.properties` setting `enableAIModule`. Note that `codyze-console` has a hard, unconditional build dependency on `cpg-ai`: enabling `enableCodyzeConsole` always enables `cpg-ai` too, even if `enableAIModule=false` is set explicitly.
+
+#### Codyze Console
+
+The [Codyze Console](codyze-console/README.md) web application is an optional module, enabled/disabled via the `gradle.properties` setting `enableCodyzeConsole`. Its AI chat feature additionally requires the `cpg-ai` module (see above), which - as noted there - is automatically enabled alongside `codyze-console` unless `enableAIModule` is set explicitly.
 
 ### Code Style
 
@@ -196,19 +203,9 @@ cp style/pre-commit .git/hooks
 
 ## Contributors
 
-The following authors have contributed to this project (in alphabetical order):
-* [fwendland](https://github.com/fwendland)
-* [JulianSchuette](https://github.com/JulianSchuette)
-* [konradweiss](https://github.com/konradweiss)
-* [KuechA](https://github.com/KuechA)
-* [Masrepus](https://github.com/Masrepus)
-* [maximiliankaul](https://github.com/maximiliankaul)
-* [maximilian-galanis](https://github.com/maximilian-galanis)
-* [obraunsdorf](https://github.com/obraunsdorf)
-* [oxisto](https://github.com/oxisto)
-* [peckto](https://github.com/peckto)
-* [titze](https://github.com/titze)
-* [vfsrfs](https://github.com/vfsrfs)
+The following authors have contributed to this project:
+
+<a href="https://github.com/Fraunhofer-AISEC/cpg/graphs/contributors"><img src="https://contrib.rocks/image?repo=Fraunhofer-AISEC/cpg" /></a>
 
 ## Contributing
 

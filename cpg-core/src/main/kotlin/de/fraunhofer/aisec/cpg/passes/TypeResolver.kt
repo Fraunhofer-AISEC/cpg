@@ -30,7 +30,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
@@ -46,24 +46,29 @@ import kotlin.collections.plusAssign
 
 /**
  * The purpose of this [Pass] is to establish a relationship between [Type] nodes (more specifically
- * [ObjectType]s) and their [RecordDeclaration].
+ * [ObjectType]s) and their [Record].
  */
 @DependsOn(ImportResolver::class)
+@Description(
+    "Resolves and infers types for nodes in the CPG, enhancing the semantic understanding of the code represented in the graph."
+)
 open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(component: Component) {
         ctx.currentComponent = component
         walker = SubgraphWalker.ScopedWalker(scopeManager, strategy = Strategy::AST_FORWARD)
         walker.registerHandler { handleNode(it) }
         walker.iterate(component)
+
+        component.additionalTypes.values.forEach { handleType(it) }
     }
 
     /**
      * This function is called for each [Node] in the component. It checks if the node has a type or
      * declares a type. If so, it tries to resolve the type using [resolveType]. It also checks for
-     * secondary type edges (see [HasSecondaryTypeEdge] and resolves them as well.
+     * secondary type edges (see [HasSecondaryTypeEdge]) and resolves them as well.
      *
      * @param node The node to handle.
      */
@@ -169,7 +174,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.name = declaredType.name
             type.refreshNames()
             type.declaredFrom = declares
-            type.recordDeclaration = declares as? RecordDeclaration
+            type.recordDeclaration = declares as? Record
             type.typeOrigin = Type.Origin.RESOLVED
             typeManager.resolvedTypes += type
 
@@ -207,10 +212,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
  * This helper function sets the [Type.scope] to the current [ScopeManager.globalScope] if it has a
  * [GlobalScope]. This is necessary because the parallel parsing introduces multiple global scopes.
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 private fun Type.updateGlobalScope() {
     if (scope is GlobalScope) {
-        scope = ctx.scopeManager.globalScope
+        scope = provider.ctx.scopeManager.globalScope
         secondOrderTypes.forEach { it.updateGlobalScope() }
     }
 }

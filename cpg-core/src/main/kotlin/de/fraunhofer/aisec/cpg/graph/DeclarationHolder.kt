@@ -46,11 +46,11 @@ interface DeclarationHolder {
         }
     }
 
-    fun <T : Node, P : AstEdge<T>> addIfNotContains(collection: AstEdges<T, P>, declaration: T) {
+    fun <T : AstNode, P : AstEdge<T>> addIfNotContains(collection: AstEdges<T, P>, declaration: T) {
         addIfNotContains(collection, declaration, true)
     }
 
-    fun <T : Node, P : Edge<T>> addIfNotContains(collection: EdgeList<T, P>, declaration: T) {
+    fun <T : AstNode, P : Edge<T>> addIfNotContains(collection: EdgeList<T, P>, declaration: T) {
         addIfNotContains(collection, declaration, true)
     }
 

@@ -33,13 +33,10 @@ class CommandIntegrationTest {
     @Test
     fun testScanCommand() {
         val command = ScanCommand()
-        val result =
-            command.test(
-                "--project-dir src/integrationTest/resources/demo-app --components webapp --components auth"
-            )
+        val result = command.test("--project-dir src/integrationTest/resources/demo-app")
         assertEquals(
-            "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n" +
-                "Message(arguments=null, id=null, markdown=null, properties=null, text=Query was successful)\n",
+            "Message(arguments=null, id=null, markdown=null, properties=null, text=The query was successful)\n" +
+                "Message(arguments=null, id=null, markdown=null, properties=null, text=The query was successful)\n",
             result.output,
         )
     }

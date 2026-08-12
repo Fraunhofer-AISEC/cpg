@@ -25,25 +25,56 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.HasModifiers
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
-import org.neo4j.ogm.annotation.NodeEntity
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
- * function ([FunctionDeclaration]).
+ * Represents a single declaration or definition, i.e. of a variable ([Variable]) or function
+ * ([Function]).
  *
  * Note: We do NOT (currently) distinguish between the definition and the declaration of a function.
  * This means, that if a function is first declared and later defined with a function body, we will
- * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
- * however clang does establish a connection between those nodes, we currently do not.
+ * currently have two [Function] nodes. This is very similar to the behaviour of clang, however
+ * clang does establish a connection between those nodes, we currently do not.
  */
-@NodeEntity
-abstract class Declaration : Node() {
+abstract class Declaration : AstNode(), HasModifiers {
     @DoNotPersist
     val symbol: Symbol
         get() {
             return this.name.localName
         }
+
+    /**
+     * Returns the [Scope] that this [Declaration] declares (if it does). For example, for a
+     * [Record], this will return the [RecordScope] of the particular record or class.
+     */
+    var declaringScope: Scope? = null
+
+    override var modifiers: Set<String> = setOf()
+
+    /**
+     * The canonical, language-independent [Visibility] of this declaration. While [modifiers] keeps
+     * the raw, language-specific spelling (e.g. the strings `public` or `static`), this exposes the
+     * *interpreted* visibility that passes such as the
+     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] can reason about without knowing any
+     * language's concrete keywords. A language frontend maps the relevant [modifiers] onto this
+     * value (see [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]). The default
+     * [Visibility.UNKNOWN] must be treated as "no restriction", so languages that do not model
+     * visibility are unaffected.
+     */
+    var visibility: Visibility = Visibility.UNKNOWN
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
 }

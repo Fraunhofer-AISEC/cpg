@@ -30,17 +30,30 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.project.Project
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
+import kotlin.script.experimental.api.ResultValue
+import kotlin.script.experimental.api.ResultWithDiagnostics
+import kotlin.script.experimental.api.ScriptDiagnostic
+import kotlin.script.experimental.api.constructorArgs
+import kotlin.script.experimental.host.toScriptSource
+import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
+import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
+import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -61,55 +74,54 @@ class ConsoleService {
     private var newConceptNodes: Set<Concept> = emptySet()
     private var newPersistedConcepts = mutableListOf<PersistedConceptEntry>()
 
+    // Cache for QueryTrees to support lazy loading
+    private var queryTreeCache: Map<String, QueryTree<*>> = emptyMap()
+
+    // Cache for parent relationships to support tree expansion
+    private var queryTreeParentMap: Map<String, String> = emptyMap()
+
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
      */
     suspend fun analyze(request: AnalyzeRequestJSON): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(request.sourceDir)
-            val builder =
-                TranslationConfiguration.builder()
-                    .sourceLocations(path.toFile())
-                    .defaultPasses()
-                    .loadIncludes(true)
-                    .registerPass<PythonStdLibConfigurationPass>()
-                    .registerPass<LoadPersistedConcepts>()
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                    .optionalLanguage(
-                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
-                    )
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
-                    .codeInNodes(true)
+            val project =
+                Project.from(path) {
+                    // If an explicit top-level is requested, we place the sources in a single
+                    // component rooted there instead of relying on auto-detection
+                    request.topLevel?.let {
+                        component(
+                            DEFAULT_APPLICATION_NAME,
+                            root = Path.of(it),
+                            sources = listOf(path),
+                        )
+                    }
 
-            if (request.includeDir != null) {
-                builder.includePath(request.includeDir)
-            }
+                    translation {
+                        it.loadIncludes(true)
+                        it.registerPass<PythonStdLibConfigurationPass>()
+                        it.registerPass<LoadPersistedConcepts>()
 
-            if (request.topLevel != null) {
-                builder.topLevel(File(request.topLevel))
-            }
-
-            if (request.conceptsFile != null) {
-                builder.configurePass<LoadPersistedConcepts>(
-                    LoadPersistedConcepts.Configuration(
-                        conceptFiles = listOf(File(request.conceptsFile))
-                    )
-                )
-            }
-
-            val config = builder.build()
+                        request.includeDir?.let { dir -> it.includePath(dir) }
+                        request.conceptsFile?.let { file ->
+                            it.configurePass<LoadPersistedConcepts>(
+                                LoadPersistedConcepts.Configuration(
+                                    conceptFiles = listOf(File(file))
+                                )
+                            )
+                        }
+                    }
+                }
 
             // Build an ad-hoc project
-            val project =
-                AnalysisProject(name = AD_HOC_PROJECT_NAME, projectDir = null, config = config)
-            analyzeProject(project)
+            val analysisProject =
+                AnalysisProject(
+                    name = AD_HOC_PROJECT_NAME,
+                    projectDir = null,
+                    config = project.config,
+                )
+            analyzeProject(analysisProject)
         }
 
     /** Analyzes the given project and returns the analysis result as [AnalysisResultJSON]. */
@@ -118,9 +130,43 @@ class ConsoleService {
 
         val result = project.analyze()
 
+        // Update the global analysis result in the MCP server
+        globalAnalysisResult = result.translationResult
+
+        // Populate QueryTree cache for lazy loading
+        populateQueryTreeCache(result.requirementsResults)
+
         val json = result.toJSON()
         this@ConsoleService.analysisResult = json
         return json
+    }
+
+    /**
+     * Populates the QueryTree cache with all QueryTrees from the analysis results. This enables
+     * lazy loading of QueryTree children and builds parent relationships for tree expansion.
+     */
+    private fun populateQueryTreeCache(requirementsResults: Map<String, QueryTree<Boolean>>?) {
+        if (requirementsResults == null) {
+            queryTreeCache = emptyMap()
+            queryTreeParentMap = emptyMap()
+            return
+        }
+
+        val cache = mutableMapOf<String, QueryTree<*>>()
+        val parentMap = mutableMapOf<String, String>()
+
+        // Recursively collect all QueryTrees and build parent relationships
+        fun collectQueryTrees(queryTree: QueryTree<*>) {
+            cache[queryTree.id.toString()] = queryTree
+            queryTree.children.forEach { child ->
+                parentMap[child.id.toString()] = queryTree.id.toString()
+                collectQueryTrees(child)
+            }
+        }
+
+        requirementsResults.values.forEach { collectQueryTrees(it) }
+        queryTreeCache = cache
+        queryTreeParentMap = parentMap
     }
 
     /** Returns the translation result of the last analysis as [AnalysisResultJSON]. */
@@ -157,10 +203,108 @@ class ConsoleService {
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
     }
 
+    /** Returns the requirement with the given ID as [RequirementJSON]. */
+    fun getRequirement(requirementId: String): RequirementJSON? {
+        return analysisResult
+            ?.requirementCategories
+            ?.flatMap { it.requirements }
+            ?.find { it.id == requirementId }
+    }
+
+    /** Returns the QueryTree with the given ID as [QueryTreeJSON] for lazy loading. */
+    fun getQueryTree(queryTreeId: String): QueryTreeJSON? {
+        return queryTreeCache[queryTreeId]?.toJSON()
+    }
+
+    /** Returns multiple QueryTrees by their IDs as a list of [QueryTreeJSON] for lazy loading. */
+    fun getQueryTrees(queryTreeIds: List<String>): List<QueryTreeJSON> {
+        val results =
+            queryTreeIds.mapNotNull { id ->
+                val result = queryTreeCache[id]?.toJSON()
+                result
+            }
+
+        return results
+    }
+
+    /** Returns a QueryTree with all its parent IDs for tree expansion. */
+    fun getQueryTreeWithParents(queryTreeId: String): QueryTreeWithParentsJSON? {
+        val queryTree = queryTreeCache[queryTreeId]?.toJSON() ?: return null
+
+        // Build the list of parent IDs by following the parent chain
+        val parentIds = mutableListOf<String>()
+        var currentId: String? = queryTreeId
+
+        while (currentId != null) {
+            val parentId = queryTreeParentMap[currentId]
+            if (parentId != null) {
+                parentIds.add(parentId)
+                currentId = parentId
+            } else {
+                currentId = null
+            }
+        }
+
+        return QueryTreeWithParentsJSON(queryTree = queryTree, parentIds = parentIds)
+    }
+
     /**
-     * Adds a new [Concept] node as an [de.fraunhofer.aisec.cpg.graph.OverlayNode] to an existing
-     * node in the analysis result. The DFG edges can be configured to connect the new concept node
-     * to the existing node.
+     * Executes a Kotlin query script against the current [TranslationResult].
+     *
+     * The [TranslationResult] is available as the `result` variable within the script. All common
+     * CPG packages are imported automatically, so the
+     * [Shortcut API][de.fraunhofer.aisec.cpg.graph.functions] can be used directly.
+     *
+     * @param scriptCode The Kotlin script code to evaluate
+     * @return The result of the last expression in the script as a string, or an error message
+     */
+    suspend fun executeQuery(scriptCode: String): String =
+        withContext(Dispatchers.IO) {
+            val translationResult =
+                analysisResult?.analysisResult?.translationResult
+                    ?: return@withContext "No analysis result available. Please run an analysis first."
+
+            try {
+                val compilationConfiguration =
+                    createJvmCompilationConfigurationFromTemplate<CpgQueryScript>()
+                val evaluationConfiguration =
+                    createJvmEvaluationConfigurationFromTemplate<CpgQueryScript> {
+                        constructorArgs(translationResult)
+                    }
+
+                val scriptResult =
+                    BasicJvmScriptingHost()
+                        .eval(
+                            scriptCode.toScriptSource(),
+                            compilationConfiguration,
+                            evaluationConfiguration,
+                        )
+
+                when (scriptResult) {
+                    is ResultWithDiagnostics.Success -> {
+                        when (val returnValue = scriptResult.value.returnValue) {
+                            is ResultValue.Value -> returnValue.value?.toString() ?: "null"
+                            is ResultValue.Unit -> "Query executed successfully (no return value)"
+                            is ResultValue.Error -> "Error: ${returnValue.error}"
+                            else -> "Query executed (no result)"
+                        }
+                    }
+                    is ResultWithDiagnostics.Failure -> {
+                        val errors =
+                            scriptResult.reports.filter {
+                                it.severity >= ScriptDiagnostic.Severity.ERROR
+                            }
+                        "Compilation error: ${errors.joinToString("; ") { it.message }}"
+                    }
+                }
+            } catch (e: Exception) {
+                "Error executing query: ${e.message}"
+            }
+        }
+
+    /**
+     * Adds a new [Concept] node as an [OverlayNode] to an existing node in the analysis result. The
+     * DFG edges can be configured to connect the new concept node to the existing node.
      *
      * @param request The request containing node ID, concept name and configuration parameters
      *   (connect DFG)
@@ -212,10 +356,7 @@ class ConsoleService {
      * Extracts the nodes from the given translation unit. If [overlayNodes] is true, it extracts
      * the overlay nodes, otherwise it extracts the AST nodes.
      */
-    private fun extractNodes(
-        tu: TranslationUnitDeclaration,
-        overlayNodes: Boolean,
-    ): List<NodeJSON> {
+    private fun extractNodes(tu: TranslationUnit, overlayNodes: Boolean): List<NodeJSON> {
         return if (overlayNodes) {
             tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
         } else {
@@ -229,6 +370,9 @@ class ConsoleService {
             val service = ConsoleService()
             service.analysisResult = result.toJSON()
             service.lastProject = result.project
+            // Populate QueryTree cache for lazy loading
+            service.populateQueryTreeCache(result.requirementsResults)
+
             return service
         }
     }

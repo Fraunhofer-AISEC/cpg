@@ -26,14 +26,16 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -47,8 +49,8 @@ object Util {
      * @param searchCode exact code that a node needs to have.
      * @return a list of nodes with the specified String.
      */
-    fun subnodesOfCode(node: Node?, searchCode: String): List<Node> {
-        return SubgraphWalker.flattenAST(node).filter { n: Node ->
+    fun subnodesOfCode(node: AstNode?, searchCode: String): List<AstNode> {
+        return SubgraphWalker.flattenAST(node).filter { n ->
             n.code != null && n.code == searchCode
         }
     }
@@ -81,10 +83,10 @@ object Util {
         quantifier: Quantifier = Quantifier.ALL,
         connectStart: Connect = Connect.SUBTREE,
         edgeDirection: Edge,
-        startNode: Node?,
+        startNode: AstNode?,
         connectEnd: Connect = Connect.SUBTREE,
         predicate: ((EvaluationOrder) -> Boolean)? = null,
-        endNodes: List<Node?>,
+        endNodes: List<AstNode?>,
     ): Boolean {
         if (startNode == null) {
             return false
@@ -94,7 +96,7 @@ object Util {
         val er = if (edgeDirection == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
         var refSide = endNodes
         nodeSide =
-            if (connectStart == Connect.SUBTREE) {
+            (if (connectStart == Connect.SUBTREE) {
                 val border = SubgraphWalker.getEOGPathEdges(startNode)
                 if (edgeDirection == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
@@ -114,9 +116,10 @@ object Util {
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
-            }
+            })
+                as List<AstNode>
         refSide =
-            if (connectEnd == Connect.SUBTREE) {
+            (if (connectEnd == Connect.SUBTREE) {
                 val borders = endNodes.map { SubgraphWalker.getEOGPathEdges(it) }
 
                 borders.flatMap { border ->
@@ -142,7 +145,8 @@ object Util {
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(node)
                 }
-            }
+            })
+                as List<AstNode?>
         val refNodes = refSide
         return if (Quantifier.ANY == quantifier) nodeSide.any { it in refNodes }
         else refNodes.containsAll(nodeSide)
@@ -390,25 +394,15 @@ object Util {
     }
 
     /**
-     * Establishes data-flow from the arguments of a [CallExpression] to the parameters of a
-     * [FunctionDeclaration] parameters. It handles positional arguments, named/default arguments,
-     * and variadic parameters. Additionally, if the call is a [MemberCallExpression], it
-     * establishes a data-flow from the [MemberCallExpression.base] towards the
-     * [MethodDeclaration.receiver].
+     * Returns a list which parameter of a [Function] matches with arguments of a [Call] It handles
+     * positional arguments, named/default arguments, and variadic parameters.
      *
-     * @param target The call's target [FunctionDeclaration]
-     * @param call The [CallExpression]
+     * @param target The call's target [Function]
+     * @param call The [Call]
+     * @return Map Argument -> Parameter
      */
-    fun attachCallParameters(target: FunctionDeclaration, call: CallExpression) {
-        // Add an incoming DFG edge from a member call's base to the method's receiver
-        if (target is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
-            target.receiver?.let { receiver ->
-                call.base
-                    ?.nextDFGEdges
-                    ?.addContextSensitive(receiver, callingContext = CallingContextIn(call))
-            }
-        }
-
+    fun matchArgumentsToCallParameters(target: Function, call: Call): MutableMap<Node, Parameter> {
+        val ret = mutableMapOf<Node, Parameter>()
         val functionParameters = target.parameters
         val argumentEdges = call.argumentEdges
         var argumentIndex = 0
@@ -418,10 +412,7 @@ object Util {
             // Try to find a named argument matching this parameter
             val namedEdge = argumentEdges.firstOrNull { it.name == param.name.localName }
             if (namedEdge != null) {
-                param.prevDFGEdges.addContextSensitive(
-                    namedEdge.end,
-                    callingContext = CallingContextIn(call),
-                )
+                ret[namedEdge.end] = param
                 argumentIndex++
                 continue // Move to next parameter
             }
@@ -435,19 +426,13 @@ object Util {
                     val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
                     remainingEdges.forEach { edge ->
                         if (isKeywordVariadic) {
-                            param.prevDFGEdges.addContextSensitive(
-                                edge.end,
-                                callingContext = CallingContextIn(call),
-                            )
+                            ret[edge.end] = param
                             argumentIndex++
                         } else {
                             // otherwise it is a positional variadic parameter (e.g. *args in
                             // python) without keyword
                             if (edge.name == null) {
-                                param.prevDFGEdges.addContextSensitive(
-                                    edge.end,
-                                    callingContext = CallingContextIn(call),
-                                )
+                                ret[edge.end] = param
                                 argumentIndex++
                             }
                         }
@@ -458,10 +443,7 @@ object Util {
 
             // Handle only positional parameters, ignoring named arguments
             if (argumentEdge != null && argumentEdge.name == null) {
-                param.prevDFGEdges.addContextSensitive(
-                    argumentEdge.end,
-                    callingContext = CallingContextIn(call),
-                )
+                ret[argumentEdge.end] = param
                 argumentIndex++
                 continue // Move to next parameter
             }
@@ -469,11 +451,38 @@ object Util {
             // Handle default parameters when not explicitly provided
             val default = param.default
             if (default != null) {
-                param.prevDFGEdges.addContextSensitive(
-                    default,
-                    callingContext = CallingContextIn(call),
-                )
+                ret[default] = param
             }
+        }
+        return ret
+    }
+
+    /**
+     * Establishes data-flow from the arguments of a [Call] to the parameters of a [Function]
+     * parameters. Additionally, if the call is a [MemberCall], it establishes a data-flow from the
+     * [MemberCall.base] towards the [Method.receiver].
+     *
+     * @param target The call's target [Function]
+     * @param call The [Call]
+     */
+    fun attachCallParameters(target: Function, call: Call) {
+        // Add an incoming DFG edge from a member call's base to the method's receiver
+        if (target is Method && call is MemberCall && !call.isStatic) {
+            target.receiver?.let { receiver ->
+                call.base
+                    ?.nextDFGEdges
+                    ?.addContextSensitive(
+                        receiver,
+                        callingContext = CallingContextIn(mutableListOf(call)),
+                    )
+            }
+        }
+
+        matchArgumentsToCallParameters(target, call).forEach { (argument, param) ->
+            param.prevDFGEdges.addContextSensitive(
+                argument,
+                callingContext = CallingContextIn(mutableListOf(call)),
+            )
         }
     }
 
@@ -483,7 +492,7 @@ object Util {
      * @param target
      * @param arguments
      */
-    fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression>) {
+    fun detachCallParameters(target: Function, arguments: List<Expression>) {
         for (param in target.parameters) {
             // A param could be variadic, so multiple arguments could be set as incoming DFG
             param.prevDFGEdges
@@ -499,7 +508,7 @@ object Util {
      * @param incoming whether the node connected by an incoming or, if false, outgoing DFG edge
      * @return
      */
-    fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
+    fun getAdjacentDFGNodes(n: AstNode, incoming: Boolean): MutableList<AstNode> {
         val subnodes = n?.astChildren ?: listOf()
         val adjacentNodes =
             if (incoming) {
@@ -508,30 +517,6 @@ object Util {
                 subnodes.filter { it.prevDFG.contains(n) }.toMutableList()
             }
         return adjacentNodes
-    }
-
-    /**
-     * Connects the node `n` with the node `branchingExp` if present or with the node
-     * `branchingDecl`. The assumption is that only `branchingExp` or `branchingDecl` are present,
-     * e.g. C++.
-     *
-     * @param n
-     * @param branchingExp
-     * @param branchingDeclaration
-     */
-    fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
-        n: Node,
-        branchingExp: Node?,
-        branchingDeclaration: Node?,
-    ) {
-        var conditionNodes = mutableListOf<Node>()
-        if (branchingExp != null) {
-            conditionNodes = mutableListOf()
-            conditionNodes.add(branchingExp)
-        } else if (branchingDeclaration != null) {
-            conditionNodes = getAdjacentDFGNodes(branchingDeclaration, true)
-        }
-        conditionNodes.forEach { n.prevDFGEdges += it }
     }
 
     enum class Connect {

@@ -28,31 +28,41 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import sootup.core.jimple.basic.Local
+import sootup.core.jimple.common.Local
 import sootup.core.model.SootClass
 import sootup.core.model.SootField
 import sootup.core.model.SootMethod
-import sootup.java.core.JavaSootClass
-import sootup.java.core.JavaSootField
-import sootup.java.core.JavaSootMethod
-import sootup.java.core.jimple.basic.JavaLocal
 
 class DeclarationHandler(frontend: JVMLanguageFrontend) :
     Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
-    init {
-        map.put(SootClass::class.java) { handleClass(it as SootClass) }
-        map.put(JavaSootClass::class.java) { handleClass(it as SootClass) }
-        map.put(SootMethod::class.java) { handleMethod(it as SootMethod) }
-        map.put(JavaSootMethod::class.java) { handleMethod(it as SootMethod) }
-        map.put(SootField::class.java) { handleField(it as SootField) }
-        map.put(JavaSootField::class.java) { handleField(it as SootField) }
-        map.put(Local::class.java) { handleLocal(it as Local) }
-        map.put(JavaLocal::class.java) { handleLocal(it as Local) }
+
+    override fun handle(ctx: Any): Declaration {
+        try {
+            return when (ctx) {
+                is SootClass -> handleClass(ctx)
+                is SootMethod -> handleMethod(ctx)
+                is SootField -> handleField(ctx)
+                is Local -> handleLocal(ctx)
+                else -> {
+                    log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
+                    newProblemDeclaration(
+                        "Unhandled declaration type: ${ctx.javaClass.simpleName}",
+                        rawNode = ctx,
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            log.error("Error while handling a declaration", e)
+            return newProblemDeclaration(
+                "Error handling declaration ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
+        }
     }
 
-    private fun handleClass(sootClass: SootClass): RecordDeclaration {
+    private fun handleClass(sootClass: SootClass): Record {
         val record =
-            newRecordDeclaration(
+            newRecord(
                 sootClass.getName(),
                 if (sootClass.isInterface()) {
                     "interface"
@@ -78,7 +88,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Loop through all fields
         for (sootField in sootClass.fields) {
-            val field = handle(sootField) as? FieldDeclaration
+            val field = handle(sootField) as? Field
             if (field != null) {
                 frontend.scopeManager.addDeclaration(field)
                 record.addDeclaration(field)
@@ -87,7 +97,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Loop through all methods
         for (sootMethod in sootClass.methods) {
-            val method = handle(sootMethod) as? MethodDeclaration
+            val method = handle(sootMethod) as? Method
             if (method != null) {
                 frontend.scopeManager.addDeclaration(method)
                 record.addDeclaration(method)
@@ -100,14 +110,14 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         return record
     }
 
-    private fun handleMethod(sootMethod: SootMethod): MethodDeclaration {
+    private fun handleMethod(sootMethod: SootMethod): Method {
         val record = frontend.scopeManager.currentRecord
 
         val method =
             if (sootMethod.name == "<init>") {
-                newConstructorDeclaration(sootMethod.name, record, rawNode = sootMethod)
+                newConstructor(sootMethod.name, record, rawNode = sootMethod)
             } else {
-                newMethodDeclaration(
+                newMethod(
                     sootMethod.name,
                     sootMethod.isStatic,
                     frontend.scopeManager.currentRecord,
@@ -120,19 +130,20 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Add "@this" as the receiver
         val receiver =
-            newVariableDeclaration("@this", method.recordDeclaration?.toType() ?: unknownType())
+            newVariable("@this", method.recordDeclaration?.toType() ?: unknownType())
                 .implicit("@this")
         frontend.scopeManager.addDeclaration(receiver)
         method.receiver = receiver
 
         // Add method parameters
         for ((index, type) in sootMethod.parameterTypes.withIndex()) {
-            val param = newParameterDeclaration("@parameter${index}", frontend.typeOf(type))
+            val param = newParameter("@parameter${index}", frontend.typeOf(type))
             frontend.scopeManager.addDeclaration(param)
             method.parameters += param
         }
 
-        if (sootMethod.isConcrete) {
+        // Parse body if doNotParseBody returns false
+        if (!frontend.frontendConfiguration.doNotParseBody(method) && sootMethod.isConcrete) {
             // Handle method body
             method.body = frontend.statementHandler.handle(sootMethod.body)
         }
@@ -143,16 +154,16 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         return method
     }
 
-    fun handleField(field: SootField): FieldDeclaration {
-        return newFieldDeclaration(
+    fun handleField(field: SootField): Field {
+        return newField(
             field.name,
             frontend.typeOf(field.type),
-            field.modifiers.map { it.name.lowercase() },
+            field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
             rawNode = field,
         )
     }
 
-    private fun handleLocal(local: Local): VariableDeclaration {
-        return newVariableDeclaration(local.name, frontend.typeOf(local.type), rawNode = local)
+    private fun handleLocal(local: Local): Variable {
+        return newVariable(local.name, frontend.typeOf(local.type), rawNode = local)
     }
 }

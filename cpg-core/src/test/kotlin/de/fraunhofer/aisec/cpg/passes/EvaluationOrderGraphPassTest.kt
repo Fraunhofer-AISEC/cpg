@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -36,7 +36,7 @@ import kotlin.test.assertTrue
 class EvaluationOrderGraphPassTest {
 
     @Test
-    fun testWhileStatement() {
+    fun testWhile() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
 
         val whileStmt = whileTest.whileLoops.firstOrNull()
@@ -55,15 +55,15 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(whileStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(whileStmt.condition, whileStmt.conditionDeclaration),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = postWhile,
-                endNodes = listOf(whileStmt.elseStatement, breakStmt),
+                endNodes = listOf(whileStmt, breakStmt),
                 connectEnd = Util.Connect.NODE,
             )
         )
@@ -71,22 +71,22 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = whileStmt.elseStatement,
-                endNodes = listOf(postWhile),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(whileStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
-                endNodes = listOf(postWhile),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(whileStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
     }
 
     @Test
-    fun testDoStatement() {
+    fun testDo() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
 
         val doStmt = doTest.doLoops.firstOrNull()
@@ -105,14 +105,15 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(doStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(doStmt.condition),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
-                startNode = postWhile,
+                connectStart = Util.Connect.NODE,
+                startNode = doStmt,
                 endNodes = listOf(doStmt.elseStatement, breakStmt),
                 connectEnd = Util.Connect.NODE,
             )
@@ -121,14 +122,22 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = doStmt.elseStatement,
-                endNodes = listOf(postWhile),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(doStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
+                endNodes = listOf(doStmt),
+                connectEnd = Util.Connect.NODE,
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = doStmt,
                 endNodes = listOf(postWhile),
                 connectEnd = Util.Connect.SUBTREE,
             )
@@ -136,7 +145,7 @@ class EvaluationOrderGraphPassTest {
     }
 
     @Test
-    fun testForStatement() {
+    fun testFor() {
         val forTest = GraphExamples.getForWithElseAndBreak()
 
         val forStmt = forTest.forLoops.firstOrNull()
@@ -155,15 +164,14 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(forStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(forStmt.condition, forStmt.conditionDeclaration),
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = postFor,
-                endNodes = listOf(forStmt.elseStatement, breakStmt),
+                endNodes = listOf(forStmt, breakStmt),
                 connectEnd = Util.Connect.NODE,
             )
         )
@@ -171,16 +179,24 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = forStmt.elseStatement,
-                endNodes = listOf(postFor),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(forStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
+                endNodes = listOf(forStmt),
+                connectEnd = Util.Connect.NODE,
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = forStmt,
                 endNodes = listOf(postFor),
-                connectEnd = Util.Connect.SUBTREE,
             )
         )
     }
@@ -205,22 +221,23 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(forEachStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(forEachStmt.variable),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = postForEach,
-                endNodes = listOf(forEachStmt.elseStatement, breakStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(forEachStmt),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
-                startNode = forEachStmt.elseStatement,
+                connectStart = Util.Connect.NODE,
+                startNode = forEachStmt,
                 endNodes = listOf(postForEach),
                 connectEnd = Util.Connect.SUBTREE,
             )
@@ -229,15 +246,15 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
-                endNodes = listOf(postForEach),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(forEachStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
     }
 
     @Test
     fun testCollectionComprehensionStatement() {
-        val compExample = GraphExamples.getNestedComprehensionExpressions()
+        val compExample = GraphExamples.getNestedComprehensions()
 
         val listComp = compExample.allChildren<CollectionComprehension>().first()
         assertNotNull(listComp)
@@ -250,11 +267,11 @@ class EvaluationOrderGraphPassTest {
 
         assertTrue { listComp.comprehensionExpressions.size == 2 }
 
-        val outerComprehensionExpression = listComp.comprehensionExpressions.first()
-        assertNotNull(outerComprehensionExpression)
+        val outerComprehension = listComp.comprehensionExpressions.first()
+        assertNotNull(outerComprehension)
 
-        val innerComprehensionExpression = listComp.comprehensionExpressions.last()
-        assertNotNull(innerComprehensionExpression)
+        val innerComprehension = listComp.comprehensionExpressions.last()
+        assertNotNull(innerComprehension)
 
         assertTrue(
             Util.eogConnect(
@@ -275,13 +292,8 @@ class EvaluationOrderGraphPassTest {
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression,
-                endNodes =
-                    listOf(
-                        innerComprehensionExpression,
-                        listComp,
-                        outerComprehensionExpression.variable,
-                    ),
+                startNode = outerComprehension,
+                endNodes = listOf(innerComprehension, listComp, outerComprehension.variable),
                 connectEnd = Util.Connect.SUBTREE,
             )
         )
@@ -289,8 +301,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression,
-                endNodes = listOf(innerComprehensionExpression),
+                startNode = outerComprehension,
+                endNodes = listOf(innerComprehension),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
             )
@@ -300,7 +312,7 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression,
+                startNode = outerComprehension,
                 endNodes = listOf(listComp),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == false },
@@ -310,8 +322,8 @@ class EvaluationOrderGraphPassTest {
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression,
-                endNodes = listOf(outerComprehensionExpression, listComp.statement),
+                startNode = innerComprehension,
+                endNodes = listOf(outerComprehension, listComp.statement),
                 connectEnd = Util.Connect.SUBTREE,
             )
         )
@@ -320,7 +332,7 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression,
+                startNode = innerComprehension,
                 endNodes = listOf(listComp.statement),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
@@ -331,8 +343,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression,
-                endNodes = listOf(outerComprehensionExpression),
+                startNode = innerComprehension,
+                endNodes = listOf(outerComprehension),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == false },
             )
@@ -342,8 +354,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression.iterable,
-                endNodes = listOf(outerComprehensionExpression.variable),
+                startNode = outerComprehension.iterable,
+                endNodes = listOf(outerComprehension.variable),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
             )
@@ -353,8 +365,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression.iterable,
-                endNodes = listOf(innerComprehensionExpression.variable),
+                startNode = innerComprehension.iterable,
+                endNodes = listOf(innerComprehension.variable),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
             )

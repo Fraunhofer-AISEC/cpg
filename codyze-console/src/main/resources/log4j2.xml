@@ -15,5 +15,8 @@
         <Logger name="io.ktor" level="info" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
+        <Logger name="io.ktor.server.plugins" level="warn" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
     </Loggers>
 </Configuration>

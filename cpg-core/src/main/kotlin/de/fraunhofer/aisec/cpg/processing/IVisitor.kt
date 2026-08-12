@@ -33,7 +33,7 @@ import java.lang.reflect.InvocationTargetException
  *
  * @param <V> V must implement `IVisitable`. </V>
  */
-abstract class IVisitor<V : IVisitable<V>> {
+abstract class IVisitor<V : IVisitable> {
     @JvmField val visited = IdentitySet<V>()
 
     open fun visit(t: V) {

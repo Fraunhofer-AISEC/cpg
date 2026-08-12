@@ -31,8 +31,6 @@ import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.ProjectOptions
 import de.fraunhofer.aisec.codyze.TranslationOptions
-import de.fraunhofer.aisec.codyze.console.ConsoleService
-import de.fraunhofer.aisec.codyze.console.startConsole
 import java.io.File
 
 /** The main `compliance` command. */
@@ -53,11 +51,7 @@ abstract class ProjectCommand : CliktCommand() {
 open class ScanCommand : ProjectCommand() {
     override fun run() {
         val project =
-            AnalysisProject.fromOptions(
-                projectOptions,
-                translationOptions,
-                postProcess = AnalysisProject::executeSecurityGoalsQueries,
-            ) {
+            AnalysisProject.fromOptions(projectOptions, translationOptions) {
                 // just to show that we can use a config build here
                 it
             }
@@ -69,27 +63,10 @@ open class ScanCommand : ProjectCommand() {
         }
 
         if (projectOptions.startConsole) {
-            ConsoleService.fromAnalysisResult(result).startConsole()
+            ConsoleServiceHelper.startConsole(result)
         }
     }
 }
 
-/**
- * The `list-security-goals` command. This will list the names of all security goals in the
- * specified project.
- *
- * This command assumes that the project contains a folder named `security-goals` that contains YAML
- * files with the security goals.
- */
-class ListSecurityGoals : ProjectCommand() {
-    override fun run() {
-        val project = AnalysisProject.fromOptions(projectOptions, translationOptions)
-        val goals = project.loadSecurityGoals()
-
-        // Print the name of each security goal
-        goals.forEach { echo(it.name.localName) }
-    }
-}
-
 /** The main command for the compliance tool. */
-var Command = ComplianceCommand().subcommands(ScanCommand(), ListSecurityGoals())
+var Command = ComplianceCommand().subcommands(ScanCommand())

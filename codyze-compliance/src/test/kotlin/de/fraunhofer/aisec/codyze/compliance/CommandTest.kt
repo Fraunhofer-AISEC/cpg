@@ -36,12 +36,4 @@ class CommandTest {
         val result = command.test()
         assertEquals(0, result.statusCode)
     }
-
-    @Test
-    fun testListSecurityGoalsCommand() {
-        val command = ListSecurityGoals()
-        val result = command.test("--project-dir src/test/resources/")
-        assertEquals(0, result.statusCode)
-        assertEquals("Goal1\n", result.stdout)
-    }
 }

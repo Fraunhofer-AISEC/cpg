@@ -64,3 +64,6 @@ var structKey = map[pairNameValue]uint64{
 var structValue = map[uint64]pairNameValue{
 	1: {name: "this", value: "that"},
 }
+
+var floatUnderscore = 224_617.445_991_228
+var intUnderscore = 1_000_000

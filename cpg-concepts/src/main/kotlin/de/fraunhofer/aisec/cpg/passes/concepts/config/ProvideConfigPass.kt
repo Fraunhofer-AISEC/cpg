@@ -39,10 +39,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.ProvideConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationOption
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
 
@@ -51,16 +53,17 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
  * configuration sources found in the graph. It connects a [ConfigurationSource] with a matching
  * [Configuration].
  */
+@Description(
+    "A pass that creates ProvideConfiguration concepts linking ConfigurationSources to Configurations."
+)
 class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnit) {
         when (node) {
-            is TranslationUnitDeclaration -> handleTranslationUnit(node)
+            is TranslationUnit -> handleTranslationUnit(node)
         }
     }
 
-    private fun handleTranslationUnit(
-        tu: TranslationUnitDeclaration
-    ): List<ConfigurationOperation> {
+    private fun handleTranslationUnit(tu: TranslationUnit): List<ConfigurationOperation> {
         // Loop through all configuration sources
         return tu.conceptNodes.filterIsInstance<ConfigurationSource>().flatMap { source ->
             // Find all LoadConfigurationFile operations that match the INI file name
@@ -81,14 +84,14 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
     private fun handleConfiguration(
         source: ConfigurationSource,
         conf: Configuration,
-        tu: TranslationUnitDeclaration,
+        tu: TranslationUnit,
         configuration: LoadConfiguration,
     ): MutableList<ConfigurationOperation> {
         val ops = mutableListOf<ConfigurationOperation>()
 
         // Loop through all groups and options and create ProvideConfigurationGroup and
         // ProvideConfigurationOption nodes
-        source.groups.mapNotNull { handleConfigurationGroup(conf, it) }.flatten()
+        source.groups.flatMapNotNull { handleConfigurationGroup(conf, it) }
 
         newProvideConfiguration(
                 underlyingNode = tu,

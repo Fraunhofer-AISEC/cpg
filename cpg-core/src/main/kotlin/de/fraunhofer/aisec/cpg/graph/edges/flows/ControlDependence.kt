@@ -30,21 +30,28 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
  * An edge in a Control Dependence Graph (CDG). Denotes that the [start] node exercises control
  * dependence on the [end] node. See [ControlDependenceGraphPass].
  */
-@RelationshipEntity
 class ControlDependence(
     start: Node,
     end: Node,
-    /** A set of [EvaluationOrder.branch] values. */
-    var branches: Set<Boolean> = setOf(),
+    /**
+     * A set of [EvaluationOrder.branch] values. Defaults to the shared empty set: the [branches] a
+     * CDG edge actually depends on are assigned via the edge builder, so most default instances
+     * would otherwise pay for an empty [HashSet].
+     */
+    var branches: Set<Boolean> = emptySet(),
 ) : ProgramDependence(start, end, DependenceType.CONTROL) {
 
-    override var labels = super.labels.plus("CDG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [ControlDependence] edges (see [Edge.labels]). */
+        val LABELS = ProgramDependence.LABELS + "CDG"
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -59,7 +66,7 @@ class ControlDependence(
     }
 }
 
-/** A container of [ControlDependence] edges. [NodeType] is necessary because of the Neo4J OGM. */
+/** A container of [ControlDependence] edges. [NodeType] is necessary for type safety. */
 class ControlDependences<NodeType : Node> :
     EdgeList<Node, ControlDependence>, MirroredEdgeCollection<Node, ControlDependence> {
 

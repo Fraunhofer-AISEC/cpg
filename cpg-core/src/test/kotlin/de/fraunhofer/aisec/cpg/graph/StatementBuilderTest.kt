@@ -37,7 +37,7 @@ import kotlin.test.assertNotNull
 
 class StatementBuilderTest {
     @Test
-    fun testNewLookupScopeStatement() {
+    fun testNewLookupScope() {
         val frontend =
             TestLanguageFrontend(
                 ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
@@ -47,26 +47,26 @@ class StatementBuilderTest {
                 translationResult {
                     var tu =
                         with(frontend) {
-                            var tu = newTranslationUnitDeclaration("main.file")
+                            var tu = newTranslationUnit("main.file")
                             scopeManager.resetToGlobal(tu)
 
-                            var globalA = newVariableDeclaration("a")
+                            var globalA = newVariable("a")
                             scopeManager.addDeclaration(globalA)
                             tu.declarations += globalA
 
-                            var func = newFunctionDeclaration("main")
+                            var func = newFunction("main")
                             scopeManager.enterScope(func)
 
                             var body = newBlock()
                             scopeManager.enterScope(body)
 
-                            var localA = newVariableDeclaration("a")
+                            var localA = newVariable("a")
                             var stmt = newDeclarationStatement()
                             stmt.declarations += localA
                             scopeManager.addDeclaration(localA)
                             body += stmt
 
-                            body += newLookupScopeStatement(listOf("a"), scopeManager.globalScope)
+                            body += newLookupScope(listOf("a"), scopeManager.globalScope)
                             body += newReference("a")
 
                             scopeManager.leaveScope(body)

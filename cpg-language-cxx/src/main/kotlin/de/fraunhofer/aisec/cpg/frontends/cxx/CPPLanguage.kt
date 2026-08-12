@@ -29,27 +29,30 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-open class CPPLanguage() :
+open class CPPLanguage :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,
@@ -59,12 +62,33 @@ open class CPPLanguage() :
     HasFunctionStyleCasts,
     HasFunctionOverloading,
     HasOperatorOverloading,
-    HasImplicitReceiver {
+    HasImplicitReceiver,
+    HasVisibilityModifiers {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
-    @Transient
+    /**
+     * Applies C++'s declaration modifiers to [declaration]. In addition to the context-dependent
+     * `static` handled by [CLanguage.applyModifiers], C++ has genuine member access control, so the
+     * access specifiers `public`/`protected`/`private` map onto the corresponding [Visibility]
+     * (they only ever occur on record members).
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        super.applyModifiers(declaration, scope)
+        when {
+            PUBLIC in declaration.modifiers -> declaration.visibility = Visibility.PUBLIC
+            PROTECTED in declaration.modifiers -> declaration.visibility = Visibility.PROTECTED
+            PRIVATE in declaration.modifiers -> declaration.visibility = Visibility.PRIVATE
+        }
+    }
+
+    // C++ has no notion of a "tentative definition": a non-class-type variable at
+    // namespace/global scope without an initializer is already a full definition, so a second
+    // such declaration is an ODR violation, not a redeclaration of the same object.
+    override val supportsTentativeDefinitions = false
+
+    @DoNotPersist
     override val overloadedOperatorNames:
         Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
         mapOf(
@@ -98,16 +122,16 @@ open class CPPLanguage() :
             BinaryOperator::class of "<=" to "operator<=",
             BinaryOperator::class of "=>" to "operator=>",
 
-            // Member access operators. See
+            // MemberAccess access operators. See
             // https://en.cppreference.com/w/cpp/language/operator_member_access
-            MemberExpression::class of "[]" to "operator[]",
+            MemberAccess::class of "[]" to "operator[]",
             UnaryOperator::class of "*" to "operator*",
             UnaryOperator::class of "&" to "operator&",
-            MemberExpression::class of "->" to "operator->",
-            MemberExpression::class of "->*" to "operator->*",
+            MemberAccess::class of "->" to "operator->",
+            MemberAccess::class of "->*" to "operator->*",
 
             // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
-            MemberCallExpression::class of "()" to "operator()",
+            MemberCall::class of "()" to "operator()",
             BinaryOperator::class of "," to "operator,",
         )
 
@@ -115,7 +139,7 @@ open class CPPLanguage() :
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a
      * reference. We only list equivalent types here and use the canonical form of integer values.
      */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             // Integer types
@@ -181,9 +205,7 @@ open class CPPLanguage() :
         // call, this will match the type T because this means that the parameter is given by
         // reference rather than by value.
         if (
-            targetType is ReferenceType &&
-                targetType.elementType == type &&
-                targetHint is ParameterDeclaration
+            targetType is ReferenceType && targetType.elementType == type && targetHint is Parameter
         ) {
             return DirectMatch
         }
@@ -202,10 +224,10 @@ open class CPPLanguage() :
         return CastNotPossible
     }
 
-    context(ContextProvider)
+    context(_: ContextProvider)
     override fun bestViableResolution(
         result: CallResolutionResult
-    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
         // There is a sort of weird workaround in C++ to select a prefix vs. postfix operator for
         // increment and decrement operators. See
         // https://en.cppreference.com/w/cpp/language/operator_incdec. If it is a postfix, we need
@@ -239,18 +261,17 @@ open class CPPLanguage() :
      * @return true if resolution was successful, false if not
      */
     override fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
-        templateCall: CallExpression,
+        curClass: Record?,
+        templateCall: Call,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?,
+        currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
-    ): Pair<Boolean, List<FunctionDeclaration>> {
+    ): Pair<Boolean, List<Function>> {
         val instantiationCandidates =
-            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
+            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplate>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
-            val initializationType =
-                mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
+            val initializationType = mutableMapOf<AstNode?, Template.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
@@ -309,7 +330,7 @@ open class CPPLanguage() :
             val edges = templateCall.templateArgumentEdges
             // Set instantiation propertyEdges
             for (edge in edges ?: listOf()) {
-                edge.instantiation = TemplateDeclaration.TemplateInitialization.EXPLICIT
+                edge.instantiation = Template.TemplateInitialization.EXPLICIT
             }
 
             if (functionTemplateDeclaration == null) {

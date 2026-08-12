@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.memory
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import java.util.Objects
 
 /** The memory management mode of a memory concept. */
@@ -52,7 +53,7 @@ enum class MemoryManagementMode {
  * @param underlyingNode The underlying node in the graph that represents this memory concept.
  * @param mode The memory management mode of the memory concept.
  */
-class Memory(underlyingNode: Node? = null, val mode: MemoryManagementMode) :
+open class Memory(underlyingNode: Node? = null, val mode: MemoryManagementMode) :
     Concept(underlyingNode = underlyingNode), IsMemory
 
 /** A common interface for the "memory" sub-graph. */
@@ -66,18 +67,28 @@ abstract class MemoryOperation(underlyingNode: Node?, concept: Concept) :
  * Represents a memory allocation operation. This can be done using `malloc` in C or `new` in C++ or
  * by calling a constructor in managed languages.
  */
-class Allocate(
+open class Allocate(
     underlyingNode: Node? = null,
     concept: Concept,
     /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
+    /**
+     * The expression that determines the allocation size **in bytes**, if known. For example, the
+     * `N` argument of `malloc(N)`, the product `M * N` of `calloc(M, N)`, or — for `new T[N]` — the
+     * synthesised expression `sizeof(T) * N`. `null` when the size couldn't be derived statically
+     * (e.g. for managed constructors that don't carry an explicit size argument).
+     */
+    var size: Expression? = null,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
     override fun equals(other: Any?): Boolean {
-        return other is Allocate && super.equals(other) && other.what == this.what
+        return other is Allocate &&
+            super.equals(other) &&
+            other.what == this.what &&
+            other.size == this.size
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), what)
+        return Objects.hash(super.hashCode(), what, size)
     }
 }
 
@@ -85,7 +96,7 @@ class Allocate(
  * Represents a memory de-allocation operation. This can be done using `free` in C or `delete` in
  * C++ or by calling a destructor in managed languages.
  */
-class DeAllocate(
+open class DeAllocate(
     underlyingNode: Node? = null,
     concept: Concept,
     /** A reference to [what] is de-allocated, e.g., a variable. */

@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
@@ -30,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
@@ -38,12 +40,17 @@ import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
+import de.fraunhofer.aisec.cpg.passes.markClean
+import de.fraunhofer.aisec.cpg.passes.markDirty
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
+import de.fraunhofer.aisec.cpg.persistence.converters.TranslationStatsConverter
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
+import kotlin.reflect.KClass
 
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
@@ -58,7 +65,7 @@ class TranslationResult(
      * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
     var finalCtx: TranslationContext,
-) : Node(), StatisticsHolder, ContextProvider {
+) : AstNode(), StatisticsHolder, ContextProvider {
 
     @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**
@@ -71,12 +78,12 @@ class TranslationResult(
      * The import dependencies of [Component] nodes of this translation result. The preferred way to
      * access this is via [Strategy.COMPONENTS_LEAST_IMPORTS].
      */
-    @Transient
+    @DoNotPersist
     @PopulatedByPass(ImportResolver::class)
     var componentDependencies: ImportDependencies<Component>? = null
 
-    /** Contains all languages that were considered in the translation process. */
-    @Transient val usedLanguages = mutableSetOf<Language<*>>()
+    /** Contains all languages considered in the translation process. */
+    @DoNotPersist val usedLanguages = mutableSetOf<Language<*>>()
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.
@@ -92,10 +99,13 @@ class TranslationResult(
      * A free-for-use collection of unique nodes. Nodes stored here will be exported to Neo4j, too.
      */
     val additionalNodes = mutableSetOf<Node>()
+
     override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
+
+    @Convert(TranslationStatsConverter::class) var stats = TranslationStats()
 
     /**
      * Checks if only a single software component has been analyzed and returns its translation
@@ -105,12 +115,12 @@ class TranslationResult(
      */
     @Deprecated(message = "translation units of individual components should be accessed instead")
     @DoNotPersist
-    val translationUnits: List<TranslationUnitDeclaration>
+    val translationUnits: List<TranslationUnit>
         get() {
             if (components.size == 1) {
                 return Collections.unmodifiableList(components[0].translationUnits)
             }
-            val result: MutableList<TranslationUnitDeclaration> = ArrayList()
+            val result: MutableList<TranslationUnit> = ArrayList()
             for (sc in components) {
                 result.addAll(sc.translationUnits)
             }
@@ -131,8 +141,8 @@ class TranslationResult(
         selected and the translation unit should be added there."""
     )
     @Synchronized
-    fun addTranslationUnit(tu: TranslationUnitDeclaration) {
-        var application = components[DEFAULT_APPLICATION_NAME]
+    fun addTranslationUnit(tu: TranslationUnit) {
+        val application = components[DEFAULT_APPLICATION_NAME]
         if (application == null) {
             // No application component exists, but it should be since it is automatically created
             // by the configuration, so something is wrong
@@ -160,9 +170,7 @@ class TranslationResult(
         get() {
             val result: MutableList<String> = ArrayList()
             components.forEach { sc: Component ->
-                result.addAll(
-                    sc.translationUnits.map(TranslationUnitDeclaration::name).map(Name::toString)
-                )
+                result.addAll(sc.translationUnits.map(TranslationUnit::name).map(Name::toString))
             }
             return result
         }
@@ -182,5 +190,31 @@ class TranslationResult(
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
         const val DEFAULT_APPLICATION_NAME = "application"
+    }
+
+    /**
+     * A map of nodes that are dirty for a specific pass. This is used to track which nodes need to
+     * be reprocessed again by a specific pass. The function [executePassesSequentially] will use
+     * this in order to populate the queue of passes accordingly.
+     *
+     * Users should not access this directly, but rather use the [markDirty] and [markClean] methods
+     * or the [Node.markDirty] and [Node.markClean] extension function.
+     */
+    @DoNotPersist val dirtyNodes = IdentityHashMap<Node, MutableList<KClass<out Pass<*>>>>()
+
+    /**
+     * Marks a node as dirty for a specific pass. This is used to indicate that the node needs to be
+     * reprocessed by the specified pass.
+     */
+    fun markDirty(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.add(pass)
+    }
+
+    /**
+     * Marks a node as clean for a specific pass. This is used to indicate that the node was
+     * reprocessed by the specified pass anymore.
+     */
+    fun markClean(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.remove(pass)
     }
 }

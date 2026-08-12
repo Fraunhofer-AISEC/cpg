@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -39,12 +39,12 @@ class EdgeSingletonListTest {
     @Test
     fun testNullable() {
         with(TestLanguageFrontend()) {
-            class MyNode : Node() {
+            class MyNode : AstNode() {
                 var edge = astOptionalEdgeOf<Expression>()
                 var unwrapped by unwrapping(MyNode::edge)
             }
 
-            var node = MyNode()
+            val node = MyNode()
             assertNull(node.unwrapped)
 
             node.unwrapped = newLiteral(1)

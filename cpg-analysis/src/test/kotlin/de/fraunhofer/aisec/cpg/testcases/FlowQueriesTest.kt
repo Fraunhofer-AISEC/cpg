@@ -36,9 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.builder.condition
 import de.fraunhofer.aisec.cpg.graph.builder.declare
 import de.fraunhofer.aisec.cpg.graph.builder.elseStmt
 import de.fraunhofer.aisec.cpg.graph.builder.eq
+import de.fraunhofer.aisec.cpg.graph.builder.forEachStmt
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.ifStmt
+import de.fraunhofer.aisec.cpg.graph.builder.iterable
 import de.fraunhofer.aisec.cpg.graph.builder.literal
+import de.fraunhofer.aisec.cpg.graph.builder.loopBody
 import de.fraunhofer.aisec.cpg.graph.builder.param
 import de.fraunhofer.aisec.cpg.graph.builder.plus
 import de.fraunhofer.aisec.cpg.graph.builder.plusAssign
@@ -334,6 +337,46 @@ class FlowQueriesTest {
                 }
             }
 
+        fun validatorDataflowOnlyIfSink(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Dataflow.java") {
+                        function("foo", t("string")) {
+                            param("arg", t("int"))
+                            body { returnStmt { call("toString") { ref("arg") } } }
+                        }
+
+                        function("main", void()) {
+                            param("args", t("string").array())
+                            body {
+                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                                declare {
+                                    variable("b", t("string")) {
+                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                                    }
+                                }
+
+                                ifStmt {
+                                    condition { ref("b") eq literal("test", t("string")) }
+                                    thenStmt {
+                                        call("print") { ref("a") }
+                                        call("baz") { ref("a") + ref("b") }
+                                    }
+                                    elseStmt { call("print") { ref("c") } }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun validatorDataflowLinearWithCall(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
@@ -447,6 +490,65 @@ class FlowQueriesTest {
                                 }
 
                                 call("baz") { ref("a") + ref("b") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun loopDetection(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Dataflow.java") {
+                        function("a", t("void")) {
+                            param("value", t("int"))
+                            body {
+                                ifStmt {
+                                    condition { ref("i") eq literal(1, t("int")) }
+                                    thenStmt {
+                                        call("println") { literal("Then branch", t("string")) }
+                                    }
+                                    elseStmt { call("a") { literal(1, t("int")) } }
+                                }
+                                returnStmt {}
+                            }
+                        }
+
+                        function("b", t("void")) {
+                            param("value", t("int"))
+                            body {
+                                call("a") { ref("value", t("int")) }
+                                returnStmt {}
+                            }
+                        }
+
+                        function("c", t("void")) {
+                            param("value", t("int"))
+                            body {
+                                call("b") { ref("value", t("int")) }
+                                returnStmt {}
+                            }
+                        }
+
+                        function("main", void()) {
+                            param("args", t("string").array())
+                            body {
+                                forEachStmt {
+                                    variable { declare { variable("i", t("int")) } }
+                                    iterable { call("range") { literal(1, t("int")) } }
+                                    loopBody {
+                                        declare { variable("temp") { literal("start") } }
+                                        call("a") { ref("i", t("int")) }
+                                        call("b") { ref("i", t("int")) }
+                                        call("c") { ref("i", t("int")) }
+                                    }
+                                }
                             }
                         }
                     }

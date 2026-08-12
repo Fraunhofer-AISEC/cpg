@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /** The types of dependences that might be represented in the CPG */
 enum class DependenceType {
@@ -58,7 +57,7 @@ class ProgramDependences<NodeType : Node> :
         outgoing: Boolean,
     ) : super(
         thisRef,
-        init = { start, end ->
+        init = { _, _ ->
             throw UnsupportedOperationException(
                 "This container only allows adding existing edges, but not creating new ones."
             )
@@ -68,8 +67,8 @@ class ProgramDependences<NodeType : Node> :
         this.mirrorProperty = mirrorProperty
     }
 
-    override fun add(e: Edge<NodeType>): Boolean {
-        return super<EdgeSet>.add(e)
+    override fun add(element: Edge<NodeType>): Boolean {
+        return super<EdgeSet>.add(element)
     }
 }
 
@@ -77,7 +76,6 @@ class ProgramDependences<NodeType : Node> :
  * This edge class defines that there's some kind of dependency between [start] and [end]. The
  * nature of this dependency is defined by [dependence].
  */
-@RelationshipEntity
 open class ProgramDependence(
     start: Node,
     end: Node,
@@ -88,7 +86,12 @@ open class ProgramDependence(
     var dependence: DependenceType,
 ) : Edge<Node>(start, end) {
 
-    override var labels = setOf("PDG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [ProgramDependence] edges (see [Edge.labels]). */
+        val LABELS = setOf("PDG")
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

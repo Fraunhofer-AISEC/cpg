@@ -32,11 +32,15 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.scopes.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import kotlin.reflect.KClass
@@ -66,20 +70,20 @@ interface HasTemplates : HasGenerics {
     /**
      * This function can be used to fine-tune the resolution of template function calls.
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
+     * Note: The function itself should NOT set the [Call.invokes] but rather return a list of
+     * possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
-     *   second parameter is a list of [FunctionDeclaration] candidates.
+     *   second parameter is a list of [Function] candidates.
      */
     fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
-        templateCall: CallExpression,
+        curClass: Record?,
+        templateCall: Call,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?,
+        currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
-    ): Pair<Boolean, List<FunctionDeclaration>>
+    ): Pair<Boolean, List<Function>>
 }
 
 /**
@@ -119,8 +123,8 @@ interface HasSuperClasses : LanguageTrait {
     val superClassKeyword: String
 
     fun SymbolResolver.handleSuperExpression(
-        memberExpression: MemberExpression,
-        curClass: RecordDeclaration,
+        memberExpression: MemberAccess,
+        curClass: Record,
     ): Boolean
 }
 
@@ -207,16 +211,15 @@ interface HasAnonymousIdentifier : LanguageTrait {
 
 /**
  * A language trait, that specifies that this language has global variables directly in the
- * [GlobalScope], i.e., not within a namespace, but directly contained in a
- * [TranslationUnitDeclaration].
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a [TranslationUnit].
  */
 interface HasGlobalVariables : LanguageTrait
 
 /**
  * A language trait, that specifies that this language has global functions directly in the
- * [GlobalScope], i.e., not within a namespace, but directly contained in a
- * [TranslationUnitDeclaration]. For example, C++ has global functions, Java and Go do not (as every
- * function is either in a class or a namespace).
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a [TranslationUnit]. For
+ * example, C++ has global functions, Java and Go do not (as every function is either in a class or
+ * a namespace).
  */
 interface HasGlobalFunctions : LanguageTrait
 
@@ -226,36 +229,36 @@ interface HasGlobalFunctions : LanguageTrait
  * and a qualified call because of an import, if "a" is an import / namespace.
  *
  * We can only resolve this after we have dealt with imports and know all symbols. Therefore, we
- * invoke the [ResolveMemberExpressionAmbiguityPass].
+ * invoke the [ResolveMemberAmbiguityPass].
  */
-interface HasMemberExpressionAmbiguity : LanguageTrait
+interface HasMemberAmbiguity : LanguageTrait
 
 /**
  * A common super-class for all language traits that arise because they are an ambiguity of a
  * function call, e.g., function-style casts. This means that we cannot differentiate between a
- * [CallExpression] and other expressions during the frontend, and we need to invoke the
- * [ResolveCallExpressionAmbiguityPass] to resolve this.
+ * [Call] and other expressions during the frontend, and we need to invoke the
+ * [ResolveCallAmbiguityPass] to resolve this.
  */
-sealed interface HasCallExpressionAmbiguity : LanguageTrait
+sealed interface HasCallAmbiguity : LanguageTrait
 
 /**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
- * [CallExpression] and a [CastExpression], we need to employ an additional pass
- * ([ResolveCallExpressionAmbiguityPass]) after the initial language frontends are done.
+ * [Call] and a [Cast], we need to employ an additional pass ([ResolveCallAmbiguityPass]) after the
+ * initial language frontends are done.
  */
-interface HasFunctionStyleCasts : HasCallExpressionAmbiguity
+interface HasFunctionStyleCasts : HasCallAmbiguity
 
 /**
  * A language trait, that specifies that the language has functional style (object) construction,
  * meaning that constructor calls look like regular call expressions (usually meaning that the
  * language has no dedicated `new` keyword).
  *
- * Since we can therefore not distinguish between a [CallExpression] and a [ConstructExpression] in
- * the frontend, we need to employ an additional pass ([ResolveCallExpressionAmbiguityPass]) after
- * the initial language frontends are done.
+ * Since we can therefore not distinguish between a [Call] and a [Construction] in the frontend, we
+ * need to employ an additional pass ([ResolveCallAmbiguityPass]) after the initial language
+ * frontends are done.
  */
-interface HasFunctionStyleConstruction : HasCallExpressionAmbiguity
+interface HasFunctionStyleConstruction : HasCallAmbiguity
 
 /**
  * A language trait that specifies that this language allowed overloading functions, meaning that
@@ -305,6 +308,50 @@ interface HasBuiltins : LanguageTrait {
 }
 
 /**
+ * A language trait that specifies that this language allows multiple textual declarations to refer
+ * to the same underlying object, and that [Scope.addSymbol] may therefore merge an incoming
+ * declaration into an already-registered one of the same kind and symbol (see [isRedeclaration]),
+ * instead of appending a duplicate. A common example is C's `extern` declarations and tentative
+ * definitions.
+ */
+interface HasRedeclarations : LanguageTrait {
+    /**
+     * Determines whether [incoming] is a redeclaration of [existing] that should be merged rather
+     * than registered as a separate declaration.
+     */
+    fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean
+
+    /**
+     * Merges state from [incoming] into [existing] when [isRedeclaration] returned `true`.
+     * [existing] remains the canonical node; [incoming] is discarded by the caller afterwards.
+     */
+    fun mergeRedeclaration(existing: Declaration, incoming: Declaration)
+}
+
+/**
+ * A language trait marking languages that *enforce* member access control, i.e. where a
+ * [Declaration.visibility] of [Visibility.PRIVATE] or [Visibility.PROTECTED] genuinely restricts
+ * *from where* a record member may be accessed (as C++, Java or TypeScript do with `public` /
+ * `protected` / `private`).
+ *
+ * This is deliberately distinct from merely *recording* a visibility: every [Declaration] carries a
+ * [Declaration.visibility], but only a language with this trait has the [SymbolResolver] act on it,
+ * dropping members that are inaccessible from the point of access while resolving a member by name
+ * (see [SymbolResolver.resolveMemberByName]). A language may therefore record visibility *without*
+ * declaring this trait: consider a language that maps a naming convention such as Python's `__x` to
+ * [Visibility.PRIVATE] purely for documentation, without actually forbidding access — enforcing
+ * that would wrongly hide reachable members, so such a frontend records the visibility but omits
+ * the trait.
+ *
+ * The trait only gates *record-relative* access control ([Visibility.PRIVATE] /
+ * [Visibility.PROTECTED]). Linkage- and module-level visibility ([Visibility.INTERNAL],
+ * [Visibility.PACKAGE]) is enforced by a separate mechanism in the [SymbolResolver] independently
+ * of this trait, so a language whose only restriction is package/linkage visibility (e.g. Go's
+ * unexported identifiers) does not declare it.
+ */
+interface HasVisibilityModifiers : LanguageTrait
+
+/**
  * Creates a [Pair] of class and operator code used in
  * [HasOperatorOverloading.overloadedOperatorNames].
  */
@@ -315,10 +362,10 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
 }
 
 /** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
-context(LanguageProvider)
+context(provider: LanguageProvider)
 val CharSequence.isKnownOperatorName: Boolean
     get() {
-        val language = language
+        val language = provider.language
         if (language !is HasOperatorOverloading) {
             return false
         }

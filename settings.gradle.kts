@@ -1,7 +1,7 @@
 rootProject.name = "cpg"
 
 plugins {
-    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.0"
+    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.3"
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -10,11 +10,11 @@ include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
 include(":cpg-concepts")
+include(":cpg-serialization")
 
 include(":codyze")
 include(":codyze-core")
 include(":codyze-compliance")
-include(":codyze-console")
 
 // this code block also exists in the root build.gradle.kts
 val enableJavaFrontend: Boolean by extra {
@@ -53,6 +53,21 @@ val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
 }
+val enableCodyzeConsole: Boolean by extra {
+    val enableCodyzeConsole: String? by settings
+    enableCodyzeConsole.toBoolean()
+}
+val enableAIModule: Boolean by extra {
+    val enableAIModule: String? by settings
+    // codyze-console has a hard, unconditional build dependency on cpg-ai, so codyze-console
+    // being enabled always forces cpg-ai on too, even if enableAIModule=false is set explicitly -
+    // an explicit false would otherwise just break the codyze-console build.
+    val explicitlyEnabled = enableAIModule.toBoolean()
+    if (!explicitlyEnabled && enableCodyzeConsole) {
+        println("cpg-ai module auto-enabled because codyze-console is enabled")
+    }
+    explicitlyEnabled || enableCodyzeConsole
+}
 
 if (enableJavaFrontend) include(":cpg-language-java")
 if (enableCXXFrontend) include(":cpg-language-cxx")
@@ -63,6 +78,9 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
+if (enableAIModule) include(":cpg-ai")
+if (enableCodyzeConsole) include(":codyze-console")
+
 
 kover {
     enableCoverage()

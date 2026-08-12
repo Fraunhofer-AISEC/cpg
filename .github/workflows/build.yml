@@ -1,3 +1,12 @@
+# This workflow runs on every push.
+# Besides the actual build, it contains several additional steps:
+#
+# - Run unit, integration and performance tests
+# - Check code formatting (spotless)
+# - Generate and upload code coverage reports (Kover + Codecov)
+# - Publish artifacts to Maven Central (snapshots)
+# - Create a GitHub release (on tags)
+# - Generate and publish JavaDoc via Dokka (currently disabled)
 name: build
 
 on:
@@ -22,22 +31,22 @@ permissions:
 jobs:
   build:
     timeout-minutes: 15
-    runs-on: [self-hosted, Linux, ARM64]
+    runs-on: [self-hosted, Linux, ARM64, cpg]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: |
           cp gradle.properties.example gradle.properties
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: "corretto"
           java-version: "21"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
-      - uses: actions/setup-node@v4
+          python-version: "3.14"
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
       - name: Setup neo4j
@@ -62,12 +71,20 @@ jobs:
         run: |
           python3 -m venv ~/.virtualenvs/cpg
           source ~/.virtualenvs/cpg/bin/activate
-          pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
+          pip3 install jep==$(grep "org.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
       - name: Build ${{ env.version }}
         run: |
-          ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
+          # The distZip/distTar and shadowJar/shadowDistZip/shadowDistTar slow down the build and are not needed in CI.
+          # shadowJar/shadowDistZip/shadowDistTar only exist on codyze-console (the only module using the Shadow
+          # plugin) - excluding a task that doesn't exist anywhere in the build fails the whole build ("Task
+          # 'shadowJar' not found"), so only exclude them when that module is actually enabled.
+          EXCLUDES="-x distZip -x distTar"
+          if grep -q '^enableCodyzeConsole=true' gradle.properties; then
+            EXCLUDES="$EXCLUDES -x shadowJar -x shadowDistZip -x shadowDistTar"
+          fi
+          ./gradlew --parallel spotlessCheck -x spotlessApply build $EXCLUDES koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}
@@ -98,7 +115,7 @@ jobs:
           zip -r reports.zip **/build/reports/**/** || true
       - name: Archive test and coverage reports
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reports
           path: reports.zip
@@ -115,10 +132,16 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
       - name: Publish to Maven Central (snapshot)
-        if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages')
+        if: github.ref == 'refs/heads/main' || (contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages') && env.version != 'gh-readonly-queue-SNAPSHOT')
         run: |
           export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository -x npmInstall
+          # npmInstall only exists on codyze-console (the only module using the Node plugin) -
+          # excluding a task that doesn't exist anywhere in the build fails the whole build.
+          EXCLUDES=""
+          if grep -q '^enableCodyzeConsole=true' gradle.properties; then
+            EXCLUDES="-x npmInstall"
+          fi
+          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository $EXCLUDES
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}
           ORG_GRADLE_PROJECT_includeJavadoc: false

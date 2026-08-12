@@ -27,12 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
@@ -40,13 +42,13 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class ObjectType : Type, HasSecondaryTypeEdge {
     /**
-     * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
-     * available. This is set by the [TypeResolver].
+     * Reference from the [ObjectType] to its class ([Record]), only if the class is available. This
+     * is set by the [TypeResolver].
      *
-     * This also sets this type's [scope] to the [RecordDeclaration.scope].
+     * This also sets this type's [scope] to the [Record.scope].
      */
     @PopulatedByPass(TypeResolver::class)
-    var recordDeclaration: RecordDeclaration? = null
+    var recordDeclaration: Record? = null
         set(value) {
             field = value
             this.scope = value?.scope
@@ -116,4 +118,63 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
 
     override val secondaryTypes: List<Type>
         get() = generics
+
+    /**
+     * Returns all constructors that are declared in this type and its super types. See
+     * [findMembers] for more details.
+     */
+    val constructors: Set<Constructor>
+        get() {
+            return findMembers<Constructor>()
+        }
+
+    /**
+     * Returns all methods that are declared in this type and its super types. See [findMembers] for
+     * more details.
+     */
+    val methods: Set<Method>
+        get() {
+            return findMembers<Method>()
+        }
+
+    /**
+     * Returns all fields that are declared in this type and its super types. See [findMembers] for
+     * more details.
+     */
+    val fields: Set<Field>
+        get() {
+            return findMembers<Field>()
+        }
+
+    /**
+     * Returns all [Declaration] nodes (of type [T]) that are declared in this type and its super
+     * types. We use the underlying [recordDeclaration] of the type to find the [Scope] it declares
+     * and then look for appropriate symbols pointing to a [Declaration].
+     */
+    private inline fun <reified T : Declaration> findMembers(): Set<T> {
+        // We need to gather all members that are in within the scope of the underlying record
+        // declaration, as well as their super types
+        val members = mutableSetOf<T>()
+
+        // Gather all members of this type and its super-types
+        val worklist = mutableListOf<Type>(this)
+        val alreadySeen = identitySetOf<Type>()
+        while (worklist.isNotEmpty()) {
+            val next = worklist.removeFirst()
+
+            // Add all members in the declaring scope
+            next.recordDeclaration
+                ?.declaringScope
+                ?.symbols
+                ?.values
+                ?.flatten()
+                ?.filterIsInstanceTo(members)
+
+            // Add super types
+            worklist += next.superTypes
+            alreadySeen.add(next)
+        }
+
+        return members
+    }
 }

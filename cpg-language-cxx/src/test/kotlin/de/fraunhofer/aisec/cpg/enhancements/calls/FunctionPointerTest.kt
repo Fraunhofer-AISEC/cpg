@@ -30,15 +30,16 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import java.util.*
 import java.util.function.Consumer
 import java.util.regex.Pattern
+import kotlin.io.path.Path
 import kotlin.test.*
 
 internal class FunctionPointerTest : BaseTest() {
@@ -78,7 +79,7 @@ internal class FunctionPointerTest : BaseTest() {
             }
         val pattern = Pattern.compile("\\((?<member>.+)?\\*(?<obj>.+(\\.|::))?(?<func>.+)\\)")
         for (call in calls) {
-            if (call is ConstructExpression) {
+            if (call is Construction) {
                 continue
             }
 
@@ -146,8 +147,8 @@ internal class FunctionPointerTest : BaseTest() {
         }
     }
 
-    private fun getSourceFunction(variable: VariableDeclaration): FunctionDeclaration {
-        val functions: MutableList<FunctionDeclaration> = ArrayList()
+    private fun getSourceFunction(variable: Variable): Function {
+        val functions: MutableList<Function> = ArrayList()
         val worklist: Deque<Node> = ArrayDeque()
         val seen = Collections.newSetFromMap(IdentityHashMap<Node, Boolean>())
         worklist.push(variable)
@@ -156,7 +157,7 @@ internal class FunctionPointerTest : BaseTest() {
             if (!seen.add(curr)) {
                 continue
             }
-            if (curr is FunctionDeclaration) {
+            if (curr is Function) {
                 functions.add(curr)
             } else {
                 curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })
@@ -171,7 +172,7 @@ internal class FunctionPointerTest : BaseTest() {
                 if (!seen.add(curr)) {
                     continue
                 }
-                if (curr is FunctionDeclaration) {
+                if (curr is Function) {
                     functions.add(curr)
                 } else {
                     curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })

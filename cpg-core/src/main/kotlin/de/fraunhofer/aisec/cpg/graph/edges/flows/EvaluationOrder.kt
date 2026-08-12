@@ -31,14 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
  * An edge in our Evaluation Order Graph (EOG). It considers the order in which our AST statements
  * would be "evaluated" (e.g. by a compiler or interpreter). See [EvaluationOrderGraphPass] for more
  * details.
  */
-@RelationshipEntity
 class EvaluationOrder(
     start: Node,
     end: Node,
@@ -54,6 +52,15 @@ class EvaluationOrder(
      */
     var branch: Boolean? = null,
 ) : Edge<Node>(start, end) {
+    /**
+     * For nodes with multiple incoming our outcoming edges, we label the node leading to/from a
+     * possible strongly connected component (SCC). This is populated by the
+     * [de.fraunhofer.aisec.cpg.passes.SccPass]. Remains `null` if the edge is not part of any
+     * non-trivial SCC, and otherwise indicates the priority (AKA the nesting level) with which the
+     * edge should be taken when iterating the EOG
+     */
+    var scc: Int? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EvaluationOrder) return false
@@ -69,7 +76,12 @@ class EvaluationOrder(
         return result
     }
 
-    override var labels = setOf("EOG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [EvaluationOrder] edges (see [Edge.labels]). */
+        val LABELS = setOf("EOG")
+    }
 }
 
 /**
@@ -116,7 +128,7 @@ fun Node.insertNodeBeforeInEOGPath(
     newNode: Node,
     builder: ((EvaluationOrder) -> Unit) = {},
 ): Boolean {
-    // Construct a new edge from the given node to the current node
+    // Constructing a new edge from the given node to the current node
     val edge = EvaluationOrder(newNode, this).also(builder)
 
     // Make a copy of the incoming edges of the current node and set the start of the new edge as
@@ -159,7 +171,7 @@ fun Node.insertNodeAfterwardInEOGPath(
     newNode: Node,
     builder: ((EvaluationOrder) -> Unit) = {},
 ): Boolean {
-    // Construct a new edge from the current node to the given node
+    // Constructing a new edge from the current node to the given node
     val edge = EvaluationOrder(this, newNode).also(builder)
 
     // Make a copy of the outgoing edges of the current node and set the end of the new edge as
@@ -176,4 +188,44 @@ fun Node.insertNodeAfterwardInEOGPath(
 
     // Add the new edge as a next edge of the current node
     return this.nextEOGEdges.add(edge)
+}
+
+/**
+ * This function inserts the given [newNode] after the current node ([this]) in its existing DFG
+ * path.
+ *
+ * Before:
+ * ```
+ *         -- DFG --> <node1>
+ * <this>
+ *         -- DFG --> <node2>
+ * ```
+ *
+ * We want to insert a new [Dataflow] edge between all outgoing edges of [this].
+ *
+ * Afterward:
+ * ```
+ *                              -- DFG --> <node1>
+ * <this> -- DFG --> <new node>
+ *                              -- DFG --> <node2>
+ * ```
+ */
+fun Node.insertNodeAfterwardInDFGPath(newNode: Node, builder: ((Dataflow) -> Unit) = {}): Boolean {
+    // Construct a new edge from the current node to the given node
+    val edge = Dataflow(this, newNode).also(builder)
+
+    // Make a copy of the outgoing edges of the current node and set the end of the new edge as
+    // the start
+    val copy = this.nextDFGEdges.toList()
+    copy.forEach { it.start = newNode }
+
+    // Clear the outgoing edges of the current node
+    this.nextDFGEdges.clear()
+
+    // Add the old edges as the next edges of the new edge's end. We cannot use "addAll" because
+    // otherwise our mirroring will not be triggered.
+    copy.forEach { newNode.nextDFGEdges += it }
+
+    // Add the new edge as a next edge of the current node
+    return this.nextDFGEdges.add(edge)
 }

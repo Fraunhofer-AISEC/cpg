@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.*
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.*
 
 class InferenceTest {

@@ -34,13 +34,30 @@ import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.applyMetadata
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.default
+import de.fraunhofer.aisec.cpg.graph.expressions.UnknownMemoryValue
+import de.fraunhofer.aisec.cpg.graph.newFunction
+import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.returns
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
 import org.slf4j.Logger
@@ -49,8 +66,7 @@ import org.slf4j.LoggerFactory
 /**
  * If the user of the library registers one or multiple DFG-function summary files (via
  * [TranslationConfiguration.Builder.registerFunctionSummaries]), this class is responsible for
- * parsing the files, caching the result and adding the respective DFG summaries to the
- * [FunctionDeclaration].
+ * parsing the files, caching the result and adding the respective DFG summaries to the [Function].
  */
 class DFGFunctionSummaries {
     private constructor()
@@ -58,21 +74,10 @@ class DFGFunctionSummaries {
     /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
-    /**
-     * Saves the information on which parameter(s) of a function are modified by the function. This
-     * is interesting since we need to add DFG edges between the modified parameter and the
-     * respective argument(s). For each [ParameterDeclaration] as well as the
-     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [FunctionDeclaration], we store all previous DFG nodes.
-     */
-    val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()
+    fun hasSummary(function: Function) = function.functionSummary.isNotEmpty()
 
-    fun hasSummary(functionDeclaration: FunctionDeclaration) =
-        functionDeclaration in functionToChangedParameters
-
-    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<ValueDeclaration, Set<Node>> =
-        functionToChangedParameters[functionDeclaration] ?: mapOf()
+    fun getLastWrites(function: Function): Map<Node, Set<Function.FSEntry>> =
+        function.functionSummary
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
@@ -91,13 +96,42 @@ class DFGFunctionSummaries {
     }
 
     /**
-     * Adds the DFG edges to the [functionDeclaration] depending on the function summaries which are
-     * kept in this object. If no suitable entry was found, this method returns `false`.
+     * Adds the DFG edges to the [function] depending on the function summaries which are kept in
+     * this object. If no suitable entry was found, this method returns `false`.
      */
-    fun DFGPass.addFlowsToFunctionDeclaration(functionDeclaration: FunctionDeclaration): Boolean {
-        val dfgEntries = findFunctionDeclarationEntry(functionDeclaration) ?: return false
-        applyDfgEntryToFunctionDeclaration(functionDeclaration, dfgEntries)
+    fun DFGPass.addFlowsToFunctionDeclaration(function: Function): Boolean {
+        val dfgEntries = findFunctionDeclarationEntry(function) ?: return false
+        applyDfgEntryToFunction(function, dfgEntries)
         return true
+    }
+
+    fun generateFunctionForEntry(
+        contextProvider: ContextProvider,
+        language: Language<*>,
+        declEntry: FunctionDeclarationEntry,
+        summary: List<DFGEntry>,
+    ): Function {
+        val inferredFunction = contextProvider.newFunction(language.parseName(declEntry.methodName))
+        declEntry.signature?.forEachIndexed { i, typeName ->
+            val type =
+                if (contextProvider.ctx.typeManager.typeExists(typeName)) {
+                    contextProvider.ctx.typeManager.lookupResolvedType(typeName)
+                } else {
+                    val type = ObjectType(typeName, listOf(), false, language)
+                    // Apply our usual metadata, such as scope, code, location, if we have any. Make
+                    // sure only to refer by the local name because we will treat types as sort of
+                    // references when creating them and resolve them later.
+                    type.applyMetadata(contextProvider, typeName, doNotPrependNamespace = true)
+
+                    // Piping it through register type will ensure that we know the type and can
+                    // resolve it later
+                    // contextProvider.ctx.typeManager.registerType(type)
+                    type
+                } ?: language.unknownType()
+            inferredFunction.parameters += contextProvider.newParameter(Name("param$i"), type)
+        }
+        applyDfgEntryToFunction(inferredFunction, summary)
+        return inferredFunction
     }
 
     /**
@@ -114,21 +148,18 @@ class DFGFunctionSummaries {
      * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
      * matches.
      */
-    private fun DFGPass.findFunctionDeclarationEntry(
-        functionDecl: FunctionDeclaration
-    ): List<DFGEntry>? {
+    private fun DFGPass.findFunctionDeclarationEntry(functionDecl: Function): List<DFGEntry>? {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
-        val languageName = language.javaClass.name
         val methodName = functionDecl.name
 
         // The language and the method name have to match. If a signature is specified, it also has
-        // to match to the one of the FunctionDeclaration, null indicates that we accept everything.
+        // to match to the one of the Function, null indicates that we accept everything.
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
                 // The language has to match otherwise the remaining comparison is useless
-                if (it.language == languageName) {
+                if (language.matchesOrDerivesFrom(it.language)) {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =
@@ -146,7 +177,7 @@ class DFGFunctionSummaries {
                         // name's parent and generate a type from it. We then check if this type is
                         // a supertype
                         (entryRecord == null ||
-                            (functionDecl as? MethodDeclaration)
+                            (functionDecl as? Method)
                                 ?.recordDeclaration
                                 ?.toType()
                                 ?.tryCast(entryRecord) != CastNotPossible) &&
@@ -204,17 +235,16 @@ class DFGFunctionSummaries {
                     typeManager.lookupResolvedType(it1, language = language)
                 } ?: language.unknownType()
 
-            var mostPreciseType =
+            val mostPreciseType =
                 uniqueTypes
-                    .map { Pair(it, language?.tryCast(targetType, it)) }
-                    .sortedBy { it.second?.depthDistance }
-                    .firstOrNull()
+                    .map { Pair(it, language.tryCast(targetType, it)) }
+                    .minByOrNull { it.second.depthDistance }
                     ?.first
 
-            var mostPreciseClassEntries =
+            val mostPreciseClassEntries =
                 typeEntryList.filter { it.first == mostPreciseType }.map { it.second }
 
-            var signatureResults =
+            val signatureResults =
                 mostPreciseClassEntries
                     .map {
                         Pair(
@@ -246,62 +276,106 @@ class DFGFunctionSummaries {
      * This method parses the [DFGEntry] entries in [dfgEntries] and adds the respective DFG edges
      * between the parameters, receiver and potentially the [functionDeclaration] itself.
      */
-    private fun applyDfgEntryToFunctionDeclaration(
-        functionDeclaration: FunctionDeclaration,
-        dfgEntries: List<DFGEntry>,
-    ) {
+    fun applyDfgEntryToFunction(functionDeclaration: Function, dfgEntries: List<DFGEntry>) {
         for (entry in dfgEntries) {
-            val from =
-                if (entry.from.startsWith("param")) {
+            var srcValueDepth = 1
+            var destValueDepth = 1
+            var granularity =
+                if (entry.dfgType == "partial") PartialDataflowGranularity("hardcoded")
+                else default()
+            val destNodes: MutableSet<Node> = mutableSetOf()
+            val properties = equalLinkedHashSetOf<Any>()
+            var subAccessName = ""
+            val from: Any? =
+                if (entry.from == "function") {
+                    functionDeclaration
+                } else if (entry.from.startsWith("param")) {
                     try {
-                        val paramIndex = entry.from.removePrefix("param").toInt()
-                        functionDeclaration.parameters[paramIndex]
-                    } catch (e: NumberFormatException) {
+                        val e = entry.from.split(".")
+                        val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
+                        if (paramIndex != null) {
+                            val tmp = functionDeclaration.parameters.getOrNull(paramIndex)
+                            if (e.getOrNull(1) == "deref") srcValueDepth = 2
+                            tmp
+                        } else null
+                    } catch (_: NumberFormatException) {
                         null
                     }
+                } else if (entry.from.startsWith("NewMemoryAddress")) {
+                    Name(entry.from, functionDeclaration.name)
                 } else if (entry.from == "base") {
-                    (functionDeclaration as? MethodDeclaration)?.receiver
+                    (functionDeclaration as? Method)?.receiver
                 } else {
-                    null
+                    UnknownMemoryValue(Name(entry.from))
                 }
             val to =
                 if (entry.to.startsWith("param")) {
                     try {
-                        val paramIndex = entry.to.removePrefix("param").toInt()
-                        val paramTo = functionDeclaration.parameters[paramIndex]
-                        if (from != null) {
-                            functionToChangedParameters
-                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                                .computeIfAbsent(paramTo) { mutableSetOf() }
-                                .add(from)
+                        val e = entry.to.split(".")
+                        val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
+                        if (e.getOrNull(1) == "deref") destValueDepth = 2
+                        else if (e.getOrNull(1) == "address") destValueDepth = 0
+                        val paramTo =
+                            paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
+                        if (paramTo != null) {
+                            destNodes.add(paramTo)
                         }
                         paramTo
-                    } catch (e: NumberFormatException) {
+                    } catch (_: NumberFormatException) {
                         null
                     }
-                } else if (entry.to == "base") {
-                    val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
-                    if (from != null) {
-                        if (receiver != null) {
-                            functionToChangedParameters
-                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                                .computeIfAbsent(receiver, ::mutableSetOf)
-                                .add(from)
-                        }
-                    }
-                    receiver
+                } else if (entry.to == "base" && functionDeclaration is Method) {
+                    // We'll later in handlePrevDFG fetch the base of the MemberCall, for now we add
+                    // the record
+                    functionDeclaration.recordDeclaration?.let { destNodes.add(it) }
+                    val newGranularity =
+                        PartialDataflowGranularity(functionDeclaration.name.localName)
+                    // Add a property that this is only a partial write (since it is to the base)
+                    properties.add(newGranularity)
+                    granularity = newGranularity
+                    functionDeclaration.receiver
                 } else if (entry.to == "return") {
+                    if (functionDeclaration.returns.isNotEmpty())
+                        destNodes.addAll(functionDeclaration.returns)
+                    else destNodes.add(functionDeclaration)
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {
-                    val returnIndex = entry.to.removePrefix("param").toInt()
                     // TODO: It would be nice if we could model the index. Not sure how this is done
+                    destNodes.addAll(functionDeclaration.returns)
                     functionDeclaration
                 } else {
                     null
                 }
+
+            if (from != null && destNodes.isNotEmpty()) {
+                destNodes.forEach { destNode ->
+                    functionDeclaration.functionSummary
+                        .computeIfAbsent(destNode) { identitySetOf() }
+                        .add(
+                            Function.FSEntry(
+                                destValueDepth,
+                                from,
+                                srcValueDepth,
+                                subAccessName,
+                                PowersetLattice.Element(
+                                    PointsToPass.NodeWithPropertiesKey(destNode, properties)
+                                ),
+                                equalLinkedHashSetOf(granularity, false),
+                            )
+                        )
+                }
+            }
+
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
-            to?.let { from?.nextDFGEdges += it }
+            // We can't currently draw the edges between ParameterMemoryValues here because we don't
+            // yet have them, so we do this in handleCallExpression in the pointsToPass
+            // Note: When we have a Name for a memoryAddress that does not yet exist, we need to
+            // draw the DFG edge later in writeEntry()
+            if (destValueDepth == 1 && srcValueDepth == 1)
+                to?.let {
+                    (from as? Node)?.nextDFGEdges += Dataflow(from, it, granularity = granularity)
+                }
         }
     }
 
@@ -314,18 +388,16 @@ class DFGFunctionSummaries {
         val dataFlows: List<DFGEntry>,
     )
 
-    /**
-     * This class is used to identify the [FunctionDeclaration] of interest for the specified flows.
-     */
+    /** This class is used to identify the [Function] of interest for the specified flows. */
     data class FunctionDeclarationEntry(
         /** The FQN of the [Language] for which this flow is relevant. */
         val language: String,
-        /** The FQN of the [FunctionDeclaration] or [MethodDeclaration]. */
+        /** The FQN of the [Function] or [Method]. */
         val methodName: String,
         /**
-         * The signature of the [FunctionDeclaration]. We use a list of the FQN of the [Type]s of
-         * parameter. This is optional and if not specified, we perform the matching only based on
-         * the [methodName].
+         * The signature of the [Function]. We use a list of the FQN of the [Type]s of parameter.
+         * This is optional and if not specified, we perform the matching only based on the
+         * [methodName].
          */
         val signature: List<String>? = null,
     )
@@ -358,4 +430,28 @@ class DFGFunctionSummaries {
 
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
     }
+}
+
+/**
+ * Returns `true` if this language class or one of its superclasses matches [targetLanguageName].
+ *
+ * This allows function summaries configured for a base language (e.g., `CLanguage`) to also match
+ * derived languages (e.g., `CPPLanguage`).
+ *
+ * For backwards compatibility, both fully qualified class names and simple class names are
+ * supported, since existing summary YAMLs may use entries such as `CPPLanguage`.
+ */
+private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean {
+    var currentClass: Class<*>? = this.javaClass
+
+    while (currentClass != null) {
+        if (
+            currentClass.name == targetLanguageName || currentClass.simpleName == targetLanguageName
+        ) {
+            return true
+        }
+        currentClass = currentClass.superclass
+    }
+
+    return false
 }

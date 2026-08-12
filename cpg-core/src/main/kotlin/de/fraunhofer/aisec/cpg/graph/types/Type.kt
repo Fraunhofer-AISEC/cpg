@@ -31,16 +31,15 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This array holds the chain of different pointer/array operations. For example if a [PointerType]
@@ -63,7 +62,6 @@ enum class TypeOperation {
  * this class. Contains information which is included in any Type such as name, storage, qualifier
  * and origin
  */
-@NodeEntity
 abstract class Type : Node {
     /** All direct supertypes of this type. */
     @PopulatedByPass(TypeHierarchyResolver::class)
@@ -140,6 +138,7 @@ abstract class Type : Node {
     }
 
     @get:JsonIgnore
+    @DoNotPersist
     var root: Type
         /**
          * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a
@@ -290,7 +289,7 @@ fun TypeOperations.apply(root: Type): Type {
 }
 
 /** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
-var Type.recordDeclaration: RecordDeclaration?
+var Type.recordDeclaration: Record?
     get() {
         return (this as? ObjectType)?.recordDeclaration
     }

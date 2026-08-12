@@ -31,15 +31,23 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.path
+import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
+import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.project.Project
+import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
+import kotlin.io.path.listDirectoryEntries
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -82,6 +90,7 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
 data class AnalysisResult(
     val translationResult: TranslationResult,
     val sarif: SarifSchema210 = SarifSchema210(version = Version.The210, runs = listOf()),
+    val requirementsResults: Map<String, QueryTree<Boolean>> = mutableMapOf(),
     val project: AnalysisProject,
 ) : ContextProvider by translationResult {
     fun writeSarifJson(file: File) {
@@ -98,6 +107,11 @@ data class AnalysisResult(
  * the project is the central entity for the analysis.
  */
 class AnalysisProject(
+    /**
+     * The builder for the project. Potentially null if this is a temporary project that was created
+     * using [AnalysisProject.temporary].
+     */
+    var builder: ProjectBuilder? = null,
     /** The project name. */
     var name: String,
     /** The project directory, if it exists on file. Null if the project is an ad-hoc project. */
@@ -118,6 +132,10 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
+    var requirementFunctions: Map<String, TranslationResult.() -> QueryTree<Boolean>> = emptyMap(),
+    var requirementCategories: Map<String, RequirementCategoryBuilder> = emptyMap(),
+    var assumptionStatusFunctions: Map<(Assumption) -> Boolean, AssumptionStatus> = emptyMap(),
+    var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**
@@ -125,17 +143,37 @@ class AnalysisProject(
      * used to fill [AnalysisResult.sarif].
      */
     var postProcess:
-        (AnalysisProject.(TranslationResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? =
+        (AnalysisProject.(AnalysisResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? =
         null,
 ) {
 
     /** Analyzes the project and returns the result. */
     fun analyze(): AnalysisResult {
+        // Propagate assumption status
+        assumptionStatusFunctions.forEach { (key, status) -> Assumption.states[key] = status }
+
+        // Propagate suppressed query tree IDs into translation result
+        QueryTree.suppressions += suppressedQueryTreeIDs
+
         val tr = TranslationManager.builder().config(config).build().analyze().get()
-        val (rules, results) = postProcess?.invoke(this, tr) ?: Pair(emptyList(), emptyList())
+
+        // Run requirements
+        val requirementsResults =
+            requirementFunctions.map { (name, func) -> Pair(name, func(tr)) }.associate { it }
+
+        // Prepare analysis result
+        val runs = mutableListOf<Run>()
+        val result =
+            AnalysisResult(
+                translationResult = tr,
+                sarif = SarifSchema210(version = Version.The210, runs = runs),
+                requirementsResults = requirementsResults,
+                project = this,
+            )
 
         // Create a new SARIF run, including a tool definition and rules corresponding to the
-        // individual security statements
+        // individual requirements
+        val (rules, results) = buildSarif(result)
         val run =
             Run(
                 tool =
@@ -146,98 +184,114 @@ class AnalysisProject(
                         .mapNotNull { Pair(it.key, it.toSarifLocation()) }
                         .associate { it },
             )
+        runs += run
 
-        return AnalysisResult(
-            translationResult = tr,
-            sarif = SarifSchema210(version = Version.The210, runs = listOf(run)),
-            project = this,
-        )
+        return result
     }
 
     companion object {
-        /** Builds a translation configuration from the given project directory. */
-        fun from(
+        /**
+         * Builds a new [AnalysisProject] from a directory that contains a `project.codyze.kts`
+         * file.
+         */
+        fun fromDirectory(
+            projectDir: Path,
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
+            return fromScript(
+                projectDir.resolve("project.codyze.kts"),
+                postProcess = postProcess,
+                configModifier = configModifier,
+            )
+        }
+
+        /**
+         * Builds a new [AnalysisProject] from a `.codyze.kts` file, which represents a
+         * [CodyzeScript].
+         */
+        fun fromScript(
+            file: Path,
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
+            // We need to evaluate the script in order to invoke our project builder inside the
+            // script
+            val script = evaluateScriptAndIncludes(file) ?: return null
+
+            return script.projectBuilder.build(
+                postProcess = postProcess,
+                configModifier = configModifier,
+            )
+        }
+
+        /**
+         * Builds a temporary [AnalysisProject] from the given values without having a `.codyze.kts`
+         * file in place. This is based on the [Project] API of the CPG: if neither [sources] nor
+         * [components] are specified, the project structure is auto-detected from the [projectDir],
+         * e.g., based on Go modules or a C/C++ compilation database.
+         */
+        fun temporary(
             projectDir: Path,
             sources: List<Path>? = null,
             components: List<String>? = null,
             exclusionPatterns: List<String>? = null,
             librariesPath: Path? = projectDir.resolve("libraries"),
             postProcess:
-                (AnalysisProject.(TranslationResult) -> Pair<
+                (AnalysisProject.(AnalysisResult) -> Pair<
                         List<ReportingDescriptor>,
                         List<Result>,
                     >)? =
                 null,
-            configBuilder:
+            configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
-            var builder =
-                TranslationConfiguration.builder()
-                    .defaultPasses()
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                    .optionalLanguage(
-                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
-                    )
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
-
-            // We can either have a single source (using --sources) or multiple components (using
-            // --components)
-            sources?.let {
-                builder =
-                    builder
-                        .sourceLocations(it.map { source -> source.toFile() })
-                        .topLevel(projectDir.toFile())
-            }
-
-            components?.let {
-                val componentDir = projectDir.resolve("components")
-                val pairs =
-                    it.map { component ->
-                        Pair(
-                            component,
-                            mutableListOf<File>(componentDir.resolve(component).toFile()),
-                        )
+            val project =
+                Project.from(projectDir) {
+                    // A single list of source files (using --sources) becomes one component
+                    sources?.let {
+                        component(DEFAULT_APPLICATION_NAME, root = projectDir, sources = it)
                     }
-                builder =
-                    builder
-                        .softwareComponents(
-                            pairs
-                                .groupingBy { it.first }
-                                .aggregate { _, accumulator: MutableList<File>?, element, _ ->
-                                    if (accumulator != null) {
-                                        accumulator.addAll(element.second)
-                                        accumulator
-                                    } else {
-                                        element.second
-                                    }
-                                }
-                                .toMutableMap()
-                        )
-                        .topLevels(it.associate { Pair(it, componentDir.resolve(it).toFile()) })
-            }
 
-            val addSourcesFolder = librariesPath?.toFile()
+                    // Explicitly named components (using --components) are located inside the
+                    // "components" folder
+                    components?.forEach {
+                        component(it, root = projectDir.resolve("components").resolve(it))
+                    }
 
-            if (librariesPath?.isDirectory() == true) {
-                builder.loadIncludes(true)
-                addSourcesFolder?.listFiles()?.forEach {
-                    builder = builder.includePath(it.toPath())
+                    exclusionPatterns?.forEach { exclude(it) }
+
+                    translation {
+                        // The "libraries" folder can contain additional libraries (or stubs) that
+                        // are added as includes
+                        if (librariesPath?.isDirectory() == true) {
+                            it.loadIncludes(true)
+                            librariesPath.listDirectoryEntries().forEach { library ->
+                                it.includePath(library)
+                            }
+                        }
+
+                        configModifier?.invoke(it)
+                    }
                 }
-            }
-
-            exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
-            configBuilder?.invoke(builder)
 
             return AnalysisProject(
-                config = builder.build(),
+                config = project.config,
                 name = projectDir.fileName.toString(),
                 librariesPath = librariesPath,
                 projectDir = projectDir,
@@ -250,7 +304,7 @@ class AnalysisProject(
             projectOptions: ProjectOptions,
             translationOptions: TranslationOptions,
             postProcess:
-                (AnalysisProject.(TranslationResult) -> Pair<
+                (AnalysisProject.(AnalysisResult) -> Pair<
                         List<ReportingDescriptor>,
                         List<Result>,
                     >)? =
@@ -259,14 +313,24 @@ class AnalysisProject(
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
-            return from(
-                projectOptions.directory,
-                translationOptions.sources,
-                translationOptions.components,
-                translationOptions.exclusionPatterns,
-                configBuilder = configModifier,
-                postProcess = postProcess,
-            )
+            // Try to load a project from the given directory
+            val project =
+                fromDirectory(
+                    projectOptions.directory,
+                    postProcess = postProcess,
+                    configModifier = configModifier,
+                )
+            return project
+                ?: // If no project was found, we create a temporary project
+                // with the given options
+                temporary(
+                    projectOptions.directory,
+                    translationOptions.sources,
+                    translationOptions.components,
+                    translationOptions.exclusionPatterns,
+                    configModifier = configModifier,
+                    postProcess = postProcess,
+                )
         }
     }
 }

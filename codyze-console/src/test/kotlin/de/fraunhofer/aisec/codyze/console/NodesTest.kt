@@ -31,9 +31,12 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.query.GenericQueryOperators
+import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.ArtifactLocation
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -70,5 +73,65 @@ class NodesTest {
         absolutePath = with(result) { location.absolutePath }
         assertNotNull(absolutePath)
         assertTrue(absolutePath.isAbsolute)
+    }
+
+    @Test
+    fun testQueryTreeToJSON() {
+        // Create a simple QueryTree
+        val queryTree =
+            QueryTree(
+                value = true,
+                stringRepresentation = "test condition == true",
+                operator = GenericQueryOperators.EVALUATE,
+            )
+
+        // Convert to JSON
+        val json = queryTree.toJSON()
+
+        // Verify the conversion
+        assertEquals("true", json.value)
+        assertEquals("AcceptedResult", json.confidence)
+        assertEquals("test condition == true", json.stringRepresentation)
+        assertEquals("EVALUATE", json.operator)
+        assertEquals(0, json.childrenIds.size)
+        assertNull(json.nodeId)
+    }
+
+    @Test
+    fun testQueryTreeWithCallerInfoToJSON() {
+        // Create a simple QueryTree with caller info
+        val queryTree =
+            QueryTree(
+                value = true,
+                stringRepresentation = "test condition == true",
+                operator = GenericQueryOperators.EVALUATE,
+            )
+
+        // Manually set caller info (normally would be set automatically)
+        queryTree.callerInfo =
+            de.fraunhofer.aisec.cpg.query.CallerInfo(
+                className = "com.example.TestClass",
+                methodName = "testMethod",
+                fileName = "TestClass.kt",
+                lineNumber = 42,
+            )
+
+        // Convert to JSON
+        val json = queryTree.toJSON()
+
+        // Verify the conversion
+        assertEquals("true", json.value)
+        assertEquals("AcceptedResult", json.confidence)
+        assertEquals("test condition == true", json.stringRepresentation)
+        assertEquals("EVALUATE", json.operator)
+        assertEquals(0, json.childrenIds.size)
+        assertNull(json.nodeId)
+
+        // Verify caller info
+        assertNotNull(json.callerInfo)
+        assertEquals("com.example.TestClass", json.callerInfo.className)
+        assertEquals("testMethod", json.callerInfo.methodName)
+        assertEquals("TestClass.kt", json.callerInfo.fileName)
+        assertEquals(42, json.callerInfo.lineNumber)
     }
 }

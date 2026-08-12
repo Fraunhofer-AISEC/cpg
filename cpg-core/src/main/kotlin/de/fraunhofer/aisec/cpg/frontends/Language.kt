@@ -33,8 +33,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
+import de.fraunhofer.aisec.cpg.getAncestors
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -42,28 +43,29 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
-import org.neo4j.ogm.annotation.Transient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -119,12 +121,10 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
 
     /** The access modifiers of this programming language */
-    open val accessModifiers: Set<String>
-        get() = setOf("public", "protected", "private")
+    open val accessModifiers: Set<String> = setOf("public", "protected", "private")
 
     /** The arithmetic operations of this language */
-    open val arithmeticOperations: Set<String>
-        get() = setOf("+", "-", "*", "/", "%", "<<", ">>")
+    open val arithmeticOperations: Set<String> = setOf("+", "-", "*", "/", "%", "<<", ">>")
 
     /** All operators which perform and assignment and an operation using lhs and rhs. */
     abstract val compoundAssignmentOperators: Set<String>
@@ -133,7 +133,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
     /** The standard evaluator to be used with this language. */
-    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
 
     init {
         this.language = this
@@ -154,12 +154,26 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
+    open fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
-    fun handlesFile(file: File): Boolean {
+    open fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
+
+    /**
+     * Projects the raw [Declaration.modifiers] of [declaration] — appearing in the given [scope] —
+     * onto the canonical, language-independent properties that later passes rely on: it sets
+     * [Declaration.visibility] and, for a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration], its `isStatic` flag.
+     *
+     * The raw modifier spellings stay in [Declaration.modifiers] losslessly; this hook is the
+     * single place where a language turns them into semantics. [scope] matters because a modifier's
+     * meaning can depend on *where* the declaration appears — most notably C/C++'s `static`, which
+     * denotes internal linkage at file scope but a class-level member inside a record. The default
+     * does nothing, so a language that models no modifiers is unaffected.
+     */
+    open fun applyModifiers(declaration: Declaration, scope: Scope?) {}
 
     override fun equals(other: Any?): Boolean {
         return other?.javaClass == this.javaClass
@@ -269,6 +283,38 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     }
 
     /**
+     * Determines how to propagate [HasType.assignedTypes] across binary operations. Returns a
+     * merged set of types if the operator requires special handling (e.g., operators where the left
+     * or the right operand can be the result at runtime), or an empty set if no special handling is
+     * needed.
+     *
+     * If both [lhs] and [rhs] have only one assigned type, the type will be determined through
+     * [propagateTypeOfBinaryOperation].
+     *
+     * Languages can override this to handle language-specific operators.
+     */
+    open fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        val lhsAssigned = lhs.assignedTypes
+        val rhsAssigned = rhs.assignedTypes
+        if (lhsAssigned.size == 1 && rhsAssigned.size == 1) {
+            val typeResult =
+                propagateTypeOfBinaryOperation(
+                    operatorCode,
+                    lhsAssigned.single(),
+                    rhsAssigned.single(),
+                )
+            if (typeResult !is UnknownType) {
+                return setOf(typeResult)
+            }
+        }
+        return emptySet()
+    }
+
+    /**
      * Determines how to propagate types across unary operations since these may differ among the
      * programming languages.
      *
@@ -343,23 +389,47 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
             return CastNotPossible
         }
 
-        // Retrieve all ancestor types of our type (more concretely of the root type)
-        val root = type.root
-        val ancestors = root.ancestors
-        val superTypes = ancestors.map(Type.Ancestor::type)
+        return matchWithTypeExpansion(type.root, targetType)
+    }
 
-        return if (targetType.root in superTypes) {
-            // Find depth
-            val depth = ancestors.firstOrNull { it.type == targetType.root }?.depth
-            if (depth == null) {
-                // This should not happen
-                CastNotPossible
-            } else {
-                ImplicitCast(depth)
+    private fun matchWithTypeExpansion(type: Type, targetType: Type): CastResult {
+        val seenList = mutableListOf<Type.Ancestor>()
+        val worklist = mutableListOf(Type.Ancestor(type.root, 0))
+        seenList.addAll(worklist)
+        while (worklist.isNotEmpty()) {
+            val current = worklist.removeAt(0)
+            val currentType = current.type
+            if (currentType == targetType.root) {
+                return ImplicitCast(current.depth)
             }
-        } else {
-            CastNotPossible
+            // See if it has an alias, if not we are done
+            // If it has one or more aliases, resolve them and add the resolved type and its
+            // ancestors with
+            // depth offset by the current types ancestor depth to the worklist and the allTypes
+
+            val reachableAliases =
+                currentType.scope
+                    ?.typedefs
+                    ?.map { it.value }
+                    ?.mapNotNull { typedef ->
+                        when {
+                            typedef.type == currentType -> typedef.alias
+                            typedef.alias == currentType -> typedef.type
+                            else -> null
+                        }
+                    } ?: emptyList()
+
+            (reachableAliases + currentType)
+                .flatMap { it.getAncestors(current.depth) }
+                .forEach {
+                    if (it !in seenList) {
+                        seenList.add(it)
+                        worklist.add(it)
+                    }
+                }
         }
+
+        return CastNotPossible
     }
 
     /**
@@ -378,17 +448,17 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      *   the best. The ranking is determined by the [CastResult.depthDistance] of all cast results
      *   in the signature results.
      */
-    context(ContextProvider)
+    context(provider: ContextProvider)
     open fun bestViableResolution(
         result: CallResolutionResult
-    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
         // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
         // result
         val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
         if (directMatches.size > 1) {
             // This is an ambiguous result. Let's return all direct matches
             return Pair(
-                directMatches.map { it.key }.toSet(),
+                directMatches.mapTo(mutableSetOf()) { it.key },
                 CallResolutionResult.SuccessKind.AMBIGUOUS,
             )
         } else if (directMatches.size == 1) {
@@ -406,14 +476,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         // case, we need to check, whether a template matches directly after we have no direct
         // matches
         val source = result.source
-        if (this is HasTemplates && source is CallExpression) {
+        if (this is HasTemplates && source is Call) {
             source.templateArgumentEdges = TemplateArguments(source)
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
                     null,
                     source,
                     false,
-                    ctx,
+                    provider.ctx,
                     null,
                     needsExactMatch = true,
                 )
@@ -436,7 +506,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
         // Find the best (lowest) rank and find functions with the specific rank
         val bestRanking = rankings.minBy { it.first }.first
-        val list = rankings.filter { it.first == bestRanking }.map { it.second }
+        val list = rankings.mapFiltered({ it.first == bestRanking }) { it.second }
         return if (list.size > 1) {
             // Return the list of best-ranked (hopefully only one). If one then more result has
             // the same ranking, this result is ambiguous
@@ -472,24 +542,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /**
      * There are some cases where our [Inference] system needs to place declarations, e.g., a
-     * [NamespaceDeclaration] in the [GlobalScope]. The issue with that is that the [Scope.astNode]
-     * of the global scope is always the last parsed [TranslationUnitDeclaration] and we might end
-     * up adding the declaration to some random translation unit, where it does not really belong.
+     * [Namespace] in the [GlobalScope]. The issue with that is that the [Scope.astNode] of the
+     * global scope is always the last parsed [TranslationUnit] and we might end up adding the
+     * declaration to some random translation unit, where it does not really belong.
      *
-     * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
-     * declaration should be placed. If the language does not override this function, the default
-     * implementation will return the first [TranslationUnitDeclaration] in the [Component] of
-     * [source].
+     * Therefore, we give the language a chance to return a [TranslationUnit] where the declaration
+     * should be placed. If the language does not override this function, the default implementation
+     * will return the first [TranslationUnit] in the [Component] of [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
-     * specific [TranslationUnitDeclaration], e.g., for each namespace that is inferred globally or
-     * try to put all inferred declarations into one specific (inferred) new translation unit.
+     * specific [TranslationUnit], e.g., for each namespace that is inferred globally or try to put
+     * all inferred declarations into one specific (inferred) new translation unit.
      *
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
-    context(ContextProvider)
-    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+    context(provider: ContextProvider)
+    open fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
         // connection to the AST. We add several fallbacks here to make sure that we have a
@@ -497,10 +566,10 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         val component =
             if (source !is Type) {
                 source.component
-                    ?: this@ContextProvider.ctx.currentComponent
+                    ?: provider.ctx.currentComponent
                     ?: source.scope?.astNode?.component
             } else {
-                this@ContextProvider.ctx.currentComponent ?: source.scope?.astNode?.component
+                provider.ctx.currentComponent ?: source.scope?.astNode?.component
             }
         if (component == null) {
             val msg =
@@ -577,8 +646,8 @@ class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
  * Returns the single language of a node and its children. If the node has multiple children with
  * different languages, it returns a [MultipleLanguages] object.
  */
-fun Node.multiLanguage(): Language<*> {
-    val languages = astChildren.map { it.language }.toSet()
+fun AstNode.multiLanguage(): Language<*> {
+    val languages = astChildren.mapTo(mutableSetOf()) { it.language }
     return if (languages.size == 1) {
         languages.single()
     } else if (languages.size > 1) {

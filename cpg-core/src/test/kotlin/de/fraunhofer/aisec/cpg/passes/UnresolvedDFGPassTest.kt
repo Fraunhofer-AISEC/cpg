@@ -32,15 +32,16 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class UnresolvedDFGPassTest {
+
     @Test
     fun testUnresolvedCalls() {
         val result = getDfgUnresolvedCalls(true, false)
@@ -65,7 +66,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is Method)
     }
 
     @Test
@@ -85,7 +86,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is Method)
     }
 
     @Test
@@ -113,7 +114,7 @@ class UnresolvedDFGPassTest {
 
         // Flow from base and argument to return value
         val callWithParam = result.calls { it.name.localName == "get" }[1]
-        assertEquals(1, callWithParam.prevDFG.size)
+        assertEquals(1, callWithParam.prevFullDFG.size)
         // Check if it's the "get" method.
         val getMethod2 = callWithParam.prevDFG.singleOrNull { it.name.localName == "get" }
         assertNotNull(getMethod2)
@@ -130,7 +131,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is Method)
     }
 
     companion object {
@@ -154,9 +155,9 @@ class UnresolvedDFGPassTest {
                 translationResult {
                     translationUnit("DfgUnresolvedCalls.java") {
                         record("DfgUnresolvedCalls") {
-                            field("i", t("int")) { modifiers = listOf("private") }
+                            field("i", t("int")) { modifiers = setOf("private") }
                             constructor {
-                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariable("this", t("DfgUnresolvedCalls"))
                                 param("i", t("int"))
                                 body {
                                     member("i", ref("this")) assign { ref("i") }
@@ -164,7 +165,7 @@ class UnresolvedDFGPassTest {
                                 }
                             }
                             method("knownFunction", t("int")) {
-                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariable("this", t("DfgUnresolvedCalls"))
                                 param("arg", t("int"))
                                 body { returnStmt { member("i", ref("this")) + ref("arg") } }
                             }

@@ -28,13 +28,14 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * An intelligent [MutableList] wrapper around an [EdgeList] which supports iterating, adding and
  * removing [Node] elements.
  */
+@Suppress("EqualsOrHashCode")
 class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     var list: EdgeList<NodeType, EdgeType>
 ) : UnwrappedEdgeCollection<NodeType, EdgeType>(list), MutableList<NodeType> {
@@ -56,7 +57,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun removeAt(index: Int): NodeType {
-        var edge = list.removeAt(index)
+        val edge = list.removeAt(index)
         return if (list.outgoing) {
             edge.end
         } else {
@@ -186,10 +187,10 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * ```
      *
      * This class is intentionally marked with [Transient], so that the delegated properties are not
-     * transferred to the Neo4J OGM. Only the property that contains the property edges should be
-     * persisted in the graph database.
+     * transferred to the persistence layer. Only the property that contains the property edges
+     * should be persisted in the graph database.
      */
-    @Transient
+    @DoNotPersist
     inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableList<NodeType> {
             return this@UnwrappedEdgeList
@@ -207,7 +208,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * parameter for the [Edge.end] property, but not for the [Edge.start] property. This is why we
      * need to cast the underlying [Edge.start] property to the incoming type.
      */
-    @Transient
+    @DoNotPersist
     inner class IncomingDelegate<ThisType : Node, IncomingType>() {
         operator fun getValue(
             thisRef: ThisType,
@@ -232,5 +233,9 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         prop: KProperty<*>,
     ): Delegate<ThisType> {
         return Delegate()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is List<*> && this.iterator().asSequence().toList() == other
     }
 }

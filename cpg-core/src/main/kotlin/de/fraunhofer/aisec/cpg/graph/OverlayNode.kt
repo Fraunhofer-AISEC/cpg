@@ -26,10 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.NoLanguage
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlayEdge
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents an extra node added to the CPG. These nodes can live next to the regular nodes,
@@ -44,9 +45,33 @@ abstract class OverlayNode() : Node() {
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
     var underlyingNodeEdge: OverlaySingleEdge =
-        OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
+        OverlaySingleEdge(
+            this,
+            of = null,
+            mirrorProperty = Node::overlayEdges,
+            outgoing = false,
+            onChange = this::propagateNodePropertiesFromUnderlyingNode,
+        )
 
     var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
+
+    /**
+     * Propagates information from the [underlyingNode] into this [OverlayNode], when setting an
+     * [underlyingNode] as part of an [OverlaySingleEdge.onChanged] callback in our delegated
+     * property [underlyingNodeEdge].
+     *
+     * Note: The new [underlyingNode] is the start node of [newEdge], because our
+     * [underlyingNodeEdge] is not outgoing.
+     */
+    private fun propagateNodePropertiesFromUnderlyingNode(
+        oldEdge: OverlayEdge?,
+        newEdge: OverlayEdge?,
+    ) {
+        val newUnderlyingNode = newEdge?.start
+
+        code = newUnderlyingNode?.code
+        location = newUnderlyingNode?.location
+    }
 
     /**
      * Compares this [OverlayNode] to another object. We also include the [underlyingNode] in this
@@ -54,9 +79,21 @@ abstract class OverlayNode() : Node() {
      * have different underlying nodes.
      */
     override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
         return other is OverlayNode &&
-            super.equals(other) &&
-            this.underlyingNode == other.underlyingNode
+            name == other.name &&
+            code == other.code &&
+            comment == other.comment &&
+            location == other.location &&
+            isImplicit == other.isImplicit &&
+            // If the underlying node is null, we don't care about it. We also cannot compare the
+            // location in this case.
+            (this.underlyingNode == null ||
+                other.underlyingNode == null ||
+                // If both have an underlying node, it should be the same one.
+                (this.underlyingNode == other.underlyingNode && this.location == other.location))
     }
 
     /**
@@ -66,5 +103,9 @@ abstract class OverlayNode() : Node() {
      */
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), underlyingNode)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
     }
 }

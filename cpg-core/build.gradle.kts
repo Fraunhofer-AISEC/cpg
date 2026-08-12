@@ -51,11 +51,15 @@ dependencies {
     implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
     implementation(libs.jacksonyml)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.collections.immutable)
 
     testImplementation(libs.junit.params)
+    integrationTestImplementation(libs.kotlin.reflect)
 
     testFixturesApi(
         libs.kotlin.test.junit5
     ) // somehow just using testFixturesApi(kotlin("test")) does not work for testFixtures
     testFixturesApi(libs.mockito)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 }

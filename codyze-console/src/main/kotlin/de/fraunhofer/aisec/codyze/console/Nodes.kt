@@ -27,17 +27,18 @@
 
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
+import de.fraunhofer.aisec.codyze.dsl.RequirementBuilder
+import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
+import de.fraunhofer.aisec.cpg.query.*
+import de.fraunhofer.aisec.cpg.serialization.*
 import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
@@ -45,14 +46,8 @@ import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.toPath
 import kotlin.uuid.Uuid
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 
 /**
  * JSON data class for an analysis request. It contains the source directory, an optional include
@@ -64,14 +59,6 @@ data class AnalyzeRequestJSON(
     val includeDir: String? = null,
     val topLevel: String? = null,
     val conceptsFile: String? = null,
-)
-
-/** JSON data class for an [Edge]. */
-@Serializable
-data class EdgeJSON(
-    var label: String,
-    @Serializable(with = UuidSerializer::class) var start: Uuid,
-    @Serializable(with = UuidSerializer::class) var end: Uuid,
 )
 
 /** JSON data class for a SARIF [Result]. */
@@ -99,6 +86,7 @@ data class AnalysisResultJSON(
     var sourceDir: String,
     @Transient val analysisResult: AnalysisResult? = null,
     val findings: List<FindingsJSON>,
+    val requirementCategories: List<RequirementsCategoryJSON> = emptyList(),
 )
 
 /**
@@ -112,14 +100,14 @@ data class ComponentJSON(
     val topLevel: String?,
 )
 
-/** JSON data class for a [TranslationUnitDeclaration]. */
+/** JSON data class for a [TranslationUnit]. */
 @Serializable
 data class TranslationUnitJSON(
     val name: String,
     @Serializable(with = UuidSerializer::class) val id: Uuid,
     val path: String,
     val code: String,
-    @Transient val cpgTU: TranslationUnitDeclaration? = null,
+    @Transient val cpgTU: TranslationUnit? = null,
 )
 
 /** JSON data class holding all relevant information required to instantiate a [Concept]. */
@@ -140,20 +128,90 @@ data class ConstructorArguments(
     val argumentType: String? = null, // currently not used
 )
 
-/** JSON data class for a [Node]. */
+/** JSON data class for a requirement category. */
 @Serializable
-data class NodeJSON(
-    @Serializable(with = UuidSerializer::class) val id: Uuid,
-    val type: String,
-    val startLine: Int,
-    val startColumn: Int,
-    val endLine: Int,
-    val endColumn: Int,
-    val code: String,
+data class RequirementsCategoryJSON(
+    val id: String,
     val name: String,
-    val astChildren: List<NodeJSON>,
-    val prevDFG: List<EdgeJSON> = emptyList(),
-    val nextDFG: List<EdgeJSON> = emptyList(),
+    val description: String,
+    val requirements: List<RequirementJSON>,
+)
+
+/**
+ * JSON data class for project information separate from analysis results. This provides metadata
+ * about the analysis project.
+ */
+@Serializable
+data class AnalysisProjectJSON(
+    val name: String,
+    val sourceDir: String,
+    val includeDir: String? = null,
+    val topLevel: String? = null,
+    val projectCreatedAt: String,
+    val lastAnalyzedAt: String? = null,
+    val requirementCategories: List<RequirementsCategoryJSON> = emptyList(),
+    @Transient val project: AnalysisProject? = null,
+)
+
+/** JSON data class for a single requirement. */
+@Serializable
+data class RequirementJSON(
+    val id: String,
+    val name: String,
+    val description: String,
+    val status: String,
+    val categoryId: String,
+    val queryTree: QueryTreeJSON? = null,
+)
+
+/** JSON data class for caller information from QueryTree. */
+@Serializable
+data class CallerInfoJSON(
+    val className: String,
+    val methodName: String,
+    val fileName: String,
+    val lineNumber: Int,
+)
+
+/** JSON data class for an assumption. */
+@Serializable
+data class AssumptionJSON(
+    val id: String,
+    val assumptionType: String, // AssumptionType as string
+    val message: String,
+    val status: String, // AssumptionStatus as string
+    val nodeId: String? = null, // UUID of associated node, if any
+    val node: NodeJSON? = null, // Full node information when available
+    val edgeLabel: String? = null, // Label of associated edge, if any
+    val assumptionScopeId: String? = null, // UUID of assumption scope node, if any
+)
+
+/** JSON data class for a QueryTree result with lazy loading support. */
+@Serializable
+data class QueryTreeJSON(
+    val id: String, // Unique identifier for this QueryTree
+    val value: String? = null, // Serialized as string to handle simple types
+    val nodeValues: List<NodeJSON>? = null, // List of nodes when value is List<Node>
+    val confidence: String, // AcceptanceStatus as string
+    val stringRepresentation: String,
+    val operator: String,
+    val queryTreeType:
+        String, // Type of QueryTree (QueryTree, BinaryOperationResult, UnaryOperationResult)
+    val childrenIds: List<String> = emptyList(), // IDs of child QueryTrees for lazy loading
+    val childrenWithAssumptionIds: Map<String, List<String>> =
+        emptyMap(), // Map from assumption ID to list of child QueryTree IDs with that assumption
+    val hasChildren: Boolean = false, // Quick check for UI expansion
+    val nodeId: String? = null, // UUID of associated node, if any
+    val node: NodeJSON? = null, // Full node information, if any
+    val callerInfo: CallerInfoJSON? = null, // Information about where the query was called from
+    val assumptions: Set<AssumptionJSON> = emptySet(), // List of assumptions for this QueryTree
+)
+
+/** JSON data class for a QueryTree with its parent IDs for tree expansion. */
+@Serializable
+data class QueryTreeWithParentsJSON(
+    val queryTree: QueryTreeJSON,
+    val parentIds: List<String> = emptyList(), // IDs of all parent QueryTrees
 )
 
 /**
@@ -194,7 +252,7 @@ data class ConceptRequestJSON(
                         ),
                     constructorArguments =
                         this.constructorArgs?.map {
-                            LoadPersistedConcepts.ConstructorArgumentEntry(
+                            ConstructorArgumentEntry(
                                 name = it.argumentName,
                                 value = it.argumentValue,
                             )
@@ -211,6 +269,9 @@ data class ConceptRequestJSON(
     }
 }
 
+/** Request body for the `/api/execute-query` endpoint. */
+@Serializable data class ExecuteQueryRequestJSON(val scriptCode: String)
+
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
     with(translationResult) {
@@ -218,14 +279,30 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
             components = components.map { it.toJSON() },
             totalNodes = nodes.size,
             analysisResult = this@toJSON,
-            sourceDir = config.sourceLocations.first().absolutePath,
+            sourceDir = config.sourceLocations.firstOrNull()?.absolutePath ?: "",
             findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
+            requirementCategories =
+                project.requirementCategoriesToJSON(this@toJSON.requirementsResults),
         )
     }
 
-/** Converts a [TranslationUnitDeclaration] into its JSON representation. */
-context(ContextProvider)
-fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
+/** Converts a [AnalysisProject] into its JSON representation. */
+fun AnalysisProject.toJSON(): AnalysisProjectJSON {
+    return AnalysisProjectJSON(
+        name = this.name,
+        sourceDir = this.projectDir?.toString() ?: "",
+        includeDir = this.config.includePaths.firstOrNull()?.toString(),
+        topLevel = this.projectDir?.toString() ?: "",
+        projectCreatedAt = java.time.Instant.now().toString(),
+        lastAnalyzedAt = null,
+        requirementCategories = this.requirementCategoriesToJSON(),
+        project = this,
+    )
+}
+
+/** Converts a [TranslationUnit] into its JSON representation. */
+context(_: ContextProvider)
+fun TranslationUnit.toJSON(): TranslationUnitJSON {
     val localName =
         component?.topLevel()?.let {
             this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)
@@ -241,7 +318,7 @@ fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
 }
 
 /** Converts a [Component] into its JSON representation. */
-context(ContextProvider)
+context(_: ContextProvider)
 fun Component.toJSON(): ComponentJSON {
     return ComponentJSON(
         name = this.name.toString(),
@@ -250,29 +327,17 @@ fun Component.toJSON(): ComponentJSON {
     )
 }
 
-/** Converts a [Node] into its JSON representation. */
-fun Node.toJSON(): NodeJSON {
-    return NodeJSON(
-        id = this.id,
-        type = this.javaClass.simpleName,
-        startLine = location?.region?.startLine ?: -1,
-        startColumn = location?.region?.startColumn ?: -1,
-        endLine = location?.region?.endLine ?: -1,
-        endColumn = location?.region?.endColumn ?: -1,
-        code = this.code ?: "",
-        name = this.name.toString(),
-        astChildren = this.astChildren.map { it.toJSON() },
-        prevDFG = this.prevDFGEdges.map { it.toJSON() },
-        nextDFG = this.nextDFGEdges.map { it.toJSON() },
-    )
-}
-
-/** Converts an [Edge] into its JSON representation. */
-fun Edge<*>.toJSON(): EdgeJSON {
-    return EdgeJSON(
-        label = this.labels.firstOrNull() ?: "",
-        start = this.start.id,
-        end = this.end.id,
+/** Converts an [Assumption] into its JSON representation. */
+fun Assumption.toJSON(): AssumptionJSON {
+    return AssumptionJSON(
+        id = this.id.toString(),
+        assumptionType = this.assumptionType.name,
+        message = this.message,
+        status = this.status.name,
+        nodeId = this.underlyingNode?.id?.toString(),
+        node = this.underlyingNode?.toJSON(),
+        edgeLabel = this.edge?.labels?.firstOrNull(),
+        assumptionScopeId = this.assumptionScope?.id?.toString(),
     )
 }
 
@@ -280,12 +345,12 @@ fun Edge<*>.toJSON(): EdgeJSON {
  * Converts a SARIF [Result] into its JSON representation. It needs a [TranslationResult] as a
  * context receiver to find the component and translation unit of the finding.
  */
-context(TranslationResult)
+context(result: TranslationResult)
 fun Result.toJSON(): FindingsJSON {
-    var path = this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.absolutePath
+    val path = this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.absolutePath
 
-    var translationUnit =
-        this@TranslationResult.components
+    val translationUnit =
+        result.components
             .flatMap { it.translationUnits }
             .firstOrNull { tu -> tu.location?.artifactLocation?.uri?.toPath() == path }
 
@@ -306,7 +371,7 @@ fun Result.toJSON(): FindingsJSON {
  * Tries to convert the [ArtifactLocation.uri] (which can either be absolute or relative to a
  * [Component.topLevel]) into an absolute [Path].
  */
-context(TranslationResult)
+context(result: TranslationResult)
 val ArtifactLocation.absolutePath: Path?
     get() {
         val uri = this.uri
@@ -324,26 +389,145 @@ val ArtifactLocation.absolutePath: Path?
             // Otherwise, try to find the URI base (which is the name of a component) and try to
             // build an absolute path again
             else -> {
-                val componentPath =
-                    this@TranslationResult.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
+                val componentPath = result.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
                 return componentPath?.resolve(uri)
             }
         }
     }
 
+/** Converts the requirement categories of an [AnalysisProject] into their JSON representation. */
+fun AnalysisProject.requirementCategoriesToJSON(
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null
+): List<RequirementsCategoryJSON> {
+    return this.requirementCategories.map { (_, categoryBuilder) ->
+        categoryBuilder.toJSON(requirementsResults)
+    }
+}
+
+/** Converts a [RequirementCategoryBuilder] into its JSON representation. */
+fun RequirementCategoryBuilder.toJSON(
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null
+): RequirementsCategoryJSON {
+    return RequirementsCategoryJSON(
+        id = this.id,
+        name = this.name ?: this.id,
+        description = this.description ?: "",
+        requirements =
+            this.requirements.map { (_, reqBuilder) ->
+                reqBuilder.toJSON(this.id, requirementsResults)
+            },
+    )
+}
+
 /**
- * Custom serializer for [Uuid] to convert it to and from a string representation. This is used for
- * serialization and deserialization of [Uuid] in the JSON data classes.
+ * Groups all children with assumptions by their assumption IDs. Returns a map from assumption ID to
+ * list of child QueryTree IDs that have that assumption.
  */
-object UuidSerializer : KSerializer<Uuid> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("Uuid", PrimitiveKind.STRING)
+fun <T> QueryTree<T>.getChildrenGroupedByAssumptions(): Map<String, List<String>> {
+    val result = mutableMapOf<String, MutableSet<String>>()
 
-    override fun serialize(encoder: Encoder, value: Uuid) {
-        encoder.encodeString(value.toString())
+    // Get all children with assumptions
+    val childrenWithAssumptions =
+        this.mapAllChildren(filter = { it.relevantAssumptions().isNotEmpty() }) { it }
+
+    // Group by assumption ID
+    for (child in childrenWithAssumptions) {
+        val childId = child.id.toString()
+        for (assumption in child.relevantAssumptions()) {
+            val assumptionId = assumption.id.toString()
+            result.getOrPut(assumptionId) { mutableSetOf() }.add(childId)
+        }
     }
 
-    override fun deserialize(decoder: Decoder): Uuid {
-        return Uuid.parse(decoder.decodeString())
-    }
+    // Convert sets to lists for the return type
+    return result.mapValues { it.value.toList() }
+}
+
+/** Converts a [QueryTree] into its JSON representation with lazy loading support. */
+fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
+    // Determine the QueryTree type based on the class
+    val queryTreeType =
+        when (this) {
+            is BinaryOperationResult<*, *> -> "BinaryOperationResult"
+            is UnaryOperationResult<*> -> "UnaryOperationResult"
+            is SinglePathResult -> "SinglePathResult"
+            else -> "QueryTree"
+        }
+
+    // Handle different value types
+    val (stringValue, nodeValues) =
+        when (val value = this.value) {
+            is List<*> -> {
+                // Check if it's a list of nodes
+                if (value.isNotEmpty() && value.first() is Node) {
+                    @Suppress("UNCHECKED_CAST") val nodes = value as List<Node>
+                    null to nodes.map { it.toJSON(noEdges = true) }
+                } else {
+                    value.toString() to null
+                }
+            }
+            else -> value.toString() to null
+        }
+
+    return QueryTreeJSON(
+        id = this.id.toString(),
+        value = stringValue,
+        nodeValues = nodeValues,
+        confidence = this.confidence.toString(),
+        stringRepresentation = this.stringRepresentation,
+        operator = this.operator.toString(),
+        queryTreeType = queryTreeType,
+        childrenIds = this.children.map { it.id.toString() },
+        childrenWithAssumptionIds = this.getChildrenGroupedByAssumptions(),
+        hasChildren = this.children.isNotEmpty(),
+        nodeId = this.node?.id?.toString(),
+        node = this.node?.toJSON(noEdges = true),
+        callerInfo =
+            this.callerInfo?.let {
+                CallerInfoJSON(
+                    className = it.className,
+                    methodName = it.methodName,
+                    fileName = it.fileName,
+                    lineNumber = it.lineNumber,
+                )
+            },
+        assumptions = this.relevantAssumptions().map { it.toJSON() }.toSet(),
+    )
+}
+
+/**
+ * Converts a [RequirementBuilder] into its JSON representation.
+ *
+ * @param categoryId The ID of the parent category, required for the JSON structure.
+ * @param requirementsResults Map containing the evaluation results for requirements, keyed by
+ *   requirement ID
+ */
+fun RequirementBuilder.toJSON(
+    categoryId: String,
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null,
+): RequirementJSON {
+    val queryTree = requirementsResults?.get(this.id)
+    val status =
+        when {
+            requirementsResults == null -> "NOT_YET_EVALUATED"
+            else -> {
+                when {
+                    queryTree == null || queryTree is NotYetEvaluated -> "NOT_YET_EVALUATED"
+                    queryTree.confidence is RejectedResult -> "REJECTED"
+                    queryTree.confidence is UndecidedResult -> "UNDECIDED"
+                    queryTree.value && queryTree.confidence is AcceptedResult -> "FULFILLED"
+                    !queryTree.value && queryTree.confidence is AcceptedResult -> "NOT_FULFILLED"
+                    else -> "UNDECIDED"
+                }
+            }
+        }
+
+    return RequirementJSON(
+        id = this.id,
+        name = this.name ?: this.id,
+        description = this.description ?: "",
+        status = status,
+        categoryId = categoryId,
+        queryTree = queryTree?.toJSON(),
+    )
 }

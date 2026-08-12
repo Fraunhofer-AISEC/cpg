@@ -29,14 +29,22 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
-class PhysicalLocation(uri: URI, region: Region) {
-    class ArtifactLocation(val uri: URI) {
+class PhysicalLocation(uri: URI?, region: Region) {
+    class ArtifactLocation(val uri: URI?) {
 
         override fun toString(): String {
-            return uri.path.substring(uri.path.lastIndexOf('/') + 1)
+            return fileName
         }
+
+        val fileName =
+            if (uri != null) {
+                uri.path.substring(uri.path.lastIndexOf('/') + 1)
+            } else {
+                "unknown"
+            }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -44,14 +52,45 @@ class PhysicalLocation(uri: URI, region: Region) {
             return uri == other.uri
         }
 
-        override fun hashCode() = Objects.hashCode(uri)
+        override fun hashCode() = Objects.hashCode(fileName)
+
+        companion object {
+            private val unknown = ArtifactLocation(null)
+            private val cache = ConcurrentHashMap<URI, ArtifactLocation>()
+
+            /**
+             * Upper bound on the number of interned [ArtifactLocation]s. The interning only needs
+             * to help within the working set of files currently being analyzed; because an
+             * [ArtifactLocation] is value-equal and cheap to rebuild, dropping cached entries only
+             * forgoes sharing, never correctness. Bounding the cache prevents unbounded growth in
+             * long-lived processes (e.g. server mode) that analyze many distinct files over time.
+             */
+            private const val MAX_CACHE_SIZE = 50_000
+
+            /**
+             * Returns a (shared) [ArtifactLocation] for [uri]. Since an [ArtifactLocation] is
+             * immutable and value-equal by [uri], and every node in a file shares the same URI, we
+             * intern one instance per URI instead of reconstructing a wrapper (and recomputing
+             * [fileName]) for every located node. The cache is bounded by [MAX_CACHE_SIZE] distinct
+             * URIs; once that limit is reached it is cleared and repopulated on demand.
+             */
+            fun of(uri: URI?): ArtifactLocation {
+                if (uri == null) return unknown
+                // Cheap, racy bound. Occasional over-shoot or double-clear across threads is
+                // harmless: entries are pure caches and any dropped instance is simply rebuilt.
+                if (cache.size >= MAX_CACHE_SIZE) {
+                    cache.clear()
+                }
+                return cache.computeIfAbsent(uri) { ArtifactLocation(it) }
+            }
+        }
     }
 
-    val artifactLocation: ArtifactLocation
+    var artifactLocation: ArtifactLocation
     var region: Region
 
     init {
-        artifactLocation = ArtifactLocation(uri)
+        artifactLocation = ArtifactLocation.of(uri)
         this.region = region
     }
 
@@ -70,11 +109,7 @@ class PhysicalLocation(uri: URI, region: Region) {
     companion object {
         fun locationLink(location: PhysicalLocation?): String {
             return if (location != null) {
-                (location.artifactLocation.uri.path +
-                    ":" +
-                    location.region.startLine +
-                    ":" +
-                    location.region.startColumn)
+                "${location.artifactLocation}:${location.region.startLine}:${location.region.startColumn}"
             } else "unknown"
         }
     }

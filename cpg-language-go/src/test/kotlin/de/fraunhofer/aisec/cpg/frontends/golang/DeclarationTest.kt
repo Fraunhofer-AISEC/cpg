@@ -27,9 +27,15 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.*
@@ -52,8 +58,8 @@ class DeclarationTest {
         val myStruct = main.records["main.MyStruct"]
         assertNotNull(myStruct)
 
-        // Receiver should be null since its unnamed
-        val myFunc = myStruct.methods["MyFunc"]
+        // Receiver should be null because its unnamed
+        val myFunc = myStruct.toType().methods["MyFunc"]
         assertNotNull(myFunc)
         assertNull(myFunc.receiver)
     }
@@ -107,8 +113,14 @@ class DeclarationTest {
         )
 
         var methods = myStruct.methods
+        assertEquals(
+            0,
+            methods.size,
+            "Expected no inner methods in struct MyStruct, since Go declares methods outside of the type",
+        )
 
-        var myFunc = methods.firstOrNull()
+        val typeMethods = myStruct.toType().methods
+        var myFunc = typeMethods.firstOrNull()
         assertNotNull(myFunc)
         assertFullName("p.MyStruct.MyFunc", myFunc)
 
@@ -137,7 +149,7 @@ class DeclarationTest {
         val body = newMyStruct.body as? Block
         assertNotNull(body)
 
-        val `return` = body.statements.first() as? ReturnStatement
+        val `return` = body.statements.first() as? Return
         assertNotNull(`return`)
 
         val returnValue = `return`.returnValue as? UnaryOperator
@@ -157,9 +169,9 @@ class DeclarationTest {
         assertNotNull(field)
 
         val init = s.initializer
-        assertIs<InitializerListExpression>(init)
+        assertIs<InitializerList>(init)
 
-        val keyValue = init.initializers<KeyValueExpression>(0)
+        val keyValue = init.initializers<KeyValue>(0)
         assertNotNull(keyValue)
 
         val key = keyValue.key
@@ -226,9 +238,9 @@ class DeclarationTest {
         assertNull(e.initializer)
 
         // The tuple (e,f) does have an initializer
-        val ef = main.allChildren<TupleDeclaration> { it.name.toString() == "(e,f)" }.firstOrNull()
+        val ef = main.allChildren<Tuple> { it.name.toString() == "(e,f)" }.firstOrNull()
         assertNotNull(ef)
-        assertIs<CallExpression>(ef.initializer)
+        assertIs<Call>(ef.initializer)
         assertEquals(ef, e.astParent)
 
         // The next two variables are using a short assignment, therefore they do not have an
@@ -334,7 +346,7 @@ class DeclarationTest {
         assertNotNull(callPrintf)
         assertInvokes(callPrintf, printf)
 
-        val expr = result.allChildren<MemberExpression>().firstOrNull()
+        val expr = result.allChildren<MemberAccess>().firstOrNull()
         assertNotNull(expr)
 
         val fmt = result.variables["fmt"]
@@ -372,7 +384,7 @@ class DeclarationTest {
 
         val mce = assign.target
         assertNotNull(mce)
-        assertIs<MemberExpression>(mce)
+        assertIs<MemberAccess>(mce)
         assertRefersTo(mce, field)
     }
 }

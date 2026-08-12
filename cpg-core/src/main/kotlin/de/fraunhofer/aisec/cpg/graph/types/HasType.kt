@@ -26,16 +26,17 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.applyMetadata
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
@@ -145,10 +146,9 @@ interface HasType : LanguageProvider {
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
          * [TypeObserver] with the [old] node and registers it with the [new] one. It updates the
-         * [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access] property of
-         * [new.end].
+         * [Expression.access] property of [AstEdge.end].
          */
-        fun <NodeType : Node> exchangeTypeObserverWithAccessPropagation(
+        fun <NodeType : AstNode> exchangeTypeObserverWithAccessPropagation(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
         ) {
@@ -158,10 +158,9 @@ interface HasType : LanguageProvider {
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
          * [TypeObserver] with the [old] node and registers it with the [new] one. It also updates
-         * the [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access] property of
-         * [new.end] if [propagateAccess] is set to `true`.
+         * the [Expression.access] property of [AstEdge.end] if [propagateAccess] is set to `true`.
          */
-        fun <NodeType : Node> exchangeTypeObserver(
+        fun <NodeType : AstNode> exchangeTypeObserver(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
             propagateAccess: Boolean,
@@ -176,10 +175,9 @@ interface HasType : LanguageProvider {
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
          * [TypeObserver] with the [old] node and registers it with the [new] one. It does not
-         * update the [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access]
-         * property of [new.end].
+         * update the [Expression.access] property of [AstEdge.end].
          */
-        fun <NodeType : Node> exchangeTypeObserverWithoutAccessPropagation(
+        fun <NodeType : AstNode> exchangeTypeObserverWithoutAccessPropagation(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
         ) {
@@ -267,7 +265,7 @@ class InitializerTypePropagation(private var decl: HasType, private var tupleIdx
         // with dynamic types because we rely on the assigned types and the dynamic type always
         // stays the "dynamic type".
         val assignedTypes =
-            assignedTypes.map {
+            assignedTypes.mapTo(mutableSetOf()) {
                 if (it is TupleType && tupleIdx != -1) {
                     it.types.getOrElse(tupleIdx) { decl.unknownType() }
                 } else {
@@ -275,6 +273,6 @@ class InitializerTypePropagation(private var decl: HasType, private var tupleIdx
                 }
             }
 
-        decl.addAssignedTypes(assignedTypes.toSet())
+        decl.addAssignedTypes(assignedTypes)
     }
 }

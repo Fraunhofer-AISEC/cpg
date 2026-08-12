@@ -26,10 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCallExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -124,10 +125,10 @@ class CXXDeclarationTest {
         // should be eight function nodes
         assertEquals(8, tu.functions.size)
 
-        var method = tu.declarations<FunctionDeclaration>(0)
+        var method = tu.declarations<Function>(0)
         assertEquals("function0(int)void", method!!.signature)
 
-        method = tu.declarations<FunctionDeclaration>(1)
+        method = tu.declarations<Function>(1)
         assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
 
         val args = method.parameters.map { it.name.localName }
@@ -143,7 +144,7 @@ class CXXDeclarationTest {
         // the declaration should be connected to the definition
         assertEquals(function0, function0DeclOnly.definition)
 
-        method = tu.declarations<FunctionDeclaration>(2)
+        method = tu.declarations<Function>(2)
         assertEquals("function0(int)void", method!!.signature)
 
         var statements = (method.body as Block).statements
@@ -151,11 +152,11 @@ class CXXDeclarationTest {
         assertEquals(2, statements.size)
 
         // last statement should be an implicit return
-        var statement = method.bodyOrNull<ReturnStatement>(-1)
+        var statement = method.bodyOrNull<Return>(-1)
         assertNotNull(statement)
         assertTrue(statement.isImplicit)
 
-        method = tu.declarations<FunctionDeclaration>(3)
+        method = tu.declarations<Function>(3)
         assertEquals("function2()void*", method!!.signature)
 
         statements = (method.body as Block).statements
@@ -167,20 +168,20 @@ class CXXDeclarationTest {
         assertNotNull(statement)
         assertFalse(statement.isImplicit)
 
-        method = tu.declarations<FunctionDeclaration>(4)
+        method = tu.declarations<Function>(4)
         assertNotNull(method)
         assertEquals("function3()UnknownType*", method.signature)
 
-        method = tu.declarations<FunctionDeclaration>(5)
+        method = tu.declarations<Function>(5)
         assertNotNull(method)
         assertEquals("function4(int)void", method.signature)
 
-        method = tu.declarations<FunctionDeclaration>(6)
+        method = tu.declarations<Function>(6)
         assertNotNull(method)
         assertEquals(0, method.parameters.size)
         assertEquals("function5()void", method.signature)
 
-        method = tu.declarations<FunctionDeclaration>(7)
+        method = tu.declarations<Function>(7)
         assertNotNull(method)
         assertEquals(1, method.parameters.size)
 
@@ -279,36 +280,36 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        var proxy = result.records["Proxy"]
+        val proxy = result.records["Proxy"]
         assertNotNull(proxy)
 
-        var op = proxy.operators["operator->"]
+        val op = proxy.operators["operator->"]
         assertNotNull(op)
 
-        var data = result.records["Data"]
+        val data = result.records["Data"]
         assertNotNull(data)
 
-        var size = data.fields["size"]
+        val size = data.fields["size"]
         assertNotNull(size)
 
         val p = result.refs["p"]
-        assertNotNull(p)
-        assertEquals(proxy.toType(), p.type)
+        assertIs<PointerDereference>(p)
+        assertEquals(proxy.toType(), p.input.type)
 
-        var sizeRef = result.memberExpressions["size"]
+        val sizeRef = result.memberExpressions["size"]
         assertNotNull(sizeRef)
         assertRefersTo(sizeRef, size)
 
         // we should now have an implicit call to our operator in-between "p" and "size"
         val opCall = sizeRef.base
         assertNotNull(opCall)
-        assertIs<OperatorCallExpression>(opCall)
+        assertIs<OperatorCall>(opCall)
         assertEquals(p, opCall.base)
         assertInvokes(opCall, op)
     }
 
     @Test
-    fun testCallExpressionOperator() {
+    fun testCallOperator() {
         val file = File("src/test/resources/cxx/operators/call_expression.cpp")
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
@@ -316,37 +317,37 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        var proxy = result.records["Proxy"]
+        val proxy = result.records["Proxy"]
         assertNotNull(proxy)
 
-        var funcBar = proxy.functions["bar"]
+        val funcBar = proxy.functions["bar"]
         assertNotNull(funcBar)
 
-        var op = proxy.operators["operator->"]
+        val op = proxy.operators["operator->"]
         assertNotNull(op)
 
-        var data = result.records["Data"]
+        val data = result.records["Data"]
         assertNotNull(data)
 
-        var funcFoo = data.functions["foo"]
+        val funcFoo = data.functions["foo"]
         assertNotNull(funcFoo)
 
         val p = result.refs["p"]
-        assertNotNull(p)
-        assertEquals(proxy.toType(), p.type)
+        assertIs<PointerDereference>(p)
+        assertEquals(proxy.toType(), p.input.type)
 
-        var funcFooRef = result.memberExpressions["foo"]
+        val funcFooRef = result.memberExpressions["foo"]
         assertNotNull(funcFooRef)
         assertRefersTo(funcFooRef, funcFoo)
 
-        var funcBarRef = result.memberExpressions["bar"]
+        val funcBarRef = result.memberExpressions["bar"]
         assertNotNull(funcBarRef)
         assertRefersTo(funcBarRef, funcBar)
 
         // we should now have an implicit call to our operator in-between "p" and "foo"
         val opCall = funcFooRef.base
         assertNotNull(opCall)
-        assertIs<OperatorCallExpression>(opCall)
+        assertIs<OperatorCall>(opCall)
         assertEquals(p, opCall.base)
         assertInvokes(opCall, op)
     }

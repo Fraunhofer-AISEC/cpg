@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.cpg.processing.strategy
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.*
 import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
@@ -76,7 +78,7 @@ object Strategy {
             }
     }
 
-    fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator<TranslationUnitDeclaration> {
+    fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator<TranslationUnit> {
         return x.translationUnitDependencies?.sorted?.iterator()
             ?: x.translationUnits.iterator().also {
                 log.warn(
@@ -122,8 +124,17 @@ object Strategy {
      * @param x
      * @return
      */
-    fun AST_FORWARD(x: Node): Iterator<Node> {
+    fun AST_FORWARD(x: AstNode): Iterator<AstNode> {
         return x.astChildren.iterator()
+    }
+
+    fun MEMORY_VALUES_FORWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueEdges.iterator() else x.nextDFGEdges.iterator()
+    }
+
+    fun MEMORY_VALUES_BACKWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueUsageEdges.iterator()
+        else x.prevDFGEdges.iterator()
     }
 
     /**
@@ -172,7 +183,7 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successor edges.
      */
-    fun AST_EDGES_FORWARD(x: Node): Iterator<AstEdge<out Node>> {
+    fun AST_EDGES_FORWARD(x: AstNode): Iterator<AstEdge<out AstNode>> {
         return x.astEdges.iterator()
     }
 
@@ -182,7 +193,7 @@ object Strategy {
      * @param x Current node in EOG.
      * @return Iterator over successor edges.
      */
-    fun AST_EDGES_BACKWARD(x: Node): Iterator<AstEdge<out Node>> {
+    fun AST_EDGES_BACKWARD(x: AstNode): Iterator<AstEdge<out AstNode>> {
         return (x.astParent?.astEdges?.filter { it.end == x } ?: emptyList()).iterator()
     }
 }

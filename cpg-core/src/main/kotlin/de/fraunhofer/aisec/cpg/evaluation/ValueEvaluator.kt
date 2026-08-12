@@ -29,9 +29,10 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
+import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -72,18 +73,31 @@ open class ValueEvaluator(
     /** This property contains the path of the latest execution of [evaluateInternal]. */
     val path: MutableList<Node> = mutableListOf()
 
-    open fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    open fun evaluate(node: Any?, useCache: Boolean = false): Any? {
         if (node !is Node) return node
         clearPath()
 
-        return evaluateInternal(node, 0)
+        // Check if we have the value for [node.hashCode] in the cache. If not, evaluate it
+        return if (useCache) valuesCache.getOrPut(node.hashCode()) { evaluateInternal(node, 0) }
+        else evaluateInternal(node, 0)
     }
 
     /**
      * Tries to evaluate this node and returns the result as the specified type [T]. If the
      * evaluation fails, the result is "null".
+     *
+     * @return The result of the evaluation. If the evaluation fails, the result is `null`.
      */
     inline fun <reified T> evaluateAs(node: Node?): T? {
+        if (node == null) return null // Nothing to do, return null right away
+        clearPath() // clear the path before evaluating or we may start with old data if re-using
+        // the ValueEvaluator object
+
         val result = evaluateInternal(node, 0)
         return if (result !is T) {
             Util.errorWithFileLocation(
@@ -109,25 +123,30 @@ open class ValueEvaluator(
             return null
         }
 
+        // If the node is already in the path twice, we are looping, so we can stop here
+        if (this.path.filter { it === node }.size > 1) {
+            return cannotEvaluate(node, this)
+        }
+
         // Add the expression to the current path
         node.let { this.path += it }
 
         when (node) {
-            is NewArrayExpression -> return handleHasInitializer(node, depth)
-            is VariableDeclaration -> return handleHasInitializer(node, depth)
+            is ArrayConstruction -> return handleHasInitializer(node, depth)
+            is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is SubscriptExpression -> return handleSubscriptExpression(node, depth)
+            is Cast -> return this.evaluateInternal(node.expression, depth + 1)
+            is Subscription -> return handleSubscription(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> return handleConditionalExpression(node, depth)
-            is AssignExpression -> return handleAssignExpression(node, depth)
+            is Conditional -> return handleConditional(node, depth)
+            is Assign -> return handleAssign(node, depth)
             is Reference -> return handleReference(node, depth)
-            is CallExpression -> return handleCallExpression(node, depth)
+            is Call -> return handleCall(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
@@ -136,8 +155,8 @@ open class ValueEvaluator(
         return cannotEvaluate(node, this)
     }
 
-    /** Handles a [CallExpression]. Default behaviour is to call [handlePrevDFG] */
-    protected open fun handleCallExpression(node: CallExpression, depth: Int): Any? {
+    /** Handles a [Call]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleCall(node: Call, depth: Int): Any? {
         return handlePrevDFG(node, depth)
     }
 
@@ -160,7 +179,7 @@ open class ValueEvaluator(
     }
 
     /** Under certain circumstances, an assignment can also be used as an expression. */
-    protected open fun handleAssignExpression(node: AssignExpression, depth: Int): Any? {
+    protected open fun handleAssign(node: Assign, depth: Int): Any? {
         // Handle compound assignments. Only possible with single values
         val lhs = node.lhs.singleOrNull()
         val rhs = node.rhs.singleOrNull()
@@ -197,7 +216,7 @@ open class ValueEvaluator(
      * Computes the effect of basic "binary" operators.
      *
      * Note: this is both used by a [BinaryOperator] with basic arithmetic operations as well as
-     * [AssignExpression], if [AssignExpression.isCompoundAssignment] is true.
+     * [Assign], if [Assign.isCompoundAssignment] is true.
      */
     protected open fun computeBinaryOpEffect(
         lhsValue: Any?,
@@ -396,17 +415,16 @@ open class ValueEvaluator(
 
     /**
      * For arrays, we check whether we can actually access the contents of the array. This is
-     * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
-     * s.
+     * basically the case if the base of the subscript expression is a list of [KeyValue] s.
      */
-    protected fun handleSubscriptExpression(expr: SubscriptExpression, depth: Int): Any? {
-        val array = (expr.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
-        val ile = array?.initializer as? InitializerListExpression
+    protected fun handleSubscription(expr: Subscription, depth: Int): Any? {
+        val array = (expr.arrayExpression as? Reference)?.refersTo as? Variable
+        val ile = array?.initializer as? InitializerList
 
         ile?.let {
             return evaluateInternal(
                 it.initializers
-                    .filterIsInstance<KeyValueExpression>()
+                    .filterIsInstance<KeyValue>()
                     .firstOrNull { kve ->
                         (kve.key as? Literal<*>)?.value ==
                             (expr.subscriptExpression as? Literal<*>)?.value
@@ -422,7 +440,7 @@ open class ValueEvaluator(
         return handlePrevDFG(expr, depth + 1)
     }
 
-    protected open fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
+    protected open fun handleConditional(expr: Conditional, depth: Int): Any? {
         var condition = expr.condition
 
         // Assume that condition is a binary operator
@@ -450,14 +468,16 @@ open class ValueEvaluator(
         // references.
         val prevDFG =
             if (node is Reference) {
-                filterSelfReferences(node, node.prevDFG.toList())
+                filterSelfReferences(node, node.prevFullDFG)
             } else {
-                node.prevDFG
+                node.prevFullDFG
             }
 
         return if (prevDFG.size == 1) {
-            // There's only one incoming DFG edge, so we follow this one.
-            evaluateInternal(prevDFG.first(), depth + 1)
+            // There's only one incoming DFG edge, so we follow this one. Except if it brings us
+            // back to the same node
+            val prev = prevDFG.single()
+            if (prev == node) cannotEvaluate(node, this) else evaluateInternal(prev, depth + 1)
         } else if (prevDFG.size > 1) {
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
@@ -467,7 +487,7 @@ open class ValueEvaluator(
             cannotEvaluate(node, this)
         } else {
             // No previous DFG node
-            log.warn("We cannot evaluate {}: It has no previous DFG edges.", node)
+            log.trace("We cannot evaluate {}: It has no previous DFG edges.", node)
             cannotEvaluate(node, this)
         }
     }
@@ -476,7 +496,7 @@ open class ValueEvaluator(
      * If a reference has READWRITE access, ignore any "self-references", e.g. from a
      * plus/minus/div/times-assign or a plusplus/minusminus, etc.
      */
-    protected fun filterSelfReferences(ref: Reference, inDFG: List<Node>): List<Node> {
+    protected fun filterSelfReferences(ref: Reference, inDFG: Collection<Node>): Collection<Node> {
         var list = inDFG
 
         // The ops +=, -=, ... and ++, -- have in common that we see the ref twice: Once to reach
@@ -496,14 +516,14 @@ open class ValueEvaluator(
             // Remove the self reference
             list =
                 list.filter {
-                    !((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
+                    !((it is Assign && it.lhs.singleOrNull() == ref) ||
                         (it is UnaryOperator && it.input == ref))
                 }
         } else if (ref.access == AccessValues.READWRITE && !isCase2) {
             // Consider only the self reference
             list =
                 list.filter {
-                    ((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
+                    ((it is Assign && it.lhs.singleOrNull() == ref) ||
                         (it is UnaryOperator && it.input == ref))
                 }
         }

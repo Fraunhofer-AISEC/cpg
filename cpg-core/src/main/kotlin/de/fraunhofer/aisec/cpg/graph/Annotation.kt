@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import java.util.*
 
-class Annotation : Node() {
+class Annotation : AstNode() {
     var members = mutableListOf<AnnotationMember>()
 
     fun getValueForName(name: String): Expression? {
