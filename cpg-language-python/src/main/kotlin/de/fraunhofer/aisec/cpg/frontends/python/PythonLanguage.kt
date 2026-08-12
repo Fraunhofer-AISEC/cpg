@@ -31,12 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -321,6 +324,21 @@ open class PythonLanguage :
     }
 
     /**
+     * Python knows no access control modifiers at all, so the only "modifier" we can interpret is
+     * the name of the [declaration] itself: the PEP 8 leading-underscore convention, mapped by
+     * [visibilityForName].
+     *
+     * That convention only carries meaning for *record members*, which is why we restrict it to
+     * declarations appearing in a [RecordScope] (methods, constructors, operators and fields).
+     * Module-level functions and local variables keep the default [Visibility.UNKNOWN].
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        if (scope is RecordScope) {
+            declaration.visibility = visibilityForName(declaration.name.localName)
+        }
+    }
+
+    /**
      * Python has **no enforced access control**; the visibility of a member is purely a PEP 8
      * naming convention (see https://peps.python.org/pep-0008/#descriptive-naming-styles and
      * https://docs.python.org/3/tutorial/classes.html#private-variables). We therefore map the
@@ -340,7 +358,7 @@ open class PythonLanguage :
      * conventional visibility so that passes may read it, without ever discarding a resolution
      * candidate.
      */
-    fun visibilityForName(localName: String): Visibility {
+    internal fun visibilityForName(localName: String): Visibility {
         return when {
             // Leading double underscore, but not a trailing dunder → name-mangled → "private".
             localName.startsWith("__") && !localName.endsWith("__") -> Visibility.PRIVATE
