@@ -47,14 +47,13 @@ class VisibilityTest {
         assertNotNull(this.firstOrNull { it.name.localName == name }, "no method named $name")
 
     /**
-     * A `#private` member has an empty local name and is identified by its raw [HARD_PRIVATE]
-     * modifier.
+     * A `#` member has an empty local name and is identified by its raw [HARD_PRIVATE] modifier.
      */
     private fun Iterable<Field>.hardPrivateField(): Field =
-        assertNotNull(this.firstOrNull { HARD_PRIVATE in it.modifiers }, "no #private field")
+        assertNotNull(this.firstOrNull { HARD_PRIVATE in it.modifiers }, "no # field")
 
     private fun Iterable<Method>.hardPrivateMethod(): Method =
-        assertNotNull(this.firstOrNull { HARD_PRIVATE in it.modifiers }, "no #private method")
+        assertNotNull(this.firstOrNull { HARD_PRIVATE in it.modifiers }, "no # method")
 
     @Test
     fun testTypeScriptFieldVisibility() {
@@ -99,7 +98,7 @@ class VisibilityTest {
         assertTrue(defaultField.modifiers.isEmpty())
         assertFalse(defaultField.isStatic)
 
-        // #private -> PRIVATE (hard/runtime private)
+        // # -> PRIVATE (hard/runtime private)
         val hardField = record.fields.hardPrivateField()
         assertEquals(Visibility.PRIVATE, hardField.visibility)
     }
@@ -155,7 +154,7 @@ class VisibilityTest {
         assertTrue(staticField.isStatic)
         assertEquals(Visibility.PUBLIC, staticField.visibility)
 
-        // A `#private` member is the only truly private thing in JavaScript.
+        // A `#` member is the only truly private thing in JavaScript.
         val hardField = record.fields.hardPrivateField()
         assertEquals(Visibility.PRIVATE, hardField.visibility)
 

@@ -50,7 +50,7 @@ const val STATIC = "static"
  * name starts with `#` (a `PrivateIdentifier`). Unlike TypeScript's compile-time `private`, this is
  * enforced at runtime and exists in plain JavaScript as well.
  */
-const val HARD_PRIVATE = "#private"
+const val HARD_PRIVATE = "#"
 
 /**
  * The JavaScript language.
