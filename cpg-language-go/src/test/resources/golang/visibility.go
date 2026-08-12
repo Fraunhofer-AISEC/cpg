@@ -44,8 +44,18 @@ type ExportedInterface interface {
 	unexportedDo()
 }
 
+// Type aliases (`=`) are exported/unexported just like any other named type.
+type ExportedAlias = int
+type unexportedAlias = int
+
 func local() {
 	// Local variables are block-scoped and carry no visibility restriction.
 	notExported := 1
 	_ = notExported
+
+	// The same holds for classic `var` declarations inside a block: even an upper-case name is
+	// not exported here, because export semantics only apply at package level.
+	var Exported = 1
+	var unexported = 2
+	_, _ = Exported, unexported
 }

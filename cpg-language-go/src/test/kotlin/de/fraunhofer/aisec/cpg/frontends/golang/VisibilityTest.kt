@@ -37,23 +37,23 @@ class VisibilityTest {
      * identifier, empty/unnamed declarations and non-ASCII (Unicode) first runes.
      */
     @Test
-    fun testExportVisibilityMapping() {
+    fun testVisibilityOfMapping() {
         // Exported: upper-case first rune -> PUBLIC
-        assertEquals(Visibility.PUBLIC, GoLanguage.exportVisibility("Foo"))
-        assertEquals(Visibility.PUBLIC, GoLanguage.exportVisibility("F"))
+        assertEquals(Visibility.PUBLIC, GoLanguage.visibilityOf("Foo"))
+        assertEquals(Visibility.PUBLIC, GoLanguage.visibilityOf("F"))
         // Unexported: lower-case first rune -> PACKAGE
-        assertEquals(Visibility.PACKAGE, GoLanguage.exportVisibility("foo"))
-        assertEquals(Visibility.PACKAGE, GoLanguage.exportVisibility("f"))
+        assertEquals(Visibility.PACKAGE, GoLanguage.visibilityOf("foo"))
+        assertEquals(Visibility.PACKAGE, GoLanguage.visibilityOf("f"))
         // Leading underscore is not an upper-case letter -> unexported -> PACKAGE
-        assertEquals(Visibility.PACKAGE, GoLanguage.exportVisibility("_foo"))
+        assertEquals(Visibility.PACKAGE, GoLanguage.visibilityOf("_foo"))
 
         // The blank identifier and unnamed declarations have no export semantics -> UNKNOWN
-        assertEquals(Visibility.UNKNOWN, GoLanguage.exportVisibility("_"))
-        assertEquals(Visibility.UNKNOWN, GoLanguage.exportVisibility(""))
+        assertEquals(Visibility.UNKNOWN, GoLanguage.visibilityOf("_"))
+        assertEquals(Visibility.UNKNOWN, GoLanguage.visibilityOf(""))
 
         // Unicode: the decision is made on the first *rune*, not the first UTF-16 char.
-        assertEquals(Visibility.PUBLIC, GoLanguage.exportVisibility("Über"))
-        assertEquals(Visibility.PACKAGE, GoLanguage.exportVisibility("über"))
+        assertEquals(Visibility.PUBLIC, GoLanguage.visibilityOf("Über"))
+        assertEquals(Visibility.PACKAGE, GoLanguage.visibilityOf("über"))
     }
 
     @Test
@@ -148,11 +148,32 @@ class VisibilityTest {
         assertNotNull(unexportedDo)
         assertEquals(Visibility.PACKAGE, unexportedDo.visibility)
 
+        // Type aliases are exported/unexported like any other named type.
+        val aliases = tu.allChildren<Typedef>()
+        val exportedAlias = aliases.singleOrNull { it.name.localName == "ExportedAlias" }
+        assertNotNull(exportedAlias)
+        assertEquals(Visibility.PUBLIC, exportedAlias.visibility)
+
+        val unexportedAlias = aliases.singleOrNull { it.name.localName == "unexportedAlias" }
+        assertNotNull(unexportedAlias)
+        assertEquals(Visibility.PACKAGE, unexportedAlias.visibility)
+
         // Local variables are block-scoped and carry no visibility restriction.
         val local = p.functions["local"]
         assertNotNull(local)
         val notExported = local.variables["notExported"]
         assertNotNull(notExported)
         assertEquals(Visibility.UNKNOWN, notExported.visibility)
+
+        // The same holds for a classic `var` inside a block: this drives the value-spec path with a
+        // non-package scope, so even the upper-case name must stay UNKNOWN. This is what keeps the
+        // scope guard in GoLanguage.applyModifiers honest.
+        val blockScoped = local.variables["Exported"]
+        assertNotNull(blockScoped)
+        assertEquals(Visibility.UNKNOWN, blockScoped.visibility)
+
+        val blockScopedLower = local.variables["unexported"]
+        assertNotNull(blockScopedLower)
+        assertEquals(Visibility.UNKNOWN, blockScopedLower.visibility)
     }
 }

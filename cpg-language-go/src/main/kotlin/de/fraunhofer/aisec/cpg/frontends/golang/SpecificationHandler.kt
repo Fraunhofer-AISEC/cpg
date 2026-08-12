@@ -100,7 +100,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     ): Record {
         val record = buildRecordDeclaration(structType, typeSpec.name.name, typeSpec)
         // A named struct type is exported/unexported based on the casing of its type name.
-        record.visibility = GoLanguage.exportVisibility(typeSpec.name.name)
+        language.applyModifiers(record, frontend.scopeManager.currentScope)
 
         return record
     }
@@ -132,8 +132,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 val decl = newField(fieldName, type, modifiers, rawNode = field)
                 // A struct field is exported/unexported based on the casing of its (field or, for
-                // embedded fields, type) name.
-                decl.visibility = GoLanguage.exportVisibility(fieldName)
+                // embedded fields, type) name. We are inside the record scope here, which is a
+                // NameScope, so the language applies the export semantics.
+                language.applyModifiers(decl, frontend.scopeManager.currentScope)
                 frontend.scopeManager.addDeclaration(decl)
                 record.fields += decl
             }
@@ -150,7 +151,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     ): Declaration {
         val record = newRecord(typeSpec.name.name, "interface", rawNode = typeSpec)
         // A named interface type is exported/unexported based on the casing of its type name.
-        record.visibility = GoLanguage.exportVisibility(typeSpec.name.name)
+        language.applyModifiers(record, frontend.scopeManager.currentScope)
 
         frontend.scopeManager.enterScope(record)
 
@@ -166,7 +167,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     val method = newMethod(field.names[0].name, rawNode = field)
                     method.type = type
                     // An interface method is exported/unexported based on the casing of its name.
-                    method.visibility = GoLanguage.exportVisibility(field.names[0].name)
+                    // We are still in the record scope here, i.e. before entering the method scope.
+                    language.applyModifiers(method, frontend.scopeManager.currentScope)
 
                     frontend.scopeManager.enterScope(method)
 
@@ -227,10 +229,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val decl = newVariable(fqn, rawNode = valueSpec)
 
                 // Only top-level (package-level) variables/constants have export semantics; local
-                // variables are block-scoped and carry no visibility restriction.
-                if (topLevel) {
-                    decl.visibility = GoLanguage.exportVisibility(ident.name)
-                }
+                // variables are block-scoped and carry no visibility restriction. The language
+                // decides that based on the scope, so we can hand it every declaration.
+                language.applyModifiers(decl, frontend.scopeManager.currentScope)
 
                 if (valueSpec.type != null) {
                     decl.type = frontend.typeOf(valueSpec.type!!)
@@ -268,10 +269,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 decl.isImplicit = true
 
                 // Only top-level (package-level) variables/constants have export semantics; local
-                // variables are block-scoped and carry no visibility restriction.
-                if (topLevel) {
-                    decl.visibility = GoLanguage.exportVisibility(ident.name)
-                }
+                // variables are block-scoped and carry no visibility restriction. The language
+                // decides that based on the scope, so we can hand it every declaration.
+                language.applyModifiers(decl, frontend.scopeManager.currentScope)
                 if (type != null) {
                     decl.type = type
                 } else {
@@ -353,6 +353,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             spec.assign != 0 -> {
                 val aliasType = frontend.typeOf(spec.name)
                 val typedef = newTypedef(targetType, aliasType, rawNode = spec)
+                // A type alias is exported/unexported based on the casing of its alias name, just
+                // like the named-type branch below.
+                language.applyModifiers(typedef, frontend.scopeManager.currentScope)
 
                 frontend.scopeManager.addTypedef(typedef)
                 typedef
@@ -364,7 +367,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             else -> {
                 val record = newRecord(spec.name.name, "type")
                 // A named type is exported/unexported based on the casing of its type name.
-                record.visibility = GoLanguage.exportVisibility(spec.name.name)
+                language.applyModifiers(record, frontend.scopeManager.currentScope)
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)

@@ -27,10 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -237,39 +240,21 @@ open class GoLanguage :
         return CastNotPossible
     }
 
-    companion object {
-        /**
-         * Maps a Go identifier onto the canonical [Visibility]. Go has no access-control keywords:
-         * the visibility of a declaration is derived solely from the casing of its identifier (see
-         * https://go.dev/ref/spec#Exported_identifiers):
-         * - an identifier whose first character is a Unicode upper-case letter is *exported* and is
-         *   therefore reachable from other packages, which we model as [Visibility.PUBLIC];
-         * - any other identifier is *unexported* and confined to its own package, which we model as
-         *   [Visibility.PACKAGE] (module/package visibility, not tied to a record — Go has no
-         *   record-level `private`/`protected` access control).
-         *
-         * The blank identifier `_` as well as empty/unnamed declarations carry no meaningful
-         * visibility and are left as [Visibility.UNKNOWN] ("no restriction").
-         *
-         * This applies uniformly to top-level declarations (funcs, vars, consts, types) as well as
-         * to struct fields and methods.
-         */
-        fun exportVisibility(identifier: CharSequence): Visibility {
-            val name = identifier.toString()
-            // The blank identifier and unnamed declarations have no export semantics.
-            if (name.isEmpty() || name == "_") {
-                return Visibility.UNKNOWN
-            }
-
-            // Go decides "exported" on the first *rune*, so we must look at the first full code
-            // point rather than the first UTF-16 char to handle non-ASCII (e.g. "Über" vs "über")
-            // identifiers correctly.
-            val firstRune = name.codePointAt(0)
-            return if (Character.isUpperCase(firstRune)) {
-                Visibility.PUBLIC
-            } else {
-                Visibility.PACKAGE
-            }
+    /**
+     * Go has no visibility keywords whatsoever, so — unlike most languages — this does not look at
+     * [Declaration.modifiers] at all (the Go frontend uses those for an unrelated purpose, namely
+     * marking embedded struct fields). Instead the visibility follows solely from the casing of the
+     * declaration's identifier, see [visibilityOf].
+     *
+     * Only declarations living in a [NameScope] have export semantics: package-level funcs, vars,
+     * consts and types, as well as struct fields and interface methods (a
+     * [de.fraunhofer.aisec.cpg.graph.scopes.RecordScope] is a [NameScope] too). Block-scoped locals
+     * are unreachable from another package by construction and are therefore left at
+     * [Visibility.UNKNOWN] ("no restriction").
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        if (scope is NameScope) {
+            declaration.visibility = visibilityOf(declaration.name.localName)
         }
     }
 
@@ -332,5 +317,35 @@ open class GoLanguage :
             // For all the rest, we take the default behavior
             else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
+    }
+
+    companion object {
+        /**
+         * Maps a Go identifier onto the canonical [Visibility]. Go has no access-control keywords:
+         * the visibility of a declaration is derived solely from the casing of its identifier (see
+         * https://go.dev/ref/spec#Exported_identifiers):
+         * - an identifier whose first character is a Unicode upper-case letter is *exported* and is
+         *   therefore reachable from other packages, which we model as [Visibility.PUBLIC];
+         * - any other identifier is *unexported* and confined to its own package, which we model as
+         *   [Visibility.PACKAGE] (module/package visibility, not tied to a record — Go has no
+         *   record-level `private`/`protected` access control).
+         *
+         * The blank identifier `_` as well as empty/unnamed declarations carry no meaningful
+         * visibility and are left as [Visibility.UNKNOWN] ("no restriction").
+         *
+         * This is the pure mapping only; [applyModifiers] is what decides *which* declarations it
+         * is applied to.
+         */
+        internal fun visibilityOf(identifier: String): Visibility =
+            when {
+                // The blank identifier and unnamed declarations have no export semantics.
+                identifier.isEmpty() || identifier == "_" -> Visibility.UNKNOWN
+                // Go decides "exported" on the first *rune*, so we must look at the first full code
+                // point rather than the first UTF-16 char to handle non-ASCII (e.g. "Über" vs
+                // "über") identifiers correctly. `isUpperCase` returns false for uncased scripts,
+                // which matches Go's "upper-case letter" rule.
+                Character.isUpperCase(identifier.codePointAt(0)) -> Visibility.PUBLIC
+                else -> Visibility.PACKAGE
+            }
     }
 }
