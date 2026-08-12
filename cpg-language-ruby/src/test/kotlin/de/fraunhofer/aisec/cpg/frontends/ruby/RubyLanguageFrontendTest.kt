@@ -30,8 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class RubyLanguageFrontendTest {
     @Test
@@ -81,5 +83,58 @@ class RubyLanguageFrontendTest {
 
         val i = arg0.function.parameters[0]
         assertLocalName("i", i)
+    }
+
+    @Test
+    fun testMethodVisibility() {
+        val topLevel = Path.of("src", "test", "resources", "ruby")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("visibility.rb").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RubyLanguage>()
+            }
+        assertNotNull(tu)
+
+        val account = tu.records["Account"]
+        assertNotNull(account)
+
+        // The default (no modifier) visibility for a Ruby method is public.
+        val deposit = account.methods["deposit"]
+        assertNotNull(deposit)
+        assertEquals(Visibility.PUBLIC, deposit.visibility)
+        assertTrue("public" in deposit.modifiers)
+
+        // A bare `protected` statement flips the default for subsequently-defined methods.
+        val compare = account.methods["compare"]
+        assertNotNull(compare)
+        assertEquals(Visibility.PROTECTED, compare.visibility)
+        assertTrue("protected" in compare.modifiers)
+
+        // A bare `private` statement flips the default for subsequently-defined methods.
+        val recompute = account.methods["recompute"]
+        assertNotNull(recompute)
+        assertEquals(Visibility.PRIVATE, recompute.visibility)
+        assertTrue("private" in recompute.modifiers)
+
+        // A bare `public` statement flips the default back to public.
+        val balance = account.methods["balance"]
+        assertNotNull(balance)
+        assertEquals(Visibility.PUBLIC, balance.visibility)
+        assertTrue("public" in balance.modifiers)
+
+        // `private def audit` applies to this single method only.
+        val audit = account.methods["audit"]
+        assertNotNull(audit)
+        assertEquals(Visibility.PRIVATE, audit.visibility)
+        assertTrue("private" in audit.modifiers)
+
+        // The `private def` above must not have flipped the default: `close` is still public.
+        val close = account.methods["close"]
+        assertNotNull(close)
+        assertEquals(Visibility.PUBLIC, close.visibility)
+        assertTrue("public" in close.modifiers)
     }
 }
