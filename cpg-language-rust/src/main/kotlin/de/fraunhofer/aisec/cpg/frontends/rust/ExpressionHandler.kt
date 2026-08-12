@@ -246,8 +246,14 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         // Here we have an explicit suffix
         for (suffix in suffixes) {
             if (literal.endsWith(suffix)) {
+                val literalValue: Any =
+                    when (suffix) {
+                        "i64", "u64", "isize", "usize" -> value.toLong()
+                        "i128", "u128" -> value
+                        else -> value.toInt()
+                    }
                 return newLiteral(
-                    value.toInt(),
+                    literalValue,
                     language.builtInTypes[suffix] ?: unknownType(),
                     raw,
                 )
