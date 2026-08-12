@@ -130,7 +130,7 @@ class RustLanguage :
                     "isize",
                     null /* At least 16 bits, but architecture dependent */,
                     this,
-                    NumericType.Modifier.UNSIGNED,
+                    NumericType.Modifier.SIGNED,
                 ),
             "f32" to FloatingPointType("f32", 32, this, NumericType.Modifier.SIGNED),
             "f64" to FloatingPointType("f64", 64, this, NumericType.Modifier.SIGNED),
