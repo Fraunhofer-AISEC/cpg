@@ -60,7 +60,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.assertInstanceOf
+import kotlin.test.assertIs
+import kotlin.test.assertNull
 import org.junit.jupiter.api.assertNull
 
 class ControlFlowTest {
