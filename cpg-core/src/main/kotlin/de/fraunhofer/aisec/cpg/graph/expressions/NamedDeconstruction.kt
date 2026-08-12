@@ -79,7 +79,7 @@ class NamedDeconstruction : Deconstruction(), ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is KeyValue) return false
+        if (other !is NamedDeconstruction) return false
         return super.equals(other) && value == other.value
     }
 
