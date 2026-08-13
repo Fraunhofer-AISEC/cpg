@@ -33,6 +33,10 @@ val enablePythonFrontend: Boolean by extra {
     val enablePythonFrontend: String? by settings
     enablePythonFrontend.toBoolean()
 }
+val enableRustFrontend: Boolean by extra {
+    val enableRustFrontend: String? by settings
+    enableRustFrontend.toBoolean()
+}
 val enableLLVMFrontend: Boolean by extra {
     val enableLLVMFrontend: String? by settings
     enableLLVMFrontend.toBoolean()
@@ -57,9 +61,16 @@ val enableCodyzeConsole: Boolean by extra {
     val enableCodyzeConsole: String? by settings
     enableCodyzeConsole.toBoolean()
 }
-val enableMCPModule: Boolean by extra {
-    val enableMCPModule: String? by settings
-    enableMCPModule.toBoolean()
+val enableAIModule: Boolean by extra {
+    val enableAIModule: String? by settings
+    // codyze-console has a hard, unconditional build dependency on cpg-ai, so codyze-console
+    // being enabled always forces cpg-ai on too, even if enableAIModule=false is set explicitly -
+    // an explicit false would otherwise just break the codyze-console build.
+    val explicitlyEnabled = enableAIModule.toBoolean()
+    if (!explicitlyEnabled && enableCodyzeConsole) {
+        println("cpg-ai module auto-enabled because codyze-console is enabled")
+    }
+    explicitlyEnabled || enableCodyzeConsole
 }
 
 if (enableJavaFrontend) include(":cpg-language-java")
@@ -67,11 +78,12 @@ if (enableCXXFrontend) include(":cpg-language-cxx")
 if (enableGoFrontend) include(":cpg-language-go")
 if (enableLLVMFrontend) include(":cpg-language-llvm")
 if (enablePythonFrontend) include(":cpg-language-python")
+if (enableRustFrontend) include(":cpg-language-rust")
 if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
-if (enableMCPModule) include(":cpg-mcp")
+if (enableAIModule) include(":cpg-ai")
 if (enableCodyzeConsole) include(":codyze-console")
 
 

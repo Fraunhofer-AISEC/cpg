@@ -161,6 +161,20 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         return file.extension in fileExtensions
     }
 
+    /**
+     * Projects the raw [Declaration.modifiers] of [declaration] — appearing in the given [scope] —
+     * onto the canonical, language-independent properties that later passes rely on: it sets
+     * [Declaration.visibility] and, for a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration], its `isStatic` flag.
+     *
+     * The raw modifier spellings stay in [Declaration.modifiers] losslessly; this hook is the
+     * single place where a language turns them into semantics. [scope] matters because a modifier's
+     * meaning can depend on *where* the declaration appears — most notably C/C++'s `static`, which
+     * denotes internal linkage at file scope but a class-level member inside a record. The default
+     * does nothing, so a language that models no modifiers is unaffected.
+     */
+    open fun applyModifiers(declaration: Declaration, scope: Scope?) {}
+
     override fun equals(other: Any?): Boolean {
         return other?.javaClass == this.javaClass
     }
