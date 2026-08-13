@@ -31,6 +31,7 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.io.TempDir
@@ -146,5 +147,26 @@ class ApplicationSetupProjectTest {
 
         val withFlag = application("--infer-nodes", file.toString()).setupProject()
         assertTrue(withFlag.config.inferenceConfiguration.inferRecords)
+    }
+
+    @Test
+    fun testNoFilesFailsFast() {
+        // Bypass picocli's own ArgGroup validation (which would normally reject this) to make sure
+        // setupProject() itself fails fast with a clear error instead of an internal
+        // NoSuchElementException.
+        val application = Application()
+        application.mutuallyExclusiveParameters = Application.Exclusive()
+
+        assertFailsWith<IllegalArgumentException> { application.setupProject() }
+    }
+
+    @Test
+    fun testEmptyJsonCompilationDatabaseFailsFast(@TempDir tmp: Path) {
+        val cc = tmp.resolve("compile_commands.json")
+        cc.writeText("[]")
+
+        assertFailsWith<IllegalArgumentException> {
+            application("--json-compilation-database", cc.toString()).setupProject()
+        }
     }
 }

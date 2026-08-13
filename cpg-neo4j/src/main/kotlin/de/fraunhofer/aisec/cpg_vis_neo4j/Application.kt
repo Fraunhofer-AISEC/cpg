@@ -297,9 +297,9 @@ class Application : Callable<Int> {
     /**
      * Parse the file paths to analyze and set up the [Project] for these paths.
      *
-     * @throws IllegalArgumentException, if there were no arguments provided, or the path does not
-     *   point to a file, is a directory or point to a hidden file or the paths does not have the
-     *   same top level path.
+     * @throws IllegalArgumentException, if there were no arguments provided, no source files could
+     *   be resolved, or a path points to a non-existent or hidden file. A bare directory argument
+     *   is supported and triggers [Project] auto-detection instead of an error.
      */
     fun setupProject(): Project {
         val db = mutuallyExclusiveParameters.jsonCompilationDatabase?.let { fromFile(it) }
@@ -322,18 +322,26 @@ class Application : Callable<Int> {
                     )
             }
 
+        val allFiles = namedComponents.values.flatten()
+        require(allFiles.isNotEmpty()) {
+            "No source files to analyze. Either no paths were given, or " +
+                "--json-compilation-database resolved to an empty compilation database."
+        }
+
         // If the user just points us at a single directory (and did not ask for an explicit
         // top-level, software components or a compilation database), let Project auto-detect its
         // structure (e.g. Go modules, a compilation database in a build/ folder) instead of
         // treating it as one flat component.
-        val singleDirectory = mutuallyExclusiveParameters.files.singleOrNull()?.let(::File)
+        val singleDirectory =
+            mutuallyExclusiveParameters.files.singleOrNull()?.let {
+                Paths.get(it).toAbsolutePath().normalize().toFile()
+            }
         val autoDetect =
             db == null &&
                 mutuallyExclusiveParameters.softwareComponents.isEmpty() &&
                 topLevel == null &&
                 singleDirectory?.isDirectory == true
 
-        val allFiles = namedComponents.values.flatten()
         val projectPath =
             (topLevel
                     ?: (if (autoDetect) singleDirectory
@@ -397,15 +405,15 @@ class Application : Callable<Int> {
                 includesFile?.let { theFile ->
                     log.info("Load includes from file: $theFile")
                     val baseDir = theFile.parentFile?.toString() ?: ""
-                    theFile
-                        .inputStream()
-                        .bufferedReader()
-                        .lines()
-                        .map(String::trim)
-                        .map {
-                            if (Paths.get(it).isAbsolute) it else Paths.get(baseDir, it).toString()
-                        }
-                        .forEach { builder.includePath(it) }
+                    theFile.bufferedReader().useLines { lines ->
+                        lines
+                            .map(String::trim)
+                            .map {
+                                if (Paths.get(it).isAbsolute) it
+                                else Paths.get(baseDir, it).toString()
+                            }
+                            .forEach { builder.includePath(it) }
+                    }
                 }
 
                 if (inferNodes) {
