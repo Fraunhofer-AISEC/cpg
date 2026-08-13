@@ -52,6 +52,7 @@ open class GoLanguage :
     HasFirstClassFunctions,
     HasAnonymousIdentifier,
     HasFunctionStyleCasts,
+    HasVisibilityModifiers,
     Detector {
 
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
