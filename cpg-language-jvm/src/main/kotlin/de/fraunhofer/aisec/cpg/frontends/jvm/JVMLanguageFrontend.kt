@@ -314,29 +314,34 @@ class JVMLanguageFrontend(
     }
 
     override fun locationOf(astNode: Any): PhysicalLocation? {
-        // A position is only useful if it actually points at a source line (>= 1). We prefer the
-        // node's own per-occurrence position; if it does not have a usable one -- which is the case
-        // for locals as well as `this`/parameter references (SootUp interns and shares those across
-        // all their use sites) and occasionally for synthetic expressions -- we fall back to the
-        // position of the statement currently being translated. That way e.g. a reference to a
-        // local reports the line of the statement that uses it instead of the dummy location
-        // -1:-1:-1:-1 (which is what NoPositionInformation represents).
-        fun usable(position: Position?) = position?.takeIf { it.firstLine >= 1 }
+        // Reconcile line bases against the written `.jimple` file. The Jimple parser reports
+        // statement positions 1-based (so a statement on the first text line is line 1, exactly
+        // matching the file) but every other position -- values, but also the class and its fields
+        // -- 0-based. When we translate the reprinted text we therefore lift such a node's own line
+        // by one so that every node reports the same 1-based line the file uses. Statement
+        // positions (and the whole non-reparse path) are already 1-based and left untouched.
+        val ownIsZeroBased = currentClassUsesTextPositions && astNode !is Stmt
+
+        // A position is only useful if it actually points at a source line, i.e. at line >= 1 once
+        // its line base is accounted for -- a 0-based position of 0 is the first line and thus
+        // perfectly usable (this is where the class declaration itself sits), whereas the dummy
+        // -1:-1:-1:-1 of NoPositionInformation never is. We prefer the node's own per-occurrence
+        // position; if it does not have a usable one -- which is the case for locals as well as
+        // `this`/parameter references (SootUp interns and shares those across all their use sites)
+        // and occasionally for synthetic expressions -- we fall back to the position of the
+        // statement currently being translated, which is 1-based either way. That way e.g. a
+        // reference to a local reports the line of the statement that uses it instead of the dummy
+        // location.
+        fun usable(position: Position?, zeroBased: Boolean = false) =
+            position?.takeIf { it.firstLine >= if (zeroBased) 0 else 1 }
 
         // Prefer the node's own per-occurrence position; otherwise fall back to the enclosing
         // statement's (see above). We remember which one we used because the two disagree on their
-        // line base when positions come from the reprinted Jimple text (see below).
-        val ownPosition = usable((astNode as? HasPosition)?.position)
+        // line base when positions come from the reprinted Jimple text (see above).
+        val ownPosition = usable((astNode as? HasPosition)?.position, ownIsZeroBased)
         val position = ownPosition ?: usable(currentStmt?.position) ?: return null
 
-        // Reconcile line bases against the written `.jimple` file. The Jimple parser reports
-        // statement positions 1-based (so a statement on the first text line is line 1, exactly
-        // matching the file) but value positions 0-based. When we translate the reprinted text we
-        // therefore lift a *value's* own line by one so that every node -- statement or value --
-        // reports the same 1-based line the file uses. Statement positions (and the whole
-        // non-reparse path) are already 1-based and left untouched.
-        val lineOffset =
-            if (currentClassUsesTextPositions && ownPosition != null && astNode !is Stmt) 1 else 0
+        val lineOffset = if (ownIsZeroBased && ownPosition != null) 1 else 0
 
         // Build a URI from the (best-effort) file name. The three-argument URI constructor properly
         // encodes spaces/special characters and yields a hierarchical (path-bearing) URI for the
