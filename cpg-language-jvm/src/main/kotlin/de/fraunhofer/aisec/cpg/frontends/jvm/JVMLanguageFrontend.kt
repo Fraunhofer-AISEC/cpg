@@ -51,6 +51,7 @@ import sootup.core.jimple.common.stmt.Stmt
 import sootup.core.model.Body
 import sootup.core.model.HasPosition
 import sootup.core.model.Position
+import sootup.core.model.SootClass
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
 import sootup.core.types.ArrayType
@@ -85,6 +86,29 @@ class JVMLanguageFrontend(
      * whereas value positions are 0-based. See [locationOf] for how this is handled.
      */
     var currentClassUsesTextPositions: Boolean = false
+
+    /**
+     * The successful Jimple-text round-trip of the class currently being translated, or `null` when
+     * positions come from the compiled artifact. Method bodies of a reparsed class are built
+     * lazily, so a body that does not survive the round-trip only surfaces while translating that
+     * method -- long after [JimpleTextPositions.reparse] returned. See [withMethodPositions], which
+     * degrades such a method individually instead of losing it (or the whole class) with it.
+     */
+    private var currentReparse: JimpleTextPositions.Result? = null
+
+    /**
+     * The original, compiled class behind [currentReparse]. It provides the fallback method whose
+     * body [withMethodPositions] translates for a method that has no text positions.
+     */
+    private var currentOriginalClass: SootClass? = null
+
+    /**
+     * The [classFileName] that refers to the compiled artifact of the class currently being
+     * translated (as opposed to the reprinted `.jimple` file). This is what [classFileName] is set
+     * to outside text-position mode, and what [withMethodPositions] restores for a single degraded
+     * method.
+     */
+    private var artifactFileName: String? = null
 
     /**
      * Lazily-created temporary directory into which the reprinted Jimple text of each class is
@@ -216,6 +240,8 @@ class JVMLanguageFrontend(
                 }
             val sootClass = reparse?.sootClass ?: originalClass
             currentClassUsesTextPositions = reparse != null
+            currentReparse = reparse
+            currentOriginalClass = originalClass
 
             // Create an appropriate namespace, if it does not already exist
             var pkg =
@@ -236,14 +262,7 @@ class JVMLanguageFrontend(
                     innerPkg
                 }
 
-            // Try to obtain a meaningful file name/path for this class:
-            // - For APK/dex input, the original source file name (e.g. "MainActivity.java") is
-            //   available from the dex debug information via DexClassSource.getSourceFile().
-            // - Otherwise we fall back to the path from which the class was loaded (the .class
-            //   file, the entry inside a jar, or the .jimple file). Note that for plain .class/.jar
-            //   bytecode SootUp does not read the `SourceFile` attribute, so the *original* .java
-            //   name is not available there -- only the load path is.
-            // - As a last resort we use the fully-qualified class name (the previous behavior).
+            artifactFileName = artifactFileNameOf(originalClass)
             classFileName =
                 if (reparse != null) {
                     // Positions now index into the reprinted Jimple text, so the file name must
@@ -252,14 +271,7 @@ class JVMLanguageFrontend(
                     runCatching { writeJimpleText(sootClass.name, reparse.jimpleText).toString() }
                         .getOrNull() ?: sootClass.name.replace(language.namespaceDelimiter, "/")
                 } else {
-                    val classSource = sootClass.classSource
-                    // A dex `SourceFile` entry can be present but blank (e.g. an obfuscator that
-                    // empties the attribute); reject blank so the fallback chain still applies.
-                    (classSource as? DexClassSource)?.sourceFile?.getOrNull()?.takeIf {
-                        it.isNotBlank()
-                    }
-                        ?: runCatching { classSource.sourcePath?.toString() }.getOrNull()
-                        ?: sootClass.name.replace(language.namespaceDelimiter, "/")
+                    artifactFileName
                 }
 
             val decl = declarationHandler.handle(sootClass)
@@ -276,12 +288,98 @@ class JVMLanguageFrontend(
             // frontend for all files
             clearProcessed()
             currentClassUsesTextPositions = false
+            currentReparse = null
+            currentOriginalClass = null
+            artifactFileName = null
         }
 
         return tu
     }
 
     override fun setComment(node: Node, astNode: Any) {}
+
+    /**
+     * A meaningful file name/path for the compiled artifact [sootClass] was loaded from:
+     * - For APK/dex input, the original source file name (e.g. "MainActivity.java") is available
+     *   from the dex debug information via `DexClassSource.getSourceFile()`.
+     * - Otherwise we fall back to the path from which the class was loaded (the .class file, the
+     *   entry inside a jar, or the .jimple file). Note that for plain .class/.jar bytecode SootUp
+     *   does not read the `SourceFile` attribute, so the *original* .java name is not available
+     *   there -- only the load path is.
+     * - As a last resort we use the fully-qualified class name (the original behavior).
+     */
+    private fun artifactFileNameOf(sootClass: SootClass): String {
+        val classSource = sootClass.classSource
+        // A dex `SourceFile` entry can be present but blank (e.g. an obfuscator that empties the
+        // attribute); reject blank so the fallback chain still applies.
+        return (classSource as? DexClassSource)?.sourceFile?.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: runCatching { classSource.sourcePath?.toString() }.getOrNull()
+            ?: sootClass.name.replace(language.namespaceDelimiter, "/")
+    }
+
+    /**
+     * Invokes [block] with the [SootMethod] that should actually be translated for [sootMethod],
+     * and with [locationOf] configured to match where that method's positions come from.
+     *
+     * Normally this is just [sootMethod] itself. But in text-position mode a method body is only
+     * rebuilt from the reprinted Jimple text when it is first requested, so a construct that does
+     * not survive the round-trip fails here -- long after [JimpleTextPositions.reparse] succeeded
+     * for the class, and thus outside the class-level fallback in [parse]. Instead of letting one
+     * such method cost us the whole class, we degrade *per method*: its counterpart from the
+     * original, compiled class is translated instead, with the compiled artifact's positions and
+     * file name ([artifactFileName]). Every other method of the class keeps its text positions.
+     *
+     * The decision is taken before the method declaration is created so that a degraded method is
+     * coherent -- its declaration and its statements then all point into the same file. Since it
+     * asks for the body, this forces every concrete method's body of a reparsed class to be built
+     * (rather than only those that are translated); in text-position mode all bodies are built
+     * anyway, because reprinting the class to Jimple already requires them.
+     */
+    internal fun <T> withMethodPositions(sootMethod: SootMethod, block: (SootMethod) -> T): T {
+        val reparse = currentReparse
+        if (reparse == null || !sootMethod.isConcrete) {
+            // Nothing to degrade: not in text-position mode, or the method has no body to lose (an
+            // abstract/native declaration is positioned by the reprinted text just fine).
+            return block(sootMethod)
+        }
+        // `hasTextPositions` handles a failing body itself; the guard is only for a body that fails
+        // with something it does not catch (e.g. a StackOverflowError from a huge method).
+        if (runCatching { reparse.hasTextPositions(sootMethod) }.getOrDefault(false)) {
+            return block(sootMethod)
+        }
+
+        val fallback =
+            currentOriginalClass?.getMethod(sootMethod.signature.subSignature)?.getOrNull()
+        if (fallback == null) {
+            // Should not happen: the reparsed class is printed from the original one. Keep the
+            // declaration (its header does have a text position); DeclarationHandler will leave it
+            // without a body.
+            log.warn(
+                "Body of {} could not be rebuilt from the reprinted Jimple text and the method has " +
+                    "no counterpart in the original class; keeping it without a body",
+                sootMethod.signature,
+            )
+            return block(sootMethod)
+        }
+
+        log.warn(
+            "Body of {} could not be rebuilt from the reprinted Jimple text; translating this " +
+                "method from {} with compiled-artifact positions instead",
+            sootMethod.signature,
+            artifactFileName,
+        )
+
+        val previousUsesTextPositions = currentClassUsesTextPositions
+        val previousFileName = classFileName
+        currentClassUsesTextPositions = false
+        classFileName = artifactFileName
+        try {
+            return block(fallback)
+        } finally {
+            currentClassUsesTextPositions = previousUsesTextPositions
+            classFileName = previousFileName
+        }
+    }
 
     /**
      * Writes the reprinted Jimple [text] of the class with the given fully-qualified [className] to

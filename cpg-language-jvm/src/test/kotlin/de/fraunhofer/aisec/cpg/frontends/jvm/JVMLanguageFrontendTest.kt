@@ -1312,4 +1312,85 @@ class JVMLanguageFrontendTest {
             "a value should carry a real, non-degenerate column span, was $binopRegion",
         )
     }
+
+    /**
+     * In text-position mode a method body is only rebuilt from the reprinted Jimple text when it is
+     * first requested, i.e. *after* the class-level round-trip succeeded. A single body that does
+     * not survive the round-trip is therefore degraded per method (it is translated from the
+     * original compiled class instead, see `JVMLanguageFrontend.withMethodPositions`), which this
+     * test pins down through the invariants that fallback has to keep:
+     * 1. no method and no body is lost, and
+     * 2. a method is never a mix of both position sources -- its declaration and its statements
+     *    always point into the same file.
+     */
+    @Test
+    fun testJimpleTextPositionsPerMethod() {
+        val topLevel = Path.of("src", "test", "resources", "class", "operators")
+        val result =
+            analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(useJimpleTextPositions = true)
+                )
+            }
+        assertNotNull(result)
+
+        val record = result.records["Operators"]
+        assertNotNull(record)
+
+        // (1) Every method the class declares is still there, with a translated body. A method
+        //     whose body cannot be built is kept (body-less) rather than dropped, and a method
+        //     without text positions is translated from the compiled artifact -- either way it must
+        //     not disappear from the record.
+        val expected =
+            setOf(
+                "<init>",
+                "testArithmetic",
+                "testComparison",
+                "testBitwise",
+                "testUnary",
+                "testArrayLength",
+                "testCast",
+                "testInstanceOf",
+            )
+        // (constructors are modelled separately from the other methods)
+        val methods = record.methods + record.constructors
+        assertEquals(
+            expected,
+            methods.map { it.name.localName }.toSet(),
+            "no method may be lost in text-position mode",
+        )
+        methods.forEach {
+            assertNotNull(it.body, "method '${it.name}' lost its body in text-position mode")
+        }
+
+        // (2) Each method is coherent: whichever of the two position sources it ended up using, its
+        //     declaration and all of its located statements refer to the same, existing file. (For
+        //     this fixture everything round-trips, so that file is the reprinted `.jimple`; a
+        //     degraded method would consistently point at the compiled artifact instead.)
+        methods.forEach { method ->
+            val methodFile = method.location?.artifactLocation?.uri?.path
+            assertNotNull(methodFile, "method '${method.name}' must carry a file URI")
+            assertTrue(
+                File(methodFile).isFile,
+                "the location of method '${method.name}' must resolve to a real file, was " +
+                    methodFile,
+            )
+            val statementFiles =
+                method
+                    .allChildren<Expression>()
+                    .filter { (it.location?.region?.startLine ?: -1) >= 1 }
+                    .mapNotNull { it.location?.artifactLocation?.uri?.path }
+                    .toSet()
+            assertTrue(
+                statementFiles.isNotEmpty(),
+                "method '${method.name}' has no located statement at all",
+            )
+            assertTrue(
+                statementFiles.all { it == methodFile },
+                "method '${method.name}' mixes position sources: its declaration is in " +
+                    "$methodFile but statements are in ${statementFiles - methodFile}",
+            )
+        }
+    }
 }

@@ -95,9 +95,11 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             }
         }
 
-        // Loop through all methods
+        // Loop through all methods. A method whose body cannot be rebuilt from the reprinted Jimple
+        // text is translated from the original, compiled class instead -- see
+        // JVMLanguageFrontend.withMethodPositions.
         for (sootMethod in sootClass.methods) {
-            val method = handle(sootMethod) as? Method
+            val method = frontend.withMethodPositions(sootMethod) { handle(it) as? Method }
             if (method != null) {
                 frontend.scopeManager.addDeclaration(method)
                 record.addDeclaration(method)
@@ -144,8 +146,22 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Parse body if doNotParseBody returns false
         if (!frontend.frontendConfiguration.doNotParseBody(method) && sootMethod.isConcrete) {
-            // Handle method body
-            method.body = frontend.statementHandler.handle(sootMethod.body)
+            // Handle method body. Building the body can still fail -- a Jimple body is resolved
+            // lazily, so this is where a body that cannot be reconstructed surfaces. Keep the
+            // method declaration (with its parameters and signature) in that case instead of
+            // dropping the whole method: a body-less method is a much smaller loss, and the graph
+            // stays consistent for everyone referring to this method.
+            runCatching { frontend.statementHandler.handle(sootMethod.body) }
+                .onFailure {
+                    log.error(
+                        "Could not translate the body of {}; keeping the method declaration " +
+                            "without a body",
+                        sootMethod.signature,
+                        it,
+                    )
+                }
+                .getOrNull()
+                ?.let { method.body = it }
         }
 
         // Leave method scope
