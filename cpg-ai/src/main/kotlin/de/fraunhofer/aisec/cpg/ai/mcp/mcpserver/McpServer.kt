@@ -56,6 +56,7 @@ fun configureServer(
         //        this.suggestLLMConceptsAndOperations()
         //        this.addLLMConceptAndOperations()
         this.addGetLastWriteTool()
+        this.addQueryTools()
         // PROMPTS
         this.addSuggestConceptsPrompt()
         this
@@ -75,9 +76,6 @@ fun configureServer(
 
     return Server(info, options).configure()
 }
-
-/** Default configureServer constructor call to use via reflection (e.g. from codyze-console). */
-fun configureDefaultServer(): Server = configureServer()
 
 const val cpgDescription =
     """

@@ -46,6 +46,13 @@ import kotlinx.io.asSource
 import kotlinx.io.buffered
 import org.slf4j.LoggerFactory
 
+/**
+ * The file holding the data-flow summaries that the LLM can read via `cpg_function_summaries` and
+ * extend via `cpg_add_function_summary`. The path is relative to the repository root, so the MCP
+ * server has to be started from there.
+ */
+const val FUNCTION_SUMMARIES_FILE = "cpg-ai/src/main/resources/functionSummaries.yml"
+
 class Application : CliktCommand(name = "cpg-mcp") {
     private val log = LoggerFactory.getLogger(Application::class.java)
 

@@ -42,6 +42,10 @@ data class CpgAnalyzePayload(
         "The path to a source file or a project directory (e.g., a repository checkout) on the local filesystem. For directories, the project structure is detected automatically, e.g., components based on Go modules or a C/C++ compilation database (compile_commands.json). Either 'path' or 'content' must be provided."
     )
     val path: String? = null,
+    @Description(
+        "Absolute paths of directories to search for #include headers, e.g. the support-files directory of a test case."
+    )
+    val includePaths: List<String>? = null,
 )
 
 @Serializable

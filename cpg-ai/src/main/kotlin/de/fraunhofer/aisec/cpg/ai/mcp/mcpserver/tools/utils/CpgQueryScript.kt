@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
+package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import kotlin.script.experimental.annotations.KotlinScript

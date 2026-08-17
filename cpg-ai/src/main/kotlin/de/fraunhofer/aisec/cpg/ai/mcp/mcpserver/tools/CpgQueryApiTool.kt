@@ -23,19 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
+package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ai.mcp.FUNCTION_SUMMARIES_FILE
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgQueryScript
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSearchNodesPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toUnmodeledInfo
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.mcp.FUNCTION_SUMMARIES_FILE
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgQueryScript
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgSearchNodesPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toUnmodeledInfo
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult

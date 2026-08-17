@@ -53,6 +53,7 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.ai.mcp.FUNCTION_SUMMARIES_FILE
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -138,9 +139,8 @@ val toolDescription =
         - "Analyze this uploaded file"
         - "Analyze the project in /path/to/repo"
 
-        If the analysis spans more than one file (e.g. a test case and the support headers/sources
-        it includes), pass their absolute paths via 'files' instead of 'content'/'extension', and
-        the directories to search for #include headers via 'includePaths'.
+        If the analyzed code includes headers from another directory (e.g. a test case and its
+        support headers), pass that directory via 'includePaths'.
     """
         .trimIndent()
 
@@ -213,11 +213,17 @@ fun runCpgAnalyze(
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferRecords(true).build()
                 )
+                payload?.includePaths?.forEach { includePath -> it.includePath(includePath) }
 
                 if (runPasses) {
                     it.registerPass<ControlDependenceGraphPass>()
                     it.registerPass<ProgramDependenceGraphPass>()
                     it.registerPass<PythonFileConceptPass>()
+
+                    val summaries = File(FUNCTION_SUMMARIES_FILE)
+                    if (summaries.exists() && summaries.readText().isNotBlank()) {
+                        it.registerFunctionSummaries(summaries)
+                    }
                 }
                 it.registerPass<PrepareSerialization>()
             }
@@ -287,9 +293,8 @@ fun Server.addCpgTranslate() {
         - "Analyze this uploaded file"
         - "Analyze the project in /path/to/repo"
 
-        If the analysis spans more than one file (e.g. a test case and the support headers/sources
-        it includes), pass their absolute paths via 'files' instead of 'content'/'extension', and
-        the directories to search for #include headers via 'includePaths'.
+        If the analyzed code includes headers from another directory (e.g. a test case and its
+        support headers), pass that directory via 'includePaths'.
     """
                 .trimIndent(),
         inputSchema = CpgAnalyzePayload::class.toSchema(),
