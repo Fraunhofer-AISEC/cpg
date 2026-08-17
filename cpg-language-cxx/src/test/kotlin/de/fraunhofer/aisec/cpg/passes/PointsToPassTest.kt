@@ -28,16 +28,17 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
 import kotlin.collections.singleOrNull
@@ -345,8 +346,10 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // Declarations
-        val iDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 22 }.first()
-        val jDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 23 }.first()
+        val iDecl =
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 22 }.first()
+        val jDecl =
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 23 }.first()
 
         // PointerDerefs
         val aPointerDerefLine27 =
@@ -625,56 +628,56 @@ class PointsToPassTest {
 
         // Declarations
         val aDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 89 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 89 }.firstOrNull()
         assertNotNull(aDecl)
         val bDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 90 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 90 }.firstOrNull()
         assertNotNull(bDecl)
         val cDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 91 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 91 }.firstOrNull()
         assertNotNull(cDecl)
         val caddrDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 92 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 92 }.firstOrNull()
         assertNotNull(caddrDecl)
         val dDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 93 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 93 }.firstOrNull()
         assertNotNull(dDecl)
         val eDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 94 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 94 }.firstOrNull()
         assertNotNull(eDecl)
         val fDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 95 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 95 }.firstOrNull()
         assertNotNull(fDecl)
         val gDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 96 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 96 }.firstOrNull()
         assertNotNull(gDecl)
         val hDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 97 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 97 }.firstOrNull()
         assertNotNull(hDecl)
 
         val paDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 99 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 99 }.firstOrNull()
         assertNotNull(paDecl)
         val pbDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 100 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 100 }.firstOrNull()
         assertNotNull(pbDecl)
         val pcDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 101 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 101 }.firstOrNull()
         assertNotNull(pcDecl)
         val pdDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 102 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 102 }.firstOrNull()
         assertNotNull(pdDecl)
         val peDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 103 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 103 }.firstOrNull()
         assertNotNull(peDecl)
         val pfDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 104 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 104 }.firstOrNull()
         assertNotNull(pfDecl)
         val pgDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 105 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 105 }.firstOrNull()
         assertNotNull(pgDecl)
         val phDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 106 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 106 }.firstOrNull()
         assertNotNull(phDecl)
 
         // References
@@ -1125,13 +1128,13 @@ class PointsToPassTest {
 
         // Declarations
         val aDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 134 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 134 }.firstOrNull()
         assertNotNull(aDecl)
         val bDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 135 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 135 }.firstOrNull()
         assertNotNull(bDecl)
         val cDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 136 }.firstOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 136 }.firstOrNull()
         assertNotNull(cDecl)
 
         // References
@@ -2417,19 +2420,24 @@ class PointsToPassTest {
 
         // Declarations
         val oldvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 256 }.singleOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 256 }
+                .singleOrNull()
         assertNotNull(oldvalDecl)
         val newvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 259 }.singleOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 259 }
+                .singleOrNull()
         assertNotNull(newvalDecl)
         val pOldvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 257 }.singleOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 257 }
+                .singleOrNull()
         assertNotNull(pOldvalDecl)
         val pNewvalDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 260 }.singleOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 260 }
+                .singleOrNull()
         assertNotNull(pNewvalDecl)
         val p2pDecl =
-            tu.allChildren<Declaration> { it.location?.region?.startLine == 258 }.singleOrNull()
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 258 }
+                .singleOrNull()
         assertNotNull(p2pDecl)
 
         // Literals
@@ -2546,7 +2554,8 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // Declarations
-        val keyDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 267 }.first()
+        val keyDecl =
+            tu.allChildren<ValueDeclaration> { it.location?.region?.startLine == 267 }.first()
         assertNotNull(keyDecl)
 
         // PointerReferences
@@ -5085,5 +5094,48 @@ class PointsToPassTest {
                 }
                 ?.start,
         )
+    }
+
+    @Test
+    fun testFunctionPointer() {
+        val file = File("src/test/resources/pointsToPass/function_pointer.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // functions
+        val mainFunc = tu.functions("main").single()
+        val incpFunc = tu.functions("incp").single()
+        val execFuncPtrFunc = tu.functions("exec_func_ptr").single()
+
+        // calls
+        val funcPtrCall1 = mainFunc.calls.getOrNull(1)
+        assertNotNull(funcPtrCall1)
+        val funcPtrCall2 = execFuncPtrFunc.calls.single()
+
+        // params and pmvs
+        val incpParam = incpFunc.parameters.single()
+        val incpDerefPMV =
+            incpParam.memoryValues.single {
+                (it as? ParameterMemoryValue)?.name?.localName == "derefvalue"
+            }
+
+        // actual tests
+        // Check if we were able to correctly resolve the function pointer
+        assertInvokes(funcPtrCall1, incpFunc)
+        // Also check if we have the expected incoming DFG edges
+        // We expect an edge from the arg to the param
+        assertContains(incpParam.prevFullDFG, funcPtrCall1.arguments.single())
+        // And an edge from i to the deref PMV. Here we only have 1, b/c the PtP managed to
+        // only resolve the invokes edge for the call in Line 17, not in Line 8, so it only drew one
+        // prevDFG edge
+        assertEquals(tu.variables("i").single(), incpDerefPMV.prevFullDFG.single())
+
+        // The second one is trickier b/c the call in Line 8 does not have any usable memory values
+        // For this one, we rely on the DynamicInvokesResolver
+        assertInvokes(funcPtrCall2, incpFunc)
     }
 }

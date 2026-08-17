@@ -43,7 +43,12 @@ class Invoke(
      */
     var dynamicInvoke: Boolean = false,
 ) : Edge<Function>(start, end) {
-    override var labels = setOf("INVOKES")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [Invoke] edges (see [Edge.labels]). */
+        val LABELS = setOf("INVOKES")
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

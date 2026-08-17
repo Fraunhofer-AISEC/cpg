@@ -611,6 +611,51 @@ fun MetadataProvider.newThrow(rawNode: Any? = null): Throw {
 }
 
 /**
+ * Creates a new [ObjectDeconstruction]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newObjectDeconstruction(rawNode: Any? = null): ObjectDeconstruction {
+    val node = ObjectDeconstruction()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [NamedDeconstruction]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newNamedDeconstruction(rawNode: Any? = null): NamedDeconstruction {
+    val node = NamedDeconstruction()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [AlternativeDeconstruction]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newAlternativeDeconstruction(rawNode: Any? = null): AlternativeDeconstruction {
+    val node = AlternativeDeconstruction()
+    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [ProblemExpression]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
@@ -645,7 +690,6 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
     duplicate.assignedTypes = this.assignedTypes
     duplicate.code = this.code
     duplicate.location = this.location
-    duplicate.locals = this.locals
     duplicate.argumentIndex = this.argumentIndex
     duplicate.annotations = this.annotations
     duplicate.comment = this.comment

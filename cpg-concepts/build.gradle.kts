@@ -33,7 +33,7 @@ mavenPublishing {
 }
 
 dependencies {
-    implementation(projects.cpgAnalysis)
+    api(projects.cpgCore)
 
     // parsing YAML files
     implementation(libs.jacksonyml)

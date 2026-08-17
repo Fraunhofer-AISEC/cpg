@@ -445,8 +445,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     // we will set the type later through the type inference observer
                     record.unknownType(),
                     setOf(),
-                    null,
-                    false,
+                    initializer = null,
+                    implicitInitializerAllowed = false,
                 )
 
             debugWithFileLocation(

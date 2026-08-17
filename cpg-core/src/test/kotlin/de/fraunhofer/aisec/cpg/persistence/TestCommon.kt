@@ -48,6 +48,7 @@ class TestCommon {
                 "isStatic",
                 "location",
                 "name",
+                "visibility",
             ),
             properties.keys,
         )

@@ -93,6 +93,13 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 newFunction(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
+        // Go has no visibility keywords: whether a function or method is exported (visible from
+        // other packages) or unexported (package-scoped) is derived from the casing of its
+        // identifier. We keep the raw name and let the language project the canonical visibility.
+        // Note that this has to happen before we enter the function scope below, so that the
+        // language sees the enclosing (package) scope.
+        language.applyModifiers(func, frontend.scopeManager.currentScope)
+
         frontend.scopeManager.enterScope(func)
 
         val receiver = (func as? Method)?.receiver

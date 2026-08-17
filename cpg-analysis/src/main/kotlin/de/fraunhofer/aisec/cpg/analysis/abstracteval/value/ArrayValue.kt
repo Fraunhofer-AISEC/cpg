@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.Allocate
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
@@ -147,10 +148,15 @@ class ArrayValue : Value<LatticeInterval> {
                 }
             }
             is Call -> {
-                if (node.name.localName == "malloc") {
-                    val length = (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()
-                    length?.let { LatticeInterval.Bounded(length, length) }
-                        ?: LatticeInterval.BOTTOM
+                // Read the allocation size in bytes from an attached [Allocate] concept overlay; a
+                // language-specific concept pass (e.g. CXXMemoryAllocationPass) is responsible
+                // for recognising allocator calls per language and populating this. Without a
+                // concept attached we can't tell whether the call is even an allocator.
+                val sizeExpr = node.overlays.filterIsInstance<Allocate>().firstOrNull()?.size
+                if (sizeExpr != null) {
+                    (sizeExpr.value.value as? Number)?.toLong()?.let {
+                        LatticeInterval.Bounded(it, it)
+                    } ?: LatticeInterval.BOTTOM
                 } else {
                     LatticeInterval.BOTTOM
                 }

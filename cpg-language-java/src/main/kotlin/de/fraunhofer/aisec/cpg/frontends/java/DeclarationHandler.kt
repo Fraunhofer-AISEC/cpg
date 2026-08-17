@@ -57,6 +57,7 @@ import java.util.function.Supplier
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
+
     fun handleConstructor(constructorDeclaration: ConstructorDeclaration): Constructor {
         val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
@@ -66,6 +67,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentRecordDecl,
                 rawNode = constructorDeclaration,
             )
+        declaration.modifiers =
+            constructorDeclaration.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        language.applyModifiers(declaration, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
@@ -114,6 +118,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             )
         functionDeclaration.modifiers =
             methodDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        language.applyModifiers(functionDeclaration, frontend.scopeManager.currentScope)
 
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
@@ -188,6 +193,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 .toMutableList()
         recordDeclaration.modifiers =
             classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        language.applyModifiers(recordDeclaration, frontend.scopeManager.currentScope)
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
@@ -279,9 +285,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     variable.name.asString(),
                     type,
                     fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
-                    initializer,
+                    isStatic = fieldDecl.isStatic,
+                    initializer = initializer,
                     rawNode = fieldDecl,
                 )
+            language.applyModifiers(fieldDeclaration, frontend.scopeManager.currentScope)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
             declarationSequence.addDeclaration(fieldDeclaration)
         }
@@ -291,6 +299,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleEnumeration(enumDecl: EnumDeclaration): Enumeration {
         val name = enumDecl.nameAsString
         val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
+        enumDeclaration.modifiers =
+            enumDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        language.applyModifiers(enumDeclaration, frontend.scopeManager.currentScope)
 
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)

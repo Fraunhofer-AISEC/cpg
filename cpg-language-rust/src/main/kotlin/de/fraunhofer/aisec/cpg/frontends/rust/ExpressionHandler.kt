@@ -1,0 +1,1199 @@
+/*
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.frontends.rust
+
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.assume
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.newBreak
+import de.fraunhofer.aisec.cpg.graph.newCase
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import java.math.BigInteger
+import uniffi.rustast.RsArrayExpr
+import uniffi.rustast.RsAst
+import uniffi.rustast.RsBinExpr
+import uniffi.rustast.RsBlockExpr
+import uniffi.rustast.RsBreakExpr
+import uniffi.rustast.RsCallExpr
+import uniffi.rustast.RsCastExpr
+import uniffi.rustast.RsClosureExpr
+import uniffi.rustast.RsContinueExpr
+import uniffi.rustast.RsExpr
+import uniffi.rustast.RsFieldExpr
+import uniffi.rustast.RsForExpr
+import uniffi.rustast.RsIfExpr
+import uniffi.rustast.RsIndexExpr
+import uniffi.rustast.RsLetExpr
+import uniffi.rustast.RsLiteral
+import uniffi.rustast.RsLiteralType
+import uniffi.rustast.RsLoopExpr
+import uniffi.rustast.RsMacroExpr
+import uniffi.rustast.RsMatchArm
+import uniffi.rustast.RsMatchExpr
+import uniffi.rustast.RsMethodCallExpr
+import uniffi.rustast.RsParenExpr
+import uniffi.rustast.RsPathExpr
+import uniffi.rustast.RsPrefixExpr
+import uniffi.rustast.RsRangeExpr
+import uniffi.rustast.RsRecordExpr
+import uniffi.rustast.RsRefExpr
+import uniffi.rustast.RsReturnExpr
+import uniffi.rustast.RsTryExpr
+import uniffi.rustast.RsTupleExpr
+import uniffi.rustast.RsUnderscoreExpr
+import uniffi.rustast.RsWhileExpr
+
+class ExpressionHandler(frontend: RustLanguageFrontend) :
+    RustHandler<Expression, RsAst.RustExpr>(::ProblemExpression, frontend) {
+
+    override fun handleNode(node: RsAst.RustExpr): Expression {
+        val unwrapped = node.v1
+        return handleNode(unwrapped)
+    }
+
+    fun handleNode(node: RsExpr): Expression {
+        return when (node) {
+            is RsExpr.BlockExpr -> handleBlockExpr(node.v1)
+            is RsExpr.Literal -> handleLiteral(node.v1)
+            is RsExpr.CallExpr -> handleCallExpr(node.v1)
+            is RsExpr.MethodCallExpr -> handleMethodCallExpr(node.v1)
+            is RsExpr.MacroExpr -> handleMacroExpr(node.v1)
+            is RsExpr.PathExpr -> handlePathExpr(node.v1)
+            is RsExpr.BinExpr -> handleBinExpr(node.v1)
+            is RsExpr.PrefixExpr -> handlePrefixExpr(node.v1)
+            is RsExpr.ParenExpr -> handleParenExpr(node.v1)
+            is RsExpr.RecordExpr -> handleRecordExpr(node.v1)
+            is RsExpr.IfExpr -> handleIfExpr(node.v1)
+            is RsExpr.LetExpr -> handleLetExpr(node.v1)
+            is RsExpr.WhileExpr -> handleWhileExpr(node.v1)
+            is RsExpr.ForExpr -> handleForExpr(node.v1)
+            is RsExpr.LoopExpr -> handleLoopExpr(node.v1)
+            is RsExpr.RangeExpr -> handleRangeExpr(node.v1)
+            is RsExpr.FieldExpr -> handleFieldExpr(node.v1)
+            is RsExpr.BreakExpr -> handleBreakExpr(node.v1)
+            is RsExpr.ContinueExpr -> handleContinueExpr(node.v1)
+            is RsExpr.CastExpr -> handleCastExpr(node.v1)
+            is RsExpr.IndexExpr -> handleIndexExpr(node.v1)
+            is RsExpr.RefExpr -> handleRefExpr(node.v1)
+            is RsExpr.ArrayExpr -> handleArrayExpr(node.v1)
+            is RsExpr.TupleExpr -> handleTupleExpr(node.v1)
+            is RsExpr.MatchExpr -> handleMatchExpr(node.v1)
+            is RsExpr.UnderscoreExpr -> handleUnderscoreExpr(node.v1)
+            is RsExpr.ReturnExpr -> handleReturnExpr(node.v1)
+            is RsExpr.TryExpr -> handleTryExpr(node.v1)
+            is RsExpr.ClosureExpr -> handleClosureExpr(node.v1)
+            else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
+        }
+    }
+
+    /**
+     * Handles a `{ ... }` block, translating its statements and optional tail expression into a
+     * [Block].
+     *
+     * AST:
+     * [ast::BlockExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BlockExpr.html)
+     *
+     * Reference:
+     * [Block expressions](https://doc.rust-lang.org/reference/expressions/block-expr.html)
+     */
+    fun handleBlockExpr(blockExpr: RsBlockExpr): Expression {
+
+        val block = newBlock(RsAst.RustExpr(RsExpr.BlockExpr(blockExpr)))
+
+        frontend.scopeManager.enterScope(block)
+
+        for (stmt in blockExpr.stmts) {
+            block.statements += frontend.statementHandler.handle(RsAst.RustStmt(stmt))
+        }
+
+        blockExpr.tailExpr.getOrNull(0)?.let {
+            block.statements += frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(block)
+        return block.also { it.usedAsExpression = true }
+    }
+
+    /**
+     * Handles a literal token (char, string, byte, C-string, integer, byte-string, float, or the
+     * `true`/`false` keywords) into a [Literal] of the matching built-in type.
+     *
+     * AST: [ast::Literal](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.Literal.html)
+     *
+     * Reference:
+     * [Literal expressions](https://doc.rust-lang.org/reference/expressions/literal-expr.html)
+     */
+    fun handleLiteral(literal: RsLiteral): Expression {
+        val stringValue = literal.astNode.text
+        val raw = RsAst.RustExpr(RsExpr.Literal(literal))
+
+        return when (literal.literalType) {
+            RsLiteralType.CHAR_L ->
+                newLiteral(
+                    stringValue.removePrefix("'").removeSuffix("'")[0],
+                    language.builtInTypes["char"] ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("\"").removeSuffix("\""),
+                    language.builtInTypes["str"] ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.BYTE_L ->
+                newLiteral(
+                    parseRustByteLiteral(stringValue.removePrefix("b'").removeSuffix("'")),
+                    language.builtInTypes["u8"] ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.C_STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("c\"").removeSuffix("\""),
+                    objectType("CString"),
+                    raw,
+                )
+            RsLiteralType.INT_NUMBER_L -> buildIntType(stringValue, raw)
+            RsLiteralType.BYTE_STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("b\"").removeSuffix("\""),
+                    (language.builtInTypes["u8"] ?: unknownType()).array(),
+                    raw,
+                )
+            RsLiteralType.FLOAT_NUMBER_L -> {
+                val type =
+                    (if (stringValue.endsWith("f32")) language.builtInTypes["f32"]
+                    else language.builtInTypes["f64"]) ?: unknownType()
+
+                val valueString = stringValue.removeSuffix("f32").removeSuffix("f64")
+
+                newLiteral(
+                    if (type == language.builtInTypes["f32"]) valueString.toFloat()
+                    else valueString.toDouble(),
+                    type,
+                    raw,
+                )
+            }
+
+            RsLiteralType.UNKNOWN_L ->
+                when (stringValue) {
+                    "true" -> newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    "false" ->
+                        newLiteral(false, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    else ->
+                        newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                }
+        }
+    }
+
+    private val escapes =
+        mapOf(
+            "\\n" to '\n',
+            "\\r" to '\r',
+            "\\t" to '\t',
+            "\\0" to '\u0000',
+            "\\'" to '\'',
+            "\\\"" to '"',
+            "\\\\" to '\\',
+        )
+
+    fun parseRustByteLiteral(content: String): Int =
+        when {
+            content.startsWith("\\x") -> content.substring(2).toInt(16)
+
+            content.startsWith("\\") ->
+                escapes[content]?.code ?: error("Unsupported escape: $content")
+
+            else -> content.single().code
+        }
+
+    fun buildIntType(literal: String, raw: Any): Literal<*> {
+        val suffixes =
+            listOf(
+                "isize",
+                "usize",
+                "i128",
+                "u128",
+                "i64",
+                "u64",
+                "i32",
+                "u32",
+                "i16",
+                "u16",
+                "i8",
+                "u8",
+            )
+
+        val suffixStart = literal.indexOfFirst { it == 'u' || it == 'i' }
+        val core = if (suffixStart == -1) literal else literal.substring(0, suffixStart)
+        // Strip separators
+        val clean = core.replace("_", "")
+
+        val (digits, radix) =
+            when {
+                clean.startsWith("0x") -> clean.substring(2) to 16
+                clean.startsWith("0o") -> clean.substring(2) to 8
+                clean.startsWith("0b") -> clean.substring(2) to 2
+                else -> clean to 10
+            }
+
+        val value = digits.toBigInteger(radix)
+
+        // Here we have an explicit suffix
+        for (suffix in suffixes) {
+            if (literal.endsWith(suffix)) {
+                val literalValue: Any =
+                    when (suffix) {
+                        "i64",
+                        "u64",
+                        "isize",
+                        "usize" -> value.toLong()
+                        "i128",
+                        "u128" -> value
+                        else -> value.toInt()
+                    }
+                return newLiteral(literalValue, language.builtInTypes[suffix] ?: unknownType(), raw)
+            }
+        }
+
+        val (typ, isBig) =
+            when {
+                value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) -> "i8" to false
+                value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) -> "i16" to false
+                value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) -> "i32" to false
+                value <= BigInteger.valueOf(Long.MAX_VALUE) -> "i64" to true
+                value.bitLength() <= 127 -> "i128" to true
+                else -> null to true
+            }
+
+        return newLiteral(
+            if (isBig) value.toLong() else value.toInt(),
+            typ?.let { language.builtInTypes[it] } ?: unknownType(),
+            raw,
+        )
+    }
+
+    /**
+     * Handles a function-call expression `callee(args...)` into a [Call].
+     *
+     * AST:
+     * [ast::CallExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.CallExpr.html)
+     *
+     * Reference: [Call expressions](https://doc.rust-lang.org/reference/expressions/call-expr.html)
+     */
+    fun handleCallExpr(callExpr: RsCallExpr): Call {
+
+        val callee: Expression? = callExpr.expr.getOrNull(0)?.let { handleNode(it) }
+
+        val call = newCall(callee = callee, rawNode = RsAst.RustExpr(RsExpr.CallExpr(callExpr)))
+
+        for (arg in callExpr.arguments) {
+            call.arguments += handleNode(arg)
+        }
+
+        return call
+    }
+
+    /**
+     * Handles a method-call expression `receiver.method(args...)` into a [MemberCall] whose callee
+     * is a [MemberAccess] on the receiver.
+     *
+     * AST:
+     * [ast::MethodCallExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MethodCallExpr.html)
+     *
+     * Reference:
+     * [Method-call expressions](https://doc.rust-lang.org/reference/expressions/method-call-expr.html)
+     */
+    fun handleMethodCallExpr(methodCallExpr: RsMethodCallExpr): MemberCall {
+
+        val callee: Expression? =
+            methodCallExpr.receiver.firstOrNull()?.let {
+                val base = handleNode(it)
+
+                methodCallExpr.nameRef?.let { call ->
+                    newMemberAccess(call.text, base, rawNode = RsAst.RustExpr(RsExpr.NameRef(call)))
+                }
+            }
+
+        val method =
+            newMemberCall(
+                callee = callee,
+                rawNode = RsAst.RustExpr(RsExpr.MethodCallExpr(methodCallExpr)),
+            )
+
+        for (arg in methodCallExpr.arguments) {
+            method.arguments += handleNode(arg)
+        }
+
+        return method
+    }
+
+    /**
+     * Handles a macro invocation used in expression position (e.g. `println!(...)`), translated as
+     * a [Call] to a reference named after the macro path, with the raw macro token string as its
+     * single argument.
+     *
+     * AST:
+     * [ast::MacroExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MacroExpr.html)
+     *
+     * Reference:
+     * [Macro invocation](https://doc.rust-lang.org/reference/macros.html#macro-invocation)
+     */
+    fun handleMacroExpr(macroExpr: RsMacroExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.MacroExpr(macroExpr))
+        macroExpr.macroCall?.let {
+            val base =
+                it.path?.segment?.nameRef?.let {
+                    newReference(it.text, rawNode = RsAst.RustExpr(RsExpr.NameRef(it)))
+                }
+            val call = newCall(callee = base, rawNode = raw)
+            call.arguments += newLiteral(it.macroString)
+            return call
+        }
+
+        return newProblemExpression("MacroExpression missing Macro Call", rawNode = raw)
+    }
+
+    /**
+     * Handles a path used as an expression (e.g. a variable name, or a qualified item path like
+     * `Foo::bar`) into a [Reference].
+     *
+     * AST:
+     * [ast::PathExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.PathExpr.html)
+     *
+     * Reference: [Path expressions](https://doc.rust-lang.org/reference/expressions/path-expr.html)
+     */
+    fun handlePathExpr(pathExpr: RsPathExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.PathExpr(pathExpr))
+
+        pathExpr.path?.let { rsPath ->
+            return newReference(
+                frontend.handleKeywordsInNames(frontend.handlePathForRef(rsPath) ?: newName("")),
+                rawNode = raw,
+            )
+        }
+
+        return newProblemExpression("PathExpression missing path to name", rawNode = raw)
+    }
+
+    /**
+     * Handles a borrow expression `&expr` / `&mut expr` as a prefix `&` [UnaryOperator] (`const` /
+     * `mut` mutability of the borrow is not modeled, as it has no direct effect on control or data
+     * flow); a raw-pointer borrow (`&raw`) is passed through unwrapped.
+     *
+     * AST: [ast::RefExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RefExpr.html)
+     *
+     * Reference:
+     * [Borrow operators](https://doc.rust-lang.org/reference/expressions/operator-expr.html#borrow-operators)
+     */
+    fun handleRefExpr(refExpr: RsRefExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RefExpr(refExpr))
+
+        refExpr.expr.firstOrNull()?.let {
+            val subExpr = handleNode(it)
+
+            // We for now do not handle const and mut modifiers as they have no direct consequence
+            // in control or data flow.
+            // They are relevant to whether code is compilable, and therefore we may need to include
+            // it as the type.
+            return if (refExpr.isRef)
+                newUnaryOperator(operatorCode = "&", postfix = false, prefix = true, rawNode = raw)
+                    .also { unaryOp -> unaryOp.input = subExpr }
+            else subExpr
+        }
+
+        return newProblemExpression("Reference expressions missing expr", rawNode = raw)
+    }
+
+    /**
+     * Handles a unary prefix operator expression (`-x`, `!x`, `*x`) as a prefix [UnaryOperator].
+     *
+     * AST:
+     * [ast::PrefixExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.PrefixExpr.html)
+     *
+     * Reference:
+     * [Negation operators](https://doc.rust-lang.org/reference/expressions/operator-expr.html#negation-operators),
+     * [The dereference
+     * operator](https://doc.rust-lang.org/reference/expressions/operator-expr.html#the-dereference-operator)
+     */
+    fun handlePrefixExpr(prefixExpr: RsPrefixExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.PrefixExpr(prefixExpr))
+        return newUnaryOperator(prefixExpr.operator, postfix = false, prefix = true, rawNode = raw)
+            .also {
+                it.input =
+                    frontend.expressionHandler.handle(RsAst.RustExpr(prefixExpr.expr.first()))
+            }
+    }
+
+    /**
+     * Handles a binary operator expression, distinguishing assignment/compound-assignment operators
+     * (translated to [Assign]) from arithmetic/logical/comparison operators (translated to
+     * [BinaryOperator]).
+     *
+     * AST: [ast::BinExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BinExpr.html)
+     *
+     * Reference:
+     * [Arithmetic and logical binary operators](https://doc.rust-lang.org/reference/expressions/operator-expr.html#arithmetic-and-logical-binary-operators),
+     * [Assignment
+     * expressions](https://doc.rust-lang.org/reference/expressions/operator-expr.html#assignment-expressions)
+     */
+    fun handleBinExpr(binExpr: RsBinExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.BinExpr(binExpr))
+        if (binExpr.expressions.size == 2) {
+            val lhs = frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.first()))
+            val rhs = frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.last()))
+            if (
+                binExpr.operator in language.compoundAssignmentOperators ||
+                    binExpr.operator in language.simpleAssignmentOperators
+            ) {
+                return newAssign(binExpr.operator, listOf(lhs), listOf(rhs), raw)
+            }
+
+            return newBinaryOperator(binExpr.operator, raw).also {
+                it.lhs = lhs
+                it.rhs = rhs
+            }
+        }
+
+        return newProblemExpression("BinExpr has fewer than 2 operands", rawNode = raw)
+    }
+
+    /**
+     * Handles an `if`/`else if`/`else` expression into an [IfStatement]; `if let` conditions are
+     * handled via [handleLetExpr], which models the pattern match as an [Assign].
+     *
+     * AST: [ast::IfExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.IfExpr.html)
+     *
+     * Reference: [If expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html)
+     */
+    fun handleIfExpr(ifExpr: RsIfExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.IfExpr(ifExpr))
+        val ifElse = newIfElse(raw)
+        frontend.scopeManager.enterScope(ifElse)
+
+        // Depending on whether the first expression is a let expression we want fo fill condition
+        // or condition declaration
+        ifExpr.expressions.first().let {
+            ifElse.condition = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        ifExpr.expressions.getOrNull(1)?.let {
+            ifElse.thenStatement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        ifExpr.expressions.getOrNull(2)?.let {
+            ifElse.elseStatement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(ifElse)
+        return ifElse.also { it.usedAsExpression = true }
+    }
+
+    /**
+     * Handles a `let` expression used as a condition (`if let PAT = expr`, `while let PAT = expr`),
+     * modeled as an [Assign] whose LHS is the deconstructed pattern (see [PatternHandler]) and
+     * whose RHS is the scrutinee expression.
+     *
+     * AST: [ast::LetExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LetExpr.html)
+     *
+     * Reference:
+     * [`let` expressions](https://doc.rust-lang.org/reference/expressions/if-expr.html#let-expressions)
+     */
+    fun handleLetExpr(letExpr: RsLetExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.LetExpr(letExpr))
+
+        // for us, a let expression is an assigment with a deconstruction
+
+        val assign: Assign =
+            newAssign(
+                operatorCode = "=",
+                lhs =
+                    letExpr.pat.firstOrNull()?.let {
+                        listOf(frontend.patternHandler.handle(RsAst.RustPat(it)))
+                    } ?: emptyList(),
+                rhs =
+                    letExpr.expr.firstOrNull()?.let {
+                        listOf(frontend.expressionHandler.handle(RsAst.RustExpr(it)))
+                    } ?: emptyList(),
+                rawNode = raw,
+            )
+
+        assign.usedAsExpression = true
+
+        return assign
+    }
+
+    /**
+     * Handles a `while` loop, including `while let`, into a [WhileStatement]; if the condition is a
+     * `let` expression the resulting [DeclarationStatement] is unpacked so the declared variable
+     * becomes `conditionDeclaration`.
+     *
+     * AST:
+     * [ast::WhileExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.WhileExpr.html)
+     *
+     * Reference:
+     * [Predicate loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html#predicate-loops)
+     */
+    fun handleWhileExpr(whileExpr: RsWhileExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.WhileExpr(whileExpr))
+
+        val whileExpression = newWhile(raw)
+
+        frontend.scopeManager.enterScope(whileExpression)
+
+        whileExpr.expressions.first().let {
+            val condExpr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            if (condExpr is DeclarationStatement) {
+                // There should only be one declaration inside a let of an if
+                whileExpression.conditionDeclaration = condExpr.declarations.first()
+            } else {
+                whileExpression.condition = condExpr
+            }
+        }
+
+        whileExpr.expressions.getOrNull(1)?.let {
+            whileExpression.statement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(whileExpression)
+
+        whileExpression.usedAsExpression = true
+
+        return whileExpression.also { it.usedAsExpression = true }
+    }
+
+    /**
+     * Handles an infinite `loop { ... }` expression, modeled as a [WhileStatement] with an implicit
+     * `true` literal condition.
+     *
+     * AST:
+     * [ast::LoopExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.LoopExpr.html)
+     *
+     * Reference:
+     * [Infinite loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html#infinite-loops)
+     */
+    fun handleLoopExpr(loopExpr: RsLoopExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.LoopExpr(loopExpr))
+        val whileExpression = newWhile(raw)
+
+        frontend.scopeManager.enterScope(whileExpression)
+
+        whileExpression.condition =
+            newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw).also {
+                it.isImplicit = true
+            }
+
+        loopExpr.body.firstOrNull()?.let {
+            whileExpression.statement = frontend.expressionHandler.handleBlockExpr(it)
+        }
+
+        frontend.scopeManager.leaveScope(whileExpression)
+
+        whileExpression.usedAsExpression = true
+
+        return whileExpression.also { it.usedAsExpression = true }
+    }
+
+    /**
+     * Handles a `for pat in iterable { ... }` loop into a [ForEachStatement].
+     *
+     * AST: [ast::ForExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ForExpr.html)
+     *
+     * Reference:
+     * [Iterator loops](https://doc.rust-lang.org/reference/expressions/loop-expr.html#iterator-loops)
+     */
+    fun handleForExpr(forExpr: RsForExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ForExpr(forExpr))
+        val forEach = newForEach(rawNode = raw)
+        frontend.scopeManager.enterScope(forEach)
+
+        val variable =
+            forExpr.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
+                ?: newProblemExpression("Variable pattern is null")
+
+        forExpr.expressions.first().let {
+            val iterable = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            forEach.iterable = iterable
+        }
+
+        forExpr.expressions.getOrNull(1)?.let {
+            forEach.statement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        forEach.variable = variable
+
+        frontend.scopeManager.leaveScope(forEach)
+
+        forEach.usedAsExpression = true
+
+        return forEach.also { it.usedAsExpression = true }
+    }
+
+    /**
+     * Handles a `break` (with optional loop label and/or value expression) into a [BreakStatement].
+     *
+     * AST:
+     * [ast::BreakExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.BreakExpr.html)
+     *
+     * Reference:
+     * [Break expressions](https://doc.rust-lang.org/reference/expressions/loop-expr.html#break-expressions)
+     */
+    fun handleBreakExpr(breakExpr: RsBreakExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.BreakExpr(breakExpr))
+
+        val breakExpression = newBreak(raw)
+
+        breakExpr.lifetime?.let { breakExpression.label = it.name }
+
+        breakExpr.expr.firstOrNull()?.let {
+            breakExpression.expr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            breakExpression.usedAsExpression = true
+        }
+
+        return breakExpression
+    }
+
+    /**
+     * Handles a `continue` (with optional loop label) into a [ContinueStatement].
+     *
+     * AST:
+     * [ast::ContinueExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ContinueExpr.html)
+     *
+     * Reference:
+     * [Continue expressions](https://doc.rust-lang.org/reference/expressions/loop-expr.html#continue-expressions)
+     */
+    fun handleContinueExpr(continueExpr: RsContinueExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ContinueExpr(continueExpr))
+
+        val continueExpression = newContinue(raw)
+
+        continueExpr.lifetime?.let { continueExpression.label = it.name }
+
+        return continueExpression
+    }
+
+    /**
+     * Handles a range expression (`a..b`, `a..=b`, `a..`, `..b`, `..`) into a [Range] with the
+     * bounds and operator (inclusive/exclusive) preserved.
+     *
+     * AST:
+     * [ast::RangeExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RangeExpr.html)
+     *
+     * Reference:
+     * [Range expressions](https://doc.rust-lang.org/reference/expressions/range-expr.html)
+     */
+    fun handleRangeExpr(rangeExpr: RsRangeExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RangeExpr(rangeExpr))
+        val range = newRange(rawNode = raw)
+
+        rangeExpr.expressions.getOrNull(0)?.let {
+            range.floor = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        rangeExpr.expressions.getOrNull(1)?.let {
+            range.ceiling = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        range.operatorCode = rangeExpr.operator
+        return range
+    }
+
+    /**
+     * Handles a field-access expression `base.field` into a [MemberAccess].
+     *
+     * AST:
+     * [ast::FieldExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.FieldExpr.html)
+     *
+     * Reference:
+     * [Field access expressions](https://doc.rust-lang.org/reference/expressions/field-expr.html)
+     */
+    fun handleFieldExpr(fieldExpr: RsFieldExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.FieldExpr(fieldExpr))
+
+        fieldExpr.expr.first().let {
+            val base = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            fieldExpr.nameRef?.let { nameRef ->
+                return newMemberAccess(name = nameRef.text, base = base, rawNode = raw)
+            }
+        }
+
+        return newProblemExpression("FieldExpression missing subexpr", rawNode = raw)
+    }
+
+    /**
+     * Handles a type-cast expression `expr as Type` into a [Cast].
+     *
+     * AST:
+     * [ast::CastExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.CastExpr.html)
+     *
+     * Reference:
+     * [Type cast expressions](https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions)
+     */
+    fun handleCastExpr(castExpr: RsCastExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.CastExpr(castExpr))
+
+        val input = frontend.expressionHandler.handle(RsAst.RustExpr(castExpr.expr.first()))
+
+        val type = castExpr.ty.firstOrNull()?.let { frontend.typeOf(it) } ?: unknownType()
+
+        return newCast(raw).also {
+            it.expression = input
+            it.castType = type
+        }
+    }
+
+    /**
+     * Handles an indexing expression `array[index]` into a [Subscription].
+     *
+     * AST:
+     * [ast::IndexExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.IndexExpr.html)
+     *
+     * Reference:
+     * [Array and slice indexing expressions](https://doc.rust-lang.org/reference/expressions/array-expr.html#array-and-slice-indexing-expressions)
+     */
+    fun handleIndexExpr(indexExpr: RsIndexExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.IndexExpr(indexExpr))
+
+        if (indexExpr.expressions.size >= 2) {
+            return newSubscription(rawNode = raw).also { subscription ->
+                indexExpr.expressions.getOrNull(0)?.let {
+                    subscription.arrayExpression =
+                        frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                }
+
+                indexExpr.expressions.getOrNull(1)?.let {
+                    subscription.subscriptExpression =
+                        frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                }
+            }
+        }
+
+        return newProblemExpression("Index expressions missing 2 subexpr", rawNode = raw)
+    }
+
+    /**
+     * Handles an array expression, both the list form `[a, b, c]` and the repeat form `[x; n]`,
+     * into an [ArrayCreationExpression] with an [InitializerList].
+     *
+     * AST:
+     * [ast::ArrayExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ArrayExpr.html)
+     *
+     * Reference:
+     * [Array expressions](https://doc.rust-lang.org/reference/expressions/array-expr.html)
+     */
+    fun handleArrayExpr(arrayExpr: RsArrayExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ArrayExpr(arrayExpr))
+
+        val arrayConstruction =
+            newArrayConstruction(rawNode = raw).also { arrayConstruction ->
+                val initializer = newInitializerList(rawNode = raw)
+                for (expr in arrayExpr.expressions) {
+                    initializer.initializers +=
+                        frontend.expressionHandler.handle(RsAst.RustExpr(expr))
+                }
+                arrayConstruction.initializer = initializer
+            }
+
+        if (arrayExpr.repeating) {
+            arrayConstruction.assume(
+                AssumptionType.DataFlowAssumption,
+                "Repetition expression as direct although it is an indirect DF.",
+                arrayConstruction,
+            )
+        }
+
+        return arrayConstruction
+    }
+
+    /**
+     * Handles a struct-literal expression `Path { field: value, .. }`, including the functional
+     * update `..base` syntax, into a [Construction] whose arguments are synthetic [Assign]s onto
+     * the fields (there is no real constructor call to model here).
+     *
+     * AST:
+     * [ast::RecordExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.RecordExpr.html)
+     *
+     * Reference:
+     * [Struct expressions](https://doc.rust-lang.org/reference/expressions/struct-expr.html)
+     */
+    fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
+
+        val t = recordExpr.path?.let { frontend.typeOf(it.astNode.text) } ?: unknownType()
+
+        // Todo Look if we can replace this with an initializer list as there is no effective
+        // constructor call
+        val construction = newConstruction(rawNode = raw)
+        construction.type = t
+
+        val refName = "null"
+
+        // We add this first, such that dfg handling then properly captures overwriting variables
+        recordExpr.spread.firstOrNull()?.let {
+            construction.addArgument(
+                newAssign(
+                    lhs = listOf(newReference(refName)),
+                    rhs = listOf(handle(RsAst.RustExpr(it))),
+                    rawNode = RsAst.RustExpr(it),
+                )
+            )
+        }
+
+        recordExpr.fields.forEach { field ->
+            val rawField = RsAst.RustExpr(RsExpr.RecordExprField(field))
+            field.expr.firstOrNull()?.let { expr ->
+                val value = handle(RsAst.RustExpr(expr))
+
+                val name = field.name?.text ?: value.toString()
+
+                val member = newMemberAccess(name, newReference(refName), rawNode = rawField)
+
+                construction.addArgument(
+                    newAssign(lhs = listOf(member), rhs = listOf(value), rawNode = rawField).also {
+                        it.usedAsExpression = true
+                    }
+                )
+            }
+        }
+
+        return construction
+    }
+
+    /**
+     * Handles a tuple expression `(a, b, c)` into an [InitializerList] of its elements.
+     *
+     * AST:
+     * [ast::TupleExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.TupleExpr.html)
+     *
+     * Reference:
+     * [Tuple expressions](https://doc.rust-lang.org/reference/expressions/tuple-expr.html)
+     */
+    fun handleTupleExpr(tupleExpr: RsTupleExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.TupleExpr(tupleExpr))
+
+        val tupleConstruction = newInitializerList(rawNode = raw)
+
+        tupleExpr.exprs.forEach { expr ->
+            tupleConstruction.initializers += handle(RsAst.RustExpr(expr))
+        }
+
+        return tupleConstruction
+    }
+
+    /**
+     * Handles a `return` (with optional value expression) into a [Return].
+     *
+     * AST:
+     * [ast::ReturnExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ReturnExpr.html)
+     *
+     * Reference:
+     * [Return expressions](https://doc.rust-lang.org/reference/expressions/return-expr.html)
+     */
+    fun handleReturnExpr(returnExpr: RsReturnExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ReturnExpr(returnExpr))
+        val ret = newReturn(raw)
+        returnExpr.expr.firstOrNull()?.let {
+            ret.returnValue = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+        return ret
+    }
+
+    /**
+     * Handles a `match` expression into a [Switch] whose selector is the scrutinee and whose arms
+     * are translated by [handleMatchArm]. This overapproximates control flow versus real Rust
+     * `match` semantics, since fallthrough between EOG cases can reach guards that would never
+     * actually be evaluated (a failing pattern match skips straight to the next arm).
+     *
+     * AST:
+     * [ast::MatchExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MatchExpr.html)
+     *
+     * Reference:
+     * [Match expressions](https://doc.rust-lang.org/reference/expressions/match-expr.html)
+     */
+    fun handleMatchExpr(matchExpr: RsMatchExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.MatchExpr(matchExpr))
+
+        // Get the scrutinee (the value being matched)
+        val scrutinee = matchExpr.expr.firstOrNull()?.let { handleNode(it) }
+
+        // Create the switch statement
+        val switchStatement =
+            newSwitch(rawNode = raw)
+                .assume(
+                    assumptionType = AssumptionType.ControlFlowAssumption,
+                    "Modeling match as a switch leads to an overapproximation of EOG paths as switch fallthrough can lead to guards being evaluated that would fail at the pattern matching, i.e. case expression.",
+                )
+        switchStatement.selector = scrutinee
+
+        frontend.scopeManager.enterScope(switchStatement)
+
+        // Create a block to hold all case statements
+        val caseBlock = newBlock(raw)
+        caseBlock.usedAsExpression = true
+
+        // Process each match arm
+        for (arm in matchExpr.arms) {
+            caseBlock.statements += handleMatchArm(arm)
+        }
+
+        switchStatement.statement = caseBlock
+
+        frontend.scopeManager.leaveScope(switchStatement)
+
+        switchStatement.usedAsExpression = true
+
+        return switchStatement
+    }
+
+    /**
+     * Handles the placeholder expression `_` (e.g. used on the LHS of an assignment to discard a
+     * value) into an [Empty] expression.
+     *
+     * AST:
+     * [ast::UnderscoreExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.UnderscoreExpr.html)
+     *
+     * Reference:
+     * [Underscore expressions](https://doc.rust-lang.org/reference/expressions/underscore-expr.html)
+     */
+    fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
+        return newEmpty(raw).also { it.usedAsExpression = true }
+    }
+
+    /**
+     * Handles a parenthesized expression `(expr)` by unwrapping it and translating the inner
+     * expression directly (parentheses carry no separate CPG representation).
+     *
+     * AST:
+     * [ast::ParenExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ParenExpr.html)
+     *
+     * Reference:
+     * [Grouped expressions](https://doc.rust-lang.org/reference/expressions/grouped-expr.html)
+     */
+    fun handleParenExpr(parenExpr: RsParenExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ParenExpr(parenExpr))
+
+        parenExpr.expr.firstOrNull()?.let {
+            return handleNode(it)
+        }
+        return newEmpty(raw).also { it.usedAsExpression = true }
+    }
+
+    /**
+     * Handles the `?` operator, desugaring it into a synthetic `match expr { Ok(val) => val,
+     * Err(err) => return err }` modeled as a [Switch]. This does not depict the actual desugaring
+     * (which depends on the `Try`/`FromResidual` trait impl), but is sufficient to reproduce the
+     * same EOG/DFG shape.
+     *
+     * AST: [ast::TryExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.TryExpr.html)
+     *
+     * Reference:
+     * [The question mark operator](https://doc.rust-lang.org/reference/expressions/operator-expr.html#the-question-mark-operator)
+     */
+    fun handleTryExpr(tryExpr: RsTryExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.TryExpr(tryExpr))
+        tryExpr.expr.firstOrNull()?.let {
+            // Here we translate a try expression to:
+            // match expr { Ok(val) => val, Err(err) => err }
+            // This does not fully depict the structure it is translated to as this depends on the
+            // implementation
+            // of the try trait, but is sufficient to modell the same EOG and DFG
+
+            // We model the try operator as a function call, as it is basically syntactic sugar for
+            // a match on the result
+            return newSwitch(rawNode = raw).also { switch ->
+                switch.selector = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                frontend.scopeManager.enterScope(switch)
+
+                // Create a block to hold two case statements
+                val caseBlock = newBlock(raw)
+                caseBlock.usedAsExpression = true
+
+                caseBlock.statements +=
+                    newCase(raw).also { value ->
+                        value.caseExpression =
+                            newObjectDeconstruction(raw).also { obj ->
+                                obj.type = frontend.typeOf("Ok")
+                                obj.components +=
+                                    newDeclarationStatement(rawNode = raw).also { declaration ->
+                                        declaration.usedAsExpression = true
+                                        val variable =
+                                            newVariable(
+                                                rawNode = raw,
+                                                name = "val_" + switch.id.toString(),
+                                            )
+                                        declaration.declarations += variable
+
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
+                                        frontend.scopeManager.addDeclaration(variable)
+                                    }
+                            }
+                    }
+
+                val breakStatement = newBreak()
+                breakStatement.expr = newReference("val_" + switch.id.toString())
+                breakStatement.usedAsExpression = true
+                caseBlock.statements += breakStatement
+
+                caseBlock.statements +=
+                    newCase(raw).also { value ->
+                        value.caseExpression =
+                            newObjectDeconstruction(raw).also { obj ->
+                                obj.type = frontend.typeOf("Err")
+                                obj.components +=
+                                    newDeclarationStatement(rawNode = raw).also { declaration ->
+                                        declaration.usedAsExpression = true
+                                        val variable =
+                                            newVariable(
+                                                rawNode = raw,
+                                                name = "err_" + switch.id.toString(),
+                                            )
+                                        declaration.declarations += variable
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
+                                        frontend.scopeManager.addDeclaration(variable)
+                                    }
+                            }
+                    }
+                caseBlock.statements +=
+                    newReturn(raw).also { ret ->
+                        ret.returnValue = newReference("err_" + switch.id.toString())
+                    }
+
+                switch.statement = caseBlock
+
+                frontend.scopeManager.leaveScope(switch)
+
+                switch.usedAsExpression = true
+            }
+        }
+
+        return newProblemExpression("Try expression missing subexpr", rawNode = raw)
+    }
+
+    /**
+     * Handles a single arm of a `match` expression (`pattern [if guard] => body`), translated into
+     * a [Case] holding the deconstructed pattern followed by a [BreakStatement] carrying the arm's
+     * body value, wrapped in an [IfStatement] when a guard is present.
+     *
+     * AST:
+     * [ast::MatchArm](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.MatchArm.html)
+     *
+     * Reference: part of
+     * [Match expressions](https://doc.rust-lang.org/reference/expressions/match-expr.html) (match
+     * arms / match guards)
+     */
+    private fun handleMatchArm(arm: RsMatchArm): List<Expression> {
+        val raw = RsAst.RustExpr(RsExpr.MatchArm(arm))
+        // Deconstruct the pattern and create a case statement
+        val pattern = arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
+
+        val caseStatement =
+            newCase(rawNode = arm.pat.firstOrNull()?.let { RsAst.RustPat(it) } ?: raw)
+        caseStatement.caseExpression = pattern
+
+        var caseExpressions = mutableListOf<Expression>(caseStatement)
+
+        // Get the match arm expression
+        val armExpr = arm.expr.firstOrNull()?.let { handleNode(it) }
+
+        val wrappedRawExpr = arm.expr.firstOrNull()?.let { RsAst.RustExpr(it) } ?: raw
+
+        // If there's a guard, wrap the break statement in an if
+        if (arm.guard.isNotEmpty()) {
+            val guard = arm.guard.firstOrNull()?.let { handleNode(it) }
+
+            val ifElse = newIfElse(raw)
+            ifElse.condition = guard
+
+            val breakStatement = newBreak(wrappedRawExpr)
+            breakStatement.expr = armExpr
+            breakStatement.usedAsExpression = true
+
+            val ifBlock = newBlock(raw)
+            ifBlock.statements += breakStatement
+            ifElse.thenStatement = ifBlock
+
+            caseExpressions += ifElse
+        } else {
+            // No guard, directly create break statement
+            val breakStatement = newBreak(wrappedRawExpr)
+            breakStatement.expr = armExpr
+            breakStatement.usedAsExpression = true
+
+            caseExpressions += breakStatement
+        }
+
+        return caseExpressions
+    }
+
+    /**
+     * Handles a closure expression `|params| body` into a [Lambda] wrapping a synthetic anonymous
+     * [Function] with the closure's parameters and body.
+     *
+     * AST:
+     * [ast::ClosureExpr](https://docs.rs/ra_ap_syntax/latest/ra_ap_syntax/ast/struct.ClosureExpr.html)
+     *
+     * Reference:
+     * [Closure expressions](https://doc.rust-lang.org/reference/expressions/closure-expr.html)
+     */
+    fun handleClosureExpr(closureExpr: RsClosureExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ClosureExpr(closureExpr))
+
+        val lambda = newLambda(rawNode = raw)
+
+        val paramsList = closureExpr.paramList.firstOrNull()
+        val enclosedFunction = newFunction("", rawNode = raw)
+        frontend.scopeManager.enterScope(enclosedFunction)
+
+        paramsList?.let { params ->
+            for (parameter in params.params) {
+                val resolvedType = parameter.ty?.let { frontend.typeOf(it) } ?: unknownType()
+                // Todo We need to handle destructuring in a parameter properly
+                val code = parameter.astNode.text
+                val param =
+                    newParameter(
+                        if (code.contains(":")) code.substringBefore(":").trim() else code.trim(),
+                        resolvedType,
+                    )
+                frontend.scopeManager.addDeclaration(param)
+                enclosedFunction.parameters += param
+            }
+        }
+
+        val functionType = computeType(enclosedFunction)
+        enclosedFunction.type = functionType
+        closureExpr.expressions.firstOrNull()?.let {
+            enclosedFunction.body = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+        frontend.scopeManager.leaveScope(enclosedFunction)
+
+        lambda.function = enclosedFunction
+
+        return lambda
+    }
+}
