@@ -101,9 +101,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 // Add all the static methods implemented in the class "base" and its superclasses
                 staticImports.addAll(classes.flatMap { it.methods }.filter(Method::isStatic))
                 // Add all the static fields implemented in the class "base" and its superclasses
-                staticImports.addAll(
-                    classes.flatMap { it.fields }.filter { "static" in it.modifiers }
-                )
+                staticImports.addAll(classes.flatMap { it.fields }.filter(Field::isStatic))
             }
         }
         return staticImports
@@ -144,7 +142,14 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                newField(name, UnknownType.getUnknownType(base.language), setOf(), null, false)
+                newField(
+                    name,
+                    UnknownType.getUnknownType(base.language),
+                    setOf(),
+                    initializer = null,
+                    implicitInitializerAllowed = false,
+                    isStatic = true,
+                )
             targetField.language = base.language
             targetField.isInferred = true
 

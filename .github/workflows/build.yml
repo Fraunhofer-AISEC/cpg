@@ -81,8 +81,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
       - name: Build ${{ env.version }}
         run: |
-          # The distZip/distTar and shadowJar/shadowDistZip/shadowDistTar slow down the build and are not needed in CI
-          ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar -x shadowJar -x shadowDistZip -x shadowDistTar koverXmlReport koverHtmlReport performanceTest integrationTest
+          # The distZip/distTar and shadowJar/shadowDistZip/shadowDistTar slow down the build and are not needed in CI.
+          # shadowJar/shadowDistZip/shadowDistTar only exist on codyze-console (the only module using the Shadow
+          # plugin) - excluding a task that doesn't exist anywhere in the build fails the whole build ("Task
+          # 'shadowJar' not found"), so only exclude them when that module is actually enabled.
+          EXCLUDES="-x distZip -x distTar"
+          if grep -q '^enableCodyzeConsole=true' gradle.properties; then
+            EXCLUDES="$EXCLUDES -x shadowJar -x shadowDistZip -x shadowDistTar"
+          fi
+          ./gradlew --parallel spotlessCheck -x spotlessApply build $EXCLUDES koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}
@@ -133,7 +140,13 @@ jobs:
         if: github.ref == 'refs/heads/main' || (contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages') && env.version != 'gh-readonly-queue-SNAPSHOT')
         run: |
           export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository -x npmInstall
+          # npmInstall only exists on codyze-console (the only module using the Node plugin) -
+          # excluding a task that doesn't exist anywhere in the build fails the whole build.
+          EXCLUDES=""
+          if grep -q '^enableCodyzeConsole=true' gradle.properties; then
+            EXCLUDES="-x npmInstall"
+          fi
+          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository $EXCLUDES
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}
           ORG_GRADLE_PROJECT_includeJavadoc: false
