@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
+import com.github.javaparser.ast.body.TypeDeclaration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
@@ -326,6 +326,80 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val constructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration, constructor.recordDeclaration)
         assertLocalName("SimpleClass", constructor)
+    }
+
+    @Test
+    fun testRecord() {
+        val file = File("src/test/resources/compiling/RecordExample.java")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<JavaLanguage>()
+            }
+        assertNotNull(tu)
+
+        val recordDeclaration = tu.records["Record"]
+        assertNotNull(recordDeclaration)
+
+        // Check the implicit fields
+        assertEquals(2, recordDeclaration.fields.size)
+        val fieldP1 = recordDeclaration.fields["p1"]
+        assertNotNull(fieldP1)
+        val fieldP2 = recordDeclaration.fields["p2"]
+        assertNotNull(fieldP2)
+
+        val method = recordDeclaration.methods[0]
+        assertNotNull(method)
+        assertEquals(recordDeclaration, method.recordDeclaration)
+        assertLocalName("recordFunction", method)
+        assertEquals(tu.primitiveType("java.lang.String"), method.returnTypes.firstOrNull())
+
+        // Method has no visibility modifier, so it should have package-private (no modifier in set)
+        // In Java, package-private means no access modifier keyword is present
+        assertFalse(method.modifiers.contains("private"))
+        assertTrue(method.modifiers.contains("public"))
+        assertFalse(method.modifiers.contains("protected"))
+
+        val functionType = method.type as? FunctionType
+        assertNotNull(functionType)
+        assertLocalName("recordFunction()java.lang.String", functionType)
+
+        // Check the constructor
+        val constructor = recordDeclaration.constructors[0]
+        assertEquals(recordDeclaration, constructor.recordDeclaration)
+        assertLocalName("Record", constructor)
+        // The constructor's parameters should match the record's field names but not as an FQN
+        assertEquals(2, constructor.parameters.size)
+        val param1 = constructor.parameters.first()
+        val param2 = constructor.parameters.last()
+        assertFullName("p1", param1)
+        assertFullName("p2", param2)
+        // The first statements should be implicit assignments to the fields.
+        val body = constructor.body
+        assertIs<Block>(body)
+
+        // The first statement is assignment to field p2
+        val firstStatement = body.statements[0]
+        assertIs<Assign>(firstStatement)
+        val firstLhs = firstStatement.lhs.singleOrNull()
+        assertIs<MemberAccess>(firstLhs)
+        assertRefersTo(firstLhs, fieldP2)
+        assertLocalName("p2", firstLhs)
+        val firstRhs = firstStatement.rhs.singleOrNull()
+        assertIs<Reference>(firstRhs)
+        assertFullName("p2", firstRhs)
+        assertRefersTo(firstRhs, param2)
+
+        // The second statement is assignment to field p1
+        val secondStatement = body.statements[1]
+        assertIs<Assign>(secondStatement)
+        val secondLhs = secondStatement.lhs.singleOrNull()
+        assertIs<MemberAccess>(secondLhs)
+        assertRefersTo(secondLhs, fieldP1)
+        assertLocalName("p1", secondLhs)
+        val secondRhs = secondStatement.rhs.singleOrNull()
+        assertIs<Reference>(secondRhs)
+        assertFullName("p1", secondRhs)
+        assertRefersTo(secondRhs, param1)
     }
 
     @Test
@@ -656,8 +730,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             init {
                 this.declarationHandler =
                     object : DeclarationHandler(this@MyJavaLanguageFrontend) {
-                        override fun handleClassOrInterfaceDeclaration(
-                            classInterDecl: ClassOrInterfaceDeclaration
+                        override fun <T : TypeDeclaration<T>> handleClassOrInterfaceDeclaration(
+                            classInterDecl: T
                         ): Record {
                             // take the original class and replace the name
                             val declaration =
