@@ -27,10 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.project.DetectionResult
@@ -40,6 +44,14 @@ import java.nio.file.Path
 import kotlin.reflect.KClass
 
 const val CONST = "const"
+
+/** The C/C++ storage-class specifier that marks internal linkage or a static member. */
+const val STATIC = "static"
+
+/** The C/C++ access specifier keywords, used inside records to control member visibility. */
+const val PUBLIC = "public"
+const val PROTECTED = "protected"
+const val PRIVATE = "private"
 
 /** The C language. */
 open class CLanguage :
@@ -130,6 +142,31 @@ open class CLanguage :
             (existing.modifiers + incoming.modifiers).let {
                 if (existing.initializer != null) it - "extern" else it
             }
+    }
+
+    /**
+     * Applies C's declaration modifiers to [declaration], resolving the notorious
+     * context-dependence of `static` from the [scope] in which the declaration appears:
+     * - at file/namespace scope it grants *internal linkage*, confining the declaration to its own
+     *   translation unit ([Visibility.INTERNAL]);
+     * - on a record member it makes the member *static*, i.e. bound to the record itself rather
+     *   than to an instance ([ValueDeclaration.isStatic]);
+     * - inside a function body it only affects storage duration, which is irrelevant to symbol
+     *   resolution, so it is ignored.
+     *
+     * C has no access control — `struct`/`union` members are always publicly accessible — so the
+     * `public`/`protected`/`private` access specifiers are only interpreted by [CPPLanguage], which
+     * additionally declares [HasVisibilityModifiers].
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        if (STATIC in declaration.modifiers) {
+            when (scope) {
+                is RecordScope -> (declaration as? ValueDeclaration)?.isStatic = true
+                is GlobalScope,
+                is NamespaceScope -> declaration.visibility = Visibility.INTERNAL
+                else -> {} // a local `static` only affects storage duration, not resolution
+            }
+        }
     }
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
