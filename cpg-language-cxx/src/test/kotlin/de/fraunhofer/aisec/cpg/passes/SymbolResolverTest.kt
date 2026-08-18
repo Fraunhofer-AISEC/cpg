@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.While
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertInvokes
@@ -265,5 +266,35 @@ class SymbolResolverTest {
         val call = field.initializer
         assertIs<Call>(call)
         assertInvokes(call, helper)
+    }
+
+    /**
+     * None of the other tests in this file contain a loop. A loop's head is reached via more than
+     * one incoming EOG edge (falling into the loop, and the back-edge from the end of the loop
+     * body), so [de.fraunhofer.aisec.cpg.helpers.functional.Lattice.iterateEOG] has to run a real
+     * fixpoint here (as opposed to the merge points after an `if`/`else`, which never feed back
+     * into themselves). This checks that references inside the loop body/condition still resolve
+     * correctly and that the analysis converges instead of timing out.
+     */
+    @Test
+    fun testLoop() {
+        val file = File("src/test/resources/cxx/symbols/loop.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+        result.refs.forEach { assertNotNull(it.refersTo, "$it should not have an empty refersTo") }
+
+        val whileStatement = result.allChildren<While>().firstOrNull()
+        assertNotNull(whileStatement)
+        assertIs<BooleanType>(
+            whileStatement.condition?.type,
+            "Type of while condition should be BooleanType",
+        )
     }
 }
