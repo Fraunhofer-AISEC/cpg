@@ -489,6 +489,24 @@ class ChatService(
                             send(Events.toolResult(ctx.toolName, args, content))
                         }
                         onToolCallFailed { ctx -> send(Events.text("Tool failed: ${ctx.message}")) }
+                        onAgentCompleted { ctx ->
+                            val assistantMessages =
+                                ctx.context.llm
+                                    .readSession { prompt.messages }
+                                    .filterIsInstance<Message.Assistant>()
+                            var inputTokens = 0
+                            var outputTokens = 0
+                            var totalTokens = 0
+                            var modelId: String? = null
+                            for (message in assistantMessages) {
+                                val usage = message.metaInfo
+                                inputTokens += usage.inputTokensCount ?: 0
+                                outputTokens += usage.outputTokensCount ?: 0
+                                totalTokens += usage.totalTokensCount ?: 0
+                                usage.modelId?.let { modelId = it }
+                            }
+                            send(Events.usage(modelId, inputTokens, outputTokens, totalTokens))
+                        }
                     }
                 }
 

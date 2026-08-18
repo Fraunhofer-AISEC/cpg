@@ -75,4 +75,16 @@ object Events {
                 put("content", content)
             }
         )
+
+    /** LLM token usage summed over an entire [ChatService.chat] call (all its LLM round trips). */
+    fun usage(model: String?, inputTokens: Int, outputTokens: Int, totalTokens: Int): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "usage")
+                put("model", model)
+                put("inputTokens", inputTokens)
+                put("outputTokens", outputTokens)
+                put("totalTokens", totalTokens)
+            }
+        )
 }
