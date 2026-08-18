@@ -785,27 +785,32 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val single = chars.singleOrNull()
         if (single != null && single <= Char.MAX_VALUE.code) {
-            return newLiteral(single.toChar(), primitiveType("char"), rawNode = ctx)
+            return newLiteral(
+                single.toChar(),
+                primitiveType(if (isWideChar) "wchar_t" else "char"),
+                rawNode = ctx,
+            )
         } else if (single != null) {
             // A single wide-char escape can represent a code point outside the 16-bit range of
             // Char (e.g. L'\x1F600'). It is already the intended value, so we return it as-is
             // instead of running it through the byte-recombination logic below.
-            return newLiteral(single, primitiveType("int"), rawNode = ctx)
+            return newLiteral(single, primitiveType("wchar_t"), rawNode = ctx)
         } else {
             // Somehow make an int out of, this is "implementation" specific.
             var intValue = 0
-            if (isWideChar) {
+            return if (isWideChar) {
                 // If it was a wide char, we do not reverse the order.
                 for ((n, c) in chars.withIndex()) {
                     intValue += (c * 256.0f.pow(n)).toInt()
                 }
+                newLiteral(intValue, primitiveType("wchar_t"), rawNode = ctx)
             } else {
                 // We follow the way clang does it
                 for ((n, c) in chars.reversed().withIndex()) {
                     intValue += (c * 256.0f.pow(n)).toInt()
                 }
+                newLiteral(intValue, primitiveType("int"), rawNode = ctx)
             }
-            return newLiteral(intValue, primitiveType("int"), rawNode = ctx)
         }
     }
 
