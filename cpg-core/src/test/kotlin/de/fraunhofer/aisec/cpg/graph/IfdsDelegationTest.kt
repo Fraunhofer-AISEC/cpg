@@ -225,4 +225,121 @@ class IfdsDelegationTest {
             assertEquals(viaIfds, viaWrapper, "EOG wrapper result must equal the IFDS solver")
         }
     }
+
+    /**
+     * Adding [FilterUnreachableEOG] back (the default EOG sensitivity) must keep the LEGACY engine
+     * for [followEOGEdgesUntilHitNodes] (mirrors [fieldSensitiveDoesNotDelegate] for DFG).
+     */
+    @Test
+    fun eogFilterUnreachableDoesNotDelegate() {
+        with(TestLanguageFrontend()) {
+            val q = newLiteral(1)
+            val s1 = newLiteral(2)
+            val c1 = newCall(fqn = "f")
+            val f = newFunction("f")
+            c1.invokes += f
+            s1.nextEOG += c1
+            c1.nextEOG += q
+
+            val result =
+                q.followEOGEdgesUntilHitNodes(
+                    direction = Backward(GraphToFollow.EOG),
+                    sensitivities = FilterUnreachableEOG + ContextSensitive,
+                    scope = Interprocedural(),
+                    predicate = { it === s1 },
+                )
+            assertEquals(setOf<Node>(s1), result, "legacy engine must still find {s1} here")
+        }
+    }
+
+    /**
+     * An [Intraprocedural] scope must fall through to the legacy engine for
+     * [followEOGEdgesUntilHitNodes] as well (mirrors [intraproceduralScopeDoesNotDelegate] for
+     * DFG). `s1` is a plain intraprocedural predecessor of the call site here (not something only
+     * reachable by crossing into the callee), so both engines agree on the result; the point of
+     * this test is to exercise the non-delegating fallback branch itself.
+     */
+    @Test
+    fun eogIntraproceduralScopeDoesNotDelegate() {
+        with(TestLanguageFrontend()) {
+            val q = newLiteral(1)
+            val s1 = newLiteral(2)
+            val c1 = newCall(fqn = "f")
+            val f = newFunction("f")
+            c1.invokes += f
+            s1.nextEOG += c1
+            c1.nextEOG += q
+
+            val result =
+                q.followEOGEdgesUntilHitNodes(
+                    direction = Backward(GraphToFollow.EOG),
+                    sensitivities = arrayOf(ContextSensitive),
+                    scope = Intraprocedural(),
+                    predicate = { it === s1 },
+                )
+            assertEquals(
+                setOf<Node>(s1),
+                result,
+                "Intraprocedural must fall through to the legacy engine",
+            )
+        }
+    }
+
+    /**
+     * A custom [earlyTermination] must fall through to the legacy engine for
+     * [followEOGEdgesUntilHitNodes] (mirrors [customEarlyTerminationDoesNotDelegate] for DFG).
+     */
+    @Test
+    fun eogCustomEarlyTerminationDoesNotDelegate() {
+        with(TestLanguageFrontend()) {
+            val q = newLiteral(1)
+            val a = newLiteral(2)
+            val s = newLiteral(3)
+            a.nextEOG += q
+            s.nextEOG += a
+
+            val predicate: (Node) -> Boolean = { it === s }
+
+            val delegated =
+                q.followEOGEdgesUntilHitNodes(
+                    direction = Backward(GraphToFollow.EOG),
+                    sensitivities = arrayOf(ContextSensitive),
+                    scope = Interprocedural(),
+                    predicate = predicate,
+                )
+            assertEquals(setOf<Node>(s), delegated, "no earlyTermination -> delegate -> {s}")
+
+            val pruned =
+                q.followEOGEdgesUntilHitNodes(
+                    direction = Backward(GraphToFollow.EOG),
+                    sensitivities = arrayOf(ContextSensitive),
+                    scope = Interprocedural(),
+                    earlyTermination = { n, _ -> n === a },
+                    predicate = predicate,
+                )
+            assertEquals(emptySet(), pruned, "custom earlyTermination must fall through and prune")
+        }
+    }
+
+    /**
+     * [followDFGEdgesUntilHitNodes] and [followEOGEdgesUntilHitNodes] called with every parameter
+     * defaulted always fall through to the legacy engine: the default sensitivities
+     * ([FieldSensitive] / [FilterUnreachableEOG], both combined with [ContextSensitive]) never
+     * equal the singleton `{ContextSensitive}` the delegation guard requires. This exercises the
+     * default argument values themselves.
+     */
+    @Test
+    fun defaultArgumentsAlwaysFallThroughToLegacyEngine() {
+        with(TestLanguageFrontend()) {
+            val a = newLiteral(1)
+            val b = newLiteral(2)
+            a.nextDFGEdges += b
+            assertEquals(setOf<Node>(b), a.followDFGEdgesUntilHitNodes { it === b })
+
+            val c = newLiteral(3)
+            val d = newLiteral(4)
+            c.nextEOG += d
+            assertEquals(setOf<Node>(d), c.followEOGEdgesUntilHitNodes { it === d })
+        }
+    }
 }

@@ -327,4 +327,114 @@ class IfdsReachingSourcesTest {
             assertEquals(emptySet(), ifds, "self-recursion with no source -> empty, must terminate")
         }
     }
+
+    /**
+     * If the start node itself already satisfies [predicate], [solve] must record it immediately
+     * and return without expanding any edges.
+     */
+    @Test
+    fun startNodeSatisfyingPredicateIsAnImmediateHit() {
+        with(TestLanguageFrontend()) {
+            val start = newLiteral(1)
+            // No edges at all: if the solver tried to expand, it would find nothing anyway, but we
+            // want to prove the immediate-hit path specifically (predicate(start) == true).
+            val ifds = start.ifdsReachingSourcesDFG(predicate = { it === start })
+            assertEquals(setOf<Node>(start), ifds, "predicate(start) must be an immediate hit")
+        }
+    }
+
+    /**
+     * Fully default arguments on the three public entry points ([ifdsReachingSources],
+     * [ifdsReachingSourcesDFG], [ifdsReachingSourcesEOG]) must behave like explicit `k =
+     * Int.MAX_VALUE` / the documented default [AnalysisDirection].
+     */
+    @Test
+    fun defaultArgumentsMatchDocumentedDefaults() {
+        with(TestLanguageFrontend()) {
+            val q = newLiteral(1)
+            val s = newLiteral(2)
+            q.prevDFGEdges += s
+
+            // ifdsReachingSources: only `direction` is mandatory, k defaults to Int.MAX_VALUE.
+            val viaEntry = q.ifdsReachingSources(Backward(GraphToFollow.DFG)) { it === s }
+            assertEquals(setOf<Node>(s), viaEntry)
+
+            // ifdsReachingSourcesDFG: both `direction` and `k` default (direction defaults to
+            // Backward(DFG), which is exactly what we want here).
+            val viaDfgDefaults = q.ifdsReachingSourcesDFG { it === s }
+            assertEquals(setOf<Node>(s), viaDfgDefaults)
+
+            // ifdsReachingSourcesEOG: both `direction` and `k` default (direction defaults to
+            // Backward(EOG)).
+            val a = newLiteral(3)
+            val b = newLiteral(4)
+            a.nextEOG += b
+            val viaEogDefaults = b.ifdsReachingSourcesEOG { it === a }
+            assertEquals(setOf<Node>(a), viaEogDefaults)
+        }
+    }
+
+    /**
+     * A return encountered while still in the ROOT / empty-stack region (i.e. the traversal never
+     * pushed via a matching call, because it started inside a function body directly) must stay
+     * permissively in the ROOT region rather than crash or drop the return's targets. Starting the
+     * query directly at the [Function] node simulates exactly this: backward EOG treats a
+     * [Function] node as a pop, and since we never entered via a [CallStep], `ctx` is still `null`.
+     */
+    @Test
+    fun returnAtRootStaysInRootRegion() {
+        with(TestLanguageFrontend()) {
+            val s1 = newLiteral(1)
+            val s2 = newLiteral(2)
+            val f = newFunction("f")
+            val c1 = newCall(fqn = "f")
+            val c2 = newCall(fqn = "f")
+
+            c1.invokes += f
+            c2.invokes += f
+            s1.nextEOG += c1
+            s2.nextEOG += c2
+
+            // Start directly at `f`, not at a caller: the very first step is already a pop.
+            val ifds =
+                f.ifdsReachingSourcesEOG(direction = Backward(GraphToFollow.EOG)) {
+                    it === s1 || it === s2
+                }
+            assertEquals(
+                setOf<Node>(s1, s2),
+                ifds,
+                "ROOT-region return must resume permissively at every caller",
+            )
+        }
+    }
+
+    /**
+     * Forward EOG interprocedural call/return: entering `f` (pushed from `c1`) walks one
+     * intraprocedural step to a leaf node `innerLeaf` (exercising the plain forward IntraStep
+     * fallthrough), which then pops back out through every call site invoking `f` (via
+     * `innerLeaf.firstParentOrNull<Function>()`, since `innerLeaf` is nested in `f`'s body, not a
+     * [Function] itself), resuming at the call's forward EOG successor.
+     */
+    @Test
+    fun forwardEogInterproceduralReturn() {
+        with(TestLanguageFrontend()) {
+            val f = newFunction("f")
+            val innerLeaf = newLiteral(1)
+            f.body = innerLeaf
+            f.nextEOG += innerLeaf
+
+            val c1 = newCall(fqn = "f")
+            val after1 = newLiteral(2)
+            c1.invokes += f
+            c1.nextEOG += after1
+
+            val ifds =
+                c1.ifdsReachingSourcesEOG(direction = Forward(GraphToFollow.EOG)) { it === after1 }
+            assertEquals(
+                setOf<Node>(after1),
+                ifds,
+                "forward EOG must pop through the call site back to its successor",
+            )
+        }
+    }
 }

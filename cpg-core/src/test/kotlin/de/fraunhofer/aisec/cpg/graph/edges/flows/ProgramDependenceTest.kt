@@ -28,8 +28,15 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.followNextCDGUntilHitNodes
+import de.fraunhofer.aisec.cpg.graph.followNextPDGUntilHitNodes
+import de.fraunhofer.aisec.cpg.graph.followPrevCDGUntilHitNodes
 import de.fraunhofer.aisec.cpg.graph.followPrevPDGUntilHit
+import de.fraunhofer.aisec.cpg.graph.followPrevPDGUntilHitNodes
+import de.fraunhofer.aisec.cpg.graph.newCall
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.newReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -139,6 +146,151 @@ class ProgramDependenceTest {
                 // DFG, CDG) in the PDG container
                 node1.nextPDGEdges.add(node2)
             }
+        }
+    }
+
+    /** Path-free MAY variant, forward, intraprocedural: mirrors [testFollowPrevPDGUntilHit]. */
+    @Test
+    fun testFollowNextPDGUntilHitNodes() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(value = 1)
+            val node2 = newLiteral(value = 2)
+            node1.nextDFGEdges += node2
+
+            val combined = mutableListOf<Edge<Node>>()
+            combined += node2.prevDFGEdges
+            node2.prevPDGEdges += combined
+
+            val result = node1.followNextPDGUntilHitNodes { it === node2 }
+            assertEquals(setOf<Node>(node2), result)
+        }
+    }
+
+    /** Path-free MAY variant, forward, intraprocedural, over CDG edges. */
+    @Test
+    fun testFollowNextCDGUntilHitNodes() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(value = 1)
+            val node2 = newLiteral(value = 2)
+            node1.nextCDGEdges.add(node2) { branches = setOf(false) }
+
+            val combined = mutableListOf<Edge<Node>>()
+            combined += node2.prevCDGEdges
+            node2.prevPDGEdges += combined
+
+            val result = node1.followNextCDGUntilHitNodes { it === node2 }
+            assertEquals(setOf<Node>(node2), result)
+        }
+    }
+
+    /** Path-free MAY variant, backward, intraprocedural: mirrors [testFollowPrevPDGUntilHit]. */
+    @Test
+    fun testFollowPrevPDGUntilHitNodes() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(value = 1)
+            val node2 = newLiteral(value = 2)
+            node1.nextDFGEdges += node2
+
+            val combined = mutableListOf<Edge<Node>>()
+            combined += node2.prevDFGEdges
+            node2.prevPDGEdges += combined
+
+            val result = node2.followPrevPDGUntilHitNodes { it === node1 }
+            assertEquals(setOf<Node>(node1), result)
+        }
+    }
+
+    /** Path-free MAY variant, backward, intraprocedural, over CDG edges. */
+    @Test
+    fun testFollowPrevCDGUntilHitNodes() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(value = 1)
+            val node2 = newLiteral(value = 2)
+            node1.nextCDGEdges.add(node2) { branches = setOf(false) }
+
+            val combined = mutableListOf<Edge<Node>>()
+            combined += node2.prevCDGEdges
+            node2.prevPDGEdges += combined
+
+            val result = node2.followPrevCDGUntilHitNodes { it === node1 }
+            assertEquals(setOf<Node>(node1), result)
+        }
+    }
+
+    /**
+     * Interprocedural next-PDG / next-CDG: from a [de.fraunhofer.aisec.cpg.graph.expressions.Call]
+     * with `interproceduralAnalysis = true`, the traversal must also follow the call's
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Call.invokeEdges] to the invoked function, even
+     * though there are no PDG/CDG edges at all on the call.
+     */
+    @Test
+    fun testNextPDGAndCDGStepInterprocedural() {
+        with(TestLanguageFrontend()) {
+            val f = newFunction("f")
+            val call = newCall(fqn = "f")
+            call.invokes += f
+
+            val pdgResult =
+                call.followNextPDGUntilHitNodes(interproceduralAnalysis = true) { it === f }
+            assertEquals(setOf<Node>(f), pdgResult)
+
+            val cdgResult =
+                call.followNextCDGUntilHitNodes(interproceduralAnalysis = true) { it === f }
+            assertEquals(setOf<Node>(f), cdgResult)
+
+            // Without interproceduralAnalysis, the invoked function must not be reachable.
+            assertEquals(emptySet(), call.followNextPDGUntilHitNodes { it === f })
+        }
+    }
+
+    /**
+     * Interprocedural prev-PDG / prev-CDG: starting AT a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Function] with `interproceduralAnalysis = true`,
+     * the traversal must follow the function's
+     * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration.usageEdges] backward to a
+     * reference used as a call's callee, pushing that call onto the context's call stack.
+     */
+    @Test
+    fun testPrevPDGAndCDGStepInterprocedural() {
+        with(TestLanguageFrontend()) {
+            val fn = newFunction("f")
+            val calleeRef = newReference("f")
+            newCall(callee = calleeRef, fqn = "f")
+            calleeRef.refersTo = fn
+
+            val pdgResult =
+                fn.followPrevPDGUntilHitNodes(interproceduralAnalysis = true) { it === calleeRef }
+            assertEquals(setOf<Node>(calleeRef), pdgResult)
+
+            val cdgResult =
+                fn.followPrevCDGUntilHitNodes(interproceduralAnalysis = true) { it === calleeRef }
+            assertEquals(setOf<Node>(calleeRef), cdgResult)
+
+            // Without interproceduralAnalysis, the reference must not be reachable.
+            assertEquals(emptySet(), fn.followPrevPDGUntilHitNodes { it === calleeRef })
+        }
+    }
+
+    /**
+     * `interproceduralMaxDepth = 0` must block the interprocedural usage-edge crossing entirely
+     * (the call stack is already at depth 0, so `0 >= 0` holds).
+     */
+    @Test
+    fun testPrevPDGStepInterproceduralMaxDepthBlocksCrossing() {
+        with(TestLanguageFrontend()) {
+            val fn = newFunction("f")
+            val calleeRef = newReference("f")
+            newCall(callee = calleeRef, fqn = "f")
+            calleeRef.refersTo = fn
+
+            val result =
+                fn.followPrevPDGUntilHitNodes(
+                    interproceduralAnalysis = true,
+                    interproceduralMaxDepth = 0,
+                ) {
+                    it === calleeRef
+                }
+            assertEquals(emptySet(), result, "maxDepth = 0 must block the interprocedural crossing")
         }
     }
 }
