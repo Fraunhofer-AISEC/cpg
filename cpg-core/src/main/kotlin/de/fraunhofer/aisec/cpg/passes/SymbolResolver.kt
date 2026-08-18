@@ -141,21 +141,21 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun accept(eogStarter: Node) {
         ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
+        cacheTemplates(ctx.currentComponent)
+
+        walker =
+            ScopedWalker(
+                scopeManager,
+                if (passConfig?.skipUnreachableEOG == true) {
+                    Strategy::REACHABLE_EOG_FORWARD
+                } else {
+                    Strategy::EOG_FORWARD
+                },
+            )
+
         if (passConfig?.experimentalEOGWorklist == true && eogStarter is Function) {
             acceptWithIterateEOG(eogStarter)
         } else {
-            cacheTemplates(ctx.currentComponent)
-
-            walker =
-                ScopedWalker(
-                    scopeManager,
-                    if (passConfig?.skipUnreachableEOG == true) {
-                        Strategy::REACHABLE_EOG_FORWARD
-                    } else {
-                        Strategy::EOG_FORWARD
-                    },
-                )
-
             walker.clearCallbacks()
             walker.registerHandler(this::handle)
 
@@ -457,8 +457,12 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * The central entry-point for all symbol-resolving. It dispatches the handling of the node to
      * the appropriate function based on the node type.
+     *
+     * Visibility is `internal` rather than `protected` so that [acceptWithIterateEOG] (an extension
+     * function living in a separate file) can invoke it as well; both traversal strategies funnel
+     * through this single dispatcher.
      */
-    protected open fun handle(node: Node?) {
+    internal open fun handle(node: Node?) {
         when (node) {
             is MemberAccess -> handleMemberAccess(node)
             is Reference -> handleReference(node)

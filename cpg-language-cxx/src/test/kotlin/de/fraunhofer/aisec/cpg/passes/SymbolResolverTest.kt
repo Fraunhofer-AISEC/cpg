@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.analyze
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -178,5 +179,54 @@ class SymbolResolverTest {
         assertNotNull(result)
         result.refs.forEach { assertNotNull(it.refersTo) }
         result.calls.forEach { assertTrue(it.invokes.isNotEmpty()) }
+    }
+
+    /**
+     * This exercises [SymbolResolver.handleOverloadedOperator], which physically replaces a
+     * [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator] / [UnaryOperator] with an
+     * [de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall] via
+     * [de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker.replace]. That replacement needs
+     * a valid [SymbolResolver.walker] instance, which the EOG-worklist code path did not set up
+     * before - this reuses the same fixture as
+     * [de.fraunhofer.aisec.cpg.frontends.cxx.CXXDeclarationTest.testArithmeticOperator] to check
+     * that overloaded operator resolution produces the same result under
+     * [SymbolResolver.Configuration.experimentalEOGWorklist].
+     */
+    @Test
+    fun testOverloadedOperators() {
+        val file = File("src/test/resources/cxx/operators/arithmetic.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+
+        val integer = result.records["Integer"]
+        assertNotNull(integer)
+
+        val plusplus = integer.operators["operator++"]
+        assertNotNull(plusplus)
+
+        val plus = integer.operators("operator+")
+        assertEquals(2, plus.size)
+
+        val main = result.functions["main"]
+        assertNotNull(main)
+
+        val unaryOp = main.operatorCalls["++"]
+        assertNotNull(unaryOp)
+        assertInvokes(unaryOp, plusplus)
+
+        val binaryOp0 = main.operatorCalls("+").getOrNull(0)
+        assertNotNull(binaryOp0)
+        assertInvokes(binaryOp0, plus.getOrNull(0))
+
+        val binaryOp1 = main.operatorCalls("+").getOrNull(1)
+        assertNotNull(binaryOp1)
+        assertInvokes(binaryOp1, plus.getOrNull(1))
     }
 }

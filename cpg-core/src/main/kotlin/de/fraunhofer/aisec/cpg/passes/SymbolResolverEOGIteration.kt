@@ -25,411 +25,126 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.commonType
-import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
-import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.types.HasType
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.unknownType
-import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.LatticeElement
-import de.fraunhofer.aisec.cpg.helpers.Util.infoWithFileLocation
-import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
-import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import kotlin.collections.toSet
-import kotlinx.coroutines.runBlocking
 
 /**
- * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
- * constructed by the powerset.
- */
-typealias PowersetLatticeDeclarationLattice = PowersetLattice<Declaration>
-
-typealias PowersetLatticeDeclarationElement = PowersetLattice.Element<Declaration>
-
-typealias PowersetLatticeTypeLattice = PowersetLattice<Type>
-
-typealias PowersetLatticeTypeElement = PowersetLattice.Element<Type>
-
-typealias ScopeToDeclarationLattice = ConcurrentMapLattice<Scope, PowersetLatticeDeclarationElement>
-
-typealias ScopeToDeclarationElement =
-    ConcurrentMapLattice.Element<Scope, PowersetLatticeDeclarationElement>
-
-typealias NodeToDeclarationLattice = ConcurrentMapLattice<Node, PowersetLatticeDeclarationElement>
-
-typealias NodeToDeclarationElement =
-    ConcurrentMapLattice.Element<Node, PowersetLatticeDeclarationElement>
-
-typealias NodeToTypeLattice = ConcurrentMapLattice<Node, PowersetLatticeTypeElement>
-
-typealias NodeToTypeElement = ConcurrentMapLattice.Element<Node, PowersetLatticeTypeElement>
-
-typealias DeclarationStateElement =
-    TripleLattice.Element<ScopeToDeclarationElement, NodeToDeclarationElement, NodeToTypeElement>
-
-typealias DeclarationState =
-    TripleLattice<ScopeToDeclarationElement, NodeToDeclarationElement, NodeToTypeElement>
-
-val DeclarationStateElement.symbols
-    get() = this.first
-
-val DeclarationStateElement.candidates
-    get() = this.second
-
-val DeclarationStateElement.types
-    get() = this.third
-
-/**
- * Pushes the [Declaration] to the [DeclarationStateElement.symbols] and returns a new
- * [DeclarationState].
+ * This function resolves symbols for the given [Function] [t] by driving [SymbolResolver.handle]
+ * with [Lattice.iterateEOG] - the same worklist/fixpoint engine used by [PointsToPass],
+ * [ControlDependenceGraphPass] and [UnreachableEOGPass] - instead of the
+ * [de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker]-based linear traversal that the
+ * default (non-experimental) code path in [SymbolResolver.accept] uses.
  *
- * If the [Declaration] is a [HasType], the type is also pushed to the
- * [DeclarationStateElement.types].
- */
-fun DeclarationStateElement.pushDeclarationToScope(
-    lattice: DeclarationState,
-    scope: Scope,
-    vararg elements: Declaration,
-): DeclarationStateElement {
-    return runBlocking {
-        lattice.lub(
-            this@pushDeclarationToScope,
-            DeclarationStateElement(
-                ScopeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
-                NodeToDeclarationElement(),
-                NodeToTypeElement(
-                    *elements
-                        .mapNotNull { it as? HasType }
-                        .map { it as Node to PowersetLatticeTypeElement(it.type) }
-                        .toTypedArray()
-                ),
-            ),
-            true,
-        )
-    }
-}
-
-fun DeclarationStateElement.pushCandidate(
-    lattice: DeclarationState,
-    scope: Node,
-    vararg elements: Declaration,
-): DeclarationStateElement {
-    return runBlocking {
-        lattice.lub(
-            this@pushCandidate,
-            DeclarationStateElement(
-                ScopeToDeclarationElement(),
-                NodeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
-                NodeToTypeElement(),
-            ),
-            true,
-        )
-    }
-}
-
-fun DeclarationStateElement.pushType(
-    lattice: DeclarationState,
-    node: Node,
-    vararg elements: Type,
-): DeclarationStateElement {
-    return runBlocking {
-        lattice.lub(
-            this@pushType,
-            DeclarationStateElement(
-                ScopeToDeclarationElement(),
-                NodeToDeclarationElement(),
-                NodeToTypeElement(node to PowersetLatticeTypeElement(*elements)),
-            ),
-            true,
-        )
-    }
-}
-
-/**
- * This method is used to resolve symbols in the AST. It uses the EOG (evaluation order graph) to
- * iterate over the nodes in the graph and resolve the symbols.
+ * Importantly, this does *not* reimplement resolution: [SymbolResolver.handle] and everything it
+ * dispatches to (member/call/construction/operator-overload resolution, access control, implicit
+ * receivers, etc.) is reused verbatim and resolves purely from the (already fully populated by the
+ * frontends before any pass runs) [de.fraunhofer.aisec.cpg.graph.scopes.Scope] tree and from
+ * already-propagated [de.fraunhofer.aisec.cpg.graph.types.HasType] information - exactly like the
+ * default traversal. Only the *traversal mechanism* changes here; nothing about resolution is
+ * flow-sensitive (yet).
  *
- * It uses the power of the [Lattice.iterateEOG] to iterate over the nodes in the graph and built a
- * state of:
- * - [ScopeToDeclarationLattice] - a mapping of scopes to declarations
- * - [NodeToDeclarationLattice] - a mapping of nodes to declarations
- * - [NodeToTypeLattice] - a mapping of nodes to types
+ * Because a node can be reached via more than one incoming [EvaluationOrder] edge (e.g., the first
+ * node after an `if`/`else` merges), [SymbolResolver.transfer] is offered every such node once per
+ * incoming edge. We track the set of already-handled nodes in a [PowersetLattice] so that
+ * [SymbolResolver.handle] is still only ever *applied* once per node.
  *
- * After the iteration, we set the following based on the final state:
- * - [Reference.candidates] - the candidates for the reference
- * - [Reference.refersTo] - the final declaration for the reference
- * - [Call.invokes] - the final declaration for the call expression
- * - [HasType.type] - the type of the node
- * - [HasType.assignedTypes] - the assigned types of the node
+ * [SymbolResolver.handleOverloadedOperator] additionally physically replaces the
+ * [BinaryOperator]/[UnaryOperator] node with an
+ * [de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall], rewiring its EOG edges in the process.
+ * [Lattice.iterateEOG] determines how to continue the traversal by reading
+ * [EvaluationOrder.end]`.nextEOGEdges` of the edge it just processed - but a replaced node is
+ * disconnected and has no outgoing EOG edges of its own anymore, so mutating the graph mid-
+ * traversal would make the engine think the EOG ends right there and abandon everything after it.
+ * We therefore only run [SymbolResolver.handle] on [BinaryOperator]/[UnaryOperator] nodes (which is
+ * the only way [SymbolResolver.handleOverloadedOperator] is reached, since [SymbolResolver.handle]
+ * dispatches [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess] and
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call] - the only other
+ * [de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation] implementers - to their own handlers
+ * first) *after* the EOG traversal has fully finished, in the order they were encountered.
  */
 fun SymbolResolver.acceptWithIterateEOG(t: Node) {
     if (t !is Function) {
         return
     }
 
-    val lattice =
-        DeclarationState(
-            ScopeToDeclarationLattice(PowersetLatticeDeclarationLattice()),
-            NodeToDeclarationLattice(PowersetLatticeDeclarationLattice()),
-            NodeToTypeLattice(PowersetLatticeTypeLattice()),
+    // Nodes that may replace themselves in the AST/EOG (see the KDoc above) are deferred here and
+    // only handled once the EOG traversal itself is done.
+    val deferredOperatorNodes = mutableListOf<Node>()
+
+    val lattice = PowersetLattice<Node>()
+    val startState = PowersetLattice.Element<Node>()
+    val (_, timeout) =
+        lattice.iterateEOG(
+            t.nextEOGEdges,
+            startState,
+            transformation = { l, edge, state -> transfer(l, edge, state, deferredOperatorNodes) },
         )
-
-    var startState =
-        DeclarationStateElement(
-            ScopeToDeclarationElement(),
-            NodeToDeclarationElement(),
-            NodeToTypeElement(),
-        )
-
-    // Push all global symbols (sort of legacy, in the future they should also go through the
-    // EOG)
-    startState =
-        startState.pushDeclarationToScope(
-            lattice,
-            ctx.scopeManager.globalScope,
-            *ctx.scopeManager.globalScope.symbols.values.flatten().toTypedArray(),
-        )
-
-    // Push all record symbols (legacy, need to visit EOG in the future)
-    ctx.scopeManager
-        .filterScopes { it is NameScope }
-        .forEach {
-            startState =
-                startState.pushDeclarationToScope(
-                    lattice,
-                    it,
-                    *it.symbols.values.flatten().toTypedArray(),
-                )
-        }
-
-    t.scope?.let { startState = startState.pushDeclarationToScope(lattice, it) }
-    val (finalState, timeout) =
-        runBlocking { lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer) }
     if (timeout) {
         log.warn("Could not compute final state for function {} (due to timeout)", t.name)
     }
 
-    finalState.candidates.forEach { node, candidates ->
-        if (node is Reference) {
-            node.candidates = candidates
-
-            // Now it's getting interesting! We need to make the final decision based on whether
-            // this a simple reference to a variable or if we are the callee of a call
-            // expression
-            val call = node.astParent as? Call
-            if (call != null) {
-                decideInvokesBasedOnCandidates(node, call)
-            } else {
-                node.refersTo = node.language.bestViableReferenceCandidate(node)
-            }
-        }
-    }
-
-    finalState.types.forEach { node, types ->
-        if (node is HasType) {
-            node.type = types.commonType ?: unknownType()
-            node.assignedTypes = types.toSet()
-        }
-    }
+    deferredOperatorNodes.forEach { handle(it) }
 }
 
 /**
- * The state-transfer function for the [SymbolResolver]. It is called for each node in the EOG and
- * is responsible for updating the state based on the node type.
+ * The state-transfer function used by [acceptWithIterateEOG]. Applies [SymbolResolver.handle] to
+ * [EvaluationOrder.end] the first time it is reached (tracked in [state]), then records it as
+ * handled. [BinaryOperator]/[UnaryOperator] nodes are special-cased: their type is propagated
+ * immediately (see [propagateOperatorType]), but the AST-mutating
+ * [SymbolResolver.handleOverloadedOperator] is deferred by appending them to
+ * [deferredOperatorNodes] instead of calling [SymbolResolver.handle] on them right away.
  */
-suspend fun SymbolResolver.transfer(
-    lattice: Lattice<DeclarationStateElement>,
+private suspend fun SymbolResolver.transfer(
+    lattice: Lattice<PowersetLattice.Element<Node>>,
     currentEdge: EvaluationOrder,
-    state: DeclarationStateElement,
-): DeclarationStateElement {
-    val lattice = lattice as? DeclarationState ?: return state
+    state: PowersetLattice.Element<Node>,
+    deferredOperatorNodes: MutableList<Node>,
+): PowersetLattice.Element<Node> {
+    val lattice = lattice as? PowersetLattice<Node> ?: return state
     val node = currentEdge.end
-    return when (node) {
-        is Declaration -> handleDeclaration(lattice, state, node)
-        is Reference -> handleReference(lattice, node, state)
-        is BinaryOperator -> handleBinaryOperator(lattice, node, state)
-        is UnaryOperator -> handleUnaryOperator(lattice, node, state)
-        else -> state
+    if (node in state) {
+        return state
     }
-}
 
-/**
- * Handles a [BinaryOperator] and updates the [state] based on the operator type and the types of
- * the [BinaryOperator.lhs] and [BinaryOperator.rhs].
- */
-private fun SymbolResolver.handleBinaryOperator(
-    lattice: DeclarationState,
-    binOp: BinaryOperator,
-    state: DeclarationStateElement,
-): DeclarationStateElement {
-    val lhsType = state.types[binOp.lhs]?.commonType ?: unknownType()
-    val rhsType = state.types[binOp.rhs]?.commonType ?: unknownType()
-
-    val type = binOp.language.propagateTypeOfBinaryOperation(binOp.operatorCode, lhsType, rhsType)
-
-    return state.pushType(lattice, binOp, type)
-}
-
-/**
- * Handles a [UnaryOperator] and updates the state based on the operator type and the type of the
- * [UnaryOperator.input].
- */
-private fun SymbolResolver.handleUnaryOperator(
-    lattice: DeclarationState,
-    op: UnaryOperator,
-    state: DeclarationStateElement,
-): DeclarationStateElement {
-    val inputTypeElement = state.types[op.input]
-    return if (inputTypeElement != null) {
-        state.pushType(
-            lattice,
-            op,
-            *inputTypeElement
-                .map { inputType ->
-                    op.language.propagateTypeOfUnaryOperation(op.operatorCode, inputType)
-                }
-                .toTypedArray(),
-        )
+    if (node is BinaryOperator || node is UnaryOperator) {
+        propagateOperatorType(node)
+        deferredOperatorNodes += node
     } else {
-        state
+        handle(node)
     }
+
+    return lattice.lub(state, PowersetLattice.Element(node), true)
 }
 
 /**
- * Handles a [Reference] and updates the state based on the resolution of the symbol used in the
- * reference.
- *
- * We need to differentiate between a simple reference and a member expression.
- * - In the case of a member expression, we need to extract the base type(s) from the
- *   [DeclarationStateElement.types] and lookup the symbol in the scopes of the base type(s).
- * - In the case of a simple reference, we can look up the symbol directly in the scope of the
- *   reference.
- *
- * In both cases, the symbols are taken from [DeclarationStateElement.symbols] and the symbol
- * candidates are pushed to the [DeclarationStateElement.candidates].
+ * [SymbolResolver.handle] does not compute the type of a [BinaryOperator] or [UnaryOperator]
+ * itself; normally, it relies on [de.fraunhofer.aisec.cpg.graph.types.HasType]'s reactive
+ * [de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver] mechanism to propagate the type of
+ * [BinaryOperator.lhs]/[BinaryOperator.rhs] (or [UnaryOperator.input]) once they are resolved. That
+ * mechanism can be switched off entirely via
+ * [de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder.disableTypeObserver], in which case
+ * nothing else computes these types. Since the EOG guarantees [node]'s operands were already
+ * handled (and thus have their final type) by the time [node] itself is reached, we can compute the
+ * type here directly, exactly mirroring what the reactive path would have done.
  */
-private fun SymbolResolver.handleReference(
-    lattice: DeclarationState,
-    node: Reference,
-    state: DeclarationStateElement,
-): DeclarationStateElement {
-    infoWithFileLocation(node, log, "Resolving reference. {} scopes are active", state.symbols.size)
-    var state = state
-    var candidates =
-        if (node is MemberAccess) {
-            // We need to extract the scope from the base type(s) and then do a qualified
-            // lookup
-            val baseTypes = state.types[node.base] ?: identitySetOf()
-            val scopes = baseTypes.mapNotNull { ctx.scopeManager.lookupScope(it.root.name) }
-            scopes.flatMap { scope ->
-                state.symbols.resolveSymbol(
-                    symbol = node.name.localName,
-                    startScope = scope,
-                    language = node.language,
-                    qualifiedLookup = true,
+private fun SymbolResolver.propagateOperatorType(node: Node) {
+    when (node) {
+        is BinaryOperator ->
+            node.type =
+                node.language.propagateTypeOfBinaryOperation(
+                    node.operatorCode,
+                    node.lhs.type,
+                    node.rhs.type,
+                    node,
                 )
-            }
-        } else {
-            state.symbols.resolveSymbol(
-                symbol = node.name.localName,
-                startScope = node.scope!!,
-                language = node.language,
-                qualifiedLookup = false,
-            )
-        }
-
-    // Push candidates to state
-    state = state.pushCandidate(lattice, node, *candidates.toTypedArray())
-
-    // Push the type information
-    state =
-        state.pushType(
-            lattice,
-            node,
-            *candidates.flatMapNotNull { state.types[it]?.toSet() }.toTypedArray(),
-        )
-
-    return state
-}
-
-/**
- * Handles a [Declaration] and updates the state, so the declaration is pushed to the visible
- * [DeclarationStateElement.symbols].
- *
- * The [DeclarationStateElement.symbols] element is a mapping of scopes to declarations.
- */
-private fun SymbolResolver.handleDeclaration(
-    lattice: DeclarationState,
-    state: DeclarationStateElement,
-    node: Declaration,
-): DeclarationStateElement {
-    var state = state
-
-    // Push declaration into scope
-    state = node.scope?.let { state.pushDeclarationToScope(lattice, it, node) } ?: state
-
-    return state
-}
-
-/**
- * Resolves the symbol in the given scope and returns the set of declarations that match the symbol.
- */
-// TODO: we could do this easier if we would have a lattice that combines the symbols across the
-//  scopes and doing the shadowing
-private fun ScopeToDeclarationElement.resolveSymbol(
-    symbol: Symbol,
-    language: Language<*>,
-    startScope: Scope,
-    qualifiedLookup: Boolean,
-): IdentitySet<Declaration> {
-    val symbols = identitySetOf<Declaration>()
-    var scope: Scope? = startScope
-
-    // TODO: support modified scope
-    val modifiedScoped = null
-
-    while (scope != null) {
-        var scopeSymbols = this[scope]
-        scopeSymbols?.filterTo(symbols) { it.name.localName == symbol }
-        if (symbols.isNotEmpty() == true) {
-            return symbols
-        }
-
-        // If we didn't find the symbol in the current scope, we need to check the parent scope
-        scope =
-            if (qualifiedLookup || modifiedScoped != null) {
-                break
-            } else {
-                // If our language needs explicit lookup for fields (and other class members),
-                // we need to skip record scopes unless we are in a qualified lookup
-                if (language !is HasImplicitReceiver && scope.parent is RecordScope) {
-                    scope.firstScopeParentOrNull { it !is RecordScope }
-                } else {
-                    // Otherwise, we can just go to the next parent
-                    scope.parent
-                }
-            }
+        is UnaryOperator ->
+            node.type =
+                node.language.propagateTypeOfUnaryOperation(node.operatorCode, node.input.type)
     }
-
-    return symbols
 }
