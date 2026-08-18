@@ -162,16 +162,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     }
 
     /**
-     * Projects the raw [Declaration.modifiers] of [declaration] — appearing in the given [scope] —
-     * onto the canonical, language-independent properties that later passes rely on: it sets
+     * Projects the surface form of [declaration] — appearing in the given [scope] — onto the
+     * canonical, language-independent properties that later passes rely on: it sets
      * [Declaration.visibility] and, for a
      * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration], its `isStatic` flag.
      *
-     * The raw modifier spellings stay in [Declaration.modifiers] losslessly; this hook is the
-     * single place where a language turns them into semantics. [scope] matters because a modifier's
-     * meaning can depend on *where* the declaration appears — most notably C/C++'s `static`, which
-     * denotes internal linkage at file scope but a class-level member inside a record. The default
-     * does nothing, so a language that models no modifiers is unaffected.
+     * For most languages that surface form are the raw [Declaration.modifiers], whose spellings
+     * stay in the declaration losslessly. Some languages however encode the very same information
+     * in the *identifier* rather than in a keyword — Go derives export status from the casing of
+     * the name, Python's visibility is a leading-underscore naming convention — so implementations
+     * may read anything about the [declaration], not just its modifiers.
+     *
+     * Either way, this hook is the single place where a language turns its surface syntax into
+     * canonical semantics; frontends should not assign [Declaration.visibility] themselves. [scope]
+     * matters because that meaning can depend on *where* the declaration appears — most notably
+     * C/C++'s `static`, which denotes internal linkage at file scope but a class-level member
+     * inside a record, or Go's export semantics, which only apply to package-level declarations and
+     * record members. The default does nothing, so a language that models neither is unaffected.
      */
     open fun applyModifiers(declaration: Declaration, scope: Scope?) {}
 
