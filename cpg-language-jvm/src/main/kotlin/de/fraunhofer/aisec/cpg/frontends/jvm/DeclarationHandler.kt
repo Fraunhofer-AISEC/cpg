@@ -74,7 +74,9 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Map the class' access flags onto the canonical visibility model. The class is not yet on
         // the scope stack, so the current scope reflects its enclosing (declaration) context.
-        record.applyAccessFlags(sootClass.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() })
+        record.applyAccessFlags(
+            sootClass.modifiers.mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
+        )
 
         // Collect super class
         val o = sootClass.superclass
@@ -130,7 +132,9 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             }
 
         // Map the method's access flags onto the canonical visibility model.
-        method.applyAccessFlags(sootMethod.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() })
+        method.applyAccessFlags(
+            sootMethod.modifiers.mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
+        )
 
         // Enter method scope
         frontend.scopeManager.enterScope(method)
@@ -166,7 +170,9 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Map the field's access flags onto the canonical visibility model. A field is always a
         // record member.
-        declaration.applyAccessFlags(field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() })
+        declaration.applyAccessFlags(
+            field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
+        )
 
         return declaration
     }
