@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -228,5 +229,41 @@ class SymbolResolverTest {
         val binaryOp1 = main.operatorCalls("+").getOrNull(1)
         assertNotNull(binaryOp1)
         assertInvokes(binaryOp1, plus.getOrNull(1))
+    }
+
+    /**
+     * [SymbolResolver.accept] used to only route
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Function] EOG starters through
+     * [SymbolResolver.acceptWithIterateEOG]; every other kind of EOG starter (e.g. a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Field] with an initializer, which has its own
+     * small, isolated EOG chain per
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Record.eogStarters]) always fell back to the
+     * default resolver, even with [SymbolResolver.Configuration.experimentalEOGWorklist] enabled.
+     * This checks that a field initializer calling a top-level function - resolved via the
+     * (unaffected) global scope, not anything tracked per-EOG-starter - still resolves correctly
+     * now that this restriction is lifted.
+     */
+    @Test
+    fun testFieldInitializerCallsGlobalFunction() {
+        val file = File("src/test/resources/cxx/symbols/field_initializer.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+
+        val helper = result.functions["helper"]
+        assertNotNull(helper)
+
+        val field = result.fields["value"]
+        assertNotNull(field)
+
+        val call = field.initializer
+        assertIs<Call>(call)
+        assertInvokes(call, helper)
     }
 }

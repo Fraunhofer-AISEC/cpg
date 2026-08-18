@@ -153,7 +153,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 },
             )
 
-        if (passConfig?.experimentalEOGWorklist == true && eogStarter is Function) {
+        if (passConfig?.experimentalEOGWorklist == true) {
             acceptWithIterateEOG(eogStarter)
         } else {
             walker.clearCallbacks()

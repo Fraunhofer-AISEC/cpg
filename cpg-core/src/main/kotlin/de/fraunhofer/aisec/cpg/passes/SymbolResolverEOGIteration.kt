@@ -35,9 +35,11 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 
 /**
- * This function resolves symbols for the given [Function] [t] by driving [SymbolResolver.handle]
- * with [Lattice.iterateEOG] - the same worklist/fixpoint engine used by [PointsToPass],
- * [ControlDependenceGraphPass] and [UnreachableEOGPass] - instead of the
+ * This function resolves symbols for the given EOG starter [t] (see
+ * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder] - e.g. a [Function], but also a translation
+ * unit, record, namespace, or a field/variable with an initializer) by driving
+ * [SymbolResolver.handle] with [Lattice.iterateEOG] - the same worklist/fixpoint engine used by
+ * [PointsToPass], [ControlDependenceGraphPass] and [UnreachableEOGPass] - instead of the
  * [de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker]-based linear traversal that the
  * default (non-experimental) code path in [SymbolResolver.accept] uses.
  *
@@ -69,10 +71,6 @@ import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
  * first) *after* the EOG traversal has fully finished, in the order they were encountered.
  */
 fun SymbolResolver.acceptWithIterateEOG(t: Node) {
-    if (t !is Function) {
-        return
-    }
-
     // Nodes that may replace themselves in the AST/EOG (see the KDoc above) are deferred here and
     // only handled once the EOG traversal itself is done.
     val deferredOperatorNodes = mutableListOf<Node>()
@@ -86,7 +84,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
             transformation = { l, edge, state -> transfer(l, edge, state, deferredOperatorNodes) },
         )
     if (timeout) {
-        log.warn("Could not compute final state for function {} (due to timeout)", t.name)
+        log.warn("Could not compute final state for EOG starter {} (due to timeout)", t.name)
     }
 
     deferredOperatorNodes.forEach { handle(it) }
