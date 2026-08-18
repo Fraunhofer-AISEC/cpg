@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Tests for [ifdsReachingSources]. These build small explicit CPG graphs (no external oracle) and
@@ -114,7 +115,7 @@ class IfdsReachingSourcesTest {
             assertEquals(setOf<Node>(s), ifds, "IFDS(k=inf) must find the complete set {s}")
 
             // Sanity: IFDS is a strict superset of the (empty) engine result here.
-            assert(ifds.containsAll(engine) && ifds.size > engine.size)
+            assertTrue(ifds.containsAll(engine) && ifds.size > engine.size)
         }
     }
 

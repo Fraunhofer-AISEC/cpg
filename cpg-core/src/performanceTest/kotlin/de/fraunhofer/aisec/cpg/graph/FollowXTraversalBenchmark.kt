@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,11 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import java.io.File
 import java.util.IdentityHashMap
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Tag
 
 /**
  * A micro-benchmark and stress-test harness for the core graph traversal engine [followXUntilHit].
@@ -40,10 +42,11 @@ import kotlin.test.assertTrue
  * synthetic `x` next-step callback that walks a hand-built [SyntheticGraph]. This isolates the cost
  * of the *engine* (worklist management, loop detection, path bookkeeping) from frontend cost and
  * lets us reproduce the two pathological regimes the engine currently struggles with:
- * 1. **Unbounded interprocedural context** – recursion keeps pushing new [Call]s onto the context
- *    call stack, so `(node, callStack)` never repeats and the on-path loop check never fires. This
- *    mirrors `complex_dfg.c` (mutual recursion `func2` <-> `func3`). With `findAllPossiblePaths =
- *    true` the current engine does not terminate.
+ * 1. **Unbounded interprocedural context** – recursion keeps pushing new
+ *    [de.fraunhofer.aisec.cpg.graph.expressions.Call]s onto the context call stack, so `(node,
+ *    callStack)` never repeats and the on-path loop check never fires. This mirrors `complex_dfg.c`
+ *    (mutual recursion `func2` <-> `func3`). With `findAllPossiblePaths = true` the current engine
+ *    does not terminate.
  * 2. **Exponential path enumeration** – a chain of diamonds (or a loop containing a branch) has an
  *    exponential number of distinct paths. `findAllPossiblePaths = true` materializes all of them.
  *
@@ -52,9 +55,13 @@ import kotlin.test.assertTrue
  * instead of hanging the JVM. The number of next-step evaluations ("steps") is the primary
  * efficiency metric; wall-clock time is reported as a secondary, machine-dependent signal.
  */
+@Tag("experimental")
 class FollowXTraversalBenchmark {
 
-    /** A minimal concrete [Edge] so the synthetic graph can hand real edges to the engine. */
+    /**
+     * A minimal concrete [de.fraunhofer.aisec.cpg.graph.edges.Edge] so the synthetic graph can hand
+     * real edges to the engine.
+     */
     private class BenchEdge(start: Node, end: Node) : Edge<Node>(start, end) {
         override var labels: Set<String> = emptySet()
 
@@ -230,7 +237,7 @@ class FollowXTraversalBenchmark {
         println("\n$table")
         // Also persist to a file so the table survives Gradle swallowing test stdout.
         runCatching {
-            java.io.File(System.getProperty("java.io.tmpdir"), "followx-bench.txt").writeText(table)
+            File(System.getProperty("java.io.tmpdir"), "followx-bench.txt").writeText(table)
         }
     }
 
