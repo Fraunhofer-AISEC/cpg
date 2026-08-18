@@ -87,7 +87,25 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
         log.warn("Could not compute final state for EOG starter {} (due to timeout)", t.name)
     }
 
-    deferredOperatorNodes.forEach { handle(it) }
+    deferredOperatorNodes.forEach {
+        jumpToScope(it)
+        handle(it)
+    }
+}
+
+/**
+ * Several of the handlers reached through [SymbolResolver.handle] (e.g.
+ * [SymbolResolver.handleReference]'s implicit-receiver fallback, which reads
+ * [de.fraunhofer.aisec.cpg.ScopeManager.currentRecord]) rely on
+ * [de.fraunhofer.aisec.cpg.ScopeManager.currentScope] reflecting [node]'s own scope, exactly like
+ * [de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker] keeps it in sync while walking.
+ * [Lattice.iterateEOG] has no notion of "current scope", so we have to update it ourselves before
+ * handling each node.
+ */
+private fun SymbolResolver.jumpToScope(node: Node) {
+    if (scopeManager.currentScope != node.scope) {
+        scopeManager.jumpTo(node.scope)
+    }
 }
 
 /**
@@ -110,6 +128,7 @@ private suspend fun SymbolResolver.transfer(
         return state
     }
 
+    jumpToScope(node)
     if (node is BinaryOperator || node is UnaryOperator) {
         propagateOperatorType(node)
         deferredOperatorNodes += node

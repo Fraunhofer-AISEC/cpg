@@ -297,4 +297,46 @@ class SymbolResolverTest {
             "Type of while condition should be BooleanType",
         )
     }
+
+    /**
+     * [SymbolResolver.handleReference]'s implicit-receiver fallback (used when an unqualified
+     * lookup finds nothing) reads [de.fraunhofer.aisec.cpg.ScopeManager.currentRecord], which in
+     * turn reads [de.fraunhofer.aisec.cpg.ScopeManager.currentScope]. The default
+     * [de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker] keeps that ambient state in
+     * sync with the node it is currently visiting, but
+     * [de.fraunhofer.aisec.cpg.helpers.functional.Lattice.iterateEOG] has no such notion by
+     * itself - [acceptWithIterateEOG] has to update it explicitly. Without that, a call/reference
+     * relying on an implicit receiver (no explicit `this->`) resolves against whatever scope was
+     * last left behind by unrelated processing, rather than the record that lexically contains it.
+     */
+    @Test
+    fun testImplicitReceiver() {
+        val file = File("src/test/resources/cxx/symbols/implicit_receiver.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+
+        val myClass = result.records["MyClass"]
+        assertNotNull(myClass)
+        val helper = myClass.methods["helper"]
+        assertNotNull(helper)
+        val value = myClass.fields["value"]
+        assertNotNull(value)
+        val caller = myClass.methods["caller"]
+        assertNotNull(caller)
+
+        val callToHelper = caller.calls.firstOrNull()
+        assertNotNull(callToHelper)
+        assertInvokes(callToHelper, helper)
+
+        val valueRef = caller.refs("value").firstOrNull()
+        assertNotNull(valueRef)
+        assertEquals(value, valueRef.refersTo)
+    }
 }
