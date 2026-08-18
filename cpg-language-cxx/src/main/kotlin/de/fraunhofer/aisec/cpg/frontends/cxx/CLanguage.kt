@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -168,6 +169,19 @@ open class CLanguage :
             }
         }
     }
+
+    /**
+     * In C/C++, any scalar value can be used as a condition: the numeric value (or pointer) `0`/
+     * `NULL` is "false" and any other value is "true".
+     */
+    override fun isTruthy(value: Any?): Boolean? =
+        when {
+            value is CouldNotResolve -> null
+            value is Boolean -> value
+            value is Number -> value.toDouble() != 0.0
+            value == null -> false // a null pointer
+            else -> null
+        }
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
 
