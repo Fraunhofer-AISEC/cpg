@@ -137,4 +137,23 @@ class ChatServiceTest {
         assertIs<JsonArray>(json["content"])
         assertEquals(0, json["content"]?.jsonArray?.size)
     }
+
+    @Test
+    fun eventsUsageTest() {
+        val event = Events.usage("gpt-4", 100, 20, 120)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("usage", json["type"]?.jsonPrimitive?.content)
+        assertEquals("gpt-4", json["model"]?.jsonPrimitive?.content)
+        assertEquals(100, json["inputTokens"]?.jsonPrimitive?.int)
+        assertEquals(20, json["outputTokens"]?.jsonPrimitive?.int)
+        assertEquals(120, json["totalTokens"]?.jsonPrimitive?.int)
+    }
+
+    @Test
+    fun eventsUsageWithNullModelTest() {
+        val event = Events.usage(null, 0, 0, 0)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("usage", json["type"]?.jsonPrimitive?.content)
+        assertIs<JsonNull>(json["model"])
+    }
 }
