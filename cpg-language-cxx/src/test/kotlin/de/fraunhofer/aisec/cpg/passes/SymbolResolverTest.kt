@@ -30,8 +30,11 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.While
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertInvokes
@@ -266,6 +269,54 @@ class SymbolResolverTest {
         val call = field.initializer
         assertIs<Call>(call)
         assertInvokes(call, helper)
+    }
+
+    /**
+     * A block-scoped variable's scope begins at its own point of declaration, not at the start of
+     * the enclosing block - so a reference textually *before* a same-named local declaration must
+     * resolve to whatever is visible from an *outer* scope instead (here, a global variable),
+     * exactly as a real C++ compiler would.
+     * [de.fraunhofer.aisec.cpg.ScopeManager.lookupSymbolByNodeName]'s (non-flow-sensitive) default
+     * of reading a whole [LocalScope]'s [de.fraunhofer.aisec.cpg.graph.scopes.Scope.symbols]
+     * unconditionally can't tell these two references apart, since both "x"s are already present in
+     * the block's scope regardless of order; only [acceptWithIterateEOG]'s flow-sensitive
+     * [LocalDeclarationLattice] can.
+     */
+    @Test
+    fun testUseBeforeDeclareFlowSensitivity() {
+        val file = File("src/test/resources/cxx/symbols/use_before_declare.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+
+        val xVariables = result.variables("x")
+        assertEquals(2, xVariables.size, "Expected one global and one local \"x\".")
+        val globalX = xVariables.singleOrNull { it.scope is GlobalScope }
+        assertNotNull(globalX)
+        val localX = xVariables.singleOrNull { it.scope is LocalScope }
+        assertNotNull(localX)
+
+        val earlyRef = result.variables["early"]?.initializer
+        assertIs<Reference>(earlyRef)
+        assertEquals(
+            globalX,
+            earlyRef.refersTo,
+            "a reference to \"x\" before its local declaration must resolve to the global \"x\"",
+        )
+
+        val lateRef = result.variables["late"]?.initializer
+        assertIs<Reference>(lateRef)
+        assertEquals(
+            localX,
+            lateRef.refersTo,
+            "a reference to \"x\" after its local declaration must resolve to the local \"x\"",
+        )
     }
 
     /**

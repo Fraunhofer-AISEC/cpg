@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.operatorCallFromDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -118,6 +119,19 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /** Our configuration. */
     var passConfig = passConfig<Configuration>()
+
+    /**
+     * An optional override for where a [de.fraunhofer.aisec.cpg.graph.scopes.Scope]'s directly
+     * declared symbols come from during a [handleReference] lookup, forwarded to
+     * [ScopeManager.lookupSymbolByNodeName] as `localSymbols`. `null` (the default) means every
+     * lookup uses [de.fraunhofer.aisec.cpg.graph.scopes.Scope.symbols] as usual, which is what the
+     * default, non-flow-sensitive traversal in [accept] relies on.
+     * [de.fraunhofer.aisec.cpg.passes.acceptWithIterateEOG] sets this to answer "which declarations
+     * have been reached by this point in the EOG" for
+     * [de.fraunhofer.aisec.cpg.graph.scopes.LocalScope]s specifically, making local (block-scoped)
+     * references flow-sensitive while leaving every other kind of scope untouched.
+     */
+    internal var localSymbolsOverride: ((Scope, Symbol) -> List<Declaration>?)? = null
 
     /**
      * If [Configuration.ignoreUnreachableDeclarations] is enabled, this predicate will filter
@@ -259,7 +273,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // Find a list of candidate symbols. In most cases, we can just perform a lookup by name
         // which either performs an unqualified lookup beginning from the current scope "upwards",
         // or a qualified lookup starting from the scope specified in the name.
-        var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
+        var candidates =
+            scopeManager
+                .lookupSymbolByNodeName(
+                    ref,
+                    localSymbols = localSymbolsOverride,
+                    predicate = predicate,
+                )
+                .toSet()
 
         // But we have to consider one special case: For languages, that support implicit receivers,
         // this reference might be a member access of either the current class or a parent class.
