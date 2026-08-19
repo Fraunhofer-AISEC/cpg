@@ -22,6 +22,7 @@ fn main() {
     let f2 = 1.0;
     let f3 = 2.5e10;
     let f4 = 2e-10;
+    let f5 = 1_000_000_000.0;
 
     // Boolean literals
     let b1 = true;
