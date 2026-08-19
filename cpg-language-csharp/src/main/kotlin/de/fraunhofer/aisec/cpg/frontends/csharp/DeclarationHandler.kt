@@ -59,6 +59,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         return when (node) {
             is Csharp.AST.BaseNamespaceDeclarationSyntax -> handleNamespaceDeclaration(node)
             is Csharp.AST.ClassDeclarationSyntax -> handleClassDeclaration(node)
+            is Csharp.AST.StructDeclarationSyntax -> handleStructDeclaration(node)
             is Csharp.AST.EnumDeclarationSyntax -> handleEnumDeclaration(node)
             is Csharp.AST.MethodDeclarationSyntax -> handleMethodDeclaration(node)
             is Csharp.AST.PropertyDeclarationSyntax -> handlePropertyDeclaration(node)
@@ -164,6 +165,69 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
                         // TODO: Not sure if this is correct: For implicit constructor calls (e.g.
                         // new()), we need to
                         //  propagate the field type to the "New" and "Construction" nodes
+                        val newExpr = field.initializer as? New
+                        if (newExpr != null) {
+                            newExpr.type = fieldType
+                            val construction = newExpr.initializer as? Construction
+                            if (construction != null) {
+                                construction.type = fieldType
+                                construction.name = parseName(fieldType.name.localName)
+                            }
+                        }
+                        frontend.scopeManager.addDeclaration(field)
+                        record.addDeclaration(field)
+                    }
+                }
+                else -> {
+                    val decl = handle(member)
+                    frontend.scopeManager.addDeclaration(decl)
+                    record.addDeclaration(decl)
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        return record
+    }
+
+    /**
+     * Translates a [StructDeclarationSyntax][Csharp.AST.StructDeclarationSyntax] into a [Record].
+     *
+     * C# spec:
+     * [Struct declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/structs#152-struct-declarations)
+     */
+    private fun handleStructDeclaration(node: Csharp.AST.StructDeclarationSyntax): Declaration {
+        val record = newRecord(node.identifier, "struct", rawNode = node)
+        record.modifiers = node.modifiers.toSet()
+        frontend.scopeManager.enterScope(record)
+
+        // A struct cannot inherit, so every entry here is an implemented interface.
+        node.baseList?.let {
+            for (baseType in it.types) {
+                record.superClasses += frontend.typeOf(baseType)
+            }
+        }
+
+        node.typeParameterList?.let {
+            frontend.typeManager.addTypeParameter(
+                record,
+                it.parameters.map { name -> ParameterizedType(name, language) },
+            )
+        }
+
+        for (member in node.members) {
+            when (member) {
+                is Csharp.AST.FieldDeclarationSyntax -> {
+                    val declaration = member.declaration
+                    val fieldType = frontend.typeOf(declaration.type)
+                    for (variable in declaration.variables) {
+                        val field = newField(variable.identifier, rawNode = member)
+                        field.type = fieldType
+                        variable.initializer?.let {
+                            field.initializer = frontend.expressionHandler.handle(it)
+                        }
+                        // An implicit `new()` initializer has no type of its own, so it takes the
+                        // field's type. Same as in handleClassDeclaration.
                         val newExpr = field.initializer as? New
                         if (newExpr != null) {
                             newExpr.type = fieldType

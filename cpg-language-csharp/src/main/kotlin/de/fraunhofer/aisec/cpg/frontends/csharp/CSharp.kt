@@ -129,6 +129,7 @@ interface Csharp : Library {
                     "FileScopedNamespaceDeclarationSyntax" ->
                         FileScopedNamespaceDeclarationSyntax(nativeValue)
                     "ClassDeclarationSyntax" -> ClassDeclarationSyntax(nativeValue)
+                    "StructDeclarationSyntax" -> StructDeclarationSyntax(nativeValue)
                     "InterfaceDeclarationSyntax" -> InterfaceDeclarationSyntax(nativeValue)
                     "EnumDeclarationSyntax" -> EnumDeclarationSyntax(nativeValue)
                     "FieldDeclarationSyntax" -> FieldDeclarationSyntax(nativeValue)
@@ -207,6 +208,13 @@ interface Csharp : Library {
          * class.
          */
         class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : TypeDeclarationSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`StructDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.structdeclarationsyntax)
+         * class.
+         */
+        class StructDeclarationSyntax(p: Pointer? = Pointer.NULL) : TypeDeclarationSyntax(p)
 
         /**
          * Represents the Roslyn

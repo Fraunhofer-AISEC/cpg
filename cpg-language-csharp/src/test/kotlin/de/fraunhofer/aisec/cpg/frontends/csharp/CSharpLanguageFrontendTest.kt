@@ -201,6 +201,61 @@ class CSharpLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun structDeclarationsTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val result =
+            analyze(listOf(topLevel.resolve("Structs.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
+        assertNotNull(tu)
+
+        val ns = tu.namespaces["HelloWorld"]
+        assertNotNull(ns)
+
+        val point = ns.records["Point"]
+        assertNotNull(point)
+        assertEquals("struct", point.kind)
+
+        assertEquals(listOf("IShape"), point.superClasses.map { it.name.localName })
+
+        assertEquals("int", point.fields["x"]?.type?.name?.localName)
+        assertEquals("int", point.fields["y"]?.type?.name?.localName)
+
+        val constructor = point.constructors.single()
+        assertEquals(2, constructor.parameters.size)
+        val constructorBody = constructor.body
+        assertIs<Block>(constructorBody)
+        assertEquals(2, constructorBody.statements.size)
+
+        val area = point.methods["Area"]
+        assertNotNull(area)
+        val areaBody = area.body
+        assertIs<Block>(areaBody)
+        val returnStmt = areaBody.statements.single()
+        assertIs<Return>(returnStmt)
+        val product = returnStmt.returnValue
+        assertIs<BinaryOperator>(product)
+        assertEquals("*", product.operatorCode)
+
+        val pair = ns.records["Pair"]
+        assertNotNull(pair)
+        assertEquals("struct", pair.kind)
+        val typeT = result.finalCtx.typeManager.getTypeParameter(pair, "T")
+        assertIs<ParameterizedType>(typeT)
+        assertNotNull(pair.fields["first"])
+        assertNotNull(pair.fields["second"])
+
+        val outer = ns.records["Outer"]
+        assertNotNull(outer)
+        assertEquals("class", outer.kind)
+        val nested = outer.records["Nested"]
+        assertNotNull(nested)
+        assertEquals("struct", nested.kind)
+        assertEquals(listOf("value"), nested.fields.map { it.name.localName })
+    }
+
+    @Test
     fun testConstructorDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
