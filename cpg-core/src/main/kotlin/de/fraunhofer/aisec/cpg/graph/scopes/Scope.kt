@@ -216,12 +216,15 @@ sealed class Scope(
      * @param replaceImports whether any symbols pointing to [Import.importedSymbols] or wildcards
      *   should be replaced with their actual nodes
      * @param localSymbols An optional override for where to source a given [Scope]'s directly
-     *   declared symbols from, in place of the default [Scope.symbols]. This is the hook flow-
-     *   sensitive callers (see [de.fraunhofer.aisec.cpg.passes.acceptWithIterateEOG]) use to answer
-     *   "which declarations have been reached by this point in the EOG" for
-     *   [de.fraunhofer.aisec.cpg.graph.scopes.LocalScope]s, while every other part of this
-     *   algorithm (shadowing, [predefinedLookupScopes], wildcard imports, the [HasBuiltins]
-     *   fallback) stays identical.
+     *   declared symbols (matching [Symbol]) from, in place of the default `scope.symbols[symbol]`.
+     *   If it returns `null` for a given scope, we fall back to `scope.symbols[symbol]` for that
+     *   scope. This is the hook flow-sensitive callers (see
+     *   [de.fraunhofer.aisec.cpg.passes.acceptWithIterateEOG]) use to answer "which declarations
+     *   have been reached by this point in the EOG" for
+     *   [de.fraunhofer.aisec.cpg.graph.scopes.LocalScope]s, returning `null` for every other
+     *   [Scope] kind so its (non-flow-sensitive) symbols are read the usual, cheap way. Every other
+     *   part of this algorithm (shadowing, [predefinedLookupScopes], wildcard imports, the
+     *   [HasBuiltins] fallback) stays identical.
      * @param predicate An optional predicate which should be used in the lookup. Kept as the last
      *   parameter (after [localSymbols]) so existing trailing-lambda call sites keep binding to
      *   this one.
@@ -232,7 +235,7 @@ sealed class Scope(
         languageOnly: Language<*>? = null,
         qualifiedLookup: Boolean = false,
         replaceImports: Boolean = true,
-        localSymbols: ((Scope) -> List<Declaration>)? = null,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val languageOnlyClass = languageOnly?.javaClass
@@ -245,12 +248,7 @@ sealed class Scope(
         var list: MutableList<Declaration>? = null
 
         while (scope != null) {
-            list =
-                if (localSymbols != null) {
-                    localSymbols(scope).filterTo(mutableListOf()) { it.name.localName == symbol }
-                } else {
-                    scope.symbols[symbol]?.toMutableList()
-                }
+            list = (localSymbols?.invoke(scope, symbol) ?: scope.symbols[symbol])?.toMutableList()
 
             // Also add any wildcard imports that we have to the list
             val wildcards = scope.wildcardImports

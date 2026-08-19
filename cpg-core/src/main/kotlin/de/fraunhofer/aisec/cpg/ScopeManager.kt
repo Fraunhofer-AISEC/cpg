@@ -780,7 +780,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         node: Node,
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
-        localSymbols: ((Scope) -> List<Declaration>)? = null,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(
@@ -830,7 +830,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         replaceImports: Boolean = true,
-        localSymbols: ((Scope) -> List<Declaration>)? = null,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val extractedScope = extractScope(name, language, location, startScope)
