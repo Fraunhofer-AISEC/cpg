@@ -34,6 +34,23 @@ import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 import kotlin.collections.plusAssign
 
+/**
+ * Represents an "or-pattern": a set of [alternatives], any one of which may match the scrutinee.
+ * Alternatives are tried in order and the first one that matches determines the bindings that
+ * become active; all alternatives must bind the same set of identifiers, with the same types.
+ *
+ * In Rust, this models or-patterns such as
+ *
+ * ```rust
+ * match n {
+ *     1 | 2 | 3 => "small",
+ *     _ => "large",
+ * }
+ * ```
+ *
+ * where each of `1`, `2`, `3` becomes one entry in [alternatives], or nested inside a larger
+ * pattern, e.g. `Message::Hello { id: 1..=3 | 7..=9 }`.
+ */
 class AlternativeDeconstruction : Deconstruction(), ArgumentHolder, HasType.TypeObserver {
 
     @Relationship("ALTERNATIVES") var alternativeEdges = astEdgesOf<Expression>()

@@ -46,7 +46,6 @@ import de.fraunhofer.aisec.cpg.graph.forEachLoops
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.refs
-import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.switches
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.graph.whileLoops
@@ -60,7 +59,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.assertInstanceOf
 import org.junit.jupiter.api.assertNull
 
 class ControlFlowTest {
@@ -87,25 +85,21 @@ class ControlFlowTest {
 
         val while1 = whiles[0]
 
-        assertInstanceOf<BinaryOperator>(while1.condition)
+        assertIs<BinaryOperator>(while1.condition)
 
         var body = while1.statement
 
-        assertNotNull(body)
-
-        assertInstanceOf<Block>(body)
+        assertIs<Block>(body)
 
         assertEquals(body.statements.size, 2)
 
         val while2 = whiles[1]
 
-        assertInstanceOf<BinaryOperator>(while2.condition)
+        assertIs<BinaryOperator>(while2.condition)
 
         body = while2.statement
 
-        assertNotNull(body)
-
-        assertInstanceOf<Block>(body)
+        assertIs<Block>(body)
 
         assertEquals(body.statements.size, 3)
     }
@@ -133,11 +127,10 @@ class ControlFlowTest {
 
         val whileLet1 = whiles[0]
 
-        assertInstanceOf<Assign>(whileLet1.condition)
+        assertIs<Assign>(whileLet1.condition)
 
         var body = whileLet1.statement
-        assertNotNull(body)
-        assertInstanceOf<Block>(body)
+        assertIs<Block>(body)
         assertEquals(body.statements.size, 1)
 
         var variable = whileLet1.variables.firstOrNull()
@@ -145,10 +138,9 @@ class ControlFlowTest {
         assertEquals(variable.name.toString(), "v")
 
         val whileLet2 = whiles[1]
-        assertInstanceOf<Assign>(whileLet2.condition)
+        assertIs<Assign>(whileLet2.condition)
         body = whileLet2.statement
-        assertNotNull(body)
-        assertInstanceOf<Block>(body)
+        assertIs<Block>(body)
         assertEquals(body.statements.size, 1)
         assertNotNull(whileLet2.variables["item"])
     }
@@ -175,16 +167,14 @@ class ControlFlowTest {
         assertEquals(loops.size, 2)
 
         val loop1 = loops[0]
-        assertInstanceOf<Literal<Boolean>>(loop1.condition)
+        assertIs<Literal<Boolean>>(loop1.condition)
         var body = loop1.statement
-        assertNotNull(body)
-        assertInstanceOf<Block>(body)
+        assertIs<Block>(body)
         assertEquals(body.statements.size, 3)
 
         val loop2 = loops[1]
         body = loop2.statement
-        assertNotNull(body)
-        assertInstanceOf<Block>(body)
+        assertIs<Block>(body)
         assertEquals(body.statements.size, 3)
     }
 
@@ -211,10 +201,9 @@ class ControlFlowTest {
         assertEquals(ifs.size, 7)
 
         val if1 = ifs[0]
-        assertInstanceOf<BinaryOperator>(if1.condition)
+        assertIs<BinaryOperator>(if1.condition)
         var then = if1.thenStatement
-        assertNotNull(then)
-        assertInstanceOf<Block>(then)
+        assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
 
         var elseStmt = if1.elseStatement
@@ -222,23 +211,20 @@ class ControlFlowTest {
 
         val if2 = ifs[1]
 
-        assertInstanceOf<BinaryOperator>(if2.condition)
+        assertIs<BinaryOperator>(if2.condition)
         then = if2.thenStatement
-        assertNotNull(then)
-        assertInstanceOf<Block>(then)
+        assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
 
         elseStmt = if2.elseStatement
-        assertNotNull(elseStmt)
-        assertInstanceOf<Block>(elseStmt)
+        assertIs<Block>(elseStmt)
         assertEquals(elseStmt.statements.size, 1)
 
         val if3 = ifs[2]
 
-        assertInstanceOf<BinaryOperator>(if3.condition)
+        assertIs<BinaryOperator>(if3.condition)
         then = if3.thenStatement
-        assertNotNull(then)
-        assertInstanceOf<Block>(then)
+        assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
 
         elseStmt = if3.elseStatement
@@ -247,30 +233,26 @@ class ControlFlowTest {
 
         val if5 = ifs[4]
 
-        assertInstanceOf<BinaryOperator>(if5.condition)
+        assertIs<BinaryOperator>(if5.condition)
         then = if5.thenStatement
-        assertNotNull(then)
-        assertInstanceOf<Block>(then)
+        assertIs<Block>(then)
         assertEquals(then.statements.size, 2)
 
         assertTrue(then.statements[1] is IfElse)
 
         elseStmt = if5.elseStatement
-        assertNotNull(elseStmt)
-        assertInstanceOf<Block>(elseStmt)
+        assertIs<Block>(elseStmt)
         assertEquals(elseStmt.statements.size, 1)
 
         val if7 = ifs[6]
 
-        assertInstanceOf<BinaryOperator>(if7.condition)
+        assertIs<BinaryOperator>(if7.condition)
         then = if7.thenStatement
-        assertNotNull(then)
-        assertInstanceOf<Block>(then)
+        assertIs<Block>(then)
         assertEquals(then.statements.size, 2)
 
         elseStmt = if7.elseStatement
-        assertNotNull(elseStmt)
-        assertInstanceOf<Block>(elseStmt)
+        assertIs<Block>(elseStmt)
         assertEquals(elseStmt.statements.size, 2)
 
         assertTrue(if7.prevDFG.flatMap { it.prevDFG }.contains(then.statements.last()))
@@ -300,10 +282,9 @@ class ControlFlowTest {
         assertEquals(ifLets.size, 1)
 
         val ifLet = ifLets[0]
-        assertInstanceOf<Assign>(ifLet.condition)
+        assertIs<Assign>(ifLet.condition)
         var then = ifLet.thenStatement
-        assertNotNull(then)
-        assertInstanceOf<Block>(then)
+        assertIs<Block>(then)
         assertEquals(then.statements.size, 1)
     }
 
@@ -346,9 +327,9 @@ class ControlFlowTest {
         assertEquals(4, statements.size)
 
         val case = statements.first() as Case
-        assertInstanceOf<Deconstruction>(case.caseExpression)
+        assertIs<Deconstruction>(case.caseExpression)
 
-        assertInstanceOf<Break>(statements[1])
+        assertIs<Break>(statements[1])
 
         val breakStmt = statements[1] as Break
         assertNotNull(breakStmt.expr)
@@ -412,19 +393,19 @@ class ControlFlowTest {
         var others = children.filter { !cases.contains(it) }
 
         others.forEach {
-            assertInstanceOf<Break>(it)
-            assertInstanceOf<Call>(it.astChildren.first())
+            assertIs<Break>(it)
+            assertIs<Call>(it.astChildren.first())
         }
 
-        assertInstanceOf<Literal<Int>>(cases[0].caseExpression)
+        assertIs<Literal<Int>>(cases[0].caseExpression)
         var literal = cases[0].caseExpression as Literal<Int>
         assertEquals("0", literal.value.toString())
 
-        assertInstanceOf<Literal<Int>>(cases[1].caseExpression)
+        assertIs<Literal<Int>>(cases[1].caseExpression)
         literal = cases[1].caseExpression as Literal<Int>
         assertEquals("1", literal.value.toString())
 
-        assertInstanceOf<Empty>(cases[2].caseExpression)
+        assertIs<Empty>(cases[2].caseExpression)
 
         val match2 = function.switches[1]
         assertNotNull(match2)
@@ -437,21 +418,21 @@ class ControlFlowTest {
         others = children.filter { !cases.contains(it) }
 
         others.forEach {
-            assertInstanceOf<Break>(it)
-            assertInstanceOf<Call>(it.astChildren.first())
+            assertIs<Break>(it)
+            assertIs<Call>(it.astChildren.first())
         }
 
-        assertInstanceOf<Range>(cases[0].caseExpression)
+        assertIs<Range>(cases[0].caseExpression)
         var range = cases[0].caseExpression as Range
         assertEquals("0", (range.floor as Literal<*>).value.toString())
         assertEquals("10", (range.ceiling as Literal<*>).value.toString())
 
-        assertInstanceOf<Range>(cases[1].caseExpression)
+        assertIs<Range>(cases[1].caseExpression)
         range = cases[1].caseExpression as Range
         assertEquals("11", (range.floor as Literal<*>).value.toString())
         assertEquals("100", (range.ceiling as Literal<*>).value.toString())
 
-        assertInstanceOf<Empty>(cases[2].caseExpression)
+        assertIs<Empty>(cases[2].caseExpression)
 
         val match3 = function.switches[2]
 
@@ -465,8 +446,8 @@ class ControlFlowTest {
         others = children.filter { !cases.contains(it) }
 
         others.dropLast(1).forEach {
-            assertInstanceOf<IfElse>(it)
-            assertInstanceOf<Break>(it.thenStatement?.astChildren?.first())
+            assertIs<IfElse>(it)
+            assertIs<Break>(it.thenStatement?.astChildren?.first())
         }
 
         val match4 = function.switches[3]
@@ -479,8 +460,8 @@ class ControlFlowTest {
         children = match4.statement?.astChildren ?: emptyList()
         cases = children.filterIsInstance<Case>()
 
-        assertInstanceOf<ObjectDeconstruction>(cases[0].caseExpression)
-        // assertInstanceOf<ObjectDeconstruction>(cases[0].caseExpression)
+        assertIs<ObjectDeconstruction>(cases[0].caseExpression)
+        // assertIs<ObjectDeconstruction>(cases[0].caseExpression)
 
     }
 
@@ -509,29 +490,29 @@ class ControlFlowTest {
 
         assertEquals("i", for1.variable.variables.first().name.toString())
 
-        assertInstanceOf<Range>(for1.iterable)
+        assertIs<Range>(for1.iterable)
 
-        assertInstanceOf<Block>(for1.statement)
+        assertIs<Block>(for1.statement)
 
-        assertInstanceOf<Call>(for1.statement?.astChildren?.first())
+        assertIs<Call>(for1.statement?.astChildren?.first())
 
         val for2 = forLoops[1]
         assertEquals("item", for2.variable.variables.first().name.toString())
-        assertInstanceOf<Reference>(for2.iterable)
-        assertInstanceOf<Block>(for2.statement)
-        assertInstanceOf<Call>(for2.statement?.astChildren?.first())
+        assertIs<Reference>(for2.iterable)
+        assertIs<Block>(for2.statement)
+        assertIs<Call>(for2.statement?.astChildren?.first())
 
         val for3 = forLoops[2]
 
-        assertInstanceOf<ObjectDeconstruction>(for3.variable)
+        assertIs<ObjectDeconstruction>(for3.variable)
 
         assertEquals("index", for3.variable.variables.first().name.toString())
         assertEquals("value", for3.variable.variables.last().name.toString())
 
-        assertInstanceOf<MemberCall>(for3.iterable)
+        assertIs<MemberCall>(for3.iterable)
 
-        assertInstanceOf<Block>(for3.statement)
+        assertIs<Block>(for3.statement)
 
-        assertInstanceOf<Call>(for3.statement?.astChildren?.first())
+        assertIs<Call>(for3.statement?.astChildren?.first())
     }
 }

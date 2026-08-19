@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
 import kotlin.test.Ignore
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -55,43 +56,43 @@ class RustLanguageFrontendTest {
         // Assert functions exist and are not inferred
         val add = tu.functions["math::basic::add"]
         assertNotNull(add)
-        assert(!add.isInferred)
+        assertFalse(add.isInferred)
 
         val sub = tu.functions["math::basic::sub"]
         assertNotNull(sub)
-        assert(!sub.isInferred)
+        assertFalse(sub.isInferred)
 
         val mul = tu.functions["math::advanced::mul"]
         assertNotNull(mul)
-        assert(!mul.isInferred)
+        assertFalse(mul.isInferred)
 
         val div = tu.functions["math::advanced::div"]
         assertNotNull(div)
-        assert(!div.isInferred)
+        assertFalse(div.isInferred)
 
         val utilsHelper = tu.functions["utils::helper"]
         assertNotNull(utilsHelper)
-        assert(!utilsHelper.isInferred)
+        assertFalse(utilsHelper.isInferred)
 
         val innerHelper = tu.functions["utils::inner::helper"]
         assertNotNull(innerHelper)
-        assert(!innerHelper.isInferred)
+        assertFalse(innerHelper.isInferred)
 
         val foo = tu.functions["extra::foo"]
         assertNotNull(foo)
-        assert(!foo.isInferred)
+        assertFalse(foo.isInferred)
 
         val bar = tu.functions["extra::bar"]
         assertNotNull(bar)
-        assert(!bar.isInferred)
+        assertFalse(bar.isInferred)
 
         val local = tu.functions["nested::local"]
         assertNotNull(local)
-        assert(!local.isInferred)
+        assertFalse(local.isInferred)
 
         val nestedChildCall = tu.functions["nested::child::call"]
         assertNotNull(nestedChildCall)
-        assert(!nestedChildCall.isInferred)
+        assertFalse(nestedChildCall.isInferred)
 
         // Assert calls exist and invoke the correct functions
         val addFnCall = tu.calls["add_fn"]

@@ -36,6 +36,17 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
 
+    companion object {
+        /**
+         * The [TypeScriptNode.type] values under which the TypeScript parser emits the access and
+         * `static` modifier keywords. Note that we must enumerate these explicitly rather than
+         * matching every `*Keyword` node, because the parser also emits *type* keywords (e.g.
+         * `NumberKeyword`, `VoidKeyword`) as children of the same declaration.
+         */
+        private val modifierKeywordTypes =
+            setOf("PublicKeyword", "ProtectedKeyword", "PrivateKeyword", "StaticKeyword")
+    }
+
     private fun handleNode(node: TypeScriptNode): Declaration {
         when (node.type) {
             "SourceFile" -> return handleSourceFile(node)
@@ -59,11 +70,54 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
-        val field = newField(name, type, setOf(), null, false, rawNode = node)
+        val field =
+            newField(
+                name,
+                type,
+                setOf(),
+                initializer = null,
+                implicitInitializerAllowed = false,
+                rawNode = node,
+            )
+
+        this.handleModifiers(field, node)
 
         this.frontend.processAnnotations(field, node)
 
         return field
+    }
+
+    /**
+     * Collects the access/visibility modifiers of [node] into [Declaration.modifiers] and lets the
+     * language project their canonical meaning onto [declaration].
+     *
+     * The raw keyword spellings are kept losslessly in [Declaration.modifiers]; turning them into
+     * canonical [Declaration.visibility] / [ValueDeclaration.isStatic] is delegated to the
+     * language's [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the
+     * current scope. Two shapes of modifier are recognized:
+     * - explicit modifier keywords such as `public`/`protected`/`private`/`static`, which the
+     *   TypeScript parser emits as dedicated `*Keyword` child nodes in front of the member name,
+     *   and
+     * - *hard private* members, identified not by a keyword but by a `#name` ([PrivateIdentifier])
+     *   name; these are runtime-private in both JavaScript and TypeScript and are recorded via the
+     *   synthetic [HARD_PRIVATE] modifier.
+     *
+     * This must be called while the frontend is still in the enclosing (record) scope, so that
+     * `applyModifiers` sees the correct scope for the declaration.
+     */
+    private fun handleModifiers(declaration: Declaration, node: TypeScriptNode) {
+        node.children
+            ?.filter { it.type in modifierKeywordTypes }
+            ?.forEach { modifier ->
+                val keyword = modifier.code ?: return@forEach
+                declaration.modifiers = declaration.modifiers + keyword
+            }
+
+        if (node.firstChild("PrivateIdentifier") != null) {
+            declaration.modifiers = declaration.modifiers + HARD_PRIVATE
+        }
+
+        frontend.language.applyModifiers(declaration, frontend.scopeManager.currentScope)
     }
 
     private fun handleClassDeclaration(node: TypeScriptNode): Record {
@@ -154,6 +208,12 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }
+
+        // Interpret access/`static` modifiers while we are still in the enclosing (record) scope,
+        // before we descend into the function's own scope.
+        if (func is Method) {
+            this.handleModifiers(func, node)
+        }
 
         this.frontend.scopeManager.enterScope(func)
 

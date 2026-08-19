@@ -43,7 +43,6 @@ import com.sun.jna.Callback
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
-import com.sun.jna.ptr.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.CharBuffer
@@ -88,15 +87,15 @@ open class RustBuffer : Structure() {
                     }
                 }
 
-        internal fun create(capacity: ULong, len: ULong, data: Pointer?): RustBuffer.ByValue {
-            var buf = RustBuffer.ByValue()
+        internal fun create(capacity: ULong, len: ULong, data: Pointer?): ByValue {
+            var buf = ByValue()
             buf.capacity = capacity.toLong()
             buf.len = len.toLong()
             buf.data = data
             return buf
         }
 
-        internal fun free(buf: RustBuffer.ByValue) =
+        internal fun free(buf: ByValue) =
             uniffiRustCall() { status -> UniffiLib.ffi_rustast_rustbuffer_free(buf, status) }
     }
 
@@ -228,8 +227,8 @@ internal open class UniffiRustCallStatus : Structure() {
     }
 
     companion object {
-        fun create(code: Byte, errorBuf: RustBuffer.ByValue): UniffiRustCallStatus.ByValue {
-            val callStatus = UniffiRustCallStatus.ByValue()
+        fun create(code: Byte, errorBuf: RustBuffer.ByValue): ByValue {
+            val callStatus = ByValue()
             callStatus.code = code
             callStatus.error_buf = errorBuf
             return callStatus
@@ -237,7 +236,7 @@ internal open class UniffiRustCallStatus : Structure() {
     }
 }
 
-class InternalException(message: String) : kotlin.Exception(message)
+class InternalException(message: String) : Exception(message)
 
 /**
  * Each top-level error class has a companion object that can lift the error from the call status's
@@ -255,7 +254,7 @@ interface UniffiRustCallStatusErrorHandler<E> {
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds
 // to the Err
-private inline fun <U, E : kotlin.Exception> uniffiRustCallWithError(
+private inline fun <U, E : Exception> uniffiRustCallWithError(
     errorHandler: UniffiRustCallStatusErrorHandler<E>,
     callback: (UniffiRustCallStatus) -> U,
 ): U {
@@ -266,7 +265,7 @@ private inline fun <U, E : kotlin.Exception> uniffiRustCallWithError(
 }
 
 // Check UniffiRustCallStatus and throw an error if the call wasn't successful
-private fun <E : kotlin.Exception> uniffiCheckCallStatus(
+private fun <E : Exception> uniffiCheckCallStatus(
     errorHandler: UniffiRustCallStatusErrorHandler<E>,
     status: UniffiRustCallStatus,
 ) {
@@ -312,7 +311,7 @@ internal inline fun <T> uniffiTraitInterfaceCall(
 ) {
     try {
         writeReturn(makeCall())
-    } catch (e: kotlin.Exception) {
+    } catch (e: Exception) {
         callStatus.code = UNIFFI_CALL_UNEXPECTED_ERROR
         callStatus.error_buf = FfiConverterString.lower(e.toString())
     }
@@ -326,7 +325,7 @@ internal inline fun <T, reified E : Throwable> uniffiTraitInterfaceCallWithError
 ) {
     try {
         writeReturn(makeCall())
-    } catch (e: kotlin.Exception) {
+    } catch (e: Exception) {
         if (e is E) {
             callStatus.code = UNIFFI_CALL_ERROR
             callStatus.error_buf = lowerError(e)
@@ -348,7 +347,7 @@ private const val UNIFFI_HANDLEMAP_DELTA = 2.toLong()
 internal class UniffiHandleMap<T : Any> {
     private val map = ConcurrentHashMap<Long, T>()
     // Start
-    private val counter = java.util.concurrent.atomic.AtomicLong(UNIFFI_HANDLEMAP_INITIAL)
+    private val counter = AtomicLong(UNIFFI_HANDLEMAP_INITIAL)
 
     val size: Int
         get() = map.size
@@ -390,19 +389,19 @@ private fun findLibraryName(componentName: String): String {
 }
 
 // Define FFI callback types
-internal interface UniffiRustFutureContinuationCallback : com.sun.jna.Callback {
+internal interface UniffiRustFutureContinuationCallback : Callback {
     fun callback(`data`: Long, `pollResult`: Byte)
 }
 
-internal interface UniffiForeignFutureDroppedCallback : com.sun.jna.Callback {
+internal interface UniffiForeignFutureDroppedCallback : Callback {
     fun callback(`handle`: Long)
 }
 
-internal interface UniffiCallbackInterfaceFree : com.sun.jna.Callback {
+internal interface UniffiCallbackInterfaceFree : Callback {
     fun callback(`handle`: Long)
 }
 
-internal interface UniffiCallbackInterfaceClone : com.sun.jna.Callback {
+internal interface UniffiCallbackInterfaceClone : Callback {
     fun callback(`handle`: Long): Long
 }
 
@@ -414,7 +413,7 @@ internal open class UniffiForeignFutureDroppedCallbackStruct(
     class UniffiByValue(
         `handle`: Long = 0.toLong(),
         `free`: UniffiForeignFutureDroppedCallback? = null,
-    ) : UniffiForeignFutureDroppedCallbackStruct(`handle`, `free`), Structure.ByValue
+    ) : UniffiForeignFutureDroppedCallbackStruct(`handle`, `free`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureDroppedCallbackStruct) {
         `handle` = other.`handle`
@@ -431,7 +430,7 @@ internal open class UniffiForeignFutureResultU8(
     class UniffiByValue(
         `returnValue`: Byte = 0.toByte(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultU8(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultU8(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultU8) {
         `returnValue` = other.`returnValue`
@@ -439,7 +438,7 @@ internal open class UniffiForeignFutureResultU8(
     }
 }
 
-internal interface UniffiForeignFutureCompleteU8 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteU8 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultU8.UniffiByValue)
 }
 
@@ -452,7 +451,7 @@ internal open class UniffiForeignFutureResultI8(
     class UniffiByValue(
         `returnValue`: Byte = 0.toByte(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultI8(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultI8(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultI8) {
         `returnValue` = other.`returnValue`
@@ -460,7 +459,7 @@ internal open class UniffiForeignFutureResultI8(
     }
 }
 
-internal interface UniffiForeignFutureCompleteI8 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteI8 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultI8.UniffiByValue)
 }
 
@@ -473,7 +472,7 @@ internal open class UniffiForeignFutureResultU16(
     class UniffiByValue(
         `returnValue`: Short = 0.toShort(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultU16(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultU16(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultU16) {
         `returnValue` = other.`returnValue`
@@ -481,7 +480,7 @@ internal open class UniffiForeignFutureResultU16(
     }
 }
 
-internal interface UniffiForeignFutureCompleteU16 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteU16 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultU16.UniffiByValue)
 }
 
@@ -494,7 +493,7 @@ internal open class UniffiForeignFutureResultI16(
     class UniffiByValue(
         `returnValue`: Short = 0.toShort(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultI16(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultI16(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultI16) {
         `returnValue` = other.`returnValue`
@@ -502,7 +501,7 @@ internal open class UniffiForeignFutureResultI16(
     }
 }
 
-internal interface UniffiForeignFutureCompleteI16 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteI16 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultI16.UniffiByValue)
 }
 
@@ -515,7 +514,7 @@ internal open class UniffiForeignFutureResultU32(
     class UniffiByValue(
         `returnValue`: Int = 0,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultU32(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultU32(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultU32) {
         `returnValue` = other.`returnValue`
@@ -523,7 +522,7 @@ internal open class UniffiForeignFutureResultU32(
     }
 }
 
-internal interface UniffiForeignFutureCompleteU32 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteU32 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultU32.UniffiByValue)
 }
 
@@ -536,7 +535,7 @@ internal open class UniffiForeignFutureResultI32(
     class UniffiByValue(
         `returnValue`: Int = 0,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultI32(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultI32(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultI32) {
         `returnValue` = other.`returnValue`
@@ -544,7 +543,7 @@ internal open class UniffiForeignFutureResultI32(
     }
 }
 
-internal interface UniffiForeignFutureCompleteI32 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteI32 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultI32.UniffiByValue)
 }
 
@@ -557,7 +556,7 @@ internal open class UniffiForeignFutureResultU64(
     class UniffiByValue(
         `returnValue`: Long = 0.toLong(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultU64(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultU64(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultU64) {
         `returnValue` = other.`returnValue`
@@ -565,7 +564,7 @@ internal open class UniffiForeignFutureResultU64(
     }
 }
 
-internal interface UniffiForeignFutureCompleteU64 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteU64 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultU64.UniffiByValue)
 }
 
@@ -578,7 +577,7 @@ internal open class UniffiForeignFutureResultI64(
     class UniffiByValue(
         `returnValue`: Long = 0.toLong(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultI64(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultI64(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultI64) {
         `returnValue` = other.`returnValue`
@@ -586,7 +585,7 @@ internal open class UniffiForeignFutureResultI64(
     }
 }
 
-internal interface UniffiForeignFutureCompleteI64 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteI64 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultI64.UniffiByValue)
 }
 
@@ -599,7 +598,7 @@ internal open class UniffiForeignFutureResultF32(
     class UniffiByValue(
         `returnValue`: Float = 0.0f,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultF32(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultF32(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultF32) {
         `returnValue` = other.`returnValue`
@@ -607,7 +606,7 @@ internal open class UniffiForeignFutureResultF32(
     }
 }
 
-internal interface UniffiForeignFutureCompleteF32 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteF32 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultF32.UniffiByValue)
 }
 
@@ -620,7 +619,7 @@ internal open class UniffiForeignFutureResultF64(
     class UniffiByValue(
         `returnValue`: Double = 0.0,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultF64(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultF64(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultF64) {
         `returnValue` = other.`returnValue`
@@ -628,7 +627,7 @@ internal open class UniffiForeignFutureResultF64(
     }
 }
 
-internal interface UniffiForeignFutureCompleteF64 : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteF64 : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultF64.UniffiByValue)
 }
 
@@ -641,7 +640,7 @@ internal open class UniffiForeignFutureResultRustBuffer(
     class UniffiByValue(
         `returnValue`: RustBuffer.ByValue = RustBuffer.ByValue(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ) : UniffiForeignFutureResultRustBuffer(`returnValue`, `callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultRustBuffer(`returnValue`, `callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultRustBuffer) {
         `returnValue` = other.`returnValue`
@@ -649,7 +648,7 @@ internal open class UniffiForeignFutureResultRustBuffer(
     }
 }
 
-internal interface UniffiForeignFutureCompleteRustBuffer : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteRustBuffer : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultRustBuffer.UniffiByValue)
 }
 
@@ -660,14 +659,14 @@ internal open class UniffiForeignFutureResultVoid(
 ) : Structure() {
     class UniffiByValue(
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue()
-    ) : UniffiForeignFutureResultVoid(`callStatus`), Structure.ByValue
+    ) : UniffiForeignFutureResultVoid(`callStatus`), ByValue
 
     internal fun uniffiSetValue(other: UniffiForeignFutureResultVoid) {
         `callStatus` = other.`callStatus`
     }
 }
 
-internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
+internal interface UniffiForeignFutureCompleteVoid : Callback {
     fun callback(`callbackData`: Long, `result`: UniffiForeignFutureResultVoid.UniffiByValue)
 }
 
@@ -1122,11 +1121,7 @@ public object FfiConverterString : FfiConverter<String, RustBuffer.ByValue> {
     }
 }
 
-data class RsAbi(
-    var `astNode`: RsNode,
-    var `hasExtern`: kotlin.Boolean,
-    var `stringLiteral`: kotlin.String,
-) {
+data class RsAbi(var `astNode`: RsNode, var `hasExtern`: Boolean, var `stringLiteral`: String) {
 
     companion object
 }
@@ -1156,7 +1151,7 @@ public object FfiConverterTypeRSAbi : FfiConverterRustBuffer<RsAbi> {
 data class RsArrayExpr(
     var `astNode`: RsNode,
     var `expressions`: List<RsExpr>,
-    var `repeating`: kotlin.Boolean,
+    var `repeating`: Boolean,
 ) {
 
     companion object
@@ -1479,7 +1474,7 @@ public object FfiConverterTypeRSBecomeExpr : FfiConverterRustBuffer<RsBecomeExpr
 data class RsBinExpr(
     var `astNode`: RsNode,
     var `expressions`: List<RsExpr>,
-    var `operator`: kotlin.String,
+    var `operator`: String,
 ) {
 
     companion object
@@ -1685,7 +1680,7 @@ public object FfiConverterTypeRSClosureExpr : FfiConverterRustBuffer<RsClosureEx
 
 data class RsConst(
     var `astNode`: RsNode,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `ty`: RsType?,
     var `expr`: List<RsExpr>,
     var `genericParams`: List<RsGenericParam>,
@@ -1847,7 +1842,7 @@ public object FfiConverterTypeRSDynTraitType : FfiConverterRustBuffer<RsDynTrait
 
 data class RsEnum(
     var `astNode`: RsNode,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `variants`: List<RsVariant>,
     var `genericParams`: List<RsGenericParam>,
 ) {
@@ -1935,11 +1930,7 @@ public object FfiConverterTypeRSExternBlock : FfiConverterRustBuffer<RsExternBlo
     }
 }
 
-data class RsExternCrate(
-    var `astNode`: RsNode,
-    var `nameRef`: RsNameRef?,
-    var `rename`: kotlin.String?,
-) {
+data class RsExternCrate(var `astNode`: RsNode, var `nameRef`: RsNameRef?, var `rename`: String?) {
 
     companion object
 }
@@ -1998,7 +1989,7 @@ data class RsFn(
     var `paramList`: RsParamList?,
     var `retType`: RsType?,
     var `body`: RsBlockExpr?,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `genericParams`: List<RsGenericParam>,
 ) {
 
@@ -2128,10 +2119,10 @@ public object FfiConverterTypeRSForType : FfiConverterRustBuffer<RsForType> {
 data class RsFormatArgsExpr(
     var `astNode`: RsNode,
     var `template`: List<RsExpr>,
-    var `hasPound`: kotlin.Boolean,
-    var `hasComma`: kotlin.Boolean,
-    var `hasBuiltin`: kotlin.Boolean,
-    var `hasFormatArgs`: kotlin.Boolean,
+    var `hasPound`: Boolean,
+    var `hasComma`: Boolean,
+    var `hasBuiltin`: Boolean,
+    var `hasFormatArgs`: Boolean,
 ) {
 
     companion object
@@ -2168,7 +2159,7 @@ public object FfiConverterTypeRSFormatArgsExpr : FfiConverterRustBuffer<RsFormat
     }
 }
 
-data class RsIdentPat(var `astNode`: RsNode, var `name`: kotlin.String?, var `pat`: List<RsPat>) {
+data class RsIdentPat(var `astNode`: RsNode, var `name`: String?, var `pat`: List<RsPat>) {
 
     companion object
 }
@@ -2384,7 +2375,7 @@ public object FfiConverterTypeRSLetStmt : FfiConverterRustBuffer<RsLetStmt> {
     }
 }
 
-data class RsLifetime(var `astNode`: RsNode, var `name`: kotlin.String) {
+data class RsLifetime(var `astNode`: RsNode, var `name`: String) {
 
     companion object
 }
@@ -2505,11 +2496,7 @@ public object FfiConverterTypeRSLiteralPat : FfiConverterRustBuffer<RsLiteralPat
     }
 }
 
-data class RsLoopExpr(
-    var `astNode`: RsNode,
-    var `label`: kotlin.String?,
-    var `body`: List<RsBlockExpr>,
-) {
+data class RsLoopExpr(var `astNode`: RsNode, var `label`: String?, var `body`: List<RsBlockExpr>) {
 
     companion object
 }
@@ -2536,11 +2523,7 @@ public object FfiConverterTypeRSLoopExpr : FfiConverterRustBuffer<RsLoopExpr> {
     }
 }
 
-data class RsMacroCall(
-    var `astNode`: RsNode,
-    var `path`: RsPath?,
-    var `macroString`: kotlin.String,
-) {
+data class RsMacroCall(var `astNode`: RsNode, var `path`: RsPath?, var `macroString`: String) {
 
     companion object
 }
@@ -2567,7 +2550,7 @@ public object FfiConverterTypeRSMacroCall : FfiConverterRustBuffer<RsMacroCall> 
     }
 }
 
-data class RsMacroDef(var `astNode`: RsNode, var `name`: kotlin.String?) {
+data class RsMacroDef(var `astNode`: RsNode, var `name`: String?) {
 
     companion object
 }
@@ -2636,7 +2619,7 @@ public object FfiConverterTypeRSMacroPat : FfiConverterRustBuffer<RsMacroPat> {
     }
 }
 
-data class RsMacroRules(var `astNode`: RsNode, var `name`: kotlin.String?) {
+data class RsMacroRules(var `astNode`: RsNode, var `name`: String?) {
 
     companion object
 }
@@ -2782,7 +2765,7 @@ public object FfiConverterTypeRSMethodCallExpr : FfiConverterRustBuffer<RsMethod
     }
 }
 
-data class RsModule(var `astNode`: RsNode, var `name`: kotlin.String?, var `items`: List<RsItem>) {
+data class RsModule(var `astNode`: RsNode, var `name`: String?, var `items`: List<RsItem>) {
 
     companion object
 }
@@ -2811,13 +2794,13 @@ public object FfiConverterTypeRSModule : FfiConverterRustBuffer<RsModule> {
 
 data class RsNameRef(
     var `astNode`: RsNode,
-    var `text`: kotlin.String,
-    var `ident`: kotlin.String?,
-    var `intNumberToken`: kotlin.String?,
-    var `hasCapSelf`: kotlin.Boolean,
-    var `hasCrate`: kotlin.Boolean,
-    var `hasSelf`: kotlin.Boolean,
-    var `hasSuper`: kotlin.Boolean,
+    var `text`: String,
+    var `ident`: String?,
+    var `intNumberToken`: String?,
+    var `hasCapSelf`: Boolean,
+    var `hasCrate`: Boolean,
+    var `hasSelf`: Boolean,
+    var `hasSuper`: Boolean,
 ) {
 
     companion object
@@ -2880,10 +2863,10 @@ public object FfiConverterTypeRSNeverType : FfiConverterRustBuffer<RsNeverType> 
 }
 
 data class RsNode(
-    var `text`: kotlin.String,
-    var `startOffset`: kotlin.UInt,
-    var `endOffset`: kotlin.UInt,
-    var `comments`: kotlin.String?,
+    var `text`: String,
+    var `startOffset`: UInt,
+    var `endOffset`: UInt,
+    var `comments`: String?,
 ) {
 
     companion object
@@ -3236,11 +3219,7 @@ public object FfiConverterTypeRSPathType : FfiConverterRustBuffer<RsPathType> {
     }
 }
 
-data class RsPrefixExpr(
-    var `astNode`: RsNode,
-    var `operator`: kotlin.String,
-    var `expr`: List<RsExpr>,
-) {
+data class RsPrefixExpr(var `astNode`: RsNode, var `operator`: String, var `expr`: List<RsExpr>) {
 
     companion object
 }
@@ -3289,9 +3268,9 @@ public object FfiConverterTypeRSProblem : FfiConverterRustBuffer<RsProblem> {
 data class RsPtrType(
     var `astNode`: RsNode,
     var `ty`: List<RsType>,
-    var `hasStar`: kotlin.Boolean,
-    var `isConst`: kotlin.Boolean,
-    var `isMut`: kotlin.Boolean,
+    var `hasStar`: Boolean,
+    var `isConst`: Boolean,
+    var `isMut`: Boolean,
 ) {
 
     companion object
@@ -3328,7 +3307,7 @@ public object FfiConverterTypeRSPtrType : FfiConverterRustBuffer<RsPtrType> {
 data class RsRangeExpr(
     var `astNode`: RsNode,
     var `expressions`: List<RsExpr>,
-    var `operator`: kotlin.String,
+    var `operator`: String,
 ) {
 
     companion object
@@ -3356,11 +3335,7 @@ public object FfiConverterTypeRSRangeExpr : FfiConverterRustBuffer<RsRangeExpr> 
     }
 }
 
-data class RsRangePat(
-    var `astNode`: RsNode,
-    var `patterns`: List<RsPat>,
-    var `operator`: kotlin.String,
-) {
+data class RsRangePat(var `astNode`: RsNode, var `patterns`: List<RsPat>, var `operator`: String) {
 
     companion object
 }
@@ -3457,7 +3432,7 @@ data class RsRecordField(
     var `astNode`: RsNode,
     var `fieldType`: RsType?,
     var `expr`: RsExpr?,
-    var `name`: kotlin.String?,
+    var `name`: String?,
 ) {
 
     companion object
@@ -3573,9 +3548,9 @@ public object FfiConverterTypeRSRecordPatField : FfiConverterRustBuffer<RsRecord
 data class RsRefExpr(
     var `astNode`: RsNode,
     var `expr`: List<RsExpr>,
-    var `mutable`: kotlin.Boolean,
-    var `isRef`: kotlin.Boolean,
-    var `isConst`: kotlin.Boolean,
+    var `mutable`: Boolean,
+    var `isRef`: Boolean,
+    var `isConst`: Boolean,
 ) {
 
     companion object
@@ -3612,8 +3587,8 @@ public object FfiConverterTypeRSRefExpr : FfiConverterRustBuffer<RsRefExpr> {
 data class RsRefPat(
     var `astNode`: RsNode,
     var `pat`: List<RsPat>,
-    var `mutable`: kotlin.Boolean,
-    var `isRef`: kotlin.Boolean,
+    var `mutable`: Boolean,
+    var `isRef`: Boolean,
 ) {
 
     companion object
@@ -3648,8 +3623,8 @@ data class RsRefType(
     var `astNode`: RsNode,
     var `lifetime`: RsLifetime?,
     var `ty`: List<RsType>,
-    var `hasAmp`: kotlin.Boolean,
-    var `hasMut`: kotlin.Boolean,
+    var `hasAmp`: Boolean,
+    var `hasMut`: Boolean,
 ) {
 
     companion object
@@ -3728,9 +3703,9 @@ public object FfiConverterTypeRSReturnExpr : FfiConverterRustBuffer<RsReturnExpr
 
 data class RsReturnTypeSyntax(
     var `astNode`: RsNode,
-    var `lParen`: kotlin.Boolean,
-    var `rParen`: kotlin.Boolean,
-    var `dotdot`: kotlin.Boolean,
+    var `lParen`: Boolean,
+    var `rParen`: Boolean,
+    var `dotdot`: Boolean,
 ) {
 
     companion object
@@ -3833,11 +3808,7 @@ public object FfiConverterTypeRSSliceType : FfiConverterRustBuffer<RsSliceType> 
     }
 }
 
-data class RsSourceFile(
-    var `astNode`: RsNode,
-    var `path`: kotlin.String,
-    var `items`: List<RsAst>,
-) {
+data class RsSourceFile(var `astNode`: RsNode, var `path`: String, var `items`: List<RsAst>) {
 
     companion object
 }
@@ -3864,7 +3835,7 @@ public object FfiConverterTypeRSSourceFile : FfiConverterRustBuffer<RsSourceFile
     }
 }
 
-data class RsStatic(var `astNode`: RsNode, var `name`: kotlin.String?, var `ty`: RsType?) {
+data class RsStatic(var `astNode`: RsNode, var `name`: String?, var `ty`: RsType?) {
 
     companion object
 }
@@ -3893,7 +3864,7 @@ public object FfiConverterTypeRSStatic : FfiConverterRustBuffer<RsStatic> {
 
 data class RsStruct(
     var `astNode`: RsNode,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `fieldList`: RsFieldList?,
     var `genericParams`: List<RsGenericParam>,
 ) {
@@ -3928,7 +3899,7 @@ public object FfiConverterTypeRSStruct : FfiConverterRustBuffer<RsStruct> {
 
 data class RsTrait(
     var `astNode`: RsNode,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `items`: List<RsAssocItem>,
     var `genericParams`: List<RsGenericParam>,
 ) {
@@ -4128,7 +4099,7 @@ public object FfiConverterTypeRSTupleType : FfiConverterRustBuffer<RsTupleType> 
 
 data class RsTypeAlias(
     var `astNode`: RsNode,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `ty`: RsType?,
     var `typeBoundList`: List<RsTypeBound>,
     var `genericParams`: List<RsGenericParam>,
@@ -4258,7 +4229,7 @@ public object FfiConverterTypeRSTypeBound : FfiConverterRustBuffer<RsTypeBound> 
 
 data class RsTypeParam(
     var `astNode`: RsNode,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `typeBoundList`: List<RsTypeBound>,
     var `defaultType`: RsType?,
 ) {
@@ -4313,7 +4284,7 @@ public object FfiConverterTypeRSUnderscoreExpr : FfiConverterRustBuffer<RsUnders
 data class RsUnion(
     var `astNode`: RsNode,
     var `genericParams`: List<RsGenericParam>,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `fieldList`: RsRecordFieldList?,
 ) {
 
@@ -4369,9 +4340,9 @@ public object FfiConverterTypeRSUse : FfiConverterRustBuffer<RsUse> {
 data class RsUseTree(
     var `astNode`: RsNode,
     var `path`: RsPath?,
-    var `rename`: kotlin.String?,
+    var `rename`: String?,
     var `useTrees`: List<RsUseTree>,
-    var `star`: kotlin.Boolean,
+    var `star`: Boolean,
 ) {
 
     companion object
@@ -4407,7 +4378,7 @@ public object FfiConverterTypeRSUseTree : FfiConverterRustBuffer<RsUseTree> {
 
 data class RsVariant(
     var `astNode`: RsNode,
-    var `name`: kotlin.String?,
+    var `name`: String?,
     var `expr`: List<RsExpr>,
     var `fields`: List<RsFieldList>,
 ) {
@@ -7091,15 +7062,15 @@ public object FfiConverterTypeRSVariantDef : FfiConverterRustBuffer<RsVariantDef
 }
 
 /** @suppress */
-public object FfiConverterOptionalString : FfiConverterRustBuffer<kotlin.String?> {
-    override fun read(buf: ByteBuffer): kotlin.String? {
+public object FfiConverterOptionalString : FfiConverterRustBuffer<String?> {
+    override fun read(buf: ByteBuffer): String? {
         if (buf.get().toInt() == 0) {
             return null
         }
         return FfiConverterString.read(buf)
     }
 
-    override fun allocationSize(value: kotlin.String?): ULong {
+    override fun allocationSize(value: String?): ULong {
         if (value == null) {
             return 1UL
         } else {
@@ -7107,7 +7078,7 @@ public object FfiConverterOptionalString : FfiConverterRustBuffer<kotlin.String?
         }
     }
 
-    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+    override fun write(value: String?, buf: ByteBuffer) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -8158,7 +8129,7 @@ public object FfiConverterSequenceTypeRSUseBoundGenericArg :
     }
 }
 
-fun `parseRustCode`(`source`: kotlin.String): RsSourceFile? {
+fun `parseRustCode`(`source`: String): RsSourceFile? {
     return FfiConverterOptionalTypeRSSourceFile.lift(
         uniffiRustCall() { _status ->
             UniffiLib.uniffi_rustast_fn_func_parse_rust_code(

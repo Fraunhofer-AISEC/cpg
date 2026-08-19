@@ -37,8 +37,6 @@ mavenPublishing {
     }
 }
 
-sourceSets { main { kotlin { srcDir("src/main/rust") } } }
-
 dependencies { implementation(libs.jna) }
 
 tasks {

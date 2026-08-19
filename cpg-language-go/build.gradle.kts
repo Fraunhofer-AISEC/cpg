@@ -39,7 +39,7 @@ mavenPublishing {
 }
 
 dependencies {
-    implementation("net.java.dev.jna:jna:5.18.1")
+    implementation("net.java.dev.jna:jna:5.19.1")
     testImplementation(project(":cpg-analysis"))
 }
 

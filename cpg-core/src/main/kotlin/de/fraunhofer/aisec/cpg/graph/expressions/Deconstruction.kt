@@ -25,4 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+/**
+ * Base class for pattern-matching expressions that unpack a value into its constituent parts, each
+ * typically bound to a new identifier — the inverse of a [Construction], with data/type flow
+ * running from the matched value down into the bindings instead of up into a result.
+ *
+ * Subclasses: [ObjectDeconstruction] (positional/named decomposition, e.g. Rust's `Point { x, y
+ * }`), [NamedDeconstruction] (one named field of it, e.g. `y: y_coord`), and
+ * [AlternativeDeconstruction] (or-patterns, e.g. Rust's `1 | 2`). Used e.g. by Rust's `let`, `if
+ * let`, `while let`, and `match`.
+ */
 abstract class Deconstruction : Expression()

@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
-import kotlin.collections.plusAssign
 import kotlin.math.min
 import uniffi.rustast.RsAst
 import uniffi.rustast.RsPath

@@ -153,9 +153,10 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         state: UnreachabilityStateElement,
     ): UnreachabilityStateElement {
         val evalResult = condition.language.evaluator.evaluate(condition)
+        val truthValue = condition.language.isTruthy(evalResult)
 
         val (unreachableEdges, remainingEdges) =
-            when (evalResult) {
+            when (truthValue) {
                 true -> {
                     // If the condition is always true, the "false" branch is always unreachable
                     Pair(
@@ -170,7 +171,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         condition.nextEOGEdges.filter { e -> e.branch != true },
                     )
                 }
-                else -> {
+                null -> {
                     Pair(listOf(), condition.nextEOGEdges)
                 }
             }
@@ -191,7 +192,6 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * body receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state
      * which led us here.
      */
-    @Suppress("KotlinConstantConditions")
     private fun handleLoop(
         lattice: UnreachabilityState,
         enteringEdge: EvaluationOrder,
@@ -207,24 +207,25 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val evalResult = condition.language.evaluator.evaluate(condition)
+        val truthValue = condition.language.isTruthy(evalResult)
 
         val (unreachableEdges, remainingEdges) =
-            when (evalResult) {
-                is Boolean if evalResult -> {
+            when (truthValue) {
+                true -> {
                     Pair(
                         condition.nextEOGEdges.filter { e -> e.branch == false },
                         condition.nextEOGEdges.filter { e -> e.branch != false },
                     )
                 }
 
-                is Boolean if !evalResult -> {
+                false -> {
                     Pair(
                         condition.nextEOGEdges.filter { e -> e.branch == true },
                         condition.nextEOGEdges.filter { e -> e.branch != true },
                     )
                 }
 
-                else -> {
+                null -> {
                     Pair(listOf(), condition.nextEOGEdges)
                 }
             }

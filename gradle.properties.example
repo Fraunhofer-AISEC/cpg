@@ -10,6 +10,7 @@ enableTypeScriptFrontend=false
 enableRubyFrontend=false
 enableJVMFrontend=false
 enableINIFrontend=true
+enableRustFrontend=true
 enableAIModule=true
 enableRustFrontend=true
 enableCodyzeConsole=false
