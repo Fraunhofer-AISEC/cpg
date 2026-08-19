@@ -36,12 +36,15 @@ import java.util.*
  * @param conceptName The name of the concept. This should be unique across all concepts.
  * @param description A description of the concept.
  * @param properties The properties of the concept.
+ * @param notes Free-text notes about this concept's application, e.g. relationships to other tagged
+ *   nodes (such as a function that must be called before this one).
  */
 class GenericLLMConcept(
     underlyingNode: Node? = null,
     val conceptName: String,
     val description: String,
     val properties: GenericProperties,
+    val notes: String? = null,
 ) : Concept(underlyingNode = underlyingNode) {
 
     override fun equals(other: Any?): Boolean {
@@ -49,8 +52,10 @@ class GenericLLMConcept(
             super.equals(other) &&
             other.conceptName == this.conceptName &&
             other.description == this.description &&
-            other.properties == this.properties
+            other.properties == this.properties &&
+            other.notes == this.notes
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), conceptName, description, properties)
+    override fun hashCode() =
+        Objects.hash(super.hashCode(), conceptName, description, properties, notes)
 }
