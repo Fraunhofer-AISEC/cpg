@@ -30,8 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 
 /**
@@ -51,10 +53,25 @@ import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
  * default traversal. Only the *traversal mechanism* changes here; nothing about resolution is
  * flow-sensitive (yet).
  *
- * Because a node can be reached via more than one incoming [EvaluationOrder] edge (e.g., the first
- * node after an `if`/`else` merges), [SymbolResolver.transfer] is offered every such node once per
- * incoming edge. We track the set of already-handled nodes in a [PowersetLattice] so that
- * [SymbolResolver.handle] is still only ever *applied* once per node.
+ * We don't need any genuine flow-sensitive state for that: [Lattice.iterateEOG] is used purely to
+ * get a termination-safe, EOG-respecting traversal (correctly handling loops via its fixpoint
+ * machinery), not to compute anything. The [PowersetLattice] state threaded through [transfer] is
+ * therefore never actually populated; it exists only because [Lattice.iterateEOG] requires *some*
+ * lattice element to track convergence, and an always-equal, always-bottom element is sufficient to
+ * guarantee that every reachable edge is still visited at least once (see
+ * [de.fraunhofer.aisec.cpg.helpers.functional.Lattice.iterateEogInternal]'s `oldGlobalIt == null`
+ * case) while loop back-edges still converge instead of being reprocessed forever.
+ *
+ * A node can be reached via more than one incoming [EvaluationOrder] edge - not just a loop back-
+ * edge (which the engine's fixpoint machinery already only re-processes until convergence), but
+ * also a genuine, non-cyclic merge, e.g. the first node after an `if`/`else` where neither branch
+ * terminates. [transfer] is offered such a node once per incoming edge, each with its own, separate
+ * slice of lattice state - so tracking "already handled" *in* that per-edge state would only catch
+ * the loop-reconvergence case, not this one. We therefore track already-handled nodes in
+ * [handledNodes], a plain, closure-captured set shared across every [transfer] call for this
+ * starter (safe without synchronization, since the engine drives them strictly sequentially), so
+ * that [SymbolResolver.handle] is only ever *applied* once per node no matter how many incoming
+ * edges it has.
  *
  * [SymbolResolver.handleOverloadedOperator] additionally physically replaces the
  * [BinaryOperator]/[UnaryOperator] node with an
@@ -71,6 +88,10 @@ import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
  * first) *after* the EOG traversal has fully finished, in the order they were encountered.
  */
 fun SymbolResolver.acceptWithIterateEOG(t: Node) {
+    // Nodes for which SymbolResolver.handle has already been applied, tracked globally across the
+    // whole traversal (see the KDoc above for why this can't live in the per-edge lattice state).
+    val handledNodes = identitySetOf<Node>()
+
     // Nodes that may replace themselves in the AST/EOG (see the KDoc above) are deferred here and
     // only handled once the EOG traversal itself is done.
     val deferredOperatorNodes = mutableListOf<Node>()
@@ -81,7 +102,9 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
         lattice.iterateEOG(
             t.nextEOGEdges,
             startState,
-            transformation = { l, edge, state -> transfer(l, edge, state, deferredOperatorNodes) },
+            transformation = { l, edge, state ->
+                transfer(l, edge, state, handledNodes, deferredOperatorNodes)
+            },
         )
     if (timeout) {
         log.warn("Could not compute final state for EOG starter {} (due to timeout)", t.name)
@@ -110,9 +133,9 @@ private fun SymbolResolver.jumpToScope(node: Node) {
 
 /**
  * The state-transfer function used by [acceptWithIterateEOG]. Applies [SymbolResolver.handle] to
- * [EvaluationOrder.end] the first time it is reached (tracked in [state]), then records it as
- * handled. [BinaryOperator]/[UnaryOperator] nodes are special-cased: their type is propagated
- * immediately (see [propagateOperatorType]), but the AST-mutating
+ * [EvaluationOrder.end] the first time it is reached (tracked in [handledNodes], not [state] - see
+ * the KDoc on [acceptWithIterateEOG]). [BinaryOperator]/[UnaryOperator] nodes are special-cased:
+ * their type is propagated immediately (see [propagateOperatorType]), but the AST-mutating
  * [SymbolResolver.handleOverloadedOperator] is deferred by appending them to
  * [deferredOperatorNodes] instead of calling [SymbolResolver.handle] on them right away.
  */
@@ -120,11 +143,11 @@ private suspend fun SymbolResolver.transfer(
     lattice: Lattice<PowersetLattice.Element<Node>>,
     currentEdge: EvaluationOrder,
     state: PowersetLattice.Element<Node>,
+    handledNodes: IdentitySet<Node>,
     deferredOperatorNodes: MutableList<Node>,
 ): PowersetLattice.Element<Node> {
-    val lattice = lattice as? PowersetLattice<Node> ?: return state
     val node = currentEdge.end
-    if (node in state) {
+    if (!handledNodes.add(node)) {
         return state
     }
 
@@ -136,7 +159,7 @@ private suspend fun SymbolResolver.transfer(
         handle(node)
     }
 
-    return lattice.lub(state, PowersetLattice.Element(node), true)
+    return state
 }
 
 /**

@@ -339,4 +339,40 @@ class SymbolResolverTest {
         assertNotNull(valueRef)
         assertEquals(value, valueRef.refersTo)
     }
+
+    /**
+     * A node reached by more than one incoming EOG edge - like the first node after an `if`/`else`
+     * where neither branch terminates - is offered to
+     * [de.fraunhofer.aisec.cpg.helpers.functional.Lattice.iterateEOG]'s transfer function once per
+     * incoming edge, each with its own separate slice of lattice state. [acceptWithIterateEOG] used
+     * to track "has SymbolResolver.handle already run for this node" in that per-edge state, which
+     * doesn't catch this case (only loop back-edges, where the *same* edge is revisited). Calling
+     * an inferring handler like [SymbolResolver.handleCall] twice on the very call that sits at
+     * such a merge point used to create two separate inferred functions for the same undeclared
+     * symbol instead of reusing the first one.
+     */
+    @Test
+    fun testMergePointCallIsHandledOnce() {
+        val file = File("src/test/resources/cxx/symbols/merge_point_call.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+
+        val undeclaredFunctions = result.functions("undeclared_function")
+        assertEquals(
+            1,
+            undeclaredFunctions.size,
+            "Expected exactly one inferred declaration for the undeclared function, not one per incoming EOG edge.",
+        )
+
+        val call = result.calls("undeclared_function").firstOrNull()
+        assertNotNull(call)
+        assertInvokes(call, undeclaredFunctions.single())
+    }
 }
