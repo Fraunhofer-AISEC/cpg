@@ -780,6 +780,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         node: Node,
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
+        localSymbols: ((Scope) -> List<Declaration>)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(
@@ -788,6 +789,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             node.location,
             scope,
             replaceImports = replaceImports,
+            localSymbols = localSymbols,
             predicate = predicate,
         )
     }
@@ -828,6 +830,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         replaceImports: Boolean = true,
+        localSymbols: ((Scope) -> List<Declaration>)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val extractedScope = extractScope(name, language, location, startScope)
@@ -842,10 +845,12 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         }
 
         // A custom predicate is a per-call lambda and cannot be safely used as (or compared
-        // through)
-        // a cache key, so we only cache the common case where no predicate is given.
+        // through) a cache key, so we only cache the common case where neither it nor a
+        // localSymbols override is given. A localSymbols override answers differently depending
+        // on how much of the EOG has been traversed so far, so its results must never be cached
+        // across call sites either.
         val cacheKey =
-            if (predicate == null) {
+            if (predicate == null && localSymbols == null) {
                 SymbolLookupCacheKey(
                     scope = scope ?: startScope,
                     symbol = n.localName,
@@ -877,6 +882,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                             languageOnly = language,
                             qualifiedLookup = true,
                             replaceImports = replaceImports,
+                            localSymbols = localSymbols,
                             predicate = predicate,
                         )
                         .toMutableList()
@@ -889,6 +895,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                             n.localName,
                             languageOnly = language,
                             replaceImports = replaceImports,
+                            localSymbols = localSymbols,
                             predicate = predicate,
                         )
                         ?.toMutableList() ?: mutableListOf()
