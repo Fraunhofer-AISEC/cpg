@@ -17,4 +17,6 @@ class Foo
     }
 
     int expressionBodied() => 1;
+
+    void voidExpressionBodied() => Bar();
 }

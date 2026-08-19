@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -479,6 +480,13 @@ public static class Library
         return body != null ? Register(body) : IntPtr.Zero;
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseMethodDeclarationExpressionBody")]
+    public static IntPtr GetBaseMethodDeclarationExpressionBody(IntPtr handlePtr)
+    {
+        var expressionBody = ((BaseMethodDeclarationSyntax)Nodes[handlePtr]).ExpressionBody;
+        return expressionBody != null ? Register(expressionBody.Expression) : IntPtr.Zero;
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetBlockStatementCount")]
     public static int GetBlockStatementCount(IntPtr handlePtr)
     {
@@ -508,7 +516,25 @@ public static class Library
     [UnmanagedCallersOnly(EntryPoint = "GetLiteralExpressionValue")]
     public static IntPtr GetLiteralExpressionValue(IntPtr handlePtr)
     {
-        return Marshal.StringToCoTaskMemUTF8(((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value.ToString());
+        var value = ((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value;
+        // A char is sent as its numeric code point. Otherwise '\0' would terminate the marshalled
+        // C string right away and arrive in Kotlin as an empty string.
+        // Numbers are formatted with the invariant culture, so that a double stays "1.5" and does
+        // not become "1,5" on a machine with a different locale.
+        var text = value is char c
+            ? ((int)c).ToString(CultureInfo.InvariantCulture)
+            : Convert.ToString(value, CultureInfo.InvariantCulture);
+        return Marshal.StringToCoTaskMemUTF8(text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLiteralExpressionValueType")]
+    public static IntPtr GetLiteralExpressionValueType(IntPtr handlePtr)
+    {
+        // Roslyn boxes the literal's value in its .NET runtime type, e.g. System.Int64 for 1L. That
+        // is the only place where the literal's C# type is available, since the syntax kind is
+        // NumericLiteralExpression for every number.
+        var value = ((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value;
+        return Marshal.StringToCoTaskMemUTF8(value?.GetType().Name ?? "");
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetIfStatementSyntaxCondition")]

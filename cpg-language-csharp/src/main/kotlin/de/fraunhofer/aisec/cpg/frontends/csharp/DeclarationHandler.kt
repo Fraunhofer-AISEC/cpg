@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.New
@@ -281,6 +282,9 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         }
         method.returnTypes = listOf(frontend.typeOf(node.returnType))
         node.body?.let { method.body = frontend.statementHandler.handle(it) }
+        node.expressionBody?.let {
+            method.body = expressionBody(it, node, returnsValue = node.returnType.name != "void")
+        }
         frontend.scopeManager.leaveScope(method)
         return method
     }
@@ -467,9 +471,41 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             constructor.parameters += param
         }
         node.body?.let { constructor.body = frontend.statementHandler.handle(it) }
+        node.expressionBody?.let {
+            constructor.body = expressionBody(it, node, returnsValue = false)
+        }
 
         frontend.scopeManager.leaveScope(constructor)
         return constructor
+    }
+
+    /**
+     * Builds the body of a member that is written as `=> expression` instead of a block, e.g. `int
+     * Double(int x) => x * 2;`. The expression becomes an implicit [Block].
+     *
+     * If the member returns a value, the expression is the returned value and gets an implicit
+     * [Return]. A `void` member only evaluates the expression.
+     *
+     * C# spec:
+     * [Expression body](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#15612-method-body)
+     */
+    private fun expressionBody(
+        expression: Csharp.AST.ExpressionSyntax,
+        node: Csharp.AST.Node,
+        returnsValue: Boolean,
+    ): Block {
+        val code = frontend.codeOf(node)
+        val location = frontend.locationOf(node)
+        val block = newBlock().implicit(code = code, location = location)
+        val expr = frontend.expressionHandler.handle(expression)
+        if (returnsValue) {
+            val ret = newReturn().implicit(code = code, location = location)
+            ret.returnValue = expr
+            block.statements += ret
+        } else {
+            block.statements += expr
+        }
+        return block
     }
 
     /** Creates an implicit `this` receiver variable for the given [method]. */

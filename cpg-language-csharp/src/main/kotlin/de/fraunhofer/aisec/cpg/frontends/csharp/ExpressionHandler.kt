@@ -145,19 +145,13 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * Translates a [LiteralExpressionSyntax][Csharp.AST.LiteralExpressionSyntax] into a [Literal].
      * The concrete literal subclass is determined by the Roslyn SyntaxKind.
      *
-     * Note: [NumericLiteralExpressionSyntax][Csharp.AST.NumericLiteralExpressionSyntax] does not
-     * distinguish between numeric types (e.g. int vs long). Instead, the .NET runtime type of
-     * `Token.Value` (e.g. `System.Int32` vs `System.Int64`) can be used, but this requires an
-     * additional mapping from .NET types to C# keywords.
-     *
      * C# spec:
      * [Literals](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/lexical-structure#645-literals)
      */
     private fun handleLiteralExpression(node: Csharp.AST.LiteralExpressionSyntax): Expression {
         val builtInTypes = frontend.language.builtInTypes
         return when (node) {
-            is Csharp.AST.NumericLiteralExpressionSyntax ->
-                newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
+            is Csharp.AST.NumericLiteralExpressionSyntax -> handleNumericLiteralExpression(node)
 
             is Csharp.AST.StringLiteralExpressionSyntax ->
                 newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
@@ -165,13 +159,66 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.BooleanLiteralExpressionSyntax ->
                 newLiteral(node.value.toBoolean(), builtInTypes.getValue("bool"), rawNode = node)
 
+            // The value is the character's code point, see
+            // [LiteralExpressionSyntax][Csharp.AST.LiteralExpressionSyntax].
             is Csharp.AST.CharacterLiteralExpressionSyntax ->
-                newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
+                newLiteral(Char(node.value.toInt()), builtInTypes.getValue("char"), rawNode = node)
 
             is Csharp.AST.NullLiteralExpressionSyntax ->
                 newLiteral(null, objectType("null"), rawNode = node)
             // TODO: Return unknownType()?
             else -> newProblemExpression("Unknown literal type: ${node.csharpType}", rawNode = node)
+        }
+    }
+
+    /**
+     * Translates a [NumericLiteralExpressionSyntax][Csharp.AST.NumericLiteralExpressionSyntax] into
+     * a [Literal]. Every number shares the same SyntaxKind, so the concrete type is taken from the
+     * .NET type Roslyn boxed the value in: an integer literal without a suffix has the first of
+     * `int`, `uint`, `long`, `ulong` that can represent it, while a suffix such as `L` or `m` names
+     * the type directly.
+     *
+     * C# spec:
+     * [Integer literals](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/lexical-structure#6453-integer-literals)
+     */
+    private fun handleNumericLiteralExpression(
+        node: Csharp.AST.NumericLiteralExpressionSyntax
+    ): Expression {
+        val builtInTypes = frontend.language.builtInTypes
+        return when (node.valueType) {
+            "Int32" -> newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
+
+            "UInt32" ->
+                newLiteral(node.value.toLong(), builtInTypes.getValue("uint"), rawNode = node)
+
+            "Int64" ->
+                newLiteral(node.value.toLong(), builtInTypes.getValue("long"), rawNode = node)
+
+            "UInt64" ->
+                newLiteral(
+                    node.value.toBigInteger(),
+                    builtInTypes.getValue("ulong"),
+                    rawNode = node,
+                )
+
+            "Single" ->
+                newLiteral(node.value.toFloat(), builtInTypes.getValue("float"), rawNode = node)
+
+            "Double" ->
+                newLiteral(node.value.toDouble(), builtInTypes.getValue("double"), rawNode = node)
+
+            "Decimal" ->
+                newLiteral(
+                    node.value.toBigDecimal(),
+                    builtInTypes.getValue("decimal"),
+                    rawNode = node,
+                )
+
+            else ->
+                newProblemExpression(
+                    "Unknown numeric literal type: ${node.valueType}",
+                    rawNode = node,
+                )
         }
     }
 

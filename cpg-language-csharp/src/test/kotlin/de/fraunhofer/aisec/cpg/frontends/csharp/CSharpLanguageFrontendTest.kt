@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
@@ -43,6 +44,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.test.*
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -50,6 +53,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class CSharpLanguageFrontendTest : BaseTest() {
 
@@ -175,10 +179,25 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertNotNull(foo)
 
         // An expression-bodied method (`int expressionBodied() => 1;`) has no block body, so
-        // Roslyn's Body is null. The frontend must not crash on such methods.
+        // Roslyn's Body is null and the expression becomes an implicit block with a return.
         val expressionBodied = foo.methods["expressionBodied"]
         assertNotNull(expressionBodied)
         assertEquals(0, expressionBodied.parameters.size)
+        val body = expressionBodied.body
+        assertIs<Block>(body)
+        val returnStmt = body.statements.single()
+        assertIs<Return>(returnStmt)
+        val literal = returnStmt.returnValue
+        assertIs<Literal<*>>(literal)
+        assertEquals(1, literal.value)
+
+        val voidExpressionBodied = foo.methods["voidExpressionBodied"]
+        assertNotNull(voidExpressionBodied)
+        val voidBody = voidExpressionBodied.body
+        assertIs<Block>(voidBody)
+        val call = voidBody.statements.single()
+        assertIs<Call>(call)
+        assertEquals("Bar", call.name.localName)
     }
 
     @Test
@@ -198,7 +217,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertNotNull(foo)
 
         val constructors = foo.constructors
-        assertEquals(2, constructors.size)
+        assertEquals(3, constructors.size)
 
         val defaultConstructor = constructors.single { it.parameters.isEmpty() }
         assertNotNull(defaultConstructor)
@@ -235,6 +254,39 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val refersTo = rhs.refersTo
         assertNotNull(refersTo)
         assertEquals(constructorWithParams.parameters.first(), refersTo)
+
+        // `Foo(int x) => this.x = x;`
+        val expressionBodied = constructors.single { it.parameters.size == 1 }
+        assertIs<Constructor>(expressionBodied)
+
+        val expressionBody = expressionBodied.body
+        assertIs<Block>(expressionBody)
+        assertTrue(expressionBody.isImplicit)
+
+        val expressionAssignment = expressionBody.statements.single()
+        assertIs<Assign>(expressionAssignment)
+        assertEquals("=", expressionAssignment.operatorCode)
+
+        // lhs: this.x, resolved to the same field as in the block-bodied constructor
+        val expressionLhs = expressionAssignment.lhs.firstOrNull()
+        assertIs<MemberAccess>(expressionLhs)
+        assertEquals("x", expressionLhs.name.localName)
+        assertIs<Field>(expressionLhs.refersTo)
+        assertEquals(fieldX, expressionLhs.refersTo)
+        val expressionBase = expressionLhs.base
+        assertIs<Reference>(expressionBase)
+        assertEquals("this", expressionBase.name.localName)
+
+        // rhs: x, resolved to this constructor's own parameter and not the other one's
+        val expressionRhs = expressionAssignment.rhs.firstOrNull()
+        assertIs<Reference>(expressionRhs)
+        assertEquals("x", expressionRhs.name.localName)
+        val expressionRefersTo = expressionRhs.refersTo
+        assertIs<Parameter>(expressionRefersTo)
+        assertEquals(expressionBodied.parameters.single(), expressionRefersTo)
+
+        assertContains(expressionRhs.prevDFG, expressionRefersTo)
+        assertContains(expressionLhs.prevDFG, expressionRhs)
     }
 
     @Test
@@ -296,6 +348,66 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertEquals(42, intLiteral.value)
         assertEquals("int", intLiteral.type.name.localName)
 
+        // uint, a literal that no longer fits into an int
+        val returnUInt = foo.methods["returnUInt"]
+        assertNotNull(returnUInt)
+        val uintReturn = (returnUInt.body as Block).statements.first()
+        assertIs<Return>(uintReturn)
+        val uintLiteral = uintReturn.returnValue
+        assertIs<Literal<*>>(uintLiteral)
+        assertEquals(3000000000L, uintLiteral.value)
+        assertEquals("uint", uintLiteral.type.name.localName)
+
+        // long
+        val returnLong = foo.methods["returnLong"]
+        assertNotNull(returnLong)
+        val longReturn = (returnLong.body as Block).statements.first()
+        assertIs<Return>(longReturn)
+        val longLiteral = longReturn.returnValue
+        assertIs<Literal<*>>(longLiteral)
+        assertEquals(9999999999L, longLiteral.value)
+        assertEquals("long", longLiteral.type.name.localName)
+
+        // ulong, kept as a BigInteger since it exceeds Long.MAX_VALUE
+        val returnULong = foo.methods["returnULong"]
+        assertNotNull(returnULong)
+        val ulongReturn = (returnULong.body as Block).statements.first()
+        assertIs<Return>(ulongReturn)
+        val ulongLiteral = ulongReturn.returnValue
+        assertIs<Literal<*>>(ulongLiteral)
+        assertEquals(BigInteger("18446744073709551615"), ulongLiteral.value)
+        assertEquals("ulong", ulongLiteral.type.name.localName)
+
+        // float
+        val returnFloat = foo.methods["returnFloat"]
+        assertNotNull(returnFloat)
+        val floatReturn = (returnFloat.body as Block).statements.first()
+        assertIs<Return>(floatReturn)
+        val floatLiteral = floatReturn.returnValue
+        assertIs<Literal<*>>(floatLiteral)
+        assertEquals(1.5f, floatLiteral.value)
+        assertEquals("float", floatLiteral.type.name.localName)
+
+        // double
+        val returnDouble = foo.methods["returnDouble"]
+        assertNotNull(returnDouble)
+        val doubleReturn = (returnDouble.body as Block).statements.first()
+        assertIs<Return>(doubleReturn)
+        val doubleLiteral = doubleReturn.returnValue
+        assertIs<Literal<*>>(doubleLiteral)
+        assertEquals(1.5, doubleLiteral.value)
+        assertEquals("double", doubleLiteral.type.name.localName)
+
+        // decimal
+        val returnDecimal = foo.methods["returnDecimal"]
+        assertNotNull(returnDecimal)
+        val decimalReturn = (returnDecimal.body as Block).statements.first()
+        assertIs<Return>(decimalReturn)
+        val decimalLiteral = decimalReturn.returnValue
+        assertIs<Literal<*>>(decimalLiteral)
+        assertEquals(BigDecimal("1.5"), decimalLiteral.value)
+        assertEquals("decimal", decimalLiteral.type.name.localName)
+
         // string
         val returnString = foo.methods["returnString"]
         assertNotNull(returnString)
@@ -335,6 +447,16 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertIs<Literal<*>>(charLiteral)
         assertEquals('a', charLiteral.value)
         assertEquals("char", charLiteral.type.name.localName)
+
+        // '\0' used to arrive as an empty string, because it terminated the marshalled C string
+        val returnNulChar = foo.methods["returnNulChar"]
+        assertNotNull(returnNulChar)
+        val nulCharReturn = (returnNulChar.body as Block).statements.first()
+        assertIs<Return>(nulCharReturn)
+        val nulCharLiteral = nulCharReturn.returnValue
+        assertIs<Literal<*>>(nulCharLiteral)
+        assertEquals(Char(0), nulCharLiteral.value)
+        assertEquals("char", nulCharLiteral.type.name.localName)
     }
 
     @Test

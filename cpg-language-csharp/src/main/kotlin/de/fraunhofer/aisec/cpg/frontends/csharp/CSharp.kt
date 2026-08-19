@@ -295,6 +295,9 @@ interface Csharp : Library {
                 INSTANCE.GetBaseMethodDeclarationParameterList(this)
             }
             val body: BlockSyntax? by lazy { INSTANCE.GetBaseMethodDeclarationBody(this) }
+            val expressionBody: ExpressionSyntax? by lazy {
+                INSTANCE.GetBaseMethodDeclarationExpressionBody(this)
+            }
 
             override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
                 if (nativeValue !is Pointer) {
@@ -773,7 +776,13 @@ interface Csharp : Library {
          * class.
          */
         open class LiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            // A character literal arrives as its numeric code point, e.g. "0" for '\0', since a NUL
+            // would end the marshalled string early.
             val value: String by lazy { INSTANCE.GetLiteralExpressionValue(this) }
+
+            // Name of the .NET type Roslyn boxed the value in, e.g. "Int32" for 1 and "Int64" for
+            // 1L. It is what tells the numeric types apart, and empty for the null literal.
+            val valueType: String by lazy { INSTANCE.GetLiteralExpressionValueType(this) }
         }
 
         class NumericLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) :
@@ -1134,11 +1143,17 @@ interface Csharp : Library {
 
     fun GetBaseMethodDeclarationBody(handle: AST.BaseMethodDeclarationSyntax): AST.BlockSyntax?
 
+    fun GetBaseMethodDeclarationExpressionBody(
+        handle: AST.BaseMethodDeclarationSyntax
+    ): AST.ExpressionSyntax?
+
     fun GetBlockStatementCount(handle: AST.StatementSyntax): Int
 
     fun GetBlockStatement(handle: AST.StatementSyntax, index: Int): AST.StatementSyntax
 
     fun GetLiteralExpressionValue(handle: AST.LiteralExpressionSyntax): String
+
+    fun GetLiteralExpressionValueType(handle: AST.LiteralExpressionSyntax): String
 
     fun GetReturnStatementExpression(handle: AST.StatementSyntax): AST.ExpressionSyntax?
 

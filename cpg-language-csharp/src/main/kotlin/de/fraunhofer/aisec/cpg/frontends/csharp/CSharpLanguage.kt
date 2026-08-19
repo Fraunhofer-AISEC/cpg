@@ -64,6 +64,7 @@ class CSharpLanguage : Language<CSharpLanguageFrontend>(), HasImplicitReceiver {
             // Integral Types:
             // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/integral-numeric-types
             "int" to IntegerType("int", Integer.MAX_VALUE, this, NumericType.Modifier.SIGNED),
+            "uint" to IntegerType("uint", 32, this, NumericType.Modifier.UNSIGNED),
             "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
             "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
             "ulong" to IntegerType("ulong", 64, this, NumericType.Modifier.UNSIGNED),

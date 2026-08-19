@@ -10,4 +10,6 @@ class Foo
     {
         this.x = x;
     }
+
+    Foo(int x) => this.x = x;
 }
