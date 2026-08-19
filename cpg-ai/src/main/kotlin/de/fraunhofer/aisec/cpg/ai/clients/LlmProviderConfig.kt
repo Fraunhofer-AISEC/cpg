@@ -94,21 +94,25 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
             }
 
             ClientProvider.OPENAI_COMPATIBLE -> {
-                // Logs the full request/response bodies exchanged with the OpenAI-compatible
+                // Can log the full request/response bodies exchanged with the OpenAI-compatible
                 // endpoint (tool schema, tool_choice, and the raw completion) - invaluable for
                 // debugging tool-calling issues against custom/local servers (vLLM, ollama, ...),
                 // whose behavior can diverge from the official OpenAI API in ways that are
-                // otherwise invisible from inside Koog's client.
+                // otherwise invisible from inside Koog's client. Gated on this logger's own DEBUG
+                // level rather than always-on: with a growing tool-calling history resent on every
+                // round trip, unconditional body logging (as opposed to Ktor's terser default
+                // LogLevel.INFO, which only logs the request line/status/duration) previously
+                // produced multi-tens-of-megabytes log files for a single skill run.
                 val loggingKtorClient =
                     HttpClient(CIO) {
                         install(Logging) {
                             logger =
                                 object : KtorLogger {
                                     override fun log(message: String) {
-                                        println(message)
+                                        log.debug(message)
                                     }
                                 }
-                            level = LogLevel.ALL
+                            level = if (log.isDebugEnabled) LogLevel.ALL else LogLevel.INFO
                         }
                     }
                 // Reuses Koog's own KtorKoogHttpClient.Factory (rather than hand-rolling the
