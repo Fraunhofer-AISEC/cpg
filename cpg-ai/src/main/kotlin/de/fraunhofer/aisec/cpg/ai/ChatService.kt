@@ -124,10 +124,47 @@ class ChatService(
     private val historyCompressionThreshold = 60
 
     /**
-     * Number of most recent messages kept when [chatStrategy] compresses the history: everything
-     * older is summarized away, per [HistoryCompressionStrategy.FromLastNMessages].
+     * Number of most recent messages kept verbatim when [chatStrategy] compresses the history;
+     * everything older falls to the [HistoryCompressionStrategy.FromLastNMessages] fallback in
+     * [historyCompressionConcepts] once its own dedicated per-concept fact extraction is done.
      */
     private val historyCompressionKeepLastN = 30
+
+    /**
+     * Concepts [chatStrategy]'s [HistoryCompressionStrategy.FactRetrieval] compression extracts as
+     * explicit facts (one dedicated LLM call per concept, over the full history-so-far) before
+     * falling back to [HistoryCompressionStrategy.FromLastNMessages] for anything not captured by
+     * these - so specific, decision-relevant progress survives compression as structured facts
+     * instead of depending on how much of it a single generic prose summary happens to retain.
+     * Deliberately skill-agnostic (tag-library vs. match-library) since [chatStrategy] is built
+     * once and shared across every [chat] call.
+     */
+    private val historyCompressionConcepts =
+        listOf(
+            Concept(
+                keyword = "CompletedWork",
+                description =
+                    "Functions or concepts/operations already tagged (tag-library) or matched to " +
+                        "a substitute (match-library) so far, with their outcome/status and any " +
+                        "noted properties or prerequisites.",
+                factType = FactType.MULTIPLE,
+            ),
+            Concept(
+                keyword = "OpenIssues",
+                description =
+                    "Functions, concepts, or operations noted as ambiguous, unmatched, or blocked " +
+                        "so far, and why - so they aren't silently dropped from the eventual " +
+                        "summary.",
+                factType = FactType.MULTIPLE,
+            ),
+            Concept(
+                keyword = "ExploredCpgEntities",
+                description =
+                    "Functions, records, or files already looked up via CPG tools so far, and a " +
+                        "brief note of what was found, to avoid redundant re-querying.",
+                factType = FactType.MULTIPLE,
+            ),
+        )
 
     /**
      * Maximum size, in characters, of a single tool result's text content admitted into the
@@ -153,16 +190,24 @@ class ChatService(
             "needed."
 
     /**
-     * Caps a tool result's textual content to [maxToolResultChars], appending a truncation marker.
-     * Both [ReceivedToolResult.output] and any [MessagePart.Text] parts are capped: depending on
-     * the tool, either (or both) may be what actually reaches the LLM's prompt, since
+     * Caps a tool result's textual content to [maxToolResultChars], keeping both the head and the
+     * tail rather than chopping off everything past the cap: for most of these tools the result is
+     * a JSON array/object, where the head carries the first, often most-relevant items and the tail
+     * carries the closing structure and last items - a head-only cut silently drops the latter
+     * every time. Both [ReceivedToolResult.output] and any [MessagePart.Text] parts are capped:
+     * depending on the tool, either (or both) may be what actually reaches the LLM's prompt, since
      * [ReceivedToolResult.toMessagePart] prefers `parts` and only falls back to wrapping [output]
      * when `parts` is null.
      */
     private fun ReceivedToolResult.truncatedForLlm(): ReceivedToolResult {
-        fun truncate(text: String): String =
-            if (text.length <= maxToolResultChars) text
-            else "${text.take(maxToolResultChars)}...[truncated, ${text.length} chars total]"
+        fun truncate(text: String): String {
+            if (text.length <= maxToolResultChars) return text
+            val headChars = maxToolResultChars * 2 / 3
+            val tailChars = maxToolResultChars - headChars
+            val droppedChars = text.length - headChars - tailChars
+            return "${text.take(headChars)}\n...[$droppedChars chars truncated out of " +
+                "${text.length} total]...\n${text.takeLast(tailChars)}"
+        }
 
         return copy(
             output = truncate(output),
@@ -291,7 +336,11 @@ class ChatService(
                     frames.toList().toMessageResponse().also { logTokenUsage(it) }
                 }
             val compressionStrategy =
-                HistoryCompressionStrategy.FromLastNMessages(historyCompressionKeepLastN)
+                FactRetrievalHistoryCompressionStrategy(
+                    concepts = historyCompressionConcepts,
+                    fallback =
+                        HistoryCompressionStrategy.FromLastNMessages(historyCompressionKeepLastN),
+                )
             val compressHistory by
                 nodeLLMCompressHistory<ReceivedToolResults>(strategy = compressionStrategy)
             // Some models (esp. smaller/local ones) narrate their next step in plain text instead
