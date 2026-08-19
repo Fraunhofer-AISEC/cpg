@@ -301,6 +301,15 @@ class ChatService(
             // text *again* do we treat it as truly final. This costs one extra round trip on every
             // genuinely-final answer too, but avoids silently truncating still-in-progress work.
             val buildNudge by node<String, String>("buildNudge") { _ -> continueNudgeMessage }
+            // onToolCalls/onTextMessage below only match a response with tool calls or a text
+            // part; a response with neither (parts=[], finishReason=stop - seen from some
+            // providers) would otherwise leave Koog unable to route the message anywhere, throwing
+            // AIAgentStuckInTheNodeException. These two transform nodes let such an empty response
+            // join the existing buildNudge/nodeFinish paths, which both expect a String input.
+            val emptyResponseToNudge by
+                node<Message.Assistant, String>("emptyResponseToNudge") { _ -> "" }
+            val emptyResponseToFinish by
+                node<Message.Assistant, String>("emptyResponseToFinish") { _ -> "" }
             val nudgeRequestStream by nodeLLMRequestStreaming("nudgeRequestStream")
             val nudgeRequest by
                 node<Flow<StreamFrame>, Message.Assistant>("collectNudgeRequestStream") { frames ->
@@ -359,6 +368,15 @@ class ChatService(
             // would let that empty text part win the race and silently skip the tool call.
             edge(requestLlm forwardTo executeTool onToolCalls { true })
             edge(requestLlm forwardTo detectFallbackToolCall onTextMessage { true })
+            // See emptyResponseToNudge/emptyResponseToFinish docs above: treat a genuinely empty
+            // response the same as unhelpful text - nudge the model to actually continue.
+            edge(
+                requestLlm forwardTo
+                    emptyResponseToNudge onCondition
+                    { message ->
+                        message.parts.isEmpty()
+                    }
+            )
             edge(executeTool forwardTo truncateToolResults)
             // If the history has grown too large, compress it before sending the tool result.
             edge(
@@ -380,6 +398,14 @@ class ChatService(
             edge(sendToolResultStream forwardTo sendToolResult)
             edge(sendToolResult forwardTo executeTool onToolCalls { true })
             edge(sendToolResult forwardTo detectFallbackToolCall onTextMessage { true })
+            // Same empty-response fallback as after requestLlm above.
+            edge(
+                sendToolResult forwardTo
+                    emptyResponseToNudge onCondition
+                    { message ->
+                        message.parts.isEmpty()
+                    }
+            )
 
             edge(
                 detectFallbackToolCall forwardTo
@@ -397,11 +423,22 @@ class ChatService(
                     }
             )
             edge(fallbackNoToolCallDetected forwardTo buildNudge)
+            edge(emptyResponseToNudge forwardTo buildNudge)
 
             edge(buildNudge forwardTo nudgeRequestStream)
             edge(nudgeRequestStream forwardTo nudgeRequest)
             edge(nudgeRequest forwardTo executeTool onToolCalls { true })
             edge(nudgeRequest forwardTo detectFallbackToolCallAfterNudge onTextMessage { true })
+            // Same empty-response case as above, but this is already the nudge response - there's
+            // no further nudge to give, so end the turn, matching how unhelpful text after the
+            // nudge already ends at nodeFinish below.
+            edge(
+                nudgeRequest forwardTo
+                    emptyResponseToFinish onCondition
+                    { message ->
+                        message.parts.isEmpty()
+                    }
+            )
 
             edge(
                 detectFallbackToolCallAfterNudge forwardTo
@@ -419,6 +456,7 @@ class ChatService(
                     }
             )
             edge(fallbackNoToolCallDetectedAfterNudge forwardTo nodeFinish)
+            edge(emptyResponseToFinish forwardTo nodeFinish)
         }
 
     /** Return the discovered skills. */
