@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toUnmodeledInfo
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -247,6 +247,13 @@ fun Server.addCpgQueryApiTool() {
     reasons about existing DFG paths. For the guarantee that data always reaches something,
     use alwaysFlowsTo. To check that a flow can never happen, wrap it in `not(...)`.
 
+    A DFG edge means that the value of one node flows into another: from a write into the
+    reads of that value, from an argument into the parameter, from a return value into the
+    call site. dataFlow follows these edges and thus answers where a value comes from
+    or where it goes. Whether two nodes access the same variable or storage is a question of
+    identity (`refersTo`, `memoryAddresses`, see cpg_node_types), whether one node executes
+    before another is a question of the execution order (executionPath).
+
     Example: does the value of `call` ever reach a reference named "sink":
     ```kotlin
     dataFlow(startNode = call) { it is Reference && it.name.localName == "sink" }
@@ -444,7 +451,7 @@ fun Server.addCpgQueryApiTool() {
     ```
 
     ## Result: QueryTree<Boolean>
-    `.value`:  Boolean.
+    `.value`:  Boolean. A check states the property that must hold, so a violation is `false`.
     `.children`: sub-results, including the node paths found.
     `.stringRepresentation`: human-readable description to reason about the result.
     """
@@ -535,6 +542,11 @@ fun Server.addCpgNodeTypesTool() {
     ```kotlin
     refersTo: Declaration?      // the declaration this reference points to;
     ```
+
+    Two nodes access the same variable when their `refersTo` points to the same declaration.
+    This is per declaration: a value passed on to another function refers to that function's own
+    parameter, so the comparison fails across the call even with an interprocedural
+    scope.
 
     Example predicate: `(it as? Reference)?.refersTo == (call.arguments[0] as? Reference)?.refersTo`
 
@@ -657,7 +669,6 @@ fun Server.addCpgNodeTypesTool() {
     }
 }
 
-// TODO: add an example with memcopy
 fun Server.addCpgFunctionSummariesTool() {
     this.addTool(
         name = "cpg_function_summaries",
@@ -684,10 +695,28 @@ fun Server.addCpgFunctionSummariesTool() {
             """
             Only needed for queries that track data flow through a function whose body is not
             part of the analyzed code (e.g. `free` from the C standard library). Each entry
-            models the effect of one function on its arguments, e.g. "paramX.deref" is the
-            memory the argument points to. A "from" value that is not a parameter is a
-            synthetic `UnknownMemoryValue` node that marks data coming out of the function,
-            so that queries can use it as a start node.
+            models the effect of one function on its arguments, its return value or its base,
+            e.g. "paramX.deref" is the memory the argument points to. A "from" value that is
+            neither a parameter nor one of the keywords documented in cpg_add_function_summary
+            is a synthetic `UnknownMemoryValue` node with that name, which marks data that has
+            no source in the analyzed code, so that queries can use it as a start node.
+
+            Example: `memcpy` writes the memory the second argument points to into the memory
+            the first argument points to and returns that pointer:
+
+            - functionDeclaration:
+                language: CLanguage
+                methodName: memcpy
+              dataFlows:
+                - from: param1.deref
+                  to: param0.deref
+                  dfgType: full
+                - from: param0.deref
+                  to: return
+                  dfgType: full
+
+            Without this entry there is no DFG edge between the two dereferenced parameters,
+            so a dataFlow query starting at the copied value does not reach the first argument.
             """
                 .trimIndent()
         val content = summaries.readText()
@@ -721,12 +750,22 @@ fun Server.addCpgListUnmodeledFunctionsTool() {
         inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
     ) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
+            val invoked = result.calls.flatMap { it.invokes }.toIdentitySet()
             val unmodeled =
-                result.functions.filter { func ->
-                    func.functionSummary.keys.any {
-                        (it as? Literal<*>)?.name?.localName == "dummy"
-                    } || func.functionSummary.values.flatten().any { it.isDummy }
-                }
+                invoked.filter { func -> func.functionSummary.values.flatten().any { it.isDummy } }
+
+            /**
+             * Note: PointsToPass uses "dummy" for two different things: an FSEntry with isDummy is
+             * a placeholder for a function it could not analyze, while a literal "dummy" (see
+             * storeFunctionSummary()) means the body was analyzed and simply had no effect on any
+             * parameter or return value.
+             */
+            //            val unmodeled =
+            //                result.functions.filter { func ->
+            //                    func.functionSummary.keys.any {
+            //                        (it as? Literal<*>)?.name?.localName == "dummy"
+            //                    } || func.functionSummary.values.flatten().any { it.isDummy }
+            //                }
             if (unmodeled.isEmpty()) {
                 CallToolResult(content = listOf(TextContent("(no unmodeled functions found)")))
             } else {
