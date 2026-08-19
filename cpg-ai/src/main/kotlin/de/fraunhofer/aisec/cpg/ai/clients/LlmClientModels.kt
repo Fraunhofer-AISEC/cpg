@@ -47,6 +47,11 @@ data class ClientConfig(
     val apiKey: String?,
     val provider: ClientProvider,
     val requiresApiKey: Boolean,
+    /**
+     * Request/socket timeout for the LLM HTTP client, in milliseconds. `null` keeps Koog's own
+     * default (900s) - see [LlmProviderConfig.clientFor].
+     */
+    val requestTimeoutMillis: Long? = null,
 )
 
 @Serializable data class LlmProviderWithModels(val name: String, val models: List<String>)

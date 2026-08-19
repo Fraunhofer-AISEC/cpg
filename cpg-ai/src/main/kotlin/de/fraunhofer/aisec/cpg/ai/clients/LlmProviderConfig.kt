@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai.clients
 
 import ai.koog.http.client.ktor.KtorKoogHttpClient
+import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
@@ -119,10 +120,24 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 // KoogHttpClient setup) so we get its baseUrl/contentType/ContentNegotiation/SSE
                 // wiring exactly as the default apiKey-based OpenAILLMClient constructor would -
                 // only swapping in our logging-enabled Ktor client underneath.
+                // By default (requestTimeoutMillis == null) this leaves Koog's own
+                // ConnectionTimeoutConfig default (900s) in place. That default is *not* the
+                // same value as DUST's --llm-call-timeout-seconds (which guards against a
+                // connection kept technically alive with no real progress, e.g. periodic
+                // keep-alive bytes) - a caller that wants both to agree needs to set this
+                // explicitly.
+                val timeoutConfig =
+                    config.requestTimeoutMillis?.let {
+                        ConnectionTimeoutConfig(requestTimeoutMillis = it, socketTimeoutMillis = it)
+                    } ?: ConnectionTimeoutConfig()
                 val client =
                     OpenAILLMClient(
                         apiKey = config.apiKey ?: "not-needed",
-                        settings = OpenAIClientSettings(baseUrl = config.baseUrl),
+                        settings =
+                            OpenAIClientSettings(
+                                baseUrl = config.baseUrl,
+                                timeoutConfig = timeoutConfig,
+                            ),
                         httpClientFactory =
                             KtorKoogHttpClient.Factory(baseClient = loggingKtorClient),
                     )
