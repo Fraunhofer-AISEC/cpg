@@ -25,19 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg.passes.concepts
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.byFQN
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
+import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -45,6 +53,8 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
+import java.net.URI
+import kotlin.reflect.KParameter
 
 /**
  * This pass reads a yaml or JSON file and creates a [Concept] for each entry in the file. The pass
@@ -83,7 +93,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param file The file containing the persisted concepts.
      * @param translationResult The [TranslationResult] to which the [Concept]s will be added.
      */
-    private fun addEntriesFromFile(file: File, translationResult: TranslationResult) {
+    internal fun addEntriesFromFile(file: File, translationResult: TranslationResult) {
         val entries =
             try {
                 val mapper =
@@ -100,25 +110,41 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
             }
 
         entries.concepts?.forEach { concept ->
-            if (concept.signature != null && concept.location != null) {
+            val setKeys =
+                listOfNotNull(
+                    if (concept.astId != null) "astId" else null,
+                    if (concept.signature != null) "signature" else null,
+                    if (concept.location != null) "location" else null,
+                )
+            if (setKeys.size != 1) {
                 log.error(
-                    "Both signature and location are set. Please use only one of them. The entire entry will be ignored!"
+                    "Expected exactly one of astId, signature, or location to be set, but found: $setKeys. The entire entry will be ignored!"
                 )
                 return@forEach
+            } else if (concept.astId != null) {
+                translationResult.getNodesByAstId(concept.astId).forEach { underlyingNode ->
+                    addConcept(underlyingNode, concept.concept, translationResult)
+                }
             } else if (concept.signature != null) {
                 translationResult.getNodesBySignature(concept.signature).forEach { underlyingNode ->
-                    addConcept(underlyingNode, concept.concept)
+                    addConcept(underlyingNode, concept.concept, translationResult)
                 }
             } else if (concept.location != null) {
                 translationResult.getNodesByLocation(concept.location).forEach { underlyingNode ->
-                    addConcept(underlyingNode, concept.concept)
+                    addConcept(underlyingNode, concept.concept, translationResult)
                 }
-            } else {
-                log.error(
-                    "Neither signature nor location are set. The entire entry will be ignored!"
-                )
             }
         }
+    }
+
+    /**
+     * This function retrieves the nodes matching the provided [astId] from the [this].
+     *
+     * @param astId The [AstIdEntry] containing the AST ID to match.
+     * @return A list of nodes matching the provided [AstIdEntry].
+     */
+    private fun TranslationResult.getNodesByAstId(astId: AstIdEntry): List<Node> {
+        return this.nodes.filterIsInstance<AstNode>().filter { it.idAst == astId.idAst }
     }
 
     /**
@@ -150,7 +176,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                 val region =
                     regex.matchEntire(location.region)
                         ?: throw IllegalArgumentException(
-                            "Invalid region format: \${location.region}"
+                            "Invalid region format: ${location.region}"
                         )
                 val startLine =
                     region.groups["startLine"]?.value?.toIntOrNull()
@@ -167,8 +193,16 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                     region.groups["endColumn"]?.value?.toIntOrNull()
                         ?: throw IllegalArgumentException("Invalid or missing endColumn in region.")
 
+                val fileUri =
+                    try {
+                        val u = URI(location.file)
+                        if (u.isAbsolute) u else File(location.file).toURI()
+                    } catch (e: Exception) {
+                        File(location.file).toURI()
+                    }
+
                 PhysicalLocation(
-                    uri = File(location.file).toURI(),
+                    uri = fileUri,
                     region = Region(startLine, startColumn, endLine, endColumn),
                 )
             } catch (ex: Exception) {
@@ -184,23 +218,108 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
         }
     }
 
+    private fun constructorParameters(className: String): List<KParameter>? {
+        return try {
+            Class.forName(className).kotlin.constructors.singleOrNull()?.parameters
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /**
-     * This is a helper function to add a [Concept] node to the [underlyingNode] as described in the
-     * provided [ConceptEntry].
+     * Helper function to add a [Concept] node to the [underlyingNode] from [ConceptEntry].
      *
      * @param underlyingNode The node to which the concept will be added.
-     * @param concept The [ConceptEntry] containing the concept information.
+     * @param concept The [ConceptEntry] containing concept data.
+     * @param translationResult The [TranslationResult] used for resolving operation targets.
      */
-    private fun addConcept(underlyingNode: Node, concept: ConceptEntry) {
+    private fun addConcept(
+        underlyingNode: Node,
+        concept: ConceptEntry,
+        translationResult: TranslationResult,
+    ) {
         log.debug("Adding concept {} to node {}.", concept, underlyingNode)
-        underlyingNode.conceptBuildHelper(
-            name = concept.name,
-            underlyingNode = underlyingNode,
-            constructorArguments =
-                concept.constructorArguments.associate { arg -> arg.name to arg.value },
-            connectDFGUnderlyingNodeToConcept = concept.dfg.fromThisNodeToConcept,
-            connectDFGConceptToUnderlyingNode = concept.dfg.fromConceptToThisNode,
-        )
+        try {
+            val ctorParams = constructorParameters(concept.name)
+            val args: MutableMap<String, Any?> =
+                concept.constructorArguments
+                    .associate { arg -> arg.name to (arg.value as Any?) }
+                    .toMutableMap()
+            if (concept.properties != null && ctorParams?.any { it.name == "properties" } == true) {
+                args["properties"] = GenericProperties(concept.properties)
+            }
+
+            val builtConcept =
+                underlyingNode.conceptBuildHelper(
+                    name = concept.name,
+                    underlyingNode = underlyingNode,
+                    constructorArguments = args,
+                    connectDFGUnderlyingNodeToConcept = concept.dfg.fromThisNodeToConcept,
+                    connectDFGConceptToUnderlyingNode = concept.dfg.fromConceptToThisNode,
+                )
+
+            concept.operations.forEach { op ->
+                addOperation(underlyingNode, builtConcept, op, translationResult)
+            }
+        } catch (ex: Exception) {
+            log.error("Failed to add concept ${concept.name}: ${ex.message}", ex)
+        }
+    }
+
+    private fun addOperation(
+        defaultNode: Node,
+        concept: Concept,
+        op: OperationEntry,
+        translationResult: TranslationResult,
+    ) {
+        val setKeys =
+            listOfNotNull(
+                if (op.astId != null) "astId" else null,
+                if (op.signature != null) "signature" else null,
+                if (op.location != null) "location" else null,
+            )
+        val targetNodes =
+            if (setKeys.size > 1) {
+                log.error(
+                    "More than one of astId, signature, or location is set on operation entry: $setKeys. The operation entry will be ignored!"
+                )
+                return
+            } else if (op.astId != null) {
+                translationResult.getNodesByAstId(op.astId)
+            } else if (op.signature != null) {
+                translationResult.getNodesBySignature(op.signature)
+            } else if (op.location != null) {
+                translationResult.getNodesByLocation(op.location)
+            } else {
+                listOf(defaultNode)
+            }
+
+        targetNodes.forEach { node ->
+            try {
+                val args: MutableMap<String, Any?> =
+                    op.constructorArguments
+                        .associate { arg -> arg.name to (arg.value as Any?) }
+                        .toMutableMap()
+                val ctorParams = constructorParameters(op.name)
+                if (ctorParams?.any { it.name == "genericLLMConcept" } == true) {
+                    args["genericLLMConcept"] = concept
+                }
+                if (op.properties != null && ctorParams?.any { it.name == "properties" } == true) {
+                    args["properties"] = GenericProperties(op.properties)
+                }
+
+                node.operationBuildHelper(
+                    name = op.name,
+                    underlyingNode = node,
+                    concept = concept,
+                    constructorArguments = args,
+                    connectDFGUnderlyingNodeToConcept = op.dfg.fromThisNodeToConcept,
+                    connectDFGConceptToUnderlyingNode = op.dfg.fromConceptToThisNode,
+                )
+            } catch (ex: Exception) {
+                log.error("Failed to add operation ${op.name}: ${ex.message}", ex)
+            }
+        }
     }
 
     /** The root node of our YAML/JSON structure. It contains a list of [PersistedConceptEntry]s. */
@@ -208,32 +327,64 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
 
     /**
      * This class represents a single entry in the YAML/JSON file. It contains the concept and
-     * optionally a location and/or a signature entry. The pass itself enforces that exactly one of
-     * location or signature is set.
+     * optionally an astId, a location, or a signature entry. The pass itself enforces that exactly
+     * one of astId, location, or signature is set.
      *
      * @param concept The [ConceptEntry] containing the concept information.
      * @param location The [LocationEntry] containing the [PhysicalLocation] information to match
      *   against.
      * @param signature The [SignatureEntry] containing the signature of nodes to match.
+     * @param astId The [AstIdEntry] containing the AST ID of nodes to match.
      */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     data class PersistedConceptEntry(
         val concept: ConceptEntry,
-        val location: LocationEntry?,
-        val signature: SignatureEntry?,
+        val location: LocationEntry? = null,
+        val signature: SignatureEntry? = null,
+        val astId: AstIdEntry? = null,
     )
 
     /**
      * This class represents a single concept entry in the YAML/JSON file. It contains the name of
-     * the concept, optional constructor arguments, and optional DFG connections.
+     * the concept, optional constructor arguments, optional properties, optional operations, and
+     * optional DFG connections.
      *
      * @param name The FQN of the concept to be added.
      * @param constructorArguments The constructor arguments to be passed to the concepts'
      *   constructor.
+     * @param properties The properties of the concept.
+     * @param operations The operations belonging to this concept.
      * @param dfg The DFG connections to be created between the concept and the underlying node.
      */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     data class ConceptEntry(
         val name: String,
         val constructorArguments: List<ConstructorArgumentEntry> = listOf(),
+        val properties: Map<String, String>? = null,
+        val operations: List<OperationEntry> = listOf(),
+        val dfg: DFGEntry = DFGEntry(fromThisNodeToConcept = false, fromConceptToThisNode = false),
+    )
+
+    /**
+     * This class represents a single operation entry in the YAML/JSON file.
+     *
+     * @param name The FQN of the operation to be added.
+     * @param constructorArguments The constructor arguments to be passed to the operations'
+     *   constructor.
+     * @param properties The properties of the operation.
+     * @param location The location of the node to which the operation applies.
+     * @param signature The signature of the node to which the operation applies.
+     * @param astId The AST ID of the node to which the operation applies.
+     * @param dfg The DFG connections to be created between the operation and the underlying node.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    data class OperationEntry(
+        val name: String,
+        val constructorArguments: List<ConstructorArgumentEntry> = listOf(),
+        val properties: Map<String, String>? = null,
+        val location: LocationEntry? = null,
+        val signature: SignatureEntry? = null,
+        val astId: AstIdEntry? = null,
         val dfg: DFGEntry = DFGEntry(fromThisNodeToConcept = false, fromConceptToThisNode = false),
     )
 
@@ -275,4 +426,104 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param fqn The fully qualified name of the [Call] to match against. E.g. `foo.bar.baz`.
      */
     data class SignatureEntry(val fqn: String)
+
+    /**
+     * This class represents a single AST ID entry in the YAML/JSON file.
+     *
+     * @param idAst The AST-based unique identifier of the node to match against.
+     */
+    data class AstIdEntry(val idAst: String)
+}
+
+/**
+ * Persists all [GenericLLMConcept] and [GenericLLMOperation] overlay nodes in this
+ * [TranslationResult] to [file] in YAML format.
+ *
+ * @param file The destination file. Defaults to `llm-tagged-concepts.yaml`.
+ */
+fun TranslationResult.persistLLMConcepts(file: File = File("llm-tagged-concepts.yaml")) {
+    val concepts = this.nodes.flatMap { it.overlays }.filterIsInstance<GenericLLMConcept>()
+    val entries =
+        concepts.map { concept ->
+            LoadPersistedConcepts.PersistedConceptEntry(
+                concept =
+                    LoadPersistedConcepts.ConceptEntry(
+                        name = concept::class.java.name,
+                        constructorArguments =
+                            listOfNotNull(
+                                LoadPersistedConcepts.ConstructorArgumentEntry(
+                                    "conceptName",
+                                    concept.conceptName,
+                                ),
+                                LoadPersistedConcepts.ConstructorArgumentEntry(
+                                    "description",
+                                    concept.description,
+                                ),
+                                concept.notes?.let {
+                                    LoadPersistedConcepts.ConstructorArgumentEntry("notes", it)
+                                },
+                            ),
+                        properties = concept.properties.properties,
+                        operations =
+                            concept.ops.filterIsInstance<GenericLLMOperation>().map { op ->
+                                LoadPersistedConcepts.OperationEntry(
+                                    name = op::class.java.name,
+                                    constructorArguments =
+                                        listOfNotNull(
+                                            LoadPersistedConcepts.ConstructorArgumentEntry(
+                                                "operationName",
+                                                op.operationName,
+                                            ),
+                                            LoadPersistedConcepts.ConstructorArgumentEntry(
+                                                "description",
+                                                op.description,
+                                            ),
+                                            op.notes?.let {
+                                                LoadPersistedConcepts.ConstructorArgumentEntry(
+                                                    "notes",
+                                                    it,
+                                                )
+                                            },
+                                        ),
+                                    properties = op.properties.properties,
+                                    astId =
+                                        op.underlyingNode
+                                            ?.takeIf { it != concept.underlyingNode }
+                                            ?.let { node ->
+                                                (node as? AstNode)?.let {
+                                                    LoadPersistedConcepts.AstIdEntry(
+                                                        idAst = it.idAst
+                                                    )
+                                                }
+                                            },
+                                    location = null,
+                                    signature = null,
+                                )
+                            },
+                    ),
+                astId =
+                    (concept.underlyingNode as? AstNode)?.let { node ->
+                        LoadPersistedConcepts.AstIdEntry(idAst = node.idAst)
+                    },
+                location = null,
+                signature = null,
+            )
+        }
+    ObjectMapper(YAMLFactory())
+        .registerKotlinModule()
+        .enable(SerializationFeature.INDENT_OUTPUT)
+        .setDefaultPropertyInclusion(
+            JsonInclude.Value.construct(JsonInclude.Include.NON_NULL, JsonInclude.Include.NON_NULL)
+        )
+        .writeValue(file, LoadPersistedConcepts.PersistedConcepts(concepts = entries))
+}
+
+/**
+ * Loads persisted concepts and operations from [file] and attaches them to this
+ * [TranslationResult].
+ *
+ * @param file The YAML or JSON file containing persisted concept entries.
+ */
+fun TranslationResult.loadLLMConceptsFromFile(file: File) {
+    LoadPersistedConcepts(this.ctx).addEntriesFromFile(file, this)
 }

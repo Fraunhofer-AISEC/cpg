@@ -1,0 +1,23 @@
+concepts:
+  - concept:
+      name: "de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept"
+      constructorArguments:
+        - name: "conceptName"
+          value: "Authentication"
+        - name: "description"
+          value: "Handles user authentication"
+      properties:
+        tier: "high"
+      operations:
+        - name: "de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation"
+          constructorArguments:
+            - name: "operationName"
+              value: "Login"
+            - name: "description"
+              value: "Performs user login"
+          properties:
+            method: "POST"
+    location:
+      file: "src/integrationTest/resources/python/file/file_read.py"
+      region: "1:6-1:30"
+      type: "de.fraunhofer.aisec.cpg.graph.expressions.Call"
