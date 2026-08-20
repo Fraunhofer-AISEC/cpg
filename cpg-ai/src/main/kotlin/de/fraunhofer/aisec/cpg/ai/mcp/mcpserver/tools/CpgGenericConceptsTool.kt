@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.passes.concepts.persistLLMConcepts
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -228,6 +229,7 @@ fun Server.addLLMConceptAndOperations() {
                                 )
                             NodeBuilder.log(this)
                         }
+                conceptNode.ops += opNode
                 appliedOps.add(
                     AppliedOperation(operation = operation, overlayNodeId = opNode.id.toString())
                 )
@@ -246,6 +248,10 @@ fun Server.addLLMConceptAndOperations() {
 
         if (schemasToPersist.isNotEmpty()) {
             persistConceptSchemas(schemasToPersist)
+        }
+
+        if (applied.isNotEmpty()) {
+            result.persistLLMConcepts()
         }
 
         val response = AddConceptsResult(applied = applied, failed = failed)
