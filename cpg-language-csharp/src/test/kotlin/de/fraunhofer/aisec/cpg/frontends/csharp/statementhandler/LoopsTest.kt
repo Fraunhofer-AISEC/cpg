@@ -38,6 +38,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class LoopsTest : BaseTest() {
 
@@ -96,6 +97,30 @@ class LoopsTest : BaseTest() {
 
         val breakStmt = loopBody.statements.getOrNull(0)
         assertIs<Break>(breakStmt)
+    }
+
+    @Test
+    fun testWhileLoopWithContinue() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Loops.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["whileLoopWithContinue"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+
+        val whileStmt = body.statements.getOrNull(0)
+        assertIs<While>(whileStmt)
+        val loopBody = whileStmt.statement
+        assertIs<Block>(loopBody)
+
+        val continueStmt = loopBody.statements.getOrNull(0)
+        assertIs<Continue>(continueStmt)
+        assertNull(continueStmt.label)
     }
 
     @Test

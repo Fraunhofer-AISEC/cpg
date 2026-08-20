@@ -809,4 +809,47 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertNotNull(setEmail)
         assertContains(setEmail.modifiers, "private")
     }
+
+    @Test
+    fun testParenthesizedExpression() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Parenthesized.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        // return (a + b) * c;
+        val grouping = tu.methods["Grouping"]
+        assertNotNull(grouping)
+        val groupingBody = grouping.body
+        assertIs<Block>(groupingBody)
+        val groupingReturn = groupingBody.statements.singleOrNull()
+        assertIs<Return>(groupingReturn)
+        val multiplication = groupingReturn.returnValue
+        assertIs<BinaryOperator>(multiplication)
+        assertEquals("*", multiplication.operatorCode)
+
+        val addition = multiplication.lhs
+        assertIs<BinaryOperator>(addition)
+        assertEquals("+", addition.operatorCode)
+        assertUsageOf(addition.lhs, grouping.parameters["a"])
+        assertUsageOf(addition.rhs, grouping.parameters["b"])
+        assertUsageOf(multiplication.rhs, grouping.parameters["c"])
+
+        // return ((a));
+        val redundant = tu.methods["Redundant"]
+        assertNotNull(redundant)
+        val redundantBody = redundant.body
+        assertIs<Block>(redundantBody)
+        val redundantReturn = redundantBody.statements.singleOrNull()
+        assertIs<Return>(redundantReturn)
+        val ref = redundantReturn.returnValue
+        assertIs<Reference>(ref)
+        assertUsageOf(ref, redundant.parameters["a"])
+    }
 }

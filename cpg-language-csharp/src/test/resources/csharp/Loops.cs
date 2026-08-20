@@ -19,6 +19,14 @@ class Foo
         }
     }
 
+    void whileLoopWithContinue()
+    {
+        while (true)
+        {
+            continue;
+        }
+    }
+
     void doWhileLoop()
     {
         int i = 0;
