@@ -228,6 +228,10 @@ internal class CXXLiteralTest : BaseTest() {
 
             val invalid2 = tu.variables["invalid2"]?.initializer
             assertIs<ProblemExpression>(invalid2)
+
+            assertLiteral('\u0000', primitiveType("wchar_t"), main, "wideChar1")
+            assertLiteral(0x1F600, primitiveType("wchar_t"), main, "wideChar2")
+            assertLiteral(513, primitiveType("wchar_t"), main, "wideMulti")
         }
     }
 
