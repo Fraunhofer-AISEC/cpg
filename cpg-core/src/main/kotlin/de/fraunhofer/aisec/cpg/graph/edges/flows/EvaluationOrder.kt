@@ -76,7 +76,12 @@ class EvaluationOrder(
         return result
     }
 
-    override var labels = setOf("EOG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [EvaluationOrder] edges (see [Edge.labels]). */
+        val LABELS = setOf("EOG")
+    }
 }
 
 /**

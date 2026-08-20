@@ -140,8 +140,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         for (child in ctx.declarations) {
             val decl = handle(child) ?: continue
 
-            frontend.scopeManager.addDeclaration(decl)
-            nsd.declarations += decl
+            val canonical = frontend.scopeManager.addDeclaration(decl)
+            nsd.addDeclaration(canonical)
         }
 
         frontend.scopeManager.leaveScope(nsd)
@@ -182,6 +182,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // We also need to set the return type, based on the function type.
         declaration.returnTypes = type?.returnTypes ?: listOf(incompleteType())
+
+        // Interpret a `static` storage-class specifier before we (potentially) enter another scope
+        // for the definition, so that the syntactic context is still the one the function is
+        // declared in (e.g. file scope for an internal-linkage function).
+        handleStorageClass(declaration, ctx.declSpecifier)
 
         // We want to determine, whether this is a function definition that is external to its
         // scope. This is a usual case in C++, where the named scope, such as a record or namespace
@@ -419,6 +424,29 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return type
     }
 
+    /**
+     * Records the `static` storage-class specifier of [declSpecifier] on the freshly-built
+     * [declaration] and lets the language project it onto the declaration's canonical properties.
+     *
+     * The raw keyword is kept losslessly in [Declaration.modifiers]; its *meaning* — internal
+     * linkage at file scope, a static (class-level) member inside a record, or nothing
+     * resolution-relevant inside a function — depends on *where* the declaration appears and is
+     * therefore delegated to the language's
+     * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the current scope
+     * and sets [Declaration.visibility] and [ValueDeclaration.isStatic] accordingly.
+     */
+    private fun handleStorageClass(
+        declaration: ValueDeclaration,
+        declSpecifier: IASTDeclSpecifier?,
+    ) {
+        if (declSpecifier?.storageClass != IASTDeclSpecifier.sc_static) {
+            return
+        }
+
+        declaration.modifiers = declaration.modifiers + STATIC
+        language.applyModifiers(declaration, frontend.scopeManager.currentScope)
+    }
+
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
         val sequence = DeclarationSequence()
         val declSpecifier = ctx.declSpecifier
@@ -477,6 +505,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // process attributes
                 frontend.processAttributes(declaration, ctx)
+
+                // Interpret a `static` storage-class specifier (internal linkage, static member,
+                // ...) based on the syntactic context this declaration appears in.
+                handleStorageClass(declaration, declSpecifier)
+
                 sequence.addDeclaration(declaration)
 
                 // We want to make sure that we parse the initializer *after* we have set the
@@ -490,6 +523,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 //   initializer. This allows us to guess cast vs. call expression in the
                 //   initializer.
                 if (declaration is Variable) {
+                    // Remember whether this declarator carries the `extern` storage class (as
+                    // opposed to an `extern "C" { ... }` linkage specification, which is a
+                    // different CDT AST construct read from `IASTDeclSpecifier.storageClass`, not
+                    // touched here), so that redeclaration merging (see
+                    // [CLanguage.isRedeclaration]) can distinguish a mere declaration from a
+                    // definition.
+                    if (declSpecifier?.storageClass == IASTDeclSpecifier.sc_extern) {
+                        declaration.modifiers = declaration.modifiers + "extern"
+                    }
+
                     // Set template parameters of the variable (if any)
                     if (templateParams != null) {
                         declaration.templateParameters = templateParams
@@ -739,12 +782,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             val decl = handle(declaration) ?: continue
             if (decl is DeclarationSequence) {
                 decl.declarations.forEach {
-                    frontend.scopeManager.addDeclaration(it)
-                    node.addDeclaration(it)
+                    val canonical = frontend.scopeManager.addDeclaration(it)
+                    node.addDeclaration(canonical)
                 }
             } else {
-                frontend.scopeManager.addDeclaration(decl)
-                node.addDeclaration(decl)
+                val canonical = frontend.scopeManager.addDeclaration(decl)
+                node.addDeclaration(canonical)
             }
         }
 

@@ -421,4 +421,8 @@ fun ScopeManager.updateImportedSymbols(import: Import) {
                 .toMutableList()
         import.importedSymbols = mutableMapOf(import.symbol to list)
     }
+
+    // Import.importedSymbols is read by Scope.lookupSymbol (via replaceImports), so any cached
+    // ScopeManager.lookupSymbolByName results may no longer be valid.
+    invalidateSymbolLookupCache()
 }

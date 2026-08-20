@@ -11,6 +11,14 @@ plugins {
     signing
     kotlin("jvm")
     kotlin("plugin.serialization")
+
+    // Restricts the native binaries pulled in by JavaCPP "-platform" artifacts (we use
+    // org.bytedeco:llvm-platform in cpg-language-llvm) to the platforms in `javacppPlatform`,
+    // which defaults to the host platform. Without it, every build resolves the natives for all
+    // nine LLVM target platforms, ~2.2 GB. This only filters how *we* resolve the dependency; the
+    // published POM still declares plain `llvm-platform`, so consumers keep getting every
+    // platform unless they opt into the same filtering.
+    id("org.bytedeco.gradle-javacpp-platform")
 }
 
 java {
@@ -22,6 +30,11 @@ java {
 //
 repositories {
     mavenCentral()
+
+    // Serves the SootUp fork (github.com/KuechA/SootUp) built on demand, under
+    // com.github.KuechA.SootUp:sootup.* -- see the `sootup` version in
+    // gradle/libs.versions.toml.
+    maven { setUrl("https://jitpack.io") }
 
     ivy {
         setUrl("https://download.eclipse.org/tools/cdt/releases/")

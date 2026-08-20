@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnknownMemoryValue
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -504,13 +505,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val max = passConfig<Configuration>()?.maxComplexity
             val c = node.body?.cyclomaticComplexity() ?: 0
             if (max != null && c > max) {
-                //                if (log.isTraceEnabled) {
                 log.info(
                     "Ignoring function ${node.name} because its complexity (${
                                 NumberFormat.getNumberInstance(Locale.US).format(c)
                             }) is greater than the configured maximum (${max})"
                 )
-                //                }
                 // Add an empty function Summary so that we don't try again
                 node.functionSummary.computeIfAbsent(Return()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
@@ -518,13 +517,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 return
             }
 
-            //            if (log.isTraceEnabled) {
             log.info(
                 "Analyzing function ${node.name}. Complexity: ${
                             NumberFormat.getNumberInstance(Locale.US).format(c)
                         }. (Function $analyzedFunctionCount / $totalFunctionCount)"
             )
-            //            }
         } else {
             if (log.isTraceEnabled) {
                 log.trace("Analyzing EOGStarterHolder ${node.name}. Complexity unknown")
@@ -580,25 +577,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // The generalState values have 3 items: The address, the value, and the
             // prevDFG-Edges with a set of properties
             // Let's start with fetching the addresses
-            if (key is HasMemoryAddress) {
+            // In case the key is a global variable, there's no need to add the address, we already
+            // have it
+            if (key is HasMemoryAddress && (key !is Variable || !key.isGlobal)) {
                 key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
             }
 
             // Then the memoryValues
             if (key is HasMemoryValue && value.second.isNotEmpty()) {
                 value.second.forEach { (v, properties) ->
-                    var granularity = default()
-                    var shortFS = false
-                    properties.forEach { p ->
-                        when (p) {
-                            // String indicated a partial target
-                            is String -> granularity = PartialDataflowGranularity(p)
-                            // Boolean says if this is a shortFS or not
-                            is Boolean -> shortFS = p
-                            else -> TODO()
+                    // We already added the parameters value in initializeParameters, so we skip
+                    // that now
+                    if (v !is Parameter) {
+                        var granularity = default()
+                        var shortFS = false
+                        properties.forEach { p ->
+                            when (p) {
+                                // String indicated a partial target
+                                is String -> granularity = PartialDataflowGranularity(p)
+                                // Boolean says if this is a shortFS or not
+                                is Boolean -> shortFS = p
+                                else -> TODO()
+                            }
                         }
+                        key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
                     }
-                    key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
                 }
             }
 
@@ -874,25 +877,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // Create the detailed shortFS. Like, which parameter
         // influences what.
         // This may take a lot of time, so this is optional
+        // TODO: if detailedShortFS is false, create an overapproximated FS
         if ((passConfig<Configuration>()?.detailedShortFS ?: true)) {
             if (!shortFS) {
-                // Check if the value is influenced by a
-                // Parameter and
-                // if so, add this information to the
-                // functionSummary
-                // TODO: Use memory value edges instead of DFG because these are shortcuts.
+                // Check if the value is influenced by a Parameter and if so, add this information
+                // to the functionSummary
                 val paths =
                     value.followDFGEdgesUntilHit(
                         collectFailedPaths = false,
                         findAllPossiblePaths = false,
                         direction = Backward(GraphToFollow.DFG),
                         sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
-                        // We need to search interprocedural
-                        // here.
-                        // In order this acceptable also in
-                        // larger graphs,
-                        // we limit the maxCallDepth and hop
-                        // size
+                        // We need to search interprocedural here.
+                        // In order this acceptable also in larger graphs, we limit the maxCallDepth
+                        // and hop size
                         scope = Interprocedural(maxCallDepth = 1, maxSteps = 10),
                         predicate = {
                             it is ParameterMemoryValue &&
@@ -935,15 +933,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         mutableSetOf(
                                             NodeWithPropertiesKey(
                                                 matchingDeclarations,
-                                                // Add the parameter
-                                                // index to indicate
-                                                // to the
-                                                // calculatePrevDFGs
-                                                // function that we
-                                                // need to replace
-                                                // the
-                                                // value of the call
-                                                // argument
+                                                // Add the parameter index to indicate to the
+                                                // calculatePrevDFGs function that we need to
+                                                // replace the value of the call argument
                                                 equalLinkedHashSetOf(
                                                     matchingDeclarations.argumentIndex
                                                 ),
@@ -1143,7 +1135,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is Return -> handleReturn(lattice, currentNode, doubleState)
 
                 is Expression -> {
-                    if (currentNode.usedAsExpression || currentNode is BinaryOperator)
+                    if (currentNode.usedAsExpression)
                         handleExpression(lattice, currentNode, doubleState)
                     else doubleState
                 }
@@ -1539,12 +1531,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Since we already have the argVal, AKA the memoryAddress
                 // of the argDerefVal, we simply fetch the last write for the
                 // argVal from the declarationState and add the properties
+                // TODO: what if argVal is global?
                 retDoubleState.declarationsState[argVal]?.third?.mapTo(PowersetLattice.Element()) {
                     NodeWithPropertiesKey(
                         it.node,
                         equalLinkedHashSetOf(callingContext, true in it.properties),
                     )
-                } ?: PowersetLattice.Element()
+                }
+                    ?: (arg as? PointerReference)?.let {
+                        doubleState.getLastWrites(it.input).mapTo(PowersetLattice.Element()) {
+                            NodeWithPropertiesKey(
+                                it.node,
+                                equalLinkedHashSetOf(callingContext, true in it.properties),
+                            )
+                        }
+                    }
+                    ?: PowersetLattice.Element()
             }
         // Also draw the edges for the (deref)derefvalues if we have
         // any and are dealing with a pointer parameter (AKA memoryValue is
@@ -1622,17 +1624,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) {
         override fun equals(other: Any?): Boolean {
             return other is MapDstToSrcEntry &&
+                param === other.param &&
                 srcNode === other.srcNode &&
-                lastWrites.size == other.lastWrites.size &&
-                lastWrites.all { lw -> other.lastWrites.any { it === lw } } &&
-                propertySet.size == other.propertySet.size &&
-                propertySet.all { p -> other.propertySet.any { it == p } } &&
+                // Skip checking for lastWrites b/c we change that
+                propertySet == other.propertySet &&
                 dst == other.dst
         }
 
         override fun hashCode(): Int {
-            var result = srcNode?.hashCode() ?: 0
-            result = 31 * result + lastWrites.hashCode()
+            var result = System.identityHashCode(param)
+            result = 31 * result + System.identityHashCode(srcNode)
+            // Skip including lastWrites b/c we change that
             result = 31 * result + propertySet.hashCode()
             result = 31 * result + dst.hashCode()
             return result
@@ -1692,6 +1694,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val prev: MutableSet<NodeWithPropertiesKey>,
     )
 
+    /* Needed for deduplication */
+    private data class PreprocessedFSEntryDedupKey(
+        val dstValueDepth: Int,
+        val subAccessName: String,
+        val srcNode: IdKey<Node>?,
+        val srcValueDepth: Int,
+        val shortFS: Boolean,
+        val propertySet: EqualLinkedHashSet<Any>,
+    )
+
     private data class AddEntryDestinationDedupCache(
         val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap()
     )
@@ -1705,6 +1717,79 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val genericSourcesCache = ConcurrentHashMap<AddEntryGenericSourcesKey, IdentitySet<Node?>>()
     }
 
+    private fun concurrentCopyOfLastWrites(
+        lastWrites: MutableSet<NodeWithPropertiesKey>
+    ): MutableSet<NodeWithPropertiesKey> {
+        return ConcurrentHashMap.newKeySet<NodeWithPropertiesKey>().apply { addAll(lastWrites) }
+    }
+
+    /**
+     * Removes duplicate [PreprocessedFSEntry] entries based on a logical key derived from the
+     * entry's fields (dstValueDepth, subAccessName, srcNode, srcValueDepth, shortFS, propertySet).
+     * When a duplicate is found, the `prev` list of the existing entry is extended with the
+     * duplicate's `prev`.
+     *
+     * @param entries list to deduplicate
+     * @return new list containing unique entries
+     */
+    private fun deduplicatePreprocessedFSEntries(
+        entries: List<PreprocessedFSEntry>
+    ): List<PreprocessedFSEntry> {
+        val deduplicated = LinkedHashMap<PreprocessedFSEntryDedupKey, PreprocessedFSEntry>()
+
+        for (entry in entries) {
+            val key =
+                PreprocessedFSEntryDedupKey(
+                    dstValueDepth = entry.dstValueDepth,
+                    subAccessName = entry.subAccessName,
+                    srcNode = entry.srcNode?.let { IdKey(it) },
+                    srcValueDepth = entry.srcValueDepth,
+                    shortFS = entry.shortFS,
+                    propertySet = equalLinkedHashSetOf<Any>().apply { addAll(entry.propertySet) },
+                )
+
+            val existing = deduplicated[key]
+            if (existing == null) {
+                deduplicated[key] = entry
+            } else {
+                existing.prev.addAll(entry.prev)
+            }
+        }
+
+        return deduplicated.values.toList()
+    }
+
+    /** Perform a deep copy of mapDstToSrc */
+    private fun copyMapDstToSrc(
+        original: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>
+    ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
+        val copy = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
+
+        for ((dstAddr, entries) in original) {
+            val copiedEntries = concurrentIdentitySetOf<MapDstToSrcEntry>()
+
+            for (entry in entries) {
+                copiedEntries.add(
+                    MapDstToSrcEntry(
+                        param = entry.param,
+                        srcNode = entry.srcNode,
+                        lastWrites = concurrentCopyOfLastWrites(entry.lastWrites),
+                        propertySet = copyPropertySet(entry.propertySet),
+                        dst = identitySetOf<Node>().apply { addAll(entry.dst) },
+                    )
+                )
+            }
+
+            copy.put(dstAddr, copiedEntries)
+        }
+
+        return copy
+    }
+
+    private fun copyPropertySet(propertySet: EqualLinkedHashSet<Any>): EqualLinkedHashSet<Any> {
+        return equalLinkedHashSetOf<Any>().apply { addAll(propertySet) }
+    }
+
     private suspend fun handleCall(
         lattice: PointsToState,
         currentNode: Call,
@@ -1713,6 +1798,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
         val addEntryToMapCache = AddEntryToMapCache()
+        /* Collect all the shortFS edges and add them later in one go */
+        val shortFsPrevEdges = linkedSetOf<NodeWithPropertiesKey>()
+
+        // If the call is a function pointer, and we don't yet have invokes edges we try to fetch
+        // them now
+        addDynamicInvokesEdges(currentNode, doubleState)
 
         // The toIdentitySet avoids having the same elements multiple times
         var invokes = currentNode.invokes.toIdentitySet()
@@ -1773,7 +1864,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             ) in fsEntries) {
                                 if (dstValueDepth in 0..3) {
                                     val shortFS = properties.any { it == true }
-                                    val propertySet = properties
+                                    val propertySet =
+                                        equalLinkedHashSetOf<Any>().apply { addAll(properties) }
                                     val normalizedSrcNode =
                                         when (srcNode) {
                                             is Function -> currentNode
@@ -1817,7 +1909,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             ParamFsWork(
                                 param,
                                 dst,
-                                Array(4) { depth -> depthBuckets[depth].toList() },
+                                Array(4) { depth ->
+                                    deduplicatePreprocessedFSEntries(depthBuckets[depth])
+                                },
                             )
                         }
                     }
@@ -1831,6 +1925,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // We can't go through all levels at once as a change at a lower level may
                 // affect a higher level. So let's do this step by step
                 for (depth in 0..3) {
+                    // Create a snapshot of mapDstToSrc. calculateCallDestinations reads from this,
+                    // it should contain all the required information (the info from the previous
+                    // depths). This allows us to use threads in which addEntryToMap at the same
+                    // time manipulates the actual mapDstToSrc
+                    val mapDstToSrcSnapshot = copyMapDstToSrc(mapDstToSrc)
                     coroutineScope {
                         for (work in parameterWork) {
                             if (work.entriesByDepth[depth].isEmpty()) {
@@ -1842,7 +1941,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     val (destinationAddresses, destinations) =
                                         calculateCallDestinations(
                                             doubleState,
-                                            mapDstToSrc,
+                                            mapDstToSrcSnapshot,
                                             entry.dstValueDepth,
                                             entry.subAccessName,
                                             work.argument,
@@ -1862,7 +1961,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         currentNode,
                                         entry.prev,
                                         work.param,
-                                        // TODO for merge: add subAccessName?
+                                        shortFsPrevEdges,
                                     )
                                 }
                             }
@@ -1880,6 +1979,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
 
+        if (shortFsPrevEdges.isNotEmpty()) {
+            doubleState =
+                lattice.push(
+                    doubleState,
+                    currentNode,
+                    GeneralStateEntryElement(
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(shortFsPrevEdges),
+                    ),
+                )
+        }
+
         return doubleState
     }
 
@@ -1894,8 +2006,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
-            // If the lastWrite is a Record, that's a hint from the functionSummary that we have a
-            // write to the base. Since we didn't know the base yet when creating the
+            // If the lastWrite is a Record, that's a hint from the functionSummary that we have
+            // a write to the base. Since we didn't know the base yet when creating the
             // functionSummary, we fetch it now
             val prev = if (lw is Record && srcNode is Node) srcNode else lw
             if (shortFS) {
@@ -1920,6 +2032,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     private suspend fun calculateFunctionSummaries(invoke: Function): Function? {
+        fun addDummyFS() {
+            val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
+            invoke.parameters.forEach { newValues.add(FSEntry(0, it, 1, "", isDummy = true)) }
+            val entries = identitySetOf<Node>()
+            if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns) else entries.add(invoke)
+            entries.forEach { entry -> invoke.functionSummary.put(entry, newValues) }
+        }
+
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
                 if (log.isTraceEnabled) {
@@ -1970,28 +2090,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     log.error(
                         "Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"
                     )
-                    invoke.functionSummary.put(
-                        newLiteral("dummy"),
-                        ConcurrentHashMap.newKeySet<FSEntry>(),
-                    )
-                    return null
+                    addDummyFS()
                 }
             } else {
                 // Add a dummy function summary so that we don't try this every time
                 // In this dummy, all parameters point either to returns if we have any, or the
                 // Function itself
-                if (log.isTraceEnabled) {
-                    log.trace("Creating dummy function summary")
-                }
-                val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
-                invoke.parameters.forEach { newValues.add(FSEntry(0, it, 1, "")) }
-                val entries = identitySetOf<Node>()
-                if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns)
-                else entries.add(invoke)
-                entries.forEach { entry -> invoke.functionSummary.put(entry, newValues) }
-                if (log.isTraceEnabled) {
-                    log.trace("Finished creating dummy function summary")
-                }
+                addDummyFS()
             }
         }
         return invoke
@@ -2102,6 +2207,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             destinations.mapTo(identitySetOf()) { it.ref },
             identitySetOf(dstAddr),
             lastWrites,
+            false,
         )
     }
 
@@ -2136,6 +2242,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         currentNode: Call,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
         param: Node,
+        shortFsPrevEdges: LinkedHashSet<NodeWithPropertiesKey>,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val doubleState = doubleState
 
@@ -2219,16 +2326,34 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return true
         }
 
-        fun insertIfNew(
+        /**
+         * Inserts a new map entry into [context.currentSet] or merges the provided [newLastWrites]
+         * into an existing entry that matches the same logical key (srcNode, param, propertySet,
+         * dst).
+         *
+         * @param context the destination context holding the current set of entries
+         * @param source the source node that the entry points from (compared by reference)
+         * @param newLastWrites collection of keys to add to the matching entry's `lastWrites`
+         * @param entry factory that creates a new `MapDstToSrcEntry` when no match is found
+         */
+        fun insertOrMerge(
             context: DestinationContext,
-            dedupKey: AddEntryDedupKey,
-            sources: ConcurrentIdentitySet<Node?>,
             source: Node?,
+            newLastWrites: Collection<NodeWithPropertiesKey>,
             entry: () -> MapDstToSrcEntry,
         ) {
-            if (sources.add(source)) {
+            val existing =
+                context.currentSet.firstOrNull {
+                    it.srcNode === source &&
+                        it.param === param &&
+                        it.propertySet == context.updatedPropertySet &&
+                        it.dst == destinations
+                }
+
+            if (existing != null) {
+                existing.lastWrites.addAll(newLastWrites)
+            } else {
                 context.currentSet += entry()
-                context.dedupCache.buckets[dedupKey]?.sources?.add(source)
             }
         }
 
@@ -2238,18 +2363,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // in the Call
                 if (srcNode.argumentIndex < currentNode.arguments.size) {
                     val src = currentNode.arguments[srcNode.argumentIndex]
-                    // If this is a short FunctionSummary, we also
+                    // If this is a short FunctionSummary, we later also have to
                     // update the generalState to draw the additional DFG Edges
                     if (shortFS) {
-                        val newEntry = NodeWithPropertiesKey(src, equalLinkedHashSetOf<Any>(true))
-                        doubleState.generalState.computeIfAbsent(currentNode) {
-                            TripleLattice.Element(
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(),
-                            )
-                        }
-                        doubleState.generalState[currentNode]?.third?.add(newEntry)
+                        shortFsPrevEdges.add(
+                            NodeWithPropertiesKey(src, equalLinkedHashSetOf<Any>(true))
+                        )
                     }
                     val argumentValuesKey =
                         AddEntryArgumentValuesKey(IdKey(src), srcValueDepth, shortFS)
@@ -2299,11 +2418,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
 
                         for (value in values) {
-                            insertIfNew(context, dedupKey, existingSources, value) {
+                            insertOrMerge(context, value, lastWrites) {
                                 MapDstToSrcEntry(
                                     param,
                                     value,
-                                    lastWrites,
+                                    concurrentCopyOfLastWrites(lastWrites),
                                     context.updatedPropertySet,
                                     destinations,
                                 )
@@ -2373,11 +2492,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
 
                     for (value in parameterValues) {
-                        insertIfNew(context, dedupKey, existingSources, value) {
+                        insertOrMerge(context, value, lastWrites) {
                             MapDstToSrcEntry(
                                 param,
                                 value,
-                                lastWrites,
+                                concurrentCopyOfLastWrites(lastWrites),
                                 context.updatedPropertySet,
                                 destinations,
                             )
@@ -2389,24 +2508,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             is MemoryAddress -> {
                 val writesIdentity = IdKey(lastWrites)
                 for (context in getDestinationContexts()) {
-                    val dedupKey =
-                        AddEntryDedupKey(
-                            AddEntryDedupMode.MEMORY_ADDRESS,
-                            writesIdentity,
-                            context.updatedPropertySet,
-                            shortFS,
-                        )
-                    val existingSources =
-                        getOrBuildSources(context, dedupKey) {
-                            it.lastWrites === lastWrites &&
-                                it.propertySet == context.updatedPropertySet
-                        }
-
-                    insertIfNew(context, dedupKey, existingSources, srcNode) {
+                    insertOrMerge(context, srcNode, lastWrites) {
                         MapDstToSrcEntry(
                             param,
                             srcNode,
-                            lastWrites,
+                            concurrentCopyOfLastWrites(lastWrites),
                             context.updatedPropertySet,
                             destinations,
                         )
@@ -2458,11 +2564,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
 
                     for (newSource in newSources) {
-                        insertIfNew(context, dedupKey, existingSources, newSource) {
+                        insertOrMerge(context, newSource, lastWrites) {
                             MapDstToSrcEntry(
                                 param,
                                 newSource,
-                                lastWrites,
+                                concurrentCopyOfLastWrites(lastWrites),
                                 context.updatedPropertySet,
                                 destinations,
                             )
@@ -3176,7 +3282,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // If we force the DerefPMVCreation, we probably create the first PMV already, so let's
             // search it. For this, we check the memoryValues and the
             // state, and if all is null, we create a new PMV
-            //            var pmv: ParameterMemoryValue?
             val pmv =
                 if (forceDerefPMVCreation && pD == 0) {
                     param.memoryValues.singleOrNull { it.name.localName == pmvName }
@@ -3208,11 +3313,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(),
                         ),
                     )
+                // Additionally, directly add the value to the node. This is necessary on recursive
+                // calls, when we are not yet finished with acceptInternal of one function, but we
+                // already need to fetch the PMVs because we have a recursive call while handling
+                // the function
+                src.memoryValueEdges += Dataflow(pmv, src)
             } else {
                 // Link the PMVs with each other so that we can find them. This is
                 // especially important outside the respective function where we
-                // don't have
-                // a state
+                // don't have a state
                 addresses.filterIsInstance<ParameterMemoryValue>().forEach {
                     doubleState =
                         lattice.push(
@@ -3249,6 +3358,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(),
                         ),
                     )
+                // Here again, directly add the value to the param to be able to access it directly
+                // instead of having to wait until acceptInternal is finished
+                param.memoryValueEdges +=
+                    Dataflow(pmv, param, granularity = PartialDataflowGranularity(pmvName))
             }
 
             // Update the states
@@ -3274,6 +3387,56 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             addresses = identitySetOf(pmv)
         }
         return doubleState
+    }
+}
+
+/**
+ * If a call doesn't have any invokes edges and could be a FunctionPointer, this function tries to
+ * identify possible invokes edges and adds them to the call
+ */
+private fun addDynamicInvokesEdges(call: Call, doubleState: PointsToState.Element) {
+    if (call.invokes.isNotEmpty()) return
+    val callee = call.callee
+    val expr =
+        if (
+            (callee.type is FunctionPointerType ||
+                ((callee as? Reference)?.refersTo is Parameter ||
+                    (callee as? Reference)?.refersTo is Variable))
+        ) {
+            callee
+        } else if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+            callee.rhs
+        } else return
+
+    // Fetch all the memory values for the callee that could be the invokes edge, e.g. are
+    // either a Function or a Variable
+    val pointerType = getFunctionPointerType(expr) ?: return
+    val currentNodeValues = doubleState.getValues(expr, expr)
+    val candidates =
+        currentNodeValues.mapNotNull {
+            if (it.second || (it.first !is Variable && it.first !is Function)) null else it.first
+        }
+    val invocationCandidates = mutableListOf<Function>()
+    // For those candidates, check if we have any that have a matching signature
+    candidates.forEach { curr ->
+        val isLambda = curr is Variable && curr.initializer is Lambda
+        val currentFunction =
+            if (isLambda) {
+                (curr.initializer as Lambda).function
+            } else {
+                curr
+            }
+        if (
+            currentFunction is Function &&
+                matchInvokesCandidateSignature(currentFunction, pointerType, isLambda)
+        )
+            invocationCandidates.add(currentFunction)
+    }
+    // If we found invocation candidates in the currentNode's memory values, we add them and
+    // continue.
+    if (invocationCandidates.isNotEmpty()) {
+        call.invokes = invocationCandidates
+        call.invokeEdges.forEach { it.dynamicInvoke = true }
     }
 }
 
@@ -3743,8 +3906,9 @@ fun PointsToState.Element.getValues(
             }
             retVal
         }
-        is Declaration -> {
-            /* For Declarations, we have to look up the last value written to it.
+        is ValueDeclaration -> {
+            /* For value declarations, we have to look up the last value written to it. Only
+             * value declarations carry a memory address (see HasMemoryAddress on ValueDeclaration).
              */
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
@@ -3851,9 +4015,10 @@ fun PointsToState.Element.getValues(
 
 fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
     return when (node) {
-        is Declaration -> {
+        is ValueDeclaration -> {
             /*
-             * For declarations, we created a new MemoryAddress node, so that's the one we use here
+             * For value declarations, we created a new MemoryAddress node, so that's the one we use
+             * here. Only value declarations carry a memory address.
              */
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
@@ -3926,7 +4091,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
                 if (refersTo is Function) {
                     globalDerefs.put(refersTo, PowersetLattice.Element(Pair(refersTo, false)))
                     identitySetOf(refersTo)
-                } else {
+                } else if (refersTo is ValueDeclaration) {
                     /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a Function. So let's do this here */
                     if (refersTo.memoryAddresses.isEmpty()) {
                         val newAddress = MemoryAddress(node.name, isGlobal(node))
@@ -3934,6 +4099,9 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
                     }
 
                     refersTo.memoryAddresses.toIdentitySet()
+                } else {
+                    /* Only value declarations carry a memory address. */
+                    identitySetOf()
                 }
             } ?: identitySetOf()
         }
@@ -4103,7 +4271,8 @@ fun PointsToState.Element.fetchFieldAddresses(
 
 /**
  * Updates the declarationState at `destinationAddresses` to the values in `sources`. Additionally,
- * updates the generalstate at `destinations` if there is any
+ * updates the generalstate at `destinations` if there is any. When `overwriteGeneralState` is set
+ * to true, old generalState will be eliminated, otherwise it will be kept
  */
 suspend fun PointsToState.Element.updateValues(
     lattice: PointsToState,
@@ -4113,6 +4282,9 @@ suspend fun PointsToState.Element.updateValues(
     // Node and short FS yes or no
     destinationAddresses: IdentitySet<Node>,
     lastWrites: MutableSet<NodeWithPropertiesKey>,
+    // In some cases, we want to remove the old generalState (for example for assigns), in others,
+    // we want to keep it (in handeCall for example)
+    overwriteGeneralState: Boolean = true,
 ): PointsToState.Element = coroutineScope {
     var doubleState = doubleState
 
@@ -4216,15 +4388,30 @@ suspend fun PointsToState.Element.updateValues(
                 }
             }
 
-            destinations.forEachMaybeParallel { d ->
-                doubleState.generalState.put(
-                    d,
-                    GeneralStateEntryElement(
-                        PowersetLattice.Element(destinationAddresses),
-                        PowersetLattice.Element(mappedSources),
-                        PowersetLattice.Element(newLastWrites),
-                    ),
-                )
+            if (overwriteGeneralState) {
+                destinations.forEachMaybeParallel { d ->
+                    doubleState.generalState.put(
+                        d,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(destinationAddresses),
+                            PowersetLattice.Element(mappedSources),
+                            PowersetLattice.Element(newLastWrites),
+                        ),
+                    )
+                }
+            } else {
+                destinations.forEachMaybeParallel { d ->
+                    doubleState =
+                        lattice.push(
+                            doubleState,
+                            d,
+                            GeneralStateEntryElement(
+                                PowersetLattice.Element(destinationAddresses),
+                                PowersetLattice.Element(mappedSources),
+                                PowersetLattice.Element(newLastWrites),
+                            ),
+                        )
+                }
             }
         } else {
             val mappedSources =

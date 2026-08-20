@@ -31,8 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
@@ -41,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.Switch
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -68,9 +70,29 @@ abstract class AstNode : Node() {
     var astChildren: List<AstNode> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    /** List of [Annotation]s associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
-    var annotations by unwrapping(AstNode::annotationEdges)
+    /** Lazy backing field for [annotationEdges]. */
+    private var _annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>? = null
+
+    /**
+     * List of [Annotation]s associated with that node.
+     *
+     * The backing container is allocated lazily on first access: annotations are absent on the
+     * overwhelming majority of nodes, and [astEdgesOf] eagerly allocates a backing array.
+     */
+    @Relationship("ANNOTATIONS")
+    var annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>
+        get() = _annotationEdges ?: astEdgesOf<Annotation>().also { _annotationEdges = it }
+        set(value) {
+            _annotationEdges = value
+        }
+
+    /** Virtual property for accessing [annotationEdges] as plain nodes. */
+    @DoNotPersist
+    var annotations: MutableList<Annotation>
+        get() = annotationEdges.unwrap()
+        set(value) {
+            annotationEdges.resetTo(value)
+        }
 
     override fun disconnectFromGraph() {
         super.disconnectFromGraph()

@@ -33,15 +33,14 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
+import de.fraunhofer.aisec.cpg.getAncestors
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.builder.assign
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -136,6 +135,15 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** The standard evaluator to be used with this language. */
     @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
 
+    /**
+     * Determines whether [value] (the result of evaluating a condition with [evaluator]) is
+     * "truthy" in this language, i.e., whether it would take the "then"/loop-body branch of a
+     * conditional. Returns `null` if this cannot be determined, e.g., because the value could not
+     * be evaluated or because this language does not allow implicit conversion of [value] to a
+     * boolean. The default implementation only accepts an actual [Boolean].
+     */
+    open fun isTruthy(value: Any?): Boolean? = value as? Boolean
+
     init {
         this.language = this
         this.name = Name(this::class.simpleName ?: EMPTY_NAME)
@@ -161,6 +169,27 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     open fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
+
+    /**
+     * Projects the surface form of [declaration] — appearing in the given [scope] — onto the
+     * canonical, language-independent properties that later passes rely on: it sets
+     * [Declaration.visibility] and, for a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration], its `isStatic` flag.
+     *
+     * For most languages that surface form are the raw [Declaration.modifiers], whose spellings
+     * stay in the declaration losslessly. Some languages however encode the very same information
+     * in the *identifier* rather than in a keyword — Go derives export status from the casing of
+     * the name, Python's visibility is a leading-underscore naming convention — so implementations
+     * may read anything about the [declaration], not just its modifiers.
+     *
+     * Either way, this hook is the single place where a language turns its surface syntax into
+     * canonical semantics; frontends should not assign [Declaration.visibility] themselves. [scope]
+     * matters because that meaning can depend on *where* the declaration appears — most notably
+     * C/C++'s `static`, which denotes internal linkage at file scope but a class-level member
+     * inside a record, or Go's export semantics, which only apply to package-level declarations and
+     * record members. The default does nothing, so a language that models neither is unaffected.
+     */
+    open fun applyModifiers(declaration: Declaration, scope: Scope?) {}
 
     override fun equals(other: Any?): Boolean {
         return other?.javaClass == this.javaClass
@@ -376,23 +405,47 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
             return CastNotPossible
         }
 
-        // Retrieve all ancestor types of our type (more concretely of the root type)
-        val root = type.root
-        val ancestors = root.ancestors
-        val superTypes = ancestors.map(Type.Ancestor::type)
+        return matchWithTypeExpansion(type.root, targetType)
+    }
 
-        return if (targetType.root in superTypes) {
-            // Find depth
-            val depth = ancestors.firstOrNull { it.type == targetType.root }?.depth
-            if (depth == null) {
-                // This should not happen
-                CastNotPossible
-            } else {
-                ImplicitCast(depth)
+    private fun matchWithTypeExpansion(type: Type, targetType: Type): CastResult {
+        val seenList = mutableListOf<Type.Ancestor>()
+        val worklist = mutableListOf(Type.Ancestor(type.root, 0))
+        seenList.addAll(worklist)
+        while (worklist.isNotEmpty()) {
+            val current = worklist.removeAt(0)
+            val currentType = current.type
+            if (currentType == targetType.root) {
+                return ImplicitCast(current.depth)
             }
-        } else {
-            CastNotPossible
+            // See if it has an alias, if not we are done
+            // If it has one or more aliases, resolve them and add the resolved type and its
+            // ancestors with
+            // depth offset by the current types ancestor depth to the worklist and the allTypes
+
+            val reachableAliases =
+                currentType.scope
+                    ?.typedefs
+                    ?.map { it.value }
+                    ?.mapNotNull { typedef ->
+                        when {
+                            typedef.type == currentType -> typedef.alias
+                            typedef.alias == currentType -> typedef.type
+                            else -> null
+                        }
+                    } ?: emptyList()
+
+            (reachableAliases + currentType)
+                .flatMap { it.getAncestors(current.depth) }
+                .forEach {
+                    if (it !in seenList) {
+                        seenList.add(it)
+                        worklist.add(it)
+                    }
+                }
         }
+
+        return CastNotPossible
     }
 
     /**
