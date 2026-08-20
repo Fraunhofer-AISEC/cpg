@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addLLMConceptAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.literals
@@ -154,6 +155,12 @@ class CpgGenericConceptsPersistenceTest {
                 )
 
                 assertTrue(llmConceptsFile.exists(), "llm-tagged-concepts.yaml should be created")
+                val yamlContent = llmConceptsFile.readText()
+                assertTrue(yamlContent.contains("astId:"), "YAML output should contain astId block")
+                assertTrue(
+                    !yamlContent.contains("location:"),
+                    "YAML output should not contain location block",
+                )
 
                 val reloadedResult =
                     analyze(
@@ -181,6 +188,10 @@ class CpgGenericConceptsPersistenceTest {
                 assertEquals("SecretKey", reloadedConcept.conceptName)
                 assertEquals("A hardcoded API secret key", reloadedConcept.description)
                 assertEquals("CRITICAL", reloadedConcept.properties.properties["severity"])
+                assertEquals(
+                    (secretLiteral as AstNode).idAst,
+                    (reloadedConcept.underlyingNode as AstNode).idAst,
+                )
 
                 val reloadedOp = reloadedConcept.ops.singleOrNull()
                 assertIs<GenericLLMOperation>(reloadedOp)
