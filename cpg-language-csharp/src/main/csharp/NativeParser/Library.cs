@@ -441,16 +441,19 @@ public static class Library
         return Register(((ParameterListSyntax)Nodes[handlePtr]).Parameters[index]);
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetArgumentListCount")]
-    public static int GetArgumentListCount(IntPtr handlePtr)
+    // We use the common base class BaseArgumentListSyntax, so that these also work for the
+    // BracketedArgumentListSyntax of an element access (`a[i]`), which has the same shape as the
+    // parenthesized ArgumentListSyntax of a call.
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseArgumentListCount")]
+    public static int GetBaseArgumentListCount(IntPtr handlePtr)
     {
-        return ((ArgumentListSyntax)Nodes[handlePtr]).Arguments.Count;
+        return ((BaseArgumentListSyntax)Nodes[handlePtr]).Arguments.Count;
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetArgumentListArgument")]
-    public static IntPtr GetArgumentListArgument(IntPtr handlePtr, int index)
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseArgumentListArgument")]
+    public static IntPtr GetBaseArgumentListArgument(IntPtr handlePtr, int index)
     {
-        return Register(((ArgumentListSyntax)Nodes[handlePtr]).Arguments[index]);
+        return Register(((BaseArgumentListSyntax)Nodes[handlePtr]).Arguments[index]);
     }
 
     // We need to call ToString() on the TypeSyntax node to get the actual type name
@@ -771,6 +774,85 @@ public static class Library
         return Register(((ForEachStatementSyntax)Nodes[handlePtr]).Statement);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetTryStatementBlock")]
+    public static IntPtr GetTryStatementBlock(IntPtr handlePtr)
+    {
+        return Register(((TryStatementSyntax)Nodes[handlePtr]).Block);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetTryStatementCatchCount")]
+    public static int GetTryStatementCatchCount(IntPtr handlePtr)
+    {
+        return ((TryStatementSyntax)Nodes[handlePtr]).Catches.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetTryStatementCatch")]
+    public static IntPtr GetTryStatementCatch(IntPtr handlePtr, int index)
+    {
+        return Register(((TryStatementSyntax)Nodes[handlePtr]).Catches[index]);
+    }
+
+    // The FinallyClauseSyntax only wraps a block, so we flatten it away and return the block itself.
+    // It is null if the try statement has no finally clause.
+    [UnmanagedCallersOnly(EntryPoint = "GetTryStatementFinallyBlock")]
+    public static IntPtr GetTryStatementFinallyBlock(IntPtr handlePtr)
+    {
+        var finallyClause = ((TryStatementSyntax)Nodes[handlePtr]).Finally;
+        return finallyClause != null ? Register(finallyClause.Block) : IntPtr.Zero;
+    }
+
+    // The declaration is null for a general catch clause (`catch { }`).
+    [UnmanagedCallersOnly(EntryPoint = "GetCatchClauseDeclaration")]
+    public static IntPtr GetCatchClauseDeclaration(IntPtr handlePtr)
+    {
+        var declaration = ((CatchClauseSyntax)Nodes[handlePtr]).Declaration;
+        return declaration != null ? Register(declaration) : IntPtr.Zero;
+    }
+
+    // The CatchFilterClauseSyntax only wraps the filter expression of a `when` clause, so we flatten
+    // it away. It is null if the catch clause has no filter.
+    [UnmanagedCallersOnly(EntryPoint = "GetCatchClauseFilterExpression")]
+    public static IntPtr GetCatchClauseFilterExpression(IntPtr handlePtr)
+    {
+        var filter = ((CatchClauseSyntax)Nodes[handlePtr]).Filter;
+        return filter != null ? Register(filter.FilterExpression) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCatchClauseBlock")]
+    public static IntPtr GetCatchClauseBlock(IntPtr handlePtr)
+    {
+        return Register(((CatchClauseSyntax)Nodes[handlePtr]).Block);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCatchDeclarationType")]
+    public static IntPtr GetCatchDeclarationType(IntPtr handlePtr)
+    {
+        return Register(((CatchDeclarationSyntax)Nodes[handlePtr]).Type);
+    }
+
+    // Empty if the exception is not bound to a variable, e.g. `catch (Exception) { }`.
+    [UnmanagedCallersOnly(EntryPoint = "GetCatchDeclarationIdentifier")]
+    public static IntPtr GetCatchDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((CatchDeclarationSyntax)Nodes[handlePtr]).Identifier.Text
+        );
+    }
+
+    // Null for a rethrow, i.e. a bare `throw;` inside a catch clause.
+    [UnmanagedCallersOnly(EntryPoint = "GetThrowStatementExpression")]
+    public static IntPtr GetThrowStatementExpression(IntPtr handlePtr)
+    {
+        var expression = ((ThrowStatementSyntax)Nodes[handlePtr]).Expression;
+        return expression != null ? Register(expression) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetThrowExpressionExpression")]
+    public static IntPtr GetThrowExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((ThrowExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetSwitchStatementExpression")]
     public static IntPtr GetSwitchStatementExpression(IntPtr handlePtr)
     {
@@ -863,6 +945,30 @@ public static class Library
     public static IntPtr GetInvocationExpressionArgumentList(IntPtr handlePtr)
     {
         return Register(((InvocationExpressionSyntax)Nodes[handlePtr]).ArgumentList);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCastExpressionType")]
+    public static IntPtr GetCastExpressionType(IntPtr handlePtr)
+    {
+        return Register(((CastExpressionSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCastExpressionExpression")]
+    public static IntPtr GetCastExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((CastExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetElementAccessExpressionExpression")]
+    public static IntPtr GetElementAccessExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((ElementAccessExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetElementAccessExpressionArgumentList")]
+    public static IntPtr GetElementAccessExpressionArgumentList(IntPtr handlePtr)
+    {
+        return Register(((ElementAccessExpressionSyntax)Nodes[handlePtr]).ArgumentList);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetArgumentExpression")]

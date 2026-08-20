@@ -31,15 +31,20 @@ import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newCall
+import de.fraunhofer.aisec.cpg.graph.newCast
 import de.fraunhofer.aisec.cpg.graph.newConstruction
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newExpressionList
+import de.fraunhofer.aisec.cpg.graph.newInitializerList
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMemberCall
 import de.fraunhofer.aisec.cpg.graph.newNew
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.newSubscription
+import de.fraunhofer.aisec.cpg.graph.newThrow
+import de.fraunhofer.aisec.cpg.graph.newTypeExpression
 import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -51,13 +56,18 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         return when (node) {
             is Csharp.AST.IdentifierNameSyntax -> handleIdentifierName(node)
             is Csharp.AST.LiteralExpressionSyntax -> handleLiteralExpression(node)
+            is Csharp.AST.AsExpressionSyntax -> handleAsExpression(node)
+            is Csharp.AST.IsExpressionSyntax -> handleIsExpression(node)
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
             is Csharp.AST.PrefixUnaryExpressionSyntax -> handlePrefixUnaryExpression(node)
             is Csharp.AST.PostfixUnaryExpressionSyntax -> handlePostfixUnaryExpression(node)
             is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
             is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
+            is Csharp.AST.ElementAccessExpressionSyntax -> handleElementAccessExpression(node)
+            is Csharp.AST.CastExpressionSyntax -> handleCastExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
+            is Csharp.AST.ThrowExpressionSyntax -> handleThrowExpression(node)
             is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
@@ -245,6 +255,83 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
+     * Translates an [IsExpressionSyntax][Csharp.AST.IsExpressionSyntax] (e.g. `x is Base`) into a
+     * [BinaryOperator] with the operator `is`. Unlike the `as` operator this is a type check and,
+     * so its result is a `bool`. The type is set by
+     * [CSharpLanguage.propagateTypeOfBinaryOperation].
+     *
+     * Note: its right-hand side is a type and not a value, so it becomes a [TypeExpression].
+     *
+     * C# spec:
+     * [The is operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12123-the-is-operator)
+     */
+    private fun handleIsExpression(node: Csharp.AST.IsExpressionSyntax): BinaryOperator {
+        return newBinaryOperator(operatorCode = node.operatorToken, rawNode = node).apply {
+            this.lhs = handle(node.left)
+            val testedType = frontend.typeOf(node.right)
+            this.rhs = newTypeExpression(testedType.name, testedType, rawNode = node.right)
+        }
+    }
+
+    /**
+     * Translates an [AsExpressionSyntax][Csharp.AST.AsExpressionSyntax] (e.g. `x as string`) into a
+     * [Cast]. Its [BinaryExpressionSyntax.right][Csharp.AST.BinaryExpressionSyntax.right] is a type
+     * and therefore becomes the [Cast.castType] instead of a second operand.
+     *
+     * Note: `as` is a safe cast, i.e. it yields `null` instead of throwing when the conversion is
+     * not possible.
+     *
+     * C# spec:
+     * [The as operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12124-the-as-operator)
+     */
+    private fun handleAsExpression(node: Csharp.AST.AsExpressionSyntax): Cast {
+        return newCast(rawNode = node).apply {
+            this.expression = handle(node.left)
+            this.castType = frontend.typeOf(node.right)
+        }
+    }
+
+    /**
+     * Translates a [CastExpressionSyntax][Csharp.AST.CastExpressionSyntax] (e.g. `(int)x`) into a
+     * [Cast].
+     *
+     * C# spec:
+     * [Cast expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1299-cast-expressions)
+     */
+    private fun handleCastExpression(node: Csharp.AST.CastExpressionSyntax): Cast {
+        return newCast(rawNode = node).apply {
+            this.expression = handle(node.expression)
+            this.castType = frontend.typeOf(node.type)
+        }
+    }
+
+    /**
+     * Translates an [ElementAccessExpressionSyntax][Csharp.AST.ElementAccessExpressionSyntax] (e.g.
+     * `a[i]`) into a [Subscription].
+     *
+     * A [Subscription] holds a single [Subscription.subscriptExpression], but C# allows several
+     * arguments for a multi-dimensional array (`m[i, j]`). In that case we model the collected
+     * arguments in an implicit [InitializerList].
+     *
+     * C# spec:
+     * [Element access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12818-element-access)
+     */
+    private fun handleElementAccessExpression(
+        node: Csharp.AST.ElementAccessExpressionSyntax
+    ): Subscription {
+        return newSubscription(rawNode = node).apply {
+            this.arrayExpression = handle(node.expression)
+
+            val arguments = node.argumentList.arguments.map { handle(it.expression) }
+            this.subscriptExpression =
+                arguments.singleOrNull()
+                    ?: newInitializerList(rawNode = node.argumentList).implicit().apply {
+                        this.initializers = arguments.toMutableList()
+                    }
+        }
+    }
+
+    /**
      * Translates a [MemberAccessExpressionSyntax][Csharp.AST.MemberAccessExpressionSyntax] into a
      * [MemberAccess].
      *
@@ -273,6 +360,18 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     private fun handleThisExpression(node: Csharp.AST.ThisExpressionSyntax): Reference {
         val type = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         return newReference(name = "this", type = type, rawNode = node)
+    }
+
+    /**
+     * Translates a [ThrowExpressionSyntax][Csharp.AST.ThrowExpressionSyntax] into a [Throw]. Unlike
+     * the throw statement, a throw expression always has an exception, since only the statement
+     * form can rethrow.
+     *
+     * C# spec:
+     * [The throw expression operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1310-the-throw-statement)
+     */
+    private fun handleThrowExpression(node: Csharp.AST.ThrowExpressionSyntax): Throw {
+        return newThrow(rawNode = node).apply { this.exception = handle(node.expression) }
     }
 
     /**

@@ -64,15 +64,19 @@ interface Csharp : Library {
          * [`TypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax)
          * class.
          */
-        open class TypeSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+        open class TypeSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val name: String by lazy { INSTANCE.GetTypeName(this) }
 
-            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any? {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
                 }
                 return when (INSTANCE.GetType(nativeValue)) {
                     "ArrayTypeSyntax" -> ArrayTypeSyntax(nativeValue)
+                    "PredefinedTypeSyntax" -> PredefinedTypeSyntax(nativeValue)
+                    "GenericNameSyntax" -> GenericNameSyntax(nativeValue)
+                    "QualifiedNameSyntax" -> QualifiedNameSyntax(nativeValue)
+                    "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
                     else -> TypeSyntax(nativeValue)
                 }
             }
@@ -86,6 +90,27 @@ interface Csharp : Library {
         class ArrayTypeSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
             val elementType: TypeSyntax by lazy { INSTANCE.GetArrayTypeElementType(this) }
         }
+
+        /**
+         * Represents the Roslyn
+         * [`PredefinedTypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.predefinedtypesyntax)
+         * class, i.e. a keyword type such as `int` or `string`.
+         */
+        class PredefinedTypeSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`GenericNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.genericnamesyntax)
+         * class, i.e. a name with type arguments such as `List<int>`.
+         */
+        class GenericNameSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`QualifiedNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.qualifiednamesyntax)
+         * class, i.e. a dotted name such as `System.String`.
+         */
+        class QualifiedNameSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p)
 
         /**
          * Represents the Roslyn
@@ -362,6 +387,8 @@ interface Csharp : Library {
                     "ForEachStatementSyntax" -> ForEachStatementSyntax(nativeValue)
                     "SwitchStatementSyntax" -> SwitchStatementSyntax(nativeValue)
                     "BreakStatementSyntax" -> BreakStatementSyntax(nativeValue)
+                    "TryStatementSyntax" -> TryStatementSyntax(nativeValue)
+                    "ThrowStatementSyntax" -> ThrowStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -538,6 +565,62 @@ interface Csharp : Library {
          * class.
          */
         class BreakStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`TryStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.trystatementsyntax)
+         * class.
+         */
+        class TryStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val block: BlockSyntax by lazy { INSTANCE.GetTryStatementBlock(this) }
+            val catches: List<CatchClauseSyntax> by lazy {
+                val count = INSTANCE.GetTryStatementCatchCount(this)
+                (0 until count).map { i -> INSTANCE.GetTryStatementCatch(this, i) }
+            }
+            /** The block of the `finally` clause, which is flattened away in the native parser. */
+            val finallyBlock: BlockSyntax? by lazy { INSTANCE.GetTryStatementFinallyBlock(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`CatchClauseSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.catchclausesyntax)
+         * class.
+         */
+        class CatchClauseSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            /** Absent for a general catch clause, i.e. `catch { }`. */
+            val declaration: CatchDeclarationSyntax? by lazy {
+                INSTANCE.GetCatchClauseDeclaration(this)
+            }
+            /**
+             * The condition of an exception filter (`catch (Exception e) when (cond)`). The
+             * surrounding `CatchFilterClauseSyntax` is flattened away in the native parser.
+             */
+            val filterExpression: ExpressionSyntax? by lazy {
+                INSTANCE.GetCatchClauseFilterExpression(this)
+            }
+            val block: BlockSyntax by lazy { INSTANCE.GetCatchClauseBlock(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`CatchDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.catchdeclarationsyntax)
+         * class, i.e. the `(Exception e)` part of a catch clause.
+         */
+        class CatchDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetCatchDeclarationType(this) }
+            /** Empty if the exception is not bound to a variable, e.g. `catch (Exception) { }`. */
+            val identifier: String by lazy { INSTANCE.GetCatchDeclarationIdentifier(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ThrowStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.throwstatementsyntax)
+         * class.
+         */
+        class ThrowStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            /** Absent for a rethrow, i.e. a bare `throw;` inside a catch clause. */
+            val expression: ExpressionSyntax? by lazy { INSTANCE.GetThrowStatementExpression(this) }
+        }
 
         /**
          * Represents the Roslyn
@@ -752,14 +835,30 @@ interface Csharp : Library {
                             "NullLiteralExpression" -> NullLiteralExpressionSyntax(nativeValue)
                             else -> LiteralExpressionSyntax(nativeValue)
                         }
-                    "BinaryExpressionSyntax" -> BinaryExpressionSyntax(nativeValue)
+                    // The `as` operator is a binary expression in Roslyn,
+                    // so we need 'GetKind' to separate them from the real binary operators.
+                    "BinaryExpressionSyntax" ->
+                        when (INSTANCE.GetKind(nativeValue)) {
+                            "AsExpression" -> AsExpressionSyntax(nativeValue)
+                            "IsExpression" -> IsExpressionSyntax(nativeValue)
+                            else -> BinaryExpressionSyntax(nativeValue)
+                        }
                     "PrefixUnaryExpressionSyntax" -> PrefixUnaryExpressionSyntax(nativeValue)
                     "PostfixUnaryExpressionSyntax" -> PostfixUnaryExpressionSyntax(nativeValue)
+                    // In Roslyn all of these are a TypeSyntax and therefore an ExpressionSyntax,
+                    // since C# allows a type wherever an expression is expected.
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
+                    "PredefinedTypeSyntax" -> PredefinedTypeSyntax(nativeValue)
+                    "GenericNameSyntax" -> GenericNameSyntax(nativeValue)
+                    "QualifiedNameSyntax" -> QualifiedNameSyntax(nativeValue)
+                    "ArrayTypeSyntax" -> ArrayTypeSyntax(nativeValue)
                     "AssignmentExpressionSyntax" -> AssignmentExpressionSyntax(nativeValue)
                     "MemberAccessExpressionSyntax" -> MemberAccessExpressionSyntax(nativeValue)
                     "InvocationExpressionSyntax" -> InvocationExpressionSyntax(nativeValue)
+                    "ElementAccessExpressionSyntax" -> ElementAccessExpressionSyntax(nativeValue)
+                    "CastExpressionSyntax" -> CastExpressionSyntax(nativeValue)
                     "ThisExpressionSyntax" -> ThisExpressionSyntax(nativeValue)
+                    "ThrowExpressionSyntax" -> ThrowExpressionSyntax(nativeValue)
                     "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
                     "ImplicitObjectCreationExpressionSyntax" ->
                         ImplicitObjectCreationExpressionSyntax(nativeValue)
@@ -812,11 +911,26 @@ interface Csharp : Library {
          * [`BinaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.binaryexpressionsyntax)
          * class.
          */
-        class BinaryExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+        open class BinaryExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val left: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionLeft(this) }
             val operatorToken: String by lazy { INSTANCE.GetBinaryExpressionOperator(this) }
             val right: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionRight(this) }
         }
+
+        /**
+         * Represents a [BinaryExpressionSyntax] of the kind `AsExpression`, i.e. the safe cast `x
+         * as T`. Roslyn has no own class for it, but unlike for all other binary expressions its
+         * [BinaryExpressionSyntax.right] is a type and not a value.
+         */
+        class AsExpressionSyntax(p: Pointer? = Pointer.NULL) : BinaryExpressionSyntax(p)
+
+        /**
+         * Represents a [BinaryExpressionSyntax] of the kind `IsExpression`, i.e. the type test `x
+         * is T`. As for the [AsExpressionSyntax], its [BinaryExpressionSyntax.right] is a type and
+         * not a value. The pattern forms (`x is T t`, `x is null`) are not this kind, but an
+         * `IsPatternExpressionSyntax`.
+         */
+        class IsExpressionSyntax(p: Pointer? = Pointer.NULL) : BinaryExpressionSyntax(p)
 
         /**
          * Represents the Roslyn
@@ -856,7 +970,7 @@ interface Csharp : Library {
          * [`IdentifierNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.identifiernamesyntax)
          * class.
          */
-        class IdentifierNameSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+        class IdentifierNameSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetIdentifierNameSyntaxIdentifier(this) }
         }
 
@@ -869,6 +983,15 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`ThrowExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.throwexpressionsyntax)
+         * class, i.e. a `throw` in expression position such as `x ?? throw new Exception()`.
+         */
+        class ThrowExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy { INSTANCE.GetThrowExpressionExpression(this) }
+        }
+
+        /**
+         * Represents the Roslyn
          * [`InvocationExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.invocationexpressionsyntax)
          * class.
          */
@@ -876,20 +999,47 @@ interface Csharp : Library {
             val expression: ExpressionSyntax by lazy {
                 INSTANCE.GetInvocationExpressionExpression(this)
             }
-            val argumentList: ArgumentListSyntax by lazy {
+            val argumentList: BaseArgumentListSyntax by lazy {
                 INSTANCE.GetInvocationExpressionArgumentList(this)
             }
         }
 
         /**
          * Represents the Roslyn
-         * [`ArgumentListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.argumentlistsyntax)
-         * class.
+         * [`CastExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.castexpressionsyntax)
+         * class, i.e. an explicit cast such as `(int)x`.
          */
-        class ArgumentListSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+        class CastExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetCastExpressionType(this) }
+            val expression: ExpressionSyntax by lazy { INSTANCE.GetCastExpressionExpression(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ElementAccessExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.elementaccessexpressionsyntax)
+         * class, i.e. an access with square brackets such as `a[i]`, `dict["key"]` or `m[i, j]`.
+         */
+        class ElementAccessExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetElementAccessExpressionExpression(this)
+            }
+            val argumentList: BaseArgumentListSyntax by lazy {
+                INSTANCE.GetElementAccessExpressionArgumentList(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`BaseArgumentListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.baseargumentlistsyntax)
+         * class. Unlike most abstract Roslyn classes, this one does get a wrapper, since its two
+         * children -- the parenthesized `ArgumentListSyntax` of a call and the
+         * `BracketedArgumentListSyntax` of an element access -- have exactly the same shape and can
+         * therefore share the accessors.
+         */
+        class BaseArgumentListSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val arguments: List<ArgumentSyntax> by lazy {
-                val count = INSTANCE.GetArgumentListCount(this)
-                (0 until count).map { i -> INSTANCE.GetArgumentListArgument(this, i) }
+                val count = INSTANCE.GetBaseArgumentListCount(this)
+                (0 until count).map { i -> INSTANCE.GetBaseArgumentListArgument(this, i) }
             }
         }
 
@@ -947,7 +1097,7 @@ interface Csharp : Library {
          */
         open class BaseObjectCreationExpressionSyntax(p: Pointer? = Pointer.NULL) :
             ExpressionSyntax(p) {
-            val argumentList: ArgumentListSyntax? by lazy {
+            val argumentList: BaseArgumentListSyntax? by lazy {
                 INSTANCE.GetBaseObjectCreationExpressionArgumentList(this)
             }
             val initializer: InitializerExpressionSyntax? by lazy {
@@ -1263,6 +1413,28 @@ interface Csharp : Library {
 
     fun GetForEachStatementStatement(handle: AST.ForEachStatementSyntax): AST.StatementSyntax
 
+    fun GetTryStatementBlock(handle: AST.TryStatementSyntax): AST.BlockSyntax
+
+    fun GetTryStatementCatchCount(handle: AST.TryStatementSyntax): Int
+
+    fun GetTryStatementCatch(handle: AST.TryStatementSyntax, index: Int): AST.CatchClauseSyntax
+
+    fun GetTryStatementFinallyBlock(handle: AST.TryStatementSyntax): AST.BlockSyntax?
+
+    fun GetCatchClauseDeclaration(handle: AST.CatchClauseSyntax): AST.CatchDeclarationSyntax?
+
+    fun GetCatchClauseFilterExpression(handle: AST.CatchClauseSyntax): AST.ExpressionSyntax?
+
+    fun GetCatchClauseBlock(handle: AST.CatchClauseSyntax): AST.BlockSyntax
+
+    fun GetCatchDeclarationType(handle: AST.CatchDeclarationSyntax): AST.TypeSyntax
+
+    fun GetCatchDeclarationIdentifier(handle: AST.CatchDeclarationSyntax): String
+
+    fun GetThrowStatementExpression(handle: AST.ThrowStatementSyntax): AST.ExpressionSyntax?
+
+    fun GetThrowExpressionExpression(handle: AST.ThrowExpressionSyntax): AST.ExpressionSyntax
+
     fun GetSwitchStatementExpression(handle: AST.SwitchStatementSyntax): AST.ExpressionSyntax
 
     fun GetSwitchStatementSectionCount(handle: AST.SwitchStatementSyntax): Int
@@ -1302,11 +1474,26 @@ interface Csharp : Library {
 
     fun GetInvocationExpressionArgumentList(
         handle: AST.InvocationExpressionSyntax
-    ): AST.ArgumentListSyntax
+    ): AST.BaseArgumentListSyntax
 
-    fun GetArgumentListCount(handle: AST.ArgumentListSyntax): Int
+    fun GetCastExpressionType(handle: AST.CastExpressionSyntax): AST.TypeSyntax
 
-    fun GetArgumentListArgument(handle: AST.ArgumentListSyntax, index: Int): AST.ArgumentSyntax
+    fun GetCastExpressionExpression(handle: AST.CastExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetElementAccessExpressionExpression(
+        handle: AST.ElementAccessExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetElementAccessExpressionArgumentList(
+        handle: AST.ElementAccessExpressionSyntax
+    ): AST.BaseArgumentListSyntax
+
+    fun GetBaseArgumentListCount(handle: AST.BaseArgumentListSyntax): Int
+
+    fun GetBaseArgumentListArgument(
+        handle: AST.BaseArgumentListSyntax,
+        index: Int,
+    ): AST.ArgumentSyntax
 
     fun GetArgumentExpression(handle: AST.ArgumentSyntax): AST.ExpressionSyntax
 
@@ -1322,7 +1509,7 @@ interface Csharp : Library {
 
     fun GetBaseObjectCreationExpressionArgumentList(
         handle: AST.BaseObjectCreationExpressionSyntax
-    ): AST.ArgumentListSyntax?
+    ): AST.BaseArgumentListSyntax?
 
     fun GetBaseObjectCreationExpressionInitializer(
         handle: AST.BaseObjectCreationExpressionSyntax

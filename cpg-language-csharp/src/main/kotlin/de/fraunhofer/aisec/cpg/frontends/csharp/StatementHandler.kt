@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newBreak
 import de.fraunhofer.aisec.cpg.graph.newCase
+import de.fraunhofer.aisec.cpg.graph.newCatchClause
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newDefault
 import de.fraunhofer.aisec.cpg.graph.newDoWhile
@@ -41,6 +42,8 @@ import de.fraunhofer.aisec.cpg.graph.newForEach
 import de.fraunhofer.aisec.cpg.graph.newIfElse
 import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.newSwitch
+import de.fraunhofer.aisec.cpg.graph.newThrow
+import de.fraunhofer.aisec.cpg.graph.newTry
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.newWhile
 
@@ -62,6 +65,8 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.ForEachStatementSyntax -> handleForEach(node)
             is Csharp.AST.SwitchStatementSyntax -> handleSwitch(node)
             is Csharp.AST.BreakStatementSyntax -> handleBreak(node)
+            is Csharp.AST.TryStatementSyntax -> handleTry(node)
+            is Csharp.AST.ThrowStatementSyntax -> handleThrow(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -329,6 +334,88 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleBreak(node: Csharp.AST.BreakStatementSyntax): Break {
         return newBreak(rawNode = node)
+    }
+
+    /**
+     * Translates a [TryStatementSyntax][Csharp.AST.TryStatementSyntax] into a [Try]. C# has no
+     * `else` block, so [Try.elseBlock] stays empty, and its resources are declared by a `using`
+     * statement rather than by the `try` itself, so [Try.resources] stays empty as well.
+     *
+     * C# spec:
+     * [The try statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1311-the-try-statement)
+     */
+    private fun handleTry(node: Csharp.AST.TryStatementSyntax): Try {
+        val tryStmt = newTry(rawNode = node)
+        frontend.scopeManager.enterScope(tryStmt)
+        tryStmt.tryBlock = handleBlock(node.block)
+        tryStmt.catchClauses = node.catches.map { handleCatchClause(it) }.toMutableList()
+        node.finallyBlock?.let { tryStmt.finallyBlock = handleBlock(it) }
+        frontend.scopeManager.leaveScope(tryStmt)
+        return tryStmt
+    }
+
+    /**
+     * Translates a [CatchClauseSyntax][Csharp.AST.CatchClauseSyntax] into a [CatchClause].
+     *
+     * The caught exception becomes the [CatchClause.parameter]. A general catch clause (`catch {
+     * }`) has no declaration and no parameter, while `catch (Exception) { }` declares the type but
+     * does not bind it to a variable, in which case the parameter has an empty name.
+     *
+     * We model an exception filter (`catch (Exception e) when (cond)`) by wrapping the body in an
+     * implicit [IfElse] guarded by the filter. This keeps the filter expression (and any calls in
+     * it).
+     *
+     * C# spec:
+     * [The try statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1311-the-try-statement)
+     */
+    private fun handleCatchClause(node: Csharp.AST.CatchClauseSyntax): CatchClause {
+        val catchClause = newCatchClause(rawNode = node)
+        frontend.scopeManager.enterScope(catchClause)
+
+        node.declaration?.let { declaration ->
+            val parameter =
+                newVariable(
+                    name = declaration.identifier,
+                    type = frontend.typeOf(declaration.type),
+                    rawNode = declaration,
+                )
+            frontend.scopeManager.addDeclaration(parameter)
+            catchClause.parameter = parameter
+        }
+
+        val body = handleBlock(node.block)
+        // The filter can refer to the parameter, so it has to be handled after the declaration.
+        val filterExpression = node.filterExpression
+        catchClause.body =
+            if (filterExpression == null) {
+                body
+            } else {
+                val guard =
+                    newIfElse().implicit(code = body.code, location = body.location).apply {
+                        this.condition = frontend.expressionHandler.handle(filterExpression)
+                        this.thenStatement = body
+                    }
+                newBlock().implicit(code = body.code, location = body.location).apply {
+                    this.statements += guard
+                }
+            }
+
+        frontend.scopeManager.leaveScope(catchClause)
+        return catchClause
+    }
+
+    /**
+     * Translates a [ThrowStatementSyntax][Csharp.AST.ThrowStatementSyntax] into a [Throw]. The
+     * exception is optional: a `throw;` inside a catch clause rethrows the current exception, so
+     * [Throw.exception] stays `null`.
+     *
+     * C# spec:
+     * [The throw statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1310-the-throw-statement)
+     */
+    private fun handleThrow(node: Csharp.AST.ThrowStatementSyntax): Throw {
+        val throwStmt = newThrow(rawNode = node)
+        node.expression?.let { throwStmt.exception = frontend.expressionHandler.handle(it) }
+        return throwStmt
     }
 
     /**
