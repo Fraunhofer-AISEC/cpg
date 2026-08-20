@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newBreak
 import de.fraunhofer.aisec.cpg.graph.newCase
 import de.fraunhofer.aisec.cpg.graph.newCatchClause
+import de.fraunhofer.aisec.cpg.graph.newContinue
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newDefault
 import de.fraunhofer.aisec.cpg.graph.newDoWhile
@@ -65,6 +66,7 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.ForEachStatementSyntax -> handleForEach(node)
             is Csharp.AST.SwitchStatementSyntax -> handleSwitch(node)
             is Csharp.AST.BreakStatementSyntax -> handleBreak(node)
+            is Csharp.AST.ContinueStatementSyntax -> handleContinue(node)
             is Csharp.AST.TryStatementSyntax -> handleTry(node)
             is Csharp.AST.ThrowStatementSyntax -> handleThrow(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
@@ -334,6 +336,17 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleBreak(node: Csharp.AST.BreakStatementSyntax): Break {
         return newBreak(rawNode = node)
+    }
+
+    /**
+     * Translates a [ContinueStatementSyntax][Csharp.AST.ContinueStatementSyntax] into a [Continue].
+     * C# has no labelled `continue`, so [Continue.label] stays `null`.
+     *
+     * C# spec:
+     * [Continue statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#13102-the-continue-statement)
+     */
+    private fun handleContinue(node: Csharp.AST.ContinueStatementSyntax): Continue {
+        return newContinue(rawNode = node)
     }
 
     /**

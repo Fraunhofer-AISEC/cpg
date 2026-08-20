@@ -65,6 +65,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
             is Csharp.AST.ElementAccessExpressionSyntax -> handleElementAccessExpression(node)
             is Csharp.AST.CastExpressionSyntax -> handleCastExpression(node)
+            is Csharp.AST.ParenthesizedExpressionSyntax -> handleParenthesizedExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
             is Csharp.AST.ThrowExpressionSyntax -> handleThrowExpression(node)
@@ -303,6 +304,25 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             this.expression = handle(node.expression)
             this.castType = frontend.typeOf(node.type)
         }
+    }
+
+    /**
+     * Translates a [ParenthesizedExpressionSyntax][Csharp.AST.ParenthesizedExpressionSyntax] (e.g.
+     * `(a + b)`) into the [Expression] of the enclosed expression.
+     *
+     * Parentheses only group the expression they enclose; the grouping is already reflected in the
+     * shape of the AST. The CPG therefore has no node for them and we hand the inner expression
+     * through unchanged. This makes the parentheses invisible in the graph, the resulting node
+     * keeps the location and the raw node of the inner expression, not of the enclosing
+     * parentheses.
+     *
+     * C# spec:
+     * [Parenthesized expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1287-parenthesized-expressions)
+     */
+    private fun handleParenthesizedExpression(
+        node: Csharp.AST.ParenthesizedExpressionSyntax
+    ): Expression {
+        return handle(node.expression)
     }
 
     /**

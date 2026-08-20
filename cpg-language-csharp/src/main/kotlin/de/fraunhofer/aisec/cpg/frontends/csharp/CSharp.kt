@@ -387,6 +387,7 @@ interface Csharp : Library {
                     "ForEachStatementSyntax" -> ForEachStatementSyntax(nativeValue)
                     "SwitchStatementSyntax" -> SwitchStatementSyntax(nativeValue)
                     "BreakStatementSyntax" -> BreakStatementSyntax(nativeValue)
+                    "ContinueStatementSyntax" -> ContinueStatementSyntax(nativeValue)
                     "TryStatementSyntax" -> TryStatementSyntax(nativeValue)
                     "ThrowStatementSyntax" -> ThrowStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
@@ -565,6 +566,13 @@ interface Csharp : Library {
          * class.
          */
         class BreakStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`ContinueStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.continuestatementsyntax)
+         * class.
+         */
+        class ContinueStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p)
 
         /**
          * Represents the Roslyn
@@ -857,6 +865,7 @@ interface Csharp : Library {
                     "InvocationExpressionSyntax" -> InvocationExpressionSyntax(nativeValue)
                     "ElementAccessExpressionSyntax" -> ElementAccessExpressionSyntax(nativeValue)
                     "CastExpressionSyntax" -> CastExpressionSyntax(nativeValue)
+                    "ParenthesizedExpressionSyntax" -> ParenthesizedExpressionSyntax(nativeValue)
                     "ThisExpressionSyntax" -> ThisExpressionSyntax(nativeValue)
                     "ThrowExpressionSyntax" -> ThrowExpressionSyntax(nativeValue)
                     "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
@@ -1012,6 +1021,17 @@ interface Csharp : Library {
         class CastExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val type: TypeSyntax by lazy { INSTANCE.GetCastExpressionType(this) }
             val expression: ExpressionSyntax by lazy { INSTANCE.GetCastExpressionExpression(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ParenthesizedExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parenthesizedexpressionsyntax)
+         * class, i.e. a parenthesized expression such as `(a + b)`.
+         */
+        class ParenthesizedExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetParenthesizedExpressionExpression(this)
+            }
         }
 
         /**
@@ -1479,6 +1499,10 @@ interface Csharp : Library {
     fun GetCastExpressionType(handle: AST.CastExpressionSyntax): AST.TypeSyntax
 
     fun GetCastExpressionExpression(handle: AST.CastExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetParenthesizedExpressionExpression(
+        handle: AST.ParenthesizedExpressionSyntax
+    ): AST.ExpressionSyntax
 
     fun GetElementAccessExpressionExpression(
         handle: AST.ElementAccessExpressionSyntax

@@ -959,6 +959,12 @@ public static class Library
         return Register(((CastExpressionSyntax)Nodes[handlePtr]).Expression);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetParenthesizedExpressionExpression")]
+    public static IntPtr GetParenthesizedExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((ParenthesizedExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetElementAccessExpressionExpression")]
     public static IntPtr GetElementAccessExpressionExpression(IntPtr handlePtr)
     {
