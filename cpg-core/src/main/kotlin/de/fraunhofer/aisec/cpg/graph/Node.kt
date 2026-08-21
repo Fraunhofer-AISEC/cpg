@@ -140,6 +140,16 @@ abstract class Node() :
     }
 
     /**
+     * Copies [other]'s [code], preserving an interned [codeSpan] if [other] has one, instead of
+     * materializing and re-storing a dedicated copy of the string (as a plain `code = other.code`
+     * assignment would).
+     */
+    internal fun copyCodeFrom(other: Node) {
+        codeSpan = other.codeSpan
+        literalCode = other.literalCode
+    }
+
+    /**
      * The language of this node. This property is set in [Node.applyMetadata] by a
      * [LanguageProvider] at the time when the node is created.
      */

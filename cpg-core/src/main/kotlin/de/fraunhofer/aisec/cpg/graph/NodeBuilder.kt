@@ -280,7 +280,7 @@ fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = nu
 }
 
 fun <T : Node> T.codeAndLocationFrom(other: Node): T {
-    this.code = other.code
+    this.copyCodeFrom(other)
     this.location = other.location
 
     return this
