@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.sarif.CodeSpan
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NodeTest {
     @Test
@@ -87,5 +89,17 @@ class NodeTest {
         node.setCodeSpan(CodeSpan("int a = 1;", 8, 9))
 
         assertEquals("1", node.code)
+    }
+
+    @Test
+    fun testIsCodeInterned() {
+        val node = with(TestLanguageFrontend()) { newLiteral(1) }
+        assertFalse(node.isCodeInterned)
+
+        node.setCodeSpan(CodeSpan("int a = 1;", 8, 9))
+        assertTrue(node.isCodeInterned)
+
+        node.code = "1"
+        assertFalse(node.isCodeInterned)
     }
 }

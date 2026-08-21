@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
+import de.fraunhofer.aisec.cpg.sarif.FileContentCache
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -391,16 +392,28 @@ private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {
+    // Determine the location first, since interning the code (below) needs it.
+    val location = provider.locationOf(rawNode)
     if (contextProvider.ctx.config.codeInNodes) {
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {
-            this.code = code
+            val span =
+                if (contextProvider.ctx.config.codeInterning) {
+                    location?.let { FileContentCache.rangeOf(it, code) }
+                } else {
+                    null
+                }
+            if (span != null) {
+                this.setCodeSpan(span)
+            } else {
+                this.code = code
+            }
         } else {
             LOGGER.warn("Unexpected: No code for node {}", rawNode)
         }
     }
-    this.location = provider.locationOf(rawNode)
+    this.location = location
 }
 
 /**

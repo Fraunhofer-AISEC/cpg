@@ -116,6 +116,7 @@ private constructor(
     val functionSummaries: DFGFunctionSummaries,
     languages: Set<KClass<out Language<*>>>,
     codeInNodes: Boolean,
+    codeInterning: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
     useUnityBuild: Boolean,
@@ -155,6 +156,16 @@ private constructor(
 
     /** should the code of a node be shown as parameter in the node * */
     @JvmField val codeInNodes: Boolean
+
+    /**
+     * If true (the default), a node's [Node.code][de.fraunhofer.aisec.cpg.graph.Node.code] is
+     * stored as an offset range into a shared, cached copy of its source file whenever that range
+     * reproduces the code exactly, instead of as a dedicated copy of the string. This is purely a
+     * memory optimization and never changes the value returned by
+     * [Node.code][de.fraunhofer.aisec.cpg.graph.Node.code]; set to `false` to disable it, e.g. for
+     * A/B comparisons or as a rollback.
+     */
+    @JvmField val codeInterning: Boolean
 
     /** Set to true to process annotations or annotation-like elements. */
     val processAnnotations: Boolean
@@ -217,6 +228,7 @@ private constructor(
         this.languages = languages
         // Make sure to init this AFTER sourceLocations has been set
         this.codeInNodes = codeInNodes
+        this.codeInterning = codeInterning
         this.processAnnotations = processAnnotations
         this.disableCleanup = disableCleanup
         this.useUnityBuild = useUnityBuild
@@ -269,6 +281,7 @@ private constructor(
             mutableMapOf<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>()
         private val functionSummaries = mutableListOf<File>()
         private var codeInNodes = true
+        private var codeInterning = true
         private var processAnnotations = false
         private var disableCleanup = false
         private var useUnityBuild = false
@@ -709,6 +722,18 @@ private constructor(
         }
 
         /**
+         * Enables or disables interning [Node.code][de.fraunhofer.aisec.cpg.graph.Node.code] as
+         * offset ranges into a shared per-file text (default `true`). Disable this only for A/B
+         * comparisons or as a rollback; it never changes the value nodes report for `code`.
+         *
+         * @param b the new value
+         */
+        fun codeInterning(b: Boolean): Builder {
+            codeInterning = b
+            return this
+        }
+
+        /**
          * Specifies, whether annotations should be process or not. By default, they are not
          * processed, since they might populate the graph too much.
          *
@@ -776,6 +801,7 @@ private constructor(
                 DFGFunctionSummaries.fromFiles(functionSummaries),
                 languages,
                 codeInNodes,
+                codeInterning,
                 processAnnotations,
                 disableCleanup,
                 useUnityBuild,

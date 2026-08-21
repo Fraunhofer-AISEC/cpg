@@ -120,6 +120,16 @@ abstract class Node() :
         }
 
     /**
+     * Whether [code] is currently backed by a [CodeSpan] shared with other nodes of the same file,
+     * rather than a dedicated copy of the string. Exposed for diagnostics/benchmarking only: the
+     * value returned by [code] is identical either way.
+     */
+    @DoNotPersist
+    @get:JsonIgnore
+    val isCodeInterned: Boolean
+        get() = codeSpan != null
+
+    /**
      * Sets [code] to [span]'s content without allocating a dedicated copy of the string. Used only
      * by [setCodeAndLocation] once it has verified that [span] reproduces the original code
      * exactly.
