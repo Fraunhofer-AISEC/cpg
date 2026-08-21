@@ -227,12 +227,18 @@ class JVMLanguageFrontend(
                 if (frontendConfiguration.useJimpleTextPositions) {
                     runCatching { JimpleTextPositions.reparse(originalClass) }
                         .onFailure {
+                            // Log a one-line summary, not the full exception: a failing round-trip
+                            // is an expected degradation path (some construct the Jimple grammar
+                            // does not accept), not a bug, and its stack trace is dominated by
+                            // internal ANTLR/parser frames that are noise for a user watching the
+                            // log. The full trace is still available at DEBUG for diagnosis.
                             log.warn(
-                                "Could not reparse class {} through Jimple text; " +
+                                "Could not reparse class {} through Jimple text ({}); " +
                                     "falling back to compiled-artifact positions",
                                 originalClass.type,
-                                it,
+                                it.message,
                             )
+                            log.debug("Reparse failure for class {}", originalClass.type, it)
                         }
                         .getOrNull()
                 } else {
