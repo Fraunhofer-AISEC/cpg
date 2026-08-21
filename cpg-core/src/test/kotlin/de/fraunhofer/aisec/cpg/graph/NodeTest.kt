@@ -26,7 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.sarif.CodeSpan
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class NodeTest {
     @Test
@@ -38,5 +41,51 @@ class NodeTest {
             // Check that the IDs are unique
             assert(node1.id != node2.id) { "Node IDs should be unique" }
         }
+    }
+
+    @Test
+    fun testCodeDefaultsToNull() {
+        val node = with(TestLanguageFrontend()) { newLiteral(1) }
+
+        assertNull(node.code)
+    }
+
+    @Test
+    fun testCodeLiteralRoundTrip() {
+        val node = with(TestLanguageFrontend()) { newLiteral(1) }
+
+        node.code = "1"
+
+        assertEquals("1", node.code)
+    }
+
+    @Test
+    fun testCodeInternedSpanRoundTrip() {
+        val node = with(TestLanguageFrontend()) { newLiteral(1) }
+        val content = "int a = 1;"
+
+        node.setCodeSpan(CodeSpan(content, 8, 9))
+
+        assertEquals("1", node.code)
+    }
+
+    @Test
+    fun testSettingLiteralCodeAfterSpanOverridesSpan() {
+        val node = with(TestLanguageFrontend()) { newLiteral(1) }
+        node.setCodeSpan(CodeSpan("int a = 1;", 8, 9))
+
+        node.code = "2"
+
+        assertEquals("2", node.code)
+    }
+
+    @Test
+    fun testSettingSpanAfterLiteralCodeOverridesLiteral() {
+        val node = with(TestLanguageFrontend()) { newLiteral(1) }
+        node.code = "unrelated"
+
+        node.setCodeSpan(CodeSpan("int a = 1;", 8, 9))
+
+        assertEquals("1", node.code)
     }
 }
