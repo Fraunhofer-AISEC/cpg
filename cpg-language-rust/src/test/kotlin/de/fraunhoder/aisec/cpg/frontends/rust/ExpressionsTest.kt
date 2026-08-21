@@ -325,6 +325,11 @@ class ExpressionsTest {
         val floatLiterals = literals.filter { it.value is Float || it.value is Double }
         assertTrue(floatLiterals.isNotEmpty(), "Should have floating point literals")
 
+        // Test floating point literal with `_` digit separators
+        val underscoredFloatLit =
+            floatLiterals.firstOrNull { (it.value as? Double) == 1_000_000_000.0 }
+        assertNotNull(underscoredFloatLit, "Should parse '1_000_000_000.0' as 1e9")
+
         // Test boolean literal
         val boolLiterals = literals.filter { it.value is Boolean }
         assertTrue(boolLiterals.isNotEmpty(), "Should have boolean literals")

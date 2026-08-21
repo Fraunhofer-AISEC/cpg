@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
+import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -126,6 +127,20 @@ open class JavaScriptLanguage :
             "^=",
             "??=",
         )
+
+    /**
+     * In JavaScript/TypeScript, `false`, `0`, `NaN`, `""`, `null`, and `undefined` are "falsy", and
+     * every other value is "truthy". See https://developer.mozilla.org/en-US/docs/Glossary/Truthy
+     */
+    override fun isTruthy(value: Any?): Boolean? =
+        when {
+            value is CouldNotResolve -> null
+            value is Boolean -> value
+            value is Number -> value.toDouble().let { !it.isNaN() && it != 0.0 }
+            value is String -> value.isNotEmpty()
+            value == null -> false // null or undefined
+            else -> null
+        }
 
     /**
      * See
