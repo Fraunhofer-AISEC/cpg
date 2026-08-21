@@ -4162,10 +4162,6 @@ class PointsToPassTest {
             strlSrcParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
         assertNotNull(strlSrcDerefPMV)
 
-        val memsetDstParam = memsetFunc.parameters[0]
-        val memsetDstDerefPMV =
-            memsetDstParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
-
         val realCodeParam = testFunc.parameters.single()
         val realCodeDerefPMV =
             realCodeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
