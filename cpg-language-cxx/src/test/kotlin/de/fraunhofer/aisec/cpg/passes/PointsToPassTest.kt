@@ -5138,4 +5138,27 @@ class PointsToPassTest {
         // For this one, we rely on the DynamicInvokesResolver
         assertInvokes(funcPtrCall2, incpFunc)
     }
+
+    @Test
+    fun testPMVDeref() {
+        val file = File("src/test/resources/pointsToPass/pmv_deref.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val fFunc = tu.functions("f").single()
+
+        // Params and PMVs
+        val dataParam = fFunc.parameters.single()
+        val dataDerefPMV = dataParam.memoryValues.single { it.name.localName == "derefvalue" }
+
+        // Actual test
+        // The PMV should have no prevDFG
+        assertTrue(dataDerefPMV.prevDFG.isEmpty())
+    }
 }
