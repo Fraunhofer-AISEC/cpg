@@ -2,6 +2,7 @@
 kotlin = "2.3.0"
 kotlinx-json = "1.10.0"
 neo4j5 = "5.28.10"
+jfalkordb = "0.3.0"
 log4j = "2.25.3"
 spotless = "8.1.0"
 publish = "0.37.0"
@@ -40,6 +41,7 @@ slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j"}
 
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.20.0"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
+jfalkordb = { module = "com.falkordb:jfalkordb", version.ref = "jfalkordb"}
 classgraph = { module = "io.github.classgraph:classgraph", version = "4.8.179"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.28.1"}

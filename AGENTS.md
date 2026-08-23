@@ -11,6 +11,7 @@ Key modules:
 - **cpg-analysis** – Higher-level analyses built on top of cpg-core (dataflow, control flow, call graphs, etc.)
 - **cpg-language-\*** – Language frontends, one module per language (e.g., `cpg-language-go`, `cpg-language-python`)
 - **cpg-concepts** – Concept and operation definitions
+- **cpg-neo4j** / **cpg-falkordb** – CLI tools that persist a translated CPG into a Neo4j resp. FalkorDB graph database, both built on the `GraphDatabaseBackend` abstraction in `cpg-core`
 - **cpg-ai** – AI components for the CPG: an MCP server exposing CPG analysis tools (dataflow, symbol analysis, concept application) to LLMs via streamable HTTP, plus chat/skills integration
 - **codyze-console** – Web-based analysis UI with AI agent chat (see [Architecture](#codyze-console-architecture) below)
 
