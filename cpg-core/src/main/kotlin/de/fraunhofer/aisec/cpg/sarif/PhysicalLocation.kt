@@ -87,7 +87,23 @@ class PhysicalLocation(uri: URI?, region: Region) {
     }
 
     var artifactLocation: ArtifactLocation
+
+    // The region is stored as four flat Int fields rather than a dedicated Region object, saving
+    // one object header per location; Region (still the public type everywhere else) is
+    // materialized on demand by the region getter/setter below.
+    private var startLine = 0
+    private var startColumn = 0
+    private var endLine = 0
+    private var endColumn = 0
+
     var region: Region
+        get() = Region(startLine, startColumn, endLine, endColumn)
+        set(value) {
+            startLine = value.startLine
+            startColumn = value.startColumn
+            endLine = value.endLine
+            endColumn = value.endColumn
+        }
 
     init {
         artifactLocation = ArtifactLocation.of(uri)
@@ -101,9 +117,19 @@ class PhysicalLocation(uri: URI?, region: Region) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is PhysicalLocation) return false
-        return artifactLocation == other.artifactLocation && region == other.region
+        // Compares the flattened fields directly rather than via the region getter (which would
+        // otherwise allocate two throwaway Region instances just to compare them).
+        return artifactLocation == other.artifactLocation &&
+            startLine == other.startLine &&
+            startColumn == other.startColumn &&
+            endLine == other.endLine &&
+            endColumn == other.endColumn
     }
 
+    // Delegates to the region getter (rather than hashing the flattened fields directly) so the
+    // computed value is byte-for-byte identical to before this class stored a Region object --
+    // Node.id (used for persistence) is derived from this transitively, so the actual hashCode
+    // *value*, not just self-consistency with equals(), matters here.
     override fun hashCode() = Objects.hash(artifactLocation, region)
 
     companion object {
