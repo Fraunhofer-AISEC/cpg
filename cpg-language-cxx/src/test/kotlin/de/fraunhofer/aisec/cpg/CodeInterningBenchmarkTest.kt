@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
+import java.io.RandomAccessFile
+import java.nio.charset.StandardCharsets
+import kotlin.system.measureNanoTime
 import kotlin.system.measureTimeMillis
 import kotlin.test.Ignore
 import kotlin.test.Test
@@ -141,5 +144,74 @@ class CodeInterningBenchmarkTest {
         println(
             "Reduction: ${sizeWithout - sizeWith} bytes (${"%.1f".format((sizeWithout - sizeWith) * 100.0 / sizeWithout)}%)"
         )
+    }
+
+    /**
+     * Compares the cost of materializing `code` two ways: (a) what we actually do -- a
+     * `String.substring()` slice out of one in-memory copy of the file's text, shared by all its
+     * nodes (no per-node caching of the *materialized* substring -- only the offsets are stored);
+     * vs. (b) a more radical alternative that keeps *no* decoded text in memory at all and instead
+     * seeks/reads the needed byte range from disk on every access. (b) would shave the ~0.4% of
+     * retained heap that the shared file text itself accounts for (see testRetainedHeapSize), at
+     * the cost of a syscall pair per access instead of a memcpy.
+     */
+    @Test
+    fun testSliceCost() {
+        val file = File("../test-files/double_scalarmult_vartime.cpp")
+        val content = file.readText()
+
+        // Build the same line-start index FileContentCache uses internally, and derive a
+        // representative sample of (start, end) spans from every node's region -- this file is
+        // ASCII, so char offsets and byte offsets coincide, which is what lets approach (b) below
+        // seek directly by char offset.
+        val lineStarts = mutableListOf(0)
+        content.forEachIndexed { i, c -> if (c == '\n') lineStarts += i + 1 }
+        fun offsetOf(line: Int, column: Int) = lineStarts.getOrNull(line - 1)?.plus(column - 1)
+
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), false) {
+                it.registerLanguage<CPPLanguage>()
+                it.codeInterning(false)
+            }
+        val spans =
+            result.nodes.mapNotNull { node ->
+                val region = node.location?.region ?: return@mapNotNull null
+                val start = offsetOf(region.startLine, region.startColumn) ?: return@mapNotNull null
+                val end = offsetOf(region.endLine, region.endColumn) ?: return@mapNotNull null
+                if (end in start..content.length) start to end else null
+            }
+        println("Sample size: ${spans.size} spans")
+
+        val rounds = 5
+
+        // (a) current approach: slice out of the one shared, already-decoded String.
+        val inMemoryNanos = measureNanoTime {
+            repeat(rounds) { for ((start, end) in spans) content.substring(start, end) }
+        }
+
+        // (b) alternative: no decoded text kept around; seek + read the byte range from disk and
+        // decode it, every single time `code` is read. A single open file handle is reused (the
+        // best case for this approach -- opening a fresh handle per access would be much worse).
+        val raf = RandomAccessFile(file, "r")
+        val diskNanos = measureNanoTime {
+            repeat(rounds) {
+                for ((start, end) in spans) {
+                    raf.seek(start.toLong())
+                    val bytes = ByteArray(end - start)
+                    raf.readFully(bytes)
+                    String(bytes, StandardCharsets.UTF_8)
+                }
+            }
+        }
+        raf.close()
+
+        val totalOps = spans.size.toLong() * rounds
+        println(
+            "In-memory substring: ${inMemoryNanos / 1_000_000} ms total, ${inMemoryNanos / totalOps} ns/op"
+        )
+        println(
+            "Disk seek+read:      ${diskNanos / 1_000_000} ms total, ${diskNanos / totalOps} ns/op"
+        )
+        println("Disk approach is ${"%.1f".format(diskNanos.toDouble() / inMemoryNanos)}x slower")
     }
 }
