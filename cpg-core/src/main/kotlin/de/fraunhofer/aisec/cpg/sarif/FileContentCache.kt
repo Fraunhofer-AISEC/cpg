@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.sarif
 
-import de.fraunhofer.aisec.cpg.helpers.regionToOffsets
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,6 +39,30 @@ import java.util.concurrent.ConcurrentHashMap
  */
 internal class CodeSpan(val content: String, val start: Int, val end: Int) {
     fun materialize(): String = content.substring(start, end)
+}
+
+/**
+ * A file's full text plus a precomputed line-start index, so a (line, column) region can be
+ * converted to a char offset in O(1) instead of re-scanning from the start of the file for every
+ * node (which would make interning O(fileSize) per node, i.e. O(fileSize * nodeCount) overall).
+ */
+private class IndexedContent(val text: String) {
+    /** `lineStarts[i]` is the char offset where line `i + 1` (1-indexed) begins. */
+    private val lineStarts: IntArray =
+        buildList {
+                add(0)
+                for (i in text.indices) {
+                    if (text[i] == '\n') add(i + 1)
+                }
+            }
+            .toIntArray()
+
+    /** Converts a 1-indexed (line, column) position to a char offset, or `null` if out of range. */
+    fun offsetOf(line: Int, column: Int): Int? {
+        val lineStart = lineStarts.getOrNull(line - 1) ?: return null
+        val offset = lineStart + (column - 1)
+        return if (offset in 0..text.length) offset else null
+    }
 }
 
 /**
@@ -63,7 +86,7 @@ internal object FileContentCache {
     private const val MAX_CACHE_SIZE = 50_000
 
     /** `Optional.empty()` is cached too, so an unreadable/virtual [URI] is not retried per node. */
-    private val cache = ConcurrentHashMap<URI, Optional<String>>()
+    private val cache = ConcurrentHashMap<URI, Optional<IndexedContent>>()
 
     /**
      * Returns a [CodeSpan] into the cached content of [location]'s file that reproduces [rawCode]
@@ -72,27 +95,26 @@ internal object FileContentCache {
      */
     fun rangeOf(location: PhysicalLocation, rawCode: String): CodeSpan? {
         val uri = location.artifactLocation.uri ?: return null
-        val content = contentOf(uri) ?: return null
+        val indexed = contentOf(uri) ?: return null
+        val region = location.region
 
-        val range =
-            regionToOffsets(content, Region(startLine = 1, startColumn = 1), location.region)
-        if (
-            range.first < 0 ||
-                range.last + 1 > content.length ||
-                range.last + 1 - range.first != rawCode.length
-        ) {
+        val start = indexed.offsetOf(region.startLine, region.startColumn) ?: return null
+        val end = indexed.offsetOf(region.endLine, region.endColumn) ?: return null
+        if (end < start || end - start != rawCode.length) {
             return null
         }
 
-        return if (content.regionMatches(range.first, rawCode, 0, rawCode.length)) {
-            CodeSpan(content, range.first, range.last + 1)
+        return if (indexed.text.regionMatches(start, rawCode, 0, rawCode.length)) {
+            CodeSpan(indexed.text, start, end)
         } else {
             null
         }
     }
 
-    /** Returns the cached full text of [uri]'s file, reading it once on first request. */
-    private fun contentOf(uri: URI): String? {
+    /**
+     * Returns the cached, line-indexed content of [uri]'s file, reading it once on first request.
+     */
+    private fun contentOf(uri: URI): IndexedContent? {
         // Cheap, racy bound. Occasional over-shoot or double-clear across threads is harmless:
         // entries are pure caches and any dropped entry is simply re-read on demand.
         if (cache.size >= MAX_CACHE_SIZE) {
@@ -101,9 +123,9 @@ internal object FileContentCache {
         return cache.computeIfAbsent(uri) { Optional.ofNullable(readOrNull(it)) }.orElse(null)
     }
 
-    private fun readOrNull(uri: URI): String? {
+    private fun readOrNull(uri: URI): IndexedContent? {
         return try {
-            Files.readString(Path.of(uri))
+            IndexedContent(Files.readString(Path.of(uri)))
         } catch (_: Exception) {
             // Not a local, readable file (e.g. a virtual/in-memory URI, or one that no longer
             // exists) -- callers fall back to storing the literal code.
