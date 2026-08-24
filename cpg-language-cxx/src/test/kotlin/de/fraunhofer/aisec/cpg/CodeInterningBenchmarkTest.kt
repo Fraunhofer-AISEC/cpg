@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -111,36 +112,51 @@ class CodeInterningBenchmarkTest {
      */
     @Test
     fun testRetainedHeapSize() {
+        reportRetainedHeap(File("../test-files/double_scalarmult_vartime.cpp")) {
+            it.registerLanguage<CPPLanguage>()
+        }
+    }
+
+    /**
+     * Same as [testRetainedHeapSize], but on a ~94k-line real file, to check whether the percentage
+     * reduction changes at scale (it's a ratio of two things -- code duplication and everything
+     * else -- that could plausibly grow at different rates with file size).
+     */
+    @Test
+    fun testRetainedHeapSizeLargeFile() {
+        reportRetainedHeap(File("../test-files/morbi.c")) { it.registerLanguage<CLanguage>() }
+    }
+
+    /**
+     * Parses [file] once per [de.fraunhofer.aisec.cpg.TranslationConfiguration.codeInterning]
+     * setting (sequentially, so only one [de.fraunhofer.aisec.cpg.TranslationResult] is live at a
+     * time -- large files can otherwise exhaust the test JVM's heap) and reports the retained heap
+     * size of each via JOL's [GraphLayout].
+     */
+    private fun reportRetainedHeap(
+        file: File,
+        configure: (de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder) -> Unit,
+    ) {
         // Newer JDKs use record classes (e.g. in ClassLoader internals) that JOL's default
         // Unsafe-based field-offset lookup can't introspect.
         System.setProperty("jol.magicFieldOffset", "true")
 
-        val file = File("../test-files/double_scalarmult_vartime.cpp")
+        fun parseAndMeasure(interning: Boolean): Pair<Long, Long> {
+            val result =
+                analyze(listOf(file), file.parentFile.toPath(), false) {
+                    configure(it)
+                    it.codeInterning(interning)
+                }
+            val layout = GraphLayout.parseInstance(*result.nodes.toTypedArray())
+            return layout.totalSize() to layout.totalCount()
+        }
 
-        val withoutInterning =
-            analyze(listOf(file), file.parentFile.toPath(), false) {
-                it.registerLanguage<CPPLanguage>()
-                it.codeInterning(false)
-            }
-        val withInterning =
-            analyze(listOf(file), file.parentFile.toPath(), false) {
-                it.registerLanguage<CPPLanguage>()
-                it.codeInterning(true)
-            }
-
-        val layoutWithout = GraphLayout.parseInstance(*withoutInterning.nodes.toTypedArray())
-        val layoutWith = GraphLayout.parseInstance(*withInterning.nodes.toTypedArray())
-
-        val sizeWithout = layoutWithout.totalSize()
-        val sizeWith = layoutWith.totalSize()
+        val (sizeWithout, countWithout) = parseAndMeasure(interning = false)
+        val (sizeWith, countWith) = parseAndMeasure(interning = true)
 
         println("File: ${file.absolutePath}")
-        println(
-            "Retained heap without interning: $sizeWithout bytes across ${layoutWithout.totalCount()} objects"
-        )
-        println(
-            "Retained heap with interning:    $sizeWith bytes across ${layoutWith.totalCount()} objects"
-        )
+        println("Retained heap without interning: $sizeWithout bytes across $countWithout objects")
+        println("Retained heap with interning:    $sizeWith bytes across $countWith objects")
         println(
             "Reduction: ${sizeWithout - sizeWith} bytes (${"%.1f".format((sizeWithout - sizeWith) * 100.0 / sizeWithout)}%)"
         )
