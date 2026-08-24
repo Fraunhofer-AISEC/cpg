@@ -78,5 +78,6 @@ dependencies {
     // find a non-enabled project.
     findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(project(":cpg-concepts"))
+    testImplementation(testFixtures(projects.cpgCore))
     implementation(project(":cpg-concepts"))
 }

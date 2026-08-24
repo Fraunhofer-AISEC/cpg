@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.persistence.FalkorDBDatabase
 import de.fraunhofer.aisec.cpg.persistence.connectToFalkorDB
 import de.fraunhofer.aisec.cpg.persistence.persist
+import de.fraunhofer.aisec.cpg.persistence.pushToFalkorDB
 import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -53,6 +54,9 @@ import kotlin.test.assertTrue
  */
 class FalkorDBTest {
 
+    private val host = System.getenv("FALKORDB_HOST") ?: "localhost"
+    private val port = System.getenv("FALKORDB_PORT")?.toIntOrNull() ?: 6379
+
     private lateinit var driver: Driver
     private lateinit var graph: Graph
 
@@ -60,8 +64,8 @@ class FalkorDBTest {
     fun setup() {
         val (driver, graph) =
             connectToFalkorDB(
-                host = System.getenv("FALKORDB_HOST") ?: "localhost",
-                port = System.getenv("FALKORDB_PORT")?.toIntOrNull() ?: 6379,
+                host = host,
+                port = port,
                 graphName = System.getenv("FALKORDB_GRAPH") ?: "cpg-integration-test",
             )
         this.driver = driver
@@ -163,5 +167,23 @@ class FalkorDBTest {
             assertTrue(count > 0)
             it.deleteGraph()
         }
+    }
+
+    @Test
+    fun testPushToFalkorDB() {
+        val result = GraphExamples.getInitializerListExprDFG()
+
+        // The public entry point opens (and closes) its own driver and graph
+        result.pushToFalkorDB(host = host, port = port, graphName = "cpg-integration-test-push")
+
+        val other = driver.graph("cpg-integration-test-push")
+        val count =
+            other
+                .readOnlyQuery("MATCH (n:Node) RETURN count(n) AS count")
+                .iterator()
+                .next()
+                .getValue<Long>("count")
+        assertTrue(count > 0, "Expected pushToFalkorDB to have persisted the graph")
+        other.deleteGraph()
     }
 }

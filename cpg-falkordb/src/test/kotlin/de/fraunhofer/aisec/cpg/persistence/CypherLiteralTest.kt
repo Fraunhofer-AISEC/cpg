@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.persistence
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class CypherLiteralTest {
 
@@ -145,5 +147,59 @@ class CypherLiteralTest {
     enum class TestEnum {
         FIRST,
         SECOND,
+    }
+
+    @Test
+    fun testRenderChar() {
+        assertEquals("\"a\"", CypherLiteral.render('a'))
+        // A character that needs escaping has to be escaped just like it would be in a string
+        assertEquals("\"\\\"\"", CypherLiteral.render('"'))
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    @Test
+    fun testRenderUuid() {
+        val uuid = Uuid.parse("f81d4fae-7dec-11d0-a765-00a0c91e6bf6")
+        assertEquals("\"f81d4fae-7dec-11d0-a765-00a0c91e6bf6\"", CypherLiteral.render(uuid))
+    }
+
+    @Test
+    fun testRenderFloats() {
+        assertEquals("1.5", CypherLiteral.render(1.5f))
+        assertEquals("1.5", CypherLiteral.render(1.5))
+        assertEquals("null", CypherLiteral.render(Float.NaN))
+        assertEquals("null", CypherLiteral.render(Float.POSITIVE_INFINITY))
+    }
+
+    @Test
+    fun testRenderPrimitiveArrays() {
+        assertEquals("[true, false]", CypherLiteral.render(booleanArrayOf(true, false)))
+        assertEquals("[1, 2]", CypherLiteral.render(byteArrayOf(1, 2)))
+        assertEquals("[\"a\", \"b\"]", CypherLiteral.render(charArrayOf('a', 'b')))
+        assertEquals("[1, 2]", CypherLiteral.render(shortArrayOf(1, 2)))
+        assertEquals("[1, 2]", CypherLiteral.render(intArrayOf(1, 2)))
+        assertEquals("[1, 2]", CypherLiteral.render(longArrayOf(1L, 2L)))
+        assertEquals("[1.5, 2.5]", CypherLiteral.render(floatArrayOf(1.5f, 2.5f)))
+        assertEquals("[1.5, 2.5]", CypherLiteral.render(doubleArrayOf(1.5, 2.5)))
+        assertEquals("[\"a\", 1]", CypherLiteral.render(arrayOf<Any>("a", 1)))
+    }
+
+    @Test
+    fun testRenderUnknownTypeFallsBackToToString() {
+        // Anything we do not know explicitly is rendered as its (escaped) string representation,
+        // so it can never escape into the query structure
+        class Weird {
+            override fun toString() = "we\"ird"
+        }
+
+        assertEquals("\"we\\\"ird\"", CypherLiteral.render(Weird()))
+    }
+
+    @Test
+    fun testWithMultipleParameters() {
+        assertEquals(
+            "CYPHER a=1 b=\"x\" RETURN 1",
+            CypherLiteral.withParameters(mapOf("a" to 1, "b" to "x"), "RETURN 1"),
+        )
     }
 }

@@ -61,10 +61,6 @@ const val nodeChunkSize = DEFAULT_NODE_CHUNK_SIZE
  * Note that closing this backend also closes the underlying [session].
  */
 class Neo4jDatabase(private val session: Session) : GraphDatabaseBackend {
-    override val nodeChunkSize: Int = DEFAULT_NODE_CHUNK_SIZE
-
-    override val relationshipChunkSize: Int = DEFAULT_RELATIONSHIP_CHUNK_SIZE
-
     override fun purgeDatabase() {
         session.executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
     }

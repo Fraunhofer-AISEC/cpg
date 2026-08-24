@@ -50,7 +50,7 @@ private val relationshipStructuralKeys = setOf("startId", "endId", "type")
  * and the relationships by their *type*. Each group is then written with a single `UNWIND` query
  * whose body is constant, which lets FalkorDB reuse the cached execution plan across chunks.
  *
- * @param graph the graph to write to, closed together with this backend
+ * @param graph the graph to write to, only closed if [driver] is supplied as well
  * @param driver the driver the [graph] was obtained from, closed together with this backend, or
  *   `null` if the caller manages the driver lifecycle
  */
@@ -138,9 +138,16 @@ class FalkorDBDatabase(private val graph: Graph, private val driver: Driver? = n
         }
     }
 
+    /**
+     * Closes the resources that this backend owns. If no [driver] was handed to us, the caller
+     * manages the lifecycle of the [graph] (and of the driver it originates from), so nothing is
+     * closed and the [graph] stays usable afterwards.
+     */
     override fun close() {
-        graph.close()
-        driver?.close()
+        driver?.let {
+            graph.close()
+            it.close()
+        }
     }
 }
 
@@ -153,6 +160,7 @@ class FalkorDBDatabase(private val graph: Graph, private val driver: Driver? = n
  * @param username the username, or `null` if the instance does not require authentication
  * @param password the password, or `null` if the instance does not require authentication
  * @param graphName the name of the graph key to store the CPG under
+ * @throws IllegalArgumentException if only one of [username] and [password] is supplied
  */
 fun connectToFalkorDB(
     host: String = FalkorDBConnectionDefaults.HOST,
@@ -161,6 +169,12 @@ fun connectToFalkorDB(
     password: String? = null,
     graphName: String = FalkorDBConnectionDefaults.GRAPH,
 ): Pair<Driver, Graph> {
+    // Silently connecting without authentication when only one half of the credentials is set
+    // would turn a typo into a confusing "graph not found" further down the line.
+    require((username == null) == (password == null)) {
+        "Either both username and password have to be supplied, or neither of them."
+    }
+
     val driver =
         if (username != null && password != null) {
             FalkorDB.driver(host, port, username, password)

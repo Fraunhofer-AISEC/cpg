@@ -42,7 +42,7 @@ language frontends you are interested in.
                     [--export-json=<exportJsonFile>] [--graph=<graphName>]
                     [--host=<host>] [--includes-file=<includesFile>]
                     [--max-complexity-cf-dfg=<maxComplexity>]
-                    [--****** [--port=<port>]
+                    [--password=<falkorDbPassword>] [--port=<port>]
                     [--top-level=<topLevel>] [--user=<falkorDbUsername>]
                     [--exclusion-patterns=<exclusionPatterns>]...
                     [-IP=<includePaths>]... ([<files>...] | -S=<String=String>
@@ -91,7 +91,7 @@ language frontends you are interested in.
       --no-default-passes   Do not register default passes [used for debugging]
       --no-falkordb         Do not push cpg into FalkorDB [used for debugging]
       --no-purge-db         Do not purge the graph before pushing the cpg
-      --******
+      --password=<falkorDbPassword>
                             FalkorDB password (default: no authentication)
       --port=<port>         Set the port of the FalkorDB instance (default:
                               6379).
