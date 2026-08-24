@@ -193,7 +193,7 @@ fun LanguageProvider.newName(
                 namespace
             }
 
-        Name(name.toString(), parent, language.namespaceDelimiter)
+        NameCache.intern(Name(name.toString(), parent, language.namespaceDelimiter))
     }
 }
 

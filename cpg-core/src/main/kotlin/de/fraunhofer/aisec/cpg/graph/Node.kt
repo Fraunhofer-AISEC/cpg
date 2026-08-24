@@ -86,7 +86,7 @@ abstract class Node() :
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class)
-    override var name: Name = Name(EMPTY_NAME)
+    override var name: Name = emptyName
         set(value) {
             field = value
             cachedHashCode = 0
@@ -585,6 +585,9 @@ abstract class Node() :
         @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
         const val EMPTY_NAME = ""
+
+        /** A single shared instance used as [name]'s default, to avoid allocating one per node. */
+        private val emptyName = Name(EMPTY_NAME)
     }
 }
 

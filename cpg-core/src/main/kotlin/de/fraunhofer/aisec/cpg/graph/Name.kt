@@ -65,15 +65,30 @@ class Name(
     }
 
     /**
-     * The full string representation of this name. Since [localName] and [parent] are immutable,
-     * this is basically a cache for [toString]. Otherwise, we would need to call [toString] a lot
-     * of times, to implement the necessary functions for [CharSequence].
+     * Caches the full string representation of this name (used by [toString] and the [CharSequence]
+     * implementation). [localName] and [parent] are immutable, so this is essentially a cache for
+     * [toString]; otherwise we would need to call [toString] a lot of times to implement the
+     * necessary functions for [CharSequence]. Manually cached (rather than `by lazy`) to avoid the
+     * extra delegate object and captured lambda that `lazy {}` allocates per instance -- a benign
+     * race that recomputes the same value twice is harmless.
      */
-    private val fullName: String by lazy {
-        (if (parent != null) parent.toString() + delimiter else "") + localName
-    }
+    private var cachedFullName: String? = null
 
-    public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
+    private val fullName: String
+        get() {
+            var f = cachedFullName
+            if (f == null) {
+                f = (if (parent != null) parent.toString() + delimiter else "") + localName
+                cachedFullName = f
+            }
+            return f
+        }
+
+    /** Caches [hashCode]. [Name] is fully immutable, so this never needs to be invalidated. */
+    private var cachedHashCode: Int = 0
+
+    public override fun clone(): Name =
+        NameCache.intern(Name(localName, parent?.clone(), delimiter))
 
     /**
      * This function splits a fully qualified name into its parts. For example,
@@ -95,7 +110,8 @@ class Name(
      */
     override fun toString() = fullName
 
-    override val length = fullName.length
+    override val length: Int
+        get() = fullName.length
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -110,7 +126,14 @@ class Name(
 
     override fun get(index: Int) = fullName[index]
 
-    override fun hashCode() = Objects.hash(localName, parent, delimiter)
+    override fun hashCode(): Int {
+        var h = cachedHashCode
+        if (h == 0) {
+            h = Objects.hash(localName, parent, delimiter)
+            cachedHashCode = h
+        }
+        return h
+    }
 
     override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
         fullName.subSequence(startIndex, endIndex)
@@ -131,14 +154,14 @@ class Name(
     fun lastPartsMatch(ending: String) = this.lastPartsMatch(parseName(ending, this.delimiter))
 
     /** This function appends a string to the local name and returns a new [Name]. */
-    fun append(s: String) = Name(localName + s, parent, delimiter)
+    fun append(s: String) = NameCache.intern(Name(localName + s, parent, delimiter))
 
     /**
      * This functions replaces all occurrences of [oldValue] with [newValue] in the local name and
      * returns a new [Name].
      */
     fun replace(oldValue: String, newValue: String) =
-        Name(localName.replace(oldValue, newValue), parent, delimiter)
+        NameCache.intern(Name(localName.replace(oldValue, newValue), parent, delimiter))
 
     /** Compare names according to the string representation of the [fullName]. */
     override fun compareTo(other: Name) = fullName.compareTo(other.toString())
@@ -170,15 +193,17 @@ internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimit
 
     val parts = fqn.split(delimiter, *splitDelimiters)
 
+    // Intern each part as it's built, so that repeated prefixes (e.g. every member of the same
+    // class/namespace) end up sharing the same (interned) parent instance, not just the leaf.
     var name: Name? = null
     for (part in parts) {
-        name = Name(part, name, delimiter)
+        name = NameCache.intern(Name(part, name, delimiter))
     }
 
     // Actually this should not occur, but otherwise the compiler won't let us return a
     // non-null Name
     if (name == null) {
-        return Name(fqn.toString(), null, delimiter)
+        return NameCache.intern(Name(fqn.toString(), null, delimiter))
     }
 
     return name
@@ -186,8 +211,4 @@ internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimit
 
 /** Returns a new [Name] based on the [localName] and the current name as parent. */
 fun Name?.fqn(localName: String, delimiter: String = this?.delimiter ?: ".") =
-    if (this == null) {
-        Name(localName, null, delimiter)
-    } else {
-        Name(localName, this, delimiter)
-    }
+    NameCache.intern(Name(localName, this, delimiter))
