@@ -51,4 +51,5 @@ dependencies {
 
     testImplementation(libs.junit.params)
     testImplementation(project(":cpg-analysis"))
+    testImplementation(libs.jol.core)
 }

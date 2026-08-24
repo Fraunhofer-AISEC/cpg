@@ -42,4 +42,6 @@ dependencies {
     // to evaluate some test cases
     testImplementation(projects.cpgAnalysis)
     integrationTestImplementation(projects.cpgAnalysis)
+
+    testImplementation(libs.jol.core)
 }

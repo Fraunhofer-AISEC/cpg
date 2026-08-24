@@ -32,6 +32,7 @@ import java.io.File
 import kotlin.system.measureTimeMillis
 import kotlin.test.Ignore
 import kotlin.test.Test
+import org.openjdk.jol.info.GraphLayout
 
 /**
  * Ad-hoc benchmark, not part of CI: reports how many characters of `code` payload are retained with
@@ -95,6 +96,50 @@ class CodeInterningBenchmarkTest {
         )
         println(
             "Reduction: ${baselineChars - afterChars} chars (${"%.1f".format((baselineChars - afterChars) * 100.0 / baselineChars)}%)"
+        )
+    }
+
+    /**
+     * Measures the *actual* retained heap size of the parsed graph via JOL's [GraphLayout], which
+     * walks the real object graph (including private fields, via reflection) and de-duplicates
+     * shared objects by identity -- so a `CodeSpan`'s shared `content` String is counted once no
+     * matter how many nodes reference it. This is a ground-truth cross-check of the analytical
+     * char-count metric in [testMemoryFootprint].
+     */
+    @Test
+    fun testRetainedHeapSize() {
+        // Newer JDKs use record classes (e.g. in ClassLoader internals) that JOL's default
+        // Unsafe-based field-offset lookup can't introspect.
+        System.setProperty("jol.magicFieldOffset", "true")
+
+        val file = File("../test-files/double_scalarmult_vartime.cpp")
+
+        val withoutInterning =
+            analyze(listOf(file), file.parentFile.toPath(), false) {
+                it.registerLanguage<CPPLanguage>()
+                it.codeInterning(false)
+            }
+        val withInterning =
+            analyze(listOf(file), file.parentFile.toPath(), false) {
+                it.registerLanguage<CPPLanguage>()
+                it.codeInterning(true)
+            }
+
+        val layoutWithout = GraphLayout.parseInstance(*withoutInterning.nodes.toTypedArray())
+        val layoutWith = GraphLayout.parseInstance(*withInterning.nodes.toTypedArray())
+
+        val sizeWithout = layoutWithout.totalSize()
+        val sizeWith = layoutWith.totalSize()
+
+        println("File: ${file.absolutePath}")
+        println(
+            "Retained heap without interning: $sizeWithout bytes across ${layoutWithout.totalCount()} objects"
+        )
+        println(
+            "Retained heap with interning:    $sizeWith bytes across ${layoutWith.totalCount()} objects"
+        )
+        println(
+            "Reduction: ${sizeWithout - sizeWith} bytes (${"%.1f".format((sizeWithout - sizeWith) * 100.0 / sizeWithout)}%)"
         )
     }
 }
