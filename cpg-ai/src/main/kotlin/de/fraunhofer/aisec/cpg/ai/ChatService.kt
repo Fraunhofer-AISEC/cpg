@@ -232,6 +232,32 @@ class ChatService(
             "what you would do. If you are done, just confirm that no further tool calls are " +
             "needed."
 
+    /**
+     * Tool names safe to execute concurrently with each other in [chatStrategy]'s `executeTool`
+     * node - i.e. read-only CPG queries with no shared mutable state. Deliberately an explicit
+     * allowlist rather than "everything except a known mutating list": several mutating tools
+     * (`cpg_persist_semantic_nodes`, `cpg_skip_function`, `cpg_persist_analysis_summary` in DUST's
+     * `CpgPersistConceptsTool.kt`/ `CpgPersistAnalysisSummaryTool.kt`) do an unsynchronized
+     * read-modify-write on a shared YAML/markdown file, so two concurrent calls could race and
+     * silently drop a write. A new tool not added here simply stays sequential, which is always
+     * safe, just not maximally fast - the reverse (a new mutating tool accidentally inheriting
+     * parallelism) would not be.
+     */
+    private val parallelSafeToolNames =
+        setOf(
+            "cpg_dataflow",
+            "cpg_dfg_backward",
+            "cpg_list_functions",
+            "cpg_list_records",
+            "cpg_list_calls",
+            "cpg_list_calls_to",
+            "cpg_list_call_args",
+            "cpg_list_call_arg_by_name_or_index",
+            "cpg_get_functions_by_name",
+            "cpg_get_node",
+            "cpg_list_llm_concepts_operations",
+        )
+
     /** Logs token usage reported by the LLM provider for one response, if any was reported. */
     private fun logTokenUsage(message: Message.Assistant) {
         val usage = message.metaInfo
@@ -335,7 +361,20 @@ class ChatService(
                 node<Flow<StreamFrame>, Message.Assistant>("collectRequestLlmStream") { frames ->
                     frames.toList().toMessageResponse().also { logTokenUsage(it) }
                 }
-            val executeTool by nodeExecuteTools()
+            // Not a plain nodeExecuteTools(): that node is all-or-nothing (every call in the
+            // turn parallel, or every call sequential). This splits a turn's tool calls into
+            // parallelSafeToolNames (executed concurrently via environment.executeTools) and
+            // everything else (executed one at a time, in order, via environment.executeTool) -
+            // see parallelSafeToolNames doc for why this can't just be "parallel = true".
+            val executeTool by
+                node<ToolCalls, ReceivedToolResults>("executeToolsPartiallyParallel") { toolCalls ->
+                    val (parallelSafe, sequential) =
+                        toolCalls.toolCalls.partition { it.tool in parallelSafeToolNames }
+                    ReceivedToolResults(
+                        environment.executeTools(parallelSafe) +
+                            sequential.map { environment.executeTool(it) }
+                    )
+                }
             val sendToolResultStream by nodeLLMSendToolResultsStreaming()
             val sendToolResult by
                 node<Flow<StreamFrame>, Message.Assistant>("collectSendToolResultStream") { frames
