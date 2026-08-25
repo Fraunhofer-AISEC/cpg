@@ -36,10 +36,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.RecordInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
@@ -52,7 +49,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
 class ListCommandsTest {
@@ -77,7 +73,10 @@ class ListCommandsTest {
             val functionNames =
                 result.content.map {
                     assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).name
+                    Json.decodeFromString<JsonObject>(it.text)
+                        .getValue("name")
+                        .jsonPrimitive
+                        .content
                 }
             assertNotNull(
                 functionNames.singleOrNull { it == "print" },
@@ -98,11 +97,11 @@ class ListCommandsTest {
                 result.content.isNotEmpty(),
                 "There is a record declaration \"Foo\" in the test code",
             )
-            assertDoesNotThrow {
-                Json.decodeFromString<RecordInfo>(
+            val view =
+                Json.decodeFromString<JsonObject>(
                     (result.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
-            }
+            assertNotNull(view["nodeId"], "Should return the generic McpNodeView of the record")
         }
 
     @Test
@@ -132,8 +131,10 @@ class ListCommandsTest {
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
-                    .nodeId
+                Json.decodeFromString<JsonObject>((callsResult.content.first() as TextContent).text)
+                    .getValue("nodeId")
+                    .jsonPrimitive
+                    .content
 
             val argsResult =
                 client.callTool(name = "cpg_list_call_args", arguments = mapOf("id" to callId))
@@ -169,8 +170,10 @@ class ListCommandsTest {
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
-                    .nodeId
+                Json.decodeFromString<JsonObject>((callsResult.content.first() as TextContent).text)
+                    .getValue("nodeId")
+                    .jsonPrimitive
+                    .content
 
             val argResultByIndex =
                 client.callTool(
@@ -247,15 +250,14 @@ class ListCommandsTest {
             assertNotNull(listResult)
             assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
 
-            val functionInfo =
-                Json.decodeFromString<FunctionInfo>(
-                    (listResult.content.first() as TextContent).text
-                )
+            val functionSummary =
+                Json.decodeFromString<JsonObject>((listResult.content.first() as TextContent).text)
 
             val result =
                 client.callTool(
                     name = "cpg_get_node",
-                    arguments = mapOf("id" to functionInfo.nodeId),
+                    arguments =
+                        mapOf("id" to functionSummary.getValue("nodeId").jsonPrimitive.content),
                 )
             assertNotNull(result)
             assertTrue(result.content.isNotEmpty(), "Should return the node")
@@ -263,11 +265,17 @@ class ListCommandsTest {
             val content = result.content.single()
             assertIs<TextContent>(content)
 
-            // cpg_get_node now returns the generic McpNodeView (see toMcpView), not the
-            // edge-laden NodeJSON - it should still carry the node's id, type, name and code.
+            // cpg_get_node returns the generic McpNodeView (see toMcpView) - it should still carry
+            // the node's id, type, name and code.
             val view = Json.parseToJsonElement(content.text).jsonObject
-            assertEquals(functionInfo.nodeId, view["nodeId"]?.jsonPrimitive?.content)
-            assertEquals(functionInfo.name, view["name"]?.jsonPrimitive?.content)
+            assertEquals(
+                functionSummary["nodeId"]?.jsonPrimitive?.content,
+                view["nodeId"]?.jsonPrimitive?.content,
+            )
+            assertEquals(
+                functionSummary["name"]?.jsonPrimitive?.content,
+                view["name"]?.jsonPrimitive?.content,
+            )
             assertNotNull(view["code"], "cpg_get_node should still return the full source")
         }
 }

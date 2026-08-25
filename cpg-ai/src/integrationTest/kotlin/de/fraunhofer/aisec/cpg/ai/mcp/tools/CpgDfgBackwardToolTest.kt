@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.*
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
@@ -36,6 +34,9 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.BeforeEach
 
 class CpgDfgBackwardToolTest {
@@ -61,21 +62,21 @@ class CpgDfgBackwardToolTest {
             assertNotNull(callsResult)
             assertTrue(callsResult.content.isNotEmpty())
 
-            val callInfo =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+            val callId =
+                Json.decodeFromString<JsonObject>((callsResult.content.first() as TextContent).text)
+                    .getValue("nodeId")
+                    .jsonPrimitive
+                    .content
 
             val result =
-                client.callTool(
-                    name = "cpg_dfg_backward",
-                    arguments = mapOf("id" to callInfo.nodeId),
-                )
+                client.callTool(name = "cpg_dfg_backward", arguments = mapOf("id" to callId))
             assertNotNull(result)
             assertTrue(result.content.isNotEmpty())
 
             val content = result.content.single()
             assertIs<TextContent>(content)
 
-            val nodes = Json.decodeFromString<List<NodeInfo>>(content.text)
+            val nodes = Json.decodeFromString<JsonArray>(content.text)
             assertTrue(nodes.isNotEmpty())
         }
 }

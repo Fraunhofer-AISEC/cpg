@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
@@ -35,21 +34,28 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.reachingWrites
+import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
+import de.fraunhofer.aisec.cpg.serialization.toMcpView
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 /**
  * The MCP-facing representation of a single [de.fraunhofer.aisec.cpg.graph.ReachingWrite]: [node]
- * is the writing node, [granularity] is its [Granularity] rendered as a short tag (see [toTag]),
- * and [functionSummary] mirrors whether the underlying edge came from a cross-function summary
- * rather than a direct write in this scope.
+ * is the writing node's generic [de.fraunhofer.aisec.cpg.serialization.toMcpView], [granularity] is
+ * its [Granularity] rendered as a short tag (see [toTag]), and [functionSummary] mirrors whether
+ * the underlying edge came from a cross-function summary rather than a direct write in this scope.
  */
 @Serializable
-data class LastWriteInfo(val node: NodeInfo, val granularity: String, val functionSummary: Boolean)
+data class LastWriteInfo(
+    val node: JsonObject,
+    val granularity: String,
+    val functionSummary: Boolean,
+)
 
 /** Renders a [Granularity] as a short string tag for the LLM-facing JSON response. */
 private fun Granularity.toTag(): String =
@@ -75,7 +81,7 @@ fun getLastWrite(result: TranslationResult, payload: CpgIdPayload): CallToolResu
     val writes =
         startNode.reachingWrites().map {
             LastWriteInfo(
-                node = NodeInfo(it.source),
+                node = it.source.toMcpView(McpDetailLevel.SUMMARY),
                 granularity = it.granularity.toTag(),
                 functionSummary = it.functionSummary,
             )

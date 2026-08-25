@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.describeRelationships
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getRelatedNodes
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCalls
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -40,6 +39,13 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.BeforeEach
+
+/** Decodes a `cpg_list_calls`/`cpg_get_related_nodes` result item as a generic McpNodeView. */
+private fun TextContent.toView(): JsonObject = Json.decodeFromString<JsonObject>(text)
+
+private fun JsonObject.nodeId(): String = getValue("nodeId").jsonPrimitive.content
+
+private fun JsonObject.name(): String = getValue("name").jsonPrimitive.content
 
 class RelationshipToolsTest {
     @BeforeEach
@@ -64,9 +70,9 @@ class RelationshipToolsTest {
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val printfCallId =
                 callsResult.content
-                    .map { Json.decodeFromString<CallInfo>((it as TextContent).text) }
-                    .single { it.argumentNames.isNotEmpty() }
-                    .nodeId
+                    .map { (it as TextContent).toView() }
+                    .single { it.name() == "printf" }
+                    .nodeId()
 
             val result =
                 client.callTool(
@@ -91,9 +97,9 @@ class RelationshipToolsTest {
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val printfCallId =
                 callsResult.content
-                    .map { Json.decodeFromString<CallInfo>((it as TextContent).text) }
-                    .single { it.argumentNames.isNotEmpty() }
-                    .nodeId
+                    .map { (it as TextContent).toView() }
+                    .single { it.name() == "printf" }
+                    .nodeId()
 
             val result =
                 client.callTool(
@@ -101,8 +107,7 @@ class RelationshipToolsTest {
                     arguments = mapOf("nodeId" to printfCallId, "relationship" to "argument"),
                 )
             assertTrue(result.content.isNotEmpty(), "printf(...) has one argument")
-            val view =
-                Json.decodeFromString<JsonObject>((result.content.single() as TextContent).text)
+            val view = (result.content.single() as TextContent).toView()
             assertNotNull(view["nodeId"], "Should return an McpNodeView for the argument")
         }
 
@@ -117,9 +122,9 @@ class RelationshipToolsTest {
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val helloCallId =
                 callsResult.content
-                    .map { Json.decodeFromString<CallInfo>((it as TextContent).text) }
-                    .single { it.name.endsWith("hello") }
-                    .nodeId
+                    .map { (it as TextContent).toView() }
+                    .single { it.name().endsWith("hello") }
+                    .nodeId()
 
             val result =
                 client.callTool(
@@ -127,10 +132,9 @@ class RelationshipToolsTest {
                     arguments = mapOf("nodeId" to helloCallId, "relationship" to "invoke"),
                 )
             assertTrue(result.content.isNotEmpty(), "hello() invokes the hello function")
-            val view =
-                Json.decodeFromString<JsonObject>((result.content.single() as TextContent).text)
+            val view = (result.content.single() as TextContent).toView()
             assertTrue(
-                view["name"]?.jsonPrimitive?.content?.endsWith("hello") == true,
+                view.name().endsWith("hello"),
                 "Should resolve to the 'hello' function declaration",
             )
         }
@@ -144,9 +148,7 @@ class RelationshipToolsTest {
             }
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
-            val callId =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
-                    .nodeId
+            val callId = (callsResult.content.first() as TextContent).toView().nodeId()
 
             val result =
                 client.callTool(

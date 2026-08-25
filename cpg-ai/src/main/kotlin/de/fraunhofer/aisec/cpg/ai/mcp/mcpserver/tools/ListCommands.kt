@@ -49,8 +49,10 @@ import kotlinx.serialization.json.Json
 fun Server.listFunctions() {
     val toolDescription =
         """
-        This tool lists all functions, more precisely function declarations, which are held in the graph.
-        
+        This tool lists all functions, more precisely function declarations, which are held in the graph, as compact summaries.
+        Use cpg_get_node with an id to retrieve the full node details (including its code), or
+        cpg_describe_relationships/cpg_get_related_nodes to inspect its parameters, callees, etc.
+
         Example prompts:
         - "Show me all functions in the analyzed code"
         - "What functions are defined in this codebase?"
@@ -60,7 +62,10 @@ fun Server.listFunctions() {
     this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.functions.map { TextContent(Json.encodeToString(it.toInfo())) }
+                content =
+                    result.functions.map {
+                        TextContent(it.toMcpView(McpDetailLevel.SUMMARY).toString())
+                    }
             )
         }
     }
@@ -70,7 +75,8 @@ fun Server.listRecords() {
     val toolDescription =
         """
         This tool lists all classes and structs, more precisely their declarations as compact summaries.
-        Use cpg_get_node with a id to retrieve the full node details.
+        Use cpg_get_node with an id to retrieve the full node details, or
+        cpg_describe_relationships/cpg_get_related_nodes to inspect its fields and methods.
 
         Example prompts:
         - "Show me all classes in the code"
@@ -81,7 +87,10 @@ fun Server.listRecords() {
     this.addTool(name = "cpg_list_records", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.records.map { TextContent(Json.encodeToString(it.toInfo())) }
+                content =
+                    result.records.map {
+                        TextContent(it.toMcpView(McpDetailLevel.SUMMARY).toString())
+                    }
             )
         }
     }
@@ -107,7 +116,8 @@ fun Server.listCalls() {
     val toolDescription =
         """
         This tool lists all function and method calls as compact summaries.
-        Use cpg_get_node with a id to retrieve the full node details.
+        Use cpg_get_node with an id to retrieve the full node details, or
+        cpg_describe_relationships/cpg_get_related_nodes to inspect its arguments or what it invokes.
 
         Example prompts:
         - "Show me all function calls in the code"
@@ -118,7 +128,10 @@ fun Server.listCalls() {
     this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.calls.map { TextContent(Json.encodeToString(it.toInfo())) }
+                content =
+                    result.calls.map {
+                        TextContent(it.toMcpView(McpDetailLevel.SUMMARY).toString())
+                    }
             )
         }
     }

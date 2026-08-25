@@ -27,15 +27,16 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
+import de.fraunhofer.aisec.cpg.serialization.toMcpView
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.uuid.Uuid
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 
 fun Server.addDfgBackwardTool() {
     val toolDescription =
@@ -61,8 +62,8 @@ fun Server.addDfgBackwardTool() {
                 )
 
         val paths = startNode.collectAllPrevDFGPaths()
-        val nodes = paths.flatMap { it.nodes }.map { NodeInfo(it) }
+        val nodes = paths.flatMap { it.nodes }.map { it.toMcpView(McpDetailLevel.SUMMARY) }
 
-        CallToolResult(content = listOf(TextContent(Json.encodeToString(nodes))))
+        CallToolResult(content = listOf(TextContent(JsonArray(nodes).toString())))
     }
 }

@@ -31,9 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
@@ -211,12 +208,6 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
 fun Node.toJson() = this.toMcpView(McpDetailLevel.FULL).toString()
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
-
-fun Function.toInfo() = FunctionInfo(this)
-
-fun Record.toInfo() = RecordInfo(this)
-
-fun Call.toInfo() = CallInfo(this)
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {
