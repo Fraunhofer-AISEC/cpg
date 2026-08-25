@@ -27,10 +27,12 @@ package de.fraunhofer.aisec.cpg.ai.clients
 
 import ai.koog.http.client.ktor.KtorKoogHttpClient
 import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig
+import ai.koog.prompt.executor.clients.google.GoogleLLMClient
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
+import ai.koog.prompt.executor.clients.retry.RetryConfig
+import ai.koog.prompt.executor.clients.retry.RetryingLLMClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
-import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
 import ai.koog.prompt.llm.LLMCapability
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
@@ -45,9 +47,25 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlin.time.Duration.Companion.seconds
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
+
+/**
+ * Retries only well-known transient failures ([RetryConfig.DEFAULT_PATTERNS]: 429/5xx,
+ * rate-limit/timeout-ish keywords) - independent of, and unrelated to, the "don't retry failed
+ * *tool* calls" policy in [SYSTEM_PROMPT], which is about the model's own tool-call behavior, not
+ * transport/provider failures. Deliberately much tighter than [RetryConfig.PRODUCTION] (3 attempts,
+ * up to 20s max delay each): a caller like DUST layers its own outer `--llm-call-timeout-seconds`
+ * per call, so retry backoff here must stay a small addition to that budget, not something that can
+ * itself balloon into multiples of it. With these settings, the two backoff waits between 3
+ * attempts are at most ~1s and ~2s (before jitter) - each individual attempt is still bounded by
+ * the client's own request/socket timeout exactly as before; only the gap *between* attempts is
+ * new.
+ */
+private val transientFailureRetryConfig =
+    RetryConfig(maxAttempts = 3, initialDelay = 1.seconds, maxDelay = 5.seconds)
 
 /**
  * Generic context-length fallbacks used when constructing an [LLModel] for a model chosen
@@ -74,7 +92,14 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 // providers below), so we intentionally don't try to route config.baseUrl through
                 // here; it is still used for model discovery in fetchGeminiModels.
                 ChatLlm(
-                    executor = simpleGoogleAIExecutor(apiKey),
+                    executor =
+                        MultiLLMPromptExecutor(
+                            LLMProvider.Google to
+                                RetryingLLMClient(
+                                    GoogleLLMClient(apiKey),
+                                    transientFailureRetryConfig,
+                                )
+                        ),
                     model =
                         LLModel(
                             provider = LLMProvider.Google,
@@ -142,7 +167,11 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                             KtorKoogHttpClient.Factory(baseClient = loggingKtorClient),
                     )
                 ChatLlm(
-                    executor = MultiLLMPromptExecutor(LLMProvider.OpenAI to client),
+                    executor =
+                        MultiLLMPromptExecutor(
+                            LLMProvider.OpenAI to
+                                RetryingLLMClient(client, transientFailureRetryConfig)
+                        ),
                     model =
                         LLModel(
                             provider = LLMProvider.OpenAI,
