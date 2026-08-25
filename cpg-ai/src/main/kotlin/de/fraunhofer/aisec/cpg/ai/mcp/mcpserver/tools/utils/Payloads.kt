@@ -53,6 +53,15 @@ data class CpgNamePayload(@Description("The local name of the node to consider."
 data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
 
 @Serializable
+data class CpgRelatedNodesPayload(
+    @Description("The id of the node to traverse from.") val nodeId: String,
+    @Description(
+        "The name of the relationship to follow, as returned by cpg_describe_relationships for this node."
+    )
+    val relationship: String,
+)
+
+@Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
     @Description("ID of the method/function call whose arguments should be listed.")
     val nodeId: String,

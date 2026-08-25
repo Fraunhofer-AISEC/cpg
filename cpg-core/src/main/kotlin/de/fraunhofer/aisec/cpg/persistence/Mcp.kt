@@ -26,11 +26,14 @@
 package de.fraunhofer.aisec.cpg.persistence
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.memberProperties
 import kotlin.uuid.Uuid
 
 /**
@@ -73,9 +76,9 @@ annotation class McpConvert(val value: KClass<out AttributeConverter<*, *>>)
  * - filtered by [detail] via [McpDetail]
  * - converted via [McpConvert] instead of [Convert], where present
  *
- * This deliberately does NOT include relationships (DFG/CDG/PDG/OVERLAY, or subclass-specific ones
- * such as `Call.invokes`) - that is a deliberate follow-up once this scalar-only view has been
- * reviewed, see the cpg-ai MCP server design discussion.
+ * This only covers scalar properties. Relationships (DFG/CDG/PDG/OVERLAY, or subclass-specific ones
+ * such as `Call.invokes`/`Call.arguments`) are handled separately, see [mcpRelationships] and
+ * [mcpRelatedNodes].
  */
 fun Persistable.mcpProperties(detail: McpDetailLevel = McpDetailLevel.SUMMARY): Map<String, Any?> {
     val properties = mutableMapOf<String, Any?>()
@@ -120,5 +123,52 @@ private fun Any.mcpConvert(
         this is Enum<*> -> properties[originalKey] = this.name
         this is Uuid -> properties[originalKey] = this.toString()
         else -> properties[originalKey] = this
+    }
+}
+
+/**
+ * A cache mapping classes of type [Persistable] to their MCP (LLM-facing) relationships, see
+ * [mcpRelationships].
+ */
+private val mcpRelationshipCache:
+    MutableMap<KClass<out Persistable>, Map<String, KProperty1<out Persistable, *>>> =
+    mutableMapOf()
+
+/**
+ * Returns this class's relationships (AST children, DFG/CDG/PDG/OVERLAY, and subclass-specific ones
+ * such as `Call.invokes`/`Call.arguments`) as a name -> property map, keyed by a name derived from
+ * the underlying Kotlin property (stripping a trailing "Edge"/"Edges", the same convention used as
+ * a fallback by [relationshipName]) rather than by [relationshipName] itself.
+ *
+ * This differs from [schemaRelationships] only in that key: [schemaRelationships] keys by the
+ * derived Neo4j relationship label, which is not guaranteed to be unique per class - e.g.
+ * `Node.prevDFGEdges`/`nextDFGEdges` both use the label "DFG" (direction is metadata there, not
+ * part of the key), so only one of the two would survive in that map. Traversal needs both
+ * directions addressable, so this uses the property name instead.
+ */
+val KClass<out Persistable>.mcpRelationships: Map<String, KProperty1<out Persistable, *>>
+    get() =
+        mcpRelationshipCache.computeIfAbsent(this) {
+            val schema = mutableMapOf<String, KProperty1<out Persistable, *>>()
+            for (property in it.memberProperties) {
+                if (isRelationship(property)) {
+                    schema[property.name.substringBeforeLast("Edge")] = property
+                }
+            }
+            schema
+        }
+
+/**
+ * Returns the [Node]s connected to this [Persistable] via the given MCP [relationship] (a key from
+ * [mcpRelationships]), or `null` if this class has no such relationship.
+ */
+fun Persistable.mcpRelatedNodes(relationship: String): List<Node>? {
+    val property = this::class.mcpRelationships[relationship] ?: return null
+
+    return when (val value = property.call(this)) {
+        is EdgeCollection<*, *> -> value.toNodeCollection().filterIsInstance<Node>()
+        is Collection<*> -> value.filterIsInstance<Node>()
+        is Node -> listOf(value)
+        else -> emptyList()
     }
 }

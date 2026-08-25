@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
+import de.fraunhofer.aisec.cpg.persistence.mcpRelatedNodes
+import de.fraunhofer.aisec.cpg.persistence.mcpRelationships
 import de.fraunhofer.aisec.cpg.serialization.toMcpView
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -205,6 +207,78 @@ fun Server.getNode() {
             )
         } else {
             CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
+        }
+    }
+}
+
+fun Server.describeRelationships() {
+    val toolDescription =
+        """
+        Lists the relationships available on a node by its id, e.g. AST children ("arguments",
+        "parameters", "fields", "statements", ...), dataflow edges ("prevDFG", "nextDFG"), or other
+        subclass-specific ones ("invoke" for calls). Use cpg_get_related_nodes with one of the
+        returned names to actually fetch the connected nodes.
+
+        Example prompts:
+        - "What can I look at from this call?"
+        - "What relationships does this node have?"
+        """
+            .trimIndent()
+
+    this.addTool<CpgIdPayload>(
+        name = "cpg_describe_relationships",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgIdPayload ->
+        val node = result.nodes.find { it.id.toString() == payload.id }
+        if (node != null) {
+            val names = node::class.mcpRelationships.keys.sorted()
+            CallToolResult(content = listOf(TextContent(Json.encodeToString(names))))
+        } else {
+            CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
+        }
+    }
+}
+
+fun Server.getRelatedNodes() {
+    val toolDescription =
+        """
+        Returns the nodes connected to a given node via the named relationship (see
+        cpg_describe_relationships to discover available names). Results are compact summaries;
+        use cpg_get_node with a returned id to inspect the full details of a specific one.
+
+        Example prompts:
+        - "Show me the arguments of this call"
+        - "What are the parameters of this function?"
+        - "Where does this value flow to next?"
+        """
+            .trimIndent()
+
+    this.addTool<CpgRelatedNodesPayload>(
+        name = "cpg_get_related_nodes",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgRelatedNodesPayload ->
+        val node = result.nodes.find { it.id.toString() == payload.nodeId }
+        if (node == null) {
+            CallToolResult(content = listOf(TextContent("No node found with ${payload.nodeId}")))
+        } else {
+            val related = node.mcpRelatedNodes(payload.relationship)
+            if (related == null) {
+                CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Unknown relationship '${payload.relationship}' for node type " +
+                                    "${node::class.simpleName}. Use cpg_describe_relationships to " +
+                                    "list the available relationships for this node."
+                            )
+                        )
+                )
+            } else {
+                CallToolResult(
+                    content =
+                        related.map { TextContent(it.toMcpView(McpDetailLevel.SUMMARY).toString()) }
+                )
+            }
         }
     }
 }

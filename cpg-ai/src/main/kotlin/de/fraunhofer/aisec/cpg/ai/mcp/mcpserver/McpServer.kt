@@ -50,6 +50,8 @@ fun configureServer(
         this.getArgByIndexOrName()
         this.listConceptsAndOperations()
         this.getNode()
+        this.describeRelationships()
+        this.getRelatedNodes()
         this.addDfgBackwardTool()
         this.addGetLastWriteTool()
         this.listLLMConceptsOperations()

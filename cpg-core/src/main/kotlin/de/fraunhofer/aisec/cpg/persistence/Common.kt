@@ -313,7 +313,7 @@ val KClass<out Persistable>.schemaRelationships: Map<String, KProperty1<out Pers
  * @return true if the property satisfies the conditions of being a "simple" property, false
  *   otherwise
  */
-private fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean {
+internal fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean {
     val returnType = property.returnType.withNullability(false)
 
     return when {
@@ -346,7 +346,7 @@ private fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean 
  *   interface
  * @return true if the property satisfies the conditions of being a "relationship", false otherwise
  */
-private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
+internal fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
     val returnType = property.returnType.withNullability(false)
 
     return when {
