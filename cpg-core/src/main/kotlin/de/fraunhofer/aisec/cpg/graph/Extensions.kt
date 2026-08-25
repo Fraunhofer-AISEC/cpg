@@ -1030,15 +1030,10 @@ fun Node.followPrevCDGUntilHit(
 }
 
 /**
- * Path-free MAY variant of [followDFGEdgesUntilHit]: returns the set of frontier DFG nodes
- * satisfying [predicate] (deduped by identity), skipping all witness bookkeeping. Mirrors the
- * parameters of [followDFGEdgesUntilHit]; see [followXUntilHitNodes] for the exact semantics.
- *
- * For the exact field-insensitive, context-sensitive, interprocedural regime that
- * [ifdsReachingSources] implements, this delegates to that IFDS solver instead of the legacy
- * visit-once engine: the IFDS tabulation is recursion-complete (it does not under-report on
- * recursive interprocedural graphs). All other configurations fall through to the legacy engine
- * unchanged. See the delegation guard below for the precise preconditions.
+ * Path-free MAY variant of [followDFGEdgesUntilHit]: returns the set of nodes satisfying
+ * [predicate] that are reachable from [this] along the DFG, deduped by identity, without collecting
+ * the paths that lead to them. See [followDFGEdgesUntilHit] for the parameter documentation (both
+ * functions share it) and [followXUntilHitNodes] for the exact semantics.
  */
 fun Node.followDFGEdgesUntilHitNodes(
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
@@ -1048,11 +1043,17 @@ fun Node.followDFGEdgesUntilHitNodes(
     earlyTermination: (Node, Context) -> Boolean = noEarlyTermination,
     predicate: (Node) -> Boolean,
 ): Set<Node> {
-    // Delegate to the recursion-complete IFDS solver iff the request is EXACTLY the
-    // field-insensitive, context-sensitive, interprocedural, fresh-empty-stack,
-    // no-early-termination
-    // regime that [ifdsReachingSources] covers. Anything else (FieldSensitive, Intraprocedural, a
-    // custom earlyTermination, or a pre-seeded call stack) falls through to the legacy engine.
+    // For the exact field-insensitive, context-sensitive, interprocedural regime that
+    // ifdsReachingSources implements, delegate to that IFDS solver instead of the legacy
+    // visit-once engine: the IFDS tabulation is recursion-complete (unlike the legacy engine, it
+    // does not under-report on recursive interprocedural graphs). Anything else (FieldSensitive,
+    // Intraprocedural, a custom earlyTermination, or a pre-seeded call stack) falls through to the
+    // legacy engine unchanged. This only applies to the node-set (MAY) variant here, not to the
+    // path-collecting followDFGEdgesUntilHit: reusing a summary edge across several callers means
+    // its target was reached via a caller-independent sub-path, so replaying it does not by itself
+    // give us a single concrete witness path back to the start node; reconstructing one would need
+    // each tabulated edge/summary to additionally remember its provenance, which is not
+    // implemented.
     if (
         (direction is Forward || direction is Backward) &&
             sensitivities.toSet() == setOf<AnalysisSensitivity>(ContextSensitive) &&
@@ -1080,13 +1081,9 @@ fun Node.followDFGEdgesUntilHitNodes(
 }
 
 /**
- * Path-free MAY variant of [followEOGEdgesUntilHit]: returns the set of frontier EOG nodes
- * satisfying [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
- *
- * As with [followDFGEdgesUntilHitNodes], the exact field-insensitive (i.e. NO
- * [FilterUnreachableEOG]), context-sensitive, interprocedural, no-early-termination regime is
- * delegated to the recursion-complete [ifdsReachingSources] solver; every other configuration falls
- * through to the legacy engine unchanged.
+ * Path-free MAY variant of [followEOGEdgesUntilHit]: returns the set of nodes satisfying
+ * [predicate] that are reachable from [this] along the EOG, deduped by identity. See
+ * [followXUntilHitNodes] for the exact semantics.
  */
 fun Node.followEOGEdgesUntilHitNodes(
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
@@ -1095,8 +1092,9 @@ fun Node.followEOGEdgesUntilHitNodes(
     earlyTermination: (Node, Context) -> Boolean = noEarlyTermination,
     predicate: (Node) -> Boolean,
 ): Set<Node> {
-    // See [followDFGEdgesUntilHitNodes] for the rationale. This wrapper has no `ctx` parameter (the
-    // EOG traversal always starts from a fresh empty stack), so there is no start-stack guard here.
+    // See followDFGEdgesUntilHitNodes for the delegation rationale (field-insensitive here means
+    // no FilterUnreachableEOG). This wrapper has no `ctx` parameter (the EOG traversal always
+    // starts from a fresh empty stack), so there is no start-stack guard here.
     if (
         (direction is Forward || direction is Backward) &&
             sensitivities.toSet() == setOf<AnalysisSensitivity>(ContextSensitive) &&
@@ -1122,8 +1120,8 @@ fun Node.followEOGEdgesUntilHitNodes(
 }
 
 /**
- * Path-free MAY variant of [followPrevFullDFGEdgesUntilHit]: returns the set of frontier nodes
- * satisfying [predicate] reachable by walking the prev full DFG edges. See [followXUntilHitNodes].
+ * Path-free MAY variant of [followPrevFullDFGEdgesUntilHit]: returns the set of nodes satisfying
+ * [predicate] reachable by walking the prev full DFG edges. See [followXUntilHitNodes].
  */
 fun Node.followPrevFullDFGEdgesUntilHitNodes(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -1139,8 +1137,8 @@ fun Node.followPrevFullDFGEdgesUntilHitNodes(
 }
 
 /**
- * Path-free MAY variant of [followNextFullDFGEdgesUntilHit]: returns the set of frontier nodes
- * satisfying [predicate] reachable by walking the next full DFG edges. See [followXUntilHitNodes].
+ * Path-free MAY variant of [followNextFullDFGEdgesUntilHit]: returns the set of nodes satisfying
+ * [predicate] reachable by walking the next full DFG edges. See [followXUntilHitNodes].
  */
 fun Node.followNextFullDFGEdgesUntilHitNodes(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -1156,8 +1154,8 @@ fun Node.followNextFullDFGEdgesUntilHitNodes(
 }
 
 /**
- * Path-free MAY variant of [followNextPDGUntilHit]: returns the set of frontier PDG nodes
- * satisfying [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
+ * Path-free MAY variant of [followNextPDGUntilHit]: returns the set of PDG nodes satisfying
+ * [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
  */
 fun Node.followNextPDGUntilHitNodes(
     interproceduralAnalysis: Boolean = false,
@@ -1172,8 +1170,8 @@ fun Node.followNextPDGUntilHitNodes(
 }
 
 /**
- * Path-free MAY variant of [followNextCDGUntilHit]: returns the set of frontier CDG nodes
- * satisfying [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
+ * Path-free MAY variant of [followNextCDGUntilHit]: returns the set of CDG nodes satisfying
+ * [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
  */
 fun Node.followNextCDGUntilHitNodes(
     interproceduralAnalysis: Boolean = false,
@@ -1188,8 +1186,8 @@ fun Node.followNextCDGUntilHitNodes(
 }
 
 /**
- * Path-free MAY variant of [followPrevPDGUntilHit]: returns the set of frontier PDG nodes
- * satisfying [predicate] (backwards analysis, deduped by identity). See [followXUntilHitNodes].
+ * Path-free MAY variant of [followPrevPDGUntilHit]: returns the set of PDG nodes satisfying
+ * [predicate] (backwards analysis, deduped by identity). See [followXUntilHitNodes].
  */
 fun Node.followPrevPDGUntilHitNodes(
     interproceduralAnalysis: Boolean = false,
@@ -1207,8 +1205,8 @@ fun Node.followPrevPDGUntilHitNodes(
 }
 
 /**
- * Path-free MAY variant of [followPrevCDGUntilHit]: returns the set of frontier CDG nodes
- * satisfying [predicate] (backwards analysis, deduped by identity). See [followXUntilHitNodes].
+ * Path-free MAY variant of [followPrevCDGUntilHit]: returns the set of CDG nodes satisfying
+ * [predicate] (backwards analysis, deduped by identity). See [followXUntilHitNodes].
  */
 fun Node.followPrevCDGUntilHitNodes(
     interproceduralAnalysis: Boolean = false,
