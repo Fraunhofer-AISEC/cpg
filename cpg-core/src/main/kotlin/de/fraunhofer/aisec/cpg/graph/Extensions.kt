@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.Usage
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.filterIsInstanceAndFilterTo
 import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -114,7 +115,9 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
             nodesWithOverlays
                 .splitInto()
                 .map { chunk ->
-                    async(Dispatchers.Default) { chunk.filterIsInstance<T>().filter(predicate) }
+                    async(Dispatchers.Default) {
+                        chunk.filterIsInstanceAndFilterTo<T, _>(mutableListOf(), predicate)
+                    }
                 }
                 .awaitAll()
                 .flatten()
