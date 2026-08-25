@@ -40,6 +40,7 @@ import ai.koog.prompt.message.MessagePart
 import ai.koog.prompt.params.LLMParams
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponse
+import ai.koog.prompt.structure.StructuredResponse
 import ai.koog.prompt.tokenizer.CachingTokenizer
 import ai.koog.prompt.tokenizer.PromptTokenizer
 import ai.koog.prompt.tokenizer.SimpleRegexBasedTokenizer
@@ -258,6 +259,17 @@ class ChatService(
             "cpg_list_llm_concepts_operations",
         )
 
+    /**
+     * Follow-up message sent once [chatStrategy] believes a turn is finished, requesting a
+     * [TaskStatus] via structured output (see `requestTaskStatus`/`finishWithTaskStatus` in
+     * [chatStrategy]) - a more reliable completion signal for callers than inferring "done" from
+     * whatever the skill happened to persist to disk. The model's own final answer is already in
+     * its history by this point (appended automatically when it was produced), so this only needs
+     * to ask for the status, not restate the question.
+     */
+    private val taskStatusRequestMessage =
+        "Report your current task status now via the structured response format requested."
+
     /** Logs token usage reported by the LLM provider for one response, if any was reported. */
     private fun logTokenUsage(message: Message.Assistant) {
         val usage = message.metaInfo
@@ -452,6 +464,31 @@ class ChatService(
                     text
                 }
 
+            // Once the model believes a turn is finished (both paths above that used to go
+            // straight to nodeFinish), ask once more for a structured TaskStatus instead of
+            // letting callers infer completion by re-parsing whatever the skill persisted to
+            // disk. The model's final answer is already in its history (appended automatically
+            // when produced) and was already streamed out via onLLMStreamingFrameReceived before
+            // this point, so the text input here is intentionally discarded - only the request
+            // for status matters.
+            val requestTaskStatus by
+                node<String, Result<StructuredResponse<TaskStatus>>>("requestTaskStatus") { _ ->
+                    llm.writeSession {
+                        appendPrompt { user(taskStatusRequestMessage) }
+                        requestLLMStructured<TaskStatus>()
+                    }
+                }
+            // Encodes the TaskStatus as this strategy's overall String output on success ([chat]
+            // decodes it back to emit a task_status event), or an empty string if the structured
+            // request itself failed - this return value isn't otherwise displayed (see [chat]'s
+            // doc on agent.run's return value), so degrading to "no status" here is safe and
+            // doesn't affect the text already streamed to the caller.
+            val finishWithTaskStatus by
+                node<Result<StructuredResponse<TaskStatus>>, String>("finishWithTaskStatus") {
+                    result ->
+                    result.fold(onSuccess = { Json.encodeToString(it.data) }, onFailure = { "" })
+                }
+
             edge(nodeStart forwardTo requestLlmStream)
             edge(requestLlmStream forwardTo requestLlm)
             // onToolCalls is checked before onTextMessage (matching Koog's own singleRunStrategy
@@ -558,8 +595,10 @@ class ChatService(
                         call == null
                     }
             )
-            edge(fallbackNoToolCallDetectedAfterNudge forwardTo nodeFinish)
-            edge(emptyResponseToFinish forwardTo nodeFinish)
+            edge(fallbackNoToolCallDetectedAfterNudge forwardTo requestTaskStatus)
+            edge(emptyResponseToFinish forwardTo requestTaskStatus)
+            edge(requestTaskStatus forwardTo finishWithTaskStatus)
+            edge(finishWithTaskStatus forwardTo nodeFinish)
         }
 
     /** Return the discovered skills. */
@@ -652,10 +691,16 @@ class ChatService(
                     }
                 }
 
-            // The final text is already streamed out via onLLMStreamingFrameReceived above; the
-            // agent's return value only matters if the run finishes without ever streaming (e.g. an
-            // immediate tool-only response), so we don't need to re-emit it here.
-            agent.run(userMessage)
+            // The final display text is already streamed out via onLLMStreamingFrameReceived
+            // above - agent.run's return value is chatStrategy's finishWithTaskStatus output
+            // (a TaskStatus encoded as JSON, or "" if that structured request failed/never
+            // fired - e.g. the turn ended via a tool call rather than a finished text answer), not
+            // display text. Emit it as its own event if present; callers that don't care about
+            // structured completion can simply ignore this event type.
+            val finalResult = agent.run(userMessage)
+            runCatching { Json.decodeFromString<TaskStatus>(finalResult) }
+                .getOrNull()
+                ?.let { send(Events.taskStatus(it.done, it.resolvedItems)) }
         } catch (e: Exception) {
             log.error("Chat error: {}", e.message, e)
             send(Events.text("Error: ${e.message}"))

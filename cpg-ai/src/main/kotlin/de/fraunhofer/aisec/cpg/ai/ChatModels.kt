@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.ai
 
+import ai.koog.agents.core.tools.annotations.LLMDescription
 import java.nio.file.Path
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -81,4 +82,30 @@ data class Skill(
     val description: String,
     val body: String,
     @Transient val location: Path? = null,
+)
+
+/**
+ * Structured completion signal requested once from the LLM whenever [ChatService.chatStrategy]
+ * believes a turn is finished (see [ChatService.requestTaskStatus]), as a more reliable alternative
+ * to a caller inferring completion by re-parsing whatever the skill happened to persist to disk.
+ * Deliberately skill-agnostic - the same "resolved identifiers" shape covers both tag-library's
+ * tagged/skipped function names and match-library's matched/unmatched ones - matching the existing
+ * [ChatService]-level design principle (see `historyCompressionConcepts`).
+ */
+@Serializable
+@LLMDescription(
+    "The current status of the requested task, reported once you believe you have finished (or " +
+        "given up on) everything asked of you."
+)
+data class TaskStatus(
+    @property:LLMDescription(
+        "True only if every requested item has been addressed - either completed or explicitly " +
+            "given up on as unresolvable. False if meaningful work remains."
+    )
+    val done: Boolean,
+    @property:LLMDescription(
+        "Identifiers (e.g. function names) that were completed or explicitly given up on/skipped " +
+            "this run, written exactly as used elsewhere in this conversation."
+    )
+    val resolvedItems: List<String> = emptyList(),
 )
