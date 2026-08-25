@@ -270,6 +270,24 @@ class ChatService(
     private val taskStatusRequestMessage =
         "Report your current task status now via the structured response format requested."
 
+    /**
+     * Converts one history [Message] to a [ChatMessageJSON] for [Events.finalHistory], or `null` to
+     * omit it: system messages (a caller resending this history gets a fresh one via
+     * [buildSystemPrompt] anyway) and any message with no text part (pure tool-call/tool-result
+     * turns - not representable in the plain user/assistant transcript [ChatRequestJSON] uses, so
+     * dropping them is strictly no worse than [chat]'s own current behavior of never returning them
+     * at all).
+     */
+    private fun Message.toChatMessageJsonOrNull(): ChatMessageJSON? {
+        if (this is Message.System) return null
+        val text = textContent()
+        if (text.isBlank()) return null
+        return ChatMessageJSON(
+            role = if (this is Message.Assistant) "assistant" else "user",
+            content = text,
+        )
+    }
+
     /** Logs token usage reported by the LLM provider for one response, if any was reported. */
     private fun logTokenUsage(message: Message.Assistant) {
         val usage = message.metaInfo
@@ -671,10 +689,9 @@ class ChatService(
                         }
                         onToolCallFailed { ctx -> send(Events.text("Tool failed: ${ctx.message}")) }
                         onAgentCompleted { ctx ->
+                            val allMessages = ctx.context.llm.readSession { prompt.messages }
                             val assistantMessages =
-                                ctx.context.llm
-                                    .readSession { prompt.messages }
-                                    .filterIsInstance<Message.Assistant>()
+                                allMessages.filterIsInstance<Message.Assistant>()
                             var inputTokens = 0
                             var outputTokens = 0
                             var totalTokens = 0
@@ -687,6 +704,11 @@ class ChatService(
                                 usage.modelId?.let { modelId = it }
                             }
                             send(Events.usage(modelId, inputTokens, outputTokens, totalTokens))
+                            send(
+                                Events.finalHistory(
+                                    allMessages.mapNotNull { it.toChatMessageJsonOrNull() }
+                                )
+                            )
                         }
                     }
                 }
