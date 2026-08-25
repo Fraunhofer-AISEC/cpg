@@ -211,6 +211,15 @@ class ChatService(
                         "brief note of what was found, to avoid redundant re-querying.",
                 factType = FactType.MULTIPLE,
             ),
+            Concept(
+                keyword = "SkippedFunctions",
+                description =
+                    "Functions or entries explicitly marked as unresolvable or given up on so " +
+                        "far (e.g. via a skip/give-up tool call), and why - so a function already " +
+                        "confirmed unresolvable isn't independently re-investigated and " +
+                        "re-skipped after history compression.",
+                factType = FactType.MULTIPLE,
+            ),
         )
 
     /**
