@@ -58,7 +58,11 @@ data class CpgNamesPayload(
     @Description(
         "The local names of the functions to look up. Keep this batch reasonably small (e.g. around 10 names) to avoid overly large responses."
     )
-    val names: List<String>
+    val names: List<String>,
+    @Description(
+        "Whether to include each function's source code in the response. Defaults to true. Set to false if you only need to confirm a function exists or inspect its signature/parameters - use cpg_get_node afterwards to fetch the full source for a specific one once picked."
+    )
+    val includeCode: Boolean = true,
 )
 
 @Serializable

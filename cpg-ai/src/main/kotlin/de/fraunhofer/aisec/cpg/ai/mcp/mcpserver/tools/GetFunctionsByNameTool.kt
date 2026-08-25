@@ -40,7 +40,7 @@ fun Server.getFunctionsByName() {
     val toolDescription =
         """
         This tool looks up a batch of functions by their (local) names and returns their full
-        details, including code, parameters, and signature.
+        details, including code (unless includeCode is set to false), parameters, and signature.
 
         Prefer this over cpg_list_functions when the target function names are already known
         (e.g. from an input file), since cpg_list_functions dumps the entire codebase's function
@@ -61,7 +61,9 @@ fun Server.getFunctionsByName() {
             }
 
         val found =
-            functionsByName.values.flatten().map { TextContent(Json.encodeToString(it.toInfo())) }
+            functionsByName.values.flatten().map {
+                TextContent(Json.encodeToString(it.toInfo(includeCode = payload.includeCode)))
+            }
         val notFound = functionsByName.filterValues { it.isEmpty() }.keys
 
         val notFoundNotice =
