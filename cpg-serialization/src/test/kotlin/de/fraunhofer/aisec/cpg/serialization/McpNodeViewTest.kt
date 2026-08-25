@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.serialization
 
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
@@ -80,6 +82,32 @@ class McpNodeViewTest {
         assertEquals(
             "greets the world",
             (view["comment"] as kotlinx.serialization.json.JsonPrimitive).content,
+        )
+    }
+
+    @Test
+    fun overriddenLocationPropertyIsFlattenedToo() {
+        // Assumption re-declares `location` (via its own `assumptionLocation`) rather than
+        // inheriting Node's, so it needs its own @McpConvert - this verifies that annotation is
+        // actually picked up, since Kotlin reflection does not inherit annotations across
+        // overridden properties.
+        val assumption =
+            Assumption(
+                assumptionType = AssumptionType.InferenceAssumption,
+                message = "this is an assumption",
+                assumptionLocation =
+                    PhysicalLocation(URI.create("file:///tmp/assumed.c"), Region(2, 1, 2, 10)),
+            )
+
+        val view = assumption.toMcpView(McpDetailLevel.SUMMARY)
+
+        assertEquals(
+            "assumed.c",
+            view["fileName"]?.let { (it as kotlinx.serialization.json.JsonPrimitive).content },
+        )
+        assertEquals(
+            "2",
+            view["startLine"]?.let { (it as kotlinx.serialization.json.JsonPrimitive).content },
         )
     }
 }

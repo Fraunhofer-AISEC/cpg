@@ -32,8 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.McpConvert
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.McpLocationConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -75,7 +77,9 @@ import kotlin.uuid.Uuid
 class Assumption(
     val assumptionType: AssumptionType,
     var message: String,
-    @Convert(LocationConverter::class) var assumptionLocation: PhysicalLocation,
+    @Convert(LocationConverter::class)
+    @McpConvert(McpLocationConverter::class)
+    var assumptionLocation: PhysicalLocation,
     node: Node? = null,
     @DoNotPersist var edge: Edge<*>? = null,
     @Relationship(value = "ASSUMPTION_SCOPE", direction = Relationship.Direction.OUTGOING)

@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class OverlayInfo(
@@ -233,6 +233,6 @@ data class DataflowResult(
 data class QueryTreeNode(
     val queryTreeId: String,
     val value: String,
-    val node: NodeJSON?,
+    val node: JsonObject?,
     val children: List<QueryTreeNode> = emptyList(),
 )

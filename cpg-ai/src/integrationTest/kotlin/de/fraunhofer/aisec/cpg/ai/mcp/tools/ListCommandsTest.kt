@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.RecordInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
-import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,6 +48,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.BeforeEach
@@ -139,18 +139,21 @@ class ListCommandsTest {
                 client.callTool(name = "cpg_list_call_args", arguments = mapOf("id" to callId))
             assertNotNull(argsResult)
             assertTrue(argsResult.content.isNotEmpty(), "Should return arguments for the call")
-            assertDoesNotThrow {
-                Json.decodeFromString<NodeJSON>(
+            val argView =
+                Json.decodeFromString<JsonObject>(
                     (argsResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
-            }
+            assertNotNull(
+                argView["nodeId"],
+                "Should return the generic McpNodeView of the argument",
+            )
 
             val wrongArgsResult =
                 client.callTool(name = "cpg_list_call_args", arguments = mapOf("nodeId" to callId))
             assertNotNull(wrongArgsResult)
             assertTrue(wrongArgsResult.content.isNotEmpty(), "Should return arguments for the call")
             assertThrows<IllegalArgumentException> {
-                Json.decodeFromString<NodeJSON>(
+                Json.decodeFromString<JsonObject>(
                     (wrongArgsResult.content.first() as TextContent).text
                 )
             }
@@ -179,11 +182,14 @@ class ListCommandsTest {
                 argResultByIndex.content.isNotEmpty(),
                 "Should return the argument at index 0",
             )
-            assertDoesNotThrow {
-                Json.decodeFromString<NodeJSON>(
+            val argView =
+                Json.decodeFromString<JsonObject>(
                     (argResultByIndex.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
-            }
+            assertNotNull(
+                argView["nodeId"],
+                "Should return the generic McpNodeView of the argument",
+            )
 
             val argResultByName =
                 client.callTool(
@@ -193,7 +199,7 @@ class ListCommandsTest {
             assertNotNull(argResultByName)
             assertTrue(argResultByName.content.isNotEmpty(), "Should return the error message")
             assertThrows<IllegalArgumentException> {
-                Json.decodeFromString<NodeJSON>(
+                Json.decodeFromString<JsonObject>(
                     (argResultByName.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
             }

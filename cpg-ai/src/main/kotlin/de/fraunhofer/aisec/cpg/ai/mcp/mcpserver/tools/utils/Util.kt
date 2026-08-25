@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.passes.Description
+import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -201,13 +202,13 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
     return QueryTreeNode(
         queryTreeId = this.id.toString(),
         value = this.value.toString(),
-        node = this.node?.toJSON(noEdges = false),
+        node = this.node?.toMcpView(McpDetailLevel.FULL),
         children = this.children.map { it.toQueryTreeNode() },
     )
 }
 
-/** Converts any [Node] to a JSON string using the [NodeJSON] format. */
-fun Node.toJson() = Json.encodeToString(this.toJSON())
+/** Converts any [Node] to a JSON string using the generic [toMcpView]. */
+fun Node.toJson() = this.toMcpView(McpDetailLevel.FULL).toString()
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
