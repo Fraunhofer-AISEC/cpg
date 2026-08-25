@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.ai.clients
 
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.llm.LLModel
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -58,7 +59,16 @@ data class ClientConfig(
 
 @Serializable data class OpenAiModelsResponse(val data: List<OpenAiModel> = emptyList())
 
-@Serializable data class OpenAiModel(val id: String)
+@Serializable
+data class OpenAiModel(
+    val id: String,
+    /**
+     * The model's real context window, in tokens - not part of the official OpenAI `/v1/models`
+     * schema, but reported by some self-hosted OpenAI-compatible servers (e.g. vLLM) as an
+     * extension field. Absent (`null`) for servers that don't report it.
+     */
+    @SerialName("max_model_len") val maxModelLen: Long? = null,
+)
 
 @Serializable data class GeminiModelsResponse(val models: List<GeminiModel> = emptyList())
 

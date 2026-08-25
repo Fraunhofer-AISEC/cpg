@@ -191,6 +191,31 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
         return result
     }
 
+    /**
+     * Looks up [model]'s real context window (in tokens) for [clientName], if the server reports
+     * it - currently only `max_model_len`, a vLLM `/v1/models` extension field (see [OpenAiModel]).
+     * Returns `null` if the client is unknown/unreachable, isn't
+     * [ClientProvider.OPENAI_COMPATIBLE], the model isn't listed, or the server doesn't report this
+     * field at all - callers should fall back to a hardcoded default in that case, not treat `null`
+     * as an error.
+     */
+    suspend fun contextLengthFor(clientName: String, model: String): Long? {
+        val config = clients.firstOrNull { it.name == clientName } ?: return null
+        if (config.provider != ClientProvider.OPENAI_COMPATIBLE) return null
+        return try {
+            val response =
+                httpClient.get("${config.baseUrl}/v1/models") {
+                    timeout { requestTimeoutMillis = 2_000L }
+                    config.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
+                }
+            if (!response.status.isSuccess()) return null
+            response.body<OpenAiModelsResponse>().data.firstOrNull { it.id == model }?.maxModelLen
+        } catch (e: Exception) {
+            log.debug("Could not fetch context length for {}/{}: {}", clientName, model, e.message)
+            null
+        }
+    }
+
     /** Fetches the provider-specific models. */
     private suspend fun fetchModels(cfg: ClientConfig): List<String> {
         return try {

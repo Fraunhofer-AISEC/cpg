@@ -128,24 +128,31 @@ class ChatService(
     private val historyCompressionThreshold = 100
 
     /**
-     * The real context window (in tokens) of the model actually deployed behind the
-     * `openai-compatible` provider, as observed directly from a live 400 response ("This model's
-     * maximum context length is 262144 tokens...") - deliberately independent of
-     * [LlmProviderConfig]'s [LLModel.contextLength], which is a generic, hardcoded per-provider
-     * guess (128_000 for openai-compatible) that this specific deployment already proved wrong.
-     * Update this if the deployed model changes.
+     * The model's real context window, in tokens, used by [chatStrategy]'s token-based compression
+     * trigger below. [chat] tries to resolve this dynamically per request (see
+     * [resolveHistoryCompressionTokenLimit], [LlmProviderConfig.contextLengthFor]) and only falls
+     * back to this hardcoded value if that fails (unreachable server, or a server that doesn't
+     * report it). 262144 is Qwen 3.6's real context length - the model this fallback was tuned
+     * for - as observed directly from a live 400 response ("This model's maximum context length is
+     * 262144 tokens..."). Deliberately independent of [LlmProviderConfig]'s
+     * [LLModel.contextLength], which is a generic, hardcoded per-provider guess (128_000 for
+     * openai-compatible) that this specific deployment already proved wrong. Update this if the
+     * fallback should target a different default model.
      */
-    private val historyCompressionTokenLimit = 262_144
+    private var historyCompressionTokenLimit = 262_144L
+
+    /** Whether [resolveHistoryCompressionTokenLimit] has already run once for this instance. */
+    private var resolvedHistoryCompressionTokenLimit = false
 
     /**
      * Once [tokenizer]'s estimated token count for the running prompt exceeds this fraction of
      * [historyCompressionTokenLimit], [chatStrategy] compresses the history - independently of
      * [historyCompressionThreshold], so a handful of huge tool results trigger compression just as
-     * reliably as many moderate ones. 0.35 (~91.8k tokens here) is chosen to stay under the ~100k
-     * mark where this deployment's model has been observed to noticeably slow down, not just under
-     * the hard 400 limit.
+     * reliably as many moderate ones. 1/3 is chosen to stay comfortably under the ~100k mark where
+     * this deployment's model has been observed to noticeably slow down, not just under the hard
+     * 400 limit.
      */
-    private val historyCompressionTokenFraction = 0.35
+    private val historyCompressionTokenFraction = 1.0 / 3.0
 
     /**
      * Rough, dependency-free token estimate (regex-based, not a real tokenizer for any specific
@@ -155,6 +162,21 @@ class ChatService(
      * conversation's messages don't change between checks.
      */
     private val tokenizer: PromptTokenizer = CachingTokenizer(SimpleRegexBasedTokenizer())
+
+    /**
+     * Tries [LlmProviderConfig.contextLengthFor] once per [ChatService] instance to replace the
+     * hardcoded [historyCompressionTokenLimit] fallback with the real value for [clientName]'s
+     * [model], if the server reports it. A no-op (including on failure) once already attempted, so
+     * a slow/unreachable server only costs one extra request per instance, not one per [chat] call.
+     */
+    private suspend fun resolveHistoryCompressionTokenLimit(clientName: String, model: String) {
+        if (resolvedHistoryCompressionTokenLimit) return
+        resolvedHistoryCompressionTokenLimit = true
+        llmProviderConfig.contextLengthFor(clientName, model)?.let {
+            log.info("Resolved real context length for {}/{}: {} tokens", clientName, model, it)
+            historyCompressionTokenLimit = it
+        }
+    }
 
     /**
      * Number of most recent messages kept verbatim when [chatStrategy] compresses the history;
@@ -517,6 +539,7 @@ class ChatService(
                     send(Events.text("Unknown or unavailable LLM client"))
                     return@channelFlow
                 }
+        resolveHistoryCompressionTokenLimit(request.client, request.model)
 
         try {
             // Re-derive the full conversation as the agent's initial history: the frontend sends
