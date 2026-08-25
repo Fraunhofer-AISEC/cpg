@@ -30,7 +30,6 @@ import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.dsl.builder.node
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.*
-import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.features.eventHandler.feature.handleEvents
 import ai.koog.agents.mcp.McpToolRegistryProvider
@@ -167,19 +166,6 @@ class ChatService(
         )
 
     /**
-     * Maximum size, in characters, of a single tool result's text content admitted into the
-     * LLM-facing conversation (see the `truncateToolResults` node in [chatStrategy]). A single MCP
-     * tool call can return an unbounded amount of data (e.g. `cpg_list_functions` without narrow
-     * filters); left uncapped, one such result can alone exceed the LLM provider's context window
-     * and cause a hard 400 error - before [historyCompressionThreshold] ever triggers, since that
-     * gates on message *count*, not the size of an individual message. This cap only affects what
-     * the LLM sees: the frontend always receives the full, untruncated result via the `tool_result`
-     * SSE event, which is emitted from within tool execution itself - i.e. strictly before
-     * [chatStrategy]'s `truncateToolResults` node ever runs.
-     */
-    private val maxToolResultChars = 20_000
-
-    /**
      * Nudge sent to the model when it replies with plain text instead of calling a tool, to
      * distinguish "narrating the next step" from a genuine final answer (see the `buildNudge` node
      * in [chatStrategy]).
@@ -188,35 +174,6 @@ class ChatService(
         "If your task is not yet complete, call the appropriate tool now instead of describing " +
             "what you would do. If you are done, just confirm that no further tool calls are " +
             "needed."
-
-    /**
-     * Caps a tool result's textual content to [maxToolResultChars], keeping both the head and the
-     * tail rather than chopping off everything past the cap: for most of these tools the result is
-     * a JSON array/object, where the head carries the first, often most-relevant items and the tail
-     * carries the closing structure and last items - a head-only cut silently drops the latter
-     * every time. Both [ReceivedToolResult.output] and any [MessagePart.Text] parts are capped:
-     * depending on the tool, either (or both) may be what actually reaches the LLM's prompt, since
-     * [ReceivedToolResult.toMessagePart] prefers `parts` and only falls back to wrapping [output]
-     * when `parts` is null.
-     */
-    private fun ReceivedToolResult.truncatedForLlm(): ReceivedToolResult {
-        fun truncate(text: String): String {
-            if (text.length <= maxToolResultChars) return text
-            val headChars = maxToolResultChars * 2 / 3
-            val tailChars = maxToolResultChars - headChars
-            val droppedChars = text.length - headChars - tailChars
-            return "${text.take(headChars)}\n...[$droppedChars chars truncated out of " +
-                "${text.length} total]...\n${text.takeLast(tailChars)}"
-        }
-
-        return copy(
-            output = truncate(output),
-            parts =
-                parts?.map { part ->
-                    if (part is MessagePart.Text) part.copy(text = truncate(part.text)) else part
-                },
-        )
-    }
 
     /** Logs token usage reported by the LLM provider for one response, if any was reported. */
     private fun logTokenUsage(message: Message.Assistant) {
@@ -306,10 +263,6 @@ class ChatService(
      *   token would reach the frontend twice) and reduces it back to a [Message.Assistant] via
      *   [toMessageResponse], so every downstream edge below is unchanged from the non-streaming
      *   version.
-     * - a `truncateToolResults` node that caps any oversized tool result (see [maxToolResultChars])
-     *   before it can reach the LLM-facing prompt, running right after tool execution (and thus
-     *   after the tool-call-completed event, which still carries the full, untruncated result to
-     *   the frontend) and before both downstream edges.
      * - a history-compression node that fires once the prompt exceeds [historyCompressionThreshold]
      *   messages (see class docs above), so long tool-calling loops don't blow the LLM's context
      *   window either.
@@ -325,10 +278,6 @@ class ChatService(
                     frames.toList().toMessageResponse().also { logTokenUsage(it) }
                 }
             val executeTool by nodeExecuteTools()
-            val truncateToolResults by
-                node<ReceivedToolResults, ReceivedToolResults>("truncateToolResults") { received ->
-                    ReceivedToolResults(received.toolResults.map { it.truncatedForLlm() })
-                }
             val sendToolResultStream by nodeLLMSendToolResultsStreaming()
             val sendToolResult by
                 node<Flow<StreamFrame>, Message.Assistant>("collectSendToolResultStream") { frames
@@ -426,10 +375,9 @@ class ChatService(
                         message.parts.isEmpty()
                     }
             )
-            edge(executeTool forwardTo truncateToolResults)
             // If the history has grown too large, compress it before sending the tool result.
             edge(
-                truncateToolResults forwardTo
+                executeTool forwardTo
                     compressHistory onCondition
                     { _ ->
                         llm.readSession { prompt.messages.size > historyCompressionThreshold }
@@ -438,7 +386,7 @@ class ChatService(
             edge(compressHistory forwardTo sendToolResultStream)
             // Otherwise, send the tool result directly.
             edge(
-                truncateToolResults forwardTo
+                executeTool forwardTo
                     sendToolResultStream onCondition
                     { _ ->
                         llm.readSession { prompt.messages.size <= historyCompressionThreshold }
