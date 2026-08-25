@@ -603,7 +603,11 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             handleUnresolvedCalls(call, call)
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
-                //                  Util.attachCallParameters(it, call)
+                if (!runsPointsToPassOrCfsDFG) {
+                    // If none of the other two passes runs, we also add the DFG edges between
+                    // arguments and parameters here.
+                    Util.attachCallParameters(it, call)
+                }
                 call.prevDFGEdges.addContextSensitive(
                     it,
                     callingContext = CallingContextOut(mutableListOf(call)),
