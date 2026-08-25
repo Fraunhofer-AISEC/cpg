@@ -40,6 +40,9 @@ import ai.koog.prompt.message.MessagePart
 import ai.koog.prompt.params.LLMParams
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponse
+import ai.koog.prompt.tokenizer.CachingTokenizer
+import ai.koog.prompt.tokenizer.PromptTokenizer
+import ai.koog.prompt.tokenizer.SimpleRegexBasedTokenizer
 import ai.koog.serialization.kotlinx.toKotlinxJsonElement
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -118,9 +121,40 @@ class ChatService(
      * history before continuing the tool-calling loop. With up to [maxAgentIterations] round trips
      * per [chat] call, a single oversized tool result (or many moderate ones accumulating over
      * iterations) can otherwise grow the prompt past the LLM provider's context window and cause a
-     * 400 error.
+     * 400 error. This alone is a weak proxy for actual size though - see
+     * [historyCompressionTokenLimit]/[historyCompressionTokenFraction], which catch the case this
+     * misses (few messages, but individually huge).
      */
-    private val historyCompressionThreshold = 60
+    private val historyCompressionThreshold = 100
+
+    /**
+     * The real context window (in tokens) of the model actually deployed behind the
+     * `openai-compatible` provider, as observed directly from a live 400 response ("This model's
+     * maximum context length is 262144 tokens...") - deliberately independent of
+     * [LlmProviderConfig]'s [LLModel.contextLength], which is a generic, hardcoded per-provider
+     * guess (128_000 for openai-compatible) that this specific deployment already proved wrong.
+     * Update this if the deployed model changes.
+     */
+    private val historyCompressionTokenLimit = 262_144
+
+    /**
+     * Once [tokenizer]'s estimated token count for the running prompt exceeds this fraction of
+     * [historyCompressionTokenLimit], [chatStrategy] compresses the history - independently of
+     * [historyCompressionThreshold], so a handful of huge tool results trigger compression just as
+     * reliably as many moderate ones. 0.35 (~91.8k tokens here) is chosen to stay under the ~100k
+     * mark where this deployment's model has been observed to noticeably slow down, not just under
+     * the hard 400 limit.
+     */
+    private val historyCompressionTokenFraction = 0.35
+
+    /**
+     * Rough, dependency-free token estimate (regex-based, not a real tokenizer for any specific
+     * model) used only to decide *when* to compress, not for anything requiring precision. Wraps it
+     * in a [CachingTokenizer] since [chatStrategy]'s compression-trigger edge conditions re-check
+     * the token count on every [ChatService.chatStrategy] node transition, and most of the
+     * conversation's messages don't change between checks.
+     */
+    private val tokenizer: PromptTokenizer = CachingTokenizer(SimpleRegexBasedTokenizer())
 
     /**
      * Number of most recent messages kept verbatim when [chatStrategy] compresses the history;
@@ -264,8 +298,9 @@ class ChatService(
      *   [toMessageResponse], so every downstream edge below is unchanged from the non-streaming
      *   version.
      * - a history-compression node that fires once the prompt exceeds [historyCompressionThreshold]
-     *   messages (see class docs above), so long tool-calling loops don't blow the LLM's context
-     *   window either.
+     *   messages, or [tokenizer]'s estimate exceeds [historyCompressionTokenFraction] of
+     *   [historyCompressionTokenLimit] (see class docs above), so long tool-calling loops don't
+     *   blow the LLM's context window either - whichever of the two fires first.
      *
      * Built once and reused across [chat] calls, since the graph itself carries no per-request
      * state.
@@ -375,12 +410,17 @@ class ChatService(
                         message.parts.isEmpty()
                     }
             )
-            // If the history has grown too large, compress it before sending the tool result.
+            // If the history has grown too large - by message count or estimated token size,
+            // whichever fires first - compress it before sending the tool result.
             edge(
                 executeTool forwardTo
                     compressHistory onCondition
                     { _ ->
-                        llm.readSession { prompt.messages.size > historyCompressionThreshold }
+                        llm.readSession {
+                            prompt.messages.size > historyCompressionThreshold ||
+                                tokenizer.tokenCountFor(prompt) >
+                                    historyCompressionTokenLimit * historyCompressionTokenFraction
+                        }
                     }
             )
             edge(compressHistory forwardTo sendToolResultStream)
@@ -389,7 +429,11 @@ class ChatService(
                 executeTool forwardTo
                     sendToolResultStream onCondition
                     { _ ->
-                        llm.readSession { prompt.messages.size <= historyCompressionThreshold }
+                        llm.readSession {
+                            prompt.messages.size <= historyCompressionThreshold &&
+                                tokenizer.tokenCountFor(prompt) <=
+                                    historyCompressionTokenLimit * historyCompressionTokenFraction
+                        }
                     }
             )
             edge(sendToolResultStream forwardTo sendToolResult)
