@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   build:
-    timeout-minutes: 30
+    timeout-minutes: 15
     runs-on: [self-hosted, Linux, ARM64, cpg]
     steps:
       - uses: actions/checkout@v6
