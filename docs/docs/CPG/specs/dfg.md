@@ -5,6 +5,14 @@ of incoming data flows (`prevDFG`) and outgoing data flows (`nextDFG`). In the
 following, we summarize how different types of nodes construct the respective
 data flows.
 
+## Levels of Analysis
+There are three different levels of the analysis which correspond to which passes are enabled.
+
+The `DFGPass` constructs flow-insensitive, field-insensitive DFG edges. Interprocedural edges (i.e., those between arguments and parameters, and return values and wherever they flow to), do get a label specifying the call, so that subsequent analyses can be context-sensitive. If the other two passes are not executed, the DFG edges of `Reference`s are incomplete right after this pass. This is the case as the other passes will add these edges. However, if one of the subsequent passes fail, the current implementation won't recover any missing edges.
+
+The `ControlFlowSensitiveDFGPass`, as the name suggests, constructs flow-sensitive DFG edges. Apart from this, it builds upon the edges which have already been drawn by the `DFGPass` (i.e., they remain capable of a context-sensitive analysis).
+
+The `PointsToPass` is more precise and takes into account a certain level of pointer arithmetic which is ignored by the other two passes. This yields the most precise results but is also the slowest pass
 
 ## Call
 
