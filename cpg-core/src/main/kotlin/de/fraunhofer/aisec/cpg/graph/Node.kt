@@ -51,9 +51,14 @@ import de.fraunhofer.aisec.cpg.helpers.smallMutableSetOf
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.McpConvert
+import de.fraunhofer.aisec.cpg.persistence.McpDetail
+import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.McpLocationConverter
 import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -85,6 +90,7 @@ abstract class Node() :
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class)
+    @McpConvert(SimpleNameConverter::class)
     override var name: Name = Name(EMPTY_NAME)
         set(value) {
             field = value
@@ -95,7 +101,7 @@ abstract class Node() :
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
      */
-    var code: String? = null
+    @McpDetail(McpDetailLevel.FULL) var code: String? = null
 
     /**
      * The language of this node. This property is set in [Node.applyMetadata] by a
@@ -119,9 +125,10 @@ abstract class Node() :
     override var scope: Scope? = null
 
     /** Optional comment of this node. */
-    var comment: String? = null
+    @McpDetail(McpDetailLevel.FULL) var comment: String? = null
 
     @Convert(LocationConverter::class)
+    @McpConvert(McpLocationConverter::class)
     override var location: PhysicalLocation? = null
         set(value) {
             field = value

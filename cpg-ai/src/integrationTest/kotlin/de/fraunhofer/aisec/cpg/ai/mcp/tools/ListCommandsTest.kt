@@ -49,6 +49,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -254,6 +256,12 @@ class ListCommandsTest {
 
             val content = result.content.single()
             assertIs<TextContent>(content)
-            assertDoesNotThrow { Json.decodeFromString<NodeJSON>(content.text) }
+
+            // cpg_get_node now returns the generic McpNodeView (see toMcpView), not the
+            // edge-laden NodeJSON - it should still carry the node's id, type, name and code.
+            val view = Json.parseToJsonElement(content.text).jsonObject
+            assertEquals(functionInfo.nodeId, view["nodeId"]?.jsonPrimitive?.content)
+            assertEquals(functionInfo.name, view["name"]?.jsonPrimitive?.content)
+            assertNotNull(view["code"], "cpg_get_node should still return the full source")
         }
 }

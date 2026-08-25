@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.invoke
+import de.fraunhofer.aisec.cpg.persistence.McpDetailLevel
+import de.fraunhofer.aisec.cpg.serialization.toMcpView
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -198,7 +200,9 @@ fun Server.getNode() {
         payload: CpgIdPayload ->
         val node = result.nodes.find { it.id.toString() == payload.id }
         if (node != null) {
-            CallToolResult(content = listOf(TextContent(node.toJson())))
+            CallToolResult(
+                content = listOf(TextContent(node.toMcpView(McpDetailLevel.FULL).toString()))
+            )
         } else {
             CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
         }
