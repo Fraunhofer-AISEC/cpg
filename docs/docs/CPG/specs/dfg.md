@@ -8,11 +8,13 @@ data flows.
 ## Levels of Analysis
 There are three different levels of the analysis which correspond to which passes are enabled.
 
-The `DFGPass` constructs flow-insensitive, field-insensitive DFG edges. Interprocedural edges (i.e., those between arguments and parameters, and return values and wherever they flow to), do get a label specifying the call, so that subsequent analyses can be context-sensitive. If the other two passes are not executed, the DFG edges of `Reference`s are incomplete right after this pass. This is the case as the other passes will add these edges. However, if one of the subsequent passes fail, the current implementation won't recover any missing edges.
+The `DFGPass` constructs flow-insensitive, field-insensitive DFG edges. Interprocedural edges (i.e., those between arguments and parameters, and return values and wherever they flow to), do get a label specifying the call, so that subsequent analyses can be context-sensitive. If neither of the other two passes is registered, the `DFGPass` also draws these edges itself, as an over-approximation, so that the resulting graph still has meaningful (if less precise) `Reference` and interprocedural edges. If one of the subsequent passes is registered but fails, the current implementation won't recover any missing edges.
 
-The `ControlFlowSensitiveDFGPass`, as the name suggests, constructs flow-sensitive DFG edges. Apart from this, it builds upon the edges which have already been drawn by the `DFGPass` (i.e., they remain capable of a context-sensitive analysis).
+The `ControlFlowSensitiveDFGPass`, as the name suggests, constructs flow-sensitive DFG edges for `Reference`s and, for calls to functions with an existing function summary, interprocedural edges labelled with the calling context. It is meant to be run instead of the `DFGPass`'s fallback described above, not in addition to it.
 
-The `PointsToPass` is more precise and takes into account a certain level of pointer arithmetic which is ignored by the other two passes. This yields the most precise results but is also the slowest pass
+The `PointsToPass` is more precise and takes into account a certain level of pointer arithmetic which is ignored by the other two passes. It computes the same flow-sensitive `Reference` and interprocedural edges as the `ControlFlowSensitiveDFGPass` (the two are meant to be run exclusively of one another), and additionally handles calls to functions without any function summary via a conservative fallback. This yields the most precise results but is also the slowest pass.
+
+See [DFG Passes](../impl/dfg-passes.md) for a detailed, per-feature breakdown of which pass is responsible for what.
 
 ## Call
 
