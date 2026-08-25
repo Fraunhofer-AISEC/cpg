@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.ai.clients
 import de.fraunhofer.aisec.cpg.ai.ChatService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -73,6 +75,20 @@ object Events {
                 put("toolName", toolName)
                 put("args", args)
                 put("content", content)
+            }
+        )
+
+    /**
+     * A structured completion signal (see [de.fraunhofer.aisec.cpg.ai.TaskStatus]), sent once per
+     * [ChatService.chat] call if the LLM produced one - callers that don't care can simply ignore
+     * this event type, exactly like `reasoning`.
+     */
+    fun taskStatus(done: Boolean, resolvedItems: List<String>): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "task_status")
+                put("done", done)
+                put("resolvedItems", buildJsonArray { resolvedItems.forEach { add(it) } })
             }
         )
 
