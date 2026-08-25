@@ -25,10 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
+import de.fraunhofer.aisec.cpg.ai.ChatMessageJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
 
 const val SYSTEM_PROMPT =
@@ -73,6 +75,25 @@ object Events {
                 put("toolName", toolName)
                 put("args", args)
                 put("content", content)
+            }
+        )
+
+    /**
+     * The conversation history as it stood at the end of one [ChatService.chat] call - after any
+     * in-call history compression, and including tool-calling turns condensed to just their
+     * non-blank text content (system messages, and any purely tool-call/tool-result turn with no
+     * text part, are omitted - a caller resending this as its next request's `messages` already
+     * gets a fresh system prompt, and a blank-content turn carries nothing a plain user/assistant
+     * transcript can represent anyway). Emitted so a caller that resends the full conversation on
+     * its next call (see [ChatService.chat]'s doc: it is stateless across calls by design) can
+     * reuse *this* instead of its own naively-appended raw history - otherwise any compression
+     * [ChatService] just did is invisible to that caller and gets undone the moment it resends.
+     */
+    fun finalHistory(messages: List<ChatMessageJSON>): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "final_history")
+                put("messages", Json.encodeToJsonElement(messages))
             }
         )
 
