@@ -132,6 +132,8 @@ fun Server.listCallsTo() {
     val toolDescription =
         """
         This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
+        Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
+        the full node details (including its code) for a specific call once picked.
 
         Example prompts:
         - "Show me all calls to the function 'encrypt'"
@@ -142,7 +144,12 @@ fun Server.listCallsTo() {
     this.addTool<CpgNamePayload>(name = "cpg_list_calls_to", description = toolDescription) {
         result: TranslationResult,
         payload: CpgNamePayload ->
-        CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
+        CallToolResult(
+            content =
+                result.calls(payload.name).map {
+                    TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
+                }
+        )
     }
 }
 
