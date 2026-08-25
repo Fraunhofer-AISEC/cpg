@@ -54,7 +54,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.helpers.mapMapNotNulled
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import kotlin.collections.toSet
 import kotlinx.coroutines.runBlocking
@@ -120,9 +119,10 @@ fun DeclarationStateElement.pushDeclarationToScope(
                 NodeToDeclarationElement(),
                 NodeToTypeElement(
                     *elements
-                        .asIterable()
-                        .mapMapNotNulled({ it as? HasType }) {
-                            it as Node to PowersetLatticeTypeElement(it.type)
+                        .mapNotNull {
+                            (it as? HasType)?.let { hasType ->
+                                hasType as Node to PowersetLatticeTypeElement(hasType.type)
+                            }
                         }
                         .toTypedArray()
                 ),

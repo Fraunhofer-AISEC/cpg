@@ -56,6 +56,7 @@ fun <T, R, C : MutableCollection<in R>> Iterable<T>.filterMappedTo(
     return target
 }
 
+/** Single-pass equivalent of `this.map(transform).filter(predicate)`. */
 fun <T, R> Iterable<T>.filterMapped(transform: (T) -> R, predicate: (R) -> Boolean): List<R> =
     filterMappedTo(mutableListOf(), transform, predicate)
 
@@ -73,6 +74,7 @@ fun <T, R, C : MutableCollection<in R>> Iterable<T>.flatMapFilteredTo(
     return target
 }
 
+/** Single-pass equivalent of `this.filter(predicate).flatMap(transform)`. */
 fun <T, R> Iterable<T>.flatMapFiltered(
     predicate: (T) -> Boolean,
     transform: (T) -> Iterable<R>,
@@ -94,6 +96,7 @@ fun <T, R, C : MutableCollection<in R>> Iterable<T>.filterFlatMappedTo(
     return target
 }
 
+/** Single-pass equivalent of `this.flatMap(transform).filter(predicate)`. */
 fun <T, R> Iterable<T>.filterFlatMapped(
     transform: (T) -> Iterable<R>,
     predicate: (R) -> Boolean,
@@ -113,6 +116,7 @@ fun <T, R, U, C : MutableCollection<in U>> Iterable<T>.mapFlatMappedTo(
     return target
 }
 
+/** Single-pass equivalent of `this.flatMap(transform).map(mapper)`. */
 fun <T, R, U> Iterable<T>.mapFlatMapped(transform: (T) -> Iterable<R>, mapper: (R) -> U): List<U> =
     mapFlatMappedTo(mutableListOf(), transform, mapper)
 
@@ -130,6 +134,7 @@ fun <T, R, C : MutableCollection<in R>> Iterable<T>.mapNotNullFilteredTo(
     return target
 }
 
+/** Single-pass equivalent of `this.filter(predicate).mapNotNull(transform)`. */
 fun <T, R> Iterable<T>.mapNotNullFiltered(
     predicate: (T) -> Boolean,
     transform: (T) -> R?,
@@ -150,6 +155,7 @@ fun <T, R, C : MutableCollection<in R>> Iterable<T>.filterMapNotNulledTo(
     return target
 }
 
+/** Single-pass equivalent of `this.mapNotNull(transform).filter(predicate)`. */
 fun <T, R> Iterable<T>.filterMapNotNulled(
     transform: (T) -> R?,
     predicate: (R) -> Boolean,
@@ -167,6 +173,7 @@ fun <T, R, U, C : MutableCollection<in U>> Iterable<T>.mapMapNotNulledTo(
     return target
 }
 
+/** Single-pass equivalent of `this.mapNotNull(transform).map(mapper)`. */
 fun <T, R, U> Iterable<T>.mapMapNotNulled(transform: (T) -> R?, mapper: (R) -> U): List<U> =
     mapMapNotNulledTo(mutableListOf(), transform, mapper)
 
