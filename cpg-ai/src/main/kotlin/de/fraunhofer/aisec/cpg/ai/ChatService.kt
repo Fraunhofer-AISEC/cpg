@@ -131,7 +131,7 @@ class ChatService(
      * The model's real context window, in tokens, used by [chatStrategy]'s token-based compression
      * trigger below. [chat] tries to resolve this dynamically (see
      * [resolveHistoryCompressionTokenLimit]) and only keeps this fallback if that fails. 262144 is
-     * Qwen 3.6's context length.
+     * Qwen 3.6's context length, used as a reasonable general-purpose default.
      */
     private var historyCompressionTokenLimit = 262_144L
 
@@ -142,9 +142,7 @@ class ChatService(
      * Once [tokenizer]'s estimated token count for the running prompt exceeds this fraction of
      * [historyCompressionTokenLimit], [chatStrategy] compresses the history - independently of
      * [historyCompressionThreshold], so a handful of huge tool results trigger compression just as
-     * reliably as many moderate ones. 0.33 stays comfortably under the ~100k mark where this
-     * deployment's model has been observed to noticeably slow down, not just under the hard 400
-     * limit.
+     * reliably as many moderate ones.
      */
     private val historyCompressionTokenFraction = 0.33
 
