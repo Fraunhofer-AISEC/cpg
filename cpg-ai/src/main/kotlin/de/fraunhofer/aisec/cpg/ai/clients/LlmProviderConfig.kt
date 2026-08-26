@@ -194,6 +194,16 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                                     // OpenAIClientSettings' default chatCompletionsPath), not the
                                     // newer /v1/responses API.
                                     LLMCapability.OpenAIEndpoint.Completions,
+                                    // Without any LLMCapability.Schema.JSON.*, requestLLMStructured
+                                    // can't use native response_format: json_schema and instead
+                                    // falls back to emulating structured output via a synthetic
+                                    // schema-tool forced through tool_choice - which some
+                                    // OpenAI-compatible servers (e.g. vLLM) reject outright with a
+                                    // "When using tool_choice, tools must be set" 400. Basic
+                                    // (rather than Standard, which assumes polymorphism/defs
+                                    // support many local/vLLM-served models lack) matches Koog's
+                                    // own precedent for local/Qwen-class models.
+                                    LLMCapability.Schema.JSON.Basic,
                                 ),
                             contextLength = OPENAI_COMPATIBLE_DEFAULT_CONTEXT_LENGTH,
                         ),
