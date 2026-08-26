@@ -211,11 +211,20 @@ fun Node.toJson() = Json.encodeToString(this.toJSON())
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
-fun Function.toInfo() = FunctionInfo(this)
+/**
+ * Converts to a [FunctionInfo], omitting the (often large - can be an entire function body)
+ * [FunctionInfo.code] field when [includeCode] is false. Bulk-listing tools (e.g.
+ * `cpg_list_functions`) should pass `false`: they're for finding candidates by name/signature, and
+ * embedding every returned function's full body multiplies context size for code the model will
+ * mostly never read - `cpg_get_node` fetches the full details (code included) for a specific one
+ * once picked.
+ */
+fun Function.toInfo(includeCode: Boolean = true) = FunctionInfo(this, includeCode)
 
 fun Record.toInfo() = RecordInfo(this)
 
-fun Call.toInfo() = CallInfo(this)
+/** See [Function.toInfo] - the same reasoning applies to [Call]/[CallInfo.code]. */
+fun Call.toInfo(includeCode: Boolean = true) = CallInfo(this, includeCode)
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {
