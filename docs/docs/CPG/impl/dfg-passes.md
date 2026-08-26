@@ -26,7 +26,7 @@ If the `PointsToPass` is used, this pass does not have any benefit and should be
 ## `PointsToPass`
 
 The `PointsToPass` is a more advanced version of the `ControlFlowSensitiveDFGPass`. Not only does it populate flow-sensitive data flow edges and add the inter-procedural edges between parameters of the function and arguments of the call of a function (as well as the propagation to modified arguments and return values), it also models pointer arithmetics to a certain extent.
-In particular, it differentiates between references and dereferences, and it understands if two variables may point to the same address (i.e., they are aliases and read/write the same data).
+In particular, it differentiates between pointer references and dereferences, and it understands if two variables may point to the same address (i.e., they are aliases and read/write the same data).
 To provide an improved version of the interprocedural data flow analysis, it keeps track of function summaries. Unlike the other two passes, it also handles calls to functions for which no function summary is available (e.g., functions without a body): it falls back to a conservative dummy summary which assumes that every parameter may affect the return value, so that some interprocedural data flow is still modeled even in the absence of a real summary.
 
 While this pass offers the most precise results, it is also the heaviest one among the three options.
