@@ -46,7 +46,9 @@ fun Server.listFunctions() {
     val toolDescription =
         """
         This tool lists all functions, more precisely function declarations, which are held in the graph.
-        
+        Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
+        the full node details (including its code) for a specific function once picked.
+
         Example prompts:
         - "Show me all functions in the analyzed code"
         - "What functions are defined in this codebase?"
@@ -56,7 +58,10 @@ fun Server.listFunctions() {
     this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.functions.map { TextContent(Json.encodeToString(it.toInfo())) }
+                content =
+                    result.functions.map {
+                        TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
+                    }
             )
         }
     }
@@ -114,7 +119,10 @@ fun Server.listCalls() {
     this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.calls.map { TextContent(Json.encodeToString(it.toInfo())) }
+                content =
+                    result.calls.map {
+                        TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
+                    }
             )
         }
     }
@@ -124,6 +132,8 @@ fun Server.listCallsTo() {
     val toolDescription =
         """
         This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
+        Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
+        the full node details (including its code) for a specific call once picked.
 
         Example prompts:
         - "Show me all calls to the function 'encrypt'"
@@ -134,7 +144,12 @@ fun Server.listCallsTo() {
     this.addTool<CpgNamePayload>(name = "cpg_list_calls_to", description = toolDescription) {
         result: TranslationResult,
         payload: CpgNamePayload ->
-        CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
+        CallToolResult(
+            content =
+                result.calls(payload.name).map {
+                    TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
+                }
+        )
     }
 }
 

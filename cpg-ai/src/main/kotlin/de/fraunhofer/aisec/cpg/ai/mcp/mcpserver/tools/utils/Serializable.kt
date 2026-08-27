@@ -141,14 +141,15 @@ data class FunctionInfo(
     val translationUnitId: String?,
 ) {
     constructor(
-        functionDeclaration: Function
+        functionDeclaration: Function,
+        includeCode: Boolean = true,
     ) : this(
         nodeId = functionDeclaration.id.toString(),
         name = functionDeclaration.name.toString(),
         parameters = functionDeclaration.parameters.map { ParameterInfo(it) },
         signature = functionDeclaration.signature,
         callees = functionDeclaration.callees.map { it.name.localName },
-        code = functionDeclaration.code,
+        code = if (includeCode) functionDeclaration.code else null,
         fileName = functionDeclaration.location?.artifactLocation?.fileName,
         startLine = functionDeclaration.location?.region?.startLine,
         endLine = functionDeclaration.location?.region?.endLine,
@@ -196,13 +197,14 @@ data class CallInfo(
     val translationUnitId: String?,
 ) {
     constructor(
-        callExpression: Call
+        callExpression: Call,
+        includeCode: Boolean = true,
     ) : this(
         nodeId = callExpression.id.toString(),
         name = callExpression.name.toString(),
         argumentNames = callExpression.arguments.map { it.name.localName },
         resolvedTo = callExpression.invokes.map { it.name.toString() },
-        code = callExpression.code,
+        code = if (includeCode) callExpression.code else null,
         fileName = callExpression.location?.artifactLocation?.fileName,
         startLine = callExpression.location?.region?.startLine,
         endLine = callExpression.location?.region?.endLine,

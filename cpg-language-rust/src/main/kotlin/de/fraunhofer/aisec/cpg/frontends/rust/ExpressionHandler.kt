@@ -188,7 +188,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     (if (stringValue.endsWith("f32")) language.builtInTypes["f32"]
                     else language.builtInTypes["f64"]) ?: unknownType()
 
-                val valueString = stringValue.removeSuffix("f32").removeSuffix("f64")
+                val valueString =
+                    stringValue.removeSuffix("f32").removeSuffix("f64").replace("_", "")
 
                 newLiteral(
                     if (type == language.builtInTypes["f32"]) valueString.toFloat()
