@@ -25,13 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 
 /**
+ * A single value held by a [GenericProperties] map. A property is either a plain scalar
+ * ([StringValue]) or, when the LLM-defined property's type is `"NodeReference"`, an actual
+ * reference to another [Node] in the graph ([NodeReferenceValue]) instead of a stringified id.
+ */
+sealed class GenericPropertyValue {
+    data class StringValue(val value: String) : GenericPropertyValue()
+
+    data class NodeReferenceValue(val node: Node) : GenericPropertyValue()
+}
+
+/**
  * Represents a generic set of properties for a concept or operation. This can be used to store
- * arbitrary "fields". The key represents the name of the property, and the value can be any type of
- * data.
+ * arbitrary "fields". The key represents the name of the property, and the value is either a plain
+ * string or a reference to another node in the graph.
  *
  * TODO: neo4j persistence
  */
-@DoNotPersist data class GenericProperties(val properties: Map<String, String /* TODO */>)
+@DoNotPersist data class GenericProperties(val properties: Map<String, GenericPropertyValue>)

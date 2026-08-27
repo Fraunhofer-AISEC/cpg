@@ -28,15 +28,33 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 import de.fraunhofer.aisec.cpg.passes.Description
 import kotlinx.serialization.Serializable
 
+/**
+ * Special [LLMPropertyDescription.type] / [LLMProperty.type] value indicating that a property's
+ * `value` is not a plain scalar but the CPG id of another node in the graph. When applying a
+ * concept/operation, such properties are resolved against the current translation result and stored
+ * as an actual reference to that node instead of a stringified id.
+ */
+const val NODE_REFERENCE_TYPE = "NodeReference"
+
 @Serializable
 data class LLMPropertyDescription(
     @Description("The name of the property. It should be short and precises, preferably one word.")
     val name: String,
     @Description(
-        "The type of the property. It should be a simple Kotlin data type (e.g. String, Integer, Boolean)."
+        "The type of the property. It should be a simple Kotlin data type (e.g. String, Integer, Boolean), " +
+            "or the special value \"NodeReference\" to indicate that the property's value must be the CPG id " +
+            "of another node in the graph (e.g. to relate this concept to a different node than the one it is " +
+            "attached to)."
     )
     val type: String,
     @Description("A short description of the property.") val description: String?,
+    @Description(
+        "If set, this property has a value that is intrinsic to the concept/operation definition itself " +
+            "(e.g. a specific ID from a taxonomy) and must not vary between applications of this concept/operation. " +
+            "Callers do not need to supply a value for this property; it is applied automatically, and any value " +
+            "a caller does supply for it is overridden with this fixed value."
+    )
+    val fixedValue: String? = null,
 ) {
     constructor(
         property: LLMProperty
@@ -91,12 +109,15 @@ data class LLMProperty(
     @Description("The name of the property. It should be short and precises, preferably one word.")
     val name: String,
     @Description(
-        "The type of the property. It should be a simple Kotlin data type (e.g. string, integer, boolean)."
+        "The type of the property. It should be a simple Kotlin data type (e.g. string, integer, boolean), " +
+            "or the special value \"NodeReference\" if the value refers to another node in the graph."
     )
     val type: String,
     @Description("A short description of the property.") val description: String? = null,
     @Description(
-        "The value to set for the property (as string representation). The type of the value should match the `type` field."
+        "The value to set for the property (as string representation). The type of the value should match the `type` field. " +
+            "If `type` is \"NodeReference\", this must be the CPG id of an existing node from the current translation " +
+            "result (not a placeholder or invented id)."
     )
     val value: String,
 )
