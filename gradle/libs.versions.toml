@@ -86,6 +86,7 @@ mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = 
 # provides the MCP client integration (McpToolRegistryProvider).
 koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
 koog-agents-mcp = { module = "ai.koog:agents-mcp", version = "1.1.1-beta" }
+koog-agents-features-memory = { module = "ai.koog:agents-features-memory", version.ref = "koog" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}

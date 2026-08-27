@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai
 
+import ai.koog.agents.chatMemory.feature.ChatMemory
+import ai.koog.agents.chatMemory.feature.ChatMemoryPreProcessor
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.dsl.builder.node
@@ -77,6 +79,29 @@ class ChatService(
     /** Maximum number of tool-calling round trips the agent may take before it must respond. */
     private val maxAgentIterations: Int = 100,
 ) {
+    /**
+     * In-memory backing store for Koog `ChatMemory`, shared across [chat] calls on this
+     * [ChatService] instance. One [ChatService] per DUST batch, so this typically holds a single
+     * session; [evictSession] clears it when the batch finishes.
+     */
+    private val chatHistoryProvider = EvictingChatHistoryProvider()
+
+    /**
+     * Safety floor on the number of messages `ChatMemory` will load/store per session. The
+     * strategy's own [FactRetrievalHistoryCompressionStrategy] (keeping the last
+     * [historyCompressionKeepLastN] messages + extracted facts) is the primary growth control and
+     * runs intra-call; this caps the stored history if compression somehow leaves more than this
+     * (or never fires), so a runaway single turn can't overflow the context window on the *next*
+     * call's load. Generously above [historyCompressionKeepLastN] so it never interferes with
+     * normal compression.
+     */
+    private val chatMemoryWindowSize = 200
+
+    /** Drop the stored ChatMemory history for [sessionId]; a no-op if it was never used. */
+    fun evictSession(sessionId: String) {
+        chatHistoryProvider.evict(sessionId)
+    }
+
     suspend fun listAvailableProviders(): List<LlmProviderWithModels> =
         llmProviderConfig.listAvailableProviders()
 
@@ -639,22 +664,24 @@ class ChatService(
         resolveHistoryCompressionTokenLimit(request.client, request.model)
 
         try {
-            // Re-derive the full conversation as the agent's initial history: the frontend sends
-            // the
-            // complete message list on every request (ChatService itself is stateless across
-            // calls),
-            // so a fresh AIAgent/prompt is built per request, mirroring the old per-request
-            // LlmClient.
+            // When ChatMemory is active (sessionId != null), the initial prompt carries only the
+            // system message; ChatMemory loads prior history (including the tool-call/tool-result
+            // messages that toChatMessageJsonOrNull drops) from the provider and appends it after
+            // the system message at strategy start. When sessionId is null, fall back to seeding
+            // history from request.messages directly (the pre-ChatMemory behavior).
+            val sessionId = request.sessionId
             val history =
                 prompt(
                     id = "chat-history",
                     params = LLMParams(toolChoice = LLMParams.ToolChoice.Auto),
                 ) {
                     system(buildSystemPrompt(skills))
-                    priorMessages.forEach { msg ->
-                        if (msg.content.isNotBlank()) {
-                            if (msg.role == "assistant") assistant(msg.content)
-                            else user(msg.content)
+                    if (sessionId == null) {
+                        priorMessages.forEach { msg ->
+                            if (msg.content.isNotBlank()) {
+                                if (msg.role == "assistant") assistant(msg.content)
+                                else user(msg.content)
+                            }
                         }
                     }
                 }
@@ -673,6 +700,26 @@ class ChatService(
                     strategy = chatStrategy,
                     toolRegistry = toolRegistry,
                 ) {
+                    if (sessionId != null) {
+                        install(ChatMemory.Feature) {
+                            chatHistoryProvider(this@ChatService.chatHistoryProvider)
+                            windowSize(chatMemoryWindowSize)
+                            addPreProcessor(
+                                object : ChatMemoryPreProcessor {
+                                    override fun preprocess(
+                                        messages: List<Message>
+                                    ): List<Message> {
+                                        log.info(
+                                            "ChatMemory session {}: {} messages loaded/stored",
+                                            sessionId,
+                                            messages.size,
+                                        )
+                                        return messages
+                                    }
+                                }
+                            )
+                        }
+                    }
                     handleEvents {
                         onLLMStreamingFrameReceived { ctx ->
                             when (val frame = ctx.streamFrame) {
@@ -719,7 +766,8 @@ class ChatService(
             // fired - e.g. the turn ended via a tool call rather than a finished text answer), not
             // display text. Emit it as its own event if present; callers that don't care about
             // structured completion can simply ignore this event type.
-            val finalResult = agent.run(userMessage)
+            val finalResult =
+                if (sessionId != null) agent.run(userMessage, sessionId) else agent.run(userMessage)
             runCatching { Json.decodeFromString<TaskStatus>(finalResult) }
                 .getOrNull()
                 ?.let { send(Events.taskStatus(it.done, it.resolvedItems)) }
