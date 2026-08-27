@@ -132,8 +132,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
-    /** The standard evaluator to be used with this language. */
-    @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    /**
+     * The standard evaluator to be used with this language. A fresh instance is returned on every
+     * access, so that concurrent evaluations (e.g. from parallel query evaluation) never share
+     * mutable evaluator state such as [ValueEvaluator.path].
+     */
+    @DoNotPersist
+    open val evaluator: ValueEvaluator
+        get() = ValueEvaluator()
 
     /**
      * Determines whether [value] (the result of evaluating a condition with [evaluator]) is

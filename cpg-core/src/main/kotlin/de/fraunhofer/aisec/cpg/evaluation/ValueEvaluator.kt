@@ -70,8 +70,17 @@ open class ValueEvaluator(
     open val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
-    /** This property contains the path of the latest execution of [evaluateInternal]. */
-    val path: MutableList<Node> = mutableListOf()
+    /**
+     * This property contains the path of the latest execution of [evaluateInternal]. Since a single
+     * [ValueEvaluator] instance (e.g. the one held by [de.fraunhofer.aisec.cpg.frontends.Language])
+     * can be shared and invoked concurrently from multiple threads (e.g. via parallel query
+     * evaluation), the underlying list is kept thread-local to avoid a
+     * [java.util.ConcurrentModificationException] when one thread mutates it while another is
+     * iterating over it.
+     */
+    private val threadLocalPath = ThreadLocal.withInitial { mutableListOf<Node>() }
+    val path: MutableList<Node>
+        get() = threadLocalPath.get()
 
     /** Cache calculated values so that we don't have to calculate them each time */
     companion object {
