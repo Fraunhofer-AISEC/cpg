@@ -41,10 +41,11 @@ data class LLMPropertyDescription(
     @Description("The name of the property. It should be short and precises, preferably one word.")
     val name: String,
     @Description(
-        "The type of the property. It should be a simple Kotlin data type (e.g. String, Integer, Boolean), " +
+        "The type of the property. It should be a simple Kotlin data type (e.g. String, Int, Long, Float, " +
+            "Double, Boolean), which is parsed into a value of that type when the concept/operation is applied, " +
             "or the special value \"NodeReference\" to indicate that the property's value must be the CPG id " +
             "of another node in the graph (e.g. to relate this concept to a different node than the one it is " +
-            "attached to)."
+            "attached to). Any unrecognized type name is treated as text."
     )
     val type: String,
     @Description("A short description of the property.") val description: String?,
@@ -109,13 +110,16 @@ data class LLMProperty(
     @Description("The name of the property. It should be short and precises, preferably one word.")
     val name: String,
     @Description(
-        "The type of the property. It should be a simple Kotlin data type (e.g. string, integer, boolean), " +
-            "or the special value \"NodeReference\" if the value refers to another node in the graph."
+        "The type of the property. It should be a simple Kotlin data type (e.g. String, Int, Long, Float, " +
+            "Double, Boolean), or the special value \"NodeReference\" if the value refers to another node in " +
+            "the graph. It should match the type declared for this property in the concept/operation schema."
     )
     val type: String,
     @Description("A short description of the property.") val description: String? = null,
     @Description(
-        "The value to set for the property (as string representation). The type of the value should match the `type` field. " +
+        "The value to set for the property (as string representation). The value must be parsable as the type " +
+            "given in the `type` field, otherwise applying the concept/operation fails: use e.g. \"42\" for an " +
+            "Int, \"1.5\" for a Double, and \"true\" or \"false\" for a Boolean. " +
             "If `type` is \"NodeReference\", this must be the CPG id of an existing node from the current translation " +
             "result (not a placeholder or invented id)."
     )

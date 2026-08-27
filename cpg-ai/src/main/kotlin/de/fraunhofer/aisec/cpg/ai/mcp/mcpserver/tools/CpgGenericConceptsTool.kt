@@ -321,11 +321,15 @@ private fun applyFixedValues(
 }
 
 /**
- * Resolves a list of [LLMProperty] instances into a [GenericProperties] map. Properties whose
- * `type` is [NODE_REFERENCE_TYPE] are resolved against [result]'s nodes and stored as an actual
- * [GenericPropertyValue.NodeReferenceValue] instead of a stringified id; all other properties are
- * stored as [GenericPropertyValue.StringValue]. Returns the resolved properties together with a
- * list of failure reasons for any node reference that could not be resolved.
+ * Resolves a list of [LLMProperty] instances into a [GenericProperties] map, converting each
+ * property's string representation into the [GenericPropertyValue] kind matching its declared
+ * `type`. Properties whose `type` is [NODE_REFERENCE_TYPE] are resolved against [result]'s nodes
+ * and stored as an actual [GenericPropertyValue.NodeReferenceValue] instead of a stringified id;
+ * everything else is delegated to [GenericPropertyValue.of], which yields a typed scalar for a
+ * recognized type name and a [GenericPropertyValue.StringValue] otherwise.
+ *
+ * Returns the resolved properties together with a list of failure reasons for any node reference
+ * that could not be resolved and any value that does not parse as its declared type.
  */
 private fun resolveProperties(
     properties: List<LLMProperty>,
@@ -346,7 +350,13 @@ private fun resolveProperties(
                         GenericPropertyValue.NodeReferenceValue(referencedNode)
                     }
                 } else {
-                    GenericPropertyValue.StringValue(property.value)
+                    GenericPropertyValue.of(property.type, property.value)
+                        ?: run {
+                            failures.add(
+                                "Property \"${property.name}\" declares type ${property.type} but its value \"${property.value}\" cannot be parsed as that type."
+                            )
+                            GenericPropertyValue.StringValue(property.value)
+                        }
                 }
             property.name to value
         }
