@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.ai.clients
 
 import de.fraunhofer.aisec.cpg.ai.ChatService
-import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
@@ -42,30 +41,10 @@ const val SYSTEM_PROMPT =
         "Do not stop at summaries. Inspect the actual code before drawing conclusions. " +
         "If a previous tool result already answers the question, respond without calling tools again. " +
         "If a tool call fails, do not retry it, instead continue with the information you already have. " +
-        "Explain your findings clearly."
-
-suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String) -> Unit) {
-    while (!channel.isClosedForRead) {
-        val line =
-            try {
-                channel.readUTF8Line()
-            } catch (_: Exception) {
-                break
-            }
-
-        if (line.isNullOrBlank()) continue
-        if (!line.startsWith("data: ")) continue
-
-        val jsonStr = line.substringAfter("data: ").trim()
-        if (jsonStr == "[DONE]") break
-
-        try {
-            processLine(jsonStr)
-        } catch (_: Exception) {
-            // Continue on parsing errors
-        }
-    }
-}
+        "Explain your findings clearly. " +
+        "Always prefer calling tools through your normal function-calling mechanism. Only if that " +
+        "is not available to you, write the call as a fenced JSON code block instead, in this " +
+        "exact shape: ```json\n{\"name\": \"<tool name>\", \"arguments\": {<parameter>: <value>}}\n```."
 
 /** SSE event payloads streamed from [ChatService] to the frontend. */
 object Events {
@@ -87,12 +66,25 @@ object Events {
 
     fun keepalive(): String = Json.encodeToString(buildJsonObject { put("type", "keepalive") })
 
-    fun toolResult(toolName: String, content: JsonElement): String =
+    fun toolResult(toolName: String, args: JsonElement, content: JsonElement): String =
         Json.encodeToString(
             buildJsonObject {
                 put("type", "tool_result")
                 put("toolName", toolName)
+                put("args", args)
                 put("content", content)
+            }
+        )
+
+    /** LLM token usage summed over an entire [ChatService.chat] call (all its LLM round trips). */
+    fun usage(model: String?, inputTokens: Int, outputTokens: Int, totalTokens: Int): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "usage")
+                put("model", model)
+                put("inputTokens", inputTokens)
+                put("outputTokens", outputTokens)
+                put("totalTokens", totalTokens)
             }
         )
 }

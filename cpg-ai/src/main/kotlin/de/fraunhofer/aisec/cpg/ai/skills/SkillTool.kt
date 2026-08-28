@@ -25,46 +25,57 @@
  */
 package de.fraunhofer.aisec.cpg.ai.skills
 
+import ai.koog.agents.core.tools.SimpleTool
+import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.annotations.LLMDescription
+import ai.koog.serialization.typeToken
 import de.fraunhofer.aisec.cpg.ai.Skill
-import io.modelcontextprotocol.kotlin.sdk.types.Tool
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
+import kotlinx.serialization.Serializable
 
 const val ACTIVATE_SKILL_TOOL_NAME = "activate_skill"
 
+/** Arguments for [ActivateSkillTool]: the name of the skill to activate. */
+@Serializable
+data class ActivateSkillArgs(
+    @param:LLMDescription(
+        "The exact name of the skill to activate, matching one of the names listed in the " +
+            "system prompt's skill catalog (e.g. \"tag-library\")."
+    )
+    val name: String
+)
+
 /**
- * Build a synthetic tool the LLM can call to activate a discovered skill. Returns null when no
- * skills are available, i.e. the tool is not registered.
+ * A synthetic tool the LLM can call to activate a discovered skill: it returns that skill's full
+ * markdown body (wrapped via [wrapActivatedSkill]) as the tool result, or an error string if
+ * [ActivateSkillArgs.name] does not match any discovered skill.
  *
- * The catalog (name + description per skill) lives in the system prompt. This tool only exposes the
- * activation mechanism itself, with an `enum` over the valid skill names so the LLM cannot
- * hallucinate unknown ones.
+ * The catalog (name + description per skill) lives in the system prompt (see [buildSkillCatalog]);
+ * this tool only exposes the activation mechanism itself.
  *
  * See
  * [Model-driven activation](https://agentskills.io/client-implementation/adding-skills-support#model-driven-activation).
  */
-fun buildActivateSkillTool(skills: List<Skill>): Tool? {
-    if (skills.isEmpty()) return null
-
-    val properties = buildJsonObject {
-        putJsonObject("name") {
-            put("type", "string")
-            put("description", "The name of the skill to activate.")
-            putJsonArray("enum") { skills.forEach { add(JsonPrimitive(it.name)) } }
-        }
-    }
-
-    return Tool(
+class ActivateSkillTool(private val skills: List<Skill>) :
+    SimpleTool<ActivateSkillArgs>(
+        argsType = typeToken<ActivateSkillArgs>(),
         name = ACTIVATE_SKILL_TOOL_NAME,
         description =
             "Activate a skill to load its full instructions. " +
                 "Use this when the user's task matches one of the skills listed in the system prompt.",
-        inputSchema = ToolSchema(properties = properties, required = listOf("name")),
-    )
+    ) {
+    override suspend fun execute(args: ActivateSkillArgs): String {
+        val skill = skills.find { it.name == args.name }
+        return skill?.let { wrapActivatedSkill(it) } ?: "Unknown skill: ${args.name}"
+    }
+}
+
+/**
+ * Build the [ToolRegistry] exposing [ActivateSkillTool], or [ToolRegistry.EMPTY] when no skills
+ * were discovered (i.e. the tool is not registered at all).
+ */
+fun buildActivateSkillToolRegistry(skills: List<Skill>): ToolRegistry {
+    if (skills.isEmpty()) return ToolRegistry.EMPTY
+    return ToolRegistry { tool(ActivateSkillTool(skills)) }
 }
 
 /**
