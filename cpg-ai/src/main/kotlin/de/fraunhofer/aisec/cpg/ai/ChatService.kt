@@ -514,11 +514,29 @@ class ChatService(
             // when produced) and was already streamed out via onLLMStreamingFrameReceived before
             // this point, so the text input here is intentionally discarded - only the request
             // for status matters.
+            //
+            // Two things to handle here:
+            // 1) toolChoice=Auto is inherited from the session prompt but requestLLMStructured
+            //    sends response_format:json_schema with no tools — vLLM rejects this combination
+            //    ("When using tool_choice, tools must be set"). Temporarily clear toolChoice for
+            //    the structured request, then restore it so subsequent turns keep tool calling.
+            // 2) executeStructured's internal try-catch does NOT cover the underlying execute()
+            //    call, so HTTP errors throw instead of returning Result.failure. Wrap in our own
+            //    try-catch to guarantee the strategy completes and ChatMemory can store history.
             val requestTaskStatus by
                 node<String, Result<StructuredResponse<TaskStatus>>>("requestTaskStatus") { _ ->
                     llm.writeSession {
                         appendPrompt { user(taskStatusRequestMessage) }
-                        requestLLMStructured<TaskStatus>()
+                        val savedParams = prompt.params
+                        rewritePrompt { it.withParams(it.params.copy(toolChoice = null)) }
+                        try {
+                            requestLLMStructured<TaskStatus>()
+                        } catch (e: Exception) {
+                            log.warn("requestLLMStructured failed: {}", e.message)
+                            Result.failure(e)
+                        } finally {
+                            rewritePrompt { it.withParams(savedParams) }
+                        }
                     }
                 }
             // Encodes the TaskStatus as this strategy's overall String output on success ([chat]
