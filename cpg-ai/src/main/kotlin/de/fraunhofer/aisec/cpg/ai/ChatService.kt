@@ -768,6 +768,10 @@ class ChatService(
                                 totalTokens += usage.totalTokensCount ?: 0
                                 usage.modelId?.let { modelId = it }
                             }
+                            // Koog 1.1.1 never populates ResponseMetaInfo.modelId (the OpenAI
+                            // client's createMetaInfo hardcodes it to null), so fall back to the
+                            // configured model id.
+                            if (modelId == null) modelId = chatLlm.model.id
                             send(Events.usage(modelId, inputTokens, outputTokens, totalTokens))
                             send(
                                 Events.finalHistory(
