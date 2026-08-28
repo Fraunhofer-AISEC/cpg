@@ -38,6 +38,14 @@ data class ChatRequestJSON(
     val messages: List<ChatMessageJSON>,
     val client: String,
     val model: String,
+    /**
+     * Optional session identifier for Koog `ChatMemory` continuity across [ChatService.chat] calls.
+     * When non-null, [ChatService.chat] installs `ChatMemory` keyed on this id so
+     * tool-call/tool-result messages survive the per-call agent rebuild (the root cause of the
+     * repeated `activate_skill` bug). When null, [ChatService.chat] falls back to seeding history
+     * from [messages] directly (the pre-ChatMemory behavior).
+     */
+    val sessionId: String? = null,
 )
 
 @Serializable data class ToolSchemaJSON(val properties: JsonObject?, val required: List<String>?)
