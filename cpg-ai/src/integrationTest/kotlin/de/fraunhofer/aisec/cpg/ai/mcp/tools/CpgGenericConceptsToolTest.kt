@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addOrUpdateConcept
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listLLMConceptsOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.suggestLLMConceptsAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMOperation
@@ -279,5 +280,118 @@ class CpgGenericConceptsToolTest {
             val text = (applyResult.content.single() as TextContent).text
             assertTrue("not found" in text)
             assertTrue(!conceptsFile.exists() || conceptsFile.readText().isBlank())
+        }
+
+    @Test
+    fun suggestLLMConceptsAndOperationsWithLocationTest() =
+        withClient(registerTools = { suggestLLMConceptsAndOperations() }) { client ->
+            val secretInitializer =
+                globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
+            assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
+            val loc = secretInitializer.location
+            assertNotNull(loc)
+            val fileName = loc.artifactLocation.uri?.path?.substringAfterLast('/')!!
+            val line = loc.region.startLine
+            val column = loc.region.startColumn
+
+            val suggestResult =
+                client.callTool(
+                    name = "cpg_suggest_llm_concepts_and_operations",
+                    arguments =
+                        mapOf(
+                            "name" to "Secret",
+                            "description" to "A hardcoded secret",
+                            "location" to
+                                mapOf("file" to fileName, "line" to line, "column" to column),
+                            "properties" to emptyList<LLMProperty>(),
+                            "operations" to emptyList<LLMOperation>(),
+                        ),
+                )
+            assertNotNull(suggestResult)
+            val text = (suggestResult.content.single() as TextContent).text
+            assertTrue("Secret" in text)
+            assertTrue(secretInitializer.id.toString() in text)
+        }
+
+    @Test
+    fun suggestLLMConceptsAndOperationsWithAmbiguousLocationTest() =
+        withClient(registerTools = { suggestLLMConceptsAndOperations() }) { client ->
+            val secretInitializer =
+                globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
+            assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
+            val loc = secretInitializer.location
+            assertNotNull(loc)
+            val fileName = loc.artifactLocation.uri?.path?.substringAfterLast('/')!!
+            val line = loc.region.startLine
+
+            val suggestResult =
+                client.callTool(
+                    name = "cpg_suggest_llm_concepts_and_operations",
+                    arguments =
+                        mapOf(
+                            "name" to "Secret",
+                            "description" to "A hardcoded secret",
+                            "location" to mapOf("file" to fileName, "line" to line),
+                            "properties" to emptyList<LLMProperty>(),
+                            "operations" to emptyList<LLMOperation>(),
+                        ),
+                )
+            assertNotNull(suggestResult)
+            val text = (suggestResult.content.single() as TextContent).text
+            assertTrue("Concept error" in text)
+            assertTrue("Ambiguous" in text || "Multiple nodes found" in text)
+        }
+
+    @Test
+    fun addLLMConceptAndOperationsWithLocationTest() =
+        withClient(
+            registerTools = {
+                addLLMConceptAndOperations()
+                listLLMConceptsOperations()
+            }
+        ) { client ->
+            val secretInitializer =
+                globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
+            assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
+            val loc = secretInitializer.location
+            assertNotNull(loc)
+            val fileName = loc.artifactLocation.uri?.path?.substringAfterLast('/')!!
+            val line = loc.region.startLine
+            val column = loc.region.startColumn
+
+            val applyResult =
+                client.callTool(
+                    name = "cpg_add_llm_concept_and_operations",
+                    arguments =
+                        mapOf(
+                            "concepts" to
+                                listOf(
+                                    mapOf(
+                                        "name" to "Secret",
+                                        "description" to "A hardcoded secret",
+                                        "location" to
+                                            mapOf(
+                                                "file" to fileName,
+                                                "line" to line,
+                                                "column" to column,
+                                            ),
+                                        "properties" to emptyList<LLMProperty>(),
+                                        "operations" to emptyList<LLMOperation>(),
+                                    )
+                                )
+                        ),
+                )
+            assertNotNull(applyResult)
+            val text = (applyResult.content.single() as TextContent).text
+            assertTrue("\"applied\"" in text, "Response should contain applied section")
+            assertTrue(secretInitializer.id.toString() in text, "Should contain resolved nodeId")
+
+            val listResult =
+                client.callTool(name = "cpg_list_llm_concepts_operations", arguments = emptyMap())
+            assertEquals(
+                1,
+                listResult.content.size,
+                "The applied concept's schema should be persisted",
+            )
         }
 }
