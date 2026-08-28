@@ -11,6 +11,7 @@ enableRubyFrontend=true
 enableJVMFrontend=true
 enableINIFrontend=true
 enableRustFrontend=true
+enableCSharpFrontend=true
 enableAIModule=true
 enableCodyzeConsole=true
 
