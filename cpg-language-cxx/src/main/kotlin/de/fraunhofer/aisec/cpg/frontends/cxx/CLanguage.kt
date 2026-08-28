@@ -236,6 +236,12 @@ open class CLanguage :
             "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
             "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
 
+            // Wide characters (wchar_t) are also defined in <stddef.h> and <wchar.h>. The size of
+            // wchar_t is platform-dependent, but we assume 32 bits here, which is the case on
+            // Linux. This is also the current implementation in CPPLanguage. TODO: On Windows,
+            // wchar_t is 16 bits, but it's not clear how we could model this properly.
+            "wchar_t" to IntegerType("wchar_t", 32, this, NumericType.Modifier.UNSIGNED),
+
             // Other commonly used extension types
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
