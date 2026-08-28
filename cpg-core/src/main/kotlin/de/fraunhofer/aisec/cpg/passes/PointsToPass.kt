@@ -66,7 +66,8 @@ import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 import kotlin.text.ifEmpty
-import kotlin.time.DurationUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
@@ -426,7 +427,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /**
          * The timeout after which we stop analyzing a function. Default one hour AKA 3,600,000ms
          */
-        var timeout: Long = 3600000,
+        var timeout: Duration = 60.minutes,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
@@ -563,7 +564,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         node.nextEOGEdges,
                         startState,
                         ::transfer,
-                        timeout = passConfig<Configuration>()?.timeout,
+                        timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
                     )
                 // If we had a timeout, treat it as an empty Function but still
                 // include the results we got
@@ -2077,9 +2078,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             if (log.isTraceEnabled) {
                                 log.trace("Old last timeout: ${timeouts.last()}")
                             }
-                            timeouts[timeouts.size - 1] =
-                                timeouts.last() +
-                                    startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
+                            timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow()
                             if (log.isTraceEnabled) {
                                 log.trace(
                                     "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
