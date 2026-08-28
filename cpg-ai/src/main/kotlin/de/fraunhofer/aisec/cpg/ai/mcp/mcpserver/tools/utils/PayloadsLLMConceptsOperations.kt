@@ -94,7 +94,12 @@ data class LLMProperty(
         "The type of the property. It should be a simple Kotlin data type (e.g. string, integer, boolean)."
     )
     val type: String,
-    @Description("A short description of the property.") val description: String? = null,
+    @Description(
+        "A short description of the property. If this property corresponds to one of the " +
+            "tagged function's actual parameters, mention which one here (name and/or position " +
+            "in the signature)."
+    )
+    val description: String? = null,
     @Description(
         "The value to set for the property (as string representation). The type of the value should match the `type` field."
     )
@@ -117,6 +122,12 @@ data class LLMOperation(
         "The properties to set for the operation. Each property should have a name and a value. The name should match the name of a parameter defined in the operation description, and the value should be the corresponding value for this specific application of the operation."
     )
     val properties: List<LLMProperty>,
+    @Description(
+        "Free-text notes about this operation's application - e.g. other functions that must be " +
+            "called before this one (such as an init/setKey call before encrypt), caveats, or " +
+            "anything else worth recording that doesn't fit the structured fields above."
+    )
+    val notes: String? = null,
 )
 
 @Serializable
@@ -135,6 +146,11 @@ data class LLMConcept(
     val properties: List<LLMProperty>,
     @Description("A list of operations to apply to this concept.")
     val operations: List<LLMOperation>,
+    @Description(
+        "Free-text notes about this concept's application - anything worth recording that " +
+            "doesn't fit the structured fields above."
+    )
+    val notes: String? = null,
 )
 
 @Serializable

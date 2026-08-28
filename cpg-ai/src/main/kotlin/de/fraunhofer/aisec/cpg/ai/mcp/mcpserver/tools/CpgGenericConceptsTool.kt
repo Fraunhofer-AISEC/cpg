@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
 import de.fraunhofer.aisec.cpg.graph.nodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -182,7 +183,16 @@ fun Server.addLLMConceptAndOperations() {
                         conceptName = concept.name,
                         description = concept.description,
                         properties =
-                            GenericProperties(concept.properties.associate { it.name to it.value }),
+                            GenericProperties(
+                                concept.properties.associate {
+                                    it.name to
+                                        GenericPropertyValue(
+                                            value = it.value,
+                                            description = it.description,
+                                        )
+                                }
+                            ),
+                        notes = concept.notes,
                     )
                     .apply {
                         this.codeAndLocationFrom(cpgConceptNode)
@@ -216,8 +226,15 @@ fun Server.addLLMConceptAndOperations() {
                             genericLLMConcept = conceptNode,
                             properties =
                                 GenericProperties(
-                                    operation.properties.associate { it.name to it.value }
+                                    operation.properties.associate {
+                                        it.name to
+                                            GenericPropertyValue(
+                                                value = it.value,
+                                                description = it.description,
+                                            )
+                                    }
                                 ),
+                            notes = operation.notes,
                         )
                         .apply {
                             this.codeAndLocationFrom(cpgOperationNode)
