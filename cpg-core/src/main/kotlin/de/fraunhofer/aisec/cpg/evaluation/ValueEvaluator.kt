@@ -179,18 +179,9 @@ open class ValueEvaluator(
      * their value. If not, we can try to use [handlePrevDFG].
      */
     protected fun handleHasInitializer(node: HasInitializer, depth: Int): Any? {
-        // A global or static variable can have writes somewhere else too, not just its
-        // initializer. If the DFG shows more than one, use handlePrevDFG to decide instead.
-        if (
-            node is Variable &&
-                (node.isGlobal || node.modifiers.contains("static")) &&
-                node.prevFullDFG.size > 1
-        ) {
-            return handlePrevDFG(node as Node, depth)
-        }
-
-        // If we have an initializer, we can use it. Otherwise, we can fall back to the prevDFG
-        return if (node.initializer != null) {
+        // If we have an initializer and nothing else writes to it, we can use the initializer.
+        // Otherwise, we let handlePrevDFG decide.
+        return if (node is Node && node.initializer != null && node.prevFullDFG.size <= 1) {
             evaluateInternal(node.initializer, depth + 1)
         } else {
             handlePrevDFG(node as Node, depth)

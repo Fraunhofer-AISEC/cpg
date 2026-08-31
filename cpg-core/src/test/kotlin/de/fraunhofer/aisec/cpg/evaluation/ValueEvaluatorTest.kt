@@ -798,11 +798,10 @@ class ValueEvaluatorTest {
     }
 
     @Test
-    fun testHandleHasInitializerWithGlobalWrites() {
+    fun testHandleHasInitializerWithWrite() {
         with(TestLanguageFrontend()) {
-            // static int counter = 0;
+            // int counter = 0;
             val counter = newVariable("counter")
-            counter.modifiers = setOf("static")
             counter.initializer = newLiteral(0)
 
             // counter = 5; somewhere else, i.e. second prevDFG edge to counter.
@@ -823,7 +822,6 @@ class ValueEvaluatorTest {
         with(TestLanguageFrontend()) {
             // No writes to counter, only the initializer value.
             val counter = newVariable("counter")
-            counter.modifiers = setOf("static")
             counter.initializer = newLiteral(0)
             counter.prevDFG = mutableSetOf(counter.initializer as Node)
 
@@ -832,6 +830,14 @@ class ValueEvaluatorTest {
             read.prevDFG = mutableSetOf(counter)
 
             assertEquals(0, ValueEvaluator().evaluate(read))
+        }
+
+        with(TestLanguageFrontend()) {
+            // A non-Variable HasInitializer, e.g. `int a[] = {1, 2, 3};`
+            val array = newArrayConstruction()
+            array.initializer = newLiteral(1)
+
+            assertEquals(1, ValueEvaluator().evaluate(array))
         }
     }
 }
