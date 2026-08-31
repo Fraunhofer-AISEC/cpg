@@ -799,57 +799,39 @@ class ValueEvaluatorTest {
 
     @Test
     fun testHandleHasInitializerWithWrite() {
-        with(TestLanguageFrontend()) {
-            // int counter = 0;
-            val counter = newVariable("counter")
-            counter.initializer = newLiteral(0)
+        val tu =
+            ValueEvaluationTests.getInitializerWithWriteExample()
+                .components
+                .first()
+                .translationUnits
+                .first()
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-            // counter = 5; somewhere else, i.e. second prevDFG edge to counter.
-            val write = newReference("counter")
-            write.refersTo = counter
-            write.prevDFG = mutableSetOf(newLiteral(5))
-            counter.prevDFG = mutableSetOf(counter.initializer as Node, write)
+        val a = main.calls("println").getOrNull(0)?.arguments?.firstOrNull()
+        val b = main.calls("println").getOrNull(1)?.arguments?.firstOrNull()
+        val c = main.calls("println").getOrNull(2)?.arguments?.firstOrNull()
+        assertNotNull(a)
+        assertNotNull(b)
+        assertNotNull(c)
 
-            // A read of counter, e.g. the condition of `if(counter)`.
-            val read = newReference("counter")
-            read.refersTo = counter
-            read.prevDFG = mutableSetOf(counter)
+        // `a` has another write, so we cannot evaluate a single value
+        assertEquals("{a}", ValueEvaluator().evaluate(a))
 
-            // There is a write to counter, so we cannot evaluate the value of counter.
-            assertEquals("{counter}", ValueEvaluator().evaluate(read))
-        }
+        // MultiValueEvaluator instead returns all values that `a` could have
+        assertEquals(ConcreteNumberSet(mutableSetOf(0, 5)), MultiValueEvaluator().evaluate(a))
 
-        with(TestLanguageFrontend()) {
-            // No writes to counter, only the initializer value.
-            val counter = newVariable("counter")
-            counter.initializer = newLiteral(0)
-            counter.prevDFG = mutableSetOf(counter.initializer as Node)
+        // `b` only has its initializer, no other writes
+        assertEquals(0, ValueEvaluator().evaluate(b))
 
-            val read = newReference("counter")
-            read.refersTo = counter
-            read.prevDFG = mutableSetOf(counter)
-
-            assertEquals(0, ValueEvaluator().evaluate(read))
-        }
+        // `c` has no initializer
+        assertEquals(7, ValueEvaluator().evaluate(c))
 
         with(TestLanguageFrontend()) {
-            // A non-Variable HasInitializer, e.g. `int a[] = {1, 2, 3};`
+            // A non-Variable HasInitializer, e.g. `new int[]{1}`.
             val array = newArrayConstruction()
             array.initializer = newLiteral(1)
-
             assertEquals(1, ValueEvaluator().evaluate(array))
-        }
-
-        with(TestLanguageFrontend()) {
-            // No initializer, falls back to prevDFG right away.
-            val counter = newVariable("counter")
-            counter.prevDFG = mutableSetOf(newLiteral(7))
-
-            val read = newReference("counter")
-            read.refersTo = counter
-            read.prevDFG = mutableSetOf(counter)
-
-            assertEquals(7, ValueEvaluator().evaluate(read))
         }
     }
 }
