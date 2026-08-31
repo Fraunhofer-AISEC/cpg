@@ -796,4 +796,42 @@ class ValueEvaluatorTest {
             assertEquals("{}", cond.evaluate())
         }
     }
+
+    @Test
+    fun testHandleHasInitializerWithGlobalWrites() {
+        with(TestLanguageFrontend()) {
+            // static int counter = 0;
+            val counter = newVariable("counter")
+            counter.modifiers = setOf("static")
+            counter.initializer = newLiteral(0)
+
+            // counter = 5; somewhere else, i.e. second prevDFG edge to counter.
+            val write = newReference("counter")
+            write.refersTo = counter
+            write.prevDFG = mutableSetOf(newLiteral(5))
+            counter.prevDFG = mutableSetOf(counter.initializer as Node, write)
+
+            // A read of counter, e.g. the condition of `if(counter)`.
+            val read = newReference("counter")
+            read.refersTo = counter
+            read.prevDFG = mutableSetOf(counter)
+
+            // There is a write to counter, so we cannot evaluate the value of counter.
+            assertEquals("{counter}", ValueEvaluator().evaluate(read))
+        }
+
+        with(TestLanguageFrontend()) {
+            // No writes to counter, only the initializer value.
+            val counter = newVariable("counter")
+            counter.modifiers = setOf("static")
+            counter.initializer = newLiteral(0)
+            counter.prevDFG = mutableSetOf(counter.initializer as Node)
+
+            val read = newReference("counter")
+            read.refersTo = counter
+            read.prevDFG = mutableSetOf(counter)
+
+            assertEquals(0, ValueEvaluator().evaluate(read))
+        }
+    }
 }
