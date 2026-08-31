@@ -2825,7 +2825,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
             }
 
-        /* For literals, we store the address and the lastWrite as "theirs" in the DeclarationState so that we know from where we have to draw DFGEdges in the future */
+        /* For literals, we store the address as "theirs" in the DeclarationState */
         // TODO: would this make sense for everything in the lhs?
         val l = currentNode.rhs.singleOrNull() as? Literal<*>
         l?.let {
@@ -2836,7 +2836,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(destinationsAddresses),
                         PowersetLattice.Element(),
-                        PowersetLattice.Element(lastWrites),
+                        PowersetLattice.Element(),
                     ),
                 )
         }

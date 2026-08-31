@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
-import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
@@ -407,13 +406,7 @@ interface Lattice<T : Lattice.Element> {
         timeout: Long? = null,
     ): Pair<T, Boolean> {
         return runBlocking {
-            /*            if (timeout != null) {
-                withTimeoutOrNull(timeout) {
-                    iterateEogInternal(startEdges, startState, transformation, strategy)
-                }
-            } else {*/
             iterateEogInternal(startEdges, startState, transformation, strategy, timeout)
-            //            }
         }
     }
 
@@ -485,9 +478,18 @@ interface Lattice<T : Lattice.Element> {
             return key
         }
 
-        startEdges.forEach { nextBranchEdgesList.add(it) }
+        suspend fun cleanup(one: T, two: T, lattice: Lattice<T>): T {
+            Pass.log.info(
+                "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
+            )
+            // We are done, so we remove the current timeout
+            timeouts.removeLast()
+            finalState = lattice.lub(one, two, false)
+            Pass.log.info("Finished calculating final lub")
+            return finalState
+        }
 
-        var debugCounter = 0L
+        startEdges.forEach { nextBranchEdgesList.add(it) }
 
         while (
             currentBBEdgesList.isNotEmpty() ||
@@ -495,13 +497,6 @@ interface Lattice<T : Lattice.Element> {
                 mergePointsEdgesMap.isNotEmpty() ||
                 sccEdgesQueue.isNotEmpty()
         ) {
-            debugCounter++
-
-            if (debugCounter % 100 == 0L && timeouts.isNotEmpty()) {
-                TranslationManager.Companion.log.trace(
-                    "Looping. debugCounter: $debugCounter, timeout: $timeout, startTime: ${startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)}, timeouts.last: ${timeouts.last()}"
-                )
-            }
 
             val nextEdge =
                 if (currentBBEdgesList.isNotEmpty()) {
@@ -562,7 +557,6 @@ interface Lattice<T : Lattice.Element> {
                 nextEdge.end.nextEOGEdges.forEach {
                     // We continue with the nextEOG edge if we haven't seen it before or if we
                     // updated the state in comparison to the previous time we were there.
-
                     val oldGlobalIt = globalState[it]
 
                     // If we're on the loop head (some node is Loop), and we use
@@ -605,6 +599,16 @@ interface Lattice<T : Lattice.Element> {
                             result
                         }
 
+                    // If we meanwhile reached the timeout, we stop here
+                    if (
+                        timeout != null &&
+                            startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS) >
+                                timeouts.last()
+                    ) {
+                        finalState = cleanup(finalState, newState, this@Lattice)
+                        return Pair(finalState, true)
+                    }
+
                     globalState.put(it, newGlobalIt)
 
                     if (
@@ -626,8 +630,7 @@ interface Lattice<T : Lattice.Element> {
                         if (
                             // We might be at the merge point.
                             // In comparison to a loop entry, a merge point has multiple
-                            // prevEOGEdges
-                            // without SCC-Label and at least one nextEOGEdge without
+                            // prevEOGEdges without SCC-Label and at least one nextEOGEdge without
                             it.start.prevEOGEdges.any { it.scc == null } &&
                                 it.start.nextEOGEdges.any { it.scc == null }
                         ) {
@@ -636,13 +639,11 @@ interface Lattice<T : Lattice.Element> {
                             mergePointsEdgesMap.removeIncomingEdgeFromMergePoint(it, nextEdge)
                         } else if (nextEdge.end.nextEOGEdges.size > 1) {
                             // If we have multiple next edges, we add the ones that stay inside the
-                            // loop
-                            // (AKA have an SCC label) to the SCCEdgesList
+                            // loop  (AKA have an SCC label) to the SCCEdgesList
                             // The other edges we add to the list of edges of to next basic block
                             // (outside the loop, or for a branch).
                             // We will process these after the current basic block has been
-                            // processed
-                            // (probably very soon).
+                            // processed (probably very soon).
                             val sccPriority = it.scc
                             if (sccPriority != null) sccEdgesQueue.add(Pair(sccPriority, it))
                             else nextBranchEdgesList.add(0, it)
@@ -664,18 +665,8 @@ interface Lattice<T : Lattice.Element> {
                     finalState = this@Lattice.lub(finalState, newState, false)
                 }
             } else {
-                TranslationManager.Companion.log.info(
-                    "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
-                )
-                // We are done, so we remove the current timeout
-                timeouts.removeLast()
-                /*                if (timeouts.isNotEmpty())
-                Pass.Companion.log.info(
-                    "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout: ${timeouts.map { it }}"
-                )*/
-                val r = this@Lattice.lub(finalState, nextGlobal, false)
-                Pass.Companion.log.info("Finished calculating final lub")
-                return Pair(r, true)
+                finalState = cleanup(finalState, nextGlobal, this@Lattice)
+                return Pair(finalState, true)
             }
         }
 
