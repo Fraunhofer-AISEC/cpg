@@ -1753,9 +1753,10 @@ fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: I
 
         is AstNode -> {
             // We only infer the remaining location if columns are not set to valid SARIF value.
+            // (This also guarantees this.location is non-null wherever inferLocation is true.)
             val inferLocation =
                 this.location?.region?.startColumn == 0 && this.location?.region?.endColumn == 0
-            val location =
+            var location =
                 this.location
                     ?: PhysicalLocation(currentFile, Region(lineCtr, columnCtr, lineCtr, columnCtr))
 
@@ -1768,7 +1769,20 @@ fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: I
             }
 
             if (inferLocation) {
-                this.location?.region?.startColumn = columnCtr
+                // PhysicalLocation/Region are treated as immutable elsewhere in the codebase (see
+                // Node.hashCode's caching), so replace this.location wholesale rather than
+                // mutating its Region in place.
+                location =
+                    PhysicalLocation(
+                        location.artifactLocation.uri,
+                        Region(
+                            startLine = location.region.startLine,
+                            startColumn = columnCtr,
+                            endLine = location.region.endLine,
+                            endColumn = location.region.endColumn,
+                        ),
+                    )
+                this.location = location
             }
 
             lineCtr = location.region.startLine
@@ -1789,12 +1803,22 @@ fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: I
             if (inferLocation) {
                 // The end column and line are extracted from the last child according to the
                 // location
-                this.location?.region?.endLine =
-                    children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
-                this.location?.region?.endColumn =
+                val endLine = children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
+                val endColumn =
                     (children
-                        .filter { it.location?.region?.endLine == this.location?.region?.endLine }
+                        .filter { it.location?.region?.endLine == endLine }
                         .maxOfOrNull { it.location?.region?.endColumn ?: -1 } ?: columnCtr) + 1
+                val newLoc =
+                    PhysicalLocation(
+                        location.artifactLocation.uri,
+                        Region(
+                            startLine = location.region.startLine,
+                            startColumn = location.region.startColumn,
+                            endLine = endLine,
+                            endColumn = endColumn,
+                        ),
+                    )
+                this.location = newLoc
             }
         }
         else -> {}
