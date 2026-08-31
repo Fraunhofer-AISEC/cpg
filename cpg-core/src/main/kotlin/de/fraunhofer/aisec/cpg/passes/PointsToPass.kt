@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMappedTo
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -1454,19 +1455,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     return@forEach
                 }
                 val derefPMVs =
-                    p.memoryValueEdges
-                        .filter {
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefvalue"
-                        }
-                        .map { it.start }
+                    p.memoryValueEdges.mapFiltered({
+                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                            "derefvalue"
+                    }) {
+                        it.start
+                    }
                 val derefderefPMVs =
-                    p.memoryValueEdges
-                        .filter {
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefderefvalue"
-                        }
-                        .map { it.start }
+                    p.memoryValueEdges.mapFiltered({
+                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                            "derefderefvalue"
+                    }) {
+                        it.start
+                    }
                 argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
                     doubleState =
                         innerCalculateIncomingCallingContexts(
@@ -2987,11 +2988,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 node = value,
                                 excludeShortFSValues = true,
                             )
-                            .map { it.value }
-                            .filter { derefValue ->
-                                doubleState.hasDeclarationStateValueEntry(derefValue)
-                            }
-                            .forEach { derefValue ->
+                            .forEach { entry ->
+                                val derefValue = entry.value
+                                if (!doubleState.hasDeclarationStateValueEntry(derefValue)) {
+                                    return@forEach
+                                }
                                 doubleState
                                     .getLastWrites(derefValue)
                                     .filter { it.properties.none { it == true } }
@@ -3913,10 +3914,12 @@ fun PointsToState.Element.getValues(
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
-            node.memoryAddresses
-                .flatMap { fetchValueFromDeclarationState(it) }
-                .map { it.value }
-                .mapTo(PowersetLattice.Element()) { Pair(it, false) }
+            node.memoryAddresses.mapFlatMappedTo(
+                PowersetLattice.Element(),
+                { fetchValueFromDeclarationState(it) },
+            ) {
+                Pair(it.value, false)
+            }
         }
         is MemoryAddress,
         is Call -> {

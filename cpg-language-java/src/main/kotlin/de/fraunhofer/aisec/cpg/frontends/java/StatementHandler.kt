@@ -452,10 +452,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
 
         val arguments =
-            explicitConstructorInvocationStmt.arguments
-                .map(frontend.expressionHandler::handle)
-                .filterIsInstance<Expression>()
-                .toMutableList()
+            explicitConstructorInvocationStmt.arguments.mapNotNullTo(mutableListOf()) {
+                frontend.expressionHandler.handle(it) as? Expression
+            }
         node.arguments = arguments
 
         return node

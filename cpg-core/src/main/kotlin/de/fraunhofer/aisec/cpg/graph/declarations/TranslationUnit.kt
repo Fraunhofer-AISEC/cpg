@@ -30,8 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.sarif.IndexedContent
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -78,6 +82,31 @@ class TranslationUnit : Declaration(), DeclarationHolder, StatementHolder, EOGSt
         }
 
     override var firstBasicBlock: BasicBlock? = null
+
+    /**
+     * A `TranslationUnit`'s own [code] is the whole file's text. Registering it on the
+     * (already-interned) [de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.ArtifactLocation] lets
+     * every other node in the same file intern its own `code` as an offset range into it, without a
+     * separate cache/lookup or reading the file from disk a second time. This is overridden here
+     * (rather than done inline wherever `location` is first assigned) because some frontends set an
+     * approximate/`null` location first and only assign the final one afterward (e.g. the Python
+     * frontend computes the end line/column after processing the whole module) -- overriding the
+     * setter guarantees this fires exactly when the location is actually finalized, regardless of
+     * how many times or in what order a given frontend assigns it.
+     *
+     * Note: the `@Convert` annotation must be repeated here -- annotations on Node.location are not
+     * inherited by this overriding property, and without it the persistence layer falls back to
+     * storing the raw PhysicalLocation object instead of converting it.
+     */
+    @Convert(LocationConverter::class)
+    override var location: PhysicalLocation?
+        get() = super.location
+        set(value) {
+            super.location = value
+            if (value != null) {
+                code?.let { value.artifactLocation.indexedContent = IndexedContent(it) }
+            }
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
