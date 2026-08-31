@@ -792,7 +792,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             coroutineScope {
                 try {
                     this@Element.forEachMaybeParallel { t ->
-                        ensureActive()
                         if (!other.containsFast(t)) {
                             ret = false
                             cancel()
