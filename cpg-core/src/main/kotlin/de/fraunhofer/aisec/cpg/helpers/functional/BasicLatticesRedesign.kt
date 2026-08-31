@@ -544,6 +544,7 @@ interface Lattice<T : Lattice.Element> {
             try {
                 withTimeout(remainingTime) {
                     nextEdge.end.nextEOGEdges.forEach {
+                        currentCoroutineContext().ensureActive()
                         // We continue with the nextEOG edge if we haven't seen it before or if we
                         // updated the state in comparison to the previous time we were there.
                         val oldGlobalIt = globalState[it]
