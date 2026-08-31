@@ -26,31 +26,28 @@
 package de.fraunhofer.aisec.cpg.sarif
 
 import java.net.URI
-import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 
-class FileContentCacheTest {
-    private fun tempFileWithContent(content: String): URI {
-        val file = Files.createTempFile("FileContentCacheTest", ".txt")
-        Files.writeString(file, content)
-        file.toFile().deleteOnExit()
-        return file.toUri()
+class CodeSpanTest {
+    private fun locationWithContent(content: String, region: Region): PhysicalLocation {
+        val location = PhysicalLocation(URI("file:///${System.nanoTime()}.txt"), region)
+        location.artifactLocation.indexedContent = IndexedContent(content)
+        return location
     }
 
     @Test
     fun testReturnsMatchingRange() {
-        val uri = tempFileWithContent("int main() {\n    return 1;\n}\n")
         val location =
-            PhysicalLocation(
-                uri,
+            locationWithContent(
+                "int main() {\n    return 1;\n}\n",
                 Region(startLine = 2, startColumn = 5, endLine = 2, endColumn = 14),
             )
 
-        val span = FileContentCache.rangeOf(location, "return 1;")
+        val span = tryInternCode(location, "return 1;")
 
         assertNotNull(span)
         assertEquals("return 1;", span.materialize())
@@ -58,54 +55,46 @@ class FileContentCacheTest {
 
     @Test
     fun testReturnsNullOnMismatch() {
-        val uri = tempFileWithContent("int main() {\n    return 1;\n}\n")
-        // A region that doesn't correspond to the given code (simulates a frontend whose
-        // location/code disagree, e.g. due to byte- vs. UTF-16-indexed columns).
         val location =
-            PhysicalLocation(
-                uri,
+            locationWithContent(
+                "int main() {\n    return 1;\n}\n",
                 Region(startLine = 2, startColumn = 5, endLine = 2, endColumn = 14),
             )
 
-        val span = FileContentCache.rangeOf(location, "something else")
+        val span = tryInternCode(location, "something else")
 
         assertNull(span)
     }
 
     @Test
-    fun testReturnsNullForNonexistentFile() {
-        val uri = URI("file:///does/not/exist/${System.nanoTime()}.txt")
+    fun testReturnsNullWhenNoContentRegisteredYet() {
+        // No indexedContent set on this location's ArtifactLocation.
         val location =
             PhysicalLocation(
-                uri,
+                URI("file:///${System.nanoTime()}-unregistered.txt"),
                 Region(startLine = 1, startColumn = 1, endLine = 1, endColumn = 1),
             )
 
-        val span = FileContentCache.rangeOf(location, "x")
+        val span = tryInternCode(location, "x")
 
         assertNull(span)
     }
 
     @Test
     fun testSharesContentAcrossNodes() {
-        val uri = tempFileWithContent("int a = 1;\nint b = 2;\n")
-        val firstLocation =
-            PhysicalLocation(
-                uri,
-                Region(startLine = 1, startColumn = 1, endLine = 1, endColumn = 11),
-            )
-        val secondLocation =
-            PhysicalLocation(
-                uri,
-                Region(startLine = 2, startColumn = 1, endLine = 2, endColumn = 11),
-            )
+        val uri = URI("file:///${System.nanoTime()}-shared.txt")
+        val content = "int a = 1;\nint b = 2;\n"
+        val firstLocation = PhysicalLocation(uri, Region(1, 1, 1, 11))
+        firstLocation.artifactLocation.indexedContent = IndexedContent(content)
+        val secondLocation = PhysicalLocation(uri, Region(2, 1, 2, 11))
 
-        val first = FileContentCache.rangeOf(firstLocation, "int a = 1;")
-        val second = FileContentCache.rangeOf(secondLocation, "int b = 2;")
+        val first = tryInternCode(firstLocation, "int a = 1;")
+        val second = tryInternCode(secondLocation, "int b = 2;")
 
         assertNotNull(first)
         assertNotNull(second)
-        // Both spans should share the exact same cached content instance.
+        // Both spans should share the exact same content instance, since firstLocation and
+        // secondLocation's ArtifactLocations are the same interned instance (same URI).
         assertSame(first.content, second.content)
     }
 }

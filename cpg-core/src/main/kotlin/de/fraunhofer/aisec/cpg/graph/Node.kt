@@ -98,7 +98,7 @@ abstract class Node() :
     /**
      * Lazily-populated pointer into a shared, cached copy of this node's source file, used instead
      * of a dedicated copy of [code] when the code exactly matches a range of that file. Only ever
-     * populated via [setCodeSpan]. See [de.fraunhofer.aisec.cpg.sarif.FileContentCache].
+     * populated via [setCodeSpan]. See [de.fraunhofer.aisec.cpg.sarif.tryInternCode].
      */
     @DoNotPersist @JsonIgnore private var codeSpan: CodeSpan? = null
 

@@ -40,9 +40,9 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
 import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
-import de.fraunhofer.aisec.cpg.sarif.FileContentCache
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.sarif.tryInternCode
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -398,12 +398,10 @@ private fun <AstNode> Node.setCodeAndLocation(
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {
-            val span =
-                if (contextProvider.ctx.config.codeInterning) {
-                    location?.let { FileContentCache.rangeOf(it, code) }
-                } else {
-                    null
-                }
+            // A TranslationUnit registers its own code (the whole file's text) on its
+            // ArtifactLocation via TranslationUnit.location's setter override, so other nodes in
+            // the same file can intern their code as an offset range into it below.
+            val span = location?.let { tryInternCode(it, code) }
             if (span != null) {
                 this.setCodeSpan(span)
             } else {

@@ -31,6 +31,30 @@ import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * A file's full text plus a precomputed line-start index, so a (line, column) region can be
+ * converted to a char offset in O(1) instead of re-scanning from the start of the file for every
+ * node (which would make interning O(fileSize) per node, i.e. O(fileSize * nodeCount) overall).
+ */
+internal class IndexedContent(val text: String) {
+    /** `lineStarts[i]` is the char offset where line `i + 1` (1-indexed) begins. */
+    private val lineStarts: IntArray =
+        buildList {
+                add(0)
+                for (i in text.indices) {
+                    if (text[i] == '\n') add(i + 1)
+                }
+            }
+            .toIntArray()
+
+    /** Converts a 1-indexed (line, column) position to a char offset, or `null` if out of range. */
+    fun offsetOf(line: Int, column: Int): Int? {
+        val lineStart = lineStarts.getOrNull(line - 1) ?: return null
+        val offset = lineStart + (column - 1)
+        return if (offset in 0..text.length) offset else null
+    }
+}
+
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
 class PhysicalLocation(uri: URI?, region: Region) {
     class ArtifactLocation(val uri: URI?) {
@@ -45,6 +69,17 @@ class PhysicalLocation(uri: URI?, region: Region) {
             } else {
                 "unknown"
             }
+
+        /**
+         * Populated once, the first time this file's
+         * [de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit] is parsed (see
+         * `NodeBuilder.setCodeAndLocation`), with that TU's own code -- which is the whole file's
+         * text. Other nodes in the same file can then intern their `code` as an offset range into
+         * it directly (via this already-interned [ArtifactLocation], reached through
+         * [PhysicalLocation.artifactLocation]) without a separate cache lookup or reading the file
+         * from disk a second time.
+         */
+        @Volatile internal var indexedContent: IndexedContent? = null
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -86,7 +121,7 @@ class PhysicalLocation(uri: URI?, region: Region) {
         }
     }
 
-    var artifactLocation: ArtifactLocation
+    val artifactLocation: ArtifactLocation
 
     // The region is stored as four flat Int fields rather than a dedicated Region object, saving
     // one object header per location; Region (still the public type everywhere else) is
