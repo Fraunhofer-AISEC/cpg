@@ -1016,7 +1016,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // nodes following the loop
             currentPredecessors.addAll(cfNode.filterIsInstance<Break>())
             // [Continue]s are attached to the start of loops
-            val continues = cfNode.filterIsInstance<Continue>().toMutableList()
+            val continues = cfNode.filterIsInstanceTo<Continue, _>(mutableListOf())
             if (continues.isNotEmpty()) {
                 val conditions =
                     loop.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
