@@ -839,5 +839,17 @@ class ValueEvaluatorTest {
 
             assertEquals(1, ValueEvaluator().evaluate(array))
         }
+
+        with(TestLanguageFrontend()) {
+            // No initializer, falls back to prevDFG right away.
+            val counter = newVariable("counter")
+            counter.prevDFG = mutableSetOf(newLiteral(7))
+
+            val read = newReference("counter")
+            read.refersTo = counter
+            read.prevDFG = mutableSetOf(counter)
+
+            assertEquals(7, ValueEvaluator().evaluate(read))
+        }
     }
 }
