@@ -29,37 +29,25 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
- * Verifies that enabling [de.fraunhofer.aisec.cpg.TranslationConfiguration.codeInterning] never
- * changes the `code` a node reports, when analyzing a `.jar`. This frontend derives `code` from
- * SootUp's re-serialization of the loaded bytecode (`JVMLanguageFrontend.codeOf`), never from the
- * original source text, so interning is expected to never engage here (see
- * CodeInterningBenchmarkTest) -- this test only guards correctness.
+ * This frontend derives `code` from SootUp's re-serialization of the loaded bytecode
+ * (`JVMLanguageFrontend.codeOf`: `SootMethod.body.toString()` / `astNode.toString()`), never a
+ * substring of any file on disk, so `Node.code` interning (see
+ * `de.fraunhofer.aisec.cpg.sarif.tryInternCode`) never has anything to verify against. Confirms
+ * that expectation stays true (i.e. it never silently starts "interning" against wrong content).
  */
 class CodeInterningTest {
     @Test
-    fun testInternedCodeMatchesLiteralCode() {
+    fun testCodeIsNeverInterned() {
         // This will be our classpath
         val topLevel = Path.of("src", "test", "resources", "jar", "literals")
         val jar = topLevel.resolve("literals.jar").toFile()
 
-        val withoutInterning =
-            analyze(listOf(jar), topLevel, false) {
-                it.registerLanguage<JVMLanguage>()
-                it.codeInterning(false)
-            }
-        val withInterning =
-            analyze(listOf(jar), topLevel, false) {
-                it.registerLanguage<JVMLanguage>()
-                it.codeInterning(true)
-            }
+        val result = analyze(listOf(jar), topLevel, false) { it.registerLanguage<JVMLanguage>() }
 
-        val withoutCodes = withoutInterning.nodes.map { it.code }
-        val withCodes = withInterning.nodes.map { it.code }
-
-        assertEquals(withoutCodes.size, withCodes.size)
-        withoutCodes.zip(withCodes).forEach { (expected, actual) -> assertEquals(expected, actual) }
+        assertTrue(result.nodes.any { it.code != null }, "expected some nodes to have code")
+        assertTrue(result.nodes.none { it.isCodeInterned }, "expected no node to intern its code")
     }
 }

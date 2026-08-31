@@ -29,36 +29,23 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
- * Verifies that enabling [de.fraunhofer.aisec.cpg.TranslationConfiguration.codeInterning] never
- * changes the `code` a node reports. This frontend's `codeOf` calls `LLVMPrintValueToString` (a
- * fresh textual re-disassembly of the in-memory IR value) and `locationOf` always returns `null`
- * (see CodeInterningBenchmarkTest), so interning is expected to never engage -- this test only
- * guards correctness.
+ * `LLVMIRLanguageFrontend.locationOf` always returns `null` (no location support at all), so
+ * `Node.code` interning (see `de.fraunhofer.aisec.cpg.sarif.tryInternCode`) never has a region to
+ * even attempt against. Confirms that expectation stays true.
  */
 class CodeInterningTest {
     @Test
-    fun testInternedCodeMatchesLiteralCode() {
+    fun testCodeIsNeverInterned() {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
         val file = topLevel.resolve("client.ll").toFile()
 
-        val withoutInterning =
-            analyze(listOf(file), topLevel, false) {
-                it.registerLanguage<LLVMIRLanguage>()
-                it.codeInterning(false)
-            }
-        val withInterning =
-            analyze(listOf(file), topLevel, false) {
-                it.registerLanguage<LLVMIRLanguage>()
-                it.codeInterning(true)
-            }
+        val result =
+            analyze(listOf(file), topLevel, false) { it.registerLanguage<LLVMIRLanguage>() }
 
-        val withoutCodes = withoutInterning.nodes.map { it.code }
-        val withCodes = withInterning.nodes.map { it.code }
-
-        assertEquals(withoutCodes.size, withCodes.size)
-        withoutCodes.zip(withCodes).forEach { (expected, actual) -> assertEquals(expected, actual) }
+        assertTrue(result.nodes.any { it.code != null }, "expected some nodes to have code")
+        assertTrue(result.nodes.none { it.isCodeInterned }, "expected no node to intern its code")
     }
 }
