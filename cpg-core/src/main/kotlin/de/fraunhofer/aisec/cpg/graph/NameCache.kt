@@ -52,7 +52,9 @@ internal object NameCache {
      */
     private const val MAX_CACHE_SIZE = 1_000_000
 
-    private val cache = ConcurrentHashMap<Name, Name>()
+    // Initial capacity chosen to avoid the first several resize-and-copy steps for any
+    // non-trivial analysis, since Names are numerous; still cheap for one-off/small analyses.
+    private val cache = ConcurrentHashMap<Name, Name>(4096)
 
     /** Returns a shared instance equal to [name], interning [name] itself if it's the first. */
     fun intern(name: Name): Name {

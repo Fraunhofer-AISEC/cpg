@@ -87,8 +87,9 @@ class Name(
     /** Caches [hashCode]. [Name] is fully immutable, so this never needs to be invalidated. */
     private var cachedHashCode: Int = 0
 
-    public override fun clone(): Name =
-        NameCache.intern(Name(localName, parent?.clone(), delimiter))
+    // Name is fully immutable, so there's nothing to actually copy -- returning this satisfies
+    // Cloneable without allocating.
+    public override fun clone(): Name = this
 
     /**
      * This function splits a fully qualified name into its parts. For example,
