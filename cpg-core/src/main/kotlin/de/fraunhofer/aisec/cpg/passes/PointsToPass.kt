@@ -443,7 +443,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
     override fun cleanup() {
-        // Nothing to do
+        // Nothing to do. Note that the caches below are shared between all targets of one pass
+        // execution, so they must not be cleared here, only in [finalCleanup].
+    }
+
+    /**
+     * Clears the caches that are shared between all targets of this pass. They are only meaningful
+     * while the pass is running: afterwards, they keep every [Call] and every synthetic
+     * [MemoryAddress]/[UnknownMemoryValue] we ever created alive, including the ones which never
+     * made it into the graph because the state they were created for was discarded again.
+     */
+    override fun finalCleanup() {
+        nodesCreatingUnknownValues.clear()
+        CallToMemAddrMap.clear()
+        globalDerefs.clear()
+        totalFunctionCount = 0
+        analyzedFunctionCount = 0
     }
 
     override fun accept(node: Node) {
