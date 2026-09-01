@@ -417,11 +417,40 @@ interface Lattice<T : Lattice.Element> {
         strategy: Strategy,
         timeout: Duration,
     ): Pair<T, Boolean> {
-        // mark the time when we started the calculation to know when we stop
-        val startTime = TimeSource.Monotonic.markNow()
-        if (timeout != Duration.INFINITE) {
+        // [timeouts] is a stack of the budgets of all analyses that are currently running (an
+        // analysis can trigger a nested one, e.g., to compute a function summary). We remember the
+        // depth we started at and restore it in the "finally" below. This guarantees that our entry
+        // is removed on every exit path, including an exception thrown out of [transformation]. If
+        // we leaked entries here, all subsequent analyses would measure their runtime against a
+        // stale budget.
+        val timeoutStackDepth = timeouts.size
+        if (timeout != null && teimeout != Duration.INFINITE) {
             timeouts.addLast(timeout)
         }
+
+        try {
+            return iterateEogWorklist(startEdges, startState, transformation, strategy, timeout)
+        } finally {
+            while (timeouts.size > timeoutStackDepth) {
+                timeouts.removeLast()
+            }
+        }
+    }
+
+    /**
+     * The actual worklist algorithm behind [iterateEogInternal]. The [timeout] budget it observes
+     * has already been pushed onto [timeouts] by the caller, which is also responsible for removing
+     * it again.
+     */
+    private suspend fun iterateEogWorklist(
+        startEdges: List<EvaluationOrder>,
+        startState: T,
+        transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
+        strategy: Strategy,
+        timeout: Long?,
+    ): Pair<T, Boolean> {
+        // mark the time when we started the calculation to know when we stop
+        val startTime = TimeSource.Monotonic.markNow()
 
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
@@ -476,6 +505,15 @@ interface Lattice<T : Lattice.Element> {
                     ?.key ?: this.keys.first()
             this.remove(key)
             return key
+        }
+
+        suspend fun cleanup(one: T, two: T, lattice: Lattice<T>): T {
+            Pass.log.info(
+                "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
+            )
+            finalState = lattice.lub(one, two, false)
+            Pass.log.info("Finished calculating final lub")
+            return finalState
         }
 
         startEdges.forEach { nextBranchEdgesList.add(it) }
@@ -662,10 +700,6 @@ interface Lattice<T : Lattice.Element> {
             }
         }
 
-        // We are done, so we remove the current timeout
-        if (timeout != Duration.INFINITE) {
-            timeouts.removeLast()
-        }
         return Pair(finalState, false)
     }
 }
