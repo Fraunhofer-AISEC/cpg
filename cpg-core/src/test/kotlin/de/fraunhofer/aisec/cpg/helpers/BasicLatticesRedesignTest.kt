@@ -25,8 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+<<<<<<< HEAD
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+=======
+>>>>>>> 977597b9bae (Always restore the timeout stack when leaving iterateEOG)
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
