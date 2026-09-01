@@ -56,6 +56,12 @@ import kotlinx.coroutines.*
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
 val MIN_CHUNK_SIZE = 100
 
+/**
+ * The number of entries below which we never bother to look for dead states while iterating the
+ * EOG. See `pruneGlobalState` in [Lattice.iterateEogInternal].
+ */
+const val MIN_GLOBAL_STATE_PRUNE_SIZE = 256
+
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
 open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
 
@@ -507,6 +513,68 @@ interface Lattice<T : Lattice.Element> {
             return key
         }
 
+        /**
+         * The size [globalState] has to exceed before we try to prune it again. See
+         * [pruneGlobalState].
+         */
+        var nextPruneSize = MIN_GLOBAL_STATE_PRUNE_SIZE
+
+        /**
+         * Drops all entries of [globalState] which can never be read again.
+         *
+         * [globalState] holds one - deeply copied - state per [EvaluationOrder] edge and nothing
+         * ever removed an entry, so its peak size is the number of visited edges times the size of
+         * a state. For large functions, this dominates the memory consumption of the analysis, even
+         * though most of these states are dead long before the fixpoint is reached.
+         *
+         * There are exactly two places which read `globalState[e]`: for the edge that we pull off
+         * one of the worklists, and for the successors of the edge we are currently processing.
+         * Consequently, `globalState[e]` can only be read again if `e` is still waiting in one of
+         * the worklists, or if `e` can be written again, which in turn requires that some edge in a
+         * worklist can reach `e` by walking forward along the EOG. The set of live edges is
+         * therefore the closure of the worklists' contents under "successor of", and everything
+         * outside of it is garbage.
+         *
+         * Note that this only frees memory; it never changes which states are computed, because we
+         * only remove entries that are provably not read anymore.
+         *
+         * This must be called while all pending edges are in the worklists, i.e. before an edge is
+         * taken off one of them.
+         */
+        fun pruneGlobalState() {
+            if (globalState.size <= nextPruneSize) {
+                return
+            }
+
+            val live = IdentitySet<EvaluationOrder>(globalState.size)
+            val stack = ArrayDeque<EvaluationOrder>()
+            fun markLive(edge: EvaluationOrder) {
+                if (live.add(edge)) {
+                    stack.addLast(edge)
+                }
+            }
+
+            currentBBEdgesList.forEach(::markLive)
+            nextBranchEdgesList.forEach(::markLive)
+            sccEdgesQueue.forEach { (_, edge) -> markLive(edge) }
+            mergePointsEdgesMap.keys.forEach(::markLive)
+
+            while (stack.isNotEmpty()) {
+                stack.removeLast().end.nextEOGEdges.forEach(::markLive)
+            }
+
+            val iterator = globalState.keys.iterator()
+            while (iterator.hasNext()) {
+                if (iterator.next() !in live) {
+                    iterator.remove()
+                }
+            }
+
+            // Prune again once the state has grown considerably, so that the cost of a prune (which
+            // is linear in the number of reachable edges) is amortized over the entries it removes.
+            nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, globalState.size * 2)
+        }
+
         suspend fun cleanup(one: T, two: T, lattice: Lattice<T>): T {
             Pass.log.info(
                 "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
@@ -524,6 +592,9 @@ interface Lattice<T : Lattice.Element> {
                 mergePointsEdgesMap.isNotEmpty() ||
                 sccEdgesQueue.isNotEmpty()
         ) {
+            // All edges which are still to be processed are in one of the worklists at this point,
+            // so this is the only place where we can determine which states are still live.
+            pruneGlobalState()
 
             val nextEdge =
                 if (currentBBEdgesList.isNotEmpty()) {
