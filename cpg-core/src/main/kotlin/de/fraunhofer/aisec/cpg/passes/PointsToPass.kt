@@ -70,7 +70,13 @@ import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
+// We also need a place to store the derefs of global variables. The Boolean indicates if this is a
+// value stored for a short function Summary
+var globalDerefs = ConcurrentIdentityHashMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
+private val CallToMemAddrMap =
+    ConcurrentIdentityHashMap<Call, ConcurrentIdentityHashMap<Name, MemoryAddress>>()
+
 var totalFunctionCount = 0
 var analyzedFunctionCount = 0
 private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
@@ -299,9 +305,6 @@ fun clearFSDummies(functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<F
         .forEach { functionSummary.remove(it) }
 }
 
-private val CallToMemAddrMap =
-    ConcurrentIdentityHashMap<Call, ConcurrentIdentityHashMap<Name, MemoryAddress>>()
-
 /**
  * Resolve a MemberAccess as long as it's base no longer is a MemberAccess itself. Returns the base
  * a Name that identifies the access
@@ -405,10 +408,6 @@ fun collectBasesAndOffsets(node: Node): List<Pair<Node, Any?>> {
     return ret
 }
 
-// We also need a place to store the derefs of global variables. The Boolean indicates if this is a
-// value stored for a short function Summary
-var globalDerefs = ConcurrentIdentityHashMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
-
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
@@ -443,7 +442,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
     override fun cleanup() {
-        // Nothing to do
+        // Test: clear the global maps to see if this fixes our memory leak
+        nodesCreatingUnknownValues.clear()
+        globalDerefs.clear()
+        CallToMemAddrMap.clear()
     }
 
     override fun accept(node: Node) {
@@ -467,6 +469,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .filter { starter -> starter.prevEOG.isEmpty() }
 
             starters.forEach { starter -> acceptInternal(starter) }
+            log.info("nodesCreatingUnknownValues.size: ${nodesCreatingUnknownValues.size}")
         }
     }
 
