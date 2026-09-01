@@ -55,6 +55,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
@@ -219,16 +220,14 @@ class DFGFunctionSummaries {
              * If nothing helped to get a unique entry, we pick the first remaining entry and hope it's the most precise one.
              */
             val typeEntryList =
-                matchingEntries
-                    .filter { it.signature != null }
-                    .map {
-                        Pair(
-                            language.parseName(it.methodName).parent?.let { it1 ->
-                                typeManager.lookupResolvedType(it1, language = language)
-                            } ?: language.unknownType(),
-                            it,
-                        )
-                    }
+                matchingEntries.mapFiltered({ it.signature != null }) {
+                    Pair(
+                        language.parseName(it.methodName).parent?.let { it1 ->
+                            typeManager.lookupResolvedType(it1, language = language)
+                        } ?: language.unknownType(),
+                        it,
+                    )
+                }
             val uniqueTypes = typeEntryList.map { it.first }.distinct()
             val targetType =
                 language.parseName(functionDecl.name).parent?.let { it1 ->
@@ -242,29 +241,28 @@ class DFGFunctionSummaries {
                     ?.first
 
             val mostPreciseClassEntries =
-                typeEntryList.filter { it.first == mostPreciseType }.map { it.second }
+                typeEntryList.mapFiltered({ it.first == mostPreciseType }) { it.second }
 
-            val signatureResults =
-                mostPreciseClassEntries
-                    .map {
-                        Pair(
-                            it,
-                            functionDecl.matchesSignature(
-                                it.signature?.map {
-                                    typeManager.lookupResolvedType(it, language = language)
-                                        ?: language.unknownType()
-                                } ?: listOf()
-                            ),
+            val signatureResults = buildMap {
+                for (entry in mostPreciseClassEntries) {
+                    val result =
+                        functionDecl.matchesSignature(
+                            entry.signature?.map {
+                                typeManager.lookupResolvedType(it, language = language)
+                                    ?: language.unknownType()
+                            } ?: listOf()
                         )
+                    if (result is SignatureMatches) {
+                        put(entry, result)
                     }
-                    .filter { it.second is SignatureMatches }
-                    .associate { it }
+                }
+            }
 
             val rankings = signatureResults.entries.map { Pair(it.value.ranking, it.key) }
 
             // Find the best (lowest) rank and find functions with the specific rank
             val bestRanking = rankings.minBy { it.first }.first
-            val list = rankings.filter { it.first == bestRanking }.map { it.second }
+            val list = rankings.mapFiltered({ it.first == bestRanking }) { it.second }
 
             functionToDFGEntryMap[list.first()]
         } else {

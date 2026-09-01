@@ -394,17 +394,15 @@ open class PythonLanguage :
      */
     fun nameToLanguageFiles(name: Name): Set<File> {
         val filesForNamespace =
-            fileExtensions
-                .flatMap { extension ->
-                    setOf(name, Name(IDENTIFIER_INIT, name)).map {
-                        File(
-                            it.toString().replace(language.namespaceDelimiter, File.separator) +
-                                "." +
-                                extension
-                        )
-                    }
+            fileExtensions.flatMapTo(mutableSetOf()) { extension ->
+                setOf(name, Name(IDENTIFIER_INIT, name)).map {
+                    File(
+                        it.toString().replace(language.namespaceDelimiter, File.separator) +
+                            "." +
+                            extension
+                    )
                 }
-                .toMutableSet()
+            }
         return filesForNamespace
     }
 

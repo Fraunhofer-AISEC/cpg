@@ -119,8 +119,11 @@ fun DeclarationStateElement.pushDeclarationToScope(
                 NodeToDeclarationElement(),
                 NodeToTypeElement(
                     *elements
-                        .mapNotNull { it as? HasType }
-                        .map { it as Node to PowersetLatticeTypeElement(it.type) }
+                        .mapNotNull {
+                            (it as? HasType)?.let { hasType ->
+                                hasType as Node to PowersetLatticeTypeElement(hasType.type)
+                            }
+                        }
                         .toTypedArray()
                 ),
             ),
