@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.While
@@ -425,5 +426,86 @@ class SymbolResolverTest {
         val call = result.calls("undeclared_function").firstOrNull()
         assertNotNull(call)
         assertInvokes(call, undeclaredFunctions.single())
+    }
+
+    /**
+     * A locally-declared function prototype has no incoming EOG edge (see
+     * [SymbolResolver.acceptWithIterateEOG]), so it needs to be seeded into
+     * [de.fraunhofer.aisec.cpg.passes.LocalDeclarationLattice] explicitly rather than being
+     * "reached" the normal way. Unlike a [de.fraunhofer.aisec.cpg.graph.expressions.CatchClause]'s
+     * exception parameter (visible for the whole clause), such a prototype is declared "at a
+     * point" - like an ordinary local variable - and must only be visible from there onward.
+     * Seeding it at the very start of the function (as an earlier version of this code did) would
+     * incorrectly make an *earlier* call resolve to it.
+     */
+    @Test
+    fun testLocalPrototypeOnlyVisibleFromItsDeclarationPoint() {
+        val file = File("src/test/resources/cxx/symbols/local_prototype_lexical_position.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+
+        // An unrelated inferred "f" (in the global scope) is also expected here: the early call
+        // below fails to resolve to the local prototype (as it should) and falls back to
+        // inference.
+        val localF = result.functions("f").singleOrNull { it.scope is LocalScope }
+        assertNotNull(localF)
+
+        val calls = result.calls("f")
+        assertEquals(2, calls.size)
+        val earlyCall = calls.first { (it.arguments.singleOrNull() as? Literal<*>)?.value == 1 }
+        val lateCall = calls.first { (it.arguments.singleOrNull() as? Literal<*>)?.value == 2 }
+
+        assertTrue(
+            localF !in earlyCall.invokes,
+            "a call before the local prototype's declaration point must not resolve to it",
+        )
+        assertInvokes(lateCall, localF)
+    }
+
+    /**
+     * For a qualified name like `A::member`, [de.fraunhofer.aisec.cpg.ScopeManager.extractScope]
+     * resolves the qualifier `A` via [de.fraunhofer.aisec.cpg.ScopeManager.lookupScopeByName],
+     * which is a separate code path from the terminal symbol lookup in
+     * [SymbolResolver.handleReference]
+     * - both need [SymbolResolver.localSymbolsOverride] threaded through for a locally-declared
+     *   record (a local class/struct, which C++ allows) to be flow-sensitive the same way an
+     *   unqualified local declaration is (see
+     *   [testLocalPrototypeOnlyVisibleFromItsDeclarationPoint]).
+     */
+    @Test
+    fun testLocalClassQualifiedAccessOnlyVisibleFromItsDeclarationPoint() {
+        val file = File("src/test/resources/cxx/symbols/local_class_qualified_lexical_position.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), usePasses = true) {
+                it.registerLanguage<CPPLanguage>()
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.disableTypeObserver()
+            }
+        assertNotNull(result)
+
+        val localClass = result.records["Local"]
+        assertNotNull(localClass)
+        val bar = localClass.methods["bar"]
+        assertNotNull(bar)
+
+        val calls = result.calls("Local::bar")
+        assertEquals(2, calls.size)
+        val earlyCall = calls.first { it.location?.region?.startLine == 7 }
+        val lateCall = calls.first { it.location?.region?.startLine == 12 }
+
+        assertTrue(
+            earlyCall.invokes.isEmpty(),
+            "a qualified call before the local class's declaration point must not resolve to it",
+        )
+        assertInvokes(lateCall, bar)
     }
 }
