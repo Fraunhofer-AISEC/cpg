@@ -25,10 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.HashMapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
+import de.fraunhofer.aisec.cpg.helpers.functional.MIN_GLOBAL_STATE_PRUNE_SIZE
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
@@ -562,6 +566,53 @@ class BasicLatticesRedesignTest {
             assertFalse(blaEmptyBla == emptyBlaFirst) // Wrong types
             assertFalse(emptyBlaFirst == blaEmptyBla) // Wrong types
         }
+    }
+
+    /**
+     * Builds a chain of [size] nodes connected by EOG edges and returns them. If [loopBackTo] is
+     * given, the last node additionally gets an edge back to the node at that index.
+     */
+    private fun eogChain(size: Int, loopBackTo: Int? = null): List<Literal<Int>> {
+        val nodes = (0 until size).map { Literal<Int>().apply { name = Name("n$it") } }
+        nodes.zipWithNext { current, next -> current.nextEOGEdges += next }
+        loopBackTo?.let { nodes.last().nextEOGEdges += nodes[it] }
+        return nodes
+    }
+
+    @Test
+    fun testIterateEOGPrunesOnlyDeadStates() {
+        // The chain has to be longer than MIN_GLOBAL_STATE_PRUNE_SIZE, otherwise we never even look
+        // for dead states.
+        val size = MIN_GLOBAL_STATE_PRUNE_SIZE * 2
+        val lattice = PowersetLattice<String>()
+
+        // Every edge adds the name of the node it points to, so the state at the end of the chain
+        // has to know about every node except the first one. If we ever dropped a state that is
+        // still live, we would lose elements here.
+        val transformation:
+            suspend (
+                Lattice<PowersetLattice.Element<String>>,
+                EvaluationOrder,
+                PowersetLattice.Element<String>,
+            ) -> PowersetLattice.Element<String> =
+            { _, edge, state ->
+                PowersetLattice.Element(state).apply { add(edge.end.name.localName) }
+            }
+
+        val chain = eogChain(size)
+        val (chainResult, chainTimeout) =
+            lattice.iterateEOG(chain.first().nextEOGEdges.toList(), lattice.bottom, transformation)
+        assertFalse(chainTimeout)
+        assertEquals(chain.drop(1).map { it.name.localName }.toSet(), chainResult.toSet())
+
+        // The same, but the tail of the chain loops back into its middle. The states of the edges
+        // inside the loop stay live for as long as the loop is being iterated, so this would fail
+        // if we pruned by "already processed" instead of by reachability.
+        val loop = eogChain(size, loopBackTo = size / 2)
+        val (loopResult, loopTimeout) =
+            lattice.iterateEOG(loop.first().nextEOGEdges.toList(), lattice.bottom, transformation)
+        assertFalse(loopTimeout)
+        assertEquals(loop.drop(1).map { it.name.localName }.toSet(), loopResult.toSet())
     }
 
     @Test
