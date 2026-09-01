@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.HashMapLattice
@@ -32,6 +33,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.timeouts
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -560,5 +562,36 @@ class BasicLatticesRedesignTest {
             assertFalse(blaEmptyBla == emptyBlaFirst) // Wrong types
             assertFalse(emptyBlaFirst == blaEmptyBla) // Wrong types
         }
+    }
+
+    @Test
+    fun testIterateEOGRestoresTimeoutStack() {
+        val lattice = PowersetLattice<String>()
+
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+
+        val depthBefore = timeouts.size
+
+        // A regular run has to leave the stack of timeout budgets exactly as it found it.
+        lattice.iterateEOG(
+            start.nextEOGEdges.toList(),
+            lattice.bottom,
+            { _, _, state -> state },
+            timeout = 10000,
+        )
+        assertEquals(depthBefore, timeouts.size)
+
+        // ... and so does a run whose transformation throws.
+        assertThrows<IllegalStateException> {
+            lattice.iterateEOG(
+                start.nextEOGEdges.toList(),
+                lattice.bottom,
+                { _, _, _ -> throw IllegalStateException("transformation failed") },
+                timeout = 10000,
+            )
+        }
+        assertEquals(depthBefore, timeouts.size)
     }
 }
