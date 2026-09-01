@@ -180,9 +180,9 @@ open class JavaLanguage :
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
             if (ref.resolutionHelper is Call) {
-                ref.candidates = ref.candidates.filter { it is Function }.toSet()
+                ref.candidates = ref.candidates.filterTo(mutableSetOf()) { it is Function }
             } else {
-                ref.candidates = ref.candidates.filter { it is Variable }.toSet()
+                ref.candidates = ref.candidates.filterTo(mutableSetOf()) { it is Variable }
             }
         }
 

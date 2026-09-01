@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import de.fraunhofer.aisec.cpg.query.AcceptedResult
 import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
@@ -113,19 +114,17 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
                     null
                 },
             codeFlows =
-                child.children
-                    .flatMap { it.getCodeflow() }
-                    .map {
-                        CodeFlow(
-                            threadFlows =
-                                listOf(
-                                    ThreadFlow(
-                                        message = Message(text = "Thread flow"),
-                                        locations = it.toSarifThreadFlowLocation(),
-                                    )
+                child.children.mapFlatMapped({ it.getCodeflow() }) {
+                    CodeFlow(
+                        threadFlows =
+                            listOf(
+                                ThreadFlow(
+                                    message = Message(text = "Thread flow"),
+                                    locations = it.toSarifThreadFlowLocation(),
                                 )
-                        )
-                    },
+                            )
+                    )
+                },
         )
     }
 }

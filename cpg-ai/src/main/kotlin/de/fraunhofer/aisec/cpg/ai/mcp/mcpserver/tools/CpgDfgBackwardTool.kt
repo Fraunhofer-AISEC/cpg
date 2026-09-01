@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -61,7 +62,7 @@ fun Server.addDfgBackwardTool() {
                 )
 
         val paths = startNode.collectAllPrevDFGPaths()
-        val nodes = paths.flatMap { it.nodes }.map { NodeInfo(it) }
+        val nodes = paths.mapFlatMapped({ it.nodes }) { NodeInfo(it) }
 
         CallToolResult(content = listOf(TextContent(Json.encodeToString(nodes))))
     }

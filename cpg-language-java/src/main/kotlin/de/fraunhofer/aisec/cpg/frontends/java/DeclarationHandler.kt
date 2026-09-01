@@ -90,7 +90,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = constructorDeclaration,
             )
         declaration.modifiers =
-            constructorDeclaration.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            constructorDeclaration.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
         language.applyModifiers(declaration, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
@@ -160,7 +162,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = constructorDeclaration,
             )
         declaration.modifiers =
-            constructorDeclaration.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            constructorDeclaration.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
         language.applyModifiers(declaration, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
@@ -209,7 +213,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = methodDecl,
             )
         functionDeclaration.modifiers =
-            methodDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            methodDecl.modifiers.mapTo(mutableSetOf()) { modifier -> modifier.keyword.asString() }
         language.applyModifiers(functionDeclaration, frontend.scopeManager.currentScope)
 
         frontend.scopeManager.enterScope(functionDeclaration)
@@ -287,7 +291,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             ?.let { recordDeclaration.implementedInterfaces = it }
 
         recordDeclaration.modifiers =
-            classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            classInterDecl.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
         language.applyModifiers(recordDeclaration, frontend.scopeManager.currentScope)
 
         frontend.typeManager.addTypeParameter(
@@ -381,7 +387,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newField(
                     variable.name.asString(),
                     type,
-                    fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
+                    fieldDecl.modifiers.mapTo(mutableSetOf()) { modifier ->
+                        modifier.keyword.asString()
+                    },
                     isStatic = fieldDecl.isStatic,
                     initializer = initializer,
                     rawNode = fieldDecl,
@@ -397,7 +405,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val name = enumDecl.nameAsString
         val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
         enumDeclaration.modifiers =
-            enumDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            enumDecl.modifiers.mapTo(mutableSetOf()) { modifier -> modifier.keyword.asString() }
         language.applyModifiers(enumDeclaration, frontend.scopeManager.currentScope)
 
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
