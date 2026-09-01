@@ -2089,7 +2089,10 @@ suspend fun <T> Collection<T>.forEachMaybeParallel(
 ) {
     if (size < minChunkSize || parallelism <= 1) {
         // small – just run the loop
-        forEach { action(it) }
+        for (item in this) {
+            currentCoroutineContext().ensureActive()
+            action(item)
+        }
     } else {
         coroutineScope {
             this@forEachMaybeParallel.splitInto(maxParts = parallelism, minPartSize = minChunkSize)

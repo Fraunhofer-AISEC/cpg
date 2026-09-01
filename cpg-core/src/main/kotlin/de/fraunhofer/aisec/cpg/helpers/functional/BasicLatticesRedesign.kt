@@ -486,6 +486,7 @@ interface Lattice<T : Lattice.Element> {
                 mergePointsEdgesMap.isNotEmpty() ||
                 sccEdgesQueue.isNotEmpty()
         ) {
+            currentCoroutineContext().ensureActive()
 
             val nextEdge =
                 if (currentBBEdgesList.isNotEmpty()) {
