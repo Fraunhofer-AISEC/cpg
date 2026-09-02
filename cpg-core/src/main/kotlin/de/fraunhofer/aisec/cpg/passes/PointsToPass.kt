@@ -424,9 +424,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
-        /**
-         * The timeout after which we stop analyzing a function. Default one hour AKA 3,600,000ms
-         */
+        /** The timeout after which we stop analyzing a function. Default 60 minutes */
         var timeout: Duration = 60.minutes,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
