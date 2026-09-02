@@ -27,13 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.objectType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.Test
@@ -53,27 +54,30 @@ class TupleTest {
             )
         ) {
             val result = build {
-                translationResult {
-                    translationUnit {
-                        function(
-                            "func",
-                            returnTypes = listOf(objectType("MyClass"), objectType("error")),
+                singleTranslationUnit { tu ->
+                    newFunction("func", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                        func.type = computeType(func)
+                    }
+
+                    val tuple =
+                        newTuple(
+                            listOf(newVariable("a"), newVariable("b")),
+                            newCall(newReference("func")),
                         )
+                    scopeManager.addDeclaration(tuple)
+                    tu.statements += newDeclarationStatement { it.singleDeclaration = tuple }
 
-                        // I fear this is too complex for the fluent DSL; so we just use the node
-                        // builder here
-                        val tuple =
-                            newTuple(
-                                listOf(newVariable("a"), newVariable("b")),
-                                newCall(newReference("func")),
-                            )
-                        scopeManager.addDeclaration(tuple)
-                        declare { this.singleDeclaration = tuple }
-                        // declarations += tuple
+                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
 
-                        tuple.elements.forEach { scopeManager.addDeclaration(it) }
-
-                        function("main") { body { call("print") { ref("a") } } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("a")
+                                    }
+                            }
                     }
                 }
             }
@@ -136,31 +140,32 @@ class TupleTest {
             )
         ) {
             val result = build {
-                translationResult {
-                    translationUnit {
-                        function(
-                            "func",
-                            returnTypes = listOf(objectType("MyClass"), objectType("error")),
-                        )
+                singleTranslationUnit { tu ->
+                    newFunction("func", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                        func.type = computeType(func)
+                    }
 
-                        function("main") {
-                            body {
-                                declare {
-                                    // I fear this is too complex for the fluent DSL; so we just use
-                                    // the node builder here
-                                    val tuple =
-                                        newTuple(
-                                            listOf(newVariable("a"), newVariable("b")),
-                                            newCall(newReference("func")),
-                                        )
-                                    scopeManager.addDeclaration(tuple)
-                                    declarations += tuple
-
-                                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                val tuple =
+                                    newTuple(
+                                        listOf(newVariable("a"), newVariable("b")),
+                                        newCall(newReference("func")),
+                                    )
+                                scopeManager.addDeclaration(tuple)
+                                block.statements += newDeclarationStatement {
+                                    it.declarations += tuple
                                 }
-                                call("print") { ref("a") }
+
+                                tuple.elements.forEach { scopeManager.addDeclaration(it) }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("a")
+                                    }
                             }
-                        }
                     }
                 }
             }
