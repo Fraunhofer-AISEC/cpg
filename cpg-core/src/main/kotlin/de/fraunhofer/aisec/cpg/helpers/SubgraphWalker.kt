@@ -513,7 +513,7 @@ private fun Call.duplicateTo(call: Call, callee: Reference) {
     }
     call.type = this.type
     call.assignedTypes = this.assignedTypes
-    call.code = this.code
+    call.copyCodeFrom(this)
     call.location = this.location
     call.argumentIndex = this.argumentIndex
     call.annotations = this.annotations
