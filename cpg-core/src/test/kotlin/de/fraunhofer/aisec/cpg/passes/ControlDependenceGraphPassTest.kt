@@ -40,6 +40,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import org.junit.jupiter.api.assertInstanceOf
 
 class ControlDependenceGraphPassTest {
@@ -307,7 +308,7 @@ class ControlDependenceGraphPassTest {
                         .defaultPasses()
                         .registerPass<ControlDependenceGraphPass>()
                         .configurePass<ControlDependenceGraphPass>(
-                            ControlDependenceGraphPass.Configuration(timeout = 0L)
+                            ControlDependenceGraphPass.Configuration(timeout = Duration.INFINITE)
                         )
                         .build()
                 )
