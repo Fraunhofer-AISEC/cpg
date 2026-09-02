@@ -25,19 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
-import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.body.*
 import com.github.javaparser.ast.body.ConstructorDeclaration
 import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.expr.Expression
+import com.github.javaparser.ast.nodeTypes.NodeWithExtends
+import com.github.javaparser.ast.nodeTypes.NodeWithImplements
+import com.github.javaparser.ast.nodeTypes.NodeWithTypeParameters
 import com.github.javaparser.ast.stmt.BlockStmt
 import com.github.javaparser.ast.stmt.ReturnStmt
 import com.github.javaparser.ast.stmt.Statement
 import com.github.javaparser.ast.type.ReferenceType
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
@@ -47,6 +48,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
@@ -56,7 +58,100 @@ import de.fraunhofer.aisec.cpg.matchesSignature
 import java.util.function.Supplier
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
-    Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
+    Handler<Declaration, BodyDeclaration<*>, JavaLanguageFrontend>(
+        Supplier { ProblemDeclaration() },
+        lang,
+    ) {
+
+    override fun handle(node: BodyDeclaration<*>): Declaration? {
+        return when (node) {
+            is MethodDeclaration -> handleMethod(node)
+            is ConstructorDeclaration -> handleConstructor(node)
+            is CompactConstructorDeclaration -> handleCompactConstructor(node)
+            is ClassOrInterfaceDeclaration -> handleClassOrInterfaceDeclaration(node)
+            is RecordDeclaration -> handleClassOrInterfaceDeclaration(node)
+            is FieldDeclaration -> handleField(node)
+            is EnumDeclaration -> handleEnumeration(node)
+            is EnumConstantDeclaration -> handleEnumConstant(node)
+            else -> {
+                ProblemDeclaration()
+            }
+        }
+    }
+
+    fun handleCompactConstructor(
+        constructorDeclaration: CompactConstructorDeclaration
+    ): Constructor {
+        val currentRecordDecl = frontend.scopeManager.currentRecord
+        val declaration =
+            this.newConstructor(
+                currentRecordDecl?.name,
+                currentRecordDecl,
+                rawNode = constructorDeclaration,
+            )
+        declaration.modifiers =
+            constructorDeclaration.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
+        language.applyModifiers(declaration, frontend.scopeManager.currentScope)
+        frontend.scopeManager.enterScope(declaration)
+        createMethodReceiver(currentRecordDecl, declaration)
+        declaration.addThrowTypes(
+            constructorDeclaration.thrownExceptions.map { type: ReferenceType ->
+                frontend.typeOf(type)
+            }
+        )
+
+        if (currentRecordDecl != null) {
+            val type = currentRecordDecl.toType()
+            declaration.type = type
+        }
+
+        // check, if constructor has body (i.e. it's not abstract or something)
+        val body = constructorDeclaration.body
+        addImplicitReturn(body)
+        declaration.body = frontend.statementHandler.handle(body)
+
+        // This constructor doesn't have parameters, so we have to add the implicit parameters from
+        // the record declaration. We also add two implicit statements which are the assignments of
+        // the parameters to the fields of the record.
+        currentRecordDecl?.fields?.forEach { field ->
+            val param =
+                this.newParameter(field.name.localName, field.type, false).apply {
+                    isImplicit = true
+                }
+            frontend.scopeManager.addDeclaration(param)
+            declaration.parameters += param
+            val assignment =
+                newAssign(
+                        operatorCode = "=",
+                        lhs =
+                            listOf(
+                                newMemberAccess(
+                                        field.name.localName,
+                                        newReference("this", declaration.type).apply {
+                                            isImplicit = true
+                                        },
+                                        field.type,
+                                    )
+                                    .apply { isImplicit = true }
+                            ),
+                        rhs =
+                            listOf(
+                                newReference(field.name.localName, field.type).apply {
+                                    isImplicit = true
+                                }
+                            ),
+                    )
+                    .apply { isImplicit = true }
+            (declaration.body as? Block)?.statements?.addFirst(assignment)
+        }
+
+        frontend.processAnnotations(declaration, constructorDeclaration)
+        frontend.scopeManager.leaveScope(declaration)
+        return declaration
+    }
+
     fun handleConstructor(constructorDeclaration: ConstructorDeclaration): Constructor {
         val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
@@ -66,6 +161,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentRecordDecl,
                 rawNode = constructorDeclaration,
             )
+        declaration.modifiers =
+            constructorDeclaration.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
+        language.applyModifiers(declaration, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
@@ -113,7 +213,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = methodDecl,
             )
         functionDeclaration.modifiers =
-            methodDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            methodDecl.modifiers.mapTo(mutableSetOf()) { modifier -> modifier.keyword.asString() }
+        language.applyModifiers(functionDeclaration, frontend.scopeManager.currentScope)
 
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
@@ -168,9 +269,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         functionDeclaration.receiver = receiver
     }
 
-    open fun handleClassOrInterfaceDeclaration(
-        classInterDecl: ClassOrInterfaceDeclaration
-    ): Record {
+    open fun <T : TypeDeclaration<T>> handleClassOrInterfaceDeclaration(classInterDecl: T): Record {
         // TODO: support other kinds, such as interfaces
         val fqn = classInterDecl.fullyQualifiedName.orElse(classInterDecl.nameAsString)
 
@@ -178,20 +277,30 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
         // add a type declaration
         val recordDeclaration = this.newRecord(fqn, "class", rawNode = classInterDecl)
-        recordDeclaration.superClasses =
-            classInterDecl.extendedTypes
-                .map { type -> frontend.getTypeAsGoodAsPossible(type) }
-                .toMutableList()
-        recordDeclaration.implementedInterfaces =
-            classInterDecl.implementedTypes
-                .map { type -> frontend.getTypeAsGoodAsPossible(type) }
-                .toMutableList()
+
+        (classInterDecl as? NodeWithExtends<*>)
+            ?.extendedTypes
+            ?.map { type -> frontend.getTypeAsGoodAsPossible(type) }
+            ?.toMutableList()
+            ?.let { recordDeclaration.superClasses = it }
+
+        (classInterDecl as? NodeWithImplements<*>)
+            ?.implementedTypes
+            ?.map { type -> frontend.getTypeAsGoodAsPossible(type) }
+            ?.toMutableList()
+            ?.let { recordDeclaration.implementedInterfaces = it }
+
         recordDeclaration.modifiers =
-            classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            classInterDecl.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
+        language.applyModifiers(recordDeclaration, frontend.scopeManager.currentScope)
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
-            classInterDecl.typeParameters.map { ParameterizedType(it.nameAsString, language) },
+            (classInterDecl as? NodeWithTypeParameters<*>)?.typeParameters?.map {
+                ParameterizedType(it.nameAsString, language)
+            } ?: listOf(),
         )
 
         processImportDeclarations(recordDeclaration)
@@ -278,11 +387,14 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newField(
                     variable.name.asString(),
                     type,
-                    fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
+                    fieldDecl.modifiers.mapTo(mutableSetOf()) { modifier ->
+                        modifier.keyword.asString()
+                    },
                     isStatic = fieldDecl.isStatic,
                     initializer = initializer,
                     rawNode = fieldDecl,
                 )
+            language.applyModifiers(fieldDeclaration, frontend.scopeManager.currentScope)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
             declarationSequence.addDeclaration(fieldDeclaration)
         }
@@ -292,6 +404,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleEnumeration(enumDecl: EnumDeclaration): Enumeration {
         val name = enumDecl.nameAsString
         val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
+        enumDeclaration.modifiers =
+            enumDecl.modifiers.mapTo(mutableSetOf()) { modifier -> modifier.keyword.asString() }
+        language.applyModifiers(enumDeclaration, frontend.scopeManager.currentScope)
 
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
@@ -323,6 +438,20 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         typeDecl: T,
         recordDeclaration: Record,
     ) {
+        // For [com.github.javaparser.ast.body.RecordDeclaration]s, the fields are defined in the
+        // parameters of the record declaration. Therefore, we need to handle them here.
+        (typeDecl as? RecordDeclaration)?.parameters?.forEach { parameter ->
+            var resolvedType: Type? =
+                frontend.typeManager.getTypeParameter(recordDeclaration, parameter.type.toString())
+            if (resolvedType == null) {
+                resolvedType = frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve())
+            }
+            val field = this.newField(parameter.nameAsString, resolvedType, rawNode = parameter)
+
+            frontend.scopeManager.addDeclaration(field)
+            recordDeclaration.fields += field
+        }
+
         for (decl in typeDecl.members) {
             when (decl) {
                 is MethodDeclaration -> {
@@ -356,6 +485,13 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     val initializerBlock = frontend.statementHandler.handleBlock(decl.body)
                     initializerBlock.isStaticBlock = decl.isStatic
                     recordDeclaration.statements += initializerBlock
+                }
+                is CompactConstructorDeclaration -> {
+                    val c = handle(decl) as Constructor
+                    // This constructor doesn't have arguments, so we need to add the implicit
+                    // arguments from the record declaration
+                    frontend.scopeManager.addDeclaration(c)
+                    recordDeclaration.constructors += c
                 }
                 else -> {
                     log.debug(
@@ -468,27 +604,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             if (lastStatement == null || !lastStatement.isReturnStmt) {
                 body.addStatement(ReturnStmt())
             }
-        }
-    }
-
-    init {
-        map[MethodDeclaration::class.java] = HandlerInterface { decl ->
-            handleMethod(decl as MethodDeclaration)
-        }
-        map[ConstructorDeclaration::class.java] = HandlerInterface { decl ->
-            handleConstructor(decl as ConstructorDeclaration)
-        }
-        map[ClassOrInterfaceDeclaration::class.java] = HandlerInterface { decl ->
-            handleClassOrInterfaceDeclaration(decl as ClassOrInterfaceDeclaration)
-        }
-        map[FieldDeclaration::class.java] = HandlerInterface { decl ->
-            handleField(decl as FieldDeclaration)
-        }
-        map[EnumDeclaration::class.java] = HandlerInterface { decl ->
-            handleEnumeration(decl as EnumDeclaration)
-        }
-        map[EnumConstantDeclaration::class.java] = HandlerInterface { decl ->
-            handleEnumConstant(decl as EnumConstantDeclaration)
         }
     }
 }
