@@ -2,7 +2,7 @@
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Fraunhofer-AISEC/cpg/actions)
  [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg)
 
-A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
+A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13), Rust and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
 
 ## What is this?
 
@@ -135,6 +135,7 @@ The current state of languages is:
 | Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | Go                       | cpg-language-go                       | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | INI                      | cpg-language-ini                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Rust                     | cpg-language-rust                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
 | LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
 | TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
@@ -174,13 +175,13 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 
 For parsing TypeScript, the necessary TypeScript-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically. The bundles script will be placed inside the jar's resources and should work out of the box.
 
-#### MCP
+#### AI
 
-[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality is provided via the optional `cpg-mcp` module. It can be enabled/disabled via the `gradle.properties` setting `enableMCPModule`.
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality, together with other AI components such as skills and chat integration, is provided via the optional `cpg-ai` module. It can be enabled/disabled via the `gradle.properties` setting `enableAIModule`. Note that `codyze-console` has a hard, unconditional build dependency on `cpg-ai`: enabling `enableCodyzeConsole` always enables `cpg-ai` too, even if `enableAIModule=false` is set explicitly.
 
 #### Codyze Console
 
-The [Codyze Console](codyze-console/README.md) web application is an optional module, enabled/disabled via the `gradle.properties` setting `enableCodyzeConsole`. Its AI chat feature additionally requires the `cpg-mcp` module (see above) to be enabled separately.
+The [Codyze Console](codyze-console/README.md) web application is an optional module, enabled/disabled via the `gradle.properties` setting `enableCodyzeConsole`. Its AI chat feature additionally requires the `cpg-ai` module (see above), which - as noted there - is automatically enabled alongside `codyze-console` unless `enableAIModule` is set explicitly.
 
 ### Code Style
 

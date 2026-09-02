@@ -99,6 +99,12 @@ val enablePythonFrontend: Boolean by extra {
 }
 project.logger.lifecycle("Python frontend is ${if (enablePythonFrontend) "enabled" else "disabled"}")
 
+val enableRustFrontend: Boolean by extra {
+    val enableRustFrontend: String? by project
+    enableRustFrontend.toBoolean()
+}
+project.logger.lifecycle("Rust frontend is ${if (enableRustFrontend) "enabled" else "disabled"}")
+
 val enableLLVMFrontend: Boolean by extra {
     val enableLLVMFrontend: String? by project
     enableLLVMFrontend.toBoolean()
@@ -137,8 +143,15 @@ project.logger.lifecycle(
     "codyze-console is ${if (enableCodyzeConsole) "enabled" else "disabled"}"
 )
 
-val enableMCPModule: Boolean by extra {
-    val enableMCPModule: String? by project
-    enableMCPModule.toBoolean()
+val enableAIModule: Boolean by extra {
+    val enableAIModule: String? by project
+    // codyze-console has a hard, unconditional build dependency on cpg-ai, so codyze-console
+    // being enabled always forces cpg-ai on too, even if enableAIModule=false is set explicitly -
+    // an explicit false would otherwise just break the codyze-console build.
+    val explicitlyEnabled = enableAIModule.toBoolean()
+    if (!explicitlyEnabled && enableCodyzeConsole) {
+        project.logger.lifecycle("cpg-ai module auto-enabled because codyze-console is enabled")
+    }
+    explicitlyEnabled || enableCodyzeConsole
 }
-project.logger.lifecycle("MCP module is ${if (enableMCPModule) "enabled" else "disabled"}")
+project.logger.lifecycle("AI module is ${if (enableAIModule) "enabled" else "disabled"}")

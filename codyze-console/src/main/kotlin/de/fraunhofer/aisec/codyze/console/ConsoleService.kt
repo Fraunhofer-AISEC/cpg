@@ -30,12 +30,13 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
-import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -131,7 +132,7 @@ class ConsoleService {
         val result = project.analyze()
 
         // Update the global analysis result in the MCP server
-        McpServerHelper.setGlobalAnalysisResult(result.translationResult)
+        globalAnalysisResult = result.translationResult
 
         // Populate QueryTree cache for lazy loading
         populateQueryTreeCache(result.requirementsResults)
@@ -358,7 +359,7 @@ class ConsoleService {
      */
     private fun extractNodes(tu: TranslationUnit, overlayNodes: Boolean): List<NodeJSON> {
         return if (overlayNodes) {
-            tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
+            tu.nodes.mapFlatMapped({ it.overlays }) { it.toJSON() }
         } else {
             tu.declarations.map { it.toJSON() } + tu.statements.map { it.toJSON() }
         }

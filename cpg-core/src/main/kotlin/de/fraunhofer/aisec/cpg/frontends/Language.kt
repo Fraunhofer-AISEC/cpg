@@ -132,8 +132,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
-    /** The standard evaluator to be used with this language. */
-    @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    /**
+     * The standard evaluator to be used with this language. A fresh instance is returned on every
+     * access, so that concurrent evaluations (e.g. from parallel query evaluation) never share
+     * mutable evaluator state such as [ValueEvaluator.path].
+     */
+    @DoNotPersist
+    open val evaluator: ValueEvaluator
+        get() = ValueEvaluator()
+
+    /**
+     * Determines whether [value] (the result of evaluating a condition with [evaluator]) is
+     * "truthy" in this language, i.e., whether it would take the "then"/loop-body branch of a
+     * conditional. Returns `null` if this cannot be determined, e.g., because the value could not
+     * be evaluated or because this language does not allow implicit conversion of [value] to a
+     * boolean. The default implementation only accepts an actual [Boolean].
+     */
+    open fun isTruthy(value: Any?): Boolean? = value as? Boolean
 
     init {
         this.language = this
@@ -160,6 +175,27 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     open fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
+
+    /**
+     * Projects the surface form of [declaration] — appearing in the given [scope] — onto the
+     * canonical, language-independent properties that later passes rely on: it sets
+     * [Declaration.visibility] and, for a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration], its `isStatic` flag.
+     *
+     * For most languages that surface form are the raw [Declaration.modifiers], whose spellings
+     * stay in the declaration losslessly. Some languages however encode the very same information
+     * in the *identifier* rather than in a keyword — Go derives export status from the casing of
+     * the name, Python's visibility is a leading-underscore naming convention — so implementations
+     * may read anything about the [declaration], not just its modifiers.
+     *
+     * Either way, this hook is the single place where a language turns its surface syntax into
+     * canonical semantics; frontends should not assign [Declaration.visibility] themselves. [scope]
+     * matters because that meaning can depend on *where* the declaration appears — most notably
+     * C/C++'s `static`, which denotes internal linkage at file scope but a class-level member
+     * inside a record, or Go's export semantics, which only apply to package-level declarations and
+     * record members. The default does nothing, so a language that models neither is unaffected.
+     */
+    open fun applyModifiers(declaration: Declaration, scope: Scope?) {}
 
     override fun equals(other: Any?): Boolean {
         return other?.javaClass == this.javaClass

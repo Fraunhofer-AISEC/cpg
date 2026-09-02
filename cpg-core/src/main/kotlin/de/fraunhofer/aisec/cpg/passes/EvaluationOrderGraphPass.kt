@@ -420,6 +420,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Import -> handleDefault(node)
             // These nodes are not added to the EOG
             is Include -> doNothing()
+            is ObjectDeconstruction -> handleObjectDeconstruction(node)
+            is NamedDeconstruction -> handleNamedDeconstruction(node)
+            is AlternativeDeconstruction -> handleAlternativeDeconstruction(node)
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
     }
@@ -844,6 +847,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See [Specification for Break](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#break)
      */
     protected fun handleBreak(node: Break) {
+        node.expr?.let { handleEOG(it) }
         attachToEOG(node)
         val label = node.label
         val breakableNode =
@@ -1009,7 +1013,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // nodes following the loop
             currentPredecessors.addAll(cfNode.filterIsInstance<Break>())
             // [Continue]s are attached to the start of loops
-            val continues = cfNode.filterIsInstance<Continue>().toMutableList()
+            val continues = cfNode.filterIsInstanceTo<Continue, _>(mutableListOf())
             if (continues.isNotEmpty()) {
                 val conditions =
                     loop.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
@@ -1265,6 +1269,45 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
         attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification for ObjectDeconstruction](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#ObjectDeconstruction)
+     *
+     * Note that we model Deconstructions in the inverse order than you may be used for other
+     * expressions. First the root node is evaluated, and then the children, as we walk down during
+     * the decomposition process.
+     */
+    protected fun handleObjectDeconstruction(node: ObjectDeconstruction) {
+        attachToEOG(node)
+        node.components.forEach { handleEOG(it) }
+    }
+
+    /**
+     * See
+     * [Specification for AlternativeDeconstruction](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#AlternativeDeconstruction)
+     *
+     * Note that we model Deconstructions in the inverse order than you may be used for other
+     * expressions. First the root node is evaluated, and then the children, as we walk down during
+     * the decomposition process.
+     */
+    protected fun handleAlternativeDeconstruction(node: AlternativeDeconstruction) {
+        attachToEOG(node)
+        node.alternatives.forEach { handleEOG(it) }
+    }
+
+    /**
+     * See
+     * [Specification for NamedDeconstruction](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#NamedDeconstruction)
+     *
+     * Note that we model Deconstructions in the inverse order than you may be used for other
+     * expressions. First the root node is evaluated, and then the children, as we walk down during
+     * the decomposition process.
+     */
+    protected fun handleNamedDeconstruction(node: NamedDeconstruction) {
+        attachToEOG(node)
+        handleEOG(node.value)
     }
 
     /**

@@ -717,5 +717,40 @@ class ValueEvaluationTests {
                     }
                 }
             }
+
+        fun getInitializerWithWriteExample(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("writeexample.cpp") {
+                        // a is written to elsewhere, b only has its initializer, c has no
+                        // initializer and is only assigned in `write`.
+                        declare { variable("a", t("int")) { literal(0, t("int")) } }
+                        declare { variable("b", t("int")) { literal(0, t("int")) } }
+                        declare { variable("c", t("int")) }
+
+                        function("write", t("void")) {
+                            body {
+                                ref("a") assign literal(5, t("int"))
+                                ref("c") assign literal(7, t("int"))
+                            }
+                        }
+
+                        function("main", t("int")) {
+                            body {
+                                call("println") { ref("a") }
+                                call("println") { ref("b") }
+                                call("println") { ref("c") }
+                                returnStmt { literal(0, t("int")) }
+                            }
+                        }
+                    }
+                }
+            }
     }
 }

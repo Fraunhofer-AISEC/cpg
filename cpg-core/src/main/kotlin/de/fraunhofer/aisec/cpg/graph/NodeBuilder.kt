@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.sarif.tryInternCode
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -193,7 +194,7 @@ fun LanguageProvider.newName(
                 namespace
             }
 
-        Name(name.toString(), parent, language.namespaceDelimiter)
+        NameCache.intern(Name(name.toString(), parent, language.namespaceDelimiter))
     }
 }
 
@@ -287,7 +288,7 @@ fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = nu
 }
 
 fun <T : Node> T.codeAndLocationFrom(other: Node): T {
-    this.code = other.code
+    this.copyCodeFrom(other)
     this.location = other.location
 
     return this
@@ -399,16 +400,26 @@ private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {
+    // Determine the location first, since interning the code (below) needs it.
+    val location = provider.locationOf(rawNode)
     if (contextProvider.ctx.config.codeInNodes) {
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {
-            this.code = code
+            // A TranslationUnit registers its own code (the whole file's text) on its
+            // ArtifactLocation via TranslationUnit.location's setter override, so other nodes in
+            // the same file can intern their code as an offset range into it below.
+            val span = location?.let { tryInternCode(it, code) }
+            if (span != null) {
+                this.setCodeSpan(span)
+            } else {
+                this.code = code
+            }
         } else {
             LOGGER.warn("Unexpected: No code for node {}", rawNode)
         }
     }
-    this.location = provider.locationOf(rawNode)
+    this.location = location
 }
 
 /**
@@ -468,9 +479,10 @@ fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: I
 
         is AstNode -> {
             // We only infer the remaining location if columns are not set to valid SARIF value.
+            // (This also guarantees this.location is non-null wherever inferLocation is true.)
             val inferLocation =
                 this.location?.region?.startColumn == 0 && this.location?.region?.endColumn == 0
-            val location =
+            var location =
                 this.location
                     ?: PhysicalLocation(currentFile, Region(lineCtr, columnCtr, lineCtr, columnCtr))
 
@@ -483,7 +495,20 @@ fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: I
             }
 
             if (inferLocation) {
-                this.location?.region?.startColumn = columnCtr
+                // PhysicalLocation/Region are treated as immutable elsewhere in the codebase (see
+                // Node.hashCode's caching), so replace this.location wholesale rather than
+                // mutating its Region in place.
+                location =
+                    PhysicalLocation(
+                        location.artifactLocation.uri,
+                        Region(
+                            startLine = location.region.startLine,
+                            startColumn = columnCtr,
+                            endLine = location.region.endLine,
+                            endColumn = location.region.endColumn,
+                        ),
+                    )
+                this.location = location
             }
 
             lineCtr = location.region.startLine
@@ -504,12 +529,22 @@ fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: I
             if (inferLocation) {
                 // The end column and line are extracted from the last child according to the
                 // location
-                this.location?.region?.endLine =
-                    children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
-                this.location?.region?.endColumn =
+                val endLine = children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
+                val endColumn =
                     (children
-                        .filter { it.location?.region?.endLine == this.location?.region?.endLine }
+                        .filter { it.location?.region?.endLine == endLine }
                         .maxOfOrNull { it.location?.region?.endColumn ?: -1 } ?: columnCtr) + 1
+                val newLoc =
+                    PhysicalLocation(
+                        location.artifactLocation.uri,
+                        Region(
+                            startLine = location.region.startLine,
+                            startColumn = location.region.startColumn,
+                            endLine = endLine,
+                            endColumn = endColumn,
+                        ),
+                    )
+                this.location = newLoc
             }
         }
         else -> {}

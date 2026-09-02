@@ -142,6 +142,14 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunction(name = s.name, rawNode = s)
             }
+
+        // Let the language turn the declaration's "modifiers" into semantics. For Python this
+        // projects the PEP 8 naming convention onto the visibility of record members (methods,
+        // constructors and operators); free functions keep the default [Visibility.UNKNOWN]. We
+        // have not entered the scope of `func` yet, so the current scope is still the scope
+        // surrounding the function, which is exactly what decides whether this is a member.
+        language.applyModifiers(func, frontend.scopeManager.currentScope)
+
         frontend.scopeManager.enterScope(func)
 
         frontend.statementHandler.addAsyncWarning(s, func)

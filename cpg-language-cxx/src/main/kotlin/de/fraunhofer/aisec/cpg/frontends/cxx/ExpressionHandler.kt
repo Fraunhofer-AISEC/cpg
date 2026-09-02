@@ -671,6 +671,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
         var raw = String(ctx.value)
+        var isWideChar = false
+
+        if (raw.startsWith("L'") && raw.endsWith("'")) {
+            // It's a widechar literal, we can just ignore the L prefix for now
+            raw = raw.substring(1)
+            isWideChar = true
+        }
         if (!raw.startsWith("'") || !raw.endsWith("'")) {
             return newProblemExpression(
                 "character literal does not start or end with '",
@@ -681,9 +688,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         raw = raw.trim('\'')
 
         // Since C/C++ for some reason allows multi-character, we need to parse character by
-        // character and then see what the final type is
+        // character and then see what the final type is. We store code points as Int rather
+        // than Char, since a wide char escape (e.g. L'\x1F600') can represent a code point
+        // outside the 16-bit range that Kotlin's Char can hold.
         var i = 0
-        val chars = mutableListOf<Char>()
+        val chars = mutableListOf<Int>()
         var escapeChars = ""
         var radix = 10
         var inEscape = false
@@ -694,8 +703,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // Check for radix specifier
                 if (escapeChars.isEmpty() && raw[i] == 'x') {
                     radix = 16
-                    maxChars =
-                        2 // it seems like most compilers only allow two hex digits here, so do we
+                    // A regular (1-byte) char only allows two hex digits, but a wide char
+                    // literal can hold a much larger code point (e.g. wchar_t is 4 bytes on
+                    // Linux/macOS), so allow up to eight hex digits there.
+                    maxChars = if (isWideChar) 8 else 2
                     i++
                     continue
                 }
@@ -703,7 +714,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // Check, if new escape char. Then finish this one and start a new one
                 if (raw[i] == '\\') {
                     try {
-                        chars += Char(escapeChars.toInt(radix))
+                        chars += escapeChars.toInt(radix)
                         // Restart, assuming its octal and wait for a new radix specifier
                         escapeChars = ""
                         inEscape = true
@@ -721,7 +732,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // Check for special escape (they are only one digit and we NOT in hex mode)
                 val specialEscape = escapeMap[raw[i]]
                 if (escapeChars.isEmpty() && radix != 16 && specialEscape != null) {
-                    chars += specialEscape
+                    chars += specialEscape.code
                     escapeChars = ""
                     inEscape = false
                     maxChars = null
@@ -737,7 +748,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         i == raw.length - 1 || (maxChars != null && escapeChars.length >= maxChars)
                     ) {
                         try {
-                            chars += Char(escapeChars.toInt(radix))
+                            chars += escapeChars.toInt(radix)
                             escapeChars = ""
                             inEscape = false
                             maxChars = 0
@@ -761,23 +772,40 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     radix = 8
                 } else {
                     // Handle regular character
-                    chars += raw[i]
+                    chars += raw[i].code
                 }
             }
             i++
         }
 
         val single = chars.singleOrNull()
-        if (single != null) {
-            return newLiteral(single, primitiveType("char"), rawNode = ctx)
+        if (single != null && single <= Char.MAX_VALUE.code) {
+            return newLiteral(
+                single.toChar(),
+                primitiveType(if (isWideChar) "wchar_t" else "char"),
+                rawNode = ctx,
+            )
+        } else if (single != null) {
+            // A single wide-char escape can represent a code point outside the 16-bit range of
+            // Char (e.g. L'\x1F600'). It is already the intended value, so we return it as-is
+            // instead of running it through the byte-recombination logic below.
+            return newLiteral(single, primitiveType("wchar_t"), rawNode = ctx)
         } else {
-            // Somehow make an int out of, this is "implementation" specific. We follow the way
-            // clang does it
+            // Somehow make an int out of, this is "implementation" specific.
             var intValue = 0
-            for ((n, c) in chars.reversed().withIndex()) {
-                intValue += (c.code * 256.0f.pow(n)).toInt()
+            return if (isWideChar) {
+                // If it was a wide char, we do not reverse the order.
+                for ((n, c) in chars.withIndex()) {
+                    intValue += (c * 256.0f.pow(n)).toInt()
+                }
+                newLiteral(intValue, primitiveType("wchar_t"), rawNode = ctx)
+            } else {
+                // We follow the way clang does it
+                for ((n, c) in chars.reversed().withIndex()) {
+                    intValue += (c * 256.0f.pow(n)).toInt()
+                }
+                newLiteral(intValue, primitiveType("int"), rawNode = ctx)
             }
-            return newLiteral(intValue, primitiveType("int"), rawNode = ctx)
         }
     }
 

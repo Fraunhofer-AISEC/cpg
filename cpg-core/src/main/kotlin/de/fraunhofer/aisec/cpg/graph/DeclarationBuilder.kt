@@ -607,6 +607,7 @@ fun MetadataProvider.newField(
     name: CharSequence?,
     type: Type = this.unknownType(),
     modifiers: Set<String> = setOf(),
+    isStatic: Boolean = false,
     initializer: Expression? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null,
@@ -618,6 +619,7 @@ fun MetadataProvider.newField(
 
     node.type = type
     node.modifiers = modifiers ?: setOf()
+    node.isStatic = isStatic
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
         if (initializer is ArrayConstruction) {

@@ -80,10 +80,15 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         val outerBlock = newBlock(rawNode = body)
 
         val printer = NormalStmtPrinter()
-        printer.initializeSootMethod(body.stmtGraph)
+        printer.initializeSootMethod(body.controlFlowGraph)
 
         frontend.printer = printer
         frontend.body = body
+        // Reset the "current statement" tracker. It is used by JVMLanguageFrontend.locationOf() to
+        // give a position to values that do not carry one themselves (e.g. locals). Local
+        // declarations below are intentionally translated while this is null: a Jimple local has no
+        // dedicated declaration site in the source, so its declaration statement gets no location.
+        frontend.currentStmt = null
 
         // Parse locals, these are always at the beginning of the function
         for (local in body.locals) {
@@ -100,6 +105,12 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         // Parse statements and segment them into (sub)-blocks.
         var block = outerBlock
         for (sootStmt in body.stmts) {
+            // Remember which statement we are currently translating so that locationOf() can fall
+            // back to its position for values that do not carry their own (e.g. locals). All
+            // operands of a single Jimple statement share the same source line, so this is exactly
+            // the line we want to attribute to those values.
+            frontend.currentStmt = sootStmt
+
             val label = printer.labels[sootStmt]
             if (label != null) {
                 // If we have a label, we need to create a new label statement, that starts a new
@@ -124,6 +135,9 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 block.statements += stmt
             }
         }
+
+        // Clear the tracker so it does not leak into declarations of following methods/classes.
+        frontend.currentStmt = null
 
         // Always return the outer block, since it comprises all the other sub-blocks.
         return outerBlock

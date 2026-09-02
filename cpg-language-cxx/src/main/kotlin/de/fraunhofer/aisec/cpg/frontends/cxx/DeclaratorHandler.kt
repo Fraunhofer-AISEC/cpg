@@ -480,8 +480,12 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
             val declaration = frontend.declarationHandler.handle(member)
             if (declaration != null) {
-                // Apply current visibility to the declaration
+                // Record the raw access specifier losslessly, then let the language project it onto
+                // the canonical `Declaration.visibility` (see Language.applyModifiers), so that
+                // passes such as the SymbolResolver can reason about member access control without
+                // knowing C++'s concrete access keywords.
                 declaration.modifiers += currentVisibility
+                language.applyModifiers(declaration, frontend.scopeManager.currentScope)
                 frontend.scopeManager.addDeclaration(declaration)
                 recordDeclaration.addDeclaration(declaration)
             }

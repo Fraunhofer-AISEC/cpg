@@ -39,8 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import sootup.core.jimple.basic.Local
-import sootup.core.jimple.basic.Value
+import sootup.core.jimple.common.Local
+import sootup.core.jimple.common.Value
 import sootup.core.jimple.common.constant.*
 import sootup.core.jimple.common.expr.*
 import sootup.core.jimple.common.ref.*

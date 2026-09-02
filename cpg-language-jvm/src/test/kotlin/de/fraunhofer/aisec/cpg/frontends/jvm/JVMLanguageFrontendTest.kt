@@ -30,6 +30,18 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.ResolveCallAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveMemberAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.SccPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertFullName
@@ -37,6 +49,7 @@ import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
+import java.io.File
 import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.Disabled
@@ -190,9 +203,9 @@ class JVMLanguageFrontendTest {
         tu.methods.forEach { println(it.code) }
     }
 
-    @Ignore(
+    /*@Ignore(
         "This test is too slow (around 30 seconds) and is not meant to be ran in the regular test suite (yet)."
-    )
+    )*/
     @Test
     fun testRealHelloWorldApk() {
         // This will be our classpath
@@ -207,7 +220,7 @@ class JVMLanguageFrontendTest {
                 // In case of an APK, the APK is directly used as input
                 listOf(apkFile),
                 topLevel,
-                true,
+                false,
             ) {
                 it.registerLanguage<JVMLanguage>()
                 it.configureFrontend<JVMLanguageFrontend>(
@@ -224,6 +237,19 @@ class JVMLanguageFrontendTest {
                             )
                     )
                 )
+
+                it.registerPass<TypeHierarchyResolver>()
+                    .registerPass<SymbolResolver>()
+                    .registerPass<ImportResolver>()
+                    .registerPass<DFGPass>()
+                    .registerPass<DynamicInvokeResolver>()
+                    .registerPass<EvaluationOrderGraphPass>() // creates EOG
+                    .registerPass<TypeResolver>()
+                    .registerPass<ControlFlowSensitiveDFGPass>()
+                    .registerPass<ResolveCallAmbiguityPass>()
+                    .registerPass<ResolveMemberAmbiguityPass>()
+                    .registerPass<BasicBlockCollectorPass>()
+                    .registerPass<SccPass>()
             }
         assertNotNull(tu)
 
@@ -903,5 +929,468 @@ class JVMLanguageFrontendTest {
         // Look for class constant (Literals.class)
         val classLiterals = haveFun.literals.filter { it.type.name.toString().contains("Class") }
         assertTrue(classLiterals.isNotEmpty(), "Should have class literal")
+    }
+
+    /**
+     * Verifies how source positions are surfaced by the JVM frontend for plain bytecode (.class).
+     *
+     * Statements and most value-level expressions (constants, binary operators, ...) carry a real
+     * position coming from the bytecode `LineNumberTable`. References to locals do NOT have an
+     * intrinsic position in SootUp -- locals are interned and shared across all their use sites, so
+     * a single object cannot represent many source sites -- therefore the frontend attributes them
+     * the position of their enclosing statement instead of the dummy location -1:-1:-1:-1 (which is
+     * how `NoPositionInformation` prints).
+     */
+    @Test
+    fun testValueAndStatementPositions() {
+        val topLevel = Path.of("src", "test", "resources", "class", "operators")
+        val result =
+            analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(result)
+
+        val testArithmetic = result.methods["testArithmetic"]
+        assertNotNull(testArithmetic)
+
+        // (1) Statements carry a real source position (from the bytecode LineNumberTable), which
+        //     SootUp exposes via Stmt.getPosition().
+        val assigns = testArithmetic.allChildren<Assign>()
+        assertTrue(assigns.isNotEmpty(), "Should have assignments")
+        val locatedAssigns = assigns.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            locatedAssigns.isNotEmpty(),
+            "At least some assignments should have a real (non-dummy) source line",
+        )
+
+        // (2) Binary operators (a value-level node) also carry a real, per-occurrence position,
+        //     because SootUp attaches a value-level position to expressions.
+        val binops = testArithmetic.allChildren<BinaryOperator>()
+        assertTrue(binops.isNotEmpty(), "Should have binary operators")
+        val locatedBinops = binops.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            locatedBinops.isNotEmpty(),
+            "At least some binary operators should have a real source line",
+        )
+
+        // (3) References to locals have no intrinsic position in SootUp, but the frontend now falls
+        //     back to the enclosing statement -- so they end up with a real line instead of -1.
+        val localRefs = testArithmetic.refs.filter { !it.isStaticAccess }
+        assertTrue(localRefs.isNotEmpty(), "Should have (local) references")
+        val locatedLocalRefs = localRefs.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            locatedLocalRefs.isNotEmpty(),
+            "Local references should inherit a real line from their enclosing statement " +
+                "(this is the whole point of the stmt-level fallback in locationOf)",
+        )
+
+        // (4) A located node must never sit at the dummy line -1: it either has a real position or
+        //     no location at all.
+        val located =
+            buildList<Node> {
+                addAll(assigns)
+                addAll(binops)
+                addAll(localRefs)
+            }
+        located.forEach { node ->
+            node.location?.let { loc ->
+                assertTrue(
+                    loc.region.startLine >= 1,
+                    "'${node.code}' should not be at the dummy location -1, but was ${loc.region}",
+                )
+            }
+        }
+
+        // (5) A local reference reports the SAME line as the statement that contains it.
+        val assignWithRef =
+            locatedAssigns.firstOrNull { assign ->
+                assign.allChildren<Reference>().any { (it.location?.region?.startLine ?: -1) >= 1 }
+            }
+        assertNotNull(assignWithRef)
+        val refInAssign =
+            assignWithRef.allChildren<Reference>().first {
+                (it.location?.region?.startLine ?: -1) >= 1
+            }
+        assertEquals(
+            assignWithRef.location?.region?.startLine,
+            refInAssign.location?.region?.startLine,
+            "A local reference should inherit the line of its enclosing statement",
+        )
+    }
+
+    /**
+     * Verifies per-occurrence local positions from the Jimple text frontend. Unlike plain bytecode
+     * (which only carries a `LineNumberTable`, so same-line occurrences are indistinguishable), the
+     * Jimple parser knows the exact line AND column of every token. SootUp now hands each
+     * occurrence of a local its own position, so the two `$i0`s in `$i0 + $i0` -- on the same
+     * source line but at different columns -- surface as two references with DIFFERENT locations.
+     * This is the column-precise form of the "two occurrences of `a` should differ" guarantee.
+     */
+    @Test
+    fun testPerOccurrenceLocalColumnsFromJimple() {
+        val topLevel = Path.of("src", "test", "resources", "jimple", "positions")
+        val result =
+            analyze(listOf(topLevel.resolve("PerOccurrence.jimple").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(result)
+
+        val compute = result.methods["compute"]
+        assertNotNull(compute)
+
+        // The two operands of '$i0 + $i0' are the same local on the same source line but different
+        // columns -> their references must carry different locations.
+        val binop = compute.allChildren<BinaryOperator>().singleOrNull { it.operatorCode == "+" }
+        assertNotNull(binop, "expected a single '+' binary operator")
+
+        val lhs = binop.lhs as? Reference
+        val rhs = binop.rhs as? Reference
+        assertNotNull(lhs, "left operand should be a reference")
+        assertNotNull(rhs, "right operand should be a reference")
+        assertLocalName("\$i0", lhs)
+        assertLocalName("\$i0", rhs)
+
+        val lhsRegion = lhs.location?.region
+        val rhsRegion = rhs.location?.region
+        assertNotNull(lhsRegion, "left '\$i0' should have a location")
+        assertNotNull(rhsRegion, "right '\$i0' should have a location")
+
+        // Same source line ...
+        assertEquals(
+            lhsRegion.startLine,
+            rhsRegion.startLine,
+            "both operands are on the same source line",
+        )
+        // ... but different columns -> the two occurrences are positionally distinct.
+        assertNotEquals(
+            lhsRegion.startColumn,
+            rhsRegion.startColumn,
+            "the two occurrences of \$i0 on the same line must have different columns",
+        )
+
+        // Stronger check: every located occurrence of $i0 in compute() (the def on '$i0 = 1', the
+        // use on '$i1 = $i0', and the two binop operands) must have a distinct location -- no two
+        // occurrences of the same local collapse onto the same position.
+        val i0Regions =
+            compute.refs.filter { it.name.localName == "\$i0" }.mapNotNull { it.location?.region }
+        assertTrue(
+            i0Regions.size >= 3,
+            "expected at least three located \$i0 references, was ${i0Regions.size}",
+        )
+        assertEquals(
+            i0Regions.size,
+            i0Regions.toSet().size,
+            "all located \$i0 occurrences must have distinct locations, but some collapsed: " +
+                i0Regions,
+        )
+    }
+
+    /**
+     * Positions also survive when the input is a jar file, because the contained .class files still
+     * carry their `LineNumberTable`.
+     */
+    @Test
+    fun testPositionsFromJar() {
+        val topLevel = Path.of("src", "test", "resources", "jar", "literals")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("literals.jar").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+
+        val located = tu.allChildren<Node>().filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            located.isNotEmpty(),
+            "Expected some nodes with a real source position from a jar input",
+        )
+    }
+
+    /**
+     * For APK/dex input we actually get *richer* location information than for plain bytecode:
+     * - Statements and values carry real (line-level) positions coming from the dex debug info.
+     * - The *original* source file name (e.g. "MainActivity.kt" or "PrintFormat.java", including
+     *   Kotlin sources) is recovered from the dex `source_file` entry via
+     *   [DexClassSource.getSourceFile] and used as the location's file name.
+     *
+     * This directly answers whether positions and a filename can be attached when analyzing APKs.
+     */
+    @Test
+    fun testPositionsAndSourceFileFromApk() {
+        val topLevel = Path.of("src", "test", "resources", "apk", "HelloWorld")
+        val apkFile = topLevel.resolve("real-app-debug.apk").toFile()
+        assertTrue(apkFile.exists(), "APK file not found at ${apkFile.absolutePath}")
+
+        val result =
+            analyze(listOf(apkFile), topLevel, false) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(
+                        packagesToIgnore =
+                            listOf(
+                                "android.",
+                                "androidx.",
+                                "com.android.",
+                                "kotlin.",
+                                "kotlinx.",
+                                "java.",
+                                "javax.",
+                            )
+                    )
+                )
+            }
+        assertNotNull(result)
+
+        val located = result.allChildren<Node>().filter { it.location != null }
+        assertTrue(located.isNotEmpty(), "Expected some located nodes from the APK")
+
+        // (1) Positions: the dex debug info gives us line numbers, so nodes have real source lines.
+        val withRealLine = located.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            withRealLine.isNotEmpty(),
+            "Expected nodes with real source lines from the APK's dex debug info",
+        )
+
+        // (2) Invariant of the stmt-level fallback: a value/statement either has a real position or
+        //     no location at all -- it must never sit at the dummy location -1:-1:-1:-1.
+        located.filterIsInstance<Expression>().forEach {
+            assertTrue(
+                (it.location?.region?.startLine ?: 1) >= 1,
+                "'${it.code}' should not be at the dummy location -1, but was ${it.location?.region}",
+            )
+        }
+
+        // (3) File names: the original source file names are recovered from the dex `source_file`
+        //     entries -- including Kotlin (.kt) sources.
+        val allFileNames =
+            located.mapNotNull { it.location?.artifactLocation?.fileName }.toSortedSet()
+        val sourceFileNames = allFileNames.filter { it.endsWith(".java") || it.endsWith(".kt") }
+        assertTrue(
+            sourceFileNames.isNotEmpty(),
+            "Expected original source file names (.java/.kt) recovered from the dex debug info, " +
+                "but got: $allFileNames",
+        )
+
+        // (4) Method declarations now carry a source location too. The dex frontend derives a
+        //     line-only Position for each method from its statements' line numbers; before this the
+        //     SootMethod carried NoPositionInformation, so `locationOf` returned null at method-
+        //     declaration time (currentStmt is null then) and methods had no location at all.
+        val ignored =
+            listOf(
+                "android.",
+                "androidx.",
+                "com.android.",
+                "kotlin.",
+                "kotlinx.",
+                "java.",
+                "javax.",
+            )
+        val userMethods =
+            result.methods.filter { m -> ignored.none { m.name.toString().startsWith(it) } }
+        val locatedMethods = userMethods.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            locatedMethods.isNotEmpty(),
+            "Expected at least one user method declaration with a source location from the APK, " +
+                "but none of ${userMethods.size} user methods had one",
+        )
+
+        // (5) Class (record) declarations now carry a source location too. The dex frontend derives
+        //     a line-only Position for the class from the earliest line in its methods' debug info;
+        //     before this the SootClass carried NoPositionInformation and records had no location.
+        val userRecords =
+            result.records.filter { r -> ignored.none { r.name.toString().startsWith(it) } }
+        val locatedRecords = userRecords.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            locatedRecords.isNotEmpty(),
+            "Expected at least one user class declaration with a source location from the APK, " +
+                "but none of ${userRecords.size} user records had one",
+        )
+
+        // (6) Field declarations inherit their enclosing class's (approximate) position (dex
+        // carries
+        //     no per-field source line), so fields of a located user class are themselves located.
+        //     The APK does declare user fields, so this check is actually exercised (not vacuous).
+        val userFields =
+            userRecords
+                .flatMap { it.fields }
+                .filter { f -> ignored.none { f.name.toString().startsWith(it) } }
+        assertTrue(userFields.isNotEmpty(), "Expected the APK to declare user fields")
+        // A field is either unlocated (its enclosing class carried no line info, so locationOf
+        // returns null) or at a real source line -- but it must never sit at the dummy location -1.
+        userFields.forEach {
+            val startLine = it.location?.region?.startLine
+            assertTrue(
+                startLine == null || startLine >= 1,
+                "field '${it.name}' should not be at the dummy location -1, but was ${it.location?.region}",
+            )
+        }
+        val locatedFields = userFields.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(
+            locatedFields.isNotEmpty(),
+            "Expected at least one user field declaration with a source location from the APK, " +
+                "but none of ${userFields.size} user fields had one",
+        )
+    }
+
+    /**
+     * Verifies the opt-in [JVMFrontendConfiguration.useJimpleTextPositions] mode. Instead of the
+     * coarse, frequently collapsed line numbers a compiled artifact carries (many statements
+     * sharing one line, no columns), every class is round-tripped through its textual Jimple
+     * representation so that each statement lands on its own, distinct line of a written `.jimple`
+     * file. This is the "pick the node on line N" guarantee: the reported line resolves to a real,
+     * readable line of a real file.
+     */
+    @Test
+    fun testJimpleTextPositions() {
+        val topLevel = Path.of("src", "test", "resources", "class", "operators")
+        val result =
+            analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(useJimpleTextPositions = true)
+                )
+            }
+        assertNotNull(result)
+
+        val testArithmetic = result.methods["testArithmetic"]
+        assertNotNull(testArithmetic)
+
+        // (1) Every located statement points into a real `.jimple` file, and the line it reports is
+        //     a real, non-blank line of that file -- i.e. "line N" actually resolves to content.
+        val assigns = testArithmetic.allChildren<Assign>()
+        val located = assigns.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(located.isNotEmpty(), "Expected located assignments in text-position mode")
+
+        located.forEach { assign ->
+            val region = assign.location?.region
+            assertNotNull(region)
+            val fileName = assign.location?.artifactLocation?.uri?.path
+            assertNotNull(fileName, "text-position nodes must carry a file URI")
+            assertTrue(
+                fileName.endsWith(".jimple"),
+                "in text-position mode the location file must be the reprinted .jimple, was $fileName",
+            )
+            val lines = File(fileName).readLines()
+            assertTrue(
+                region.startLine <= lines.size,
+                "reported line ${region.startLine} is outside the ${lines.size}-line file",
+            )
+            assertTrue(
+                lines[region.startLine - 1].isNotBlank(),
+                "statement reported on blank line ${region.startLine} of $fileName",
+            )
+        }
+
+        // (2) Statements land on DISTINCT lines -- the whole point of the round-trip (the compiled
+        //     artifact collapses many onto one). No two of our assignments share a start line.
+        val startLines = located.mapNotNull { it.location?.region?.startLine }
+        assertEquals(
+            startLines.size,
+            startLines.toSet().size,
+            "statements must occupy distinct lines in text-position mode, but some collapsed: " +
+                startLines.sorted(),
+        )
+
+        // (3) Line bases are reconciled: a value-level node (binary operator) reports the SAME line
+        //     as its enclosing statement (no 0-/1-based off-by-one), while still carrying real
+        //     columns -- so the line matches the file and the columns pinpoint the sub-expression.
+        val assignWithBinop = located.firstOrNull { it.allChildren<BinaryOperator>().isNotEmpty() }
+        assertNotNull(assignWithBinop, "expected an assignment containing a binary operator")
+        val binop = assignWithBinop.allChildren<BinaryOperator>().first()
+        assertEquals(
+            assignWithBinop.location?.region?.startLine,
+            binop.location?.region?.startLine,
+            "a value's line must match its enclosing statement's line (no off-by-one)",
+        )
+        val binopRegion = binop.location?.region
+        assertNotNull(binopRegion)
+        assertTrue(
+            binopRegion.startColumn >= 0 && binopRegion.endColumn > binopRegion.startColumn,
+            "a value should carry a real, non-degenerate column span, was $binopRegion",
+        )
+    }
+
+    /**
+     * In text-position mode a method body is only rebuilt from the reprinted Jimple text when it is
+     * first requested, i.e. *after* the class-level round-trip succeeded. A single body that does
+     * not survive the round-trip is therefore degraded per method (it is translated from the
+     * original compiled class instead, see `JVMLanguageFrontend.withMethodPositions`), which this
+     * test pins down through the invariants that fallback has to keep:
+     * 1. no method and no body is lost, and
+     * 2. a method is never a mix of both position sources -- its declaration and its statements
+     *    always point into the same file.
+     */
+    @Test
+    fun testJimpleTextPositionsPerMethod() {
+        val topLevel = Path.of("src", "test", "resources", "class", "operators")
+        val result =
+            analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(useJimpleTextPositions = true)
+                )
+            }
+        assertNotNull(result)
+
+        val record = result.records["Operators"]
+        assertNotNull(record)
+
+        // (1) Every method the class declares is still there, with a translated body. A method
+        //     whose body cannot be built is kept (body-less) rather than dropped, and a method
+        //     without text positions is translated from the compiled artifact -- either way it must
+        //     not disappear from the record.
+        val expected =
+            setOf(
+                "<init>",
+                "testArithmetic",
+                "testComparison",
+                "testBitwise",
+                "testUnary",
+                "testArrayLength",
+                "testCast",
+                "testInstanceOf",
+            )
+        // (constructors are modelled separately from the other methods)
+        val methods = record.methods + record.constructors
+        assertEquals(
+            expected,
+            methods.map { it.name.localName }.toSet(),
+            "no method may be lost in text-position mode",
+        )
+        methods.forEach {
+            assertNotNull(it.body, "method '${it.name}' lost its body in text-position mode")
+        }
+
+        // (2) Each method is coherent: whichever of the two position sources it ended up using, its
+        //     declaration and all of its located statements refer to the same, existing file. (For
+        //     this fixture everything round-trips, so that file is the reprinted `.jimple`; a
+        //     degraded method would consistently point at the compiled artifact instead.)
+        methods.forEach { method ->
+            val methodFile = method.location?.artifactLocation?.uri?.path
+            assertNotNull(methodFile, "method '${method.name}' must carry a file URI")
+            assertTrue(
+                File(methodFile).isFile,
+                "the location of method '${method.name}' must resolve to a real file, was " +
+                    methodFile,
+            )
+            val statementFiles =
+                method
+                    .allChildren<Expression>()
+                    .filter { (it.location?.region?.startLine ?: -1) >= 1 }
+                    .mapNotNull { it.location?.artifactLocation?.uri?.path }
+                    .toSet()
+            assertTrue(
+                statementFiles.isNotEmpty(),
+                "method '${method.name}' has no located statement at all",
+            )
+            assertTrue(
+                statementFiles.all { it == methodFile },
+                "method '${method.name}' mixes position sources: its declaration is in " +
+                    "$methodFile but statements are in ${statementFiles - methodFile}",
+            )
+        }
     }
 }
