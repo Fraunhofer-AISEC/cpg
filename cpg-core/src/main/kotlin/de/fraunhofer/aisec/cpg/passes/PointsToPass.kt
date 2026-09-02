@@ -70,7 +70,29 @@ import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
-val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
+/**
+ * The key of [nodesCreatingUnknownValues]. The [node] is compared by identity, the [name] by
+ * equality.
+ *
+ * We cannot use a plain `Pair<Node, Name>` here: [Node.equals] compares name, code, location and
+ * class, so two *different* nodes which happen to originate from the same source location - e.g.
+ * the declarations of a header which is included by two translation units - would be considered the
+ * same key and would share one synthetic value node. [Name], in contrast, is a value type where two
+ * equal names must map to the same entry.
+ */
+private data class UnknownValueKey(val node: Node, val name: Name) {
+    override fun equals(other: Any?) =
+        other is UnknownValueKey && node === other.node && name == other.name
+
+    override fun hashCode() = 31 * System.identityHashCode(node) + name.hashCode()
+}
+
+/**
+ * Caches the synthetic [MemoryAddress]/[UnknownMemoryValue] nodes we create for a node whose value
+ * or field address we do not know, so that we create each of them only once. Cleared in
+ * [PointsToPass.finalCleanup].
+ */
+private val nodesCreatingUnknownValues = ConcurrentHashMap<UnknownValueKey, MemoryAddress>()
 var totalFunctionCount = 0
 var analyzedFunctionCount = 0
 private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
@@ -443,7 +465,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
     override fun cleanup() {
-        // Nothing to do
+        // Nothing to do. Note that the caches below are shared between all targets of one pass
+        // execution, so they must not be cleared here, only in [finalCleanup].
+    }
+
+    /**
+     * Clears the caches that are shared between all targets of this pass. They are only meaningful
+     * while the pass is running: afterwards, they keep every [Call] and every synthetic
+     * [MemoryAddress]/[UnknownMemoryValue] we ever created alive, including the ones which never
+     * made it into the graph because the state they were created for was discarded again.
+     */
+    override fun finalCleanup() {
+        nodesCreatingUnknownValues.clear()
+        CallToMemAddrMap.clear()
+        globalDerefs.clear()
+        totalFunctionCount = 0
+        analyzedFunctionCount = 0
     }
 
     override fun accept(node: Node) {
@@ -3583,7 +3620,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
                         UnknownMemoryValue(newName, true)
                     }
                 // TODO: Check if the boolean should be true sometimes
@@ -3619,7 +3656,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
                         UnknownMemoryValue(newName)
                     }
                 val newPair = Pair(newEntry, false)
@@ -3795,7 +3832,9 @@ fun PointsToState.Element.getLastWrites(
                         val newName = Name(getNodeName(addr).localName + ".derefvalue")
                         ret.add(
                             NodeWithPropertiesKey(
-                                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
+                                nodesCreatingUnknownValues.computeIfAbsent(
+                                    UnknownValueKey(addr, newName)
+                                ) {
                                     UnknownMemoryValue(newName)
                                 },
                                 equalLinkedHashSetOf(),
@@ -3953,7 +3992,7 @@ fun PointsToState.Element.getValues(
                 val newName = Name(getNodeName(node).localName, base.name)
                 PowersetLattice.Element(
                     Pair(
-                        nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                        nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
                             UnknownMemoryValue(newName)
                         },
                         false,
@@ -4249,7 +4288,9 @@ fun PointsToState.Element.fetchFieldAddresses(
 
         if (!foundAnyFieldAddress) {
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, normalizedNodeName)) {
+                nodesCreatingUnknownValues.computeIfAbsent(
+                    UnknownValueKey(addr, normalizedNodeName)
+                ) {
                     MemoryAddress(normalizedNodeName, isGlobal(addr))
                 }
 
