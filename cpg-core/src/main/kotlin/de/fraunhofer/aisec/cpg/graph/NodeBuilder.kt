@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.sarif.tryInternCode
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -192,7 +193,7 @@ fun LanguageProvider.newName(
                 namespace
             }
 
-        Name(name.toString(), parent, language.namespaceDelimiter)
+        NameCache.intern(Name(name.toString(), parent, language.namespaceDelimiter))
     }
 }
 
@@ -279,7 +280,7 @@ fun <T : Node> T.implicit(code: String? = null, location: PhysicalLocation? = nu
 }
 
 fun <T : Node> T.codeAndLocationFrom(other: Node): T {
-    this.code = other.code
+    this.copyCodeFrom(other)
     this.location = other.location
 
     return this
@@ -391,16 +392,26 @@ private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {
+    // Determine the location first, since interning the code (below) needs it.
+    val location = provider.locationOf(rawNode)
     if (contextProvider.ctx.config.codeInNodes) {
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {
-            this.code = code
+            // A TranslationUnit registers its own code (the whole file's text) on its
+            // ArtifactLocation via TranslationUnit.location's setter override, so other nodes in
+            // the same file can intern their code as an offset range into it below.
+            val span = location?.let { tryInternCode(it, code) }
+            if (span != null) {
+                this.setCodeSpan(span)
+            } else {
+                this.code = code
+            }
         } else {
             LOGGER.warn("Unexpected: No code for node {}", rawNode)
         }
     }
-    this.location = provider.locationOf(rawNode)
+    this.location = location
 }
 
 /**
