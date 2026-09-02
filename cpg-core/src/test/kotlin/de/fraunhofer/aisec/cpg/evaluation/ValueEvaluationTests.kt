@@ -726,29 +726,66 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("writeexample.cpp") {
-                        // a is written to elsewhere, b only has its initializer, c has no
-                        // initializer and is only assigned in `write`.
-                        declare { variable("a", t("int")) { literal(0, t("int")) } }
-                        declare { variable("b", t("int")) { literal(0, t("int")) } }
-                        declare { variable("c", t("int")) }
-
-                        function("write", t("void")) {
-                            body {
-                                ref("a") assign literal(5, t("int"))
-                                ref("c") assign literal(7, t("int"))
-                            }
+                singleTranslationUnit("writeexample.cpp") { tu ->
+                    // a is written to elsewhere, b only has its initializer, c has no
+                    // initializer and is only assigned in `write`.
+                    tu.statements += newDeclarationStatement { declStmt ->
+                        newVariable("a", objectType("int"), holder = declStmt) {
+                            it.initializer = newLiteral(0, objectType("int"))
                         }
-
-                        function("main", t("int")) {
-                            body {
-                                call("println") { ref("a") }
-                                call("println") { ref("b") }
-                                call("println") { ref("c") }
-                                returnStmt { literal(0, t("int")) }
-                            }
+                    }
+                    tu.statements += newDeclarationStatement { declStmt ->
+                        newVariable("b", objectType("int"), holder = declStmt) {
+                            it.initializer = newLiteral(0, objectType("int"))
                         }
+                    }
+                    tu.statements += newDeclarationStatement { declStmt ->
+                        newVariable("c", objectType("int"), holder = declStmt)
+                    }
+
+                    newFunction("write", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("void"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(5, objectType("int"))),
+                                    )
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("c")),
+                                        listOf(newLiteral(7, objectType("int"))),
+                                    )
+                            }
+                    }
+
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("a")
+                                    }
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("b")
+                                    }
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("c")
+                                    }
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
+                            }
                     }
                 }
             }

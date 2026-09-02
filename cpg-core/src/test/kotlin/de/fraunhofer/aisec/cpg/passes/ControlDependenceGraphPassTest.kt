@@ -231,17 +231,30 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    call("printf") { literal("1\n", t("string")) }
-                                    call("printf") { literal("2\n", t("string")) }
-                                    returnStmt { ref("i") }
+                    singleTranslationUnit("if.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("i", objectType("int"), holder = declStmt) {
+                                            it.initializer = newLiteral(0, objectType("int"))
+                                        }
+                                    }
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("1\n", objectType("string"))
+                                        }
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("2\n", objectType("string"))
+                                        }
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("i")
+                                    }
                                 }
-                            }
                         }
                     }
                 }

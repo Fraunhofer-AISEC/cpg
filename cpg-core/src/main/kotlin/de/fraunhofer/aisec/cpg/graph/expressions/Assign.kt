@@ -57,10 +57,7 @@ import org.slf4j.LoggerFactory
  * from the (first) rhs to the [Assign] itself.
  */
 class Assign :
-    Expression(false),
-    AssignmentHolder,
-    HasType.TypeObserver,
-    HasOperatorCode {
+    Expression(false), AssignmentHolder, HasType.TypeObserver, HasOperatorCode, DeclarationHolder {
 
     override var operatorCode: String = "="
 

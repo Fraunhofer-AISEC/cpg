@@ -125,8 +125,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                             Pair(field.names[0].name, setOf())
                         }
 
-                    newField(fieldName, type, modifiers, rawNode = field, holder = record) { decl
-                        ->
+                    newField(fieldName, type, modifiers, rawNode = field, holder = record) { decl ->
                         // A struct field is exported/unexported based on the casing of its (field
                         // or, for embedded fields, type) name. We are inside the record scope here,
                         // which is a NameScope, so the language applies the export semantics.
