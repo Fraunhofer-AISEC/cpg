@@ -494,7 +494,7 @@ interface Lattice<T : Lattice.Element> {
         // we leaked entries here, all subsequent analyses would measure their runtime against a
         // stale budget.
         val timeoutStackDepth = timeouts.size
-        if (timeout != null && teimeout != Duration.INFINITE) {
+        if (timeout != Duration.INFINITE) {
             timeouts.addLast(timeout)
         }
 
@@ -650,15 +650,6 @@ interface Lattice<T : Lattice.Element> {
             // Prune again once the state has grown considerably, so that the cost of a prune (which
             // is linear in the number of reachable edges) is amortized over the entries it removes.
             nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, globalState.size * 2)
-        }
-
-        suspend fun cleanup(one: T, two: T, lattice: Lattice<T>): T {
-            Pass.log.info(
-                "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
-            )
-            finalState = lattice.lub(one, two, false)
-            Pass.log.info("Finished calculating final lub")
-            return finalState
         }
 
         startEdges.forEach { nextBranchEdgesList.add(it) }
@@ -847,8 +838,6 @@ interface Lattice<T : Lattice.Element> {
                 Pass.log.info(
                     "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
                 )
-                // We are done, so we remove the current timeout
-                timeouts.removeLast()
                 finalState = this@Lattice.lub(finalState, newState, false)
                 Pass.log.info("Finished calculating final lub")
                 return Pair(finalState, true)
