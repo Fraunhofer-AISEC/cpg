@@ -49,13 +49,22 @@ interface GenericPropertyValue {
      */
     val rawValue: Any?
 
-    data class StringValue(val value: String) : GenericPropertyValue {
+    /**
+     * The description of this property, as declared in its schema (e.g. the corresponding
+     * [de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMPropertyDescription.description]/
+     * `LLMProperty.description`). `null` if the property was not declared with a description.
+     */
+    val description: String?
+
+    data class StringValue(val value: String, override val description: String? = null) :
+        GenericPropertyValue {
         override val rawValue: Any
             get() = value
     }
 
     /** Holds any integral value. [Long] is used so that no declared integral type can overflow. */
-    data class IntegerValue(val value: Long) : GenericPropertyValue {
+    data class IntegerValue(val value: Long, override val description: String? = null) :
+        GenericPropertyValue {
         override val rawValue: Any
             get() = value
     }
@@ -64,17 +73,20 @@ interface GenericPropertyValue {
      * Holds any floating-point value. [Double] is used so that no declared floating-point type
      * loses precision.
      */
-    data class FloatValue(val value: Double) : GenericPropertyValue {
+    data class FloatValue(val value: Double, override val description: String? = null) :
+        GenericPropertyValue {
         override val rawValue: Any
             get() = value
     }
 
-    data class BooleanValue(val value: Boolean) : GenericPropertyValue {
+    data class BooleanValue(val value: Boolean, override val description: String? = null) :
+        GenericPropertyValue {
         override val rawValue: Any
             get() = value
     }
 
-    data class NodeReferenceValue(val node: Node) : GenericPropertyValue {
+    data class NodeReferenceValue(val node: Node, override val description: String? = null) :
+        GenericPropertyValue {
         override val rawValue: Any
             get() = node
     }
@@ -102,17 +114,18 @@ interface GenericPropertyValue {
          *   cannot be parsed as it (so the caller can report the mismatch instead of silently
          *   storing text).
          */
-        fun of(type: String?, value: String): GenericPropertyValue? {
+        fun of(type: String?, value: String, description: String? = null): GenericPropertyValue? {
             return when (type?.trim()?.lowercase().orEmpty()) {
-                in INTEGER_TYPES -> value.trim().toLongOrNull()?.let { IntegerValue(it) }
-                in FLOAT_TYPES -> value.trim().toDoubleOrNull()?.let { FloatValue(it) }
+                in INTEGER_TYPES ->
+                    value.trim().toLongOrNull()?.let { IntegerValue(it, description) }
+                in FLOAT_TYPES -> value.trim().toDoubleOrNull()?.let { FloatValue(it, description) }
                 in BOOLEAN_TYPES ->
                     when (value.trim().lowercase()) {
-                        "true" -> BooleanValue(true)
-                        "false" -> BooleanValue(false)
+                        "true" -> BooleanValue(true, description)
+                        "false" -> BooleanValue(false, description)
                         else -> null
                     }
-                else -> StringValue(value)
+                else -> StringValue(value, description)
             }
         }
     }

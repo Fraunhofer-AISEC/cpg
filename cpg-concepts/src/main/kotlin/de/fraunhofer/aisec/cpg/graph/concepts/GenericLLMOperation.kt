@@ -56,7 +56,8 @@ class GenericLLMOperation(
      * stays the single source of truth.
      *
      * The backing container is allocated lazily on first access, since most generic operations do
-     * not reference any other node.
+     * not reference any other node. Note that it is *not* invalidated afterwards: [properties] must
+     * not be mutated after this operation is constructed, or the edges will go stale.
      */
     @Relationship(value = GenericPropertyReferenceEdge.RELATIONSHIP_NAME)
     override val propertyReferenceEdges: GenericPropertyReferences

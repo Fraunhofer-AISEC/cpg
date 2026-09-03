@@ -345,17 +345,20 @@ private fun resolveProperties(
                         failures.add(
                             "Property \"${property.name}\" declares type $NODE_REFERENCE_TYPE but node ${property.value} was not found or ambiguous."
                         )
-                        GenericPropertyValue.StringValue(property.value)
+                        GenericPropertyValue.StringValue(property.value, property.description)
                     } else {
-                        GenericPropertyValue.NodeReferenceValue(referencedNode)
+                        GenericPropertyValue.NodeReferenceValue(
+                            referencedNode,
+                            property.description,
+                        )
                     }
                 } else {
-                    GenericPropertyValue.of(property.type, property.value)
+                    GenericPropertyValue.of(property.type, property.value, property.description)
                         ?: run {
                             failures.add(
                                 "Property \"${property.name}\" declares type ${property.type} but its value \"${property.value}\" cannot be parsed as that type."
                             )
-                            GenericPropertyValue.StringValue(property.value)
+                            GenericPropertyValue.StringValue(property.value, property.description)
                         }
                 }
             property.name to value
@@ -397,15 +400,32 @@ private fun mergeFixedValues(
     )
 }
 
+/** Cached result of the last [loadPersistedConceptsAndOperations] call, keyed by [fileName]'s. */
+private data class PersistedSchemasCache(
+    val lastModified: Long,
+    val schemas: List<LLMConceptDescription>,
+)
+
+@Volatile private var persistedSchemasCache: PersistedSchemasCache? = null
+
 /**
  * This function loads persisted concepts and operations from a storage and returns them as a list
  * of [LLMConceptDescription].
+ *
+ * The result is cached in memory and keyed by the store file's last-modified timestamp, so that
+ * repeated calls within the same server run (e.g. one per [addLLMConceptAndOperations] invocation)
+ * only re-read and re-parse the YAML file when it has actually changed on disk, rather than on
+ * every tool call.
  */
 internal fun loadPersistedConceptsAndOperations(): List<LLMConceptDescription> {
     val file = File(fileName)
     if (!file.exists() || file.length() == 0L) return emptyList()
+    val lastModified = file.lastModified()
+    persistedSchemasCache?.let { if (it.lastModified == lastModified) return it.schemas }
     val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
-    return mapper.readValue<List<LLMConceptDescription>>(file)
+    val schemas = mapper.readValue<List<LLMConceptDescription>>(file)
+    persistedSchemasCache = PersistedSchemasCache(lastModified, schemas)
+    return schemas
 }
 
 /**
@@ -425,4 +445,8 @@ private fun persistConceptSchemas(schemas: List<LLMConceptDescription>) {
             }
     }
     mapper.writeValue(file, updated)
+    // Update the cache directly instead of relying on the new last-modified timestamp, since
+    // filesystem mtime resolution (often 1 second) could otherwise make a write within the same
+    // tick invisible to loadPersistedConceptsAndOperations()'s staleness check.
+    persistedSchemasCache = PersistedSchemasCache(file.lastModified(), updated)
 }
