@@ -315,10 +315,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // push the function declaration
         attachToEOG(node)
 
-        scopeManager.enterScope(node)
         // analyze the body
         handleEOG(node.body)
-        scopeManager.leaveScope(node)
 
         val uncaughtEOGThrows = nodesToInternalThrows[node]?.values?.flatten() ?: listOf()
         // Connect uncaught throws to block node

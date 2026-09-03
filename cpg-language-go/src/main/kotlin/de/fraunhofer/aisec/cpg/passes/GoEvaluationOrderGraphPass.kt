@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
@@ -57,7 +58,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
 
     /** Handles the EOG for a [`defer`](https://go.dev/ref/spec#Defer_statements) statement. */
     private fun handleDeferUnaryOperator(node: UnaryOperator, input: Call) {
-        val function = scopeManager.currentFunction
+        val function = node.firstParentOrNull<Function>()
         if (function != null) {
             // We need to disrupt the regular EOG handling here and store this deferred call. We
             // will pick it up again in handleFunction.
