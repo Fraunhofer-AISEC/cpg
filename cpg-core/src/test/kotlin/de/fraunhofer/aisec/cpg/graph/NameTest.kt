@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.test.*
+import kotlin.test.assertSame
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -91,5 +92,36 @@ internal class NameTest {
 
             this.scopeManager.leaveScope(myClass)
         }
+    }
+
+    @Test
+    fun testParseNameInterning() {
+        val a = parseName("std::string", "::")
+        val b = parseName("std::string", "::")
+
+        // Structurally equal names built through parseName are the same shared instance.
+        assertSame(a, b)
+        // ... and so are their shared "std" prefixes.
+        assertSame(a.parent, b.parent)
+    }
+
+    @Test
+    fun testFqnInterning() {
+        val std = parseName("std", "::")
+
+        val a = std.fqn("vector")
+        val b = std.fqn("vector")
+
+        assertSame(a, b)
+    }
+
+    @Test
+    fun testDirectConstructionStillEqualButNotInterned() {
+        // Directly constructing a Name (bypassing parseName/newName/fqn) is still fully
+        // supported and behaves identically in value terms -- it's simply not deduplicated.
+        val a = Name("string", Name("std"), "::")
+        val b = Name("string", Name("std"), "::")
+
+        assertEquals(a, b)
     }
 }
