@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
-import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
@@ -85,7 +84,6 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
                 )
             }
         }
-
     }
 
     /**
