@@ -60,10 +60,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         frontend.scopeManager.enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
-            val param = newParameter(parameter.nameAsString, resolvedType, parameter.isVarArgs)
+            val param =
+                newParameter(
+                    parameter.nameAsString,
+                    resolvedType,
+                    parameter.isVarArgs,
+                    holder = anonymousFunction,
+                )
             frontend.processAnnotations(param, parameter)
-            frontend.scopeManager.addDeclaration(param)
-            anonymousFunction.parameters += param
         }
 
         // TODO: We cannot easily identify the signature of the lambda
@@ -80,22 +84,20 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleCastExpr(expr: JPExpression): Expression {
         val castExpr = expr.asCastExpr()
-        val castExpression = newCast(rawNode = expr)
-        val expression =
-            handle(castExpr.expression) ?: newProblemExpression("could not parse expression")
-        castExpression.expression = expression
-        castExpression.setCastOperator(2)
-        val t = frontend.getTypeAsGoodAsPossible(castExpr.type)
-        castExpression.castType = t
-        if (castExpr.type.isPrimitiveType) {
-            // Set Type based on the Casting type as it will result in a conversion for primitive
-            // types
-            castExpression.type = frontend.typeOf(castExpr.type.resolve().asPrimitive())
-        } else {
-            // Get Runtime type from cast expression for complex types;
-            // castExpression.expression.registerTypeListener(castExpression)
+        return newCast(rawNode = expr) { castExpression ->
+            castExpression.expression =
+                handle(castExpr.expression) ?: newProblemExpression("could not parse expression")
+            castExpression.setCastOperator(2)
+            castExpression.castType = frontend.getTypeAsGoodAsPossible(castExpr.type)
+            if (castExpr.type.isPrimitiveType) {
+                // Set Type based on the Casting type as it will result in a conversion for
+                // primitive types
+                castExpression.type = frontend.typeOf(castExpr.type.resolve().asPrimitive())
+            } else {
+                // Get Runtime type from cast expression for complex types;
+                // castExpression.expression.registerTypeListener(castExpression)
+            }
         }
-        return castExpression
     }
 
     /**
@@ -106,20 +108,19 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      */
     private fun handleArrayCreationExpr(expr: JPExpression): Expression {
         val arrayCreationExpr = expr as ArrayCreationExpr
-        val creationExpression = newArrayConstruction(rawNode = expr)
 
         // in Java, an array creation expression either specifies an initializer or dimensions
+        return newArrayConstruction(rawNode = expr) { creationExpression ->
+            // parse initializer, if present
+            arrayCreationExpr.initializer.ifPresent {
+                creationExpression.initializer = handle(it) as? InitializerList
+            }
 
-        // parse initializer, if present
-        arrayCreationExpr.initializer.ifPresent {
-            creationExpression.initializer = handle(it) as? InitializerList
+            // dimensions are only present if you specify them explicitly, such as new int[1]
+            for (lvl in arrayCreationExpr.levels) {
+                lvl.dimension.ifPresent { handle(it)?.let { creationExpression.addDimension(it) } }
+            }
         }
-
-        // dimensions are only present if you specify them explicitly, such as new int[1]
-        for (lvl in arrayCreationExpr.levels) {
-            lvl.dimension.ifPresent { handle(it)?.let { creationExpression.addDimension(it) } }
-        }
-        return creationExpression
     }
 
     private fun handleArrayInitializerExpr(expr: JPExpression): Expression {
@@ -135,14 +136,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         // ArrayInitializerExpressions are converted into InitializerLists to reduce the
         // syntactic distance a CPP and JAVA CPG
-        val initList = newInitializerList(arrayType, rawNode = expr)
-        val initializers =
-            arrayInitializerExpr.values
-                .map { handle(it) }
-                .map { Expression::class.java.cast(it) }
-                .toMutableList()
-        initList.initializers = initializers
-        return initList
+        return newInitializerList(arrayType, rawNode = expr) { initList ->
+            initList.initializers =
+                arrayInitializerExpr.values
+                    .map { handle(it) }
+                    .map { Expression::class.java.cast(it) }
+                    .toMutableList()
+        }
     }
 
     private fun handleArrayAccessExpr(expr: JPExpression): Subscription {
@@ -207,10 +207,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val variableDeclarationExpr = expr.asVariableDeclarationExpr()
         val declarationStatement = newDeclarationStatement(rawNode = expr)
         for (variable in variableDeclarationExpr.variables) {
-            val declaration = frontend.declarationHandler.handleVariableDeclarator(variable)
+            val declaration =
+                frontend.declarationHandler.handleVariableDeclarator(
+                    variable,
+                    holder = declarationStatement,
+                )
             frontend.processAnnotations(declaration, variableDeclarationExpr)
-            frontend.scopeManager.addDeclaration(declaration)
-            declarationStatement.declarations += declaration
         }
         return declarationStatement
     }
@@ -374,54 +376,47 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
     private fun handleInstanceOfExpression(expr: JPExpression): BinaryOperator {
         val binaryExpr = expr.asInstanceOfExpr()
+        return newBinaryOperator("instanceof", rawNode = binaryExpr) { binaryOperator ->
+            // first, handle the target. this is the first argument of the operator call
+            binaryOperator.lhs =
+                handle(binaryExpr.expression) ?: newProblemExpression("could not parse lhs")
 
-        // first, handle the target. this is the first argument of the operator callUnresolved
-        // symbol
-        val lhs = handle(binaryExpr.expression) ?: newProblemExpression("could not parse lhs")
-        val typeAsGoodAsPossible = frontend.getTypeAsGoodAsPossible(binaryExpr.type)
-
-        // second, handle the value. this is the second argument of the operator call
-        val rhs: Expression =
-            newLiteral(
-                typeAsGoodAsPossible.typeName,
-                this.objectType("class"),
-                rawNode = binaryExpr,
-            )
-        val binaryOperator = newBinaryOperator("instanceof", rawNode = binaryExpr)
-        binaryOperator.lhs = lhs
-        binaryOperator.rhs = rhs
-        return binaryOperator
+            // second, handle the value. this is the second argument of the operator call
+            binaryOperator.rhs =
+                newLiteral(
+                    frontend.getTypeAsGoodAsPossible(binaryExpr.type).typeName,
+                    this.objectType("class"),
+                    rawNode = binaryExpr,
+                )
+        }
     }
 
     private fun handleUnaryExpression(expr: JPExpression): UnaryOperator {
         val unaryExpr = expr.asUnaryExpr()
-
-        // handle the 'inner' expression, which is affected by the unary expression
-        val expression =
-            handle(unaryExpr.expression) ?: newProblemExpression("could not parse input")
-        val unaryOperator =
-            newUnaryOperator(
-                unaryExpr.operator.asString(),
-                unaryExpr.isPostfix,
-                unaryExpr.isPrefix,
-                rawNode = unaryExpr,
-            )
-        unaryOperator.input = expression
-        return unaryOperator
+        return newUnaryOperator(
+            unaryExpr.operator.asString(),
+            unaryExpr.isPostfix,
+            unaryExpr.isPrefix,
+            rawNode = unaryExpr,
+        ) { unaryOperator ->
+            // handle the 'inner' expression, which is affected by the unary expression
+            unaryOperator.input =
+                handle(unaryExpr.expression) ?: newProblemExpression("could not parse input")
+        }
     }
 
     private fun handleBinaryExpression(expr: JPExpression): BinaryOperator {
         val binaryExpr = expr.asBinaryExpr()
+        return newBinaryOperator(binaryExpr.operator.asString(), rawNode = binaryExpr) {
+            binaryOperator ->
+            // first, handle the target. this is the first argument of the operator call
+            binaryOperator.lhs =
+                handle(binaryExpr.left) ?: newProblemExpression("could not parse lhs")
 
-        // first, handle the target. this is the first argument of the operator call
-        val lhs = handle(binaryExpr.left) ?: newProblemExpression("could not parse lhs")
-
-        // second, handle the value. this is the second argument of the operator call
-        val rhs = handle(binaryExpr.right) ?: newProblemExpression("could not parse rhs")
-        val binaryOperator = newBinaryOperator(binaryExpr.operator.asString(), rawNode = binaryExpr)
-        binaryOperator.lhs = lhs
-        binaryOperator.rhs = rhs
-        return binaryOperator
+            // second, handle the value. this is the second argument of the operator call
+            binaryOperator.rhs =
+                handle(binaryExpr.right) ?: newProblemExpression("could not parse rhs")
+        }
     }
 
     private fun handleMethodCall(expr: JPExpression): Call {
@@ -575,14 +570,16 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
             if (anonymousRecord.constructors.isEmpty()) {
                 val constructorDeclaration =
-                    newConstructor(anonymousRecord.name.localName, anonymousRecord)
+                    newConstructor(
+                            anonymousRecord.name.localName,
+                            anonymousRecord,
+                            holder = anonymousRecord,
+                        )
                         .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->
                     constructorDeclaration.parameters += newParameter("arg${i}", arg.type)
                 }
-                frontend.scopeManager.addDeclaration(constructorDeclaration)
-                anonymousRecord.constructors += constructorDeclaration
                 ctor.anonymousClass = anonymousRecord
 
                 frontend.scopeManager.leaveScope(anonymousRecord)

@@ -43,7 +43,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * before adding any values to [InitializerList.initializers].
  */
 // TODO Merge and/or refactor
-class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
+class InitializerList : Expression(), HasType.TypeObserver {
 
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
@@ -65,28 +65,6 @@ class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
             .appendSuper(super.toString())
             .append("initializers", initializers)
             .toString()
-    }
-
-    override fun addArgument(expression: Expression) {
-        this.initializers += expression
-        expression.access = this.access
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        val idx = initializerEdges.indexOfFirst { it.end == old }
-        if (idx != -1) {
-            old.unregisterTypeObserver(this)
-            initializerEdges[idx].end = new
-            new.registerTypeObserver(this)
-            new.access = this.access
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in this.initializers
     }
 
     override fun typeChanged(newType: Type, src: HasType) {

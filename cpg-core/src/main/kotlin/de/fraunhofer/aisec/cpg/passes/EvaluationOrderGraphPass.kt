@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -175,7 +174,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
     protected fun handleTranslationUnit(node: TranslationUnit) {
-        handleStatementHolder(node as StatementHolder)
+        handleStatementHolder(node, node.statements)
 
         // loop through functions
         for (child in node.declarations) {
@@ -190,7 +189,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
     protected fun handleNamespace(node: Namespace) {
-        handleStatementHolder(node)
+        handleStatementHolder(node, node.statements)
 
         // loop through functions
         for (child in node.declarations) {
@@ -239,7 +238,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
     protected open fun handleRecord(node: Record) {
-        handleStatementHolder(node)
+        handleStatementHolder(node, node.statements)
         currentPredecessors.clear()
         for (constructor in node.constructors) {
             handleEOG(constructor)
@@ -259,20 +258,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
-    protected fun handleStatementHolder(statementHolder: StatementHolder) {
+    protected fun handleStatementHolder(node: Node, statements: List<Expression>) {
         // separate code into static and non-static parts as they are executed in different moments,
         // although they can be placed in the same enclosing declaration.
-        val code = statementHolder.statements
+        val staticCode = statements.filter { (it as? Block)?.isStaticBlock == true }
+        val nonStaticCode = statements.filter { it !in staticCode }
 
-        val staticCode = code.filter { (it as? Block)?.isStaticBlock == true }
-        val nonStaticCode = code.filter { it !in staticCode }
-
-        attachToEOG(statementHolder as Node)
+        attachToEOG(node)
         for (staticStatement in staticCode) {
             handleEOG(staticStatement)
         }
         currentPredecessors.clear()
-        attachToEOG(statementHolder as Node)
+        attachToEOG(node)
         for (nonStaticStatement in nonStaticCode) {
             handleEOG(nonStaticStatement)
         }
