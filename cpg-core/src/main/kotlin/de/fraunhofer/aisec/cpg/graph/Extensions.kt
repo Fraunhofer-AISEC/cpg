@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.Usage
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.filterIsInstanceAndFilterTo
 import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -52,6 +53,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -111,7 +114,9 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
             nodesWithOverlays
                 .splitInto()
                 .map { chunk ->
-                    async(Dispatchers.Default) { chunk.filterIsInstance<T>().filter(predicate) }
+                    async(Dispatchers.Default) {
+                        chunk.filterIsInstanceAndFilterTo<T, _>(mutableListOf(), predicate)
+                    }
                 }
                 .awaitAll()
                 .flatten()
@@ -2084,11 +2089,21 @@ suspend fun <T> Collection<T>.forEachMaybeParallel(
 ) {
     if (size < minChunkSize || parallelism <= 1) {
         // small – just run the loop
-        forEach { action(it) }
+        for (item in this) {
+            currentCoroutineContext().ensureActive()
+            action(item)
+        }
     } else {
         coroutineScope {
             this@forEachMaybeParallel.splitInto(maxParts = parallelism, minPartSize = minChunkSize)
-                .map { chunk -> launch(Dispatchers.Default) { chunk.forEach { action(it) } } }
+                .map { chunk ->
+                    launch(Dispatchers.Default) {
+                        chunk.forEach {
+                            currentCoroutineContext().ensureActive()
+                            action(it)
+                        }
+                    }
+                }
                 .joinAll()
         }
     }

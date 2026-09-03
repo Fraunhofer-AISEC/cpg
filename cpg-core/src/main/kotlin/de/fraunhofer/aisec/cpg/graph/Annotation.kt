@@ -33,9 +33,8 @@ class Annotation : AstNode() {
 
     fun getValueForName(name: String): Expression? {
         return members
-            .filter { member: AnnotationMember -> member.name.lastPartsMatch(name) }
-            .map { obj: AnnotationMember -> obj.value }
-            .firstOrNull()
+            .firstOrNull { member: AnnotationMember -> member.name.lastPartsMatch(name) }
+            ?.value
     }
 
     override fun equals(other: Any?): Boolean {

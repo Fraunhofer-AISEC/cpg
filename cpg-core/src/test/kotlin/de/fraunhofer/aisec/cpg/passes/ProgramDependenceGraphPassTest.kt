@@ -27,11 +27,10 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.AstNode
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.stream.Stream
@@ -114,30 +113,57 @@ class ProgramDependenceGraphPassTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare {
-                                        variable("i", t("int")) {
-                                            comment = "remove next"
-                                            call("rand")
+                    singleTranslationUnit("if.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("i", objectType("int"), holder = declStmt) {
+                                            it.comment = "remove next"
+                                            it.initializer = newCall(newReference("rand"))
                                         }
                                     }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(0, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign
-                                                {
-                                                    ref("i") { comment = "remove prev" } *
-                                                        literal(-1, t("int"))
-                                                }
-                                        }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator("<") {
+                                                it.lhs = newReference("i")
+                                                it.rhs = newLiteral(0, objectType("int"))
+                                            }
+
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newAssign(
+                                                        operatorCode = "=",
+                                                        lhs = listOf(newReference("i")),
+                                                        rhs =
+                                                            listOf(
+                                                                newBinaryOperator("*") {
+                                                                    it.lhs =
+                                                                        newReference("i").also { ref
+                                                                            ->
+                                                                            ref.comment =
+                                                                                "remove prev"
+                                                                        }
+                                                                    it.rhs =
+                                                                        newLiteral(
+                                                                            -1,
+                                                                            objectType("int"),
+                                                                        )
+                                                                }
+                                                            ),
+                                                    )
+                                            }
                                     }
-                                    returnStmt { ref("i") }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("i")
+                                    }
                                 }
-                            }
                         }
                     }
                 }
@@ -150,28 +176,62 @@ class ProgramDependenceGraphPassTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    translationResult {
-                        translationUnit("loop.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare {
-                                        variable("i", t("int")) {
-                                            comment = "remove next"
-                                            call("rand")
+                    singleTranslationUnit("loop.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("i", objectType("int"), holder = declStmt) {
+                                            it.comment = "remove next"
+                                            it.initializer = newCall(newReference("rand"))
                                         }
                                     }
-                                    whileStmt {
-                                        whileCondition { ref("i") gt literal(0, t("int")) }
-                                        loopBody {
-                                            call("printf") { literal("#", t("string")) }
-                                            ref("i") { comment = "remove prev, remove next" }.dec()
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition =
+                                                newBinaryOperator(">") {
+                                                    it.lhs = newReference("i")
+                                                    it.rhs = newLiteral(0, objectType("int"))
+                                                }
+                                            w.statement =
+                                                newBlock(enterScope = true) { loopBody ->
+                                                    loopBody.statements +=
+                                                        newCall(newReference("printf")) {
+                                                            it.arguments +=
+                                                                newLiteral(
+                                                                    "#",
+                                                                    objectType("string"),
+                                                                )
+                                                        }
+
+                                                    loopBody.statements +=
+                                                        newUnaryOperator(
+                                                            "--",
+                                                            postfix = true,
+                                                            prefix = false,
+                                                        ) {
+                                                            it.input =
+                                                                newReference("i").also { ref ->
+                                                                    ref.comment =
+                                                                        "remove prev, remove next"
+                                                                }
+                                                        }
+                                                }
                                         }
+
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("\n", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newLiteral(0, objectType("int"))
                                     }
-                                    call("printf") { literal("\n", t("string")) }
-                                    returnStmt { literal(0, t("int")) }
                                 }
-                            }
                         }
                     }
                 }

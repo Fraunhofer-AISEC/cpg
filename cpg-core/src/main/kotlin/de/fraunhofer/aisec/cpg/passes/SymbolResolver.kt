@@ -1118,7 +1118,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 workingPossibleTypes.flatMap {
                     getInvocationCandidatesFromParents(
                         name,
-                        it.superTypeDeclarations.filter { it !in possibleTypes }.toSet(),
+                        it.superTypeDeclarations.filterTo(mutableSetOf()) { it !in possibleTypes },
                     )
                 }
             }
@@ -1333,20 +1333,19 @@ internal fun Pass<*>.resolveWithArguments(
     // Filter functions that match the signature of our call, either directly or with casts;
     // those functions are "viable". Take default arguments into account if the language has
     // them.
-    result.signatureResults =
-        result.candidateFunctions
-            .map {
-                Pair(
-                    it,
-                    it.matchesSignature(
-                        arguments.map(Expression::type),
-                        arguments,
-                        source.language is HasDefaultArguments,
-                    ),
+    result.signatureResults = buildMap {
+        for (candidate in result.candidateFunctions) {
+            val signatureResult =
+                candidate.matchesSignature(
+                    arguments.map(Expression::type),
+                    arguments,
+                    source.language is HasDefaultArguments,
                 )
+            if (signatureResult is SignatureMatches) {
+                put(candidate, signatureResult)
             }
-            .filter { it.second is SignatureMatches }
-            .associate { it }
+        }
+    }
     result.viableFunctions = result.signatureResults.keys
 
     // If we have a "problematic" result, we can stop here. In this case we cannot really

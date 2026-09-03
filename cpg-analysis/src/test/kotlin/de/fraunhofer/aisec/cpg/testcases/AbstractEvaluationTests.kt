@@ -27,11 +27,10 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
-import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
 abstract class AbstractEvaluationTests {
@@ -116,133 +115,407 @@ abstract class AbstractEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("integer.java") {
-                        record("Foo") {
-                            method("f1") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
+                singleTranslationUnit("integer.java") { tu ->
+                    newRecord("Foo", "class", holder = tu, enterScope = true) { foo ->
+                        newMethod("f1", holder = foo, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
 
-                                    ref("a") assign literal(0, t("int"))
-                                    ref("a") assignMinus literal(2, t("int"))
-                                    ref("a") assignPlus literal(3, t("int"))
-
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f2") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
-
-                                    ref("a") assign literal(3, t("int"))
-
-                                    ref("a").inc()
-                                    ref("a").incPrefix()
-
-                                    memberCall("c", ref("Bar")) { ref("a") }
-
-                                    ref("a") assignMinus literal(2, t("int"))
-                                    ref("a") assignPlus literal(3, t("int"))
-
-                                    ref("a").dec()
-                                    ref("a").decPrefix()
-
-                                    ref("a") assignMult literal(4, t("int"))
-                                    ref("a") assignDiv literal(2, t("int"))
-                                    ref("a") assignMod literal(3, t("int"))
-
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f3") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
-
-                                    ifStmt {
-                                        condition { memberCall("nextBoolean", ref("Random")) }
-                                        thenStmt { ref("a") assignMinus literal(1, t("int")) }
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { bDeclStmt ->
+                                        newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                     }
 
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f4") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
-
-                                    ifStmt {
-                                        condition { memberCall("nextBoolean", ref("Random")) }
-                                        thenStmt { ref("a") assignMinus literal(1, t("int")) }
-                                        elseStmt { ref("a") assign literal(3, t("int")) }
-                                    }
-
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f5") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
-
-                                    forStmt {
-                                        forInitializer {
-                                            declare {
-                                                variable("i", t("int")) { literal(0, t("int")) }
-                                            }
-                                        }
-                                        forCondition { ref("i") lt literal(5, t("int")) }
-                                        forIteration { ref("i").inc() }
-
-                                        loopBody {
-                                            ref("a") assignPlus literal(1, t("int"))
-                                            call("println") { ref("i") }
+                                    block.statements += newDeclarationStatement { aDeclStmt ->
+                                        newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                            it.initializer = newLiteral(5, objectType("int"))
                                         }
                                     }
 
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f6") {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(0, objectType("int"))),
+                                        )
+                                    block.statements +=
+                                        newAssign(
+                                            "-=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(2, objectType("int"))),
+                                        )
+                                    block.statements +=
+                                        newAssign(
+                                            "+=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
 
-                                    forStmt {
-                                        forInitializerExpr { ref("i") assign literal(0, t("int")) }
-                                        forCondition { ref("i") lt literal(5, t("int")) }
-                                        forIteration { ref("i").inc() }
-
-                                        loopBody {
-                                            ifStmt {
-                                                condition {
-                                                    val tmp =
-                                                        this@build.newBinaryOperator("<").apply {
-                                                            lhs = newReference("i")
-                                                            rhs = newLiteral(3, t("int"))
-                                                        }
-                                                    condition = tmp
-                                                    tmp
-                                                    // ref("i") lt literal(3, t("int"))
-                                                }
-                                                thenStmt { call("lessThanThree") { ref("i") } }
-                                                elseStmt { call("greaterEqualThree") { ref("i") } }
-                                            }
-                                            call("println") { ref("i") }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("f", newReference("Bar")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("a")
                                         }
-                                    }
-
-                                    call("afterLoop") { ref("i") }
                                 }
-                            }
                         }
-                        record("Bar") {
-                            method("main") {
-                                param("a", t("int"))
-                                body {}
-                            }
+                        newMethod("f2", holder = foo, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { bDeclStmt ->
+                                        newVariable("b", objectType("Bar"), holder = bDeclStmt)
+                                    }
+
+                                    block.statements += newDeclarationStatement { aDeclStmt ->
+                                        newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                            it.initializer = newLiteral(5, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
+
+                                    block.statements +=
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("a")
+                                        }
+                                    block.statements +=
+                                        newUnaryOperator("++", postfix = false, prefix = true) {
+                                            it.input = newReference("a")
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("c", newReference("Bar")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("a")
+                                        }
+
+                                    block.statements +=
+                                        newAssign(
+                                            "-=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(2, objectType("int"))),
+                                        )
+                                    block.statements +=
+                                        newAssign(
+                                            "+=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
+
+                                    block.statements +=
+                                        newUnaryOperator("--", postfix = true, prefix = false) {
+                                            it.input = newReference("a")
+                                        }
+                                    block.statements +=
+                                        newUnaryOperator("--", postfix = false, prefix = true) {
+                                            it.input = newReference("a")
+                                        }
+
+                                    block.statements +=
+                                        newAssign(
+                                            "*=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(4, objectType("int"))),
+                                        )
+                                    block.statements +=
+                                        newAssign(
+                                            "/=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(2, objectType("int"))),
+                                        )
+                                    block.statements +=
+                                        newAssign(
+                                            "%=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("f", newReference("Bar")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("a")
+                                        }
+                                }
+                        }
+                        newMethod("f3", holder = foo, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { bDeclStmt ->
+                                        newVariable("b", objectType("Bar"), holder = bDeclStmt)
+                                    }
+
+                                    block.statements += newDeclarationStatement { aDeclStmt ->
+                                        newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                            it.initializer = newLiteral(5, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextBoolean",
+                                                    newReference("Random"),
+                                                ),
+                                                false,
+                                            )
+
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newAssign(
+                                                        "-=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(1, objectType("int"))),
+                                                    )
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("f", newReference("Bar")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("a")
+                                        }
+                                }
+                        }
+                        newMethod("f4", holder = foo, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { bDeclStmt ->
+                                        newVariable("b", objectType("Bar"), holder = bDeclStmt)
+                                    }
+
+                                    block.statements += newDeclarationStatement { aDeclStmt ->
+                                        newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                            it.initializer = newLiteral(5, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextBoolean",
+                                                    newReference("Random"),
+                                                ),
+                                                false,
+                                            )
+
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newAssign(
+                                                        "-=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(1, objectType("int"))),
+                                                    )
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(3, objectType("int"))),
+                                                    )
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("f", newReference("Bar")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("a")
+                                        }
+                                }
+                        }
+                        newMethod("f5", holder = foo, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { bDeclStmt ->
+                                        newVariable("b", objectType("Bar"), holder = bDeclStmt)
+                                    }
+
+                                    block.statements += newDeclarationStatement { aDeclStmt ->
+                                        newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                            it.initializer = newLiteral(5, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newFor(enterScope = true) { for_ ->
+                                            for_.initializerStatement =
+                                                newDeclarationStatement { iDeclStmt ->
+                                                    newVariable(
+                                                        "i",
+                                                        objectType("int"),
+                                                        holder = iDeclStmt,
+                                                    ) {
+                                                        it.initializer =
+                                                            newLiteral(0, objectType("int"))
+                                                    }
+                                                }
+
+                                            for_.condition =
+                                                newBinaryOperator("<") {
+                                                    it.lhs = newReference("i")
+                                                    it.rhs = newLiteral(5, objectType("int"))
+                                                }
+
+                                            for_.iterationStatement =
+                                                newUnaryOperator(
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("i")
+                                                }
+
+                                            for_.statement =
+                                                newBlock(enterScope = true) { loopBodyBlock ->
+                                                    loopBodyBlock.statements +=
+                                                        newAssign(
+                                                            "+=",
+                                                            listOf(newReference("a")),
+                                                            listOf(newLiteral(1, objectType("int"))),
+                                                        )
+
+                                                    loopBodyBlock.statements +=
+                                                        newCall(newReference("println")) {
+                                                            it.arguments += newReference("i")
+                                                        }
+                                                }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("f", newReference("Bar")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("a")
+                                        }
+                                }
+                        }
+                        newMethod("f6", holder = foo, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { iDeclStmt ->
+                                        newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                            it.initializer = newLiteral(0, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newFor(enterScope = true) { for_ ->
+                                            for_.initializerStatement =
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("i")),
+                                                    listOf(newLiteral(0, objectType("int"))),
+                                                )
+
+                                            for_.condition =
+                                                newBinaryOperator("<") {
+                                                    it.lhs = newReference("i")
+                                                    it.rhs = newLiteral(5, objectType("int"))
+                                                }
+
+                                            for_.iterationStatement =
+                                                newUnaryOperator(
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("i")
+                                                }
+
+                                            for_.statement =
+                                                newBlock(enterScope = true) { loopBodyBlock ->
+                                                    loopBodyBlock.statements += newIfElse { inner ->
+                                                        inner.condition =
+                                                            newBinaryOperator("<") {
+                                                                it.lhs = newReference("i")
+                                                                it.rhs =
+                                                                    newLiteral(3, objectType("int"))
+                                                            }
+
+                                                        inner.thenStatement =
+                                                            newBlock(enterScope = true) { tb ->
+                                                                tb.statements +=
+                                                                    newCall(
+                                                                        newReference(
+                                                                            "lessThanThree"
+                                                                        )
+                                                                    ) {
+                                                                        it.arguments +=
+                                                                            newReference("i")
+                                                                    }
+                                                            }
+                                                        inner.elseStatement =
+                                                            newBlock(enterScope = true) { eb ->
+                                                                eb.statements +=
+                                                                    newCall(
+                                                                        newReference(
+                                                                            "greaterEqualThree"
+                                                                        )
+                                                                    ) {
+                                                                        it.arguments +=
+                                                                            newReference("i")
+                                                                    }
+                                                            }
+                                                    }
+
+                                                    loopBodyBlock.statements +=
+                                                        newCall(newReference("println")) {
+                                                            it.arguments += newReference("i")
+                                                        }
+                                                }
+                                        }
+
+                                    block.statements +=
+                                        newCall(newReference("afterLoop")) {
+                                            it.arguments += newReference("i")
+                                        }
+                                }
+                        }
+                    }
+                    newRecord("Bar", "class", holder = tu, enterScope = true) { bar ->
+                        newMethod("main", holder = bar, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+
+                            newParameter("a", objectType("int"), holder = method)
+
+                            method.body = newBlock(enterScope = true)
                         }
                     }
                 }

@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -44,7 +43,7 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** This class holds the variable, iterable and predicate of the [CollectionComprehension]. */
-class Comprehension : Expression(), ArgumentHolder, DeclarationHolder {
+class Comprehension : Expression(), DeclarationHolder {
 
     /**
      * The local [ValueDeclaration]s (the comprehension's iteration variable(s)) declared by this
@@ -114,40 +113,6 @@ class Comprehension : Expression(), ArgumentHolder, DeclarationHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate)
-
-    override fun addArgument(expression: Expression) {
-        if (this.variable is ProblemExpression) {
-            this.variable = expression
-        } else if (this.iterable is ProblemExpression) {
-            this.iterable = expression
-        } else {
-            this.predicate = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (this.variable == old) {
-            this.variable = new
-            return true
-        }
-
-        if (this.iterable == old) {
-            this.iterable = new
-            return true
-        }
-
-        if (this.predicate == old) {
-            this.predicate = new
-            return true
-        }
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return this.variable == expression ||
-            this.iterable == expression ||
-            expression == this.predicate
-    }
 
     override fun getStartingPrevEOG(): Collection<Node> {
         return iterable.getStartingPrevEOG()

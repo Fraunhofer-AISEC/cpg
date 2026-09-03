@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg_vis_neo4j
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.helpers.filterMapped
 import de.fraunhofer.aisec.cpg.persistence.*
 import io.github.classgraph.ClassGraph
 import java.io.File
@@ -164,18 +165,16 @@ class Schema {
         // Include both abstract and concrete classes for hierarchy building
         val allEntities =
             allSubclasses
-                .map { it.kotlin }
-                .filter { !it.java.isInterface }
-                .filterIsInstance<KClass<out Node>>()
-                .toMutableList()
+                .filterMapped({ it.kotlin }) { !it.java.isInterface }
+                .filterIsInstanceTo<KClass<out Node>, _>(mutableListOf())
 
         // Also keep track of just the concrete entities for schema output
         val entities =
             allSubclasses
-                .map { it.kotlin }
-                .filter { !it.java.isInterface && !Modifier.isAbstract(it.java.modifiers) }
-                .filterIsInstance<KClass<out Node>>()
-                .toMutableList()
+                .filterMapped({ it.kotlin }) {
+                    !it.java.isInterface && !Modifier.isAbstract(it.java.modifiers)
+                }
+                .filterIsInstanceTo<KClass<out Node>, _>(mutableListOf())
 
         // Add the Node class itself
         allEntities.add(0, nodeClass)
@@ -204,11 +203,9 @@ class Schema {
             val relationships = entity.schemaRelationships
 
             allRels[name] =
-                relationships
-                    .map { (propertyName, property) ->
-                        Pair(propertyName, property.relationshipName)
-                    }
-                    .toSet()
+                relationships.mapTo(mutableSetOf()) { (propertyName, property) ->
+                    Pair(propertyName, property.relationshipName)
+                }
         }
 
         // Complements the hierarchy and relationship information for abstract classes
@@ -221,16 +218,16 @@ class Schema {
             val relationships = entity.schemaRelationships
 
             // Get relationships declared directly in this class
-            val declaredProps = entity.memberProperties.map { it.name }.toSet()
+            val declaredProps = entity.memberProperties.mapTo(mutableSetOf()) { it.name }
             relationships.forEach { (propName, property) ->
                 relationshipFields[Pair(entity, propName)] = property
             }
 
             allRels[name]?.let { relationPair ->
                 inherentRels[name] =
-                    relationPair
-                        .filter { rel -> relationships.keys.any { it == rel.first } }
-                        .toSet()
+                    relationPair.filterTo(mutableSetOf()) { rel ->
+                        relationships.keys.any { it == rel.first }
+                    }
             }
 
             // Extracting the key-value pairs that are persisted as node properties
@@ -298,13 +295,10 @@ class Schema {
             .forEach { kClass ->
                 val name = kClass.qualifiedName ?: kClass.simpleName ?: ""
                 relCanHave[name] =
-                    hierarchy[kClass]
-                        ?.second
-                        ?.flatMap { childClass ->
-                            relCanHave[childClass.qualifiedName ?: childClass.simpleName ?: ""]
-                                ?: setOf()
-                        }
-                        ?.toSet() ?: setOf()
+                    hierarchy[kClass]?.second?.flatMapTo(mutableSetOf()) { childClass ->
+                        relCanHave[childClass.qualifiedName ?: childClass.simpleName ?: ""]
+                            ?: setOf()
+                    } ?: setOf()
             }
     }
 
@@ -536,8 +530,7 @@ class Schema {
         return list
             .map { it.second }
             .distinct()
-            .map { label -> list.first { it.second == label } }
-            .toSet()
+            .mapTo(mutableSetOf()) { label -> list.first { it.second == label } }
     }
 
     private fun toLabel(kClass: KClass<out Node>?): String {
