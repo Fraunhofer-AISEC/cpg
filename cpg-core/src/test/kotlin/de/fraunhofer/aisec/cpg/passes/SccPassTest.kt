@@ -32,6 +32,52 @@ import kotlin.test.assertTrue
 
 class SccPassTest {
     /**
+     * Regression test for the `StackOverflowError` that the original recursive [SccPass.tarjan] hit
+     * on deep EOGs (recursion depth = longest simple path in the EOG). Hand-builds a chain of [n]
+     * plain nodes linked via `nextEOG` (same approach as
+     * [testBlacklistedNodeDoesNotAbortSuccessorScan] below, just chained deep) and runs `tarjan` on
+     * a separate [Thread] with a deliberately small stack, so the test is deterministic regardless
+     * of how many bytes the JVM uses per recursive frame on a given platform.
+     *
+     * An earlier version of this test built the chain through the real frontend/DSL (many
+     * sequential `if`s, to force basic-block boundaries via `BasicBlockCollectorPass`). That turned
+     * out unreliable in practice: `defaultPasses()` pulls in unrelated passes
+     * (`ControlFlowSensitiveDFGPass`/`SymbolResolver`) with their own complexity blowups on
+     * functions with many branches (`OutOfMemoryError` at just 3,000 `if`s), and even after
+     * trimming to the minimal passes `SccPass` needs, the resulting EOG chain was consistently far
+     * shallower than the `if` count, and default-JVM-stack-sized runs never overflowed even at very
+     * high `n`. Hand-building the chain directly avoids both problems and gives an exact, known
+     * depth.
+     */
+    @Test
+    fun testDeepEogDoesNotStackOverflow() {
+        val n = 5_000
+        val start = AnnotationMember()
+        var current = start
+        repeat(n) {
+            val next = AnnotationMember()
+            current.nextEOG.add(next)
+            current = next
+        }
+
+        var caught: Throwable? = null
+        val thread =
+            Thread(
+                null,
+                {
+                    runCatching { SccPass(TranslationContext()).tarjan(start, 1) }
+                        .onFailure { caught = it }
+                },
+                "scc-small-stack",
+                256 * 1024,
+            )
+        thread.start()
+        thread.join()
+
+        assertTrue(caught == null, "SccPass threw on a deep EOG: $caught")
+    }
+
+    /**
      * Regression test for a bug where [SccPass.tarjan] used `break` instead of `continue` when
      * hitting a blacklisted node while iterating a node's `nextEOG` successors. `break` aborts the
      * whole successor scan on the first blacklisted node, silently dropping any successors that
