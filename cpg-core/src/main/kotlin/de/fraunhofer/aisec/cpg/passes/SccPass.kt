@@ -69,7 +69,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             // To detect inner loops, we put some nodes on a blacklist and see if we can still find
             // a loop
             if (next in currentInfo.blackList) {
-                break
+                continue
             }
             if (next !in currentInfo.visited) {
                 tarjan(next, level)
