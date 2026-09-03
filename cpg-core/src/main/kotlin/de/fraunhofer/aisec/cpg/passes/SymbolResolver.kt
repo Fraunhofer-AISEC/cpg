@@ -56,6 +56,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunction
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.util.IdentityHashMap
 import kotlin.collections.firstOrNull
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
@@ -209,54 +210,40 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * This function resolves symbols for the given EOG starter [t] (see [EOGStarterHolder] - e.g. a
      * [Function], but also a translation unit, record, namespace, or a field/variable with an
-     * initializer) by driving [handle] with [Lattice.iterateEOG] - the same worklist/fixpoint
-     * engine used by [PointsToPass], [ControlDependenceGraphPass] and [UnreachableEOGPass] -
-     * instead of the [ScopedWalker]-based linear traversal that the default (non-experimental) code
-     * path in [accept] uses.
+     * initializer) in two phases:
+     * 1. [collectDeclarationState] drives a pure, side-effect-free [Lattice.iterateEOG] - the same
+     *    worklist/fixpoint engine used by [PointsToPass], [ControlDependenceGraphPass] and
+     *    [UnreachableEOGPass] - purely to compute, for every [Node] in [t]'s EOG, the *final*,
+     *    fully-converged [LocalDeclarationElement] of [LocalScope] declarations reachable by that
+     *    point, recorded into [nodeStates].
+     * 2. [walker] (the very same [ScopedWalker] instance and [Strategy] - honoring
+     *    [Configuration.skipUnreachableEOG] - that the default, non-experimental code path in
+     *    [accept] uses) then does the actual resolution, calling [handle] on every node exactly as
+     *    the default path would, with [localSymbolsOverride] pointed at that node's precomputed
+     *    entry in [nodeStates] so [handleReference] resolves [LocalScope] symbols flow-sensitively.
      *
-     * Resolution is reused verbatim from [handle] and everything it dispatches to
-     * (member/call/construction/operator-overload resolution, access control, implicit receivers,
-     * etc.); only the visibility of [LocalScope]-declared symbols is genuinely flow-sensitive, via
-     * [LocalDeclarationLattice] and [localSymbolsOverride]. Every other [Scope] kind is still read
-     * directly from [Scope.symbols], exactly like the default traversal - both because that's
-     * correct (a global/record/namespace symbol's visibility never depends on the EOG) and because
-     * most of it (parameters, fields, globals) is never reached by any EOG walk at all.
-     *
-     * A node can be reached via more than one incoming [EvaluationOrder] edge - not just a loop
-     * back-edge (which the engine's fixpoint machinery already only re-processes until
-     * convergence), but also a genuine, non-cyclic merge, e.g. the first node after an `if`/`else`
-     * where neither branch terminates. [transfer] is offered such a node once per incoming edge,
-     * each with its own, separate slice of lattice state. [LocalDeclarationLattice]'s own `lub` (a
-     * union, at both the map and the inner-set level) is exactly the merge semantics we want for
-     * the *flow state* here - a declaration reached along *either* incoming path is considered
-     * reached (matching this tool's general lean towards best-effort resolution over strict
-     * soundness) - but applying [handle] itself needs a *separate*, non-lattice, all-or-nothing
-     * "already handled" marker: tracking that in the per-edge lattice state would only catch the
-     * loop-reconvergence case, not a true merge, since neither incoming edge's own state has a
-     * record of the other having already processed their shared successor. [handledNodes] is that
-     * marker: a plain, closure-captured identity set shared across every [transfer] call for this
-     * starter, safe without synchronization since the engine drives them strictly sequentially.
-     *
-     * [handleOverloadedOperator] additionally physically replaces the [BinaryOperator]/
-     * [UnaryOperator] node with an [OperatorCall], rewiring its EOG edges in the process.
-     * [Lattice.iterateEOG] determines how to continue the traversal by reading
-     * [EvaluationOrder.end]`.nextEOGEdges` of the edge it just processed - but a replaced node is
-     * disconnected and has no outgoing EOG edges of its own anymore, so mutating the graph mid-
-     * traversal would make the engine think the EOG ends right there and abandon everything after
-     * it. We therefore only run [handle] on [BinaryOperator]/[UnaryOperator] nodes (which is the
-     * only way [handleOverloadedOperator] is reached, since [handle] dispatches [MemberAccess] and
-     * [Call] - the only other [HasOverloadedOperation] implementers - to their own handlers first)
-     * *after* the EOG traversal has fully finished, in the order they were encountered.
+     * Splitting the two concerns like this (rather than calling [handle] directly from the
+     * [Lattice.iterateEOG] transformation) avoids two problems that plagued an earlier version of
+     * this function:
+     * - A node can be reached via more than one incoming [EvaluationOrder] edge - not just a loop
+     *   back-edge, but also a genuine, non-cyclic merge (e.g. the first node after an `if`/`else`
+     *   where neither branch terminates). Resolving as soon as the *first* edge arrives would make
+     *   the result depend on whichever predecessor the engine happens to schedule first, since
+     *   nothing would ever re-resolve the node once a *later* edge brings a bigger, merged state.
+     *   [collectDeclarationState] sidesteps this entirely by never resolving anything itself - it
+     *   just accumulates (via [LocalDeclarationLattice]'s own union `lub`) every state that ever
+     *   reaches a node, so by the time phase 2 reads [nodeStates], the recorded value already
+     *   reflects every incoming path.
+     * - [handleOverloadedOperator] physically replaces a [BinaryOperator]/[UnaryOperator] node with
+     *   an [OperatorCall], rewiring its EOG edges in the process. [Lattice.iterateEOG] determines
+     *   how to continue by reading the *same* edge's `end.nextEOGEdges` right after invoking the
+     *   transformation, so mutating the graph inside that callback would make the engine think the
+     *   EOG ends right there. [ScopedWalker], on the other hand, already tolerates this exact kind
+     *   of mid-traversal AST/EOG mutation (it re-reads `nextEOGEdges` lazily) - which is why the
+     *   default, non-experimental path can call [handle] on operators inline without any
+     *   special-casing, and why phase 2 reusing it can too.
      */
     protected open fun acceptWithIterateEOG(t: Node) {
-        // Nodes for which handle has already been applied, tracked globally across the whole
-        // traversal (see the KDoc above for why this can't live in the per-edge lattice state).
-        val handledNodes = identitySetOf<Node>()
-
-        // Nodes that may replace themselves in the AST/EOG (see the KDoc above) are deferred here
-        // and only handled once the EOG traversal itself is done.
-        val deferredOperatorNodes = mutableListOf<Node>()
-
         // The scope t itself introduces (e.g. a Function's FunctionScope), used to tell apart a
         // LocalScope that belongs to this starter's own traversal (and is therefore genuinely
         // flow-sensitive here) from one belonging to an *enclosing*, already fully-resolved starter
@@ -306,32 +293,49 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             startState = runBlocking { lattice.lub(startState, seededElement, true) }
         }
 
+        // Phase 1: compute, for every node, the final (fully-converged) set of LocalScope
+        // declarations reachable by that point - without resolving anything yet.
+        val nodeStates = IdentityHashMap<Node, LocalDeclarationElement>()
         val (_, timeout) =
             lattice.iterateEOG(
                 t.nextEOGEdges,
                 startState,
                 transformation = { l, edge, state ->
-                    transfer(
-                        l,
-                        edge,
-                        state,
-                        handledNodes,
-                        deferredOperatorNodes,
-                        starterScope,
-                        anchoredSeeds,
-                    )
+                    collectDeclarationState(l, edge, state, nodeStates, anchoredSeeds)
                 },
             )
         if (timeout) {
             log.warn("Could not compute final state for EOG starter {} (due to timeout)", t.name)
         }
 
-        deferredOperatorNodes.forEach {
-            jumpToScope(it)
-            handle(it)
+        // Phase 2: resolve, reusing the same walker/strategy the default path uses, consulting
+        // nodeStates for LocalScope visibility instead of Scope.symbols.
+        try {
+            walker.clearCallbacks()
+            walker.registerHandler { node ->
+                localSymbolsOverride = { scope, symbol ->
+                    if (scope is LocalScope && isWithinStarter(scope, starterScope)) {
+                        nodeStates[node]?.get(scope)?.filter { it.name.localName == symbol }
+                            ?: emptyList()
+                    } else {
+                        // Not a LocalScope we're tracking flow-sensitively (either not a LocalScope
+                        // at all, or one belonging to an enclosing, already-resolved starter): fall
+                        // back to the default, static Scope.symbols[symbol] lookup.
+                        null
+                    }
+                }
+                // If the type observer is disabled, nothing else computes the type of a raw
+                // BinaryOperator/UnaryOperator (see propagateOperatorType); the EOG guarantees its
+                // operand(s) already have their final type by the time it is reached here.
+                if (ctx.config.disableTypeObserver) {
+                    propagateOperatorType(node)
+                }
+                handle(node)
+            }
+            walker.iterate(t)
+        } finally {
+            localSymbolsOverride = null
         }
-
-        localSymbolsOverride = null
     }
 
     /**
@@ -410,25 +414,23 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * The state-transfer function used by [acceptWithIterateEOG]. If [EvaluationOrder.end] is
-     * itself a [Declaration] in a [LocalScope], it is pushed into [state]. [handle] is then applied
-     * to the node the first time it is reached (tracked in [handledNodes], not [state] - see the
-     * KDoc on [acceptWithIterateEOG]), with [localSymbolsOverride] pointed at the resulting state
-     * so [handleReference] resolves flow-sensitively for [LocalScope]s. [BinaryOperator]/
-     * [UnaryOperator] nodes are special-cased: their type is propagated immediately (see
-     * [propagateOperatorType]), but the AST-mutating [handleOverloadedOperator] is deferred by
-     * appending them to [deferredOperatorNodes] instead of calling [handle] on them right away.
-     * Finally, any declarations anchored to [EvaluationOrder.end] via [anchoredSeeds] (see
-     * [seedPlanFor]) are pushed into the returned state *after* handling the node, since they
-     * become visible only once their anchor has finished, not before.
+     * The pure, side-effect-free state-transfer function used by phase 1 of [acceptWithIterateEOG].
+     * If [EvaluationOrder.end] is itself a [Declaration] in a [LocalScope], it is pushed into
+     * [state]. The resulting per-node state is then merged (via [LocalDeclarationLattice]'s union
+     * `lub`) into [nodeStates] - across *every* visit of this node, from *every* incoming edge, so
+     * that once [Lattice.iterateEOG] converges, [nodeStates] holds each node's complete, final set
+     * of reachable [LocalScope] declarations, independent of which predecessor the engine happened
+     * to schedule first. [nodeStates] is read back in phase 2 of [acceptWithIterateEOG] to drive
+     * the actual resolution. Finally, any declarations anchored to [EvaluationOrder.end] via
+     * [anchoredSeeds] (see [seedPlanFor]) are pushed into the *returned* state (but not into
+     * [nodeStates] for this node) since they become visible only from the next node onward, not
+     * from this one.
      */
-    private suspend fun transfer(
+    private suspend fun collectDeclarationState(
         lattice: Lattice<LocalDeclarationElement>,
         currentEdge: EvaluationOrder,
         state: LocalDeclarationElement,
-        handledNodes: IdentitySet<Node>,
-        deferredOperatorNodes: MutableList<Node>,
-        starterScope: Scope?,
+        nodeStates: MutableMap<Node, LocalDeclarationElement>,
         anchoredSeeds: Map<Node, List<Declaration>>,
     ): LocalDeclarationElement {
         val lattice = lattice as? LocalDeclarationLattice ?: return state
@@ -446,26 +448,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 )
         }
 
-        if (handledNodes.add(node)) {
-            jumpToScope(node)
-            localSymbolsOverride = { scope, symbol ->
-                if (scope is LocalScope && isWithinStarter(scope, starterScope)) {
-                    newState[scope]?.filter { it.name.localName == symbol } ?: emptyList()
-                } else {
-                    // Not a LocalScope we're tracking flow-sensitively (either not a LocalScope
-                    // at all, or one belonging to an enclosing, already-resolved starter): fall
-                    // back to the default, static Scope.symbols[symbol] lookup.
-                    null
-                }
-            }
-
-            if (node is BinaryOperator || node is UnaryOperator) {
-                propagateOperatorType(node)
-                deferredOperatorNodes += node
+        val existing = nodeStates[node]
+        nodeStates[node] =
+            if (existing != null) {
+                lattice.lub(existing, newState, true)
             } else {
-                handle(node)
+                newState.duplicate()
             }
-        }
 
         val anchored = anchoredSeeds[node]
         if (!anchored.isNullOrEmpty()) {
@@ -486,41 +475,22 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * Several of the handlers reached through [handle] (e.g. [handleReference]'s implicit-receiver
-     * fallback, which reads [ScopeManager.currentRecord]) rely on [ScopeManager.currentScope]
-     * reflecting [node]'s own scope, exactly like [ScopedWalker] keeps it in sync while walking.
-     * [Lattice.iterateEOG] has no notion of "current scope", so we have to update it ourselves
-     * before handling each node.
-     */
-    private fun jumpToScope(node: Node) {
-        if (scopeManager.currentScope != node.scope) {
-            scopeManager.jumpTo(node.scope)
-        }
-    }
-
-    /**
      * [handle] does not compute the type of a [BinaryOperator] or [UnaryOperator] itself; normally,
-     * it relies on [HasType]'s reactive [HasType.TypeObserver] mechanism to propagate the type of
-     * [BinaryOperator.lhs]/[BinaryOperator.rhs] (or [UnaryOperator.input]) once they are resolved.
-     * That mechanism can be switched off entirely via
-     * [TranslationConfiguration.Builder.disableTypeObserver], in which case nothing else computes
-     * these types. Since the EOG guarantees [node]'s operands were already handled (and thus have
-     * their final type) by the time [node] itself is reached, we can compute the type here
-     * directly, exactly mirroring what the reactive path would have done.
+     * it relies on [HasType]'s reactive [HasType.TypeObserver] mechanism (both implement it
+     * themselves, via `typeChanged`) to propagate the type of [BinaryOperator.lhs]/
+     * [BinaryOperator.rhs] (or [UnaryOperator.input]) once they are resolved. That mechanism can be
+     * switched off entirely via [TranslationConfiguration.Builder.disableTypeObserver], in which
+     * case nothing else computes these types. Since the EOG guarantees [node]'s operand(s) were
+     * already handled (and thus have their final type) by the time [node] itself is reached, we can
+     * invoke the same `typeChanged` callback directly here, exactly mirroring what the reactive
+     * path would have done - including its special-casing of `.*`/`->*` for function-pointer types
+     * (see [BinaryOperator.typeChanged]) - rather than reimplementing the type propagation
+     * ourselves.
      */
     private fun propagateOperatorType(node: Node) {
         when (node) {
-            is BinaryOperator ->
-                node.type =
-                    node.language.propagateTypeOfBinaryOperation(
-                        node.operatorCode,
-                        node.lhs.type,
-                        node.rhs.type,
-                        node,
-                    )
-            is UnaryOperator ->
-                node.type =
-                    node.language.propagateTypeOfUnaryOperation(node.operatorCode, node.input.type)
+            is BinaryOperator -> node.typeChanged(node.rhs.type, node.rhs)
+            is UnaryOperator -> node.typeChanged(node.input.type, node.input)
         }
     }
 
