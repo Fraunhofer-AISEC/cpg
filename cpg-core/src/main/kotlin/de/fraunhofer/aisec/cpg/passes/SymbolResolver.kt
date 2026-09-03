@@ -355,9 +355,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /**
      * Determines the [SeedPlan] for [declaration]. If [declaration] is itself a direct element of
-     * some [StatementHolder]'s statement list (e.g. a locally-declared function prototype, or the
-     * [de.fraunhofer.aisec.cpg.graph.declarations.Tuple] wrapping the individual variables of a
-     * tuple/multiple declaration), it is declared "at a point" like an ordinary local variable.
+     * some ancestor's statement list (see [statementsOrNull]) - e.g. a locally-declared function
+     * prototype, or the [de.fraunhofer.aisec.cpg.graph.declarations.Tuple] wrapping the individual
+     * variables of a tuple/multiple declaration - it is declared "at a point" like an ordinary
+     * local variable.
      *
      * We anchor it to the *preceding* sibling statement that is EOG-reachable (searching further
      * back over any other EOG-invisible siblings, e.g. several prototypes declared back to back),
@@ -379,7 +380,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         var current: Node = declaration
         while (current !== starterRoot) {
             val parent = current.astParent ?: return SeedPlan.AtStart
-            val statements = (parent as? StatementHolder)?.statements
+            val statements = statementsOrNull(parent)
             if (statements != null && current in statements) {
                 val index = statements.indexOf(current)
                 val anchor =
@@ -390,6 +391,23 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
         return SeedPlan.AtStart
     }
+
+    /**
+     * Returns [node]'s directly-owned, ordered list of statements, if it is one of the AST node
+     * kinds that has one (what used to be `StatementHolder` before its removal), or `null`
+     * otherwise.
+     */
+    private fun statementsOrNull(node: Node): List<Expression>? =
+        when (node) {
+            is Block -> node.statements
+            is Label -> node.statements
+            is ForEach -> node.statements
+            is For -> node.statements
+            is Record -> node.statements
+            is Namespace -> node.statements
+            is TranslationUnit -> node.statements
+            else -> null
+        }
 
     /**
      * Whether [scope] is (transitively) nested within [starterScope], i.e. whether it belongs to
