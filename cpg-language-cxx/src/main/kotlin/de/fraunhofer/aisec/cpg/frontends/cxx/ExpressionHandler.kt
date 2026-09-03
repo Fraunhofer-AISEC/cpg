@@ -103,26 +103,27 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         node: CPPASTSimpleTypeConstructorExpression
     ): Expression {
         return if (node.declSpecifier is IASTSimpleDeclSpecifier) {
-            val cast = newCast(rawNode = node)
-            cast.castType = frontend.typeOf(node.declSpecifier)
+            newCast(rawNode = node) { cast ->
+                cast.castType = frontend.typeOf(node.declSpecifier)
 
-            // The actual expression that is cast is nested in an initializer. We could forward
-            // this to our initializer handler, but this would create a lot of construct expressions
-            // just for simple type casts, which we want to avoid, so we take a shortcut and do a
-            // direct unwrapping here.
-            val single =
-                (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
-            cast.expression =
-                single?.let { handle(it) } ?: newProblemExpression("could not parse initializer")
-            cast
+                // The actual expression that is cast is nested in an initializer. We could forward
+                // this to our initializer handler, but this would create a lot of construct
+                // expressions just for simple type casts, which we want to avoid, so we take a
+                // shortcut and do a direct unwrapping here.
+                val single =
+                    (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
+                cast.expression =
+                    single?.let { handle(it) }
+                        ?: newProblemExpression("could not parse initializer")
+            }
         } else {
             // Otherwise, we try to parse it as an initializer, which must either be an initializer
             // list expression or a constructor initializer
             val initializer = frontend.initializerHandler.handle(node.initializer)
             if (initializer is InitializerList) {
-                val construct = newConstruction(rawNode = node)
-                construct.arguments = initializer.initializers
-                construct
+                newConstruction(rawNode = node) { construct ->
+                    construct.arguments = initializer.initializers
+                }
             } else initializer ?: newProblemExpression("could not parse initializer")
         }
     }
@@ -217,10 +218,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleArraySubscript(ctx: IASTArraySubscriptExpression): Expression {
-        val arraySubsExpression = newSubscription(rawNode = ctx)
-        handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
-        handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
-        return arraySubsExpression
+        return newSubscription(rawNode = ctx) { arraySubsExpression ->
+            handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
+            handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
+        }
     }
 
     private fun handleNew(ctx: CPPASTNewExpression): Expression {
@@ -336,26 +337,25 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleDelete(ctx: CPPASTDeleteExpression): Delete {
-        val deleteExpression = newDelete(rawNode = ctx)
-        for (name in ctx.implicitDestructorNames) {
-            log.debug("Implicit constructor name {}", name)
+        return newDelete(rawNode = ctx) { deleteExpression ->
+            for (name in ctx.implicitDestructorNames) {
+                log.debug("Implicit constructor name {}", name)
+            }
+            handle(ctx.operand)?.let { deleteExpression.operands.add(it) }
         }
-        handle(ctx.operand)?.let { deleteExpression.operands.add(it) }
-        return deleteExpression
     }
 
     private fun handleCast(ctx: IASTCastExpression): Expression {
-        val castExpression = newCast(rawNode = ctx)
-        castExpression.expression =
-            handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
-        castExpression.setCastOperator(ctx.operator)
-        castExpression.castType = frontend.typeOf(ctx.typeId)
+        return newCast(rawNode = ctx) { castExpression ->
+            castExpression.expression =
+                handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
+            castExpression.setCastOperator(ctx.operator)
+            castExpression.castType = frontend.typeOf(ctx.typeId)
 
-        if (isPrimitive(castExpression.castType) || ctx.operator == 4) {
-            castExpression.type = castExpression.castType
+            if (isPrimitive(castExpression.castType) || ctx.operator == 4) {
+                castExpression.type = castExpression.castType
+            }
         }
-
-        return castExpression
     }
 
     /**
@@ -446,17 +446,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     }
                 }
         } else {
-            val unaryOperator =
-                newUnaryOperator(
-                    operatorCode,
-                    ctx.isPostfixOperator,
-                    !ctx.isPostfixOperator,
-                    rawNode = ctx,
-                )
-            if (input != null) {
-                unaryOperator.input = input
+            return newUnaryOperator(
+                operatorCode,
+                ctx.isPostfixOperator,
+                !ctx.isPostfixOperator,
+                rawNode = ctx,
+            ) { unaryOperator ->
+                if (input != null) {
+                    unaryOperator.input = input
+                }
             }
-            return unaryOperator
         }
     }
 
@@ -565,11 +564,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
-        val expressionList = newExpressionList(rawNode = exprList)
-        for (expr in exprList.expressions) {
-            handle(expr)?.let { expressionList.expressions += it }
+        return newExpressionList(rawNode = exprList) { expressionList ->
+            for (expr in exprList.expressions) {
+                handle(expr)?.let { expressionList.expressions += it }
+            }
         }
-        return expressionList
     }
 
     private fun handleBinaryExpression(ctx: IASTBinaryExpression): Expression {
@@ -593,19 +592,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 else -> String(ASTStringUtil.getBinaryOperatorString(ctx))
             }
 
-        val binaryOperator = newBinaryOperator(operatorCode, rawNode = ctx)
-        val lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
-        val rhs =
-            if (ctx.operand2 != null) {
-                handle(ctx.operand2)
-            } else {
-                handle(ctx.initOperand2)
-            } ?: newProblemExpression("could not parse rhs")
-
-        binaryOperator.lhs = lhs
-        binaryOperator.rhs = rhs
-
-        return binaryOperator
+        return newBinaryOperator(operatorCode, rawNode = ctx) { binaryOperator ->
+            binaryOperator.lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
+            binaryOperator.rhs =
+                if (ctx.operand2 != null) {
+                    handle(ctx.operand2)
+                } else {
+                    handle(ctx.initOperand2)
+                } ?: newProblemExpression("could not parse rhs")
+        }
     }
 
     private fun handleAssignment(ctx: IASTBinaryExpression): Expression {
@@ -676,6 +671,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
         var raw = String(ctx.value)
+        var isWideChar = false
+
+        if (raw.startsWith("L'") && raw.endsWith("'")) {
+            // It's a widechar literal, we can just ignore the L prefix for now
+            raw = raw.substring(1)
+            isWideChar = true
+        }
         if (!raw.startsWith("'") || !raw.endsWith("'")) {
             return newProblemExpression(
                 "character literal does not start or end with '",
@@ -686,9 +688,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         raw = raw.trim('\'')
 
         // Since C/C++ for some reason allows multi-character, we need to parse character by
-        // character and then see what the final type is
+        // character and then see what the final type is. We store code points as Int rather
+        // than Char, since a wide char escape (e.g. L'\x1F600') can represent a code point
+        // outside the 16-bit range that Kotlin's Char can hold.
         var i = 0
-        val chars = mutableListOf<Char>()
+        val chars = mutableListOf<Int>()
         var escapeChars = ""
         var radix = 10
         var inEscape = false
@@ -699,8 +703,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // Check for radix specifier
                 if (escapeChars.isEmpty() && raw[i] == 'x') {
                     radix = 16
-                    maxChars =
-                        2 // it seems like most compilers only allow two hex digits here, so do we
+                    // A regular (1-byte) char only allows two hex digits, but a wide char
+                    // literal can hold a much larger code point (e.g. wchar_t is 4 bytes on
+                    // Linux/macOS), so allow up to eight hex digits there.
+                    maxChars = if (isWideChar) 8 else 2
                     i++
                     continue
                 }
@@ -708,7 +714,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // Check, if new escape char. Then finish this one and start a new one
                 if (raw[i] == '\\') {
                     try {
-                        chars += Char(escapeChars.toInt(radix))
+                        chars += escapeChars.toInt(radix)
                         // Restart, assuming its octal and wait for a new radix specifier
                         escapeChars = ""
                         inEscape = true
@@ -726,7 +732,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // Check for special escape (they are only one digit and we NOT in hex mode)
                 val specialEscape = escapeMap[raw[i]]
                 if (escapeChars.isEmpty() && radix != 16 && specialEscape != null) {
-                    chars += specialEscape
+                    chars += specialEscape.code
                     escapeChars = ""
                     inEscape = false
                     maxChars = null
@@ -742,7 +748,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         i == raw.length - 1 || (maxChars != null && escapeChars.length >= maxChars)
                     ) {
                         try {
-                            chars += Char(escapeChars.toInt(radix))
+                            chars += escapeChars.toInt(radix)
                             escapeChars = ""
                             inEscape = false
                             maxChars = 0
@@ -766,23 +772,40 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     radix = 8
                 } else {
                     // Handle regular character
-                    chars += raw[i]
+                    chars += raw[i].code
                 }
             }
             i++
         }
 
         val single = chars.singleOrNull()
-        if (single != null) {
-            return newLiteral(single, primitiveType("char"), rawNode = ctx)
+        if (single != null && single <= Char.MAX_VALUE.code) {
+            return newLiteral(
+                single.toChar(),
+                primitiveType(if (isWideChar) "wchar_t" else "char"),
+                rawNode = ctx,
+            )
+        } else if (single != null) {
+            // A single wide-char escape can represent a code point outside the 16-bit range of
+            // Char (e.g. L'\x1F600'). It is already the intended value, so we return it as-is
+            // instead of running it through the byte-recombination logic below.
+            return newLiteral(single, primitiveType("wchar_t"), rawNode = ctx)
         } else {
-            // Somehow make an int out of, this is "implementation" specific. We follow the way
-            // clang does it
+            // Somehow make an int out of, this is "implementation" specific.
             var intValue = 0
-            for ((n, c) in chars.reversed().withIndex()) {
-                intValue += (c.code * 256.0f.pow(n)).toInt()
+            return if (isWideChar) {
+                // If it was a wide char, we do not reverse the order.
+                for ((n, c) in chars.withIndex()) {
+                    intValue += (c * 256.0f.pow(n)).toInt()
+                }
+                newLiteral(intValue, primitiveType("wchar_t"), rawNode = ctx)
+            } else {
+                // We follow the way clang does it
+                for ((n, c) in chars.reversed().withIndex()) {
+                    intValue += (c * 256.0f.pow(n)).toInt()
+                }
+                newLiteral(intValue, primitiveType("int"), rawNode = ctx)
             }
-            return newLiteral(intValue, primitiveType("int"), rawNode = ctx)
         }
     }
 
@@ -807,12 +830,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val lhs =
             when (des) {
-                is CPPASTArrayDesignator -> {
-                    val sub = newSubscription()
-                    sub.arrayExpression = ref
-                    handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
-                    sub
-                }
+                is CPPASTArrayDesignator ->
+                    newSubscription { sub ->
+                        sub.arrayExpression = ref
+                        handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
+                    }
                 is CPPASTFieldDesignator -> {
                     // Then we loop through all designators and chain them. Only field designators
                     // can be chained in this way
@@ -859,23 +881,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val lhs =
             when (des) {
-                is CASTArrayDesignator -> {
-                    val sub = newSubscription(rawNode = des)
-                    sub.arrayExpression = ref
-                    handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
-                    sub
-                }
-                is CASTArrayRangeDesignator -> {
-                    val sub = newSubscription(rawNode = des)
-                    sub.arrayExpression = ref
+                is CASTArrayDesignator ->
+                    newSubscription(rawNode = des) { sub ->
+                        sub.arrayExpression = ref
+                        handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
+                    }
+                is CASTArrayRangeDesignator ->
+                    newSubscription(rawNode = des) { sub ->
+                        sub.arrayExpression = ref
 
-                    val range = newRange(rawNode = des)
-                    des.rangeFloor?.let { range.floor = handle(it) }
-                    des.rangeCeiling?.let { range.ceiling = handle(it) }
-                    range.operatorCode = "..."
-                    sub.subscriptExpression = range
-                    sub
-                }
+                        sub.subscriptExpression =
+                            newRange(rawNode = des) { range ->
+                                des.rangeFloor?.let { range.floor = handle(it) }
+                                des.rangeCeiling?.let { range.ceiling = handle(it) }
+                                range.operatorCode = "..."
+                            }
+                    }
                 is CASTFieldDesignator -> {
                     // Then we loop through all designators and chain them. Only field designators
                     // can be chained in this way
@@ -906,17 +927,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     ): Construction {
         val type = frontend.typeOf(ctx.typeId)
 
-        val construct = newConstruction(type.name, rawNode = ctx)
-
-        // The only supported initializer is an initializer list
-        (ctx.initializer as? IASTInitializerList)?.let {
-            construct.arguments =
-                it.clauses
-                    .map { handle(it) ?: newProblemExpression("could not parse argument") }
-                    .toMutableList()
+        return newConstruction(type.name, rawNode = ctx) { construct ->
+            // The only supported initializer is an initializer list
+            (ctx.initializer as? IASTInitializerList)?.let {
+                construct.arguments =
+                    it.clauses
+                        .map { handle(it) ?: newProblemExpression("could not parse argument") }
+                        .toMutableList()
+            }
         }
-
-        return construct
     }
 
     private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression {

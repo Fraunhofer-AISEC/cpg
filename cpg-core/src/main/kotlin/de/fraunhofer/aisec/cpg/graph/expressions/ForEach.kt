@@ -44,7 +44,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
  * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
  */
-class ForEach : Loop(), BranchingNode, StatementHolder, DeclarationHolder {
+class ForEach : Loop(), BranchingNode, DeclarationHolder {
 
     /**
      * The local [ValueDeclaration]s (the loop's iteration variable) declared by this node. These
@@ -93,7 +93,7 @@ class ForEach : Loop(), BranchingNode, StatementHolder, DeclarationHolder {
     override val branchedBy
         get() = iterable
 
-    override var statementEdges: AstEdges<Expression, AstEdge<Expression>>
+    var statementEdges: AstEdges<Expression, AstEdge<Expression>>
         get() {
             val statements = astEdgesOf<Expression>()
             statements += variableEdge
@@ -106,7 +106,7 @@ class ForEach : Loop(), BranchingNode, StatementHolder, DeclarationHolder {
             // Nothing to do here
         }
 
-    override var statements: MutableList<Expression>
+    var statements: MutableList<Expression>
         get() = unwrapping(ForEach::statementEdges)
         set(value) {}
 

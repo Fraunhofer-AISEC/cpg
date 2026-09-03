@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,20 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph
+package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
-import kotlin.test.Test
-import kotlin.test.assertTrue
-
-class InterfacesTest {
-
-    @Test
-    fun testRemoveArgument() {
-        val v: HasInitializer = Variable()
-        val lit = Literal<String>()
-        v.initializer = lit
-        assertTrue(v.removeArgument(lit))
-    }
-}
+/**
+ * Base class for pattern-matching expressions that unpack a value into its constituent parts, each
+ * typically bound to a new identifier — the inverse of a [Construction], with data/type flow
+ * running from the matched value down into the bindings instead of up into a result.
+ *
+ * Subclasses: [ObjectDeconstruction] (positional/named decomposition, e.g. Rust's `Point { x, y
+ * }`), [NamedDeconstruction] (one named field of it, e.g. `y: y_coord`), and
+ * [AlternativeDeconstruction] (or-patterns, e.g. Rust's `1 | 2`). Used e.g. by Rust's `let`, `if
+ * let`, `while let`, and `match`.
+ */
+abstract class Deconstruction : Expression()

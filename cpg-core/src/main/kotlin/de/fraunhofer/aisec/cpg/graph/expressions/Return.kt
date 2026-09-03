@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -37,7 +36,7 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a statement that returns out of the current function. */
-class Return : Expression(false), ArgumentHolder {
+class Return : Expression(false) {
 
     @Relationship(value = "RETURN_VALUES")
     var returnValueEdges =
@@ -74,24 +73,6 @@ class Return : Expression(false), ArgumentHolder {
             .appendSuper(super.toString())
             .append("returnValues", returnValues)
             .toString()
-    }
-
-    override fun addArgument(expression: Expression) {
-        this.returnValues += expression
-    }
-
-    override fun removeArgument(expression: Expression): Boolean {
-        this.returnValues -= expression
-        return true
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        this.returnValue = new
-        return true
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in this.returnValues
     }
 
     override fun equals(other: Any?): Boolean {

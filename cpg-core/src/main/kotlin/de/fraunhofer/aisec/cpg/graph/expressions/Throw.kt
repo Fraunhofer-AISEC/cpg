@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -34,7 +33,7 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a `throw` or `raise` statement/expression. */
-class Throw : Expression(), ArgumentHolder {
+class Throw : Expression() {
 
     /** The exception object to be raised. */
     @Relationship(value = "EXCEPTION") var exceptionEdge = astOptionalEdgeOf<Expression>()
@@ -47,31 +46,6 @@ class Throw : Expression(), ArgumentHolder {
     @Relationship(value = "PARENT_EXCEPTION")
     var parentExceptionEdge = astOptionalEdgeOf<Expression>()
     var parentException by unwrapping(Throw::parentExceptionEdge)
-
-    override fun addArgument(expression: Expression) {
-        when {
-            exception == null -> exception = expression
-            parentException == null -> parentException = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return when {
-            exception == old -> {
-                exception = new
-                true
-            }
-            parentException == old -> {
-                parentException = new
-                true
-            }
-            else -> false
-        }
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return exception == expression || parentException == expression
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -238,11 +238,14 @@ open class CPPLanguage :
                 (expr.operatorCode == "++" || expr.operatorCode == "--") &&
                 expr.isPostfix
         ) {
-            result.signatureResults =
-                result.candidateFunctions
-                    .map { Pair(it, it.matchesSignature(listOf(primitiveType("int")))) }
-                    .filter { it.second is SignatureMatches }
-                    .associate { it }
+            result.signatureResults = buildMap {
+                for (candidate in result.candidateFunctions) {
+                    val signatureResult = candidate.matchesSignature(listOf(primitiveType("int")))
+                    if (signatureResult is SignatureMatches) {
+                        put(candidate, signatureResult)
+                    }
+                }
+            }
         }
 
         return super.bestViableResolution(result)

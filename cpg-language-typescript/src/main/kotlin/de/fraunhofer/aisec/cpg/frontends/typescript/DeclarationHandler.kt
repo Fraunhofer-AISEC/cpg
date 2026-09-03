@@ -36,6 +36,17 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
 
+    companion object {
+        /**
+         * The [TypeScriptNode.type] values under which the TypeScript parser emits the access and
+         * `static` modifier keywords. Note that we must enumerate these explicitly rather than
+         * matching every `*Keyword` node, because the parser also emits *type* keywords (e.g.
+         * `NumberKeyword`, `VoidKeyword`) as children of the same declaration.
+         */
+        private val modifierKeywordTypes =
+            setOf("PublicKeyword", "ProtectedKeyword", "PrivateKeyword", "StaticKeyword")
+    }
+
     private fun handleNode(node: TypeScriptNode): Declaration {
         when (node.type) {
             "SourceFile" -> return handleSourceFile(node)
@@ -59,19 +70,50 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
-        val field =
-            newField(
-                name,
-                type,
-                setOf(),
-                initializer = null,
-                implicitInitializerAllowed = false,
-                rawNode = node,
-            )
+        return newField(
+            name,
+            type,
+            setOf(),
+            initializer = null,
+            implicitInitializerAllowed = false,
+            rawNode = node,
+        ) { field ->
+            this.handleModifiers(field, node)
+            this.frontend.processAnnotations(field, node)
+        }
+    }
 
-        this.frontend.processAnnotations(field, node)
+    /**
+     * Collects the access/visibility modifiers of [node] into [Declaration.modifiers] and lets the
+     * language project their canonical meaning onto [declaration].
+     *
+     * The raw keyword spellings are kept losslessly in [Declaration.modifiers]; turning them into
+     * canonical [Declaration.visibility] / [ValueDeclaration.isStatic] is delegated to the
+     * language's [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the
+     * current scope. Two shapes of modifier are recognized:
+     * - explicit modifier keywords such as `public`/`protected`/`private`/`static`, which the
+     *   TypeScript parser emits as dedicated `*Keyword` child nodes in front of the member name,
+     *   and
+     * - *hard private* members, identified not by a keyword but by a `#name` ([PrivateIdentifier])
+     *   name; these are runtime-private in both JavaScript and TypeScript and are recorded via the
+     *   synthetic [HARD_PRIVATE] modifier.
+     *
+     * This must be called while the frontend is still in the enclosing (record) scope, so that
+     * `applyModifiers` sees the correct scope for the declaration.
+     */
+    private fun handleModifiers(declaration: Declaration, node: TypeScriptNode) {
+        node.children
+            ?.filter { it.type in modifierKeywordTypes }
+            ?.forEach { modifier ->
+                val keyword = modifier.code ?: return@forEach
+                declaration.modifiers = declaration.modifiers + keyword
+            }
 
-        return field
+        if (node.firstChild("PrivateIdentifier") != null) {
+            declaration.modifiers = declaration.modifiers + HARD_PRIVATE
+        }
+
+        frontend.language.applyModifiers(declaration, frontend.scopeManager.currentScope)
     }
 
     private fun handleClassDeclaration(node: TypeScriptNode): Record {
@@ -86,26 +128,23 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     "class"
                 },
                 rawNode = node,
-            )
-
-        this.frontend.scopeManager.enterScope(record)
-
-        // loop through property signatures aka fields, constructors and methods
-        node.children
-            ?.filter {
-                it.type == "PropertySignature" ||
-                    it.type == "PropertyDeclaration" ||
-                    it.type == "Constructor" ||
-                    it.type == "MethodDeclaration"
+                enterScope = true,
+            ) { record ->
+                // loop through property signatures aka fields, constructors and methods
+                node.children
+                    ?.filter {
+                        it.type == "PropertySignature" ||
+                            it.type == "PropertyDeclaration" ||
+                            it.type == "Constructor" ||
+                            it.type == "MethodDeclaration"
+                    }
+                    ?.forEach {
+                        this.handle(it)?.let { decl ->
+                            this.frontend.scopeManager.addDeclaration(decl)
+                            record.addDeclaration(decl)
+                        }
+                    }
             }
-            ?.forEach {
-                this.handle(it)?.let { decl ->
-                    this.frontend.scopeManager.addDeclaration(decl)
-                    record.addDeclaration(decl)
-                }
-            }
-
-        this.frontend.scopeManager.leaveScope(record)
 
         this.frontend.processAnnotations(record, node)
 
@@ -120,27 +159,25 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     fun handleSourceFile(node: TypeScriptNode): TranslationUnit {
-        val tu = newTranslationUnit(node.location.file, rawNode = node)
+        return newTranslationUnit(node.location.file, rawNode = node) { tu ->
+            this.frontend.scopeManager.resetToGlobal(tu)
 
-        this.frontend.scopeManager.resetToGlobal(tu)
+            // loop through children
+            for (childNode in node.children ?: emptyList()) {
+                // filter for statements (not sure if this is really sufficient)
+                if (childNode.type.endsWith("Statement")) {
+                    val statement = this.frontend.statementHandler.handle(childNode)
 
-        // loop through children
-        for (childNode in node.children ?: emptyList()) {
-            // filter for statements (not sure if this is really sufficient)
-            if (childNode.type.endsWith("Statement")) {
-                val statement = this.frontend.statementHandler.handle(childNode)
-
-                statement?.let { tu.statements += it }
-            } else {
-                val decl = this.handle(childNode)
-                if (decl != null) {
-                    this.frontend.scopeManager.addDeclaration(decl)
-                    tu.declarations += decl
+                    statement?.let { tu.statements += it }
+                } else {
+                    val decl = this.handle(childNode)
+                    if (decl != null) {
+                        this.frontend.scopeManager.addDeclaration(decl)
+                        tu.declarations += decl
+                    }
                 }
             }
         }
-
-        return tu
     }
 
     private fun handleFunction(node: TypeScriptNode): Function {
@@ -162,6 +199,12 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }
+
+        // Interpret access/`static` modifiers while we are still in the enclosing (record) scope,
+        // before we descend into the function's own scope.
+        if (func is Method) {
+            this.handleModifiers(func, node)
+        }
 
         this.frontend.scopeManager.enterScope(func)
 
@@ -204,14 +247,14 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
         // TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment
 
-        val declaration = newVariable(name, unknownType(), false, rawNode = node)
-        declaration.location = this.frontend.locationOf(node)
+        return newVariable(name, unknownType(), false, rawNode = node) { declaration ->
+            declaration.location = this.frontend.locationOf(node)
 
-        // the last node that is not an identifier or an object binding pattern is an initializer
-        node.children
-            ?.lastOrNull { it.type != "Identifier" && it.type != "ObjectBindingPattern" }
-            ?.let { declaration.initializer = this.frontend.expressionHandler.handle(it) }
-
-        return declaration
+            // the last node that is not an identifier or an object binding pattern is an
+            // initializer
+            node.children
+                ?.lastOrNull { it.type != "Identifier" && it.type != "ObjectBindingPattern" }
+                ?.let { declaration.initializer = this.frontend.expressionHandler.handle(it) }
+        }
     }
 }
