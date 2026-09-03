@@ -132,8 +132,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
-    /** The standard evaluator to be used with this language. */
-    @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    /**
+     * The standard evaluator to be used with this language. A fresh instance is returned on every
+     * access, so that concurrent evaluations (e.g. from parallel query evaluation) never share
+     * mutable evaluator state such as [ValueEvaluator.path].
+     */
+    @DoNotPersist
+    open val evaluator: ValueEvaluator
+        get() = ValueEvaluator()
+
+    /**
+     * Determines whether [value] (the result of evaluating a condition with [evaluator]) is
+     * "truthy" in this language, i.e., whether it would take the "then"/loop-body branch of a
+     * conditional. Returns `null` if this cannot be determined, e.g., because the value could not
+     * be evaluated or because this language does not allow implicit conversion of [value] to a
+     * boolean. The default implementation only accepts an actual [Boolean].
+     */
+    open fun isTruthy(value: Any?): Boolean? = value as? Boolean
 
     init {
         this.language = this

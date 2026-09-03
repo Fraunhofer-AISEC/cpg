@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
+import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -87,6 +88,18 @@ open class RubyLanguage :
     ): Boolean {
         TODO("Not yet implemented")
     }
+
+    /**
+     * In Ruby, only `false` and `nil` are "falsy" — every other value, including `0` and `""`
+     * (unlike C or Python), is "truthy".
+     */
+    override fun isTruthy(value: Any?): Boolean? =
+        when {
+            value is CouldNotResolve -> null
+            value is Boolean -> value
+            value == null -> false // nil
+            else -> true
+        }
 
     /**
      * Applies Ruby's method-visibility modifiers to [declaration]. Ruby controls method access via

@@ -477,7 +477,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             result += lastNode.filterIsInstance<File>()
         } else {
             // There is a [FileHandle] but no [File] overlay, so we create a new [File] node
-            lastNode.filterIsInstance<FileHandle>().map { fileHandle ->
+            lastNode.filterIsInstance<FileHandle>().forEach { fileHandle ->
                 result +=
                     newFile(
                             underlyingNode = fileHandle.underlyingNode!! /* TODO */,

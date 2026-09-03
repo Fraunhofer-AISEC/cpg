@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Throw
@@ -46,18 +46,23 @@ class ThrowTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("some.file") {
-                            function("foo", t("void")) {
-                                body {
-                                    `throw` {}
-                                    `throw` { call("SomeError") }
-                                    `throw` {
-                                        call("SomeError")
-                                        call("SomeError2")
+                    singleTranslationUnit("some.file") { tu ->
+                        newFunction("foo", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("void"))
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newThrow()
+
+                                    block.statements += newThrow {
+                                        it.exception = newCall(newReference("SomeError"))
+                                    }
+
+                                    block.statements += newThrow {
+                                        it.exception = newCall(newReference("SomeError"))
+                                        it.parentException = newCall(newReference("SomeError2"))
                                     }
                                 }
-                            }
                         }
                     }
                 }

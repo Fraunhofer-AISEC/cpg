@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
@@ -227,6 +228,23 @@ open class PythonLanguage :
     override val evaluator: ValueEvaluator
         get() = PythonValueEvaluator()
 
+    /**
+     * In Python, `None`, `False`, numeric zero, and empty strings/collections are "falsy", and
+     * every other value is "truthy". See
+     * https://docs.python.org/3/reference/expressions.html#truth-value-testing
+     */
+    override fun isTruthy(value: Any?): Boolean? =
+        when {
+            value is CouldNotResolve -> null
+            value is Boolean -> value
+            value is Number -> value.toDouble() != 0.0
+            value is String -> value.isNotEmpty()
+            value is Collection<*> -> value.isNotEmpty()
+            value is Map<*, *> -> value.isNotEmpty()
+            value == null -> false // None
+            else -> null
+        }
+
     override fun propagateTypeOfBinaryOperation(
         operatorCode: String?,
         lhsType: Type,
@@ -376,17 +394,15 @@ open class PythonLanguage :
      */
     fun nameToLanguageFiles(name: Name): Set<File> {
         val filesForNamespace =
-            fileExtensions
-                .flatMap { extension ->
-                    setOf(name, Name(IDENTIFIER_INIT, name)).map {
-                        File(
-                            it.toString().replace(language.namespaceDelimiter, File.separator) +
-                                "." +
-                                extension
-                        )
-                    }
+            fileExtensions.flatMapTo(mutableSetOf()) { extension ->
+                setOf(name, Name(IDENTIFIER_INIT, name)).map {
+                    File(
+                        it.toString().replace(language.namespaceDelimiter, File.separator) +
+                            "." +
+                            extension
+                    )
                 }
-                .toMutableSet()
+            }
         return filesForNamespace
     }
 

@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMappedTo
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -65,7 +66,8 @@ import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 import kotlin.text.ifEmpty
-import kotlin.time.DurationUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
@@ -422,10 +424,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
-        /**
-         * The timeout after which we stop analyzing a function. Default one hour AKA 3,600,000ms
-         */
-        var timeout: Long = 3600000,
+        /** The timeout after which we stop analyzing a function. Default 60 minutes */
+        var timeout: Duration = 60.minutes,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
@@ -562,7 +562,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         node.nextEOGEdges,
                         startState,
                         ::transfer,
-                        timeout = passConfig<Configuration>()?.timeout,
+                        timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
                     )
                 // If we had a timeout, treat it as an empty Function but still
                 // include the results we got
@@ -1448,19 +1448,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     return@forEach
                 }
                 val derefPMVs =
-                    p.memoryValueEdges
-                        .filter {
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefvalue"
-                        }
-                        .map { it.start }
+                    p.memoryValueEdges.mapFiltered({
+                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                            "derefvalue"
+                    }) {
+                        it.start
+                    }
                 val derefderefPMVs =
-                    p.memoryValueEdges
-                        .filter {
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefderefvalue"
-                        }
-                        .map { it.start }
+                    p.memoryValueEdges.mapFiltered({
+                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                            "derefderefvalue"
+                    }) {
+                        it.start
+                    }
                 argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
                     doubleState =
                         innerCalculateIncomingCallingContexts(
@@ -2070,9 +2070,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             if (log.isTraceEnabled) {
                                 log.trace("Old last timeout: ${timeouts.last()}")
                             }
-                            timeouts[timeouts.size - 1] =
-                                timeouts.last() +
-                                    startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
+                            timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow()
                             if (log.isTraceEnabled) {
                                 log.trace(
                                     "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
@@ -2819,7 +2817,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
             }
 
-        /* For literals, we store the address and the lastWrite as "theirs" in the DeclarationState so that we know from where we have to draw DFGEdges in the future */
+        /* For literals, we store the address as "theirs" in the DeclarationState */
         // TODO: would this make sense for everything in the lhs?
         val l = currentNode.rhs.singleOrNull() as? Literal<*>
         l?.let {
@@ -2830,7 +2828,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(destinationsAddresses),
                         PowersetLattice.Element(),
-                        PowersetLattice.Element(lastWrites),
+                        PowersetLattice.Element(),
                     ),
                 )
         }
@@ -2981,11 +2979,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 node = value,
                                 excludeShortFSValues = true,
                             )
-                            .map { it.value }
-                            .filter { derefValue ->
-                                doubleState.hasDeclarationStateValueEntry(derefValue)
-                            }
-                            .forEach { derefValue ->
+                            .forEach { entry ->
+                                val derefValue = entry.value
+                                if (!doubleState.hasDeclarationStateValueEntry(derefValue)) {
+                                    return@forEach
+                                }
                                 doubleState
                                     .getLastWrites(derefValue)
                                     .filter { it.properties.none { it == true } }
@@ -3907,10 +3905,12 @@ fun PointsToState.Element.getValues(
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
-            node.memoryAddresses
-                .flatMap { fetchValueFromDeclarationState(it) }
-                .map { it.value }
-                .mapTo(PowersetLattice.Element()) { Pair(it, false) }
+            node.memoryAddresses.mapFlatMappedTo(
+                PowersetLattice.Element(),
+                { fetchValueFromDeclarationState(it) },
+            ) {
+                Pair(it.value, false)
+            }
         }
         is MemoryAddress,
         is Call -> {

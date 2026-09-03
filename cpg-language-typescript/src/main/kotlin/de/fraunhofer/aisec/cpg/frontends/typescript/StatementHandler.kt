@@ -58,34 +58,28 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleFunction(node: TypeScriptNode): Expression {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement = newDeclarationStatement(rawNode = node)
+        return newDeclarationStatement(rawNode = node) { statement ->
+            val decl = this.frontend.declarationHandler.handle(node)
 
-        val decl = this.frontend.declarationHandler.handle(node)
-
-        if (decl != null) {
-            this.frontend.scopeManager.addDeclaration(decl)
-            statement.declarations += decl
+            if (decl != null) {
+                this.frontend.scopeManager.addDeclaration(decl)
+                statement.declarations += decl
+            }
         }
-
-        return statement
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): Return {
-        val returnStmt = newReturn(rawNode = node)
-
-        node.children?.first()?.let {
-            returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
+        return newReturn(rawNode = node) { returnStmt ->
+            node.children?.first()?.let {
+                returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
+            }
         }
-
-        return returnStmt
     }
 
     private fun handleBlock(node: TypeScriptNode): Block {
-        val block = newBlock(rawNode = node)
-
-        node.children?.forEach { this.handle(it)?.let { it1 -> block.statements += it1 } }
-
-        return block
+        return newBlock(rawNode = node) { block ->
+            node.children?.forEach { this.handle(it)?.let { it1 -> block.statements += it1 } }
+        }
     }
 
     private fun handleExpressionStatement(node: TypeScriptNode): Expression {
@@ -97,20 +91,18 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
-        val statement = newDeclarationStatement(rawNode = node)
+        return newDeclarationStatement(rawNode = node) { statement ->
+            // the declarations are contained in a VariableDeclarationList
+            val nodes = node.firstChild("VariableDeclarationList")?.children
 
-        // the declarations are contained in a VariableDeclarationList
-        val nodes = node.firstChild("VariableDeclarationList")?.children
+            for (variableNode in nodes ?: emptyList()) {
+                val decl = this.frontend.declarationHandler.handle(variableNode)
 
-        for (variableNode in nodes ?: emptyList()) {
-            val decl = this.frontend.declarationHandler.handle(variableNode)
-
-            if (decl != null) {
-                this.frontend.scopeManager.addDeclaration(decl)
-                statement.declarations += decl
+                if (decl != null) {
+                    this.frontend.scopeManager.addDeclaration(decl)
+                    statement.declarations += decl
+                }
             }
         }
-
-        return statement
     }
 }

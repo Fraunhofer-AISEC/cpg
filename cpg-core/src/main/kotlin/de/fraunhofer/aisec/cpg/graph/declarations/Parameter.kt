@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -34,7 +33,7 @@ import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 
 /** A declaration of a function or non-type template parameter. */
-class Parameter : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder {
+class Parameter : ValueDeclaration(), HasDefault<Expression?> {
 
     var isVariadic = false
 
@@ -57,23 +56,4 @@ class Parameter : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), isVariadic, defaultValue)
-
-    override fun addArgument(expression: Expression) {
-        if (defaultValue == null) {
-            defaultValue = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (defaultValue == old) {
-            defaultValue = new
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return defaultValue == expression
-    }
 }
