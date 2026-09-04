@@ -42,6 +42,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -646,6 +647,61 @@ class BasicLatticesRedesignTest {
             )
         }
         assertEquals(depthBefore, timeouts.size)
+    }
+
+    @Test
+    fun testDuplicateSharesEntries() {
+        val original =
+            ConcurrentMapLattice.Element(
+                "a" to PowersetLattice.Element("bla"),
+                "b" to PowersetLattice.Element("foo"),
+            )
+
+        val copy = original.duplicate()
+
+        // The copy holds the very same entries as the original ...
+        assertEquals(original.keys, copy.keys)
+        for (key in original.keys) {
+            assertSame(original[key], copy[key])
+            assertTrue(assertNotNull(copy[key]).isShared)
+        }
+
+        // ... which is why neither side may modify them any more.
+        assertThrows<IllegalStateException> { assertNotNull(copy["a"]).add("blub") }
+        assertThrows<IllegalStateException> { assertNotNull(original["a"]).add("blub") }
+
+        // Asking for a private copy of one entry gives us a modifiable one and leaves the other
+        // owner - and the entries we did not ask for - alone.
+        val shared = assertNotNull(original["b"])
+        val private = assertNotNull(copy.getForUpdate("a"))
+        assertNotSame(original["a"], private)
+        assertFalse(private.isShared)
+        private.add("blub")
+
+        assertEquals(PowersetLattice.Element("bla", "blub"), copy["a"])
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
+        assertSame(shared, copy["b"])
+    }
+
+    @Test
+    fun testLubSharesEntries() {
+        val lattice =
+            ConcurrentMapLattice<String, PowersetLattice.Element<String>>(PowersetLattice())
+        val one = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val two = ConcurrentMapLattice.Element("b" to PowersetLattice.Element("foo"))
+
+        // A key which only one of the two sides has carries its value over unchanged, so the
+        // result shares it instead of copying it.
+        val result = runBlocking { lattice.lub(one, two) }
+        assertSame(one["a"], result["a"])
+        assertSame(two["b"], result["b"])
+        assertThrows<IllegalStateException> { assertNotNull(result["a"]).add("blub") }
+
+        // The in-place variant may not modify the value it took from `two` either.
+        val inPlace = runBlocking { lattice.lub(one, two, allowModify = true) }
+        assertSame(one, inPlace)
+        assertSame(two["b"], one["b"])
+        assertThrows<IllegalStateException> { assertNotNull(one["b"]).add("blub") }
     }
 
     @Test
