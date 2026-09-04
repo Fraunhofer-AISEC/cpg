@@ -116,7 +116,12 @@ fun StringPattern.mayMatch(regex: Regex): Boolean {
  * we can only decide it when the language can be [enumerate]d within a reasonable budget. It
  * returns a conservative `false` otherwise.
  *
- * TODO(Phase 2/4): record an `Assumption` when this is reachable from a node context.
+ * This pure, [Node]-free function cannot itself record an `Assumption` for that give-up case (a
+ * `StringPattern` is a plain value type, not a [de.fraunhofer.aisec.cpg.assumptions.HasAssumptions]
+ * - see the design doc's discussion of this trade-off). The query-API wrapper
+ *   `Node.stringMustMatch` (`cpg-analysis/query/StringQueries.kt`), which does have a node context,
+ *   records a `SoundnessAssumption` on its `QueryTree` whenever this returns `false` because
+ *   [enumerate] gave up, as opposed to a genuine, proven non-match.
  */
 fun StringPattern.mustMatch(regex: Regex): Boolean {
     val enumerated = enumerate(MUST_MATCH_ENUMERATION_LIMIT) ?: return false
@@ -124,7 +129,13 @@ fun StringPattern.mustMatch(regex: Regex): Boolean {
 }
 
 private const val MAY_MATCH_ENUMERATION_LIMIT = 1000
-private const val MUST_MATCH_ENUMERATION_LIMIT = 1000
+
+/**
+ * `internal`, not `private`: `Node.stringMustMatch` needs the exact same budget to determine
+ * whether a conservative `false` from [mustMatch] was a genuine proof of non-match or a give-up (in
+ * which case it must attach a soundness assumption).
+ */
+internal const val MUST_MATCH_ENUMERATION_LIMIT = 1000
 
 /**
  * The longest prefix that is guaranteed to be present in every string of this pattern's language.
