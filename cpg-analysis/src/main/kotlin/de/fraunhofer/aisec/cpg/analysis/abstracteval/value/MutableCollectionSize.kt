@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * This class implements the [Value] interface for tracking the size of mutable collections. It
  * provides several operations which can then be used for concrete implementations.
  */
-abstract class MutableCollectionSize : Value<LatticeInterval> {
+abstract class MutableCollectionSize : Value<NewIntervalLattice.Element, LatticeInterval> {
     fun createEmptyCollection(): LatticeInterval {
         return LatticeInterval.Bounded(0, 0)
     }

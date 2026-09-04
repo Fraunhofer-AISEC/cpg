@@ -375,7 +375,8 @@ class NewIntervalLattice() :
  */
 class AbstractIntervalEvaluator {
     /** The type of value being analyzed. Set during evaluation. */
-    private lateinit var analysisType: KClass<out Value<LatticeInterval>>
+    private lateinit var analysisType:
+        KClass<out Value<NewIntervalLattice.Element, LatticeInterval>>
 
     /**
      * Evaluates the interval of a value at the given [node], using the specified [targetType].
@@ -385,7 +386,10 @@ class AbstractIntervalEvaluator {
      * @return The computed [LatticeInterval] for the value at this node, or
      *   [LatticeInterval.BOTTOM] if not found.
      */
-    fun evaluate(node: Node, targetType: KClass<out Value<LatticeInterval>>): LatticeInterval {
+    fun evaluate(
+        node: Node,
+        targetType: KClass<out Value<NewIntervalLattice.Element, LatticeInterval>>,
+    ): LatticeInterval {
         val startNode = node.firstParentOrNull<Function>() ?: return LatticeInterval.BOTTOM
         return evaluate(startNode, node, targetType, LatticeInterval.BOTTOM)
     }
@@ -403,7 +407,7 @@ class AbstractIntervalEvaluator {
     fun evaluate(
         start: Node,
         targetNode: Node,
-        type: KClass<out Value<LatticeInterval>>,
+        type: KClass<out Value<NewIntervalLattice.Element, LatticeInterval>>,
         interval: LatticeInterval = LatticeInterval.BOTTOM, // TODO: Maybe should be top?
     ): LatticeInterval {
         analysisType = type

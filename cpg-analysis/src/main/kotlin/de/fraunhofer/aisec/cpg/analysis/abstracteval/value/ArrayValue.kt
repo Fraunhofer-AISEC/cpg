@@ -73,7 +73,7 @@ class ArraySizeEvaluator : ValueEvaluator() {
  * This class implements the [Value] interface for Arrays, tracking the size of the collection. We
  * assume that there is no operation that changes an array's size apart from re-declaring it.
  */
-class ArrayValue : Value<LatticeInterval> {
+class ArrayValue : Value<NewIntervalLattice.Element, LatticeInterval> {
     override fun applyEffect(
         lattice: TupleState<Any, NewIntervalLattice.Element>,
         state: TupleStateElement<Any, NewIntervalLattice.Element>,

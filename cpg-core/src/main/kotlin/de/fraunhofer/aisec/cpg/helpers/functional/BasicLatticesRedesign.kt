@@ -1092,16 +1092,27 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                         one.put(k, v)
                     } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
                         // This key already exists in "one" and the values in one and
-                        // two are different, so we have to compute the lub of the values
+                        // two are different, so we have to compute the lub of the values.
+                        // We must store the result back into the map rather than relying on
+                        // in-place mutation of `oneValue`: that only happens to work for inner
+                        // lattices whose `Element` is a mutable wrapper (e.g.
+                        // `NewIntervalLattice.Element`). An inner lattice whose `Element` is
+                        // immutable (e.g. `StringPattern`, see design decision D8 in
+                        // `docs/docs/CPG/impl/string-analysis.md`) returns a *new* value from
+                        // `lub` instead of mutating anything, and discarding that return value
+                        // here would silently drop every join for an already-present key.
                         one[k]?.let { oneValue ->
-                            innerLattice.lub(
-                                oneValue,
-                                v,
-                                allowModify = true,
-                                widen = widen,
-                                // We already run on $CPU_CORES coroutines, so we
-                                // don't need any additional ones
-                                1,
+                            one.put(
+                                k,
+                                innerLattice.lub(
+                                    oneValue,
+                                    v,
+                                    allowModify = true,
+                                    widen = widen,
+                                    // We already run on $CPU_CORES coroutines, so we
+                                    // don't need any additional ones
+                                    1,
+                                ),
                             )
                         }
                     }
@@ -1287,11 +1298,18 @@ open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) 
                     // Key only in `two` -> copy it across.
                     one.put(k, v)
                 } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                    // Key in both with different values -> lub them in-place.
+                    // Key in both with different values -> lub them in-place. The result must be
+                    // stored back explicitly rather than relying solely on in-place mutation of
+                    // `oneValue`: that only works for inner lattices whose `Element` is a mutable
+                    // wrapper (e.g. `NewIntervalLattice.Element`). An inner lattice whose
+                    // `Element` is immutable (e.g. `StringPattern`, see design decision D8 in
+                    // `docs/docs/CPG/impl/string-analysis.md`) returns a *new* value from `lub`
+                    // instead of mutating anything, and discarding that return value here would
+                    // silently drop every join for an already-present key.
                     one[k]?.let { oneValue ->
                         // The outer forEachMaybeParallel already spawns CPU_CORES coroutines;
                         // tell the inner lub not to spawn more.
-                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
+                        one[k] = innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
                     }
                 }
             }

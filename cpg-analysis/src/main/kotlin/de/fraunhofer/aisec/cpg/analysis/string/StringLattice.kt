@@ -59,6 +59,20 @@ class StringLattice(
      * `StringPattern`s are immutable, so [allowModify] has no observable effect: there is nothing
      * to mutate in place, and returning a freshly normalised term is exactly as cheap as
      * "modifying" `one` would be. The flag is accepted only to satisfy the [Lattice] interface.
+     *
+     * **Argument order when [widen] is `true`:** [Lattice.iterateEogInternal] calls this as
+     * `lub(one = newState, two = oldGlobalIt, widen = true)` at a loop head, i.e. [one] is the
+     * freshly recomputed value for this round and [two] is the already-widened baseline from the
+     * previous round. [widen] (this class's own function of that name) expects the *baseline* first
+     * and the *new* value second (see its KDoc: "if one already subsumes two: return one" - `one`
+     * is the stable side). We therefore call `widen(two, one)`, not `widen(one,
+     * two)` - [de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice.lub] makes the
+     * exact same swap (`twoElem.widen(oneElem)`) for the same reason. Getting this backwards does
+     * not break soundness (the join is still an over-approximation either way), but it breaks
+     * *termination*: [de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.widen]'s
+     * bound-jump-to-infinity logic only fires when the stable baseline is the receiver, so calling
+     * it with the roles swapped makes the recorded length grow by a small amount every round
+     * instead of jumping to `INFINITE` in one step - never reaching a fixpoint.
      */
     override suspend fun lub(
         one: StringPattern,
@@ -68,7 +82,7 @@ class StringLattice(
         concurrencyCounter: Int,
     ): StringPattern =
         if (widen) {
-            widen(one, two)
+            widen(two, one)
         } else {
             normalize(StringPattern.Union(setOf(one, two)), maxTermSize, maxTermDepth, maxUnionSize)
         }

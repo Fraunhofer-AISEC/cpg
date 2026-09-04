@@ -65,7 +65,7 @@ class IntegerIntervalEvaluator : ValueEvaluator() {
 }
 
 /** This class implements the [Value] interface for Integer values. */
-class IntegerValue : Value<LatticeInterval> {
+class IntegerValue : Value<NewIntervalLattice.Element, LatticeInterval> {
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(IntegerValue::class.java)
