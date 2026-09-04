@@ -283,4 +283,61 @@ class StringQueriesTest {
             "budget exhaustion must surface a SoundnessAssumption on the returned QueryTree",
         )
     }
+
+    /**
+     * `stringMustMatch`/`stringMayMatch` attach the [de.fraunhofer.aisec.cpg.query.stringValue]
+     * `QueryTree` only as a `children` entry, so an assumption recorded on that underlying tree
+     * (here: the `BUDGET_EXCEEDED` `SoundnessAssumption` from the 200-deep call chain, see
+     * [testStringValueSurfacesBudgetExceededAssumption]) must still be reachable via
+     * `relevantAssumptions()` on the `mustMatch`/`mayMatch` result, not silently dropped.
+     */
+    @Test
+    fun testStringMustMatchAndMayMatchSurfaceUnderlyingAssumptions() {
+        lateinit var topCall: Call
+        val chainDepth = 200
+        build { tu ->
+            for (i in 0 until chainDepth) {
+                newFunction("f$i", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("string"))
+                    func.type = computeType(func)
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newReturn { r ->
+                                r.returnValue =
+                                    if (i == chainDepth - 1) {
+                                        newLiteral("leaf", objectType("string"))
+                                    } else {
+                                        newCall(newReference("f${i + 1}"))
+                                    }
+                            }
+                        }
+                }
+            }
+            newFunction("entry", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newReturn { r ->
+                            topCall = newCall(newReference("f0"))
+                            r.returnValue = topCall
+                        }
+                    }
+            }
+        }
+
+        assertTrue(topCall.invokes.isNotEmpty(), "the call to f0 must have been resolved")
+
+        val mustMatchTree = topCall.stringMustMatch(Regex("leaf"))
+        assertTrue(
+            mustMatchTree.relevantAssumptions().isNotEmpty(),
+            "stringMustMatch must not drop the underlying stringValue's assumptions",
+        )
+
+        val mayMatchTree = topCall.stringMayMatch(Regex("leaf"))
+        assertTrue(
+            mayMatchTree.relevantAssumptions().isNotEmpty(),
+            "stringMayMatch must not drop the underlying stringValue's assumptions",
+        )
+    }
 }

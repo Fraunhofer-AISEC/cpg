@@ -25,13 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.analysis.string.MUST_MATCH_ENUMERATION_LIMIT
 import de.fraunhofer.aisec.cpg.analysis.string.StringEvaluatorConfig
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
-import de.fraunhofer.aisec.cpg.analysis.string.enumerate
 import de.fraunhofer.aisec.cpg.analysis.string.evaluateString
 import de.fraunhofer.aisec.cpg.analysis.string.mayMatch
-import de.fraunhofer.aisec.cpg.analysis.string.mustMatch
+import de.fraunhofer.aisec.cpg.analysis.string.mustMatchWithGiveUp
 import de.fraunhofer.aisec.cpg.analysis.string.unknownOrigins
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
@@ -83,8 +81,7 @@ fun Node.stringMustMatch(
 ): QueryTree<Boolean> {
     val patternTree = stringValue(config)
     val pattern = patternTree.value
-    val result = pattern.mustMatch(regex)
-    val gaveUp = !result && pattern.enumerate(MUST_MATCH_ENUMERATION_LIMIT) == null
+    val (result, gaveUp) = pattern.mustMatchWithGiveUp(regex)
 
     val queryTree =
         QueryTree(
@@ -93,6 +90,7 @@ fun Node.stringMustMatch(
             stringRepresentation =
                 "the string value of `${this.compactToString()}` (`$pattern`) must match `$regex`",
             node = this,
+            assumptions = patternTree.assumptions.toMutableSet(),
             operator = GenericQueryOperators.EVALUATE,
         )
     if (gaveUp) {
@@ -125,6 +123,7 @@ fun Node.stringMayMatch(
         stringRepresentation =
             "the string value of `${this.compactToString()}` (`$pattern`) may match `$regex`",
         node = this,
+        assumptions = patternTree.assumptions.toMutableSet(),
         operator = GenericQueryOperators.EVALUATE,
     )
 }

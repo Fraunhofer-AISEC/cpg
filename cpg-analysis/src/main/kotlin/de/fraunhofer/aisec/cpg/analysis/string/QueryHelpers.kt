@@ -123,9 +123,18 @@ fun StringPattern.mayMatch(regex: Regex): Boolean {
  *   records a `SoundnessAssumption` on its `QueryTree` whenever this returns `false` because
  *   [enumerate] gave up, as opposed to a genuine, proven non-match.
  */
-fun StringPattern.mustMatch(regex: Regex): Boolean {
-    val enumerated = enumerate(MUST_MATCH_ENUMERATION_LIMIT) ?: return false
-    return enumerated.isNotEmpty() && enumerated.all { regex.matches(it) }
+fun StringPattern.mustMatch(regex: Regex): Boolean = mustMatchWithGiveUp(regex).first
+
+/**
+ * Same as [mustMatch], but also reports whether the conservative `false` (if any) is a genuine
+ * proof of non-match or a give-up because [enumerate] could not enumerate the pattern's language
+ * within budget. `internal`: shared by [mustMatch] and `Node.stringMustMatch`
+ * (`cpg-analysis/query/StringQueries.kt`) so that [enumerate] - potentially expensive, as it
+ * recurses over the pattern's `Concat`/`Union` structure - is only computed once per call.
+ */
+internal fun StringPattern.mustMatchWithGiveUp(regex: Regex): Pair<Boolean, Boolean> {
+    val enumerated = enumerate(MUST_MATCH_ENUMERATION_LIMIT) ?: return false to true
+    return (enumerated.isNotEmpty() && enumerated.all { regex.matches(it) }) to false
 }
 
 private const val MAY_MATCH_ENUMERATION_LIMIT = 1000
