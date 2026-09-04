@@ -26,9 +26,10 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.lang.UnsupportedOperationException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 
@@ -184,17 +185,42 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
         get() = map?.size ?: 0
 }
 
+/**
+ * The concurrent sibling of [IdentitySet]: a [MutableSet] which compares its elements by reference
+ * instead of by [Object.equals] and which is safe to use from multiple threads.
+ *
+ * All elements live in a *single* [ConcurrentHashMap], keyed by [keyFor] of the element. The
+ * default key is a reference-equality wrapper, so - as in [IdentitySet] - only the very same object
+ * counts as already contained. Subclasses may override [keyFor] to index their elements
+ * differently, for example [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element],
+ * which uses structural keys for the element types whose reference identity is not meaningful.
+ *
+ * Keeping everything in one map is what makes this class cheap enough to allocate millions of times
+ * during a points-to analysis: a set holding a single element costs the set itself, the map, its
+ * table and one key wrapper, and nothing else.
+ */
 open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
-    // Note that we must not inflate [expectedMaxSize] here: a [ConcurrentHashMap] already reserves
-    // room for its load factor internally, so multiplying the size again doubles the table array of
-    // every single set. There are millions of these sets in a points-to analysis, so this matters.
-    private val map: ConcurrentIdentityHashMap<T, Int> = ConcurrentIdentityHashMap(expectedMaxSize)
-    private val counter = AtomicInteger()
+    /**
+     * The backing map: the key is [keyFor] of the element, the value is the element itself (boxed
+     * into [NullElement] if it is `null`, since a [ConcurrentHashMap] cannot hold `null` values).
+     *
+     * Note that we must not inflate [expectedMaxSize] here: a [ConcurrentHashMap] already reserves
+     * room for its load factor internally, so multiplying the size again doubles the table array of
+     * every single set. There are millions of these sets in a points-to analysis, so this matters.
+     */
+    private val map: ConcurrentHashMap<Any, Any> = ConcurrentHashMap(expectedMaxSize)
+
+    /**
+     * Returns the key under which [element] is stored. Two elements are the same element for this
+     * set if and only if their keys are equal, so this method defines the set's notion of equality.
+     *
+     * The default implementation wraps the element in a reference-equality key.
+     */
+    protected open fun keyFor(element: T): Any = PointsToPass.IdKey(element)
 
     override operator fun contains(element: T): Boolean {
-        // We are using the backing reference-equality based map to check, if the element is already
-        // in the set.
-        return map.containsKey(element)
+        // We are using the backing map to check, if the element is already in the set.
+        return map.containsKey(keyFor(element))
     }
 
     override fun equals(other: Any?): Boolean {
@@ -205,34 +231,24 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 
     override fun add(element: T): Boolean {
         // Since we are a Set, we only want to add elements that are not already there
-        if (!contains(element)) {
-            map.put(element, counter.addAndGet(1))
-            return true
-        }
-
-        return false
+        return map.putIfAbsent(keyFor(element), box(element)) == null
     }
 
     /**
-     * Adds all [elements] to this [IdentitySet] without checking if they are already present. This
-     * should only be used if this set is empty!
+     * Adds all [elements] to this [ConcurrentIdentitySet] without checking if they are already
+     * present. This should only be used if this set is empty!
+     *
+     * Note that we still have to compute [keyFor] for every element: the keys of another set were
+     * computed by *its* [keyFor] and are not necessarily the keys this set would use.
      */
-    fun addAllWithoutCheck(elements: ConcurrentIdentitySet<T>) {
-        if (map.isEmpty()) {
-            map.copyFrom(elements.map)
-            counter.set(elements.counter.get())
-            return
-        }
-
-        // We rely on the input set and add everything without checking if an element is already
-        // present.
+    open fun addAllWithoutCheck(elements: Iterable<T>) {
         for (element in elements) {
-            map.put(element, counter.addAndGet(1))
+            map.put(keyFor(element), box(element))
         }
     }
 
     override fun containsAll(elements: Collection<T>): Boolean {
-        return elements.all { map.containsKey(it) }
+        return elements.all { map.containsKey(keyFor(it)) }
     }
 
     override fun isEmpty(): Boolean {
@@ -240,16 +256,14 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     }
 
     override fun iterator(): MutableIterator<T> {
-        return (map.keys as MutableSet).iterator()
-    }
+        val iterator = map.values.iterator()
+        return object : MutableIterator<T> {
+            override fun hasNext(): Boolean = iterator.hasNext()
 
-    /**
-     * Returns the contents of this [IdentitySet] as a sorted [List] according to order the nodes
-     * were inserted to. This is particularly useful, if you need to look up values in the list
-     * according to their "closeness" to the root AST node.
-     */
-    fun toSortedList(): List<T> {
-        return map.entries.sortedBy { it.value }.map { it.key }
+            override fun next(): T = unbox(iterator.next())
+
+            override fun remove() = iterator.remove()
+        }
     }
 
     override fun addAll(elements: Collection<T>): Boolean {
@@ -270,11 +284,19 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     }
 
     override fun remove(element: T): Boolean {
-        return map.remove(element) != null
+        return map.remove(keyFor(element)) != null
     }
 
     override fun removeIf(filter: Predicate<in T>): Boolean {
-        return map.removeKeyIf(filter)
+        var removed = false
+        val iterator = map.values.iterator()
+        while (iterator.hasNext()) {
+            if (filter.test(unbox(iterator.next()))) {
+                iterator.remove()
+                removed = true
+            }
+        }
+        return removed
     }
 
     override fun removeAll(elements: Collection<T>): Boolean {
@@ -294,13 +316,26 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
         throw UnsupportedOperationException()
     }
 
+    /**
+     * Note that we only hash the *keys*: the elements themselves may have an expensive (and, for
+     * [Node]s, deeply structural) [hashCode], and summing the keys is enough to stay consistent
+     * with [equals], which also only looks at the keys.
+     */
     override fun hashCode(): Int {
-        return map.hashCode()
+        return map.keys.sumOf { it.hashCode() }
     }
 
     override val size: Int
         get() = map.size
+
+    private fun box(element: T): Any = element ?: NullElement
+
+    @Suppress("UNCHECKED_CAST")
+    private fun unbox(value: Any): T = if (value === NullElement) null as T else value as T
 }
+
+/** Marker for a `null` element, which a [ConcurrentHashMap] cannot store as a value. */
+private object NullElement
 
 /** A shared, allocation-free empty [MutableIterator], used for empty [IdentitySet]s. */
 private object EmptyMutableIterator : MutableIterator<Any?> {
