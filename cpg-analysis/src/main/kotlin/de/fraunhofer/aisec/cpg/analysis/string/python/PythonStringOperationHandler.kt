@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
+import de.fraunhofer.aisec.cpg.analysis.string.charsOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
 import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
@@ -111,7 +112,10 @@ class PythonStringOperationHandler : StringOperationHandler {
     /**
      * `"...".format(a, b, name=c)`. Only handled when the format string itself is a resolvable
      * constant (returns `null` otherwise, so the generic fallback in [StringEvaluator] applies).
-     * Supports positional (`{0}`, `{}`) and named (`{name}`) placeholders; a format-spec suffix
+     * Supports positional (`{0}`, `{}`) and named (`{name}`) placeholders, and Python's `{{`/`}}`
+     * brace-escaping (`"{{x}}".format()` is the literal string `"{x}"`, not a substitution field
+     * named `"x"`) - a single regex distinguishes `{{`, `}}` and `{field}` tokens so that escapes
+     * adjacent to a real placeholder (e.g. `"{{{0}}}"`) are handled correctly. A format-spec suffix
      * (`{0:>10}`) is recognised but not honoured (padding/alignment is not modelled, only the
      * placeholder substitution itself). An out-of-range positional index or an unresolvable named
      * argument becomes an `Unknown` segment rather than failing the whole call.
@@ -123,25 +127,31 @@ class PythonStringOperationHandler : StringOperationHandler {
         val parts = mutableListOf<StringPattern>()
         var autoIndex = 0
         var lastEnd = 0
-        for (m in FORMAT_PLACEHOLDER.findAll(formatString)) {
+        for (m in FORMAT_TOKEN.findAll(formatString)) {
             if (m.range.first > lastEnd) {
                 parts.add(const(formatString.substring(lastEnd, m.range.first)))
             }
-            val field = m.groupValues[1].substringBefore(':')
-            val replacement =
-                when {
-                    field.isEmpty() -> call.argumentByNameOrPosition(position = autoIndex++)
-                    field.toIntOrNull() != null ->
-                        call.argumentByNameOrPosition(position = field.toInt())
-                    else -> call.argumentByNameOrPosition(name = field)
-                }
-            parts.add(
-                replacement?.let { evaluate(it) }
-                    ?: StringPattern.Unknown(
-                        origin = call,
-                        reason = StringPattern.Reason.UNSUPPORTED,
+            when (m.value) {
+                "{{" -> parts.add(const("{"))
+                "}}" -> parts.add(const("}"))
+                else -> {
+                    val field = m.value.substring(1, m.value.length - 1).substringBefore(':')
+                    val replacement =
+                        when {
+                            field.isEmpty() -> call.argumentByNameOrPosition(position = autoIndex++)
+                            field.toIntOrNull() != null ->
+                                call.argumentByNameOrPosition(position = field.toInt())
+                            else -> call.argumentByNameOrPosition(name = field)
+                        }
+                    parts.add(
+                        replacement?.let { evaluate(it) }
+                            ?: StringPattern.Unknown(
+                                origin = call,
+                                reason = StringPattern.Reason.UNSUPPORTED,
+                            )
                     )
-            )
+                }
+            }
             lastEnd = m.range.last + 1
         }
         if (lastEnd < formatString.length) {
@@ -176,12 +186,22 @@ class PythonStringOperationHandler : StringOperationHandler {
     }
 
     /**
-     * `s.replace(old, new)`. Exact when the receiver and both arguments are constants; otherwise
-     * over-approximated as `Concat(constantPrefix(s), Unknown)`, and a
-     * [AssumptionType]`.SoundnessAssumption` is recorded on [call] itself (rather than via the
-     * root-node mechanism [StringEvaluator] uses for budget exhaustion), since the imprecision here
-     * is intrinsic to this one call and does not depend on the evaluator's overall budget - scoping
-     * it to the call is more precise.
+     * `s.replace(old, new)` / `s.replace(old, new, count)`. Exact when the receiver, `old`, `new`,
+     * and (if present) `count` are all constants, and `old` is non-empty - Python's semantics for
+     * an empty `old` (inserting `new` between every character) are not modelled exactly and always
+     * fall through to the over-approximation below.
+     *
+     * Otherwise over-approximated, and a [AssumptionType]`.SoundnessAssumption` is recorded on
+     * [call] itself (rather than via the root-node mechanism [StringEvaluator] uses for budget
+     * exhaustion), since the imprecision here is intrinsic to this one call and does not depend on
+     * the evaluator's overall budget - scoping it to the call is more precise.
+     *
+     * The over-approximation is `Concat(constantPrefix(s), Unknown)` **only** when `old` is a
+     * known, non-empty constant that provably cannot start a match within that prefix (see
+     * [cannotOccurWithinPrefix]) - otherwise a match of `old` could straddle or lie entirely inside
+     * the claimed-fixed prefix and rewrite it, so the sound fallback is a coarser `Unknown` whose
+     * `charSet` is the union of the receiver's and `new`'s character sets and whose length is
+     * unbounded.
      */
     private fun handleReplace(call: MemberCall, evaluate: (Node) -> StringPattern): StringPattern? {
         val base = call.base ?: return null
@@ -195,43 +215,121 @@ class PythonStringOperationHandler : StringOperationHandler {
         val receiverConst = receiver.asConstantOrNull()
         val oldConst = old.asConstantOrNull()
         val newConst = new.asConstantOrNull()
-        if (receiverConst != null && oldConst != null && newConst != null) {
-            return const(receiverConst.replace(oldConst, newConst))
+
+        val countArg = call.argumentByNameOrPosition(name = "count", position = 2)
+        val countConst = countArg?.let { evaluate(it).asConstantOrNull()?.toIntOrNull() }
+
+        if (
+            receiverConst != null &&
+                oldConst != null &&
+                oldConst.isNotEmpty() &&
+                newConst != null &&
+                (countArg == null || countConst != null)
+        ) {
+            return const(
+                if (countArg == null) receiverConst.replace(oldConst, newConst)
+                else boundedReplace(receiverConst, oldConst, newConst, countConst!!)
+            )
         }
 
         call.assume(
             AssumptionType.SoundnessAssumption,
-            "We assume that the result of the call to `replace` at `$call` is over-approximated " +
-                "by its known constant prefix followed by `.*`, because the receiver, the `old`, " +
-                "or the `new` argument is not a fully known constant. To verify this assumption, " +
-                "we need to check whether narrowing these values (e.g. by increasing the " +
-                "evaluator's budget) changes the result.",
+            "We assume that the result of the call to `replace` at `$call` is over-approximated, " +
+                "because the receiver, the `old`, the `new`, or the `count` argument is not a " +
+                "fully known constant, or `old` is the empty string (whose replace semantics are " +
+                "not modelled exactly). To verify this assumption, we need to check whether " +
+                "narrowing these values (e.g. by increasing the evaluator's budget) changes the " +
+                "result.",
             scope = call,
         )
         val prefix = receiver.constantPrefix()
-        return concat(
-            const(prefix),
-            StringPattern.Unknown(origin = call, reason = StringPattern.Reason.UNSUPPORTED),
-        )
+        return if (
+            oldConst != null && oldConst.isNotEmpty() && cannotOccurWithinPrefix(prefix, oldConst)
+        ) {
+            concat(
+                const(prefix),
+                StringPattern.Unknown(origin = call, reason = StringPattern.Reason.UNSUPPORTED),
+            )
+        } else {
+            StringPattern.Unknown(
+                origin = call,
+                reason = StringPattern.Reason.UNSUPPORTED,
+                charSet = charSetOf(receiver) union charSetOf(new),
+                length = LatticeInterval.TOP,
+            )
+        }
     }
 
     /**
-     * `s.strip()`/`s.lstrip()`/`s.rstrip()`. Exact when the receiver is constant. Otherwise, since
-     * stripping can only shrink (or keep) the length, never grow it, and can only ever remove
-     * characters that were already admitted by the receiver's [CharSet], a sound over-approximation
-     * is `Unknown` with the receiver's [CharSet] and a length interval of `[0,
+     * Bounded, left-to-right, non-overlapping replacement of up to [count] occurrences of [old] in
+     * [receiver] with [new], matching Python's `str.replace(old, new, count)`. Requires `old` to be
+     * non-empty.
+     */
+    private fun boundedReplace(receiver: String, old: String, new: String, count: Int): String {
+        if (count <= 0) return receiver
+        val sb = StringBuilder()
+        var i = 0
+        var remaining = count
+        while (i < receiver.length) {
+            if (remaining > 0 && receiver.startsWith(old, i)) {
+                sb.append(new)
+                i += old.length
+                remaining--
+            } else {
+                sb.append(receiver[i])
+                i++
+            }
+        }
+        return sb.toString()
+    }
+
+    /**
+     * `true` iff [old] provably cannot start a match within [prefix], including a match that starts
+     * inside [prefix] and extends past its end - the condition under which `Concat(prefix,
+     * Unknown)` soundly over-approximates `receiver.replace(old, new)` when `receiver`'s known
+     * prefix is exactly [prefix]. Conservative: returns `false` (i.e. "cannot rule it out")
+     * whenever unsure.
+     */
+    private fun cannotOccurWithinPrefix(prefix: String, old: String): Boolean {
+        if (prefix.contains(old)) return false
+        val maxOverlap = minOf(prefix.length, old.length - 1)
+        for (k in 1..maxOverlap) {
+            if (prefix.endsWith(old.substring(0, k))) return false
+        }
+        return true
+    }
+
+    /**
+     * `s.strip()`/`s.lstrip()`/`s.rstrip()`, optionally with a `chars` argument selecting which
+     * characters to strip (default: whitespace). Exact when the receiver is constant and, if
+     * present, `chars` resolves to a constant string. Otherwise, since stripping can only shrink
+     * (or keep) the length, never grow it, and can only ever remove characters that were already
+     * admitted by the receiver's [CharSet] (regardless of which characters `chars` selects - that
+     * only affects *how much* is stripped, never *which* characters could remain), a sound
+     * over-approximation is `Unknown` with the receiver's [CharSet] and a length interval of `[0,
      * receiverLength.upper]`.
      */
     private fun handleStrip(call: MemberCall, evaluate: (Node) -> StringPattern): StringPattern? {
         val base = call.base ?: return null
         val receiver = evaluate(base)
         val receiverConst = receiver.asConstantOrNull()
-        if (receiverConst != null) {
+        val charsArg = call.argumentByNameOrPosition(name = "chars", position = 0)
+        val charsConst = charsArg?.let { evaluate(it).asConstantOrNull() }
+
+        if (receiverConst != null && (charsArg == null || charsConst != null)) {
             val stripped =
-                when (call.name.localName) {
-                    "lstrip" -> receiverConst.trimStart()
-                    "rstrip" -> receiverConst.trimEnd()
-                    else -> receiverConst.trim()
+                if (charsConst != null) {
+                    when (call.name.localName) {
+                        "lstrip" -> receiverConst.trimStart { it in charsConst }
+                        "rstrip" -> receiverConst.trimEnd { it in charsConst }
+                        else -> receiverConst.trim { it in charsConst }
+                    }
+                } else {
+                    when (call.name.localName) {
+                        "lstrip" -> receiverConst.trimStart()
+                        "rstrip" -> receiverConst.trimEnd()
+                        else -> receiverConst.trim()
+                    }
                 }
             return const(stripped)
         }
@@ -263,10 +361,9 @@ class PythonStringOperationHandler : StringOperationHandler {
 
     /**
      * Maps every [StringPattern.Const] leaf of [p] through [f], re-normalising the result via the
-     * smart constructors. [StringPattern.Unknown] leaves have their [CharSet] mapped character-by-
-     * character (best-effort: a character that maps to more than one character under [f], e.g.
-     * German `ß` uppercasing to `SS`, is left unmapped, which only affects [CharSet.Chars]
-     * precision, never soundness of the overall [StringPattern.length] bound).
+     * smart constructors. [StringPattern.Unknown] leaves have their [CharSet] mapped via
+     * [mapCharSet], which soundly accounts for characters whose full-string case mapping under [f]
+     * produces more than one character (e.g. German `ß` uppercasing to `"SS"`).
      *
      * Provably terminating: this is a structural recursion over [p], which is already a finite term
      * (bounded by the evaluator's `maxTermSize`/`maxTermDepth`) - no new nesting is introduced.
@@ -281,18 +378,24 @@ class PythonStringOperationHandler : StringOperationHandler {
             is StringPattern.Unknown -> p.copy(charSet = mapCharSet(p.charSet, f))
         }
 
+    /**
+     * Maps [charSet] through [f], applied to each character's full-string representation (so that a
+     * character whose mapping under [f] is itself multiple characters, e.g. German `ß` uppercasing
+     * to `"SS"`, contributes *all* of those resulting characters). Never drops a possible output
+     * character - dropping would under-approximate the resulting [CharSet], violating this domain's
+     * soundness invariant (see the design doc: results must always be supersets of what is actually
+     * reachable).
+     */
     private fun mapCharSet(charSet: CharSet, f: (String) -> String): CharSet =
         when (charSet) {
             is CharSet.Empty,
             is CharSet.Any -> charSet
             is CharSet.Chars ->
-                CharSet.Chars(
-                    charSet.chars.mapNotNull { c -> f(c.toString()).singleOrNull() }.toSet()
-                )
+                charsOf(charSet.chars.flatMap { c -> f(c.toString()).toList() }.toSet())
         }
 
     companion object {
-        private val FORMAT_PLACEHOLDER = Regex("\\{([^{}]*)\\}")
+        private val FORMAT_TOKEN = Regex("\\{\\{|\\}\\}|\\{[^{}]*\\}")
         private val STRIP_METHODS = setOf("strip", "lstrip", "rstrip")
         private val CASE_METHODS = setOf("upper", "lower")
     }

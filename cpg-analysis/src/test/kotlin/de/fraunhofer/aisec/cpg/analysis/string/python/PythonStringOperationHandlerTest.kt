@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.analysis.string.python
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.analysis.string.CharSet
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.const
+import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.union
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
@@ -517,5 +519,357 @@ class PythonStringOperationHandlerTest {
 
         val pattern = ret.returnValue!!.evaluatePythonString()
         assertIs<StringPattern.Unknown>(pattern)
+    }
+
+    /**
+     * `("cat" + p).replace("at", "XX")` where `p` is an unknown parameter. `"at"` occurs inside the
+     * receiver's known constant prefix `"cat"` (e.g. a real receiver value `"catfoo"` would become
+     * `"cXXfoo"`, which does not start with `"cat"`), so the narrow `Concat(prefix, Unknown)`
+     * over-approximation would be unsound here. The handler must fall back to the coarser `Unknown`
+     * that does not claim `"cat"` as a guaranteed prefix.
+     */
+    @Test
+    fun testReplaceOldOverlappingPrefixFallsBackToCoarseUnknown() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                val param = newParameter("p", objectType("string"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "replace",
+                                        newBinaryOperator("+") { op ->
+                                            op.lhs = newLiteral("cat", objectType("string"))
+                                            op.rhs = newReference(param.name)
+                                        },
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("at", objectType("string"))
+                                    it.arguments += newLiteral("XX", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertTrue(
+            pattern.constantPrefix() != "cat",
+            "expected the coarse fallback (no guaranteed \"cat\" prefix), got $pattern",
+        )
+    }
+
+    /**
+     * `("cat" + p).replace("dog", "XX")` where `p` is unknown. `"dog"` cannot occur within, or
+     * straddle the end of, the known prefix `"cat"`, so the narrow `Concat(prefix, Unknown)`
+     * over-approximation remains sound and should still be used - this is the precision-retention
+     * counterpart to [testReplaceOldOverlappingPrefixFallsBackToCoarseUnknown].
+     */
+    @Test
+    fun testReplaceOldNotInPrefixKeepsNarrowOverApproximation() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                val param = newParameter("p", objectType("string"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "replace",
+                                        newBinaryOperator("+") { op ->
+                                            op.lhs = newLiteral("cat", objectType("string"))
+                                            op.rhs = newReference(param.name)
+                                        },
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("dog", objectType("string"))
+                                    it.arguments += newLiteral("XX", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertEquals("cat", pattern.constantPrefix())
+    }
+
+    /**
+     * `"cat".replace("", "X")`. Python's semantics for an empty `old` (inserting `new` between
+     * every character) are not modelled exactly; the handler must fall back to the
+     * over-approximation rather than silently producing a wrong constant (e.g. by treating it as a
+     * no-op).
+     */
+    @Test
+    fun testReplaceWithEmptyOldFallsBackToOverApproximation() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "replace",
+                                        newLiteral("cat", objectType("string")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("", objectType("string"))
+                                    it.arguments += newLiteral("X", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertTrue(
+            pattern !is StringPattern.Const,
+            "expected the over-approximation for empty `old`, got $pattern",
+        )
+    }
+
+    /** `"aaaa".replace("a", "b", 2)` with a constant `count` computes the bounded exact result. */
+    @Test
+    fun testReplaceWithConstantCount() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "replace",
+                                        newLiteral("aaaa", objectType("string")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                    it.arguments += newLiteral(2, objectType("int"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertEquals(const("bbaa"), pattern)
+    }
+
+    /**
+     * `"aaaa".replace("a", "b", n)` where `n` is an unresolvable parameter must not silently do a
+     * replace-all; it must fall back to the over-approximation instead.
+     */
+    @Test
+    fun testReplaceWithNonConstantCountFallsBackToOverApproximation() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                val param = newParameter("n", objectType("int"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "replace",
+                                        newLiteral("aaaa", objectType("string")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                    it.arguments += newReference(param.name)
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertTrue(
+            pattern !is StringPattern.Const,
+            "expected the over-approximation for a non-constant `count`, got $pattern",
+        )
+    }
+
+    /**
+     * `x.strip().upper()` where `x` is branch-dependent between `"ß"` and `"q"`. After `.strip()`
+     * this is an `Unknown` whose `CharSet` is `{ß, q}`; `.upper()` must map that `CharSet` through
+     * the full-string uppercase mapping (`"ß".uppercase() == "SS"`), not a single-character
+     * mapping, so the resulting `CharSet` must admit `'S'` - dropping it would under-approximate
+     * the possible outputs.
+     */
+    @Test
+    fun testUpperOnUnknownWithMultiCharCaseMapping() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("helper", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                newParameter("cond", objectType("bool"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("x", objectType("string"), holder = decl) {
+                                it.isImplicitInitializerAllowed = true
+                            }
+                        }
+                        block.statements += newIfElse { ifElse ->
+                            ifElse.condition = newReference("cond")
+                            ifElse.thenStatement =
+                                newBlock(enterScope = true) { thenBlock ->
+                                    thenBlock.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("x")),
+                                            listOf(newLiteral("ß", objectType("string"))),
+                                        )
+                                }
+                            ifElse.elseStatement =
+                                newBlock(enterScope = true) { elseBlock ->
+                                    elseBlock.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("x")),
+                                            listOf(newLiteral("q", objectType("string"))),
+                                        )
+                                }
+                        }
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "upper",
+                                        newMemberCall(newMemberAccess("strip", newReference("x"))),
+                                    )
+                                )
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Unknown>(pattern)
+        val charSet = pattern.charSet
+        assertIs<CharSet.Chars>(charSet)
+        assertTrue(
+            'S' in charSet.chars,
+            "expected the charset to admit 'S' (from \"ß\".uppercase() == \"SS\"), got $charSet",
+        )
+    }
+
+    /** `"xxhixx".strip("x")` with a constant `chars` argument strips only `'x'`, not whitespace. */
+    @Test
+    fun testStripWithConstantCharsArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "strip",
+                                        newLiteral("xxhixx", objectType("string")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("x", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertEquals(const("hi"), pattern)
+    }
+
+    /** `"{{x}}".format()` must resolve to the literal `Const("{x}")`, not a substitution field. */
+    @Test
+    fun testFormatEscapedBraces() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "format",
+                                        newLiteral("{{x}}", objectType("string")),
+                                    )
+                                )
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertEquals(const("{x}"), pattern)
+    }
+
+    /**
+     * `"{{{0}}}".format("v")` combines escaped braces adjacent to a real placeholder: the result
+     * must be the literal `"{"`, followed by the substituted `"v"`, followed by the literal `"}"`.
+     */
+    @Test
+    fun testFormatEscapedBracesAdjacentToPlaceholder() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "format",
+                                        newLiteral("{{{0}}}", objectType("string")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("v", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertEquals(const("{v}"), pattern)
     }
 }
