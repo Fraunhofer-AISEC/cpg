@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -41,8 +42,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 interface Value<T> {
     /** Applies the effect of a Node to the interval containing its possible values. */
     fun applyEffect(
-        lattice: TupleState<Any>,
-        state: TupleStateElement<Any>,
+        lattice: TupleState<Any, NewIntervalLattice.Element>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
         node: Node,
         edge: EvaluationOrder? = null,
         computeWithoutPush: Boolean = false,
