@@ -128,74 +128,139 @@ class StringLattice(
      * ```
      * widen(one, two):
      *   if one already subsumes two: return one   // no growth, already a fixpoint
-     *   if one is Unknown: return Unknown(..., charSet = one.charSet union charSet(two),
-     *                                     length = one.length.widen(length(two)))
+     *   return alignAndWiden(one, two)
+     *
+     * alignAndWiden(one, two):
+     *   if one == two: return one                              // fixpoint, no growth here
+     *   if one is Unknown or two is Unknown: return widenLeaves(one, two)
+     *   if one, two are same-arity Concat/matching Star/both Union: recurse pairwise, rebuild
+     *   otherwise: growWiden(one, two)                          // shape genuinely differs
+     *
+     * growWiden(one, two):
      *   j = lub(one, two)
      *   if size(j) <= maxTermSize && depth(j) <= maxTermDepth: return j
      *   if two matches Concat(one, x) structurally: return Concat(one, Star(x))
      *   if two matches Concat(x, one) structurally: return Concat(Star(x), one)
+     *   return widenLeaves(one, two)
+     *
+     * widenLeaves(one, two):
      *   return Unknown(origin = commonOrigin(one, two), reason = WIDENED,
      *                  charSet = charSet(one) union charSet(two), length = length(one).widen(length(two)))
      * ```
      *
-     * The `one is Unknown` branch is not in the original design-doc pseudocode but is required for
-     * termination: `two` is itself typically produced by a plain (non-widening) [lub]/[normalize]
-     * call, which has its *own* independent size-based auto-collapse (`normalize`'s step 8). That
-     * collapse computes a fresh, exact `charSet`/`length` from whatever term it happens to see,
-     * with no memory of earlier collapses - so on its own it is only non-decreasing, never jumps to
-     * a fixpoint. If `one` is already an `Unknown` (the sentinel that we have already given up on
-     * exact structure once), the *only* sound way to guarantee this converges is to always widen
-     * its `length`/`charSet` against `two`'s, unconditionally - `size(j) <= maxTermSize` would
-     * otherwise almost always hold trivially in this state (an `Unknown` union anything is tiny),
-     * and we would never reach [LatticeInterval.widen]'s infinity-jump. See
-     * [WideningTerminationTest] for the ascending chain this specifically guards against.
+     * **Why the structural recursion is needed.** `two` is itself typically produced by a plain
+     * (non-widening) [lub]/[normalize] call, which has its *own* independent size-based
+     * auto-collapse (`normalize`'s step 8). That collapse computes a fresh, exact
+     * `charSet`/`length` `Unknown` from whatever term it happens to see, with no memory of earlier
+     * collapses. If that fresh `Unknown` only ever got compared against `one` as a *whole* (the
+     * original, buggy version of this function), the top-level `Union` dedup in
+     * [structuralNormalize] can find that the fresh `Unknown` already subsumes every alternative
+     * contributed by `one`'s history and silently drop them - without ever invoking
+     * [LatticeInterval.widen] on the leaf that actually needs it. The term's *shape* then repeats
+     * identically every iteration (so the outer `size(j) <= maxTermSize` guard trivially holds
+     * forever), while a `length`/`charSet` buried at a leaf position keeps growing by a fresh,
+     * unwidened recomputation each time - never stabilising. See
+     * [WideningTerminationTest.testUnionWrappedGrowingTailStabilizes] for the ascending chain this
+     * specifically guards against.
      *
-     * **Termination sketch.** An ascending chain `t0 <= t1 <= t2 <= ...` is produced by repeated
-     * calls `t(i+1) = widen(t(i), s(i))` for some sequence of "one more step" values `s(i)`.
-     * Consider what happens once a call reaches the size/depth bound (every unbounded chain must,
-     * since [lub] alone strictly grows a term that has not converged):
-     * 1. **Star-introduction case.** `t(i+1) = Concat(t(i), Star(x))` (or the symmetric prefix
-     *    case) is only reached when `two` is structurally `Concat(one, x)`, i.e. it re-parses as
-     *    `t(i)` followed by an extra `x`. `t(i+1)` replaces the *growing* part `x` (which increases
-     *    in size every step of an unbounded chain, or the chain would already have converged under
-     *    plain `lub`) with `Star(x)`, whose language covers zero-or-more repeats of `x` and
-     *    therefore already covers any future `Concat(x, x, ..., x)` suffix without needing to grow
-     *    again. So a later call `widen(t(i+1), s(i+1))` where `s(i+1)` again grows the same tail
-     *    either (a) is already subsumed by `t(i+1)` and `lub` alone returns something of bounded
-     *    size (the `x` part does not need to change), or (b) hits the size/depth guard on the
-     *    *candidate* `Concat(one, Star(x))` itself - which we check explicitly before returning
-     *    it - and falls through to the `Unknown` case below instead of ever producing an
-     *    ever-growing `Star(Star(...))` nesting. Either way, the term stops growing after at most
-     *    one more widening step.
-     * 2. **Unknown fallback.** Once we reach `Unknown`, every later call takes the `one is Unknown`
-     *    branch above, which only touches its two components: [CharSet] has finite height (`Empty
-     *    <= Chars <= Any`, and `Chars` can only grow by adding characters up to
-     *    [CharSet.MAX_EXPLICIT] before collapsing to `Any`), so repeated `union`s stabilise in at
-     *    most `MAX_EXPLICIT + 2` steps.
-     *    [de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.widen] is already proven to
-     *    terminate (it only ever pushes a bound to `NEGATIVE_INFINITE`/`INFINITE`, each bound can
-     *    do that at most once). Once both components stop changing, `Unknown(...)` is structurally
-     *    equal to the previous result - and the `one already subsumes two` check at the top
-     *    short-circuits to `one` even before recomputing it, i.e. a fixpoint of `widen`.
+     * `alignAndWiden` fixes this by recursing into corresponding sub-terms of `one` and `two`
+     * *before* any collapse can hide the comparison, and widening (rather than exact-recomputing)
+     * at every position where either side is already an `Unknown` - not just when the entire term
+     * is.
      *
-     * Both branches therefore turn an unbounded ascending chain into one that stabilises after a
-     * bounded number of steps, which is exactly what [WideningTerminationTest] checks empirically.
+     * **Termination sketch.**
+     * 1. **The recursion in `alignAndWiden` itself is finite.** Every recursive call either (a)
+     *    hits the `one == two` fixpoint (no further recursion), (b) hits the `Unknown`-vs-anything
+     *    case (no further recursion - it computes [widenLeaves] directly), or (c) recurses into
+     *    *strictly smaller* children of a matching `Concat`/`Union`/`Star` shape. So the recursion
+     *    depth is bounded by the depth of the smaller of `one` and `two`, and it always terminates.
+     * 2. **The sequence of widen calls across fixpoint iterations converges.** Consider any
+     *    position in the term that would otherwise grow forever. Once a call at that position takes
+     *    the `Unknown`-vs-anything branch, every later call at the same position takes it again (an
+     *    `Unknown` stays an `Unknown` under this branch), which only touches two finite-height
+     *    components: [CharSet] (`Empty <= Chars <= Any`, `Chars` can only grow up to
+     *    [CharSet.MAX_EXPLICIT] before collapsing to `Any`) and
+     *    [de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.widen] (already proven to
+     *    terminate: each bound can jump to `NEGATIVE_INFINITE`/`INFINITE` at most once). Once both
+     *    stabilise, `widenLeaves(...)` reproduces the same `Unknown`, and the smart constructors
+     *    that rebuild the enclosing `Concat`/`Union`/`Star` pass it through unchanged (they only
+     *    re-derive an exact `charSet`/`length` when the *whole rebuilt term* still exceeds
+     *    `maxTermSize`/`maxTermDepth`, which the shape-stable positions this function targets do
+     *    not), so the position is a fixpoint from then on.
+     * 3. **The remaining, genuinely shape-changing case is unchanged from before.** Once every
+     *    position that would otherwise grow forever has become `Unknown`-shaped and stable, only
+     *    top-level shape growth (e.g. a `Concat` gaining one more part per iteration) is left,
+     *    which `growWiden` already handles exactly as the pre-existing size/depth-gated logic did
+     *    (Star-introduction for the append/prepend shape, or the `Unknown` fallback otherwise).
+     *
+     * Together, every position converges after a bounded number of steps, which is exactly what
+     * [WideningTerminationTest] checks empirically.
      */
     override fun widen(one: StringPattern, two: StringPattern): StringPattern {
         if (subsumes(one, two)) {
             return one
         }
+        return alignAndWiden(one, two)
+    }
 
-        if (one is StringPattern.Unknown) {
-            val sharedOrigins = unknownOriginsOf(one) intersect unknownOriginsOf(two)
-            return StringPattern.Unknown(
-                origin = one.origin ?: sharedOrigins.firstOrNull(),
-                reason = StringPattern.Reason.WIDENED,
-                charSet = one.charSet union charSetOf(two),
-                length = one.length.widen(lengthOf(two)),
-            )
+    /**
+     * Recurses into matching sub-structure of [one] and [two], widening (via [widenLeaves]) at
+     * every position where either side is a [StringPattern.Unknown], instead of letting a later,
+     * whole-term collapse silently replace accumulated history with a fresh exact recomputation.
+     * See the termination sketch on [widen].
+     */
+    private fun alignAndWiden(one: StringPattern, two: StringPattern): StringPattern {
+        if (one == two) {
+            return one
         }
+        if (one is StringPattern.Unknown || two is StringPattern.Unknown) {
+            return widenLeaves(one, two)
+        }
+        val aligned =
+            when {
+                one is StringPattern.Concat &&
+                    two is StringPattern.Concat &&
+                    one.parts.size == two.parts.size ->
+                    concat(one.parts.zip(two.parts).map { (a, b) -> alignAndWiden(a, b) })
+                one is StringPattern.Star &&
+                    two is StringPattern.Star &&
+                    one.min == two.min &&
+                    one.max == two.max ->
+                    star(alignAndWiden(one.inner, two.inner), one.min, one.max)
+                one is StringPattern.Union && two is StringPattern.Union -> alignUnions(one, two)
+                else -> null
+            }
+        return aligned ?: growWiden(one, two)
+    }
 
+    /**
+     * Pairs up alternatives of [one] and [two] that have the same top-level shape (see
+     * [sameTopShape]) and widens each pair via [alignAndWiden]; alternatives that find no partner
+     * are carried over unchanged (still sound: they only add to the represented language). Rebuilt
+     * via the normalising [union] smart constructor.
+     */
+    private fun alignUnions(one: StringPattern.Union, two: StringPattern.Union): StringPattern {
+        val remaining = two.alternatives.toMutableList()
+        val widenedAlts = mutableListOf<StringPattern>()
+        for (a in one.alternatives) {
+            val matchIndex = remaining.indexOfFirst { sameTopShape(a, it) }
+            if (matchIndex >= 0) {
+                widenedAlts.add(alignAndWiden(a, remaining.removeAt(matchIndex)))
+            } else {
+                widenedAlts.add(a)
+            }
+        }
+        widenedAlts.addAll(remaining)
+        return union(widenedAlts)
+    }
+
+    /**
+     * The genuine "term shape grew" case: [one] and [two] have no aligned sub-structure to widen
+     * pairwise (either a top-level shape mismatch, e.g. `Concat` vs `Union`, or `alignAndWiden`'s
+     * caller already tried and failed to align them). Falls back to the size/depth-gated join, the
+     * Star-introduction detection for append/prepend-in-a-loop shapes, and finally [widenLeaves].
+     */
+    private fun growWiden(one: StringPattern, two: StringPattern): StringPattern {
         // Deliberately uses structuralNormalize, not normalize/lub: normalize() would silently
         // auto-collapse an oversized join to an ad hoc Unknown by itself, which would make this
         // check always pass trivially and this function would never reach the real widening logic
@@ -219,15 +284,44 @@ class StringLattice(
             }
         }
 
-        val sharedOrigins = unknownOriginsOf(one) intersect unknownOriginsOf(two)
+        return widenLeaves(one, two)
+    }
+
+    /**
+     * The terminating leaf-level widen: over-approximates both [one] and [two] as a single
+     * [StringPattern.Unknown], widening `charSet`/`length` (rather than exact-recomputing them) so
+     * that repeated calls at the same position are guaranteed to stabilise - see the termination
+     * sketch on [widen].
+     */
+    private fun widenLeaves(one: StringPattern, two: StringPattern): StringPattern {
+        val origin =
+            (one as? StringPattern.Unknown)?.origin
+                ?: (unknownOriginsOf(one) intersect unknownOriginsOf(two)).firstOrNull()
         return StringPattern.Unknown(
-            origin = sharedOrigins.firstOrNull(),
+            origin = origin,
             reason = StringPattern.Reason.WIDENED,
             charSet = charSetOf(one) union charSetOf(two),
             length = lengthOf(one).widen(lengthOf(two)),
         )
     }
 }
+
+/**
+ * `true` iff [a] and [b] have the same top-level [StringPattern] constructor (arity-compatible for
+ * [StringPattern.Concat], min/max-compatible for [StringPattern.Star]), or either is a
+ * [StringPattern.Unknown] - used by [StringLattice.alignUnions] to decide which alternatives to
+ * pair up for pairwise widening rather than carrying over unchanged.
+ */
+private fun sameTopShape(a: StringPattern, b: StringPattern): Boolean =
+    when {
+        a is StringPattern.Unknown || b is StringPattern.Unknown -> true
+        a is StringPattern.Bottom && b is StringPattern.Bottom -> true
+        a is StringPattern.Const && b is StringPattern.Const -> true
+        a is StringPattern.Concat && b is StringPattern.Concat -> a.parts.size == b.parts.size
+        a is StringPattern.Union && b is StringPattern.Union -> true
+        a is StringPattern.Star && b is StringPattern.Star -> a.min == b.min && a.max == b.max
+        else -> false
+    }
 
 /** The top-level parts of a [StringPattern.Concat], or `[p]` itself if it is not one. */
 private fun partsOf(p: StringPattern): List<StringPattern> =

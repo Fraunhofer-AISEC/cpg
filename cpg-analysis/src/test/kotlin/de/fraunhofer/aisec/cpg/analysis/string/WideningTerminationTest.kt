@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.string
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import kotlin.test.*
 import kotlinx.coroutines.runBlocking
 
@@ -113,5 +114,39 @@ class WideningTerminationTest {
         val next = lattice.lub(current, concat(current, const("a")))
         val widened = lattice.widen(current, next)
         assertEquals(current, widened, "widen should be a no-op once a fixpoint is reached")
+    }
+
+    /**
+     * Regression test for the bug found by adversarial review of Phase 1: a `Union`-wrapped growing
+     * tail (e.g. from a loop with an `if` that appends a literal on one branch) defeated the old,
+     * purely size/depth-gated [StringLattice.widen] - its shape stabilised immediately, but a
+     * nested [StringPattern.Unknown] leaf's length interval upper bound grew by roughly one per
+     * iteration forever, because the fresh, exact `Unknown` produced by `normalize`'s own
+     * auto-collapse (see [StringLattice.widenLeaves]'s KDoc reference on [StringLattice.widen])
+     * silently subsumed and discarded the previous iteration's accumulated `Unknown` in the
+     * top-level `Union` dedup, without ever invoking [LatticeInterval.widen] on it. Uses the
+     * default, generous bounds (unlike the other tests in this class) since the bug was independent
+     * of the size/depth thresholds - it is about a leaf value growing forever, not about the term's
+     * shape.
+     */
+    @Test
+    fun testUnionWrappedGrowingTailStabilizes() = runBlocking {
+        val defaultLattice = StringLattice()
+        var current: StringPattern = const("a")
+        var stabilizedAt = -1
+        for (i in 1..50) {
+            val step = union(concat(current, const("a")), const("zzz"))
+            val next = defaultLattice.lub(current, step)
+            val widened = defaultLattice.widen(current, next)
+            if (widened == current) {
+                stabilizedAt = i
+                break
+            }
+            current = widened
+        }
+        assertTrue(
+            stabilizedAt in 1..50,
+            "expected a fixpoint within 50 iterations, got $stabilizedAt",
+        )
     }
 }
