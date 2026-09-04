@@ -257,6 +257,77 @@ class JvmStringOperationHandlerTest {
         )
     }
 
+    /**
+     * `String.format("%s%n%s", "a", "b", "c")` regression test: `%n` takes no argument at all, so
+     * it must not shift the auto-index used by the surrounding `%s` conversions. Real Java
+     * semantics: the first `%s` consumes `"a"` (auto-index 0), `%n` consumes nothing, the second
+     * `%s` consumes `"b"` (auto-index 1, *not* 2) - `"c"` is simply an unused trailing vararg,
+     * which `String.format` permits. Before the fix, `%n` incorrectly advanced the auto-index and
+     * consumed `"b"` as an `Unknown`/discarded value, so the second `%s` would resolve to `"c"`
+     * instead of `"b"`.
+     */
+    @Test
+    fun testFormatPercentNDoesNotShiftArgumentIndex() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("format", newReference("String")),
+                                    isStatic = true,
+                                ) {
+                                    it.arguments += newLiteral("%s%n%s", objectType("string"))
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                    it.arguments += newLiteral("c", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertEquals(const("a\nb"), pattern)
+    }
+
+    /**
+     * `String.format("%n", ...)` alone: a pure literal newline, with no `%s`/`%d` conversions to
+     * consume any of the (irrelevant, unused) trailing varargs.
+     */
+    @Test
+    fun testFormatPercentNAlone() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("format", newReference("String")),
+                                    isStatic = true,
+                                ) {
+                                    it.arguments += newLiteral("%n", objectType("string"))
+                                    it.arguments += newLiteral("ignored", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertEquals(const("\n"), pattern)
+    }
+
     /** `String.join(", ", "a", "b")` with constant operands resolves to `Const("a, b")`. */
     @Test
     fun testJoinConstant() {

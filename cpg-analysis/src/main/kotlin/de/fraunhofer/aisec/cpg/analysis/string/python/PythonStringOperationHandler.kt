@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringEvaluatorConfig
 import de.fraunhofer.aisec.cpg.analysis.string.StringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
+import de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
 import de.fraunhofer.aisec.cpg.analysis.string.charsOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
@@ -260,11 +261,11 @@ class PythonStringOperationHandler : StringOperationHandler {
      * the evaluator's overall budget - scoping it to the call is more precise.
      *
      * The over-approximation is `Concat(constantPrefix(s), Unknown)` **only** when `old` is a
-     * known, non-empty constant that provably cannot start a match within that prefix (see
-     * [cannotOccurWithinPrefix]) - otherwise a match of `old` could straddle or lie entirely inside
-     * the claimed-fixed prefix and rewrite it, so the sound fallback is a coarser `Unknown` whose
-     * `charSet` is the union of the receiver's and `new`'s character sets and whose length is
-     * unbounded.
+     * known, non-empty constant that provably cannot start a match within that prefix (see the
+     * shared [de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix]) - otherwise a match
+     * of `old` could straddle or lie entirely inside the claimed-fixed prefix and rewrite it, so
+     * the sound fallback is a coarser `Unknown` whose `charSet` is the union of the receiver's and
+     * `new`'s character sets and whose length is unbounded.
      */
     private fun handleReplace(call: MemberCall, evaluate: (Node) -> StringPattern): StringPattern? {
         val base = call.base ?: return null
@@ -344,22 +345,6 @@ class PythonStringOperationHandler : StringOperationHandler {
             }
         }
         return sb.toString()
-    }
-
-    /**
-     * `true` iff [old] provably cannot start a match within [prefix], including a match that starts
-     * inside [prefix] and extends past its end - the condition under which `Concat(prefix,
-     * Unknown)` soundly over-approximates `receiver.replace(old, new)` when `receiver`'s known
-     * prefix is exactly [prefix]. Conservative: returns `false` (i.e. "cannot rule it out")
-     * whenever unsure.
-     */
-    private fun cannotOccurWithinPrefix(prefix: String, old: String): Boolean {
-        if (prefix.contains(old)) return false
-        val maxOverlap = minOf(prefix.length, old.length - 1)
-        for (k in 1..maxOverlap) {
-            if (prefix.endsWith(old.substring(0, k))) return false
-        }
-        return true
     }
 
     /**

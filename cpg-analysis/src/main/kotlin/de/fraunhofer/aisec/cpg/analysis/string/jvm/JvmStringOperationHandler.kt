@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringEvaluatorConfig
 import de.fraunhofer.aisec.cpg.analysis.string.StringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
+import de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
 import de.fraunhofer.aisec.cpg.analysis.string.const
@@ -148,7 +149,12 @@ class JvmStringOperationHandler : StringOperationHandler {
      * same reasoning as the Python handlers' brace-/percent-escaping fixes). Every other conversion
      * (`%f`, `%x`, ...) becomes an `Unknown` segment but still consumes the next positional
      * argument, so that later `%s`/`%d` placeholders stay aligned. An explicit argument index
-     * (`%1$s`) is honoured; otherwise arguments are consumed in order.
+     * (`%1$s`) is honoured; otherwise arguments are consumed in order. `%n` (the platform line
+     * separator, modelled here as a literal `"\n"` for simplicity rather than
+     * `System.lineSeparator()`) is a Java `Formatter` conversion that takes **no** argument at
+     * all - unlike every other conversion, it must not advance the auto-index counter nor consume a
+     * value from `values`, or every subsequent positional placeholder would be shifted by one and
+     * the result would unsoundly exclude the real output.
      */
     private fun handleFormat(call: MemberCall, evaluate: (Node) -> StringPattern): StringPattern? {
         val args = call.arguments
@@ -164,14 +170,16 @@ class JvmStringOperationHandler : StringOperationHandler {
                 parts.add(const(formatString.substring(lastEnd, m.range.first)))
             }
             val token = m.value
+            val conversion = token.last().lowercaseChar()
             parts.add(
                 if (token == "%%") {
                     const("%")
+                } else if (conversion == 'n') {
+                    const("\n")
                 } else {
                     val explicitIndex =
                         EXPLICIT_INDEX.find(token)?.groupValues?.get(1)?.toIntOrNull()
                     val index = explicitIndex?.let { it - 1 } ?: autoIndex++
-                    val conversion = token.last().lowercaseChar()
                     val value = values.getOrNull(index)
                     if (conversion == 's' || conversion == 'd' || conversion == 'i') {
                         value?.let { evaluate(it) }
@@ -277,11 +285,13 @@ class JvmStringOperationHandler : StringOperationHandler {
      * `s.replace(old, new)`. Unlike Python's `str.replace`, Java's 2-arg `String.replace` has no
      * `count` parameter and treats `old`/`new` as `CharSequence` or `char` - both are handled as
      * plain strings here. Reuses the exact same soundness-fixed reasoning as
-     * `PythonStringOperationHandler.handleReplace`: the over-approximation `Concat(prefix,
-     * Unknown)` is only used when `old` provably [cannotOccurWithinPrefix] the receiver's known
-     * constant prefix (i.e. cannot start a match within it, including a match straddling its end) -
-     * otherwise a match of `old` could rewrite part of the claimed-fixed prefix, so the sound
-     * fallback is a coarser `Unknown` whose `charSet` is the union of the receiver's and `new`'s.
+     * `PythonStringOperationHandler.handleReplace` (both call the shared
+     * [de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix]): the over-approximation
+     * `Concat(prefix, Unknown)` is only used when `old` provably [cannotOccurWithinPrefix] the
+     * receiver's known constant prefix (i.e. cannot start a match within it, including a match
+     * straddling its end) - otherwise a match of `old` could rewrite part of the claimed-fixed
+     * prefix, so the sound fallback is a coarser `Unknown` whose `charSet` is the union of the
+     * receiver's and `new`'s.
      */
     private fun handleReplace(call: MemberCall, evaluate: (Node) -> StringPattern): StringPattern? {
         val base = call.base ?: return null
@@ -327,20 +337,6 @@ class JvmStringOperationHandler : StringOperationHandler {
                 length = LatticeInterval.TOP,
             )
         }
-    }
-
-    /**
-     * `true` iff [old] provably cannot start a match within [prefix], including a match that starts
-     * inside [prefix] and extends past its end - see
-     * `PythonStringOperationHandler.cannotOccurWithinPrefix`, which this mirrors exactly.
-     */
-    private fun cannotOccurWithinPrefix(prefix: String, old: String): Boolean {
-        if (prefix.contains(old)) return false
-        val maxOverlap = minOf(prefix.length, old.length - 1)
-        for (k in 1..maxOverlap) {
-            if (prefix.endsWith(old.substring(0, k))) return false
-        }
-        return true
     }
 
     companion object {
