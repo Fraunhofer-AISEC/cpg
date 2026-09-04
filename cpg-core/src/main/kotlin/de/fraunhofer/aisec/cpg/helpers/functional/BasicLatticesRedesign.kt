@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel
 import de.fraunhofer.aisec.cpg.graph.isBranchOf
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
@@ -292,10 +291,6 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
 
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
-
-    internal fun copyFrom(other: ConcurrentIdentityHashMap<K, V>) {
-        backing.putAll(other.backing)
-    }
 
     fun clear() = backing.clear()
 
@@ -868,9 +863,26 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     class Element<T>(expectedMaxSize: Int) :
         ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
 
-        // Secondary track indexes to accelerate 'contains', 'equals', and 'compare' to O(1)
-        private val nodeIndex = ConcurrentHashMap<PointsToPass.NodeWithPropertiesKey, T>()
-        private val pairIndex = ConcurrentHashMap<PairKey, Pair<*, *>>()
+        /**
+         * Points-to sets contain elements whose reference identity is meaningless, because they are
+         * created on the fly while transferring a state: a [Pair] or a
+         * [PointsToPass.NodeWithPropertiesKey] describing the same nodes must count as one element,
+         * no matter how often it was constructed. For those we therefore key the set by a
+         * structural key instead of by reference. Everything else - in particular [Node]s - keeps
+         * the reference semantics of [ConcurrentIdentitySet].
+         *
+         * This is the only place which knows about the special element types; [add], [remove],
+         * [contains] and hence [equals] and [compare] all agree on it because they all go through
+         * this method.
+         */
+        override fun keyFor(element: T): Any =
+            when (element) {
+                is Pair<*, *> -> PairKey(element.first, element.second)
+                // This one is its own key already: it compares its node by reference and its
+                // properties structurally.
+                is PointsToPass.NodeWithPropertiesKey -> element
+                else -> super.keyFor(element)
+            }
 
         private class PairKey(val first: Any?, val second: Any?) {
             override fun equals(other: Any?): Boolean {
@@ -886,8 +898,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         // We make the new element a bit bigger than the current size to avoid resizing
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
-            addAllWithoutCheck(set as? ConcurrentIdentitySet<T> ?: set.toConcurrentIdentitySet())
-            buildIndexFromCurrentElements()
+            addAllWithoutCheck(set)
         }
 
         // Points-to sets are tiny (usually a single element), and there are millions of them, so we
@@ -896,75 +907,15 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         // We make the new element a bit bigger than the current size to avoid resizing
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
-            addAll(entries) // standard addAll loops and calls our overridden add()
+            addAll(entries) // standard addAll loops and calls add(), which uses our keyFor()
         }
 
         /**
-         * Rebuilds the secondary indexes from scratch. Crucial when batch operations like
-         * [addAllWithoutCheck] bypass the standard [add] method.
+         * O(1) containment check. Unlike [contains] this accepts an arbitrary object, which is
+         * handy when comparing two sets of unrelated element types.
          */
-        fun buildIndexFromCurrentElements() {
-            nodeIndex.clear()
-            pairIndex.clear()
-            for (item in this) {
-                when (item) {
-                    is Pair<*, *> -> pairIndex[PairKey(item.first, item.second)] = item
-                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex[item] = item
-                }
-            }
-        }
-
-        override fun add(element: T): Boolean {
-            when (element) {
-                is Pair<*, *> -> {
-                    val key = PairKey(element.first, element.second)
-                    if (pairIndex.containsKey(key)) return false
-                    val added = super.add(element)
-                    if (added) {
-                        pairIndex[key] = element
-                    }
-                    return added
-                }
-                is PointsToPass.NodeWithPropertiesKey -> {
-                    if (nodeIndex.containsKey(element)) return false
-                    val added = super.add(element)
-                    if (added) {
-                        nodeIndex[element] = element
-                    }
-                    return added
-                }
-                else -> {
-                    return super.add(element)
-                }
-            }
-        }
-
-        // Note: If your framework's base class uses 'Any?' for remove, change 'T' to 'Any?'
-        override fun remove(element: T): Boolean {
-            val removed = super.remove(element)
-            if (removed) {
-                when (element) {
-                    is Pair<*, *> -> pairIndex.remove(PairKey(element.first, element.second))
-                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex.remove(element)
-                }
-            }
-            return removed
-        }
-
-        override fun clear() {
-            super.clear()
-            nodeIndex.clear()
-            pairIndex.clear()
-        }
-
-        /** High-performance O(1) containment check utilizing our secondary indexes. */
-        fun containsFast(element: Any?): Boolean {
-            return when (element) {
-                is Pair<*, *> -> pairIndex.containsKey(PairKey(element.first, element.second))
-                is PointsToPass.NodeWithPropertiesKey -> nodeIndex.containsKey(element)
-                else -> (element as? T)?.let { super.contains(it) } ?: false
-            }
-        }
+        @Suppress("UNCHECKED_CAST")
+        fun containsFast(element: Any?): Boolean = contains(element as T)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -1060,7 +1011,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         val result = Element<T>(one.size + two.size)
         result.addAllWithoutCheck(one)
-        result.buildIndexFromCurrentElements() // Force index generation after raw batch load!
         result += two
         return result
     }
