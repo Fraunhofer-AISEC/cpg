@@ -683,6 +683,28 @@ class BasicLatticesRedesignTest {
         assertSame(shared, copy["b"])
     }
 
+    /**
+     * A duplicate shares not only the entries but the map itself, so it must not cost anything per
+     * entry. Adding or removing a key on either side still has to leave the other one alone.
+     */
+    @Test
+    fun testDuplicateSharesTheMapItself() {
+        val original =
+            ConcurrentMapLattice.Element(
+                "a" to PowersetLattice.Element("bla"),
+                "b" to PowersetLattice.Element("foo"),
+            )
+
+        val copy = original.duplicate()
+
+        copy.put("c", PowersetLattice.Element("new in the copy"))
+        original.put("d", PowersetLattice.Element("new in the original"))
+        original.remove("a")
+
+        assertEquals(setOf("a", "b", "c"), copy.keys.toSet())
+        assertEquals(setOf("b", "d"), original.keys.toSet())
+    }
+
     @Test
     fun testLubSharesEntries() {
         val lattice =
