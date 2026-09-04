@@ -289,8 +289,17 @@ interface HasWidening<T : Lattice.Element> {
      * Computes the widening of [one] and [two]. This is used to ensure that the fixpoint iteration
      * converges (faster).
      *
-     * @param one The first element to widen
-     * @param two The second element to widen
+     * By convention, [one] is the stable/previous-iteration value and [two] is the newly computed
+     * value from the current iteration. Implementations are generally NOT symmetric in [one]/[two]:
+     * growth-detection logic (e.g. jumping straight to an unbounded/top-like value once growth is
+     * observed across iterations, as done by `LatticeInterval.widen` and `StringLattice.widen`)
+     * relies on comparing the new value against the stable baseline in this specific order to
+     * converge in bounded steps. Calling `widen(two, one)` instead of `widen(one, two)` may still
+     * be sound but can silently break termination. Callers must pass arguments in this order; do
+     * not assume `widen` is commutative.
+     *
+     * @param one The stable/previous-iteration element
+     * @param two The newly computed element to widen against [one]
      * @return The widened element
      */
     fun widen(one: T, two: T): T
