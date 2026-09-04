@@ -55,6 +55,42 @@ import org.slf4j.LoggerFactory
 private const val MAX_FIXPOINT_ITERATIONS = 20
 
 /**
+ * A structurally-hashable substitute for using [Context] directly as a `HashMap` key - see
+ * [StringEvaluator]'s `threadLocalCache` KDoc for why [Context]'s own `hashCode` cannot be used for
+ * this. Derived from exactly the two fields [Context.equals] itself compares
+ * (`indexStack`/`callStack`), deliberately excluding `steps`.
+ *
+ * Stack elements ([de.fraunhofer.aisec.cpg.graph.expressions.Call] for `callStack`,
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity] for `indexStack`) are
+ * compared/hashed by identity, not by `Node`'s structural `equals`/`hashCode`, for the same reason
+ * [StringEvaluator]'s `threadLocalPath` does: two different call sites (or two different
+ * indexed-access edges) that happen to be structurally equal must not collapse into one cache
+ * entry, which would silently merge results that D6 requires to stay separate.
+ */
+private class ContextKey(ctx: Context) {
+    private val callStack = ctx.callStack.toList()
+    private val indexStack = ctx.indexStack.toList()
+
+    override fun equals(other: Any?): Boolean =
+        other is ContextKey &&
+            callStack.size == other.callStack.size &&
+            indexStack.size == other.indexStack.size &&
+            callStack.indices.all { callStack[it] === other.callStack[it] } &&
+            indexStack.indices.all { indexStack[it] === other.indexStack[it] }
+
+    override fun hashCode(): Int {
+        var result = 1
+        for (call in callStack) {
+            result = 31 * result + System.identityHashCode(call)
+        }
+        for (granularity in indexStack) {
+            result = 31 * result + System.identityHashCode(granularity)
+        }
+        return result
+    }
+}
+
+/**
  * A demand-driven, backward, interprocedural evaluator for [StringPattern]s. See
  * `docs/docs/CPG/impl/string-analysis.md` for the design rationale.
  *
@@ -112,6 +148,54 @@ open class StringEvaluator(
     private val threadLocalCyclic = ThreadLocal.withInitial { identitySetOf<Node>() }
 
     /**
+     * Memoizes the result of [evaluateInternal] for a `(Node, Context)` pair, scoped to a single
+     * top-level [evaluate] call (cleared at the start of [evaluate], just like
+     * [path]/[assumed]/[cyclic]).
+     *
+     * Without this, [evaluateInternal] re-descends into shared predecessors on every branch of
+     * every join with no memoization: a chain of N sequential joins that each depend on the
+     * previous one (e.g. `x = x + "a"` repeated inside if/else branches) triggers genuine `2^N`
+     * re-evaluation, because [followPredecessors] evaluates *every* incoming branch independently
+     * before taking their [union].
+     *
+     * Writes only ever happen once [evaluateWithFixpoint] has returned for `node` *and* no cycle is
+     * still being widened anywhere on the current path (`cyclic.isEmpty()`) - see the comment at
+     * the write site in [evaluateInternal] for why the latter condition is required in addition to
+     * the former: a node that is merely a *dependency* of a still-converging cyclic node returns
+     * normally on every fixpoint round, long before the cycle converges, and caching that
+     * intermediate value would freeze in a too-precise result that later fixpoint rounds would read
+     * back stale instead of recomputing - this is what makes the unmemoized evaluator sound today
+     * (anything depending on a cyclic node always sees its final, widened value), and is exactly
+     * the property [testLoopBuiltString] guards.
+     *
+     * Keying: the outer [IdentityHashMap] uses [Node] identity (not the structural
+     * `equals`/`hashCode` `Node` defines), for the same reason [threadLocalAssumed] does - two
+     * structurally-equal-but-distinct nodes must not collapse.
+     *
+     * The inner map is keyed by [ContextKey], **not** by [Context] directly, even though
+     * conceptually we want to key on "everything about `ctx` that can change the result for the
+     * same node" - which is exactly `indexStack` and `callStack` (not `steps`: that is a per-path
+     * step counter that changes on every hop, and folding it into the key would defeat memoization
+     * entirely by making almost every key unique; deliberately mirrors `Context.equals`, which also
+     * excludes it). Using `callStack` as part of the key is what keeps this sound rather than just
+     * imprecise: a [Parameter] reached via two different call sites has two different `callStack`s
+     * and therefore two different cache entries, so per-call-site precision (D6, see the design
+     * doc) is preserved - caching by `Node` identity alone would incorrectly collapse those into a
+     * single answer.
+     *
+     * The reason we cannot just use `Context` itself as the `HashMap` key: `Context.hashCode()`
+     * (`Extensions.kt`) is `Objects.hash(super.hashCode(), indexStack, callStack)`, and
+     * `super.hashCode()` is `Any`'s *identity* hash code, since `Context` does not otherwise
+     * override it - i.e. `Context.hashCode()` is (almost always) different for every instance even
+     * when `Context.equals()` says two instances are equal. `HashMap` requires equal hashCodes for
+     * equal keys, so using `Context` directly makes lookups miss the cache almost every time
+     * (confirmed by measurement: near-zero hit rate), even though `equals()` itself is correct.
+     * [ContextKey] recomputes a proper structural hash from the same two fields instead.
+     */
+    private val threadLocalCache =
+        ThreadLocal.withInitial { IdentityHashMap<Node, MutableMap<ContextKey, StringPattern>>() }
+
+    /**
      * Required by [Backward.pickNextStep]'s signature but not otherwise consulted by our logic:
      * [de.fraunhofer.aisec.cpg.graph.Interprocedural.followEdge] only ever *adds* to this set (to
      * report a detected call-recursion loop for callers that inspect it), it never reads it back to
@@ -135,6 +219,9 @@ open class StringEvaluator(
     private val loopingPaths: MutableSet<NodePath>
         get() = threadLocalLoopingPaths.get()
 
+    private val cache: IdentityHashMap<Node, MutableMap<ContextKey, StringPattern>>
+        get() = threadLocalCache.get()
+
     private val rootNode: Node
         get() = threadLocalRoot.get() ?: error("evaluate() must be called before evaluateInternal")
 
@@ -144,15 +231,22 @@ open class StringEvaluator(
         assumed.clear()
         cyclic.clear()
         loopingPaths.clear()
+        cache.clear()
         threadLocalRoot.set(node)
         return evaluateInternal(node, Context())
     }
 
     /**
-     * The single recursive gateway: detects cycles (a node already on [path]) and otherwise pushes
-     * [node] and delegates to [evaluateWithFixpoint] `->` [dispatch].
+     * The single recursive gateway: serves cached results (see [threadLocalCache]), detects cycles
+     * (a node already on [path]) and otherwise pushes [node] and delegates to
+     * [evaluateWithFixpoint] `->` [dispatch].
      */
     protected open fun evaluateInternal(node: Node, ctx: Context): StringPattern {
+        val key = ContextKey(ctx)
+        cache[node]?.get(key)?.let {
+            return it
+        }
+
         if (path.any { it === node }) {
             // We are in the middle of evaluating `node` further up the call stack: this is a
             // genuine cycle in the backward DFG (e.g. a loop-carried variable). Report it to the
@@ -164,7 +258,26 @@ open class StringEvaluator(
 
         path.add(node)
         try {
-            return evaluateWithFixpoint(node, ctx)
+            val result = evaluateWithFixpoint(node, ctx)
+            // Only cache once there is no cycle still being widened anywhere on the current path.
+            // `evaluateWithFixpoint` removes `node` from `cyclic` only once *its own* fixpoint has
+            // converged, so `cyclic.isEmpty()` here means neither `node` itself nor any ancestor
+            // still on `path` is mid-fixpoint. This is necessary, not just the "cache only after
+            // evaluateWithFixpoint returns" rule from the KDoc above: a node like the `+` in
+            // `x = x + "a"` (a *dependency* of the cyclic node `x = ...`, not the cyclic node
+            // itself) has its own `evaluateWithFixpoint` return normally on every fixpoint round,
+            // long before the outer cycle converges - caching its result the first time it returns
+            // would freeze in a value computed against a not-yet-widened `assumed[x]`, and every
+            // later fixpoint round would then read that stale cached value back out instead of
+            // recomputing it against the newly widened assumption, silently breaking convergence.
+            // Skipping the cache write while `cyclic` is non-empty defers caching for such
+            // dependencies indefinitely (they are simply recomputed every time, as before this
+            // change) - sound, if less optimal, and confirmed necessary by `testLoopBuiltString`,
+            // which fails with a too-precise, non-widened result if this check is removed.
+            if (cyclic.isEmpty()) {
+                cache.getOrPut(node) { mutableMapOf() }[key] = result
+            }
+            return result
         } finally {
             path.removeAt(path.size - 1)
         }
@@ -368,22 +481,32 @@ open class StringEvaluator(
      * - More than one next step: recurse into every branch and [union] the results - this is D7,
      *   the core improvement over `ValueEvaluator.handlePrevDFG`, which just aborts here.
      *
-     * Budget exhaustion (`AnalysisScope.maxSteps` / `Interprocedural.maxCallDepth`) is checked
-     * proactively (rather than inferred from an empty result, which would be indistinguishable from
-     * a genuine dead end) and yields `Unknown(reason = BUDGET_EXCEEDED)` plus a
-     * [AssumptionType.SoundnessAssumption] recorded on the node passed to the public [evaluate]
-     * entry point (the "root node"), since [StringPattern] itself has no assumptions slot (it is a
-     * pure value type, not a `Node`/`HasAssumptions`) - see the design doc's discussion of this
-     * trade-off in `QueryHelpers.kt`'s `mustMatch`.
+     * Budget exhaustion (`AnalysisScope.maxSteps`) is checked proactively (rather than inferred
+     * from an empty result, which would be indistinguishable from a genuine dead end) and yields
+     * `Unknown(reason = BUDGET_EXCEEDED)` plus a [AssumptionType.SoundnessAssumption] recorded on
+     * the node passed to the public [evaluate] entry point (the "root node"), since [StringPattern]
+     * itself has no assumptions slot (it is a pure value type, not a `Node`/`HasAssumptions`) - see
+     * the design doc's discussion of this trade-off in `QueryHelpers.kt`'s `mustMatch`.
+     *
+     * `Interprocedural.maxCallDepth`, in contrast, cannot be checked proactively for an arbitrary
+     * node: [de.fraunhofer.aisec.cpg.graph.Interprocedural.followEdge] only ever cuts off
+     * *interprocedural* edges once `ctx.callStack.depth >= maxCallDepth`, not the node itself, and
+     * a node can have a perfectly reachable same-function predecessor whose availability has
+     * nothing to do with the call-depth budget. Proactively labelling every node reached at max
+     * depth as budget-exceeded would therefore mislabel nodes that would have gotten a real answer
+     * regardless (this used to be checked, incorrectly, only `if (node is Parameter)`, which missed
+     * every other node type `followEdge` can cut off, e.g. a `Return`/call-boundary node in a plain
+     * deep call chain). Instead we call
+     * [de.fraunhofer.aisec.cpg.graph.AnalysisDirection.pickNextStep] as normal, and only *after* it
+     * comes back empty do we ask whether we are at/beyond `maxCallDepth` - if so, the empty result
+     * is plausibly `followEdge` cutting off the only escape route, so we label it
+     * `BUDGET_EXCEEDED`; otherwise it is a genuine leaf and we fall back to [leafUnknown] (e.g.
+     * `PARAMETER` for a parameter that truly has no caller at all).
      */
     protected open fun followPredecessors(node: Node, ctx: Context): StringPattern {
         val scope = config.scope
         val maxSteps = scope.maxSteps
         if (maxSteps != null && ctx.steps >= maxSteps) {
-            return budgetExceeded(node)
-        }
-        val maxCallDepth = (scope as? Interprocedural)?.maxCallDepth
-        if (maxCallDepth != null && node is Parameter && ctx.callStack.depth >= maxCallDepth) {
             return budgetExceeded(node)
         }
 
@@ -401,7 +524,12 @@ open class StringEvaluator(
                 .filter { (next, _, _) -> config.enterInferredFunctions || !isInferred(next) }
 
         if (steps.isEmpty()) {
-            return leafUnknown(node)
+            val maxCallDepth = (scope as? Interprocedural)?.maxCallDepth
+            return if (maxCallDepth != null && ctx.callStack.depth >= maxCallDepth) {
+                budgetExceeded(node)
+            } else {
+                leafUnknown(node)
+            }
         }
 
         val results =

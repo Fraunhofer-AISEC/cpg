@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import java.util.concurrent.TimeUnit
+import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -329,6 +330,154 @@ class StringEvaluatorTest {
 
         val pattern = ret.returnValue!!.evaluateString()
         assertEquals(union(const("a"), const("b")), pattern)
+    }
+
+    /**
+     * A chain of `diamondCount` sequential if/else diamonds, each reassigning the same variable via
+     * concatenation (`x = x + "0"` / `x = x + "1"`), so that diamond `i` depends on the result of
+     * diamond `i - 1`, not just on a leaf. Without memoization (see
+     * [StringEvaluator.evaluateInternal]'s cache), evaluating the final `x` re-descends into every
+     * shared predecessor on every branch of every join, causing genuine `2^diamondCount`
+     * re-evaluation - this used to take seconds at `diamondCount = 18`; with memoization it must
+     * complete in a small fraction of a second, and the result must still be sound: the pattern
+     * must not claim to be fully known, and must still admit both `'0'` and `'1'`, the characters
+     * every branch may introduce.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    fun testManySequentialJoinsIsFast() {
+        lateinit var ret: Return
+        val diamondCount = 18
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                repeat(diamondCount) { i ->
+                    newParameter("cond$i", objectType("bool"), holder = func)
+                }
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("x", objectType("string"), holder = decl) {
+                                it.initializer = newLiteral("", objectType("string"))
+                            }
+                        }
+                        repeat(diamondCount) { i ->
+                            block.statements += newIfElse { ifElse ->
+                                ifElse.condition = newReference("cond$i")
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock.statements +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("x")),
+                                                listOf(
+                                                    newBinaryOperator("+") { op ->
+                                                        op.lhs = newReference("x")
+                                                        op.rhs =
+                                                            newLiteral("0", objectType("string"))
+                                                    }
+                                                ),
+                                            )
+                                    }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        elseBlock.statements +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("x")),
+                                                listOf(
+                                                    newBinaryOperator("+") { op ->
+                                                        op.lhs = newReference("x")
+                                                        op.rhs =
+                                                            newLiteral("1", objectType("string"))
+                                                    }
+                                                ),
+                                            )
+                                    }
+                            }
+                        }
+                        ret = newReturn { r -> r.returnValue = newReference("x") }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        lateinit var pattern: StringPattern
+        val elapsedMs = measureTimeMillis { pattern = ret.returnValue!!.evaluateString() }
+
+        assertTrue(
+            elapsedMs < 1000,
+            "evaluating $diamondCount sequential joins took ${elapsedMs}ms, expected well " +
+                "under 1000ms with memoization",
+        )
+        assertFalse(
+            pattern.isFullyKnown,
+            "a join of $diamondCount diamonds must not be fully known: $pattern",
+        )
+        assertTrue(
+            charSetContains(charSetOf(pattern), CharSet.Chars(setOf('0'))) &&
+                charSetContains(charSetOf(pattern), CharSet.Chars(setOf('1'))),
+            "the over-approximation must still admit both '0' and '1': $pattern",
+        )
+    }
+
+    /**
+     * A chain of 200 functions, each calling the next (`f0` -> `f1` -> ... -> `f199`), where only
+     * `f199` returns a known literal. With the default `maxCallDepth = 10`,
+     * `Interprocedural.followEdge` cuts off the interprocedural edge well before reaching `f199`,
+     * so [StringEvaluator.followPredecessors] must recognise the resulting empty predecessor set as
+     * budget exhaustion (`Unknown(reason = BUDGET_EXCEEDED)`, with a recorded
+     * `SoundnessAssumption`), not as a generic unsupported/leaf case - this is the case that used
+     * to be missed because the old proactive check only fired `if (node is Parameter)`.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    fun testDeepCallChainReportsBudgetExceeded() {
+        lateinit var topCall: Call
+        val chainDepth = 200
+        build { tu ->
+            for (i in 0 until chainDepth) {
+                newFunction("f$i", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("string"))
+                    func.type = computeType(func)
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newReturn { r ->
+                                r.returnValue =
+                                    if (i == chainDepth - 1) {
+                                        newLiteral("leaf", objectType("string"))
+                                    } else {
+                                        newCall(newReference("f${i + 1}"))
+                                    }
+                            }
+                        }
+                }
+            }
+            newFunction("entry", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newReturn { r ->
+                            topCall = newCall(newReference("f0"))
+                            r.returnValue = topCall
+                        }
+                    }
+            }
+        }
+
+        assertTrue(topCall.invokes.isNotEmpty(), "the call to f0 must have been resolved")
+        assertTrue(topCall.assumptions.isEmpty(), "no assumption should exist before evaluation")
+
+        val pattern = topCall.evaluateString()
+
+        assertIs<StringPattern.Unknown>(pattern)
+        assertEquals(StringPattern.Reason.BUDGET_EXCEEDED, pattern.reason)
+        assertTrue(
+            topCall.assumptions.isNotEmpty(),
+            "budget exhaustion must record a SoundnessAssumption on the root node",
+        )
     }
 
     /**
