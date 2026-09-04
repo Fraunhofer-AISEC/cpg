@@ -45,6 +45,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.assertThrows
 
@@ -630,7 +631,7 @@ class BasicLatticesRedesignTest {
             start.nextEOGEdges.toList(),
             lattice.bottom,
             { _, _, state -> state },
-            timeout = 10000,
+            timeout = 10.seconds,
         )
         assertEquals(depthBefore, timeouts.size)
 
@@ -640,7 +641,7 @@ class BasicLatticesRedesignTest {
                 start.nextEOGEdges.toList(),
                 lattice.bottom,
                 { _, _, _ -> throw IllegalStateException("transformation failed") },
-                timeout = 10000,
+                timeout = 10.seconds,
             )
         }
         assertEquals(depthBefore, timeouts.size)
