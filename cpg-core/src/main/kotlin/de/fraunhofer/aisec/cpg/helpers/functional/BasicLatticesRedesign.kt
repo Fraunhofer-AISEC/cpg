@@ -62,6 +62,75 @@ val MIN_CHUNK_SIZE = 100
  */
 const val MIN_GLOBAL_STATE_PRUNE_SIZE = 256
 
+/**
+ * The number of state entries an [Lattice.iterateEOG] run may keep alive before we warn about it.
+ *
+ * A single entry of a points-to state costs roughly 1.5 kB, so this corresponds to a couple of
+ * gigabytes. If an analysis runs out of memory, the last function warned about here is the one to
+ * look at.
+ */
+const val LARGE_STATE_ENTRY_WARN_THRESHOLD = 2_000_000L
+
+/**
+ * Bookkeeping for a single [Lattice.iterateEOG] run. Memory consumption of the analysis is driven
+ * by the product of [peakLiveStates] and the number of entries in each of them, neither of which is
+ * visible from the outside, so we report both.
+ */
+private class IterationStatistics {
+    /** The number of edges we took off a worklist. */
+    var processedEdges = 0
+
+    /**
+     * The high-water mark of the number of states we kept alive at the same time, sampled before
+     * pruning.
+     */
+    var peakLiveStates = 0
+
+    /** The number of entries of the resulting state, or -1 if we did not get that far. */
+    var finalStateEntries = -1
+
+    fun report(startEdges: List<EvaluationOrder>) {
+        val name = startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+        // The final state is the union of all end states, so its size is an upper bound for the
+        // size of every intermediate state.
+        val peakEntries = peakLiveStates.toLong() * finalStateEntries.coerceAtLeast(0)
+        if (peakEntries > LARGE_STATE_ENTRY_WARN_THRESHOLD) {
+            Pass.log.warn(
+                "The analysis of {} kept up to {} states of up to {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
+                name,
+                peakLiveStates,
+                finalStateEntries,
+                peakEntries,
+            )
+        } else if (Pass.log.isDebugEnabled) {
+            Pass.log.debug(
+                "Iterated the EOG of {} in {} steps, keeping up to {} states of up to {} entries alive ({} entries in total).",
+                name,
+                processedEdges,
+                peakLiveStates,
+                finalStateEntries,
+                peakEntries,
+            )
+        }
+    }
+}
+
+/**
+ * The number of entries this element holds, summed over all nested containers. Together with the
+ * number of states that are alive at the same time, this is what determines the memory consumption
+ * of an [Lattice.iterateEOG] run, so we use it for the diagnostics in [IterationStatistics].
+ */
+private fun Lattice.Element.entryCount(): Int =
+    when (this) {
+        is TupleLattice.Element<*, *> -> first.entryCount() + second.entryCount()
+        is TripleLattice.Element<*, *, *> ->
+            first.entryCount() + second.entryCount() + third.entryCount()
+        is ConcurrentMapLattice.Element<*, *> -> size
+        is HashMapLattice.Element<*, *> -> size
+        is PowersetLattice.Element<*> -> size
+        else -> 1
+    }
+
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
 open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
 
@@ -434,9 +503,21 @@ interface Lattice<T : Lattice.Element> {
             timeouts.addLast(timeout)
         }
 
+        val statistics = IterationStatistics()
         try {
-            return iterateEogWorklist(startEdges, startState, transformation, strategy, timeout)
+            val result =
+                iterateEogWorklist(
+                    startEdges,
+                    startState,
+                    transformation,
+                    strategy,
+                    timeout,
+                    statistics,
+                )
+            statistics.finalStateEntries = result.first.entryCount()
+            return result
         } finally {
+            statistics.report(startEdges)
             while (timeouts.size > timeoutStackDepth) {
                 timeouts.removeLast()
             }
@@ -454,6 +535,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Long?,
+        statistics: IterationStatistics,
     ): Pair<T, Boolean> {
         // mark the time when we started the calculation to know when we stop
         val startTime = TimeSource.Monotonic.markNow()
@@ -592,6 +674,13 @@ interface Lattice<T : Lattice.Element> {
                 mergePointsEdgesMap.isNotEmpty() ||
                 sccEdgesQueue.isNotEmpty()
         ) {
+            // Sample the retention before pruning: that high-water mark is what actually has to fit
+            // into the heap.
+            statistics.processedEdges++
+            if (globalState.size > statistics.peakLiveStates) {
+                statistics.peakLiveStates = globalState.size
+            }
+
             // All edges which are still to be processed are in one of the worklists at this point,
             // so this is the only place where we can determine which states are still live.
             pruneGlobalState()
