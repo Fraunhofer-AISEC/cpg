@@ -28,17 +28,145 @@ package de.fraunhofer.aisec.cpg.test
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.ClassTestLanguage
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.autoType
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newInitializerList
-import de.fraunhofer.aisec.cpg.graph.newVariable
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
+
+/**
+ * Builds a chain of [MemberAccess]/[de.fraunhofer.aisec.cpg.graph.expressions.Reference] nodes for
+ * a (possibly qualified) [name], optionally setting [type] on the innermost node.
+ */
+private fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type? = null): Expression {
+    val node =
+        if (name.parent != null) {
+            newMemberAccess(name.localName, memberOrRef(name.parent))
+        } else {
+            newReference(name.localName)
+        }
+    if (type != null) {
+        node.type = type
+    }
+    return node
+}
+
+/**
+ * Builds a [Call] (or a member call if [name] is a dotted/qualified name) with the given [name] as
+ * callee.
+ */
+private fun LanguageFrontend<*, *>.dottedCall(name: CharSequence, isStatic: Boolean = false): Call {
+    val parsedName = parseName(name)
+    return if (parsedName.parent != null) {
+        newMemberCall(
+            newMemberAccess(parsedName.localName, memberOrRef(parsedName.parent)),
+            isStatic,
+        )
+    } else {
+        newCall(newReference(parsedName))
+    }
+}
+
+/**
+ * Builds a [MemberAccess] with the given [name]. If [base] is `null`, an implicit `this` reference
+ * is used, whose type is resolved to the nearest enclosing record's type, or left as [unknownType]
+ * if none is found.
+ */
+private fun LanguageFrontend<*, *>.newMember(
+    name: CharSequence,
+    base: Expression? = null,
+    operatorCode: String = ".",
+): MemberAccess {
+    val parsedName = parseName(name)
+    val type =
+        if (parsedName.parent != null) {
+            null
+        } else {
+            var scope: de.fraunhofer.aisec.cpg.graph.scopes.Scope? = scopeManager.currentScope
+            while (scope != null && scope !is RecordScope) {
+                scope = scope.parent
+            }
+            scope?.name?.let { objectType(it) }
+        }
+    val memberBase = base ?: memberOrRef(parsedName.parent ?: parseName("this"), type)
+    return newMemberAccess(name, memberBase, operatorCode = operatorCode)
+}
+
+/** Stamps a fake [PhysicalLocation] on the receiver for line [i], using its name as the code. */
+private fun Expression.line(tuName: String, i: Int): Expression {
+    val code = this.name
+    val region = Region(i, 0, i, code.length)
+    this.location = PhysicalLocation(URI(tuName), region)
+    return this
+}
+
+/**
+ * Appends the recurring "if (true) break;" statement followed by a `postIf()` call to [block], the
+ * shared loop body used by several of the `...WithElseAndBreak` test cases below.
+ */
+private fun LanguageFrontend<*, *>.addIfTrueBreakAndPostIf(block: Block) {
+    block.statements += newIfElse {
+        it.condition = newLiteral(true, objectType("bool"))
+        it.thenStatement = newBlock(enterScope = true) { it.statements += newBreak() }
+    }
+    block.statements += newCall(newReference("postIf"))
+}
+
+/** Builds the recurring loop `else` block containing a single `elseCall()` call. */
+private fun LanguageFrontend<*, *>.elseCallBlock(): Block =
+    newBlock(enterScope = true) { it.statements += newCall(newReference("elseCall")) }
+
+/** Builds the recurring `System.out.println(argument)` member call used below. */
+private fun LanguageFrontend<*, *>.printlnCall(argument: Expression): MemberCall =
+    newMemberCall(
+        newMemberAccess(
+            "println",
+            newMember("out", newReference("System").also { it.isStaticAccess = true }),
+        )
+    ) {
+        it.arguments += argument
+    }
+
+/**
+ * Creates a [Variable] named [name] of [type], registers it, and sets it as [method]'s receiver.
+ */
+private fun LanguageFrontend<*, *>.addReceiver(method: Method, name: String, type: Type): Variable {
+    val node = newVariable(name, type)
+    method.receiver = node
+    scopeManager.addDeclaration(node)
+    return node
+}
+
+/**
+ * Declares a single [Variable] named [name] of [type] (optionally initialized via [init]) inside a
+ * new declaration statement appended to [block].
+ */
+private fun LanguageFrontend<*, *>.declareVariable(
+    block: Block,
+    name: CharSequence,
+    type: Type = unknownType(),
+    init: ((Variable) -> Unit)? = null,
+): Variable {
+    val declStmt = newDeclarationStatement()
+    val v = newVariable(name, type, holder = declStmt, init = init)
+    block.statements += declStmt
+    return v
+}
 
 class GraphExamples {
     companion object {
@@ -50,21 +178,30 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("initializerListExprDFG.cpp") {
-                        function("foo", t("int")) { body { returnStmt { literal(0, t("int")) } } }
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("i", t("int")) {
-                                        val initList = newInitializerList()
-                                        initList.initializers = mutableListOf(call("foo"))
-                                        initializer = initList
-                                    }
+                singleTranslationUnit("initializerListExprDFG.cpp") { tu ->
+                    newFunction("foo", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
                                 }
-                                returnStmt { ref("i") }
                             }
-                        }
+                    }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "i", objectType("int")) { v ->
+                                    v.initializer =
+                                        newInitializerList().also {
+                                            it.initializers = mutableListOf(dottedCall("foo"))
+                                        }
+                                }
+                                block.statements += newReturn { it.returnValue = newReference("i") }
+                            }
                     }
                 }
             }
@@ -77,36 +214,31 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("whileWithBreakAndElse.py") {
-                        record("someRecord") {
-                            method("func") {
-                                body {
-                                    whileStmt {
-                                        whileCondition { literal(true, t("bool")) }
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
-                                            }
-                                            call("postIf")
+                singleTranslationUnit("whileWithBreakAndElse.py") { tu ->
+                    newRecord("someRecord", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("func", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w1 ->
+                                            w1.condition = newLiteral(true, objectType("bool"))
+                                            w1.statement =
+                                                newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                            w1.elseStatement = elseCallBlock()
                                         }
-                                        loopElseStmt { call("elseCall") }
-                                    }
-                                    call("postWhile")
-                                    whileStmt {
-                                        whileCondition { literal(true, t("bool")) }
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
-                                            }
-                                            call("postIf")
+
+                                    block.statements += dottedCall("postWhile")
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w2 ->
+                                            w2.condition = newLiteral(true, objectType("bool"))
+                                            w2.statement =
+                                                newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                            w2.elseStatement = elseCallBlock()
                                         }
-                                        loopElseStmt { call("elseCall") }
-                                    }
                                 }
-                            }
                         }
                     }
                 }
@@ -120,36 +252,31 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("whileWithBreakAndElse.py") {
-                        record("someRecord") {
-                            method("func") {
-                                body {
-                                    doStmt {
-                                        doCondition { literal(true, t("bool")) }
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
-                                            }
-                                            call("postIf")
+                singleTranslationUnit("whileWithBreakAndElse.py") { tu ->
+                    newRecord("someRecord", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("func", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newDoWhile(enterScope = true) { d1 ->
+                                            d1.condition = newLiteral(true, objectType("bool"))
+                                            d1.statement =
+                                                newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                            d1.elseStatement = elseCallBlock()
                                         }
-                                        loopElseStmt { call("elseCall") }
-                                    }
-                                    call("postDo")
-                                    doStmt {
-                                        doCondition { literal(true, t("bool")) }
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
-                                            }
-                                            call("postIf")
+
+                                    block.statements += dottedCall("postDo")
+
+                                    block.statements +=
+                                        newDoWhile(enterScope = true) { d2 ->
+                                            d2.condition = newLiteral(true, objectType("bool"))
+                                            d2.statement =
+                                                newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                            d2.elseStatement = elseCallBlock()
                                         }
-                                        loopElseStmt { call("elseCall") }
-                                    }
                                 }
-                            }
                         }
                     }
                 }
@@ -163,44 +290,40 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("whileWithBreakAndElse.py") {
-                        record("someRecord") {
-                            method("func") {
-                                body {
-                                    forStmt {
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
-                                            }
-                                            call("postIf")
+                singleTranslationUnit("whileWithBreakAndElse.py") { tu ->
+                    newRecord("someRecord", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("func", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    fun buildFor(): de.fraunhofer.aisec.cpg.graph.expressions.For =
+                                        newFor { forNode ->
+                                            forNode.statement =
+                                                newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                            forNode.initializerStatement =
+                                                newDeclarationStatement { declStmt ->
+                                                    newVariable(
+                                                        "a",
+                                                        objectType("int"),
+                                                        holder = declStmt,
+                                                    ) {
+                                                        it.initializer =
+                                                            newLiteral(0, objectType("int"))
+                                                    }
+                                                }
+                                            forNode.condition = newLiteral(true, objectType("bool"))
+                                            forNode.iterationStatement =
+                                                newUnaryOperator("++", true, false) {
+                                                    it.input = newReference("a")
+                                                }
+                                            forNode.elseStatement = elseCallBlock()
                                         }
-                                        forInitializer {
-                                            declareVar("a", t("int")) { literal(0, t("int")) }
-                                        }
-                                        forCondition { literal(true, t("bool")) }
-                                        forIteration { ref("a").inc() }
-                                        loopElseStmt { call("elseCall") }
-                                    }
-                                    call("postFor")
-                                    forStmt {
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
-                                            }
-                                            call("postIf")
-                                        }
-                                        forInitializer {
-                                            declareVar("a", t("int")) { literal(0, t("int")) }
-                                        }
-                                        forCondition { literal(true, t("bool")) }
-                                        forIteration { ref("a").inc() }
-                                        loopElseStmt { call("elseCall") }
-                                    }
+
+                                    block.statements += buildFor()
+                                    block.statements += dottedCall("postFor")
+                                    block.statements += buildFor()
                                 }
-                            }
                         }
                     }
                 }
@@ -214,38 +337,29 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("whileWithBreakAndElse.py") {
-                        record("someRecord") {
-                            method("func") {
-                                body {
-                                    forEachStmt {
-                                        iterable { call("listOf") }
-                                        variable { declare { variable("a") } }
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
+                singleTranslationUnit("whileWithBreakAndElse.py") { tu ->
+                    newRecord("someRecord", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("func", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    fun buildForEach():
+                                        de.fraunhofer.aisec.cpg.graph.expressions.ForEach =
+                                        newForEach { forEach ->
+                                            forEach.iterable = dottedCall("listOf")
+                                            forEach.variable = newDeclarationStatement { declStmt ->
+                                                newVariable("a", unknownType(), holder = declStmt)
                                             }
-                                            call("postIf")
+                                            forEach.statement =
+                                                newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                            forEach.elseStatement = elseCallBlock()
                                         }
-                                        loopElseStmt { call("elseCall") }
-                                    }
-                                    call("postForEach")
-                                    forEachStmt {
-                                        iterable { call("listOf") }
-                                        variable { declare { variable("a") } }
-                                        loopBody {
-                                            ifStmt {
-                                                condition { literal(true, t("bool")) }
-                                                thenStmt { breakStmt() }
-                                            }
-                                            call("postIf")
-                                        }
-                                        loopElseStmt { call("elseCall") }
-                                    }
+
+                                    block.statements += buildForEach()
+                                    block.statements += dottedCall("postForEach")
+                                    block.statements += buildForEach()
                                 }
-                            }
                         }
                     }
                 }
@@ -259,81 +373,180 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("statementsAsExpressions.py") {
-                        record("someRecord") {
-                            method("func") {
-                                body {
-                                    forEachStmt {
-                                        usedAsExpression = true
-                                        iterable { call("listOf") }
-                                        variable { declare { variable("a") } }
-                                        loopBody { call("inBody") }
-                                        loopElseStmt { call("inElse") }
+                singleTranslationUnit("statementsAsExpressions.py") { tu ->
+                    newRecord("someRecord", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("func", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newForEach { forEach1 ->
+                                        forEach1.usedAsExpression = true
+                                        forEach1.iterable = dottedCall("listOf")
+                                        forEach1.variable = newDeclarationStatement { declStmt ->
+                                            newVariable("a", unknownType(), holder = declStmt)
+                                        }
+                                        forEach1.statement =
+                                            newBlock().also {
+                                                it.statements += dottedCall("inBody")
+                                            }
+                                        forEach1.elseStatement =
+                                            newBlock(enterScope = true) {
+                                                it.statements += dottedCall("inElse")
+                                            }
                                     }
-                                    declare {
-                                        variable("a") {
-                                            literal(1, t("int"))
-                                                .plus(
-                                                    forStmt {
-                                                        usedAsExpression = true
-                                                        loopBody { call("bodyCall") }
-                                                        forInitializer {
-                                                            declareVar("a", t("int")) {
-                                                                literal(0, t("int"))
-                                                            }
+
+                                    val forNode = newFor {
+                                        it.usedAsExpression = true
+                                        it.statement =
+                                            newBlock().also { blk ->
+                                                blk.statements += dottedCall("bodyCall")
+                                            }
+                                        it.initializerStatement =
+                                            newDeclarationStatement { declStmt ->
+                                                newVariable(
+                                                    "a",
+                                                    objectType("int"),
+                                                    holder = declStmt,
+                                                ) { v ->
+                                                    v.initializer = newLiteral(0, objectType("int"))
+                                                }
+                                            }
+                                        it.condition = newLiteral(true, objectType("bool"))
+                                        it.iterationStatement =
+                                            newUnaryOperator("++", true, false) { u ->
+                                                u.input = newReference("a")
+                                            }
+                                        it.elseStatement = elseCallBlock()
+                                    }
+
+                                    declareVariable(block, "a", unknownType()) { v ->
+                                        v.initializer =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newLiteral(1, objectType("int"))
+                                                it.rhs = forNode
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newDoWhile(enterScope = true) { doNode ->
+                                            doNode.usedAsExpression = true
+                                            doNode.condition = newLiteral(true, objectType("bool"))
+                                            doNode.statement =
+                                                newBlock().also {
+                                                    it.statements += dottedCall("bodyCall")
+                                                }
+                                            doNode.elseStatement = elseCallBlock()
+                                        }
+
+                                    block.statements +=
+                                        newLabel().also { labelNode ->
+                                            labelNode.label = "lab"
+                                            labelNode.usedAsExpression = true
+                                            labelNode.subStatement =
+                                                newWhile(enterScope = true) { whileNode ->
+                                                    whileNode.usedAsExpression = true
+                                                    whileNode.condition =
+                                                        newLiteral(true, objectType("bool"))
+                                                    whileNode.statement =
+                                                        newBlock().also {
+                                                            it.statements += dottedCall("bodyCall")
                                                         }
-                                                        forCondition { literal(true, t("bool")) }
-                                                        forIteration { ref("a").inc() }
-                                                        loopElseStmt { call("elseCall") }
-                                                    }
-                                                )
+                                                    whileNode.elseStatement = elseCallBlock()
+                                                }
                                         }
-                                    }
-                                    doStmt {
-                                        usedAsExpression = true
-                                        doCondition { literal(true, t("bool")) }
-                                        loopBody { call("bodyCall") }
-                                        loopElseStmt { call("elseCall") }
-                                    }
-                                    label("lab") {
-                                        usedAsExpression = true
-                                        whileStmt {
-                                            usedAsExpression = true
-                                            whileCondition { literal(true, t("bool")) }
-                                            loopBody { call("bodyCall") }
-                                            loopElseStmt { call("elseCall") }
-                                        }
+
+                                    block.statements += newIfElse { ifNode ->
+                                        ifNode.usedAsExpression = true
+                                        ifNode.condition =
+                                            newBinaryOperator(">") {
+                                                it.lhs = newReference("param")
+                                                it.rhs = newLiteral(7, objectType("int"))
+                                            }
+                                        ifNode.thenStatement =
+                                            newBlock(enterScope = true) {
+                                                it.statements += dottedCall("thenCall")
+                                            }
+                                        ifNode.elseStatement =
+                                            newBlock(enterScope = true) {
+                                                it.statements += dottedCall("elseCall")
+                                            }
                                     }
 
-                                    ifStmt {
-                                        usedAsExpression = true
-                                        condition { ref("param") gt literal(7, t("int")) }
-                                        thenStmt { call("thenCall") }
-                                        elseStmt { call("elseCall") }
-                                    }
+                                    block.statements +=
+                                        newSwitch(enterScope = true) { switchNode ->
+                                            switchNode.selector = newReference("someref")
+                                            switchNode.usedAsExpression = true
+                                            switchNode.statement =
+                                                newBlock().also { blk ->
+                                                    blk.statements +=
+                                                        newCase().also {
+                                                            it.caseExpression = newReference("True")
+                                                        }
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("a")),
+                                                            listOf(
+                                                                newBinaryOperator("*") {
+                                                                    it.lhs = newReference("a")
+                                                                    it.rhs =
+                                                                        newLiteral(
+                                                                            2,
+                                                                            objectType("int"),
+                                                                        )
+                                                                }
+                                                            ),
+                                                        )
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("c")),
+                                                            listOf(
+                                                                newLiteral(-2, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements += newBreak()
+                                                    blk.statements +=
+                                                        newCase().also {
+                                                            it.caseExpression =
+                                                                newReference("False")
+                                                        }
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("a")),
+                                                            listOf(
+                                                                newLiteral(290, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("d")),
+                                                            listOf(
+                                                                newLiteral(-2, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("b")),
+                                                            listOf(
+                                                                newLiteral(-2, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements += newBreak()
+                                                }
+                                        }
 
-                                    switchStmt(ref("someref")) {
-                                        usedAsExpression = true
-                                        switchBody {
-                                            case(ref("True"))
-                                            ref("a") assign { ref("a") * literal(2, t("int")) }
-                                            ref("c") assign literal(-2, t("int"))
-                                            breakStmt()
-                                            case(ref("False"))
-                                            ref("a") assign literal(290, t("int"))
-                                            ref("d") assign literal(-2, t("int"))
-                                            ref("b") assign literal(-2, t("int"))
-                                            breakStmt()
+                                    block.statements += newDeclarationStatement { ds ->
+                                        ds.usedAsExpression = true
+                                        newVariable("a", unknownType(), holder = ds) {
+                                            it.initializer = newLiteral(42, objectType("int"))
                                         }
                                     }
-                                    declare {
-                                        usedAsExpression = true
-                                        variable("a") { literal(42, t("int")) }
-                                    }
-                                    // Todo
                                 }
-                            }
                         }
                     }
                 }
@@ -347,27 +560,38 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("whileWithBreakAndElse.py") {
-                        record("someRecord") {
-                            method("func") {
-                                body {
-                                    call("preComprehensions")
-                                    listComp {
-                                        ref("i")
-                                        compExpr {
-                                            ref("i")
-                                            ref("someIterable")
-                                        }
-                                        compExpr {
-                                            ref("j")
-                                            ref("i")
-                                            ref("j") gt literal(5, t("int"))
-                                        }
+                singleTranslationUnit("whileWithBreakAndElse.py") { tu ->
+                    newRecord("someRecord", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("func", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += dottedCall("preComprehensions")
+
+                                    block.statements += newCollectionComprehension { listComp ->
+                                        listComp.statement = newReference("i")
+                                        listComp.comprehensionExpressions =
+                                            mutableListOf(
+                                                newComprehension {
+                                                    it.variable = newReference("i")
+                                                    it.iterable = newReference("someIterable")
+                                                },
+                                                newComprehension {
+                                                    it.variable = newReference("j")
+                                                    it.iterable = newReference("i")
+                                                    it.predicate =
+                                                        newBinaryOperator(">") { gt ->
+                                                            gt.lhs = newReference("j")
+                                                            gt.rhs =
+                                                                newLiteral(5, objectType("int"))
+                                                        }
+                                                },
+                                            )
                                     }
-                                    call("postComprehensions")
+
+                                    block.statements += dottedCall("postComprehensions")
                                 }
-                            }
                         }
                     }
                 }
@@ -384,26 +608,33 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("record.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable(
-                                        "node",
-                                        t("T").reference(PointerType.PointerOrigin.POINTER),
+                singleTranslationUnit("record.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(
+                                    block,
+                                    "node",
+                                    objectType("T").reference(PointerType.PointerOrigin.POINTER),
+                                )
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMember("value", newReference("node"), "->")),
+                                        listOf(newLiteral(42, objectType("int"))),
                                     )
-                                }
-                                member("value", ref("node"), "->") assign literal(42, t("int"))
-                                member("next", ref("node"), "->") assign ref("node")
-                                memberCall(
-                                    "dump",
-                                    ref("node"),
-                                ) // TODO: Do we have to encode the "->" here?
-                                returnStmt { isImplicit = true }
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMember("next", newReference("node"), "->")),
+                                        listOf(newReference("node")),
+                                    )
+                                block.statements +=
+                                    newMemberCall(newMemberAccess("dump", newReference("node")))
+                                block.statements += newReturn { it.isImplicit = true }
                             }
-                        }
                     }
                 }
             }
@@ -419,17 +650,31 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("record.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("node", t("T")) }
-                                member("value", ref("node")) assign literal(42, t("int"))
-                                member("next", ref("node")) assign { reference(ref("node")) }
-                                returnStmt { isImplicit = true }
+                singleTranslationUnit("record.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "node", objectType("T"))
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMember("value", newReference("node"))),
+                                        listOf(newLiteral(42, objectType("int"))),
+                                    )
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMember("next", newReference("node"))),
+                                        listOf(
+                                            newUnaryOperator("&", false, false) {
+                                                it.input = newReference("node")
+                                            }
+                                        ),
+                                    )
+                                block.statements += newReturn { it.isImplicit = true }
                             }
-                        }
                     }
                 }
             }
@@ -448,16 +693,37 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("test.python") {
-                        function("foo", t("int")) {
-                            body {
-                                declare { variable("a") }
-                                declare { variable("b") }
-                                ref("a") assign { call("bar") + literal(2, t("int")) }
-                                ref("b") assign { literal(2L, t("long")) + call("baz") }
+                singleTranslationUnit("test.python") { tu ->
+                    newFunction("foo", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "a")
+                                declareVariable(block, "b")
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("a")),
+                                        listOf(
+                                            newBinaryOperator("+") {
+                                                it.lhs = dottedCall("bar")
+                                                it.rhs = newLiteral(2, objectType("int"))
+                                            }
+                                        ),
+                                    )
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("b")),
+                                        listOf(
+                                            newBinaryOperator("+") {
+                                                it.lhs = newLiteral(2L, objectType("long"))
+                                                it.rhs = dottedCall("baz")
+                                            }
+                                        ),
+                                    )
                             }
-                        }
                     }
                 }
             }
@@ -476,11 +742,18 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("test.python") {
-                        function("foo", returnTypes = listOf(t("Foo"), t("Bar"))) {
-                            body { returnStmt { call("bar") } }
-                        }
+                singleTranslationUnit("test.python") { tu ->
+
+                    // The return types are resolved in the enclosing scope before entering "foo"'s
+                    // scope.
+                    val returnTypes = listOf(objectType("Foo"), objectType("Bar"))
+                    newFunction("foo", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = returnTypes
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newReturn { it.returnValue = dottedCall("bar") }
+                            }
                     }
                 }
             }
@@ -499,9 +772,21 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Test.java") {
-                        record("Test") { method("foo") { body { returnStmt { -call("bar") } } } }
+                singleTranslationUnit("Test.java") { tu ->
+                    newRecord("Test", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("foo", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue =
+                                            newUnaryOperator("-", false, false) { u ->
+                                                u.input = dottedCall("bar")
+                                            }
+                                    }
+                                }
+                        }
                     }
                 }
             }
@@ -520,15 +805,16 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Test.java") {
-                        record("Test") {
-                            method("foo") {
-                                body {
-                                    declare { variable("node", t("java.lang.String")) }
-                                    returnStmt { isImplicit = true }
+                singleTranslationUnit("Test.java") { tu ->
+                    newRecord("Test", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("foo", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "node", objectType("java.lang.String"))
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
                         }
                     }
                 }
@@ -542,44 +828,68 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Variables.java") {
-                        record("Variables") {
-                            field("field", t("int")) {
-                                literal(42, t("int"))
-                                modifiers = setOf("private")
-                            }
-                            method("getField", t("int")) {
-                                receiver = newVariable("this", t("Variables"))
-                                body { returnStmt { member("field") } }
-                            }
-                            method("getLocal", t("int")) {
-                                receiver = newVariable("this", t("Variables"))
-                                body {
-                                    declare {
-                                        variable("local", t("int")) { literal(42, t("int")) }
+                singleTranslationUnit("Variables.java") { tu ->
+                    newRecord("Variables", "class", holder = tu, enterScope = true) { record ->
+                        newField("field", objectType("int"), holder = record) {
+                            it.initializer = newLiteral(42, objectType("int"))
+                            it.modifiers = setOf("private")
+                        }
+
+                        newMethod("getField", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("int"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("Variables"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue = newMember("field")
                                     }
-                                    returnStmt { ref("local") }
                                 }
-                            }
-                            method("getShadow", t("int")) {
-                                receiver = newVariable("this", t("Variables"))
-                                body {
-                                    declare {
-                                        variable("field", t("int")) { literal(43, t("int")) }
+                        }
+
+                        newMethod("getLocal", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("int"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("Variables"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "local", objectType("int")) {
+                                        it.initializer = newLiteral(42, objectType("int"))
                                     }
-                                    returnStmt { ref("field") }
-                                }
-                            }
-                            method("getNoShadow", t("int")) {
-                                receiver = newVariable("this", t("Variables"))
-                                body {
-                                    declare {
-                                        variable("field", t("int")) { literal(43, t("int")) }
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("local")
                                     }
-                                    returnStmt { member("field", ref("this")) }
                                 }
-                            }
+                        }
+
+                        newMethod("getShadow", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("int"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("Variables"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "field", objectType("int")) {
+                                        it.initializer = newLiteral(43, objectType("int"))
+                                    }
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("field")
+                                    }
+                                }
+                        }
+
+                        newMethod("getNoShadow", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("int"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("Variables"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "field", objectType("int")) {
+                                        it.initializer = newLiteral(43, objectType("int"))
+                                    }
+                                    block.statements += newReturn {
+                                        it.returnValue = newMember("field", newReference("this"))
+                                    }
+                                }
                         }
                     }
                 }
@@ -593,16 +903,21 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("unaryoperator.cpp") {
-                        // The main method
-                        function("somefunc") {
-                            body {
-                                declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                ref("i").inc()
-                                returnStmt { isImplicit = true }
+                singleTranslationUnit("unaryoperator.cpp") { tu ->
+                    newFunction("somefunc", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(unknownType())
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "i", objectType("int")) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
+                                block.statements +=
+                                    newUnaryOperator("++", true, false) {
+                                        it.input = newReference("i")
+                                    }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
-                        }
                     }
                 }
             }
@@ -615,16 +930,23 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("compoundoperator.cpp") {
-                        // The main method
-                        function("somefunc") {
-                            body {
-                                declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                ref("i") plusAssign literal(0, t("int"))
-                                returnStmt { isImplicit = true }
+                singleTranslationUnit("compoundoperator.cpp") { tu ->
+                    newFunction("somefunc", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(unknownType())
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "i", objectType("int")) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
+                                block.statements +=
+                                    newAssign(
+                                        "+=",
+                                        listOf(newReference("i")),
+                                        listOf(newLiteral(0, objectType("int"))),
+                                    )
+                                block.statements += newReturn { it.isImplicit = true }
                             }
-                        }
                     }
                 }
             }
@@ -637,70 +959,97 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("conditional_expression.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("a", t("int")) { literal(0, t("int")) } }
-                                declare { variable("b", t("int")) { literal(1, t("int")) } }
+                val tuName = "conditional_expression.cpp"
+                singleTranslationUnit(tuName) { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "a", objectType("int")) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
+                                declareVariable(block, "b", objectType("int")) {
+                                    it.initializer = newLiteral(1, objectType("int"))
+                                }
 
-                                ref("a") {
-                                    location =
-                                        PhysicalLocation(
-                                            URI("conditional_expression.cpp"),
-                                            Region(5, 3, 5, 4),
-                                        )
-                                } assign
-                                    {
-                                        conditional(
-                                            ref("a") {
-                                                location =
+                                val a1 =
+                                    newReference("a").also {
+                                        it.location =
+                                            PhysicalLocation(URI(tuName), Region(5, 3, 5, 4))
+                                    }
+                                val cond =
+                                    newReference("a")
+                                        .also {
+                                            it.location =
+                                                PhysicalLocation(URI(tuName), Region(5, 7, 5, 8))
+                                        }
+                                        .let { lhs ->
+                                            newBinaryOperator("==") {
+                                                it.lhs = lhs
+                                                it.rhs =
+                                                    newReference("b").also { rhs ->
+                                                        rhs.location =
+                                                            PhysicalLocation(
+                                                                URI(tuName),
+                                                                Region(5, 12, 5, 13),
+                                                            )
+                                                    }
+                                            }
+                                        }
+                                val thenAssign =
+                                    newAssign(
+                                        "=",
+                                        listOf(
+                                            newReference("b").also {
+                                                it.location =
                                                     PhysicalLocation(
-                                                        URI("conditional_expression.cpp"),
-                                                        Region(5, 7, 5, 8),
-                                                    )
-                                            } eq
-                                                ref("b") {
-                                                    location =
-                                                        PhysicalLocation(
-                                                            URI("conditional_expression.cpp"),
-                                                            Region(5, 12, 5, 13),
-                                                        )
-                                                },
-                                            ref("b") {
-                                                location =
-                                                    PhysicalLocation(
-                                                        URI("conditional_expression.cpp"),
+                                                        URI(tuName),
                                                         Region(5, 16, 5, 17),
                                                     )
-                                            } assignAsExpr { literal(2, t("int")) },
-                                            ref("b") {
-                                                location =
+                                            }
+                                        ),
+                                    ) {
+                                        it.rhs = mutableListOf(newLiteral(2, objectType("int")))
+                                        it.usedAsExpression = true
+                                    }
+                                val elseAssign =
+                                    newAssign(
+                                        "=",
+                                        listOf(
+                                            newReference("b").also {
+                                                it.location =
                                                     PhysicalLocation(
-                                                        URI("conditional_expression.cpp"),
+                                                        URI(tuName),
                                                         Region(5, 23, 5, 24),
                                                     )
-                                            } assignAsExpr { literal(3, t("int")) },
-                                        )
+                                            }
+                                        ),
+                                    ) {
+                                        it.rhs = mutableListOf(newLiteral(3, objectType("int")))
+                                        it.usedAsExpression = true
                                     }
-                                ref("a") {
-                                    location =
-                                        PhysicalLocation(
-                                            URI("conditional_expression.cpp"),
-                                            Region(6, 3, 6, 4),
-                                        )
-                                } assign
-                                    ref("b") {
-                                        location =
-                                            PhysicalLocation(
-                                                URI("conditional_expression.cpp"),
-                                                Region(6, 7, 6, 8),
-                                            )
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(a1),
+                                        listOf(newConditional(cond, thenAssign, elseAssign)),
+                                    )
+
+                                val a2 =
+                                    newReference("a").also {
+                                        it.location =
+                                            PhysicalLocation(URI(tuName), Region(6, 3, 6, 4))
                                     }
-                                returnStmt { isImplicit = true }
+                                val b2 =
+                                    newReference("b").also {
+                                        it.location =
+                                            PhysicalLocation(URI(tuName), Region(6, 7, 6, 8))
+                                    }
+                                block.statements += newAssign("=", listOf(a2), listOf(b2))
+
+                                block.statements += newReturn { it.isImplicit = true }
                             }
-                        }
                     }
                 }
             }
@@ -713,87 +1062,252 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("BasicSlice.java") {
-                        record("BasicSlice") {
-                            // The main method
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String[]"))
-                                body {
-                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
-                                    declare {
-                                        variable("b", t("int")) { literal(1, t("int")) }
-                                        variable("c", t("int")) { literal(0, t("int")) }
-                                        variable("d", t("int")) { literal(0, t("int")) }
+                singleTranslationUnit("BasicSlice.java") { tu ->
+                    newRecord("BasicSlice", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.isStatic = true
+                            newParameter("args", objectType("String[]"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
-                                    declare {
-                                        variable("sunShines", t("boolean")) {
-                                            literal(true, t("boolean"))
+
+                                    block.statements += newDeclarationStatement { declStmtBCD ->
+                                        newVariable("b", objectType("int"), holder = declStmtBCD) {
+                                            it.initializer = newLiteral(1, objectType("int"))
+                                        }
+                                        newVariable("c", objectType("int"), holder = declStmtBCD) {
+                                            it.initializer = newLiteral(0, objectType("int"))
+                                        }
+                                        newVariable("d", objectType("int"), holder = declStmtBCD) {
+                                            it.initializer = newLiteral(0, objectType("int"))
                                         }
                                     }
 
-                                    ifStmt {
-                                        condition { ref("a") gt literal(0, t("int")) }
-                                        thenStmt {
-                                            ref("d") assign literal(5, t("int"))
-                                            ref("c") assign literal(2, t("int"))
-                                            ifStmt {
-                                                condition { ref("b") gt literal(0, t("int")) }
-                                                thenStmt {
-                                                    ref("d") assign
-                                                        {
-                                                            ref("a") * literal(2, t("int"))
+                                    declareVariable(block, "sunShines", objectType("boolean")) {
+                                        it.initializer = newLiteral(true, objectType("boolean"))
+                                    }
+
+                                    block.statements += newIfElse { outerIf ->
+                                        outerIf.condition =
+                                            newBinaryOperator(">") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newLiteral(0, objectType("int"))
+                                            }
+                                        outerIf.thenStatement =
+                                            newBlock(enterScope = true) { thenBlk ->
+                                                thenBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("d")),
+                                                        listOf(newLiteral(5, objectType("int"))),
+                                                    )
+                                                thenBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("c")),
+                                                        listOf(newLiteral(2, objectType("int"))),
+                                                    )
+
+                                                thenBlk.statements += newIfElse { innerIf ->
+                                                    innerIf.condition =
+                                                        newBinaryOperator(">") {
+                                                            it.lhs = newReference("b")
+                                                            it.rhs =
+                                                                newLiteral(0, objectType("int"))
                                                         }
-                                                    ref("a") assign
-                                                        {
-                                                            ref("a") +
-                                                                ref("d") * literal(2, t("int"))
+                                                    innerIf.thenStatement =
+                                                        newBlock(enterScope = true) { innerThen ->
+                                                            innerThen.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("d")),
+                                                                    listOf(
+                                                                        newBinaryOperator("*") {
+                                                                            it.lhs =
+                                                                                newReference("a")
+                                                                            it.rhs =
+                                                                                newLiteral(
+                                                                                    2,
+                                                                                    objectType(
+                                                                                        "int"
+                                                                                    ),
+                                                                                )
+                                                                        }
+                                                                    ),
+                                                                )
+                                                            innerThen.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("a")),
+                                                                    listOf(
+                                                                        newBinaryOperator("+") {
+                                                                            it.lhs =
+                                                                                newReference("a")
+                                                                            it.rhs =
+                                                                                newBinaryOperator(
+                                                                                    "*"
+                                                                                ) { m ->
+                                                                                    m.lhs =
+                                                                                        newReference(
+                                                                                            "d"
+                                                                                        )
+                                                                                    m.rhs =
+                                                                                        newLiteral(
+                                                                                            2,
+                                                                                            objectType(
+                                                                                                "int"
+                                                                                            ),
+                                                                                        )
+                                                                                }
+                                                                        }
+                                                                    ),
+                                                                )
                                                         }
-                                                }
-                                                elseIf {
-                                                    condition { ref("b") lt literal(-2, t("int")) }
-                                                    thenStmt {
-                                                        ref("a") assign
-                                                            {
-                                                                ref("a") - literal(10, t("int"))
-                                                            }
-                                                    }
+                                                    // The else-if condition is intentionally just
+                                                    // this
+                                                    // literal and does not reference a;
+                                                    // DFGTest.testOutgoingDFGFromVariableDeclaration
+                                                    // asserts exactly 6 out-edges for a.
+                                                    innerIf.elseStatement =
+                                                        newIfElse { elseIfNode ->
+                                                            elseIfNode.condition =
+                                                                newLiteral(-2, objectType("int"))
+                                                            elseIfNode.thenStatement =
+                                                                newBlock(enterScope = true) {
+                                                                    elseIfThen ->
+                                                                    elseIfThen.statements +=
+                                                                        newAssign(
+                                                                            "=",
+                                                                            listOf(
+                                                                                newReference("a")
+                                                                            ),
+                                                                            listOf(
+                                                                                newBinaryOperator(
+                                                                                    "-"
+                                                                                ) {
+                                                                                    it.lhs =
+                                                                                        newReference(
+                                                                                            "a"
+                                                                                        )
+                                                                                    it.rhs =
+                                                                                        newLiteral(
+                                                                                            10,
+                                                                                            objectType(
+                                                                                                "int"
+                                                                                            ),
+                                                                                        )
+                                                                                }
+                                                                            ),
+                                                                        )
+                                                                }
+                                                        }
                                                 }
                                             }
-                                        }
-                                        elseStmt {
-                                            ref("b") assign literal(-2, t("int"))
-                                            ref("d") assign literal(-2, t("int"))
-                                            ref("a").dec()
-                                        }
+                                        outerIf.elseStatement =
+                                            newBlock(enterScope = true) { elseBlk ->
+                                                elseBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("b")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                elseBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("d")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                elseBlk.statements +=
+                                                    newUnaryOperator("--", true, false) {
+                                                        it.input = newReference("a")
+                                                    }
+                                            }
                                     }
 
-                                    ref("a") assign { ref("a") + ref("b") }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(
+                                                newBinaryOperator("+") {
+                                                    it.lhs = newReference("a")
+                                                    it.rhs = newReference("b")
+                                                }
+                                            ),
+                                        )
 
-                                    switchStmt(ref("sunShines")) {
-                                        switchBody {
-                                            case(
-                                                ref("True")
-                                            ) // No idea why it was "True" and not "true". Bug? On
-                                            // purpose? I just keep it
-                                            ref("a") assign { ref("a") * literal(2, t("int")) }
-                                            ref("c") assign literal(-2, t("int"))
-                                            breakStmt()
-                                            case(
-                                                ref("False")
-                                            ) // No idea why it was "False" and not "false". Bug? On
-                                            // purpose? I just keep it
-                                            ref("a") assign literal(290, t("int"))
-                                            ref("d") assign literal(-2, t("int"))
-                                            ref("b") assign literal(-2, t("int"))
-                                            breakStmt()
+                                    block.statements +=
+                                        newSwitch(enterScope = true) { switchNode ->
+                                            switchNode.selector = newReference("sunShines")
+                                            switchNode.statement =
+                                                newBlock().also { blk ->
+                                                    blk.statements +=
+                                                        newCase().also {
+                                                            it.caseExpression = newReference("True")
+                                                        }
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("a")),
+                                                            listOf(
+                                                                newBinaryOperator("*") {
+                                                                    it.lhs = newReference("a")
+                                                                    it.rhs =
+                                                                        newLiteral(
+                                                                            2,
+                                                                            objectType("int"),
+                                                                        )
+                                                                }
+                                                            ),
+                                                        )
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("c")),
+                                                            listOf(
+                                                                newLiteral(-2, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements += newBreak()
+                                                    blk.statements +=
+                                                        newCase().also {
+                                                            it.caseExpression =
+                                                                newReference("False")
+                                                        }
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("a")),
+                                                            listOf(
+                                                                newLiteral(290, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("d")),
+                                                            listOf(
+                                                                newLiteral(-2, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("b")),
+                                                            listOf(
+                                                                newLiteral(-2, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements += newBreak()
+                                                }
                                         }
-                                    }
 
-                                    returnStmt { isImplicit = true }
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
                         }
                     }
                 }
@@ -807,57 +1321,99 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ControlFlowSensitiveDFGIfMerge.java") {
-                        record("ControlFlowSensitiveDFGIfMerge") {
-                            field("bla", t("int")) {}
-                            constructor {
-                                isImplicit = true
-                                receiver = newVariable("this", t("ControlFlowSensitiveDFGIfMerge"))
-                                body { returnStmt { isImplicit = true } }
-                            }
-                            method("func") {
-                                receiver = newVariable("this", t("ControlFlowSensitiveDFGIfMerge"))
-                                param("args", t("int[]"))
-                                body {
-                                    declare { variable("a", t("int")) { literal(1, t("int")) } }
-                                    ifStmt {
-                                        condition {
-                                            member("length", ref("args")) gt literal(3, t("int"))
-                                        }
-                                        thenStmt { ref("a") assign literal(2, t("int")) }
-                                        elseStmt {
-                                            memberCall(
-                                                "println",
-                                                member(
-                                                    "out",
-                                                    ref("System") { isStaticAccess = true },
-                                                ),
-                                            ) {
-                                                ref("a")
+                singleTranslationUnit("ControlFlowSensitiveDFGIfMerge.java") { tu ->
+                    newRecord(
+                        "ControlFlowSensitiveDFGIfMerge",
+                        "class",
+                        holder = tu,
+                        enterScope = true,
+                    ) { record ->
+                        newField("bla", objectType("int"), holder = record)
+
+                        newConstructor(record.name, record, holder = record, enterScope = true) {
+                            ctor ->
+                            ctor.isImplicit = true
+                            ctor.receiver =
+                                newVariable("this", objectType("ControlFlowSensitiveDFGIfMerge"))
+                            ctor.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn { it.isImplicit = true }
+                                }
+                        }
+
+                        newMethod("func", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.receiver =
+                                newVariable("this", objectType("ControlFlowSensitiveDFGIfMerge"))
+                            newParameter("args", objectType("int[]"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(1, objectType("int"))
+                                    }
+
+                                    block.statements += newIfElse { ifNode ->
+                                        ifNode.condition =
+                                            newBinaryOperator(">") {
+                                                it.lhs = newMember("length", newReference("args"))
+                                                it.rhs = newLiteral(3, objectType("int"))
                                             }
-                                        }
+                                        ifNode.thenStatement =
+                                            newBlock(enterScope = true) { thenBlk ->
+                                                thenBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(2, objectType("int"))),
+                                                    )
+                                            }
+                                        ifNode.elseStatement =
+                                            newBlock(enterScope = true) { elseBlk ->
+                                                elseBlk.statements += printlnCall(newReference("a"))
+                                            }
                                     }
 
-                                    declare { variable("b", t("int")) { ref("a") } }
-                                    returnStmt { isImplicit = true }
-                                }
-                            }
-
-                            // The main method
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String[]"))
-                                body {
-                                    declare {
-                                        variable("obj", t("ControlFlowSensitiveDFGIfMerge")) {
-                                            new { construct("ControlFlowSensitiveDFGIfMerge") }
-                                        }
+                                    declareVariable(block, "b", objectType("int")) {
+                                        it.initializer = newReference("a")
                                     }
-                                    member("bla", ref("obj")) assign literal(3, t("int"))
-                                    returnStmt { isImplicit = true }
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
+                        }
+
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.isStatic = true
+                            newParameter("args", objectType("String[]"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(
+                                        block,
+                                        "obj",
+                                        objectType("ControlFlowSensitiveDFGIfMerge"),
+                                    ) {
+                                        it.initializer =
+                                            newNew().also { n ->
+                                                n.initializer =
+                                                    newConstruction(
+                                                        parseName("ControlFlowSensitiveDFGIfMerge")
+                                                    ) { c ->
+                                                        c.type =
+                                                            objectType(
+                                                                "ControlFlowSensitiveDFGIfMerge"
+                                                            )
+                                                    }
+                                            }
+                                    }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newMember("bla", newReference("obj"))),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
+                                    block.statements += newReturn { it.isImplicit = true }
+                                }
                         }
                     }
                 }
@@ -871,63 +1427,109 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ControlFlowSesitiveDFGSwitch.java") {
-                        record("ControlFlowSesitiveDFGSwitch") {
-                            // The main method
-                            method("func3") {
-                                receiver = newVariable("this", t("ControlFlowSesitiveDFGSwitch"))
-                                body {
-                                    declare {
-                                        variable("switchVal", t("int")) { literal(3, t("int")) }
+                val tuName = "ControlFlowSesitiveDFGSwitch.java"
+                singleTranslationUnit(tuName) { tu ->
+                    newRecord(
+                        "ControlFlowSesitiveDFGSwitch",
+                        "class",
+                        holder = tu,
+                        enterScope = true,
+                    ) { record ->
+                        newMethod("func3", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.receiver =
+                                newVariable("this", objectType("ControlFlowSesitiveDFGSwitch"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "switchVal", objectType("int")) {
+                                        it.initializer = newLiteral(3, objectType("int"))
                                     }
-                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
-                                    switchStmt(ref("switchVal")) {
-                                        switchBody {
-                                            case(literal(1, t("int")))
-                                            ref("a") {
-                                                location =
-                                                    PhysicalLocation(
-                                                        URI("ControlFlowSesitiveDFGSwitch.java"),
-                                                        Region(8, 9, 8, 10),
-                                                    )
-                                            } assign literal(10, t("int"))
-                                            breakStmt()
-                                            case(literal(2, t("int")))
-                                            ref("a") {
-                                                location =
-                                                    PhysicalLocation(
-                                                        URI("ControlFlowSesitiveDFGSwitch.java"),
-                                                        Region(11, 9, 11, 10),
-                                                    )
-                                            } assign literal(11, t("int"))
-                                            breakStmt()
-                                            case(literal(3, t("int")))
-                                            ref("a") {
-                                                location =
-                                                    PhysicalLocation(
-                                                        URI("ControlFlowSesitiveDFGSwitch.java"),
-                                                        Region(14, 9, 14, 10),
-                                                    )
-                                            } assign literal(12, t("int"))
-                                            default()
-                                            memberCall(
-                                                "println",
-                                                member(
-                                                    "out",
-                                                    ref("System") { isStaticAccess = true },
-                                                ),
-                                            ) {
-                                                ref("a")
-                                            }
-                                            breakStmt()
-                                        }
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
 
-                                    declare { variable("b", t("int")) { ref("a") } }
-                                    returnStmt { isImplicit = true }
+                                    block.statements +=
+                                        newSwitch(enterScope = true) { switchNode ->
+                                            switchNode.selector = newReference("switchVal")
+                                            switchNode.statement =
+                                                newBlock().also { blk ->
+                                                    blk.statements +=
+                                                        newCase().also {
+                                                            it.caseExpression =
+                                                                newLiteral(1, objectType("int"))
+                                                        }
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(
+                                                                newReference("a").also {
+                                                                    it.location =
+                                                                        PhysicalLocation(
+                                                                            URI(tuName),
+                                                                            Region(8, 9, 8, 10),
+                                                                        )
+                                                                }
+                                                            ),
+                                                            listOf(
+                                                                newLiteral(10, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements += newBreak()
+                                                    blk.statements +=
+                                                        newCase().also {
+                                                            it.caseExpression =
+                                                                newLiteral(2, objectType("int"))
+                                                        }
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(
+                                                                newReference("a").also {
+                                                                    it.location =
+                                                                        PhysicalLocation(
+                                                                            URI(tuName),
+                                                                            Region(11, 9, 11, 10),
+                                                                        )
+                                                                }
+                                                            ),
+                                                            listOf(
+                                                                newLiteral(11, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements += newBreak()
+                                                    blk.statements +=
+                                                        newCase().also {
+                                                            it.caseExpression =
+                                                                newLiteral(3, objectType("int"))
+                                                        }
+                                                    blk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(
+                                                                newReference("a").also {
+                                                                    it.location =
+                                                                        PhysicalLocation(
+                                                                            URI(tuName),
+                                                                            Region(14, 9, 14, 10),
+                                                                        )
+                                                                }
+                                                            ),
+                                                            listOf(
+                                                                newLiteral(12, objectType("int"))
+                                                            ),
+                                                        )
+                                                    blk.statements += newDefault()
+                                                    blk.statements += printlnCall(newReference("a"))
+                                                    blk.statements += newBreak()
+                                                }
+                                        }
+
+                                    declareVariable(block, "b", objectType("int")) {
+                                        it.initializer = newReference("a")
+                                    }
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
                         }
                     }
                 }
@@ -941,28 +1543,55 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ControlFlowSensitiveDFGIfNoMerge.java") {
-                        record("ControlFlowSensitiveDFGIfNoMerge") {
-                            // The main method
-                            method("func2") {
-                                receiver =
-                                    newVariable("this", t("ControlFlowSensitiveDFGIfNoMerge"))
-                                body {
-                                    declare { variable("a", t("int")) { literal(1, t("int")) } }
-                                    ifStmt {
-                                        condition {
-                                            member("length", ref("args")) gt literal(3, t("int"))
-                                        }
-                                        thenStmt { ref("a") assign literal(2, t("int")) }
-                                        elseStmt {
-                                            ref("a") assign literal(4, t("int"))
-                                            declare { variable("b", t("int")) { ref("a") } }
-                                        }
+                singleTranslationUnit("ControlFlowSensitiveDFGIfNoMerge.java") { tu ->
+                    newRecord(
+                        "ControlFlowSensitiveDFGIfNoMerge",
+                        "class",
+                        holder = tu,
+                        enterScope = true,
+                    ) { record ->
+                        newMethod("func2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.receiver =
+                                newVariable("this", objectType("ControlFlowSensitiveDFGIfNoMerge"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(1, objectType("int"))
                                     }
-                                    returnStmt { isImplicit = true }
+
+                                    block.statements += newIfElse { ifNode ->
+                                        ifNode.condition =
+                                            newBinaryOperator(">") {
+                                                it.lhs = newMember("length", newReference("args"))
+                                                it.rhs = newLiteral(3, objectType("int"))
+                                            }
+                                        ifNode.thenStatement =
+                                            newBlock(enterScope = true) { thenBlk ->
+                                                thenBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(2, objectType("int"))),
+                                                    )
+                                            }
+                                        ifNode.elseStatement =
+                                            newBlock(enterScope = true) { elseBlk ->
+                                                elseBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(4, objectType("int"))),
+                                                    )
+                                                declareVariable(elseBlk, "b", objectType("int")) {
+                                                    it.initializer = newReference("a")
+                                                }
+                                            }
+                                    }
+
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
                         }
                     }
                 }
@@ -976,74 +1605,189 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("LoopDFGs.java") {
-                        record("LoopDFGs") {
-                            // The main method
-                            method("labeledBreakContinue") {
-                                receiver = newVariable("this", t("LoopDFGs"))
-                                param("param", t("int"))
-                                body {
-                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
-                                    label("lab1") {
-                                        whileStmt {
-                                            whileCondition { ref("param") lt literal(5, t("int")) }
-                                            loopBody {
-                                                whileStmt {
-                                                    whileCondition {
-                                                        ref("param") gt literal(6, t("int"))
-                                                    }
-                                                    loopBody {
-                                                        ifStmt {
-                                                            condition {
-                                                                ref("param") gt literal(7, t("int"))
-                                                            }
-                                                            thenStmt {
-                                                                ref("a") assign literal(1, t("int"))
-                                                                continueStmt("lab1")
-                                                            }
-                                                            elseStmt {
-                                                                memberCall(
-                                                                    "println",
-                                                                    member(
-                                                                        "out",
-                                                                        ref("System") {
-                                                                            isStaticAccess = true
-                                                                        },
-                                                                    ),
-                                                                ) {
-                                                                    ref("a")
-                                                                }
-                                                                ref("a") assign literal(2, t("int"))
-                                                                breakStmt("lab1")
-                                                            }
-                                                        }
-                                                        ref("a") assign literal(4, t("int"))
-                                                    }
-                                                }
-                                                memberCall(
-                                                    "println",
-                                                    member(
-                                                        "out",
-                                                        ref("System") { isStaticAccess = true },
-                                                    ),
-                                                ) {
-                                                    ref("a")
-                                                }
-                                                ref("a") assign literal(3, t("int"))
-                                            }
-                                        }
+                singleTranslationUnit("LoopDFGs.java") { tu ->
+                    newRecord("LoopDFGs", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("labeledBreakContinue", holder = record, enterScope = true) {
+                            method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("LoopDFGs"))
+                            newParameter("param", objectType("int"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
 
-                                    memberCall(
-                                        "println",
-                                        member("out", ref("System") { isStaticAccess = true }),
-                                    ) {
-                                        ref("a")
-                                    }
-                                    returnStmt { isImplicit = true }
+                                    block.statements +=
+                                        newLabel().also { labelNode ->
+                                            labelNode.label = "lab1"
+                                            labelNode.subStatement =
+                                                newWhile(enterScope = true) { outerWhile ->
+                                                    outerWhile.condition =
+                                                        newBinaryOperator("<") {
+                                                            it.lhs = newReference("param")
+                                                            it.rhs =
+                                                                newLiteral(5, objectType("int"))
+                                                        }
+                                                    outerWhile.statement =
+                                                        newBlock().also { outerBody ->
+                                                            outerBody.statements +=
+                                                                newWhile(enterScope = true) {
+                                                                    innerWhile ->
+                                                                    innerWhile.condition =
+                                                                        newBinaryOperator(">") {
+                                                                            it.lhs =
+                                                                                newReference(
+                                                                                    "param"
+                                                                                )
+                                                                            it.rhs =
+                                                                                newLiteral(
+                                                                                    6,
+                                                                                    objectType(
+                                                                                        "int"
+                                                                                    ),
+                                                                                )
+                                                                        }
+                                                                    innerWhile.statement =
+                                                                        newBlock().also { innerBody
+                                                                            ->
+                                                                            innerBody.statements +=
+                                                                                newIfElse { innerIf
+                                                                                    ->
+                                                                                    innerIf
+                                                                                        .condition =
+                                                                                        newBinaryOperator(
+                                                                                            ">"
+                                                                                        ) {
+                                                                                            it.lhs =
+                                                                                                newReference(
+                                                                                                    "param"
+                                                                                                )
+                                                                                            it.rhs =
+                                                                                                newLiteral(
+                                                                                                    7,
+                                                                                                    objectType(
+                                                                                                        "int"
+                                                                                                    ),
+                                                                                                )
+                                                                                        }
+                                                                                    innerIf
+                                                                                        .thenStatement =
+                                                                                        newBlock(
+                                                                                            enterScope =
+                                                                                                true
+                                                                                        ) { thenBlk
+                                                                                            ->
+                                                                                            thenBlk
+                                                                                                .statements +=
+                                                                                                newAssign(
+                                                                                                    "=",
+                                                                                                    listOf(
+                                                                                                        newReference(
+                                                                                                            "a"
+                                                                                                        )
+                                                                                                    ),
+                                                                                                    listOf(
+                                                                                                        newLiteral(
+                                                                                                            1,
+                                                                                                            objectType(
+                                                                                                                "int"
+                                                                                                            ),
+                                                                                                        )
+                                                                                                    ),
+                                                                                                )
+                                                                                            thenBlk
+                                                                                                .statements +=
+                                                                                                newContinue()
+                                                                                                    .also {
+                                                                                                        it
+                                                                                                            .label =
+                                                                                                            "lab1"
+                                                                                                    }
+                                                                                        }
+                                                                                    innerIf
+                                                                                        .elseStatement =
+                                                                                        newBlock(
+                                                                                            enterScope =
+                                                                                                true
+                                                                                        ) { elseBlk
+                                                                                            ->
+                                                                                            elseBlk
+                                                                                                .statements +=
+                                                                                                printlnCall(
+                                                                                                    newReference(
+                                                                                                        "a"
+                                                                                                    )
+                                                                                                )
+                                                                                            elseBlk
+                                                                                                .statements +=
+                                                                                                newAssign(
+                                                                                                    "=",
+                                                                                                    listOf(
+                                                                                                        newReference(
+                                                                                                            "a"
+                                                                                                        )
+                                                                                                    ),
+                                                                                                    listOf(
+                                                                                                        newLiteral(
+                                                                                                            2,
+                                                                                                            objectType(
+                                                                                                                "int"
+                                                                                                            ),
+                                                                                                        )
+                                                                                                    ),
+                                                                                                )
+                                                                                            elseBlk
+                                                                                                .statements +=
+                                                                                                newBreak()
+                                                                                                    .also {
+                                                                                                        it
+                                                                                                            .label =
+                                                                                                            "lab1"
+                                                                                                    }
+                                                                                        }
+                                                                                }
+                                                                            innerBody.statements +=
+                                                                                newAssign(
+                                                                                    "=",
+                                                                                    listOf(
+                                                                                        newReference(
+                                                                                            "a"
+                                                                                        )
+                                                                                    ),
+                                                                                    listOf(
+                                                                                        newLiteral(
+                                                                                            4,
+                                                                                            objectType(
+                                                                                                "int"
+                                                                                            ),
+                                                                                        )
+                                                                                    ),
+                                                                                )
+                                                                        }
+                                                                }
+
+                                                            outerBody.statements +=
+                                                                printlnCall(newReference("a"))
+                                                            outerBody.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("a")),
+                                                                    listOf(
+                                                                        newLiteral(
+                                                                            3,
+                                                                            objectType("int"),
+                                                                        )
+                                                                    ),
+                                                                )
+                                                        }
+                                                }
+                                        }
+
+                                    block.statements += printlnCall(newReference("a"))
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
                         }
                     }
                 }
@@ -1057,44 +1801,81 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("LoopDFGs.java") {
-                        record("LoopDFGs") {
-                            // The main method
-                            method("looping") {
-                                receiver = newVariable("this", t("LoopDFGs"))
-                                param("param", t("int"))
-                                body {
-                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
-                                    whileStmt {
-                                        whileCondition {
-                                            (ref("param") % literal(6, t("int"))) eq
-                                                literal(5, t("int"))
-                                        }
-                                        loopBody {
-                                            ifStmt {
-                                                condition { ref("param") gt literal(7, t("int")) }
-                                                thenStmt { ref("a") assign literal(1, t("int")) }
-                                                elseStmt {
-                                                    memberCall(
-                                                        "println",
-                                                        member(
-                                                            "out",
-                                                            ref("System") { isStaticAccess = true },
-                                                        ),
-                                                    ) {
-                                                        ref("a")
-                                                    }
-                                                    ref("a") assign literal(2, t("int"))
-                                                }
-                                            }
-                                        }
+                singleTranslationUnit("LoopDFGs.java") { tu ->
+                    newRecord("LoopDFGs", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("looping", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("LoopDFGs"))
+                            newParameter("param", objectType("int"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
 
-                                    ref("a") assign { literal(3, t("int")) }
-                                    returnStmt { isImplicit = true }
+                                    block.statements +=
+                                        newWhile(enterScope = true) { whileNode ->
+                                            whileNode.condition =
+                                                newBinaryOperator("==") {
+                                                    it.lhs =
+                                                        newBinaryOperator("%") { m ->
+                                                            m.lhs = newReference("param")
+                                                            m.rhs = newLiteral(6, objectType("int"))
+                                                        }
+                                                    it.rhs = newLiteral(5, objectType("int"))
+                                                }
+                                            whileNode.statement =
+                                                newBlock().also { body ->
+                                                    body.statements += newIfElse { ifNode ->
+                                                        ifNode.condition =
+                                                            newBinaryOperator(">") {
+                                                                it.lhs = newReference("param")
+                                                                it.rhs =
+                                                                    newLiteral(7, objectType("int"))
+                                                            }
+                                                        ifNode.thenStatement =
+                                                            newBlock(enterScope = true) { thenBlk ->
+                                                                thenBlk.statements +=
+                                                                    newAssign(
+                                                                        "=",
+                                                                        listOf(newReference("a")),
+                                                                        listOf(
+                                                                            newLiteral(
+                                                                                1,
+                                                                                objectType("int"),
+                                                                            )
+                                                                        ),
+                                                                    )
+                                                            }
+                                                        ifNode.elseStatement =
+                                                            newBlock(enterScope = true) { elseBlk ->
+                                                                elseBlk.statements +=
+                                                                    printlnCall(newReference("a"))
+                                                                elseBlk.statements +=
+                                                                    newAssign(
+                                                                        "=",
+                                                                        listOf(newReference("a")),
+                                                                        listOf(
+                                                                            newLiteral(
+                                                                                2,
+                                                                                objectType("int"),
+                                                                            )
+                                                                        ),
+                                                                    )
+                                                            }
+                                                    }
+                                                }
+                                        }
+
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
                         }
                     }
                 }
@@ -1108,19 +1889,38 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("DelayedAssignmentAfterRHS.java") {
-                        record("DelayedAssignmentAfterRHS") {
-                            // The main method
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String[]"))
-                                body {
-                                    declare { variable("a", t("int")) { literal(0, t("int")) } }
-                                    declare { variable("b", t("int")) { literal(1, t("int")) } }
-                                    ref("a") assign { ref("a") + ref("b") }
+                singleTranslationUnit("DelayedAssignmentAfterRHS.java") { tu ->
+                    newRecord(
+                        "DelayedAssignmentAfterRHS",
+                        "class",
+                        holder = tu,
+                        enterScope = true,
+                    ) { record ->
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.isStatic = true
+                            newParameter("args", objectType("String[]"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                    declareVariable(block, "b", objectType("int")) {
+                                        it.initializer = newLiteral(1, objectType("int"))
+                                    }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(
+                                                newBinaryOperator("+") {
+                                                    it.lhs = newReference("a")
+                                                    it.rhs = newReference("b")
+                                                }
+                                            ),
+                                        )
                                 }
-                            }
                         }
                     }
                 }
@@ -1134,39 +1934,52 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ReturnTest.java") {
-                        record("ReturnTest", "class") {
-                            method("testReturn", t("int")) {
-                                receiver = newVariable("this", t("ReturnTest"))
-                                body {
-                                    declare { variable("a", t("int")) { literal(1, t("int")) } }
-                                    ifStmt {
-                                        condition { ref("a") eq literal(5, t("int")) }
-                                        thenStmt {
-                                            returnStmt {
-                                                returnValue = literal(2, t("int"))
-                                                location =
-                                                    PhysicalLocation(
-                                                        URI("ReturnTest.java"),
-                                                        Region(5, 13, 5, 21),
-                                                    )
-                                            }
-                                        }
-                                        elseStmt {
-                                            returnStmt {
-                                                returnValue = ref("a")
-                                                location =
-                                                    PhysicalLocation(
-                                                        URI("ReturnTest.java"),
-                                                        Region(7, 13, 7, 21),
-                                                    )
-                                            }
-                                        }
+                val tuName = "ReturnTest.java"
+                singleTranslationUnit(tuName) { tu ->
+                    newRecord("ReturnTest", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("testReturn", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("int"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("ReturnTest"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a", objectType("int")) {
+                                        it.initializer = newLiteral(1, objectType("int"))
                                     }
-                                    returnStmt { isImplicit = true }
+
+                                    block.statements += newIfElse { ifNode ->
+                                        ifNode.condition =
+                                            newBinaryOperator("==") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
+                                        ifNode.thenStatement =
+                                            newBlock(enterScope = true) { thenBlk ->
+                                                thenBlk.statements += newReturn {
+                                                    it.returnValue =
+                                                        newLiteral(2, objectType("int"))
+                                                    it.location =
+                                                        PhysicalLocation(
+                                                            URI(tuName),
+                                                            Region(5, 13, 5, 21),
+                                                        )
+                                                }
+                                            }
+                                        ifNode.elseStatement =
+                                            newBlock(enterScope = true) { elseBlk ->
+                                                elseBlk.statements += newReturn {
+                                                    it.returnValue = newReference("a")
+                                                    it.location =
+                                                        PhysicalLocation(
+                                                            URI(tuName),
+                                                            Region(7, 13, 7, 21),
+                                                        )
+                                                }
+                                            }
+                                    }
+
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
                         }
                     }
                 }
@@ -1180,38 +1993,88 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Record.java") {
-                        namespace("compiling") {
-                            record("SimpleClass", "class") {
-                                field("field", t("int")) {}
-                                constructor {
-                                    receiver = newVariable("this", t("SimpleClass"))
-                                    body { returnStmt { isImplicit = true } }
-                                }
-                                method("method", t("Integer")) {
-                                    receiver = newVariable("this", t("SimpleClass"))
-                                    body {
-                                        memberCall(
-                                            "println",
-                                            member("out", ref("System") { isStaticAccess = true }),
-                                        ) {
-                                            literal("Hello world")
-                                        }
-                                        declare { variable("x", t("int")) { literal(0) } }
-                                        ifStmt {
-                                            condition {
-                                                memberCall(
-                                                    "currentTimeMillis",
-                                                    ref("System") { isStaticAccess = true },
-                                                ) gt literal(0)
-                                            }
-                                            thenStmt { ref("x") assign { ref("x") + literal(1) } }
-                                            elseStmt { ref("x") assign { ref("x") - literal(1) } }
-                                        }
-                                        returnStmt { ref("x") }
+                singleTranslationUnit("Record.java") { tu ->
+                    newNamespace("compiling", holder = tu, enterScope = true) { ns ->
+                        newRecord("SimpleClass", "class", holder = ns, enterScope = true) { record
+                            ->
+                            newField("field", objectType("int"), holder = record)
+
+                            newConstructor(
+                                record.name,
+                                record,
+                                holder = record,
+                                enterScope = true,
+                            ) { ctor ->
+                                ctor.receiver = newVariable("this", objectType("SimpleClass"))
+                                ctor.body =
+                                    newBlock(enterScope = true) { block ->
+                                        block.statements += newReturn { it.isImplicit = true }
                                     }
-                                }
+                            }
+
+                            newMethod("method", holder = record, enterScope = true) { method ->
+                                method.returnTypes = listOf(objectType("Integer"))
+                                method.type = computeType(method)
+                                method.receiver = newVariable("this", objectType("SimpleClass"))
+                                method.body =
+                                    newBlock(enterScope = true) { block ->
+                                        block.statements +=
+                                            printlnCall(newLiteral("Hello world", unknownType()))
+
+                                        declareVariable(block, "x", objectType("int")) {
+                                            it.initializer = newLiteral(0, unknownType())
+                                        }
+
+                                        block.statements += newIfElse { ifNode ->
+                                            ifNode.condition =
+                                                newBinaryOperator(">") {
+                                                    it.lhs =
+                                                        newMemberCall(
+                                                            newMemberAccess(
+                                                                "currentTimeMillis",
+                                                                newReference("System").also {
+                                                                    it.isStaticAccess = true
+                                                                },
+                                                            )
+                                                        )
+                                                    it.rhs = newLiteral(0, unknownType())
+                                                }
+                                            ifNode.thenStatement =
+                                                newBlock(enterScope = true) { thenBlk ->
+                                                    thenBlk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("x")),
+                                                            listOf(
+                                                                newBinaryOperator("+") {
+                                                                    it.lhs = newReference("x")
+                                                                    it.rhs =
+                                                                        newLiteral(1, unknownType())
+                                                                }
+                                                            ),
+                                                        )
+                                                }
+                                            ifNode.elseStatement =
+                                                newBlock(enterScope = true) { elseBlk ->
+                                                    elseBlk.statements +=
+                                                        newAssign(
+                                                            "=",
+                                                            listOf(newReference("x")),
+                                                            listOf(
+                                                                newBinaryOperator("-") {
+                                                                    it.lhs = newReference("x")
+                                                                    it.rhs =
+                                                                        newLiteral(1, unknownType())
+                                                                }
+                                                            ),
+                                                        )
+                                                }
+                                        }
+
+                                        block.statements += newReturn {
+                                            it.returnValue = newReference("x")
+                                        }
+                                    }
                             }
                         }
                     }
@@ -1226,56 +2089,94 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        record("Dataflow") {
-                            field("attr", t("String")) { literal("", t("String")) }
-                            constructor {
-                                isImplicit = true
-                                receiver = newVariable("this", t("Dataflow"))
-                                body { returnStmt { isImplicit = true } }
-                            }
-                            method("toString", t("String")) {
-                                receiver = newVariable("this", t("Dataflow"))
-                                body {
-                                    returnStmt { literal("ShortcutClass: attr=") + member("attr") }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                        newField("attr", objectType("String"), holder = record) {
+                            it.initializer = newLiteral("", objectType("String"))
+                        }
+
+                        newConstructor(record.name, record, holder = record, enterScope = true) {
+                            ctor ->
+                            ctor.isImplicit = true
+                            ctor.receiver = newVariable("this", objectType("Dataflow"))
+                            ctor.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
-                            }
+                        }
 
-                            method("test", t("String")) {
-                                receiver = newVariable("this", t("Dataflow"))
-                                body { returnStmt { literal("abcd") } }
-                            }
-
-                            method("print", t("int")) {
-                                receiver = newVariable("this", t("Dataflow"))
-                                param("s", t("String"))
-                                body {
-                                    memberCall(
-                                        "println",
-                                        member("out", ref("System") { isStaticAccess = true }),
-                                    ) {
-                                        ref("s")
+                        newMethod("toString", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("String"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("Dataflow"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue =
+                                            newBinaryOperator("+") { op ->
+                                                op.lhs =
+                                                    newLiteral(
+                                                        "ShortcutClass: attr=",
+                                                        objectType("String"),
+                                                    )
+                                                op.rhs = newMember("attr")
+                                            }
                                     }
-                                    returnStmt { isImplicit = true }
                                 }
-                            }
+                        }
 
-                            // The main method
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String[]"))
-                                body {
-                                    declare {
-                                        variable("sc", t("Dataflow")) {
-                                            new { construct("Dataflow") }
+                        newMethod("test", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("String"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("Dataflow"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue = newLiteral("abcd", unknownType())
+                                    }
+                                }
+                        }
+
+                        newMethod("print", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("int"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("Dataflow"))
+                            newParameter("s", objectType("String"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += printlnCall(newReference("s"))
+                                    block.statements += newReturn { it.isImplicit = true }
+                                }
+                        }
+
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.isStatic = true
+                            newParameter("args", objectType("String[]"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "sc", objectType("Dataflow")) {
+                                        it.initializer =
+                                            newNew().also { n ->
+                                                n.initializer =
+                                                    newConstruction(parseName("Dataflow")) { c ->
+                                                        c.type = objectType("Dataflow")
+                                                    }
+                                            }
+                                    }
+                                    declareVariable(block, "s", objectType("String")) {
+                                        it.initializer = dottedCall("sc.toString")
+                                    }
+                                    block.statements +=
+                                        dottedCall("sc.print").also {
+                                            it.arguments += newReference("s")
                                         }
-                                    }
-                                    declare { variable("s", t("String")) { call("sc.toString") } }
-                                    call("sc.print") { ref("s") }
-                                    call("sc.print") { call("sc.toString") }
+                                    block.statements +=
+                                        dottedCall("sc.print").also {
+                                            it.arguments += dottedCall("sc.toString")
+                                        }
                                 }
-                            }
                         }
                     }
                 }
@@ -1289,89 +2190,210 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ShortcutClass.java") {
-                        record("ShortcutClass") {
-                            field("attr", t("int")) { literal(0, t("int")) }
-                            constructor {
-                                receiver = newVariable("this", t("ShortcutClass"))
-                                isImplicit = true
-                                body { returnStmt { isImplicit = true } }
-                            }
-                            method("toString", t("String")) {
-                                receiver = newVariable("this", t("ShortcutClass"))
-                                body {
-                                    returnStmt { literal("ShortcutClass: attr=") + member("attr") }
-                                }
-                            }
+                singleTranslationUnit("ShortcutClass.java") { tu ->
+                    newRecord("ShortcutClass", "class", holder = tu, enterScope = true) { record ->
+                        newField("attr", objectType("int"), holder = record) {
+                            it.initializer = newLiteral(0, objectType("int"))
+                        }
 
-                            method("print", t("int")) {
-                                receiver = newVariable("this", t("ShortcutClass"))
-                                body {
-                                    memberCall(
-                                        "println",
-                                        member("out", ref("System") { isStaticAccess = true }),
-                                    ) {
-                                        call("this.toString")
+                        newConstructor(record.name, record, holder = record, enterScope = true) {
+                            ctor ->
+                            ctor.receiver = newVariable("this", objectType("ShortcutClass"))
+                            ctor.isImplicit = true
+                            ctor.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn { it.isImplicit = true }
+                                }
+                        }
+
+                        newMethod("toString", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("String"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("ShortcutClass"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue =
+                                            newBinaryOperator("+") { op ->
+                                                op.lhs =
+                                                    newLiteral(
+                                                        "ShortcutClass: attr=",
+                                                        objectType("String"),
+                                                    )
+                                                op.rhs = newMember("attr")
+                                            }
                                     }
                                 }
-                            }
+                        }
 
-                            method("magic") {
-                                receiver = newVariable("this", t("ShortcutClass"))
-                                param("b", t("int"))
-                                body {
-                                    ifStmt {
-                                        condition { ref("b") eq literal(5, t("int")) }
-                                        thenStmt {
-                                            ifStmt {
-                                                condition { member("attr") eq literal(2, t("int")) }
-                                                thenStmt {
-                                                    member("attr") assign literal(3, t("int"))
-                                                }
-                                                elseStmt {
-                                                    member("attr") assign literal(2, t("int"))
+                        newMethod("print", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("int"))
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("ShortcutClass"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += printlnCall(dottedCall("this.toString"))
+                                }
+                        }
+
+                        newMethod("magic", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.receiver = newVariable("this", objectType("ShortcutClass"))
+                            newParameter("b", objectType("int"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newIfElse { outerIf ->
+                                        outerIf.condition =
+                                            newBinaryOperator("==") {
+                                                it.lhs = newReference("b")
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
+                                        outerIf.thenStatement =
+                                            newBlock(enterScope = true) { thenBlk ->
+                                                thenBlk.statements += newIfElse { innerIf ->
+                                                    innerIf.condition =
+                                                        newBinaryOperator("==") {
+                                                            it.lhs = newMember("attr")
+                                                            it.rhs =
+                                                                newLiteral(2, objectType("int"))
+                                                        }
+                                                    innerIf.thenStatement =
+                                                        newBlock(enterScope = true) { innerThen ->
+                                                            innerThen.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newMember("attr")),
+                                                                    listOf(
+                                                                        newLiteral(
+                                                                            3,
+                                                                            objectType("int"),
+                                                                        )
+                                                                    ),
+                                                                )
+                                                        }
+                                                    innerIf.elseStatement =
+                                                        newBlock(enterScope = true) { innerElse ->
+                                                            innerElse.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newMember("attr")),
+                                                                    listOf(
+                                                                        newLiteral(
+                                                                            2,
+                                                                            objectType("int"),
+                                                                        )
+                                                                    ),
+                                                                )
+                                                        }
                                                 }
                                             }
-                                        }
-                                        elseStmt { member("attr") assign ref("b") }
-                                    }
-                                }
-                            }
-
-                            method("magic2") {
-                                param("b", t("int"))
-                                body {
-                                    declare { variable("a") }
-                                    ifStmt {
-                                        condition { ref("b") gt literal(5, t("int")) }
-                                        thenStmt {
-                                            ifStmt {
-                                                condition { member("attr") eq literal(2, t("int")) }
-                                                thenStmt { ref("a") assign literal(3, t("int")) }
-                                                elseStmt { ref("a") assign literal(2, t("int")) }
+                                        outerIf.elseStatement =
+                                            newBlock(enterScope = true) { elseBlk ->
+                                                elseBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newMember("attr")),
+                                                        listOf(newReference("b")),
+                                                    )
                                             }
-                                        }
-                                        elseStmt { ref("a") assign ref("b") }
                                     }
                                 }
-                            }
+                        }
 
-                            // The main method
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("int[]"))
-                                body {
-                                    declare {
-                                        variable("sc", t("ShortcutClass")) {
-                                            new { construct("ShortcutClass") }
-                                        }
+                        newMethod("magic2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            newParameter("b", objectType("int"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "a")
+
+                                    block.statements += newIfElse { outerIf ->
+                                        outerIf.condition =
+                                            newBinaryOperator(">") {
+                                                it.lhs = newReference("b")
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
+                                        outerIf.thenStatement =
+                                            newBlock(enterScope = true) { thenBlk ->
+                                                thenBlk.statements += newIfElse { innerIf ->
+                                                    innerIf.condition =
+                                                        newBinaryOperator("==") {
+                                                            it.lhs = newMember("attr")
+                                                            it.rhs =
+                                                                newLiteral(2, objectType("int"))
+                                                        }
+                                                    innerIf.thenStatement =
+                                                        newBlock(enterScope = true) { innerThen ->
+                                                            innerThen.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("a")),
+                                                                    listOf(
+                                                                        newLiteral(
+                                                                            3,
+                                                                            objectType("int"),
+                                                                        )
+                                                                    ),
+                                                                )
+                                                        }
+                                                    innerIf.elseStatement =
+                                                        newBlock(enterScope = true) { innerElse ->
+                                                            innerElse.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("a")),
+                                                                    listOf(
+                                                                        newLiteral(
+                                                                            2,
+                                                                            objectType("int"),
+                                                                        )
+                                                                    ),
+                                                                )
+                                                        }
+                                                }
+                                            }
+                                        outerIf.elseStatement =
+                                            newBlock(enterScope = true) { elseBlk ->
+                                                elseBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newReference("b")),
+                                                    )
+                                            }
                                     }
-                                    call("sc.print")
-                                    call("sc.magic") { literal(3, t("int")) }
-                                    call("sc.magic2") { literal(5, t("int")) }
                                 }
-                            }
+                        }
+
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            method.isStatic = true
+                            newParameter("args", objectType("int[]"), holder = method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "sc", objectType("ShortcutClass")) {
+                                        it.initializer =
+                                            newNew().also { n ->
+                                                n.initializer =
+                                                    newConstruction(parseName("ShortcutClass")) { c
+                                                        ->
+                                                        c.type = objectType("ShortcutClass")
+                                                    }
+                                            }
+                                    }
+                                    block.statements += dottedCall("sc.print")
+                                    block.statements +=
+                                        dottedCall("sc.magic").also {
+                                            it.arguments += newLiteral(3, objectType("int"))
+                                        }
+                                    block.statements +=
+                                        dottedCall("sc.magic2").also {
+                                            it.arguments += newLiteral(5, objectType("int"))
+                                        }
+                                }
                         }
                     }
                 }
@@ -1405,28 +2427,48 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("CombinedVariableAndCall.java") {
-                        record("TestClass") {
-                            constructor { param("i", t("int")) }
-                            method("method1", t("TestClass")) {
-                                body {
-                                    returnStmt { construct("TestClass") { literal(4, t("int")) } }
-                                }
-                            }
+                singleTranslationUnit("CombinedVariableAndCall.java") { tu ->
+                    newRecord("TestClass", "class", holder = tu, enterScope = true) { record ->
+                        newConstructor(record.name, record, holder = record, enterScope = true) {
+                            ctor ->
+                            newParameter("i", objectType("int"), holder = ctor)
+                        }
 
-                            method("method2") {
-                                receiver("this", t("TestClass"))
-                                body {
-                                    declare {
-                                        variable("variable", autoType()) {
-                                            memberCall("method1", ref("this"))
-                                        }
+                        // The return type is resolved in the enclosing scope before entering
+                        // "method1"'s scope.
+                        val method1ReturnType = objectType("TestClass")
+                        newMethod("method1", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(method1ReturnType)
+                            method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue =
+                                            newConstruction(parseName("TestClass")) { c ->
+                                                c.type = objectType("TestClass")
+                                                c.arguments += newLiteral(4, objectType("int"))
+                                            }
                                     }
-
-                                    memberCall("method2", ref("variable"))
                                 }
-                            }
+                        }
+
+                        newMethod("method2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(unknownType())
+                            method.type = computeType(method)
+                            addReceiver(method, "this", objectType("TestClass"))
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    declareVariable(block, "variable", autoType()) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess("method1", newReference("this"))
+                                            )
+                                    }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("method2", newReference("variable"))
+                                        )
+                                }
                         }
                     }
                 }
@@ -1463,44 +2505,77 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("dataflow_field.c") {
-                        record("myStruct") { field("field1", t("int")) }
-                        function("doSomething") { param("i", t("int")) }
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    // Declare s1 and s2 of the same type
-                                    variable("s1", t("myStruct"))
-                                    variable("s2", t("myStruct"))
+                val tuName = "dataflow_field.c"
+                singleTranslationUnit(tuName) { tu ->
+                    newRecord("myStruct", "class", holder = tu, enterScope = true) { record ->
+                        newField("field1", objectType("int"), holder = record)
+                    }
+                    newFunction("doSomething", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(unknownType())
+                        func.type = computeType(func)
+                        newParameter("i", objectType("int"), holder = func)
+                    }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("s1", objectType("myStruct"), holder = declStmt)
+                                    newVariable("s2", objectType("myStruct"), holder = declStmt)
                                 }
 
-                                // Call doSomething on field1 of s1
-                                call("doSomething") {
-                                        member("field1", ref("s1", makeMagic = false).line(11))
-                                            .line(11)
-                                    }
-                                    .line(11)
+                                block.statements +=
+                                    newCall(newReference("doSomething")) {
+                                            it.arguments +=
+                                                newMember(
+                                                        "field1",
+                                                        newReference("s1").line(tuName, 11),
+                                                    )
+                                                    .line(tuName, 11)
+                                        }
+                                        .line(tuName, 11)
 
-                                // Set field1 of both s1 and s2, to literal 1 and 2 respectively
-                                member("field1", ref("s1", makeMagic = false).line(13))
-                                    .line(13) assign literal(1)
-                                member("field1", ref("s2", makeMagic = false).line(14))
-                                    .line(14) assign literal(2)
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(
+                                            newMember("field1", newReference("s1").line(tuName, 13))
+                                                .line(tuName, 13)
+                                        ),
+                                        listOf(newLiteral(1, unknownType())),
+                                    )
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(
+                                            newMember("field1", newReference("s2").line(tuName, 14))
+                                                .line(tuName, 14)
+                                        ),
+                                        listOf(newLiteral(2, unknownType())),
+                                    )
 
-                                // Call doSomething on field1 of s1 and s2
-                                call("doSomething") {
-                                        member("field1", ref("s1", makeMagic = false).line(15))
-                                            .line(15)
-                                    }
-                                    .line(15)
-                                call("doSomething") {
-                                        member("field1", ref("s2", makeMagic = false).line(16))
-                                            .line(16)
-                                    }
-                                    .line(16)
+                                block.statements +=
+                                    newCall(newReference("doSomething")) {
+                                            it.arguments +=
+                                                newMember(
+                                                        "field1",
+                                                        newReference("s1").line(tuName, 15),
+                                                    )
+                                                    .line(tuName, 15)
+                                        }
+                                        .line(tuName, 15)
+                                block.statements +=
+                                    newCall(newReference("doSomething")) {
+                                            it.arguments +=
+                                                newMember(
+                                                        "field1",
+                                                        newReference("s2").line(tuName, 16),
+                                                    )
+                                                    .line(tuName, 16)
+                                        }
+                                        .line(tuName, 16)
                             }
-                        }
                     }
                 }
             }
@@ -1534,32 +2609,58 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("dataflow_field.c") {
-                        record("inner") { field("field", t("int")) }
-                        record("outer") { field("in", t("inner")) }
-                        function("doSomething") { param("i", t("int")) }
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("o", t("outer")) }
+                val tuName = "dataflow_field.c"
+                singleTranslationUnit(tuName) { tu ->
+                    newRecord("inner", "class", holder = tu, enterScope = true) { record ->
+                        newField("field", objectType("int"), holder = record)
+                    }
+                    newRecord("outer", "class", holder = tu, enterScope = true) { record ->
+                        newField("in", objectType("inner"), holder = record)
+                    }
+                    newFunction("doSomething", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(unknownType())
+                        func.type = computeType(func)
+                        newParameter("i", objectType("int"), holder = func)
+                    }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "o", objectType("outer"))
 
-                                member(
-                                        "field",
-                                        member("in", ref("o", makeMagic = false).line(13)).line(13),
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(
+                                            newMember(
+                                                    "field",
+                                                    newMember(
+                                                            "in",
+                                                            newReference("o").line(tuName, 13),
+                                                        )
+                                                        .line(tuName, 13),
+                                                )
+                                                .line(tuName, 13)
+                                        ),
+                                        listOf(newLiteral(1, unknownType())),
                                     )
-                                    .line(13) assign literal(1)
 
-                                call("doSomething") {
-                                        member(
-                                                "field",
-                                                member("in", ref("o", makeMagic = false).line(15))
-                                                    .line(15),
-                                            )
-                                            .line(15)
-                                    }
-                                    .line(15)
+                                block.statements +=
+                                    newCall(newReference("doSomething")) {
+                                            it.arguments +=
+                                                newMember(
+                                                        "field",
+                                                        newMember(
+                                                                "in",
+                                                                newReference("o").line(tuName, 15),
+                                                            )
+                                                            .line(tuName, 15),
+                                                    )
+                                                    .line(tuName, 15)
+                                        }
+                                        .line(tuName, 15)
                             }
-                        }
                     }
                 }
             }
@@ -1572,14 +2673,22 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("some.file") {
-                        function("foo", t("void")) {
-                            body {
-                                declare { variable("a", t("short")) { literal(42) } }
-                                `throw` { call("SomeError") { ref("a") } }
+                singleTranslationUnit("some.file") { tu ->
+                    newFunction("foo", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("void"))
+                        func.type = computeType(func)
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                declareVariable(block, "a", objectType("short")) {
+                                    it.initializer = newLiteral(42, unknownType())
+                                }
+                                block.statements += newThrow {
+                                    it.exception =
+                                        dottedCall("SomeError").also { c ->
+                                            c.arguments += newReference("a")
+                                        }
+                                }
                             }
-                        }
                     }
                 }
             }

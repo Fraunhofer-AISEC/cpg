@@ -66,7 +66,8 @@ import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 import kotlin.text.ifEmpty
-import kotlin.time.DurationUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
@@ -423,10 +424,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
-        /**
-         * The timeout after which we stop analyzing a function. Default one hour AKA 3,600,000ms
-         */
-        var timeout: Long = 3600000,
+        /** The timeout after which we stop analyzing a function. Default 60 minutes */
+        var timeout: Duration = 60.minutes,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
@@ -563,7 +562,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         node.nextEOGEdges,
                         startState,
                         ::transfer,
-                        timeout = passConfig<Configuration>()?.timeout,
+                        timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
                     )
                 // If we had a timeout, treat it as an empty Function but still
                 // include the results we got
@@ -884,9 +883,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Check if the value is influenced by a Parameter and if so, add this information
                 // to the functionSummary
                 val paths =
-                    value.followDFGEdgesUntilHit(
-                        collectFailedPaths = false,
-                        findAllPossiblePaths = false,
+                    value.followDFGEdgesUntilHitNodes(
                         direction = Backward(GraphToFollow.DFG),
                         sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
                         // We need to search interprocedural here.
@@ -913,40 +910,36 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 } || it in node.parameters
                         },
                     )
-                paths.fulfilled
-                    .mapTo(IdentitySet()) { it.nodes.last() }
-                    .forEach { sourceParamValue ->
-                        val matchingDeclarations =
-                            if (sourceParamValue is ParameterMemoryValue)
-                                node.parameters.singleOrNull {
-                                    it.name.localName == sourceParamValue.name.parent?.localName
-                                }
-                            else sourceParamValue as? Parameter
-                        if (matchingDeclarations != null) {
-                            node.functionSummary
-                                .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
-                                .add(
-                                    FSEntry(
-                                        dstValueDepth,
-                                        matchingDeclarations,
-                                        stringToDepth(sourceParamValue.name.localName),
-                                        subAccessName,
-                                        mutableSetOf(
-                                            NodeWithPropertiesKey(
-                                                matchingDeclarations,
-                                                // Add the parameter index to indicate to the
-                                                // calculatePrevDFGs function that we need to
-                                                // replace the value of the call argument
-                                                equalLinkedHashSetOf(
-                                                    matchingDeclarations.argumentIndex
-                                                ),
-                                            )
-                                        ),
-                                        equalLinkedHashSetOf(true),
-                                    )
+                paths.forEach { sourceParamValue ->
+                    val matchingDeclarations =
+                        if (sourceParamValue is ParameterMemoryValue)
+                            node.parameters.singleOrNull {
+                                it.name.localName == sourceParamValue.name.parent?.localName
+                            }
+                        else sourceParamValue as? Parameter
+                    if (matchingDeclarations != null) {
+                        node.functionSummary
+                            .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
+                            .add(
+                                FSEntry(
+                                    dstValueDepth,
+                                    matchingDeclarations,
+                                    stringToDepth(sourceParamValue.name.localName),
+                                    subAccessName,
+                                    mutableSetOf(
+                                        NodeWithPropertiesKey(
+                                            matchingDeclarations,
+                                            // Add the parameter index to indicate to the
+                                            // calculatePrevDFGs function that we need to
+                                            // replace the value of the call argument
+                                            equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
+                                        )
+                                    ),
+                                    equalLinkedHashSetOf(true),
                                 )
-                        }
+                            )
                     }
+                }
             }
         }
     }
@@ -2077,9 +2070,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             if (log.isTraceEnabled) {
                                 log.trace("Old last timeout: ${timeouts.last()}")
                             }
-                            timeouts[timeouts.size - 1] =
-                                timeouts.last() +
-                                    startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
+                            timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow()
                             if (log.isTraceEnabled) {
                                 log.trace(
                                     "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"

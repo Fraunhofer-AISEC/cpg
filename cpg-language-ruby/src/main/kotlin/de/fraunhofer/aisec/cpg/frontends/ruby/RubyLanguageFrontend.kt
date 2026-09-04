@@ -72,33 +72,31 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
     }
 
     private fun handleRootNode(node: RootNode): TranslationUnit {
-        val tu = newTranslationUnit(node.file, rawNode = node)
+        return newTranslationUnit(node.file, rawNode = node) { tu ->
+            scopeManager.resetToGlobal(tu)
 
-        scopeManager.resetToGlobal(tu)
+            // The root node can either contain a single node or a block node. We normalize both
+            // cases into a flat list of top-level nodes.
+            val topLevelNodes =
+                when (val body = node.bodyNode) {
+                    is BlockNode -> body.filterNotNull()
+                    null -> emptyList()
+                    else -> listOf(body)
+                }
 
-        // The root node can either contain a single node or a block node. We normalize both cases
-        // into a flat list of top-level nodes.
-        val topLevelNodes =
-            when (val body = node.bodyNode) {
-                is BlockNode -> body.filterNotNull()
-                null -> emptyList()
-                else -> listOf(body)
-            }
-
-        for (innerNode in topLevelNodes) {
-            // Method definitions (`def`) and class definitions (`class`) become declarations,
-            // everything else is treated as a top-level statement.
-            if (innerNode is MethodDefNode || innerNode is ClassNode) {
-                val decl = declarationHandler.handle(innerNode)
-                scopeManager.addDeclaration(decl)
-                tu.declarations += decl
-            } else {
-                val stmt = statementHandler.handle(innerNode)
-                tu += stmt
+            for (innerNode in topLevelNodes) {
+                // Method definitions (`def`) and class definitions (`class`) become declarations,
+                // everything else is treated as a top-level statement.
+                if (innerNode is MethodDefNode || innerNode is ClassNode) {
+                    val decl = declarationHandler.handle(innerNode)
+                    scopeManager.addDeclaration(decl)
+                    tu.declarations += decl
+                } else {
+                    val stmt = statementHandler.handle(innerNode)
+                    tu.statements += stmt
+                }
             }
         }
-
-        return tu
     }
 
     override fun codeOf(astNode: org.jruby.ast.Node): String? {

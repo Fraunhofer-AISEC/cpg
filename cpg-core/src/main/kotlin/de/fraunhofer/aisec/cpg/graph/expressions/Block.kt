@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -39,12 +38,12 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * A statement which contains a list of statements. A common example is a function body within a
  * [Function].
  */
-open class Block : Expression(false), StatementHolder {
+open class Block : Expression(false) {
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Expression>()
-    override var statements by unwrapping(Block::statementEdges)
+    var statementEdges = astEdgesOf<Expression>()
+    var statements by unwrapping(Block::statementEdges)
     /**
      * This variable helps to differentiate between static and non-static initializer blocks. Static
      * initializer blocks are executed when the enclosing declaration is first referred to, e.g.

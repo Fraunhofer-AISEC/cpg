@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.slf4j.LoggerFactory
 
-class Cast : Expression(), ArgumentHolder, HasType.TypeObserver {
+class Cast : Expression(), HasType.TypeObserver {
     /**
      * The [Expression] that is cast to [castType].
      *
@@ -72,25 +72,6 @@ class Cast : Expression(), ArgumentHolder, HasType.TypeObserver {
         if (localName != null) {
             name = Name(localName, null, language)
         }
-    }
-
-    override fun addArgument(expression: Expression) {
-        this.expression = expression
-        this.expression.access = access
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (this.expression == old) {
-            this.expression = new
-            this.expression.access = access
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return this.expression == expression
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
