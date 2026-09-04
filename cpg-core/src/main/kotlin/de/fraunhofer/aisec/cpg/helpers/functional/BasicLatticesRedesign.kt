@@ -64,41 +64,108 @@ const val MIN_GLOBAL_STATE_PRUNE_SIZE = 256
 /**
  * The number of state entries an [Lattice.iterateEOG] run may keep alive before we warn about it.
  *
- * A single entry of a points-to state costs roughly 1.5 kB, so this corresponds to a couple of
- * gigabytes. If an analysis runs out of memory, the last function warned about here is the one to
+ * A single entry of a points-to state costs roughly 500 bytes, so this corresponds to about a
+ * gigabyte. If an analysis runs out of memory, the last function warned about here is the one to
  * look at.
  */
 const val LARGE_STATE_ENTRY_WARN_THRESHOLD = 2_000_000L
 
 /**
+ * The number of edges after which [IterationStatistics] takes its first sample of how much state an
+ * [Lattice.iterateEOG] run keeps alive. Every further sample is taken after twice as many edges as
+ * the previous one, so the sampling costs are logarithmic in the length of the run.
+ */
+private const val FIRST_STATE_SAMPLE_AFTER_EDGES = 64
+
+/** The number of states [IterationStatistics] looks at when it takes a sample. */
+private const val STATES_PER_SAMPLE = 8
+
+/**
  * Bookkeeping for a single [Lattice.iterateEOG] run. Memory consumption of the analysis is driven
  * by the product of [peakLiveStates] and the number of entries in each of them, neither of which is
  * visible from the outside, so we report both.
+ *
+ * We report *while* iterating and not only at the end, because a run that exhausts the heap never
+ * reaches the end: without the intermediate reports, the log would name every function but the one
+ * that actually caused the problem.
  */
-private class IterationStatistics {
+private class IterationStatistics(private val startEdges: List<EvaluationOrder>) {
     /** The number of edges we took off a worklist. */
     var processedEdges = 0
+        private set
 
     /**
      * The high-water mark of the number of states we kept alive at the same time, sampled before
      * pruning.
      */
     var peakLiveStates = 0
+        private set
 
     /** The number of entries of the resulting state, or -1 if we did not get that far. */
     var finalStateEntries = -1
 
-    fun report(startEdges: List<EvaluationOrder>) {
-        val name = startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+    /** The number of entries of the biggest state we looked at, or -1 if we never sampled one. */
+    private var sampledStateEntries = -1
+
+    /** The number of processed edges at which we take the next sample. */
+    private var nextSampleEdge = FIRST_STATE_SAMPLE_AFTER_EDGES
+
+    /** The number of entries above which the next warning is due. */
+    private var nextWarnEntries = LARGE_STATE_ENTRY_WARN_THRESHOLD
+
+    private val name: String
+        get() = startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+
+    /**
+     * Records that we are about to process another edge while [liveStates] states are alive, and
+     * returns our current estimate of the total number of entries they hold.
+     *
+     * Counting the entries of a state is linear in its size, so we only do that every now and then
+     * (see [FIRST_STATE_SAMPLE_AFTER_EDGES]) and for a few states only (see [STATES_PER_SAMPLE]).
+     * [states] is therefore not a collection but a function: we do not even want to iterate the
+     * states unless we are going to sample them.
+     */
+    fun sample(liveStates: Int, states: () -> Iterable<Lattice.Element>): Long {
+        processedEdges++
+        if (liveStates > peakLiveStates) {
+            peakLiveStates = liveStates
+        }
+
+        if (processedEdges >= nextSampleEdge) {
+            nextSampleEdge *= 2
+            sampledStateEntries =
+                states().take(STATES_PER_SAMPLE).maxOfOrNull { it.entryCount() } ?: 0
+        }
+
+        val entries = liveStates.toLong() * sampledStateEntries.coerceAtLeast(0)
+        if (entries > nextWarnEntries) {
+            Pass.log.warn(
+                "The analysis of {} is keeping {} states of about {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
+                name,
+                liveStates,
+                sampledStateEntries,
+                entries,
+            )
+            // Only warn again once the problem has become noticeably worse.
+            nextWarnEntries = entries * 2
+        }
+
+        return entries
+    }
+
+    /** Logs what the finished - or abandoned - run kept alive. */
+    fun report() {
         // The final state is the union of all end states, so its size is an upper bound for the
-        // size of every intermediate state.
-        val peakEntries = peakLiveStates.toLong() * finalStateEntries.coerceAtLeast(0)
+        // size of every intermediate state. If we never got there, we have to make do with the last
+        // state we sampled.
+        val entriesPerState = if (finalStateEntries >= 0) finalStateEntries else sampledStateEntries
+        val peakEntries = peakLiveStates.toLong() * entriesPerState.coerceAtLeast(0)
         if (peakEntries > LARGE_STATE_ENTRY_WARN_THRESHOLD) {
             Pass.log.warn(
                 "The analysis of {} kept up to {} states of up to {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
                 name,
                 peakLiveStates,
-                finalStateEntries,
+                entriesPerState,
                 peakEntries,
             )
         } else if (Pass.log.isDebugEnabled) {
@@ -107,7 +174,7 @@ private class IterationStatistics {
                 name,
                 processedEdges,
                 peakLiveStates,
-                finalStateEntries,
+                entriesPerState,
                 peakEntries,
             )
         }
@@ -498,7 +565,7 @@ interface Lattice<T : Lattice.Element> {
             timeouts.addLast(timeout)
         }
 
-        val statistics = IterationStatistics()
+        val statistics = IterationStatistics(startEdges)
         try {
             val result =
                 iterateEogWorklist(
@@ -512,7 +579,7 @@ interface Lattice<T : Lattice.Element> {
             statistics.finalStateEntries = result.first.entryCount()
             return result
         } finally {
-            statistics.report(startEdges)
+            statistics.report()
             while (timeouts.size > timeoutStackDepth) {
                 timeouts.removeLast()
             }
@@ -664,10 +731,7 @@ interface Lattice<T : Lattice.Element> {
 
             // Sample the retention before pruning: that high-water mark is what actually has to fit
             // into the heap.
-            statistics.processedEdges++
-            if (globalState.size > statistics.peakLiveStates) {
-                statistics.peakLiveStates = globalState.size
-            }
+            statistics.sample(globalState.size) { globalState.values }
 
             // All edges which are still to be processed are in one of the worklists at this point,
             // so this is the only place where we can determine which states are still live.
