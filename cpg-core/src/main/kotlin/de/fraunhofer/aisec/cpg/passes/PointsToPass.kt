@@ -1213,9 +1213,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // be something new in the state.
         // To avoid this, we simply throw away the existing state for new
         val doubleState = doubleState
-        doubleState.declarationsState[currentNode]?.first?.clear()
-        doubleState.declarationsState[currentNode]?.second?.clear()
-        doubleState.declarationsState[currentNode]?.third?.clear()
+        doubleState.declarationsState.getForUpdate(currentNode)?.let { entry ->
+            entry.first.clear()
+            entry.second.clear()
+            entry.third.clear()
+        }
         return doubleState
     }
 
@@ -4398,7 +4400,7 @@ suspend fun PointsToState.Element.updateValues(
                 // TODO: this should be fields, but for now we deal with the names
                 val writtenFields =
                     sources.mapNotNullTo(HashSet()) { (it.third as? Field)?.name?.localName }
-                doubleState.declarationsState[destAddr]?.third?.removeIf {
+                doubleState.declarationsState.getForUpdate(destAddr)?.third?.removeIf {
                     it.properties.any { p ->
                         ((p as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                             ?.name
