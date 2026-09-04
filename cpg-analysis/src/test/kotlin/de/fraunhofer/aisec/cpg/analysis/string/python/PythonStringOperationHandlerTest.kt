@@ -872,4 +872,98 @@ class PythonStringOperationHandlerTest {
         val pattern = ret.returnValue!!.evaluatePythonString()
         assertEquals(const("{v}"), pattern)
     }
+
+    /** `"%s-%s" % ("a", "b")` with constant operands resolves to the exact `Const("a-b")`. */
+    @Test
+    fun testPercentFormatConstant() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newBinaryOperator("%") { op ->
+                                    op.lhs = newLiteral("%s-%s", objectType("string"))
+                                    op.rhs =
+                                        newInitializerList(objectType("tuple")) { list ->
+                                            list.initializers +=
+                                                newLiteral("a", objectType("string"))
+                                            list.initializers +=
+                                                newLiteral("b", objectType("string"))
+                                        }
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertEquals(const("a-b"), pattern)
+    }
+
+    /**
+     * `"%s" % x` where `x` is a parameter (hence `Unknown`) must still produce a sound
+     * over-approximation admitting whatever `x` may be, not a crash or a false-precise constant.
+     */
+    @Test
+    fun testPercentFormatWithUnknownArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                val param = newParameter("x", objectType("string"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newBinaryOperator("%") { op ->
+                                    op.lhs = newLiteral("%s", objectType("string"))
+                                    op.rhs = newReference(param.name)
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertTrue(
+            pattern is StringPattern.Concat || pattern is StringPattern.Unknown,
+            "expected a Concat or Unknown, got $pattern",
+        )
+    }
+
+    /**
+     * `"100%%"` with no substitutions must resolve to the literal `Const("100%")`: the `%%` escape
+     * must not be mistaken for a real placeholder.
+     */
+    @Test
+    fun testPercentFormatEscaping() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newBinaryOperator("%") { op ->
+                                    op.lhs = newLiteral("100%%", objectType("string"))
+                                    op.rhs = newInitializerList(objectType("tuple"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertEquals(const("100%"), pattern)
+    }
 }

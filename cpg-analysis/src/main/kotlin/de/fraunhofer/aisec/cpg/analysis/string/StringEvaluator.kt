@@ -351,7 +351,10 @@ open class StringEvaluator(
     }
 
     /**
-     * `+`/`+=` become [concat]; every other operator falls back to [followPredecessors] (in
+     * `+`/`+=` become [concat], generically - this is language-agnostic (it already covers Python
+     * f-strings for free, see the design doc) so it is never routed through [operationHandlers].
+     * Every other operator code is offered to [operationHandlers] first (e.g. Python's `%`-
+     * formatting), and only falls back to [followPredecessors] if none of them recognise it (in
      * practice this almost always yields [StringPattern.Unknown], since arithmetic/comparison
      * operators do not usually have an incoming DFG edge of their own).
      */
@@ -366,7 +369,15 @@ open class StringEvaluator(
                     maxTermDepth = config.maxTermDepth,
                     maxUnionSize = config.maxUnionSize,
                 )
-            else -> followPredecessors(node, ctx)
+            else -> {
+                for (handler in operationHandlers) {
+                    val result = handler.handleBinaryOperator(node) { evaluateInternal(it, ctx) }
+                    if (result != null) {
+                        return result
+                    }
+                }
+                followPredecessors(node, ctx)
+            }
         }
     }
 

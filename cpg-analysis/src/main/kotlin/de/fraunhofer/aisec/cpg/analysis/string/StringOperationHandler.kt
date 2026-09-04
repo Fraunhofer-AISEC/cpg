@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.string
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 
 /**
@@ -33,8 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
  * `strcat`, ...), consulted by [StringEvaluator.handleCall] before it falls back to the generic
  * predecessor-following behaviour.
  *
- * This is the extension point for Phase 3 of the design doc; no concrete handler is implemented
- * yet.
+ * This is the extension point for Phase 3 of the design doc.
  */
 interface StringOperationHandler {
     /**
@@ -45,4 +45,18 @@ interface StringOperationHandler {
      * tried, and eventually the generic fallback.
      */
     fun handleCall(call: Call, evaluate: (Node) -> StringPattern): StringPattern?
+
+    /**
+     * Tries to model [op], a language-specific binary operator such as Python's `%`-formatting.
+     * [evaluate] is a callback into the owning [StringEvaluator], as in [handleCall].
+     *
+     * Returns `null` if this handler does not know [op] (the default), so that the next handler in
+     * the list is tried, and eventually the generic fallback - see
+     * [StringEvaluator.handleBinaryOperator]. Unlike [handleCall], this is not consulted for `+`/
+     * `+=`, which [StringEvaluator] already handles generically.
+     */
+    fun handleBinaryOperator(
+        op: BinaryOperator,
+        evaluate: (Node) -> StringPattern,
+    ): StringPattern? = null
 }

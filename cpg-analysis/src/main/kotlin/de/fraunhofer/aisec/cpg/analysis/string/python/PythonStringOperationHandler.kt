@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.argumentByNameOrPosition
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
@@ -73,12 +74,8 @@ import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
  * `.format()`/`.join()` on an unrelated type), which is acceptable for an opt-in, Python-specific
  * handler.
  *
- * **Not implemented in this pass** (see the design doc's Phase 3 list): `%`-style formatting (this
- * is a [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator] with operator code `%`, not a
- * [Call], so it needs a different extension point than [StringOperationHandler.handleCall];
- * retrofitting that hook is left as follow-up work rather than restructuring [StringEvaluator]'s
- * dispatch for this one case), `encode`/`decode`, base64, and slicing (lower priority /
- * language-agnostic per the design doc).
+ * **Not implemented in this pass** (see the design doc's Phase 3 list): `encode`/`decode`, base64,
+ * and slicing (lower priority / language-agnostic per the design doc).
  */
 class PythonStringOperationHandler : StringOperationHandler {
     override fun handleCall(call: Call, evaluate: (Node) -> StringPattern): StringPattern? {
@@ -93,6 +90,72 @@ class PythonStringOperationHandler : StringOperationHandler {
             call is MemberCall && call.name.localName in CASE_METHODS -> handleCase(call, evaluate)
             else -> null
         }
+    }
+
+    /**
+     * `"%s and %s" % (a, b)`, i.e. a [BinaryOperator] with operator code `%` whose [lhs][
+     * BinaryOperator.lhs] is the format string and whose [rhs][BinaryOperator.rhs] is either a
+     * single substitution value, or an [InitializerList] (the shape the Python frontend uses for a
+     * tuple, see `ExpressionHandler.handleTuple`) holding several.
+     *
+     * Only handled when the format string itself is a resolvable constant (returns `null`
+     * otherwise, mirroring [handleFormat]'s conservatism). Supports `%s` (string), `%d`/`%i`
+     * (stringified, exactly like [handleFormat]'s placeholders - `evaluate` on a numeric literal
+     * already yields its `toString()`, see `StringEvaluator.handleLiteral`) and `%%` (a literal
+     * `%`), via a single tokenizing regex, so that `%%` adjacent to a real specifier cannot be
+     * misparsed by two independent passes (the same reasoning as [handleFormat]'s `{{`/`}}` fix).
+     * Every other conversion specifier (`%f`, `%x`, a `%(name)s` dict-style reference, ...) becomes
+     * an `Unknown` segment rather than failing the whole call - conservative, not exact, but still
+     * consumes a positional value (except for the dict-style case, which does not consume one) so
+     * that subsequent `%s`/`%d` placeholders stay aligned with the correct argument.
+     */
+    override fun handleBinaryOperator(
+        op: BinaryOperator,
+        evaluate: (Node) -> StringPattern,
+    ): StringPattern? {
+        if (op.operatorCode != "%") return null
+        val formatString = evaluate(op.lhs).asConstantOrNull() ?: return null
+        val values = (op.rhs as? InitializerList)?.initializers ?: listOf(op.rhs)
+
+        val parts = mutableListOf<StringPattern>()
+        var valueIndex = 0
+        var lastEnd = 0
+        for (m in PERCENT_TOKEN.findAll(formatString)) {
+            if (m.range.first > lastEnd) {
+                parts.add(const(formatString.substring(lastEnd, m.range.first)))
+            }
+            val token = m.value
+            parts.add(
+                when {
+                    token == "%%" -> const("%")
+                    token.contains('(') ->
+                        StringPattern.Unknown(
+                            origin = op,
+                            reason = StringPattern.Reason.UNSUPPORTED,
+                        )
+                    token.last() == 's' || token.last() == 'd' || token.last() == 'i' -> {
+                        val value = values.getOrNull(valueIndex++)
+                        value?.let { evaluate(it) }
+                            ?: StringPattern.Unknown(
+                                origin = op,
+                                reason = StringPattern.Reason.UNSUPPORTED,
+                            )
+                    }
+                    else -> {
+                        valueIndex++
+                        StringPattern.Unknown(
+                            origin = op,
+                            reason = StringPattern.Reason.UNSUPPORTED,
+                        )
+                    }
+                }
+            )
+            lastEnd = m.range.last + 1
+        }
+        if (lastEnd < formatString.length) {
+            parts.add(const(formatString.substring(lastEnd)))
+        }
+        return concat(parts)
     }
 
     /**
@@ -398,6 +461,14 @@ class PythonStringOperationHandler : StringOperationHandler {
         private val FORMAT_TOKEN = Regex("\\{\\{|\\}\\}|\\{[^{}]*\\}")
         private val STRIP_METHODS = setOf("strip", "lstrip", "rstrip")
         private val CASE_METHODS = setOf("upper", "lower")
+
+        /**
+         * Tokenizes Python's `%`-format strings: `%%` (an escaped literal `%`), `%(name)...` (a
+         * dict-style reference, format-spec part parsed but not modelled), or a positional
+         * specifier (`%s`, `%5.2f`, ...). One regex, not two independent passes, so that `%%`
+         * adjacent to a real specifier cannot be misparsed - see [handleBinaryOperator]'s KDoc.
+         */
+        private val PERCENT_TOKEN = Regex("%%|%(\\([^)]*\\))?[-+0 #]*\\d*(\\.\\d+)?[a-zA-Z]")
     }
 }
 
