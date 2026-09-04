@@ -124,18 +124,45 @@ val EMPTY_STRING_PATTERN: StringPattern = StringPattern.Const("")
 fun const(s: String): StringPattern = StringPattern.Const(s)
 
 /** Smart constructor for [StringPattern.Concat], normalising the result. */
-fun concat(vararg parts: StringPattern): StringPattern = concat(parts.toList())
+fun concat(
+    vararg parts: StringPattern,
+    maxTermSize: Int = DEFAULT_MAX_TERM_SIZE,
+    maxTermDepth: Int = DEFAULT_MAX_TERM_DEPTH,
+    maxUnionSize: Int = DEFAULT_MAX_UNION_SIZE,
+): StringPattern = concat(parts.toList(), maxTermSize, maxTermDepth, maxUnionSize)
 
 /** Smart constructor for [StringPattern.Concat], normalising the result. */
-fun concat(parts: List<StringPattern>): StringPattern = normalize(StringPattern.Concat(parts))
+fun concat(
+    parts: List<StringPattern>,
+    maxTermSize: Int = DEFAULT_MAX_TERM_SIZE,
+    maxTermDepth: Int = DEFAULT_MAX_TERM_DEPTH,
+    maxUnionSize: Int = DEFAULT_MAX_UNION_SIZE,
+): StringPattern = normalize(StringPattern.Concat(parts), maxTermSize, maxTermDepth, maxUnionSize)
 
 /** Smart constructor for [StringPattern.Union], normalising the result. */
-fun union(vararg alts: StringPattern): StringPattern = union(alts.toList())
+fun union(
+    vararg alts: StringPattern,
+    maxTermSize: Int = DEFAULT_MAX_TERM_SIZE,
+    maxTermDepth: Int = DEFAULT_MAX_TERM_DEPTH,
+    maxUnionSize: Int = DEFAULT_MAX_UNION_SIZE,
+): StringPattern = union(alts.toList(), maxTermSize, maxTermDepth, maxUnionSize)
 
 /** Smart constructor for [StringPattern.Union], normalising the result. */
-fun union(alts: Collection<StringPattern>): StringPattern =
-    normalize(StringPattern.Union(alts.toSet()))
+fun union(
+    alts: Collection<StringPattern>,
+    maxTermSize: Int = DEFAULT_MAX_TERM_SIZE,
+    maxTermDepth: Int = DEFAULT_MAX_TERM_DEPTH,
+    maxUnionSize: Int = DEFAULT_MAX_UNION_SIZE,
+): StringPattern =
+    normalize(StringPattern.Union(alts.toSet()), maxTermSize, maxTermDepth, maxUnionSize)
 
 /** Smart constructor for [StringPattern.Star], normalising the result. */
-fun star(inner: StringPattern, min: Int = 0, max: Int? = null): StringPattern =
-    normalize(StringPattern.Star(inner, min, max))
+fun star(
+    inner: StringPattern,
+    min: Int = 0,
+    max: Int? = null,
+    maxTermSize: Int = DEFAULT_MAX_TERM_SIZE,
+    maxTermDepth: Int = DEFAULT_MAX_TERM_DEPTH,
+    maxUnionSize: Int = DEFAULT_MAX_UNION_SIZE,
+): StringPattern =
+    normalize(StringPattern.Star(inner, min, max), maxTermSize, maxTermDepth, maxUnionSize)
