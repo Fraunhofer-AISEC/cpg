@@ -163,8 +163,40 @@ private fun normalizeStar(inner: StringPattern, min: Int, max: Int?): StringPatt
         else -> StringPattern.Star(inner, min, max)
     }
 
-/** A stable total order over [StringPattern]s used to make [normalize] deterministic. */
-private val patternOrder: Comparator<StringPattern> = compareBy { it.toRegexString() }
+/**
+ * A stable total order over [StringPattern]s used to make [normalize] deterministic.
+ *
+ * [StringPattern.toRegexString] is the primary key, but it is not injective: two
+ * [StringPattern.Unknown]s with the same
+ * [StringPattern.Unknown.charSet]/[StringPattern.Unknown.length] render identically (e.g. both as
+ * `.*`) while differing in [StringPattern.Unknown.reason] or [StringPattern.Unknown.origin], which
+ * are not reflected in the rendering at all. Without a secondary key, [normalizeUnion]'s
+ * dedup/subsumption pass would break such ties using whatever order the input list happens to be
+ * in - which, since it is ultimately derived from a `Set<StringPattern>` (see
+ * [StringPattern.Union.alternatives]), depends on iteration order rather than the two operands
+ * themselves. That made [StringLattice.lub] silently non-commutative: `lub(a, b)` and `lub(b, a)`
+ * could keep a different one of two otherwise-tied [StringPattern.Unknown] alternatives (see
+ * `StringLatticePropertyTest.testLubCommutativeOnRandomTerms` for the regression test). Not a
+ * soundness bug - the kept alternative always [subsumes] the dropped one either way - but a real
+ * violation of the lub-commutativity lattice law.
+ *
+ * The secondary/tertiary/quaternary keys below only ever come into play on such a rendering tie,
+ * and exist purely to make the *choice* of which equally-good alternative survives deterministic,
+ * not to express any precision preference: [StringPattern.Unknown.reason]'s ordinal, then the
+ * [Node.location] of [StringPattern.Unknown.origin] (stable across runs when present), then, as the
+ * final fallback for two ties that still cannot be told apart any other way (e.g. no location, both
+ * null origins, or a genuine coincidence), [System.identityHashCode] of the term itself -
+ * deterministic for the same pair of object references regardless of which order they are compared
+ * in (which is all commutativity of `lub` requires), but not reproducible across separate JVM runs.
+ * That is acceptable here since at that point the two alternatives are semantically
+ * indistinguishable to begin with - only *which one* survives needs to be stable within a run, not
+ * which one is "correct".
+ */
+private val patternOrder: Comparator<StringPattern> =
+    compareBy<StringPattern> { it.toRegexString() }
+        .thenBy { (it as? StringPattern.Unknown)?.reason?.ordinal ?: -1 }
+        .thenBy { (it as? StringPattern.Unknown)?.origin?.location?.toString() ?: "" }
+        .thenBy { System.identityHashCode(it) }
 
 /**
  * Factors a single common leading or trailing [StringPattern.Const] out of [alts], e.g. `{"ab",
