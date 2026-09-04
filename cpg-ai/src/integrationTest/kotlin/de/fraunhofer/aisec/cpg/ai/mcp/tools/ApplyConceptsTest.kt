@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgApplyConceptsTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.literals
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -49,7 +49,7 @@ class ApplyConceptsTest {
                 extension = "py",
             )
         val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
-        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+        assertNotNull(getSession(), "Result should be set after tool execution")
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
     }
@@ -63,7 +63,7 @@ class ApplyConceptsTest {
             }
         ) { client ->
             val secretInitializer =
-                globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
+                getSession()?.translationResult?.literals?.singleOrNull { it.value == "0000" }
             assertNotNull(secretInitializer)
 
             val applyResult =
