@@ -534,6 +534,13 @@ interface Lattice<T : Lattice.Element> {
      * [timeout] can be used to limit the time spent in this function. If the timeout is reached and
      * the fixpoint is not reached yet, we return `null`. If [timeout] is `null`, we will not time
      * out.
+     *
+     * [maxStateEntries] is the same kind of budget for memory instead of time: it limits the number
+     * of entries this run may keep alive, i.e. the number of states times the number of entries in
+     * each of them. Exceeding it ends the analysis exactly like a timeout does. It is unlimited by
+     * default, because - unlike a timeout - a run that is too big for the heap takes the whole
+     * analysis down with it, so the right value depends on the heap the caller is willing to spend.
+     * As a rule of thumb, an entry of a points-to state costs about 500 bytes.
      */
     fun iterateEOG(
         startEdges: List<EvaluationOrder>,
@@ -541,9 +548,17 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
         timeout: Duration = Duration.INFINITE,
+        maxStateEntries: Long = Long.MAX_VALUE,
     ): Pair<T, Boolean> {
         return runBlocking {
-            iterateEogInternal(startEdges, startState, transformation, strategy, timeout)
+            iterateEogInternal(
+                startEdges,
+                startState,
+                transformation,
+                strategy,
+                timeout,
+                maxStateEntries,
+            )
         }
     }
 
@@ -553,6 +568,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Duration,
+        maxStateEntries: Long = Long.MAX_VALUE,
     ): Pair<T, Boolean> {
         // [timeouts] is a stack of the budgets of all analyses that are currently running (an
         // analysis can trigger a nested one, e.g., to compute a function summary). We remember the
@@ -574,6 +590,7 @@ interface Lattice<T : Lattice.Element> {
                     transformation,
                     strategy,
                     timeout,
+                    maxStateEntries,
                     statistics,
                 )
             statistics.finalStateEntries = result.first.entryCount()
@@ -597,6 +614,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Duration,
+        maxStateEntries: Long,
         statistics: IterationStatistics,
     ): Pair<T, Boolean> {
         // mark the time when we started the calculation to know when we stop
@@ -731,7 +749,7 @@ interface Lattice<T : Lattice.Element> {
 
             // Sample the retention before pruning: that high-water mark is what actually has to fit
             // into the heap.
-            statistics.sample(globalState.size) { globalState.values }
+            val liveEntries = statistics.sample(globalState.size) { globalState.values }
 
             // All edges which are still to be processed are in one of the worklists at this point,
             // so this is the only place where we can determine which states are still live.
@@ -760,6 +778,19 @@ interface Lattice<T : Lattice.Element> {
             // Compute the effects of "nextEdge" on the state by applying the transformation to
             // its state.
             val nextGlobal = globalState[nextEdge] ?: continue
+
+            if (liveEntries > maxStateEntries) {
+                // We are out of memory budget. We stop here in exactly the same way as we do when
+                // we run out of time: the caller gets what we have computed so far, together with
+                // the information that this is not a fixpoint.
+                Pass.log.warn(
+                    "Exceeded the budget of {} state entries for {}, stopping further analysis",
+                    maxStateEntries,
+                    startEdges.first().start.name.localName,
+                )
+                finalState = this@Lattice.lub(finalState, nextGlobal, false)
+                return Pair(finalState, true)
+            }
 
             // Either immediately before or after this edge, there's a branching node. In these
             // cases, we definitely want to check if there's an update to the state.

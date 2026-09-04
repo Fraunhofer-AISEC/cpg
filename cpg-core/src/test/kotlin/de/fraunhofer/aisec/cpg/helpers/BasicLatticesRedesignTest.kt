@@ -47,6 +47,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 
 class BasicLatticesRedesignTest {
@@ -645,5 +646,34 @@ class BasicLatticesRedesignTest {
             )
         }
         assertEquals(depthBefore, timeouts.size)
+    }
+
+    @Test
+    @Timeout(60)
+    fun testIterateEOGRespectsStateEntryBudget() {
+        val lattice = PowersetLattice<Int>()
+
+        // A cycle in the EOG, so the analysis only terminates once the state stops growing ...
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+        end.nextEOGEdges += start
+
+        // ... which it never does here: every visit adds an element which was not in the state
+        // before, so without a budget this run would go on forever.
+        var counter = 0
+
+        val (result, aborted) =
+            lattice.iterateEOG(
+                start.nextEOGEdges.toList(),
+                lattice.bottom,
+                { _, _, state -> PowersetLattice.Element(state).also { it += counter++ } },
+                maxStateEntries = 100,
+            )
+
+        // We get the results computed so far, together with the information that they are not a
+        // fixpoint.
+        assertTrue(aborted)
+        assertTrue(result.isNotEmpty())
     }
 }
