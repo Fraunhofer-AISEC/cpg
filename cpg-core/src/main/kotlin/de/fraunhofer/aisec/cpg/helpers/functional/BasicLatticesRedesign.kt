@@ -801,7 +801,9 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             buildIndexFromCurrentElements()
         }
 
-        constructor() : this(16)
+        // Points-to sets are tiny (usually a single element), and there are millions of them, so we
+        // start small and accept the occasional resize instead of reserving 16 slots up front.
+        constructor() : this(2)
 
         // We make the new element a bit bigger than the current size to avoid resizing
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {

@@ -45,10 +45,13 @@ import java.util.function.Predicate
  * be very resource-intensive if nodes are very similar but not the *same*, in a work-list however
  * we only want just to avoid to place the exact node twice.
  *
- * The magic size of 16 comes from the implementation of Java and is randomly chosen. The
- * [expectedMaxSize] should be 2^n but this will be enforced internally anyway.
+ * The default [expectedMaxSize] is deliberately small: the vast majority of these sets hold a
+ * handful of elements at most, and the backing table is by far the largest part of a small set.
+ * Sets that grow beyond it pay an amortized O(n) rehash, which is cheap compared to reserving space
+ * for 16 elements in every single one of them. Pass a bigger value if you know the set will be
+ * large.
  */
-open class IdentitySet<T>(private val expectedMaxSize: Int = 16) : MutableSet<T> {
+open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> {
     /**
      * The backing hashmap for our set. The [IdentityHashMap] offers reference-equality for keys and
      * values. In this case we use it to determine, if a node is already in our set or not. The
@@ -58,15 +61,20 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 16) : MutableSet<T>
      * It is allocated lazily on the first insertion: a great many [IdentitySet]s (e.g. every node's
      * `typeObservers`) stay empty for their whole lifetime, and an [IdentityHashMap] eagerly
      * allocates its backing table in its constructor. Keeping this `null` until something is added
-     * avoids that allocation for the empty case. The map is sized to twice the [expectedMaxSize] to
-     * avoid resizing too often, which is expensive.
+     * avoids that allocation for the empty case.
+     *
+     * Note that we pass [expectedMaxSize] on unchanged: [IdentityHashMap] already reserves room for
+     * its load factor internally (it sizes its table for `3 * expectedMaxSize / 2` *interleaved*
+     * key/value slots), so inflating the size here again quadruples the table array. For a set that
+     * holds a single element, that is the difference between 165 and 622 bytes, and there are
+     * millions of these sets in a large graph.
      */
     private var map: IdentityHashMap<T, Int>? = null
     private val counter = AtomicInteger()
 
     /** Returns the backing map, allocating it on first use. */
     private fun ensureMap(): IdentityHashMap<T, Int> {
-        return map ?: IdentityHashMap<T, Int>(expectedMaxSize * 2).also { map = it }
+        return map ?: IdentityHashMap<T, Int>(expectedMaxSize).also { map = it }
     }
 
     override operator fun contains(element: T): Boolean {
@@ -177,8 +185,10 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 16) : MutableSet<T>
 }
 
 open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
-    private val map: ConcurrentIdentityHashMap<T, Int> =
-        ConcurrentIdentityHashMap(expectedMaxSize * 2)
+    // Note that we must not inflate [expectedMaxSize] here: a [ConcurrentHashMap] already reserves
+    // room for its load factor internally, so multiplying the size again doubles the table array of
+    // every single set. There are millions of these sets in a points-to analysis, so this matters.
+    private val map: ConcurrentIdentityHashMap<T, Int> = ConcurrentIdentityHashMap(expectedMaxSize)
     private val counter = AtomicInteger()
 
     override operator fun contains(element: T): Boolean {
