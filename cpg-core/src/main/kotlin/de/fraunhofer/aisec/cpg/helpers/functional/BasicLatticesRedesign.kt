@@ -1202,7 +1202,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
     override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
-        ConcurrentIdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
+        PersistentIdentityMap<K, V>(expectedMaxSize), Lattice.Element {
 
         constructor() : this(32)
 
@@ -1211,7 +1211,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
          * who wants to modify an entry has to ask for a private copy first, see [getForUpdate].
          */
         constructor(m: Map<K, V>) : this(m.size) {
-            if (m is ConcurrentIdentityHashMap<K, V>) {
+            if (m is PersistentIdentityMap<K, V>) {
                 putAllTransformed(m) { shareValue(it) }
             } else {
                 for ((key, value) in m) {
@@ -1385,12 +1385,20 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
          * modified afterwards - via [getForUpdate] - are ever copied, and the analysis modifies
          * only a handful of entries per state.
          *
-         * Values which do not [support sharing][Lattice.Element.supportsSharing] are deep-copied as
-         * before.
+         * If every value may be shared, the copy also shares the map itself, so that it does not
+         * even cost one map slot per entry. Values which do not
+         * [support sharing][Lattice.Element.supportsSharing] have to be deep-copied, and then we
+         * have to build a new map for them anyway.
          */
         override fun duplicate(): Element<K, V> {
-            val copy = Element<K, V>(this.size)
-            copy.putAllTransformed(this) { shareValue(it) }
+            val snapshot = snapshot()
+            val copy = Element<K, V>()
+            if (snapshot.values.all { it.supportsSharing }) {
+                snapshot.values.forEach { it.isShared = true }
+                copy.restore(snapshot)
+            } else {
+                copy.putAllTransformed(this) { shareValue(it) }
+            }
             return copy
         }
 
