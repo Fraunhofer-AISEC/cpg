@@ -218,6 +218,12 @@ abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : Mutable
      */
     protected abstract fun keyFor(element: T): K
 
+    /**
+     * Called by every method which modifies this set, before it does so. Subclasses can use it to
+     * enforce invariants; the default implementation does nothing.
+     */
+    protected open fun onMutate() {}
+
     override operator fun contains(element: T): Boolean {
         // We are using the backing map to check, if the element is already in the set.
         return map.containsKey(keyFor(element))
@@ -230,6 +236,7 @@ abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : Mutable
     }
 
     override fun add(element: T): Boolean {
+        onMutate()
         // Since we are a Set, we only want to add elements that are not already there
         return map.putIfAbsent(keyFor(element), box(element)) == null
     }
@@ -244,6 +251,7 @@ abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : Mutable
      * [keyFor].
      */
     open fun addAllWithoutCheck(elements: Iterable<T>) {
+        onMutate()
         for (element in elements) {
             map.put(keyFor(element), box(element))
         }
@@ -264,7 +272,10 @@ abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : Mutable
 
             override fun next(): T = unbox(iterator.next())
 
-            override fun remove() = iterator.remove()
+            override fun remove() {
+                onMutate()
+                iterator.remove()
+            }
         }
     }
 
@@ -282,14 +293,17 @@ abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : Mutable
     }
 
     override fun clear() {
+        onMutate()
         map.clear()
     }
 
     override fun remove(element: T): Boolean {
+        onMutate()
         return map.remove(keyFor(element)) != null
     }
 
     override fun removeIf(filter: Predicate<in T>): Boolean {
+        onMutate()
         var removed = false
         val iterator = map.values.iterator()
         while (iterator.hasNext()) {
