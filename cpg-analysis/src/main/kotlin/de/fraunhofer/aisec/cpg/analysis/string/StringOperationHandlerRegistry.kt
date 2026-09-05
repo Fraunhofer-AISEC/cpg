@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.string
 
+import de.fraunhofer.aisec.cpg.analysis.string.golang.GoStringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.jvm.JvmStringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.python.PythonStringOperationHandler
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -62,6 +63,7 @@ object StringOperationHandlerRegistry {
     init {
         register("PythonLanguage", PythonStringOperationHandler())
         register("JavaLanguage", JvmStringOperationHandler())
+        register("GoLanguage", GoStringOperationHandler())
     }
 
     /**

@@ -34,12 +34,11 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
 import de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
-import de.fraunhofer.aisec.cpg.analysis.string.charsOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
 import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.lengthOf
-import de.fraunhofer.aisec.cpg.analysis.string.star
+import de.fraunhofer.aisec.cpg.analysis.string.mapConstLeaves
 import de.fraunhofer.aisec.cpg.analysis.string.union
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
@@ -406,41 +405,6 @@ class PythonStringOperationHandler : StringOperationHandler {
         val f: (String) -> String = if (upper) String::uppercase else String::lowercase
         return mapConstLeaves(receiver, f)
     }
-
-    /**
-     * Maps every [StringPattern.Const] leaf of [p] through [f], re-normalising the result via the
-     * smart constructors. [StringPattern.Unknown] leaves have their [CharSet] mapped via
-     * [mapCharSet], which soundly accounts for characters whose full-string case mapping under [f]
-     * produces more than one character (e.g. German `ß` uppercasing to `"SS"`).
-     *
-     * Provably terminating: this is a structural recursion over [p], which is already a finite term
-     * (bounded by the evaluator's `maxTermSize`/`maxTermDepth`) - no new nesting is introduced.
-     */
-    private fun mapConstLeaves(p: StringPattern, f: (String) -> String): StringPattern =
-        when (p) {
-            is StringPattern.Bottom -> p
-            is StringPattern.Const -> const(f(p.value))
-            is StringPattern.Concat -> concat(p.parts.map { mapConstLeaves(it, f) })
-            is StringPattern.Union -> union(p.alternatives.map { mapConstLeaves(it, f) })
-            is StringPattern.Star -> star(mapConstLeaves(p.inner, f), p.min, p.max)
-            is StringPattern.Unknown -> p.copy(charSet = mapCharSet(p.charSet, f))
-        }
-
-    /**
-     * Maps [charSet] through [f], applied to each character's full-string representation (so that a
-     * character whose mapping under [f] is itself multiple characters, e.g. German `ß` uppercasing
-     * to `"SS"`, contributes *all* of those resulting characters). Never drops a possible output
-     * character - dropping would under-approximate the resulting [CharSet], violating this domain's
-     * soundness invariant (see the design doc: results must always be supersets of what is actually
-     * reachable).
-     */
-    private fun mapCharSet(charSet: CharSet, f: (String) -> String): CharSet =
-        when (charSet) {
-            is CharSet.Empty,
-            is CharSet.Any -> charSet
-            is CharSet.Chars ->
-                charsOf(charSet.chars.flatMap { c -> f(c.toString()).toList() }.toSet())
-        }
 
     companion object {
         private val FORMAT_TOKEN = Regex("\\{\\{|\\}\\}|\\{[^{}]*\\}")
