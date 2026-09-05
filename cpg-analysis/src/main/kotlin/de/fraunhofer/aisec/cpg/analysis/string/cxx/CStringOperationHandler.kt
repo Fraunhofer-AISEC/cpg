@@ -83,6 +83,27 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
  * construct that DFG shape by hand to keep the ground truth unambiguous regardless of the real
  * frontend's behaviour.
  *
+ * **`snprintf`'s return value vs. `buf`'s value - a caveat as significant as the DFG-shape
+ * assumption above, and not to be confused with it.** Unlike `strcat`/`strcpy`, whose C return
+ * value genuinely *is* (a pointer aliasing) `dest`, real `snprintf(buf, size, format, args...)`
+ * returns an `int` (the number of characters that *would have been* written, ignoring truncation) -
+ * it does *not* return the formatted string. [handleSnprintf] cannot tell these two cases apart: it
+ * produces the formatted/truncated string unconditionally whenever [StringEvaluator.handleCall]
+ * dispatches this `Call` node into it, which is only the *correct* answer when reached via the same
+ * DFG-shape mechanism described above for `strcat`/`strcpy` - i.e. a *later read of `buf`* whose
+ * backward DFG resolves to this call as `buf`'s def-site. If, instead, this handler is reached
+ * because something evaluated the call expression's *own* value directly (e.g. `int n =
+ * snprintf(...)` and then evaluating `n`'s def-site chain back to this call, or evaluating the
+ * `Call` node itself), the formatted string is the *wrong* answer - the correct one would be an
+ * `int` count, which this handler does not attempt to compute. [StringEvaluator]'s dispatch has no
+ * mechanism to distinguish "reached via `buf`'s def-site" from "reached via the call's own
+ * expression value" without threading additional context through
+ * [handleCall]/[StringOperationHandler.handleCall], which is a larger change than this handler's
+ * scope - this is accepted as a known limitation of the general `Call`-node dispatch design (shared
+ * with, and no worse than, the pre-existing `strcat`/`strcpy` DFG-shape assumption above), not
+ * something redesigned here. See `CStringOperationHandlerTest.testSnprintfExact`'s KDoc for how the
+ * test suite reflects this.
+ *
  * **`snprintf`'s format-string mini-language.** C's `printf` family conversions
  * (`d`/`i`/`o`/`u`/`x`/`X`/`e`/`E`/`f`/`F`/`g`/`G`/`a`/`A`/`c`/`s`/`p`/`n`) are always consumed
  * positionally, in order - unlike Java's `String.format`, standard C `printf` has no `%1$s`-style
@@ -186,6 +207,14 @@ class CStringOperationHandler : StringOperationHandler {
      * otherwise, if `size` is known, the result's length bound is tightened to `size - 1` rather
      * than left unbounded, since that bound is real, exploitable information for a
      * buffer-overflow-relevant analysis.
+     *
+     * **Only correct when reached via `buf`'s def-site, not via the call's own expression value** -
+     * see this class's KDoc, "`snprintf`'s return value vs. `buf`'s value", for why: real
+     * `snprintf`'s own expression value is an `int` count, not this formatted string, and this
+     * handler has no way to tell the two dispatch reasons apart. Callers/tests must exercise this
+     * handler via a later read of `buf` whose `prevDFG` resolves to the `snprintf` call (mirroring
+     * the `strcat`/`strcpy` tests), not by evaluating the `Call` node directly, to exercise the
+     * intended, correct usage.
      */
     private fun handleSnprintf(call: Call, evaluate: (Node) -> StringPattern): StringPattern? {
         val args = call.arguments

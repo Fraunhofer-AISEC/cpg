@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import java.util.IdentityHashMap
+import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -207,6 +208,22 @@ open class StringEvaluator(
      */
     private val threadLocalCache =
         ThreadLocal.withInitial { IdentityHashMap<Node, MutableMap<ContextKey, StringPattern>>() }
+
+    /**
+     * Caches [StringOperationHandlerRegistry.forLanguage]'s result per language (keyed by
+     * `node.language::class.simpleName`), for the lifetime of this [StringEvaluator] instance
+     * rather than just one [evaluate] call. [handlersFor] is on the hot path (consulted on every
+     * [Call]/[BinaryOperator] dispatch, and nodes can be re-evaluated many times during
+     * interprocedural/fixpoint traversal), and [StringOperationHandlerRegistry.forLanguage]
+     * allocates a fresh `.toList()` copy on every invocation - unlike [threadLocalCache] and its
+     * siblings, this does not need clearing per top-level [evaluate] call: registrations happen
+     * once at startup (see the registry's own KDoc, "in practice the built-in handlers are
+     * registered once, at class-init time"), so entries here cannot go stale across `evaluate()`
+     * calls the way per-evaluation memoized [StringPattern] results could. Shared across threads
+     * via [ConcurrentHashMap] rather than `ThreadLocal`, since it holds no per-evaluation state -
+     * it is pure derived data from the (effectively immutable, post-startup) registry.
+     */
+    private val handlersByLanguage = ConcurrentHashMap<String?, List<StringOperationHandler>>()
 
     /**
      * Required by [Backward.pickNextStep]'s signature but not otherwise consulted by our logic:
@@ -465,7 +482,11 @@ open class StringEvaluator(
      * from different languages - see [operationHandlers]'s KDoc.
      */
     private fun handlersFor(node: Node): List<StringOperationHandler> =
-        operationHandlers.ifEmpty { StringOperationHandlerRegistry.forLanguage(node) }
+        operationHandlers.ifEmpty {
+            handlersByLanguage.getOrPut(node.language::class.simpleName) {
+                StringOperationHandlerRegistry.forLanguage(node)
+            }
+        }
 
     /**
      * Best-effort: a single character of a known [StringPattern.Const] at a known constant index,

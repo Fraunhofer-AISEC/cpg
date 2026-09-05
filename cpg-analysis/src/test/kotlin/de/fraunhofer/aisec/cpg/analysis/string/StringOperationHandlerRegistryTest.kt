@@ -35,6 +35,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
 
 /**
  * [StringOperationHandlerRegistry.forLanguage] keys purely off [Language::class.simpleName] (see
@@ -54,6 +55,19 @@ private class UnregisteredTestLanguage : TestLanguage()
 private class PseudoLanguageForRegistrationTest : TestLanguage()
 
 class StringOperationHandlerRegistryTest {
+
+    /**
+     * [testRegisterAddsWithoutOverwriting] registers throwaway handlers under
+     * `"PseudoLanguageForRegistrationTest"` in the process-lifetime
+     * [StringOperationHandlerRegistry] singleton, which never removes entries on its own - without
+     * this teardown, re-running that test in the same JVM (retries, `--rerun-tasks`, CI
+     * flaky-retry) would see both this run's and every prior run's handlers accumulate under the
+     * same key, and the exact-list `assertEquals` would spuriously fail.
+     */
+    @AfterEach
+    fun tearDown() {
+        StringOperationHandlerRegistry.clear("PseudoLanguageForRegistrationTest")
+    }
 
     @Test
     fun testBuiltinsPreRegistered() {

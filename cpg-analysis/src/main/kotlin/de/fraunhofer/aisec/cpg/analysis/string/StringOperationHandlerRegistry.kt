@@ -89,4 +89,16 @@ object StringOperationHandlerRegistry {
 
     /** Convenience overload of [forLanguage] taking a [Node], delegating to [Node.language]. */
     fun forLanguage(node: Node): List<StringOperationHandler> = forLanguage(node.language)
+
+    /**
+     * Removes all handlers registered for [languageSimpleName]. Not intended for production use
+     * (the registry is meant to be a stable, append-only, process-lifetime registration of the
+     * built-in handlers plus whatever a consumer adds at startup) - this exists solely so that
+     * tests which register throwaway handlers under a test-only key (e.g.
+     * `StringOperationHandlerRegistryTest`) can clean up after themselves and remain safely
+     * re-runnable within the same JVM, hence `internal`.
+     */
+    internal fun clear(languageSimpleName: String) {
+        handlers.remove(languageSimpleName)
+    }
 }

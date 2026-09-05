@@ -177,7 +177,197 @@ class CStringOperationHandlerTest {
         )
     }
 
-    /** `snprintf(buf, 10, "%s-%s", "a", "b")` with all-constant arguments resolves exactly. */
+    /**
+     * `snprintf(buf, 10, "%s-%s", "a", "b")` where a *later read of `buf`* resolves back to the
+     * `snprintf` call as its def-site - mirroring [testStrcpyOverwritesOldValue]'s/
+     * [testStrcatDependsOnOldValue]'s manually-constructed `prevDFG` pattern. This is the *primary,
+     * intended* usage of [CStringOperationHandler]'s `snprintf` support: see
+     * [CStringOperationHandler]'s KDoc ("`snprintf`'s return value vs. `buf`'s value") for why
+     * evaluating the `Call` node's own expression value directly (as [testSnprintfExact] below
+     * does) is a *different*, and per real C semantics *incorrect*, scenario - real `snprintf`
+     * returns an `int` count, not the formatted string.
+     */
+    @Test
+    fun testSnprintfDefSiteExact() {
+        lateinit var laterRead: Reference
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val call =
+                            newCall(newReference("snprintf")) {
+                                it.arguments += newReference("bufArg")
+                                it.arguments += newLiteral(10, objectType("size_t"))
+                                it.arguments += newLiteral("%s-%s", objectType("char*"))
+                                it.arguments += newLiteral("a", objectType("char*"))
+                                it.arguments += newLiteral("b", objectType("char*"))
+                            }
+                        block.statements += call
+
+                        laterRead = newReference("buf")
+                        laterRead.prevDFG += call
+                        block.statements += newReturn { it.returnValue = laterRead }
+                    }
+            }
+        }
+
+        val pattern = laterRead.evaluateCString()
+        assertEquals(const("a-b"), pattern)
+    }
+
+    /**
+     * `snprintf(buf, 4, "%s-%s", "aaaa", "bbbb")` via a later read of `buf` (see
+     * [testSnprintfDefSiteExact]): the logical, unbounded formatted result (`"aaaa-bbbb"`) is
+     * longer than `size - 1 == 3` characters, so the exact, truncated result (`"aaa"`) must be
+     * produced, mirroring real `snprintf` truncation semantics.
+     */
+    @Test
+    fun testSnprintfDefSiteTruncatesExactConstant() {
+        lateinit var laterRead: Reference
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val call =
+                            newCall(newReference("snprintf")) {
+                                it.arguments += newReference("bufArg")
+                                it.arguments += newLiteral(4, objectType("size_t"))
+                                it.arguments += newLiteral("%s-%s", objectType("char*"))
+                                it.arguments += newLiteral("aaaa", objectType("char*"))
+                                it.arguments += newLiteral("bbbb", objectType("char*"))
+                            }
+                        block.statements += call
+
+                        laterRead = newReference("buf")
+                        laterRead.prevDFG += call
+                        block.statements += newReturn { it.returnValue = laterRead }
+                    }
+            }
+        }
+
+        val pattern = laterRead.evaluateCString()
+        assertEquals(const("aaa"), pattern)
+    }
+
+    /**
+     * `snprintf(buf, size, "%s", x)` via a later read of `buf` (see [testSnprintfDefSiteExact]),
+     * where `x` is a non-constant parameter and `size` is a known constant: the result cannot be
+     * computed exactly, but its length must still be bounded above by `size - 1`.
+     */
+    @Test
+    fun testSnprintfDefSiteBoundsLengthWhenNonConstant() {
+        lateinit var laterRead: Reference
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                val param = newParameter("x", objectType("char*"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val call =
+                            newCall(newReference("snprintf")) {
+                                it.arguments += newReference("bufArg")
+                                it.arguments += newLiteral(8, objectType("size_t"))
+                                it.arguments += newLiteral("%s", objectType("char*"))
+                                it.arguments += newReference(param.name)
+                            }
+                        block.statements += call
+
+                        laterRead = newReference("buf")
+                        laterRead.prevDFG += call
+                        block.statements += newReturn { it.returnValue = laterRead }
+                    }
+            }
+        }
+
+        val pattern = laterRead.evaluateCString()
+        assertIs<StringPattern.Unknown>(pattern)
+        val length = pattern.length
+        assertIs<de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bounded>(length)
+        assertEquals(
+            de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.Value(7),
+            length.upper,
+        )
+    }
+
+    /**
+     * `snprintf(buf, size, "%s%%%s", "a", "b")` via a later read of `buf` (see
+     * [testSnprintfDefSiteExact]) - regression test mirroring
+     * `JvmStringOperationHandlerTest.testFormatPercentNDoesNotShiftArgumentIndex`: `%%` must not
+     * consume a positional argument, so the second `%s` must still resolve to `"b"`, not miss it or
+     * shift onto a nonexistent third argument.
+     */
+    @Test
+    fun testSnprintfDefSitePercentDoesNotShiftArgumentIndex() {
+        lateinit var laterRead: Reference
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val call =
+                            newCall(newReference("snprintf")) {
+                                it.arguments += newReference("bufArg")
+                                it.arguments += newLiteral(100, objectType("size_t"))
+                                it.arguments += newLiteral("%s%%%s", objectType("char*"))
+                                it.arguments += newLiteral("a", objectType("char*"))
+                                it.arguments += newLiteral("b", objectType("char*"))
+                            }
+                        block.statements += call
+
+                        laterRead = newReference("buf")
+                        laterRead.prevDFG += call
+                        block.statements += newReturn { it.returnValue = laterRead }
+                    }
+            }
+        }
+
+        val pattern = laterRead.evaluateCString()
+        assertEquals(const("a%b"), pattern)
+    }
+
+    /**
+     * `snprintf(buf, size, "%d%n%d", 1, &count, 2)` via a later read of `buf` (see
+     * [testSnprintfDefSiteExact]) - regression test for C's `%n`: unlike Java's argument-less `%n`,
+     * C's `%n` *does* consume a (pointer) argument - it just contributes no characters to the
+     * output. The second `%d` must resolve to `2` (the third vararg), not to `&count` (the second
+     * vararg, which `%n` consumes without stringifying).
+     */
+    @Test
+    fun testSnprintfDefSitePercentNConsumesArgumentButNoOutput() {
+        lateinit var laterRead: Reference
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val call =
+                            newCall(newReference("snprintf")) {
+                                it.arguments += newReference("bufArg")
+                                it.arguments += newLiteral(100, objectType("size_t"))
+                                it.arguments += newLiteral("%d%n%d", objectType("char*"))
+                                it.arguments += newLiteral(1, objectType("int"))
+                                it.arguments += newReference("count")
+                                it.arguments += newLiteral(2, objectType("int"))
+                            }
+                        block.statements += call
+
+                        laterRead = newReference("buf")
+                        laterRead.prevDFG += call
+                        block.statements += newReturn { it.returnValue = laterRead }
+                    }
+            }
+        }
+
+        val pattern = laterRead.evaluateCString()
+        assertEquals(const("12"), pattern)
+    }
+
+    /**
+     * `snprintf(buf, 10, "%s-%s", "a", "b")` with all-constant arguments resolves exactly.
+     *
+     * This evaluates the `Call` node's own expression value directly, *not* a later read of `buf`
+     * via its def-site - per [CStringOperationHandler]'s KDoc, this is the accepted-as-limited case
+     * (real `snprintf` returns an `int` count here, not this formatted string); kept passing for
+     * regression coverage of the handler's formatting logic, but [testSnprintfDefSiteExact] above
+     * is the primary, semantically-correct test for this behaviour.
+     */
     @Test
     fun testSnprintfExact() {
         lateinit var ret: de.fraunhofer.aisec.cpg.graph.expressions.Return
@@ -208,6 +398,9 @@ class CStringOperationHandlerTest {
      * `snprintf(buf, 4, "%s-%s", "aaaa", "bbbb")` - the logical, unbounded formatted result
      * (`"aaaa-bbbb"`) is longer than `size - 1 == 3` characters, so the exact, truncated result
      * (`"aaa"`) must be produced, mirroring real `snprintf` truncation semantics.
+     *
+     * Evaluates the `Call` node's own expression value directly - the accepted-as-limited case, see
+     * [testSnprintfExact]'s KDoc; [testSnprintfDefSiteTruncatesExactConstant] is primary.
      */
     @Test
     fun testSnprintfTruncatesExactConstant() {
@@ -239,6 +432,9 @@ class CStringOperationHandlerTest {
      * `snprintf(buf, size, "%s", x)` where `x` is a non-constant parameter and `size` is a known
      * constant: the result cannot be computed exactly, but its length must still be bounded above
      * by `size - 1`.
+     *
+     * Evaluates the `Call` node's own expression value directly - the accepted-as-limited case, see
+     * [testSnprintfExact]'s KDoc; [testSnprintfDefSiteBoundsLengthWhenNonConstant] is primary.
      */
     @Test
     fun testSnprintfBoundsLengthWhenNonConstant() {
@@ -277,6 +473,9 @@ class CStringOperationHandlerTest {
      * `JvmStringOperationHandlerTest.testFormatPercentNDoesNotShiftArgumentIndex`: `%%` must not
      * consume a positional argument, so the second `%s` must still resolve to `"b"`, not miss it or
      * shift onto a nonexistent third argument.
+     *
+     * Evaluates the `Call` node's own expression value directly - the accepted-as-limited case, see
+     * [testSnprintfExact]'s KDoc; [testSnprintfDefSitePercentDoesNotShiftArgumentIndex] is primary.
      */
     @Test
     fun testSnprintfPercentDoesNotShiftArgumentIndex() {
@@ -309,6 +508,10 @@ class CStringOperationHandlerTest {
      * argument-less `%n`, C's `%n` *does* consume a (pointer) argument - it just contributes no
      * characters to the output. The second `%d` must resolve to `2` (the third vararg), not to
      * `&count` (the second vararg, which `%n` consumes without stringifying).
+     *
+     * Evaluates the `Call` node's own expression value directly - the accepted-as-limited case, see
+     * [testSnprintfExact]'s KDoc; [testSnprintfDefSitePercentNConsumesArgumentButNoOutput] is
+     * primary.
      */
     @Test
     fun testSnprintfPercentNConsumesArgumentButNoOutput() {
