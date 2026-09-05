@@ -116,9 +116,22 @@ private class ContextKey(ctx: Context) {
 open class StringEvaluator(
     val config: StringEvaluatorConfig = StringEvaluatorConfig(),
     /**
-     * Consulted, in order, by [handleCall] before falling back to the generic predecessor-following
-     * behaviour. Empty in this phase - see [StringOperationHandler], this is the extension point
-     * for Phase 3 (language-specific call handling).
+     * Consulted, in order, by [handleCall]/[handleBinaryOperator] before falling back to the
+     * generic predecessor-following behaviour, in preference to any handlers found via
+     * [StringOperationHandlerRegistry].
+     *
+     * Left empty (the default) to get fully automatic, per-node dispatch: [handleCall] and
+     * [handleBinaryOperator] look up [StringOperationHandlerRegistry.forLanguage] for the node
+     * being evaluated at the point of use rather than once at construction time, since a single
+     * `StringEvaluator` instance can, at least in principle, be asked to evaluate nodes belonging
+     * to different languages (e.g. while following interprocedural dataflow edges in a polyglot
+     * CPG) - looking the registry up once here and freezing it into this list would pick only the
+     * first node's language's handlers for the whole evaluator lifetime.
+     *
+     * Passing an explicit, non-empty list here (e.g. `listOf(PythonStringOperationHandler())`)
+     * overrides the registry lookup entirely for this evaluator instance - this is how the existing
+     * Phase 3 tests keep working unchanged, and remains the way to force specific handlers
+     * regardless of what is/isn't registered.
      */
     val operationHandlers: List<StringOperationHandler> = emptyList(),
 ) {
@@ -370,7 +383,7 @@ open class StringEvaluator(
                     maxUnionSize = config.maxUnionSize,
                 )
             else -> {
-                for (handler in operationHandlers) {
+                for (handler in handlersFor(node)) {
                     val result = handler.handleBinaryOperator(node) { evaluateInternal(it, ctx) }
                     if (result != null) {
                         return result
@@ -436,7 +449,7 @@ open class StringEvaluator(
      * `open` so that Phase 3 can add its own handling without touching [dispatch].
      */
     protected open fun handleCall(node: Call, ctx: Context): StringPattern {
-        for (handler in operationHandlers) {
+        for (handler in handlersFor(node)) {
             val result = handler.handleCall(node) { evaluateInternal(it, ctx) }
             if (result != null) {
                 return result
@@ -444,6 +457,15 @@ open class StringEvaluator(
         }
         return followPredecessors(node, ctx)
     }
+
+    /**
+     * The handlers to consult for [node]: the explicit [operationHandlers] if any were passed to
+     * this evaluator, otherwise [StringOperationHandlerRegistry.forLanguage] for [node]'s own
+     * language, looked up per call so that a single evaluator instance can correctly handle nodes
+     * from different languages - see [operationHandlers]'s KDoc.
+     */
+    private fun handlersFor(node: Node): List<StringOperationHandler> =
+        operationHandlers.ifEmpty { StringOperationHandlerRegistry.forLanguage(node) }
 
     /**
      * Best-effort: a single character of a known [StringPattern.Const] at a known constant index,
