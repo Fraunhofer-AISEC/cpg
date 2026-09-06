@@ -290,4 +290,55 @@ class AbstractStringEvaluatorTest {
         // this fixture, i.e. comparable precision for this specific case - neither dominates the
         // other in general, so no equality/ordering is asserted here.
     }
+
+    /**
+     * [AbstractStringEvaluator], now that it extends
+     * [de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator], must produce the same result through the
+     * generic `Node.evaluate(evaluator)` entry point as the existing
+     * `AbstractStringEvaluator().evaluate(node, StringValue::class)` call.
+     */
+    @Test
+    fun testGenericEvaluateMatchesExplicitTargetType() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("x", objectType("string"), holder = decl) {
+                                it.initializer = newLiteral("a", objectType("string"))
+                            }
+                        }
+                        block.statements +=
+                            newAssign(
+                                "=",
+                                listOf(newReference("x")),
+                                listOf(
+                                    newBinaryOperator("+") { op ->
+                                        op.lhs = newReference("x")
+                                        op.rhs = newLiteral("b", objectType("string"))
+                                    }
+                                ),
+                            )
+                        ret = newReturn { r -> r.returnValue = newReference("x") }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val explicit = AbstractStringEvaluator().evaluate(ret.returnValue!!, StringValue::class)
+        val generic = ret.returnValue!!.evaluate(AbstractStringEvaluator()) as? StringPattern
+        assertEquals(explicit, generic)
+    }
+
+    /**
+     * The straight-line/branching/loop fixtures already exercised above (via the private [evaluate]
+     * helper, which uses the 2-arg `evaluate(node, targetType)` overload) must keep passing
+     * unmodified now that the `analysisType` field has been removed in favour of threading
+     * `targetType` through as a parameter - this is just [testStraightLineConcatenation],
+     * [testBranchingJoin] and [testLoopBuiltString] continuing to hold, which is asserted
+     * implicitly by those tests themselves still passing.
+     */
 }

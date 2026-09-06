@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.GeneralStateElement
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -59,11 +60,32 @@ import kotlinx.coroutines.runBlocking
  * badly by the backward evaluator: strings built up across a loop, and other path-dependent values
  * where the flow-sensitive join at merge points gives a better (or at least differently-shaped)
  * answer.
+ *
+ * Extends [ValueEvaluator] so that the generic `Node.evaluate(evaluator)`/`Node.evaluateAs<T>()`
+ * extension functions work with an [AbstractStringEvaluator] directly, via [targetType] (defaulting
+ * to [StringValue], the only existing [Value]`<StringPattern, StringPattern>` implementation).
+ * Unlike [StringEvaluator], there is no self-recursive, per-node machinery here whose state needs
+ * careful sequencing across `ValueEvaluator`'s `evaluateAs`-bypass: the whole computation is a
+ * single EOG fixpoint per [evaluate] call, with all fixpoint state kept in local variables.
  */
-class AbstractStringEvaluator {
-    /** The type of [Value] being analyzed. Set during evaluation. */
-    private lateinit var analysisType: KClass<out Value<StringPattern, StringPattern>>
-
+class AbstractStringEvaluator(
+    /**
+     * The [Value] implementation to use when [evaluate] is called through the [ValueEvaluator]-
+     * inherited entry points (`evaluate(Any?, Boolean)`/`evaluateInternal(Node?, Int)`/
+     * `evaluateAs<T>()`), which do not otherwise have a way to specify one. The existing
+     * `evaluate(node, targetType)`/`evaluate(start, targetNode, type, initial)` overloads remain
+     * available for callers that want to pass a different [Value] implementation explicitly.
+     */
+    val targetType: KClass<out Value<StringPattern, StringPattern>> = StringValue::class,
+    /**
+     * Not currently consulted internally - there is no `ValueEvaluator`-style hook into
+     * [Value.applyEffect] (its signature does not receive the evaluator instance). Provided for API
+     * consistency with [ValueEvaluator] and potential future use.
+     */
+    override val cannotEvaluate: (Node?, ValueEvaluator) -> StringPattern = { node, _ ->
+        StringPattern.Unknown(origin = node, reason = StringPattern.Reason.UNSUPPORTED)
+    },
+) : ValueEvaluator() {
     /**
      * Evaluates the [StringPattern] of a value at the given [node], using the specified
      * [targetType]. Starts the fixpoint from the enclosing [Function], mirroring
@@ -78,6 +100,23 @@ class AbstractStringEvaluator {
     }
 
     /**
+     * The real override of `ValueEvaluator.evaluate(node: Any?, useCache: Boolean): Any?`, with a
+     * covariant `StringPattern` return type. Delegates to the 2-arg [evaluate] overload using this
+     * instance's constructor-bound [targetType].
+     */
+    override fun evaluate(node: Any?, useCache: Boolean): StringPattern =
+        if (node is Node) evaluate(node, targetType) else StringPattern.Bottom
+
+    /**
+     * The override of `ValueEvaluator.evaluateInternal`. `depth` is ignored: unlike
+     * [StringEvaluator] (a recursive, demand-driven evaluator, where `depth` becomes a step
+     * counter), this evaluator's computation is a single whole-function EOG fixpoint with no notion
+     * of recursion depth.
+     */
+    override fun evaluateInternal(node: Node?, depth: Int): StringPattern =
+        if (node == null) StringPattern.Bottom else evaluate(node, targetType)
+
+    /**
      * Evaluates the [StringPattern] of a value at [targetNode], starting the EOG fixpoint from
      * [start], with the given [type] and [initial] pattern for [start].
      */
@@ -87,7 +126,6 @@ class AbstractStringEvaluator {
         type: KClass<out Value<StringPattern, StringPattern>>,
         initial: StringPattern = StringPattern.Bottom,
     ): StringPattern {
-        analysisType = type
         val innerLattice = StringLattice()
         val declarationState = DeclarationState<Any, StringPattern>(innerLattice)
         val generalState = GeneralState<StringPattern>(innerLattice)
@@ -103,7 +141,9 @@ class AbstractStringEvaluator {
                 startState.iterateEOG(
                     start.nextEOGEdges,
                     startStateElement,
-                    ::handleNode,
+                    { lattice, currentEdge, currentState ->
+                        handleNode(type, lattice, currentEdge, currentState)
+                    },
                     strategy = Lattice.Strategy.WIDENING,
                 )
             }
@@ -111,18 +151,25 @@ class AbstractStringEvaluator {
     }
 
     /**
-     * Handles the effect of a node during EOG traversal, delegating to [analysisType]'s
+     * Handles the effect of a node during EOG traversal, delegating to [type]'s
      * [Value.applyEffect]. Mirrors
      * [de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator.handleNode].
+     *
+     * Takes [type] as an explicit parameter (captured from the enclosing [evaluate] call's local
+     * scope via a lambda at the call site) rather than reading it from a shared instance field: a
+     * single [AbstractStringEvaluator] instance is expected to be shared and invoked concurrently
+     * (per [ValueEvaluator]'s documented contract), and a mutable field set per-call would let two
+     * concurrent [evaluate] calls on the same instance see each other's [type].
      */
     private fun handleNode(
+        type: KClass<out Value<StringPattern, StringPattern>>,
         lattice: Lattice<TupleStateElement<Any, StringPattern>>,
         currentEdge: EvaluationOrder,
         currentState: TupleStateElement<Any, StringPattern>,
     ): TupleStateElement<Any, StringPattern> {
         val currentNode = currentEdge.end
 
-        analysisType
+        type
             .createInstance()
             .applyEffect(
                 lattice = lattice as TupleState<Any, StringPattern>,
