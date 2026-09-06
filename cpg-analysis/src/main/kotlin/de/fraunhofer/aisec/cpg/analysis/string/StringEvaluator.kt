@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.string
 
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.Context
 import de.fraunhofer.aisec.cpg.graph.ContextSensitive
@@ -113,6 +114,14 @@ private class ContextKey(ctx: Context) {
  * A single instance is expected to be shared and invoked concurrently (e.g. from parallel query
  * evaluation), so all mutable per-evaluation state is kept in [ThreadLocal]s, mirroring
  * `ValueEvaluator.path`.
+ *
+ * Extends [ValueEvaluator] so that the generic `Node.evaluate(evaluator)`/`Node.evaluateAs<T>()`
+ * extension functions work with a [StringEvaluator] directly. See [evaluateInternal] (the override
+ * of `ValueEvaluator.evaluateInternal`) for why all the state-resetting logic that used to live in
+ * the (now [resolve]-named) recursive workhorse's caller lives there rather than in [evaluate]: the
+ * inherited `ValueEvaluator.evaluateAs<T>` is `inline` and therefore cannot be overridden - it
+ * calls `evaluateInternal` directly, bypassing [evaluate] entirely, so any reset logic placed only
+ * in [evaluate] would silently not run for callers going through `evaluateAs`.
  */
 open class StringEvaluator(
     val config: StringEvaluatorConfig = StringEvaluatorConfig(),
@@ -135,20 +144,25 @@ open class StringEvaluator(
      * regardless of what is/isn't registered.
      */
     val operationHandlers: List<StringOperationHandler> = emptyList(),
-) {
-    open val log: Logger
+    /**
+     * Consulted by [leafUnknown] for the truly-generic "ran out of ideas for this node" fallback
+     * (the [StringPattern.Reason.UNSUPPORTED] case). Does *not* replace the more specific
+     * [StringPattern.Reason.PARAMETER] (a parameter with no reachable caller) or
+     * [StringPattern.Reason.BUDGET_EXCEEDED] (which additionally records an [Assumption][
+     * de.fraunhofer.aisec.cpg.assumptions.Assumption]) cases - those are specific, deliberate
+     * outcomes, not "we give up" moments, mirroring how `ValueEvaluator`'s own default
+     * `cannotEvaluate` is a last resort rather than being consulted for every distinguishable
+     * failure mode.
+     */
+    override val cannotEvaluate: (Node?, ValueEvaluator) -> StringPattern = { node, _ ->
+        StringPattern.Unknown(origin = node, reason = StringPattern.Reason.UNSUPPORTED)
+    },
+) : ValueEvaluator() {
+    override val log: Logger
         get() = LoggerFactory.getLogger(StringEvaluator::class.java)
 
     private val lattice =
         StringLattice(config.maxTermSize, config.maxTermDepth, config.maxUnionSize)
-
-    /**
-     * The current recursion stack, by object identity. Used for cycle detection: if we are asked to
-     * evaluate a node that is already on this stack, we have found a cycle in the backward DFG.
-     * `Node` overrides `equals`/`hashCode` structurally, so identity (`===`) is used explicitly
-     * rather than relying on [List.contains].
-     */
-    private val threadLocalPath = ThreadLocal.withInitial { mutableListOf<Node>() }
 
     /**
      * The current fixpoint assumption for a node that is being widened because it is part of a
@@ -237,9 +251,6 @@ open class StringEvaluator(
     /** The node passed to the public [evaluate] entry point, used as the scope of assumptions. */
     private val threadLocalRoot = ThreadLocal<Node?>()
 
-    private val path: MutableList<Node>
-        get() = threadLocalPath.get()
-
     private val assumed: IdentityHashMap<Node, StringPattern>
         get() = threadLocalAssumed.get()
 
@@ -255,23 +266,56 @@ open class StringEvaluator(
     private val rootNode: Node
         get() = threadLocalRoot.get() ?: error("evaluate() must be called before evaluateInternal")
 
-    /** Evaluates [node], returning everything we know about the strings it may evaluate to. */
-    fun evaluate(node: Node): StringPattern {
-        path.clear()
+    /**
+     * Evaluates [node], returning everything we know about the strings it may evaluate to.
+     *
+     * This is the real override of `ValueEvaluator.evaluate(node: Any?, useCache: Boolean): Any?`,
+     * with a covariant `StringPattern` return type. `useCache` is deliberately ignored:
+     * `ValueEvaluator`'s `useCache` gates a separate, static, cross-instance cache
+     * (`ValueEvaluator.valuesCache`), completely unrelated to this evaluator's own per-call `(Node,
+     * Context)` memoization (see [threadLocalCache]'s KDoc) - that memoization is not optional (it
+     * exists purely to avoid the `2^N` re-evaluation blowup [testManySequentialJoinsIsFast] guards
+     * against) and must always run, so there is nothing left for `useCache` to toggle here.
+     */
+    override fun evaluate(node: Any?, useCache: Boolean): StringPattern =
+        if (node is Node) evaluateInternal(node, 0) else StringPattern.Bottom
+
+    /**
+     * The override of `ValueEvaluator.evaluateInternal`. This - not [evaluate] - is where all the
+     * per-top-level-call state resetting happens, because the inherited
+     * `ValueEvaluator.evaluateAs<T>` is `inline` and therefore cannot be overridden: it calls
+     * `evaluateInternal` directly, bypassing [evaluate] entirely. Doing the resetting here instead
+     * means every entry point (`evaluate`, `evaluateAs`, and any future one) goes through it.
+     *
+     * `depth` becomes the initial `Context.steps` for [resolve], mirroring how `ValueEvaluator`
+     * itself threads `depth` through as a step counter.
+     */
+    override fun evaluateInternal(node: Node?, depth: Int): StringPattern {
+        if (node == null) return StringPattern.Bottom
+        clearPath()
         assumed.clear()
         cyclic.clear()
         loopingPaths.clear()
         cache.clear()
         threadLocalRoot.set(node)
-        return evaluateInternal(node, Context())
+        return resolve(node, Context(steps = depth))
     }
 
     /**
      * The single recursive gateway: serves cached results (see [threadLocalCache]), detects cycles
      * (a node already on [path]) and otherwise pushes [node] and delegates to
      * [evaluateWithFixpoint] `->` [dispatch].
+     *
+     * Named distinctly from [evaluateInternal] (the `(Node, Context)` signature used to be named
+     * `evaluateInternal` itself, before this class extended `ValueEvaluator`) so that it cannot be
+     * confused with, or accidentally called instead of, the parent-overriding
+     * `evaluateInternal(Node?, Int)`: every recursive call from within this class must keep calling
+     * [resolve] directly - calling the public `evaluateInternal` override from here would construct
+     * a brand new [Context] (discarding the real `callStack`/`indexStack`) and re-clear
+     * [cache]/[assumed]/[cyclic]/[loopingPaths]/[path] mid-computation, corrupting an in-progress
+     * evaluation.
      */
-    protected open fun evaluateInternal(node: Node, ctx: Context): StringPattern {
+    protected open fun resolve(node: Node, ctx: Context): StringPattern {
         val key = ContextKey(ctx)
         cache[node]?.get(key)?.let {
             return it
@@ -393,15 +437,15 @@ open class StringEvaluator(
             "+",
             "+=" ->
                 concat(
-                    evaluateInternal(node.lhs, ctx),
-                    evaluateInternal(node.rhs, ctx),
+                    resolve(node.lhs, ctx),
+                    resolve(node.rhs, ctx),
                     maxTermSize = config.maxTermSize,
                     maxTermDepth = config.maxTermDepth,
                     maxUnionSize = config.maxUnionSize,
                 )
             else -> {
                 for (handler in handlersFor(node)) {
-                    val result = handler.handleBinaryOperator(node) { evaluateInternal(it, ctx) }
+                    val result = handler.handleBinaryOperator(node) { resolve(it, ctx) }
                     if (result != null) {
                         return result
                     }
@@ -421,14 +465,14 @@ open class StringEvaluator(
         val rhs = node.rhs.singleOrNull()
         return if (lhs != null && rhs != null && node.isCompoundAssignment) {
             concat(
-                evaluateInternal(lhs, ctx),
-                evaluateInternal(rhs, ctx),
+                resolve(lhs, ctx),
+                resolve(rhs, ctx),
                 maxTermSize = config.maxTermSize,
                 maxTermDepth = config.maxTermDepth,
                 maxUnionSize = config.maxUnionSize,
             )
         } else {
-            rhs?.let { evaluateInternal(it, ctx) } ?: followPredecessors(node, ctx)
+            rhs?.let { resolve(it, ctx) } ?: followPredecessors(node, ctx)
         }
     }
 
@@ -440,8 +484,8 @@ open class StringEvaluator(
      * by a constant-folded condition where possible") rather than a hard requirement.
      */
     protected open fun handleConditional(node: Conditional, ctx: Context): StringPattern {
-        val then = node.thenExpression?.let { evaluateInternal(it, ctx) } ?: StringPattern.Bottom
-        val els = node.elseExpression?.let { evaluateInternal(it, ctx) } ?: StringPattern.Bottom
+        val then = node.thenExpression?.let { resolve(it, ctx) } ?: StringPattern.Bottom
+        val els = node.elseExpression?.let { resolve(it, ctx) } ?: StringPattern.Bottom
         return union(
             listOf(then, els),
             maxTermSize = config.maxTermSize,
@@ -453,8 +497,7 @@ open class StringEvaluator(
     /** Transparent: recurses into the cast's inner expression. */
     protected open fun handleCast(node: Cast, ctx: Context): StringPattern {
         val expression = node.expression
-        return if (expression != null) evaluateInternal(expression, ctx)
-        else followPredecessors(node, ctx)
+        return if (expression != null) resolve(expression, ctx) else followPredecessors(node, ctx)
     }
 
     /**
@@ -467,7 +510,7 @@ open class StringEvaluator(
      */
     protected open fun handleCall(node: Call, ctx: Context): StringPattern {
         for (handler in handlersFor(node)) {
-            val result = handler.handleCall(node) { evaluateInternal(it, ctx) }
+            val result = handler.handleCall(node) { resolve(it, ctx) }
             if (result != null) {
                 return result
             }
@@ -493,7 +536,7 @@ open class StringEvaluator(
      * otherwise [StringPattern.Unknown]. Deliberately does not attempt general slicing.
      */
     protected open fun handleSubscription(node: Subscription, ctx: Context): StringPattern {
-        val array = node.arrayExpression?.let { evaluateInternal(it, ctx) }
+        val array = node.arrayExpression?.let { resolve(it, ctx) }
         val index = ((node.subscriptExpression as? Literal<*>)?.value as? Number)?.toInt()
         return if (array is StringPattern.Const && index != null && index in array.value.indices) {
             const(array.value[index].toString())
@@ -506,7 +549,7 @@ open class StringEvaluator(
     protected open fun handleUnaryOperator(node: UnaryOperator, ctx: Context): StringPattern {
         return when (node.operatorCode) {
             "*",
-            "&" -> node.input?.let { evaluateInternal(it, ctx) } ?: followPredecessors(node, ctx)
+            "&" -> node.input?.let { resolve(it, ctx) } ?: followPredecessors(node, ctx)
             else -> followPredecessors(node, ctx)
         }
     }
@@ -589,7 +632,7 @@ open class StringEvaluator(
         val results =
             steps.map { (next, _, newCtx) ->
                 newCtx.inc()
-                evaluateInternal(next, newCtx)
+                resolve(next, newCtx)
             }
 
         return if (results.size == 1) {
@@ -611,7 +654,7 @@ open class StringEvaluator(
         if (node is Parameter) {
             StringPattern.Unknown(origin = node, reason = StringPattern.Reason.PARAMETER)
         } else {
-            StringPattern.Unknown(origin = node, reason = StringPattern.Reason.UNSUPPORTED)
+            cannotEvaluate(node, this)
         }
 
     private fun budgetExceeded(node: Node): StringPattern {

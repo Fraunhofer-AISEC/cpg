@@ -508,4 +508,245 @@ class StringEvaluatorTest {
         val pattern = ret.returnValue!!.evaluateString()
         assertEquals(const("x5"), pattern)
     }
+
+    private fun buildSimpleConstant(): Return {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("x", objectType("string"), holder = decl) {
+                                it.initializer = newLiteral("foo", objectType("string"))
+                            }
+                        }
+                        ret = newReturn { r -> r.returnValue = newReference("x") }
+                        block.statements += ret
+                    }
+            }
+        }
+        return ret
+    }
+
+    private fun buildBranchingJoinFixture(): Return {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                newParameter("cond", objectType("bool"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("x", objectType("string"), holder = decl) {
+                                it.isImplicitInitializerAllowed = true
+                            }
+                        }
+                        block.statements += newIfElse { ifElse ->
+                            ifElse.condition = newReference("cond")
+                            ifElse.thenStatement =
+                                newBlock(enterScope = true) { thenBlock ->
+                                    thenBlock.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("x")),
+                                            listOf(newLiteral("a", objectType("string"))),
+                                        )
+                                }
+                            ifElse.elseStatement =
+                                newBlock(enterScope = true) { elseBlock ->
+                                    elseBlock.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("x")),
+                                            listOf(newLiteral("b", objectType("string"))),
+                                        )
+                                }
+                        }
+                        ret = newReturn { r -> r.returnValue = newReference("x") }
+                        block.statements += ret
+                    }
+            }
+        }
+        return ret
+    }
+
+    private fun buildLoopBuiltStringFixture(): Return {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                newParameter("cond", objectType("bool"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("x", objectType("string"), holder = decl) {
+                                it.initializer = newLiteral("", objectType("string"))
+                            }
+                        }
+                        block.statements +=
+                            newWhile(enterScope = true) { w ->
+                                w.condition = newReference("cond")
+                                w.statement =
+                                    newBlock(enterScope = true) { body ->
+                                        body.statements +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("x")),
+                                                listOf(
+                                                    newBinaryOperator("+") { op ->
+                                                        op.lhs = newReference("x")
+                                                        op.rhs =
+                                                            newLiteral("a", objectType("string"))
+                                                    }
+                                                ),
+                                            )
+                                    }
+                            }
+                        ret = newReturn { r -> r.returnValue = newReference("x") }
+                        block.statements += ret
+                    }
+            }
+        }
+        return ret
+    }
+
+    private fun buildDeepCallChainFixture(chainDepth: Int = 200): Call {
+        lateinit var topCall: Call
+        build { tu ->
+            for (i in 0 until chainDepth) {
+                newFunction("f$i", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("string"))
+                    func.type = computeType(func)
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newReturn { r ->
+                                r.returnValue =
+                                    if (i == chainDepth - 1) {
+                                        newLiteral("leaf", objectType("string"))
+                                    } else {
+                                        newCall(newReference("f${i + 1}"))
+                                    }
+                            }
+                        }
+                }
+            }
+            newFunction("entry", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newReturn { r ->
+                            topCall = newCall(newReference("f0"))
+                            r.returnValue = topCall
+                        }
+                    }
+            }
+        }
+        return topCall
+    }
+
+    /**
+     * Tests that [StringEvaluator], now that it extends [ValueEvaluator], works correctly through
+     * the generic `Node.evaluate(evaluator)` entry point, producing the identical result to
+     * [evaluateString] for a simple constant, a branching-join case, and the loop-built-string
+     * cycle case.
+     */
+    @Test
+    fun testGenericEvaluateMatchesEvaluateString() {
+        val simpleConstant = buildSimpleConstant()
+        assertEquals(
+            simpleConstant.returnValue!!.evaluateString(),
+            simpleConstant.returnValue!!.evaluate(StringEvaluator()),
+        )
+
+        val branchingJoin = buildBranchingJoinFixture()
+        assertEquals(
+            branchingJoin.returnValue!!.evaluateString(),
+            branchingJoin.returnValue!!.evaluate(StringEvaluator()),
+        )
+
+        val loop = buildLoopBuiltStringFixture()
+        assertEquals(
+            loop.returnValue!!.evaluateString(),
+            loop.returnValue!!.evaluate(StringEvaluator()),
+        )
+    }
+
+    /**
+     * Calling `.evaluate(...)` twice on the same [StringEvaluator] instance, on two different,
+     * unrelated fixtures, must not leak cache/path/assumed/cyclic state from the first call into
+     * the second - i.e. [StringEvaluator.evaluateInternal] must fully reset this state, since it is
+     * the only place both `evaluate` and `evaluateAs` funnel through.
+     */
+    @Test
+    fun testRepeatedCallsOnSameInstanceDoNotLeakState() {
+        val evaluator = StringEvaluator()
+        val loop = buildLoopBuiltStringFixture()
+        val simpleConstant = buildSimpleConstant()
+
+        val loopResult = evaluator.evaluate(loop.returnValue)
+        assertFalse(loopResult.isFullyKnown)
+
+        val constantResult = evaluator.evaluate(simpleConstant.returnValue)
+        assertEquals(const("foo"), constantResult)
+
+        // And in the other order, to rule out ordering-dependent leakage.
+        val evaluator2 = StringEvaluator()
+        val constantResult2 = evaluator2.evaluate(simpleConstant.returnValue)
+        assertEquals(const("foo"), constantResult2)
+        val loopResult2 = evaluator2.evaluate(loop.returnValue)
+        assertFalse(loopResult2.isFullyKnown)
+    }
+
+    /**
+     * The single most important test in this suite: `ValueEvaluator.evaluateAs<T>(node)` is the
+     * inherited, non-overridable `inline` function from [ValueEvaluator] - it calls
+     * `evaluateInternal` directly, bypassing `StringEvaluator.evaluate` entirely. If the
+     * state-resetting logic had been placed only in `evaluate` (the naive design), this test would
+     * fail: running the loop-cycle fixture first would leave `cyclic`/`assumed` non-empty (or the
+     * cache stale), and the second, unrelated, simple-constant fixture would then read back a
+     * corrupted result via the shared thread-local state. Because the reset lives in
+     * `evaluateInternal` instead, both calls are correct.
+     */
+    @Test
+    fun testEvaluateAsDoesNotLeakStateAcrossCalls() {
+        val evaluator = StringEvaluator()
+        val loop = buildLoopBuiltStringFixture()
+        val simpleConstant = buildSimpleConstant()
+
+        val loopResult = evaluator.evaluateAs<StringPattern>(loop.returnValue)
+        assertFalse(loopResult?.isFullyKnown ?: true)
+
+        val constantResult = evaluator.evaluateAs<StringPattern>(simpleConstant.returnValue)
+        assertEquals(const("foo"), constantResult)
+    }
+
+    /**
+     * Confirms that budget-exceeded assumptions still attach to the correct root node when
+     * triggered via the `evaluate(Any?, useCache)`/`evaluateAs` entry points, not just the original
+     * `evaluateString()`/`StringEvaluator.evaluate(Node)` path.
+     */
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    fun testBudgetExceededViaGenericEvaluateEntryPoints() {
+        val topCall = buildDeepCallChainFixture()
+        assertTrue(topCall.assumptions.isEmpty())
+
+        val evaluator = StringEvaluator()
+        val pattern = topCall.evaluate(evaluator) as? StringPattern
+        assertIs<StringPattern.Unknown>(pattern)
+        assertEquals(StringPattern.Reason.BUDGET_EXCEEDED, pattern.reason)
+        assertTrue(topCall.assumptions.isNotEmpty())
+
+        // And via evaluateAs, on a fresh instance.
+        val topCall2 = buildDeepCallChainFixture()
+        val pattern2 = StringEvaluator().evaluateAs<StringPattern>(topCall2)
+        assertIs<StringPattern.Unknown>(pattern2)
+        assertEquals(StringPattern.Reason.BUDGET_EXCEEDED, pattern2.reason)
+        assertTrue(topCall2.assumptions.isNotEmpty())
+    }
 }
