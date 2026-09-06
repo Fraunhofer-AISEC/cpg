@@ -34,15 +34,20 @@ import kotlin.math.min
 import org.apache.commons.lang3.StringUtils
 
 /**
- * Returns the part of the [code] described by [subRegion], embedded in [nodeRegion]. [newLineType]
- * can be used to specify the type of new-line char(s) used on the platform.
+ * Computes the `[start, end)` char offset range of [subRegion] inside [code], given that `code[0]`
+ * corresponds to `nodeRegion.startLine:nodeRegion.startColumn`. [lineBreakSequence] can be used to
+ * specify the type of new-line char(s) used on the platform.
+ *
+ * This performs no bounds-checking beyond clamping `end` to `code.length` (matching the previous
+ * behavior of [getCodeOfSubregion]); callers that cannot guarantee a well-formed [subRegion] (e.g.
+ * one derived from an untrusted/independently-computed source) must validate the result themselves.
  */
-fun getCodeOfSubregion(
+internal fun regionToOffsets(
     code: String,
     nodeRegion: Region,
     subRegion: Region,
     lineBreakSequence: CharSequence = "\n",
-): String {
+): IntRange {
     val start =
         if (subRegion.startLine == nodeRegion.startLine) {
             subRegion.startColumn - nodeRegion.startColumn
@@ -68,7 +73,22 @@ fun getCodeOfSubregion(
     // python AST thinks that multiple characters are needed and reports a position that is actually
     // beyond our "end"
     end = min(end, code.length)
-    return code.substring(start, end)
+
+    return start until end
+}
+
+/**
+ * Returns the part of the [code] described by [subRegion], embedded in [nodeRegion]. [newLineType]
+ * can be used to specify the type of new-line char(s) used on the platform.
+ */
+fun getCodeOfSubregion(
+    code: String,
+    nodeRegion: Region,
+    subRegion: Region,
+    lineBreakSequence: CharSequence = "\n",
+): String {
+    val range = regionToOffsets(code, nodeRegion, subRegion, lineBreakSequence)
+    return code.substring(range.first, range.last + 1)
 }
 
 /**

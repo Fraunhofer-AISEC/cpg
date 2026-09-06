@@ -45,7 +45,7 @@ import java.util.Objects
  *
  * The name property of this node need to be a FQN for property resolution.
  */
-class Namespace : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+class Namespace : Declaration(), DeclarationHolder, EOGStarterHolder {
     /**
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
@@ -55,7 +55,7 @@ class Namespace : Declaration(), DeclarationHolder, StatementHolder, EOGStarterH
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Expression>()
+    var statementEdges = astEdgesOf<Expression>()
 
     /**
      * In some languages, there is a relationship between paths / directories and the package
@@ -75,7 +75,7 @@ class Namespace : Declaration(), DeclarationHolder, StatementHolder, EOGStarterH
         addIfNotContains(declarations, declaration)
     }
 
-    override var statements by unwrapping(Namespace::statementEdges)
+    var statements by unwrapping(Namespace::statementEdges)
 
     @DoNotPersist
     override val eogStarters: List<Node>
