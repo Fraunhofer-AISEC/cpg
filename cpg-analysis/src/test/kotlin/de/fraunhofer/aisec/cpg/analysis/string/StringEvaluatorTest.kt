@@ -33,10 +33,14 @@ import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -748,5 +752,233 @@ class StringEvaluatorTest {
         assertIs<StringPattern.Unknown>(pattern2)
         assertEquals(StringPattern.Reason.BUDGET_EXCEEDED, pattern2.reason)
         assertTrue(topCall2.assumptions.isNotEmpty())
+    }
+
+    /**
+     * A [StringOperationHandler] that recognises calls to a function named `"shared"`, counts every
+     * time it is actually invoked (i.e. every time the `shared()` call node is genuinely
+     * (re-)computed, as opposed to served from a cache), and returns `Const("shared")`. Used as the
+     * "expensive, observable" shared sub-node `C` in the cross-query-cache tests below.
+     */
+    private class CountingSharedCallHandler(val counter: AtomicInteger) : StringOperationHandler {
+        override fun handleCall(call: Call, evaluate: (Node) -> StringPattern): StringPattern? {
+            if (call.name.localName != "shared") return null
+            counter.incrementAndGet()
+            return const("shared")
+        }
+
+        override fun handleBinaryOperator(
+            op: BinaryOperator,
+            evaluate: (Node) -> StringPattern,
+        ): StringPattern? = null
+    }
+
+    /**
+     * `c = shared(); a = c + "a"; b = c + "b"` (all in one function, so `a`'s and `b`'s backward
+     * paths to the `shared()` call node share the same, empty call/index stack, i.e. the same
+     * [ContextKey] once reached). Returns the two *different* top-level query targets (`a`'s and
+     * `b`'s initializers) that both backward-reach the shared `shared()` call node `C`.
+     */
+    private fun buildSharedSubgraphFixture(): Pair<BinaryOperator, BinaryOperator> {
+        lateinit var aExpr: BinaryOperator
+        lateinit var bExpr: BinaryOperator
+        build { tu ->
+            newFunction("shared", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newReturn { r ->
+                            r.returnValue = newLiteral("c", objectType("string"))
+                        }
+                    }
+            }
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("c", objectType("string"), holder = decl) {
+                                it.initializer = newCall(newReference("shared"))
+                            }
+                        }
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("a", objectType("string"), holder = decl) {
+                                aExpr =
+                                    newBinaryOperator("+") { op ->
+                                        op.lhs = newReference("c")
+                                        op.rhs = newLiteral("a", objectType("string"))
+                                    }
+                                it.initializer = aExpr
+                            }
+                        }
+                        block.statements += newDeclarationStatement { decl ->
+                            newVariable("b", objectType("string"), holder = decl) {
+                                bExpr =
+                                    newBinaryOperator("+") { op ->
+                                        op.lhs = newReference("c")
+                                        op.rhs = newLiteral("b", objectType("string"))
+                                    }
+                                it.initializer = bExpr
+                            }
+                        }
+                    }
+            }
+        }
+        return aExpr to bExpr
+    }
+
+    /**
+     * With `crossQueryCache = true`, evaluating two *separate* top-level targets (`a`, `b`) that
+     * share a common backward-reachable sub-node (the `shared()` call) must only actually compute
+     * that shared sub-node once across both calls - the second call must be served from the
+     * persistent cache.
+     */
+    @Test
+    fun testCrossQueryCacheReusesSharedSubNode() {
+        val (aExpr, bExpr) = buildSharedSubgraphFixture()
+        val counter = AtomicInteger(0)
+        val evaluator =
+            StringEvaluator(
+                operationHandlers = listOf(CountingSharedCallHandler(counter)),
+                crossQueryCache = true,
+            )
+
+        val resultA = evaluator.evaluate(aExpr)
+        val resultB = evaluator.evaluate(bExpr)
+
+        assertEquals(const("shareda"), resultA)
+        assertEquals(const("sharedb"), resultB)
+        assertEquals(
+            1,
+            counter.get(),
+            "the shared sub-node must only be computed once across both top-level calls " +
+                "when crossQueryCache is enabled",
+        )
+    }
+
+    /**
+     * The contrast/regression-guard for [testCrossQueryCacheReusesSharedSubNode]: with the default
+     * `crossQueryCache = false`, the exact same fixture must recompute the shared sub-node once per
+     * top-level call, confirming the default really does not share state across separate [evaluate]
+     * calls.
+     */
+    @Test
+    fun testDefaultDoesNotReuseAcrossQueries() {
+        val (aExpr, bExpr) = buildSharedSubgraphFixture()
+        val counter = AtomicInteger(0)
+        val evaluator =
+            StringEvaluator(operationHandlers = listOf(CountingSharedCallHandler(counter)))
+
+        val resultA = evaluator.evaluate(aExpr)
+        val resultB = evaluator.evaluate(bExpr)
+
+        assertEquals(const("shareda"), resultA)
+        assertEquals(const("sharedb"), resultB)
+        assertEquals(
+            2,
+            counter.get(),
+            "without crossQueryCache, the shared sub-node must be recomputed for every " +
+                "top-level call",
+        )
+    }
+
+    /**
+     * Correctness under reuse: the actual [StringPattern] results with `crossQueryCache = true`
+     * must be identical to what a fresh, non-cross-query evaluator produces for the same nodes -
+     * the cache must only affect performance, never the answer.
+     */
+    @Test
+    fun testCrossQueryCacheDoesNotChangeResults() {
+        val (aExpr, bExpr) = buildSharedSubgraphFixture()
+
+        val cachedEvaluator = StringEvaluator(crossQueryCache = true)
+        val cachedA = cachedEvaluator.evaluate(aExpr)
+        val cachedB = cachedEvaluator.evaluate(bExpr)
+
+        val uncachedEvaluator = StringEvaluator(crossQueryCache = false)
+        val uncachedA = uncachedEvaluator.evaluate(aExpr)
+        val uncachedB = uncachedEvaluator.evaluate(bExpr)
+
+        assertEquals(uncachedA, cachedA)
+        assertEquals(uncachedB, cachedB)
+
+        // Also cross-check against the loop-built-string and branching-join fixtures, to make sure
+        // the reentrancy-hazard-avoiding "compute outside, insert after" write pattern does not
+        // subtly change results for non-trivial, non-shared fixtures either.
+        val loop = buildLoopBuiltStringFixture()
+        assertEquals(
+            StringEvaluator(crossQueryCache = false).evaluate(loop.returnValue),
+            StringEvaluator(crossQueryCache = true).evaluate(loop.returnValue),
+        )
+        val branchingJoin = buildBranchingJoinFixture()
+        assertEquals(
+            StringEvaluator(crossQueryCache = false).evaluate(branchingJoin.returnValue),
+            StringEvaluator(crossQueryCache = true).evaluate(branchingJoin.returnValue),
+        )
+    }
+
+    /**
+     * The reentrancy stress test: [StringEvaluator] deliberately re-visits the same node while it
+     * is still being computed further up the current call stack (the loop-built-string cycle). With
+     * `crossQueryCache = true`, the result-memoization cache is a shared, cross-thread
+     * [de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap] rather than a
+     * `ThreadLocal` one - this test confirms the "compute outside, insert after" write pattern (see
+     * `StringEvaluator.storeResult`'s KDoc) avoids the `ConcurrentHashMap` recursive-update hazard
+     * that a naive `computeIfAbsent`-based cache would risk here, by confirming this still
+     * terminates (via `@Timeout`) and produces the same sound, non-fully-known result as the
+     * `crossQueryCache = false` case - both for a single evaluation, and for many concurrent
+     * evaluations of the *same* cyclic node (plus unrelated fixtures) hammering one shared instance
+     * from multiple threads at once.
+     */
+    @Test
+    @Timeout(value = 20, unit = TimeUnit.SECONDS)
+    fun testCrossQueryCacheReentrancyDoesNotDeadlock() {
+        val loop = buildLoopBuiltStringFixture()
+        val expected = StringEvaluator(crossQueryCache = false).evaluate(loop.returnValue)
+        assertFalse(expected.isFullyKnown)
+
+        // Single-threaded: does it still terminate and agree with the non-cross-query result?
+        val singleThreaded = StringEvaluator(crossQueryCache = true).evaluate(loop.returnValue)
+        assertEquals(expected, singleThreaded)
+
+        // Multi-threaded: many threads hammering one shared crossQueryCache=true instance,
+        // concurrently evaluating the same cyclic node and an unrelated simple-constant fixture -
+        // exactly the scenario the "compute outside, insert after" design is meant to survive.
+        val sharedEvaluator = StringEvaluator(crossQueryCache = true)
+        val simpleConstant = buildSimpleConstant()
+        val threadCount = 16
+        val iterationsPerThread = 20
+        val executor = Executors.newFixedThreadPool(threadCount)
+        val startLatch = CountDownLatch(1)
+        val failures = java.util.Collections.synchronizedList(mutableListOf<Throwable>())
+        try {
+            val futures =
+                (0 until threadCount).map { threadIndex ->
+                    executor.submit {
+                        startLatch.await()
+                        repeat(iterationsPerThread) {
+                            try {
+                                if (threadIndex % 2 == 0) {
+                                    val result = sharedEvaluator.evaluate(loop.returnValue)
+                                    assertEquals(expected, result)
+                                } else {
+                                    val result =
+                                        sharedEvaluator.evaluate(simpleConstant.returnValue)
+                                    assertEquals(const("foo"), result)
+                                }
+                            } catch (t: Throwable) {
+                                failures.add(t)
+                            }
+                        }
+                    }
+                }
+            startLatch.countDown()
+            futures.forEach { it.get(15, TimeUnit.SECONDS) }
+        } finally {
+            executor.shutdown()
+        }
+        assertTrue(failures.isEmpty(), "concurrent evaluation raised: $failures")
     }
 }

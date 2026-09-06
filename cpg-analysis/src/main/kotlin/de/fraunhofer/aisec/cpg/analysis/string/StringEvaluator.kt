@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentHashMap
@@ -157,6 +158,27 @@ open class StringEvaluator(
     override val cannotEvaluate: (Node?, ValueEvaluator) -> StringPattern = { node, _ ->
         StringPattern.Unknown(origin = node, reason = StringPattern.Reason.UNSUPPORTED)
     },
+    /**
+     * Opt-in: reuse memoized `(Node, Context)` results (see [threadLocalCache]) across *separate*
+     * top-level [evaluate]/`evaluateAs` calls on this same instance, instead of discarding them at
+     * the start of every call. Off (`false`) by default, so all existing callers/tests are
+     * completely unaffected; nothing about their behaviour changes unless this is explicitly set to
+     * `true`.
+     *
+     * Enabling this trades a soundness caveat for cross-query performance: results are memoized
+     * assuming the graph does not change for the lifetime of this [StringEvaluator] instance. There
+     * is currently **no invalidation mechanism** - if the underlying CPG is mutated after a result
+     * for some `(Node, Context)` has been cached, [resolve] will keep returning the stale, pre-
+     * mutation result for that pair indefinitely. This is deliberately out of scope here (a future
+     * change may add invalidation); a caller that enables this flag is responsible for either never
+     * mutating the graph for the instance's lifetime, or discarding the instance (there is
+     * deliberately no `clearCache()` escape hatch yet either) after a mutation.
+     *
+     * When `true`, the cross-thread, cross-call [persistentCache] is used instead of
+     * [threadLocalCache] - see its KDoc for the cache structure and the "compute outside, insert
+     * after" write pattern used to avoid a reentrancy/deadlock hazard.
+     */
+    private val crossQueryCache: Boolean = false,
 ) : ValueEvaluator() {
     override val log: Logger
         get() = LoggerFactory.getLogger(StringEvaluator::class.java)
@@ -222,6 +244,44 @@ open class StringEvaluator(
      */
     private val threadLocalCache =
         ThreadLocal.withInitial { IdentityHashMap<Node, MutableMap<ContextKey, StringPattern>>() }
+
+    /**
+     * The cross-thread, cross-[evaluate]-call counterpart of [threadLocalCache], used instead of it
+     * whenever [crossQueryCache] is `true` (`null` otherwise, so a `false` instance carries no
+     * extra state). Not cleared by [evaluateInternal]: it persists for the lifetime of this
+     * [StringEvaluator] instance, which is exactly the point - see [crossQueryCache]'s KDoc for the
+     * soundness caveat this trades away (no invalidation on graph mutation).
+     *
+     * Keying mirrors [threadLocalCache] exactly (outer by [Node] identity, inner by [ContextKey]),
+     * except the outer map is a [ConcurrentIdentityHashMap] (identity-keyed *and* thread-safe,
+     * unlike [IdentityHashMap]) and the inner map is a plain [ConcurrentHashMap] rather than
+     * another identity map: [ContextKey] already defines proper structural `equals`/`hashCode` (see
+     * its own KDoc), so a plain [ConcurrentHashMap] is correct and simpler than wrapping it in
+     * another identity layer.
+     *
+     * **Do not** rewrite [cachedResult]/[storeResult] to use [ConcurrentIdentityHashMap.get] plus
+     * an atomic "insert if absent, else compute" step (there is no `computeIfAbsent` on
+     * [ConcurrentIdentityHashMap] to tempt this, but the inner [ConcurrentHashMap] does have one -
+     * avoid it here too). [resolve] can legitimately re-enter with the *same* `(node, key)` further
+     * up the same call stack for a genuinely cyclic node (that is what [path]-based cycle detection
+     * is for): if the "compute the value" step ran *inside* the map's own atomic compute callback
+     * for that same key, the reentrant call would try to acquire the same key's lock/bin again from
+     * within it, which is [ConcurrentHashMap]'s documented recursive-update hazard (undefined
+     * behaviour, up to a deadlock). [storeResult] sidesteps this entirely by never computing inside
+     * an atomic map operation: [resolve] computes the result via the ordinary
+     * [evaluateWithFixpoint]/ [dispatch] machinery first, with no lock held on this cache at all,
+     * and only inserts the already-computed result afterwards via plain, non-atomic `get`/`put`
+     * calls. The accepted tradeoff: two threads can both miss the cache for the same `(node, key)`
+     * and both redundantly compute it (wasted work, not a correctness problem, since the
+     * computation is a pure function of `(Node, Context)` and the graph), and in the rare case they
+     * also both race to create the inner per-node map, one thread's freshly-created inner map can
+     * overwrite the other's before either thread's write is required to survive (that write is
+     * simply not cached and gets recomputed on the next miss) - both are benign, "just a little
+     * more work than optimal" races, not soundness bugs.
+     */
+    private val persistentCache:
+        ConcurrentIdentityHashMap<Node, ConcurrentHashMap<ContextKey, StringPattern>>? =
+        if (crossQueryCache) ConcurrentIdentityHashMap() else null
 
     /**
      * Caches [StringOperationHandlerRegistry.forLanguage]'s result per language (keyed by
@@ -296,7 +356,13 @@ open class StringEvaluator(
         assumed.clear()
         cyclic.clear()
         loopingPaths.clear()
-        cache.clear()
+        // The per-call memoization cache is only ever cleared for the default, non-cross-query
+        // mode: when crossQueryCache is true, threadLocalCache is not used at all (resolve reads
+        // and writes persistentCache instead), and that cache must survive across top-level calls
+        // by design - see crossQueryCache's and persistentCache's KDoc.
+        if (!crossQueryCache) {
+            cache.clear()
+        }
         threadLocalRoot.set(node)
         return resolve(node, Context(steps = depth))
     }
@@ -316,11 +382,22 @@ open class StringEvaluator(
      * evaluation.
      */
     protected open fun resolve(node: Node, ctx: Context): StringPattern {
-        val key = ContextKey(ctx)
-        cache[node]?.get(key)?.let {
-            return it
-        }
-
+        // The path/cyclic check MUST run before the cache lookup, not after - this matters only for
+        // crossQueryCache = true, but is checked unconditionally for both modes to keep resolve's
+        // logic identical either way. Rationale: [path] is thread-local, but [persistentCache] is
+        // shared across threads. If the cache lookup ran first, a node still mid-fixpoint on *this*
+        // thread's own path (a genuine cycle for *this* traversal) could already have a fully
+        // converged value cached by a *different* thread concurrently evaluating the very same
+        // node/context (e.g. two threads independently evaluating the same cyclic node). This
+        // thread's recursive re-visit of that node would then short-circuit on the foreign cached
+        // value, skip `cyclic.add(node)` entirely, and `evaluateWithFixpoint` would consequently
+        // never see `node` in `cyclic` and skip the widen loop - silently returning an
+        // under-widened,
+        // unsound result. Checking `path` first means a node on this thread's own path always takes
+        // the cyclic branch, exactly as in the (already correct) single-threaded/default case, and
+        // a
+        // cache lookup only ever happens for nodes this thread is not currently, recursively,
+        // computing - which is exactly when trusting a value written by another thread is safe.
         if (path.any { it === node }) {
             // We are in the middle of evaluating `node` further up the call stack: this is a
             // genuine cycle in the backward DFG (e.g. a loop-carried variable). Report it to the
@@ -328,6 +405,11 @@ open class StringEvaluator(
             // stack) and return our current best guess for it - Bottom until a first guess exists.
             cyclic.add(node)
             return assumed[node] ?: StringPattern.Bottom
+        }
+
+        val key = ContextKey(ctx)
+        cachedResult(node, key)?.let {
+            return it
         }
 
         path.add(node)
@@ -349,11 +431,40 @@ open class StringEvaluator(
             // change) - sound, if less optimal, and confirmed necessary by `testLoopBuiltString`,
             // which fails with a too-precise, non-widened result if this check is removed.
             if (cyclic.isEmpty()) {
-                cache.getOrPut(node) { mutableMapOf() }[key] = result
+                storeResult(node, key, result)
             }
             return result
         } finally {
             path.removeAt(path.size - 1)
+        }
+    }
+
+    /** Reads whichever cache is active for this instance - see [crossQueryCache]. */
+    private fun cachedResult(node: Node, key: ContextKey): StringPattern? =
+        if (crossQueryCache) persistentCache?.get(node)?.get(key) else cache[node]?.get(key)
+
+    /**
+     * Writes [result] for `(node, key)` into whichever cache is active - see [crossQueryCache]. For
+     * the `crossQueryCache = true` case, this deliberately never uses an atomic "get or compute"
+     * operation on either map: [result] has *already been fully computed* by the time this is
+     * called (by [resolve], right after [evaluateWithFixpoint] returns), so this only ever performs
+     * plain, non-atomic reads/writes to insert an already-known value - see [persistentCache]'s
+     * KDoc for why computing *inside* an atomic map operation here would risk a reentrant-update
+     * deadlock, and why the resulting benign races (redundant recomputation; one thread's
+     * freshly-created inner map losing to another's) are an accepted tradeoff rather than a bug.
+     */
+    private fun storeResult(node: Node, key: ContextKey, result: StringPattern) {
+        if (crossQueryCache) {
+            val inner = persistentCache?.get(node)
+            if (inner != null) {
+                inner[key] = result
+            } else {
+                val newInner = ConcurrentHashMap<ContextKey, StringPattern>()
+                newInner[key] = result
+                persistentCache?.put(node, newInner)
+            }
+        } else {
+            cache.getOrPut(node) { mutableMapOf() }[key] = result
         }
     }
 
