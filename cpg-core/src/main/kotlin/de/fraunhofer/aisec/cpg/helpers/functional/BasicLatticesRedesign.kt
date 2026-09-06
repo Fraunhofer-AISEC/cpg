@@ -453,7 +453,7 @@ interface Lattice<T : Lattice.Element> {
         startState: T,
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
-        timeout: Long?,
+        timeout: Duration,
     ): Pair<T, Boolean> {
         // mark the time when we started the calculation to know when we stop
         val startTime = TimeSource.Monotonic.markNow()
