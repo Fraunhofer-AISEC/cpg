@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
+import de.fraunhofer.aisec.cpg.ConfigurationException
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
@@ -168,5 +171,88 @@ class ApplicationSetupProjectTest {
         assertFailsWith<IllegalArgumentException> {
             application("--json-compilation-database", cc.toString()).setupProject()
         }
+    }
+
+    @Test
+    fun testNonExistentFileFailsFast(@TempDir tmp: Path) {
+        val missing = tmp.resolve("does-not-exist.c")
+
+        assertFailsWith<IllegalArgumentException> { application(missing.toString()).setupProject() }
+    }
+
+    @Test
+    fun testIncludePathsArePassedToConfig(@TempDir tmp: Path) {
+        val file = tmp.resolve("main.c").apply { writeText("int main() { return 0; }") }
+        val includeDir = tmp.resolve("include").apply { createDirectories() }
+
+        val project =
+            application("--include-paths", includeDir.toString(), file.toString()).setupProject()
+
+        assertTrue(project.config.includePaths.any { it.toString() == includeDir.toString() })
+    }
+
+    @Test
+    fun testMaxComplexitySetsPassConfiguration(@TempDir tmp: Path) {
+        val file = tmp.resolve("main.c").apply { writeText("int main() { return 0; }") }
+
+        val project = application("--max-complexity-cf-dfg", "5", file.toString()).setupProject()
+
+        val config =
+            project.config.passConfigurations[ControlFlowSensitiveDFGPass::class]
+                as? ControlFlowSensitiveDFGPass.Configuration
+        assertNotNull(config)
+        assertEquals(5, config.maxComplexity)
+    }
+
+    @Test
+    fun testCustomPassListByShortName(@TempDir tmp: Path) {
+        val file = tmp.resolve("main.c").apply { writeText("int main() { return 0; }") }
+
+        val project =
+            application("--no-default-passes", "--custom-pass-list", "DFGPass", file.toString())
+                .setupProject()
+
+        assertTrue(DFGPass::class in project.config.registeredPasses.flatten())
+    }
+
+    @Test
+    fun testCustomPassListByFqdn(@TempDir tmp: Path) {
+        val file = tmp.resolve("main.c").apply { writeText("int main() { return 0; }") }
+
+        val project =
+            application(
+                    "--no-default-passes",
+                    "--custom-pass-list",
+                    "de.fraunhofer.aisec.cpg.passes.DFGPass",
+                    file.toString(),
+                )
+                .setupProject()
+
+        assertTrue(DFGPass::class in project.config.registeredPasses.flatten())
+    }
+
+    @Test
+    fun testCustomPassListWithUnknownNameThrows(@TempDir tmp: Path) {
+        val file = tmp.resolve("main.c").apply { writeText("int main() { return 0; }") }
+
+        assertFailsWith<ConfigurationException> {
+            application("--custom-pass-list", "NotARealPass", file.toString()).setupProject()
+        }
+    }
+
+    @Test
+    fun testIncludesFileAddsRelativeAndAbsolutePaths(@TempDir tmp: Path) {
+        val file = tmp.resolve("main.c").apply { writeText("int main() { return 0; }") }
+        val relativeIncludeDir = tmp.resolve("relInclude").apply { createDirectories() }
+        val absoluteIncludeDir = tmp.resolve("absInclude").apply { createDirectories() }
+        val includesFile =
+            tmp.resolve("includes.txt").apply { writeText("relInclude\n$absoluteIncludeDir\n") }
+
+        val project =
+            application("--includes-file", includesFile.toString(), file.toString()).setupProject()
+
+        val includePaths = project.config.includePaths.map { it.toString() }
+        assertTrue(includePaths.contains(relativeIncludeDir.toString()))
+        assertTrue(includePaths.contains(absoluteIncludeDir.toString()))
     }
 }
