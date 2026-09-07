@@ -31,10 +31,46 @@ import java.io.File
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import picocli.CommandLine
 
 class ApplicationTest {
+
+    @Test
+    fun testCallListPasses() {
+        // --list-passes is handled by call() itself, before setupProject() is ever invoked, so it
+        // must not require any source files.
+        val cmd = CommandLine(Application::class.java)
+        cmd.parseArgs("--list-passes")
+
+        assertEquals(0, cmd.getCommand<Application>().call())
+    }
+
+    @Test
+    fun testCallSchemaMarkdown() {
+        val path = "./tmp-call.md"
+        val cmd = CommandLine(Application::class.java)
+        cmd.parseArgs("--schema-markdown", path)
+
+        assertEquals(0, cmd.getCommand<Application>().call())
+        assertTrue(File(path).length() > 100000)
+        Files.deleteIfExists(Path(path))
+    }
+
+    @Test
+    fun testCallSchemaJson() {
+        val path = "./tmp-call.json"
+        val cmd = CommandLine(Application::class.java)
+        cmd.parseArgs("--schema-json", path)
+
+        assertEquals(0, cmd.getCommand<Application>().call())
+        val schema = ObjectMapper().readValue(File(path), List::class.java)
+        assertIs<ArrayList<*>>(schema)
+        assertTrue(schema.isNotEmpty())
+        Files.deleteIfExists(Path(path))
+    }
 
     @Test
     fun testExportMarkdownSchema() {
