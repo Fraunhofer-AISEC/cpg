@@ -2117,14 +2117,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         if (log.isTraceEnabled) {
                             log.trace("Finished with acceptInternal(${invoke.name.localName})")
                         }
-                        if (timeouts.isNotEmpty()) {
+                        // acceptInternal ran its own, independently timed nested analysis. Credit
+                        // the time it took back to our own (enclosing) budget, if any, so that we
+                        // aren't unfairly penalized for time spent in a callee that has already
+                        // been charged against its own budget.
+                        val budget = currentCoroutineContext()[TimeoutBudget]
+                        if (budget != null) {
+                            val elapsed = startTime.elapsedNow()
                             if (log.isTraceEnabled) {
-                                log.trace("Old last timeout: ${timeouts.last()}")
+                                log.trace("Old remaining timeout: ${budget.remaining}")
                             }
-                            timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow()
+                            budget.credit(elapsed)
                             if (log.isTraceEnabled) {
                                 log.trace(
-                                    "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
+                                    "Increased remaining timeout to consider time spent in acceptInternal. New remaining timeout: ${budget.remaining}"
                                 )
                             }
                         }

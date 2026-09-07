@@ -47,8 +47,11 @@ import kotlin.collections.set
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.ceil
 import kotlin.time.Duration
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
@@ -395,8 +398,37 @@ fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
     return set
 }
 
-/** Used to track the timeout of all functions being currently analyzed * */
-val timeouts = mutableListOf<Duration>()
+/**
+ * Carries the timeout budget of the currently running [Lattice.iterateEOG] analysis in the
+ * [CoroutineContext], scoped to exactly the subtree of coroutines it belongs to (including those
+ * spawned in parallel via [de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel]). A nested analysis
+ * (e.g. one triggered mid-analysis to compute a function summary) installs its own instance for its
+ * own subtree via [kotlinx.coroutines.withContext], so unrelated/concurrent analyses never observe
+ * or mutate each other's budget -- unlike a single global mutable stack, which two concurrently
+ * running analyses could corrupt by interleaving pushes and pops.
+ */
+@OptIn(ExperimentalAtomicApi::class)
+class TimeoutBudget(private val startMark: TimeMark, timeout: Duration) :
+    AbstractCoroutineContextElement(Key) {
+    private val remainingTimeout = AtomicReference(timeout)
+
+    /** The time left until this budget is exhausted. */
+    val remaining: Duration
+        get() = remainingTimeout.load() - startMark.elapsedNow()
+
+    /**
+     * Extends this budget by [elapsed], e.g. to exempt time spent in a nested analysis that is
+     * governed by its own, independent budget.
+     */
+    fun credit(elapsed: Duration) {
+        while (true) {
+            val current = remainingTimeout.load()
+            if (remainingTimeout.compareAndSet(current, current + elapsed)) break
+        }
+    }
+
+    companion object Key : CoroutineContext.Key<TimeoutBudget>
+}
 
 /** Used to identify the order of elements */
 enum class Order {
@@ -570,43 +602,44 @@ interface Lattice<T : Lattice.Element> {
         timeout: Duration,
         maxStateEntries: Long = Long.MAX_VALUE,
     ): Pair<T, Boolean> {
-        // [timeouts] is a stack of the budgets of all analyses that are currently running (an
-        // analysis can trigger a nested one, e.g., to compute a function summary). We remember the
-        // depth we started at and restore it in the "finally" below. This guarantees that our entry
-        // is removed on every exit path, including an exception thrown out of [transformation]. If
-        // we leaked entries here, all subsequent analyses would measure their runtime against a
-        // stale budget.
-        val timeoutStackDepth = timeouts.size
-        if (timeout != Duration.INFINITE) {
-            timeouts.addLast(timeout)
-        }
+        // [TimeoutBudget] is installed in the coroutine context for the duration of this call (an
+        // analysis can trigger a nested one, e.g., to compute a function summary), scoping the
+        // budget to exactly this call's subtree of coroutines. [kotlinx.coroutines.withContext]
+        // guarantees the previous context (and thus the enclosing budget, if any) is restored on
+        // every exit path, including an exception thrown out of [transformation], so we can't leak
+        // an entry that would make some unrelated analysis measure its runtime against a stale
+        // budget.
+        val context =
+            if (timeout != Duration.INFINITE) {
+                currentCoroutineContext() + TimeoutBudget(TimeSource.Monotonic.markNow(), timeout)
+            } else {
+                currentCoroutineContext()
+            }
 
         val statistics = IterationStatistics(startEdges)
-        try {
-            val result =
-                iterateEogWorklist(
-                    startEdges,
-                    startState,
-                    transformation,
-                    strategy,
-                    timeout,
-                    maxStateEntries,
-                    statistics,
-                )
-            statistics.finalStateEntries = result.first.entryCount()
-            return result
-        } finally {
-            statistics.report()
-            while (timeouts.size > timeoutStackDepth) {
-                timeouts.removeLast()
+        return withContext(context) {
+            try {
+                val result =
+                    iterateEogWorklist(
+                        startEdges,
+                        startState,
+                        transformation,
+                        strategy,
+                        timeout,
+                        maxStateEntries,
+                        statistics,
+                    )
+                statistics.finalStateEntries = result.first.entryCount()
+                result
+            } finally {
+                statistics.report()
             }
         }
     }
 
     /**
      * The actual worklist algorithm behind [iterateEogInternal]. The [timeout] budget it observes
-     * has already been pushed onto [timeouts] by the caller, which is also responsible for removing
-     * it again.
+     * has already been installed as a [TimeoutBudget] in the coroutine context by the caller.
      */
     private suspend fun iterateEogWorklist(
         startEdges: List<EvaluationOrder>,
@@ -617,9 +650,6 @@ interface Lattice<T : Lattice.Element> {
         maxStateEntries: Long,
         statistics: IterationStatistics,
     ): Pair<T, Boolean> {
-        // mark the time when we started the calculation to know when we stop
-        val startTime = TimeSource.Monotonic.markNow()
-
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
@@ -812,7 +842,8 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.start.prevEOGEdges.single().start.prevEOGEdges.size == 1
 
             val remainingTime =
-                if (timeout != Duration.INFINITE) timeouts.last() - startTime.elapsedNow()
+                if (timeout != Duration.INFINITE)
+                    currentCoroutineContext()[TimeoutBudget]?.remaining ?: Duration.INFINITE
                 else Duration.INFINITE
             @Suppress("UNCHECKED_CAST")
             val newState =
