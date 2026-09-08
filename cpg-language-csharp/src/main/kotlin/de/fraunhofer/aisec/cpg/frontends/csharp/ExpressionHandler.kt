@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newAssign
@@ -48,6 +49,7 @@ import de.fraunhofer.aisec.cpg.graph.newTypeExpression
 import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.objectType
+import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class ExpressionHandler(frontend: CSharpLanguageFrontend) :
@@ -65,11 +67,15 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
             is Csharp.AST.ElementAccessExpressionSyntax -> handleElementAccessExpression(node)
             is Csharp.AST.CastExpressionSyntax -> handleCastExpression(node)
+            is Csharp.AST.DefaultExpressionSyntax -> handleDefaultExpression(node)
             is Csharp.AST.ParenthesizedExpressionSyntax -> handleParenthesizedExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
+            is Csharp.AST.BaseExpressionSyntax -> handleBaseExpression(node)
             is Csharp.AST.ThrowExpressionSyntax -> handleThrowExpression(node)
+            is Csharp.AST.CheckedExpressionSyntax -> handleCheckedExpression(node)
             is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
+            is Csharp.AST.GenericNameSyntax -> handleGenericName(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -81,6 +87,24 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * [Simple names](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1284-simple-names)
      */
     private fun handleIdentifierName(node: Csharp.AST.IdentifierNameSyntax): Reference {
+        return newReference(name = node.identifier, rawNode = node)
+    }
+
+    /**
+     * Translates a [GenericNameSyntax][Csharp.AST.GenericNameSyntax] (e.g. `Foo<int>`) into a
+     * [Reference] to its [identifier][Csharp.AST.GenericNameSyntax.identifier], i.e. `Foo`.
+     *
+     * C# allows a type wherever an expression is expected, so Roslyn models a generic name as an
+     * `ExpressionSyntax`. In that case it is most often the callee of a generic method invocation
+     * such as `Create<Foo>(x)`, so it becomes a [Reference]. That name is the bare identifier,
+     * since `Foo<int>` would never match the declaration of `Foo`.
+     *
+     * Note: Currently, the type arguments are dropped. We may want to model them in the future.
+     *
+     * C# spec:
+     * [Type arguments](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#843-type-arguments)
+     */
+    private fun handleGenericName(node: Csharp.AST.GenericNameSyntax): Reference {
         return newReference(name = node.identifier, rawNode = node)
     }
 
@@ -177,6 +201,29 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
 
             is Csharp.AST.NullLiteralExpressionSyntax ->
                 newLiteral(null, objectType("null"), rawNode = node)
+
+            // A bare `default` stands for the default value of whatever type it is used at: `0` for
+            // the numeric types, `null` for the reference types and an all-zero value for a struct.
+            // Which one it is depends on the target type, which we do not know here, so the value
+            // stays `null` and the type stays unknown.
+            is Csharp.AST.DefaultLiteralExpressionSyntax ->
+                newLiteral(null, unknownType(), rawNode = node)
+
+            // A `u8` literal is a `ReadOnlySpan<byte>` holding the UTF-8 bytes of the string, not a
+            // `string`. We keep the characters as the value, since it is what we get from Roslyn.
+            // The `byte` must be a generic of the type rather than part of its name, or the literal
+            // would never match a declaration of `ReadOnlySpan`, see
+            // [CSharpLanguageFrontend.typeOf].
+            is Csharp.AST.Utf8StringLiteralExpressionSyntax ->
+                newLiteral(
+                    node.value,
+                    objectType(
+                        Name("ReadOnlySpan", parseName("System")),
+                        listOf(builtInTypes.getValue("byte")),
+                    ),
+                    rawNode = node,
+                )
+
             // TODO: Return unknownType()?
             else -> newProblemExpression("Unknown literal type: ${node.csharpType}", rawNode = node)
         }
@@ -307,14 +354,26 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
+     * Translates a [DefaultExpressionSyntax][Csharp.AST.DefaultExpressionSyntax] (e.g.
+     * `default(int)`) into a [Literal].
+     *
+     * Unlike the bare `default`, this form names the type it stands for, so we can type the literal
+     * even though we still do not know the value: it is `0` for the numeric types, `null` for the
+     * reference types and an all-zero value for a struct, which depends on the type's declaration
+     * rather than on the syntax.
+     *
+     * C# spec:
+     * [Default value expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12820-default-value-expressions)
+     */
+    private fun handleDefaultExpression(node: Csharp.AST.DefaultExpressionSyntax): Literal<*> {
+        return newLiteral(null, frontend.typeOf(node.type), rawNode = node)
+    }
+
+    /**
      * Translates a [ParenthesizedExpressionSyntax][Csharp.AST.ParenthesizedExpressionSyntax] (e.g.
      * `(a + b)`) into the [Expression] of the enclosed expression.
      *
-     * Parentheses only group the expression they enclose; the grouping is already reflected in the
-     * shape of the AST. The CPG therefore has no node for them and we hand the inner expression
-     * through unchanged. This makes the parentheses invisible in the graph, the resulting node
-     * keeps the location and the raw node of the inner expression, not of the enclosing
-     * parentheses.
+     * TODO: Double-check the handling of parentheses
      *
      * C# spec:
      * [Parenthesized expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1287-parenthesized-expressions)
@@ -380,6 +439,51 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     private fun handleThisExpression(node: Csharp.AST.ThisExpressionSyntax): Reference {
         val type = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         return newReference(name = "this", type = type, rawNode = node)
+    }
+
+    /**
+     * Translates a [BaseExpressionSyntax][Csharp.AST.BaseExpressionSyntax] into a [Reference] with
+     * the name `base`.
+     *
+     * Like `this`, `base` refers to the current instance, but views it as its base class so that
+     * `base.M()` calls the inherited rather than the overriding member.
+     *
+     * The type is left unknown here, since the base class may be declared in a file that has not
+     * been parsed yet. Both the type and the reference to the enclosing method's receiver are set
+     * once all records are known, in [handleSuperExpression][CSharpLanguage.handleSuperExpression].
+     *
+     * C# spec:
+     * [Base access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12815-base-access)
+     */
+    private fun handleBaseExpression(node: Csharp.AST.BaseExpressionSyntax): Reference {
+        return newReference(
+            name = (frontend.language as CSharpLanguage).superClassKeyword,
+            type = unknownType(),
+            rawNode = node,
+        )
+    }
+
+    /**
+     * Translates a [CheckedExpressionSyntax][Csharp.AST.CheckedExpressionSyntax] (e.g. `checked(a +
+     * b)` or `unchecked(a + b)`) into the [Expression] of the enclosed expression.
+     *
+     * Whether arithmetic overflow throws an `OverflowException` or wraps around is not modeled, as
+     * it has no direct effect on control or data flow, but it is recorded as a
+     * [ProblemNode.ProblemType.TRANSLATION] problem.
+     *
+     * C# spec:
+     * [The checked and unchecked operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12820-the-checked-and-unchecked-operators)
+     */
+    private fun handleCheckedExpression(node: Csharp.AST.CheckedExpressionSyntax): Expression {
+        val expression = handle(node.expression)
+        // `checked` and `unchecked` share the syntax class, so the kind tells them apart
+        expression.additionalProblems +=
+            newProblemExpression(
+                "The overflow behaviour of a ${Csharp.INSTANCE.GetKind(node.pointer)} is not modeled",
+                type = ProblemNode.ProblemType.TRANSLATION,
+                rawNode = node,
+            )
+        return expression
     }
 
     /**

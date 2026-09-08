@@ -25,9 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.frontends.HasDefaultArguments
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
+import de.fraunhofer.aisec.cpg.frontends.HasSuperClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
@@ -35,13 +41,19 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
+import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
-class CSharpLanguage : Language<CSharpLanguageFrontend>(), HasImplicitReceiver {
+class CSharpLanguage :
+    Language<CSharpLanguageFrontend>(), HasImplicitReceiver, HasDefaultArguments, HasSuperClasses {
     override val receiverName = "this"
     override val fileExtensions = listOf("cs")
     override val namespaceDelimiter = "."
+    override val superClassKeyword = "base"
 
     @DoNotPersist
     override val frontend: KClass<out CSharpLanguageFrontend> = CSharpLanguageFrontend::class
@@ -82,6 +94,61 @@ class CSharpLanguage : Language<CSharpLanguageFrontend>(), HasImplicitReceiver {
             "string" to StringType("string", this),
             "object" to ObjectType("object", listOf(), false, true, this),
         )
+
+    /**
+     * Resolves the `base` [Reference] of a [MemberAccess] such as `base.Describe()` or
+     * `base.field`.
+     *
+     * `base` is the current instance viewed as its base class, so two things have to happen here:
+     * the reference has to point at the receiver of the enclosing method and its type has to become
+     * the base class.
+     *
+     * This cannot be done while translating the `base`, because the base class may be declared in a
+     * file that has not been parsed at that point. The frontend therefore leaves the reference
+     * untyped and we type it here, once all records are known.
+     *
+     * C# spec:
+     * [Base access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12815-base-access)
+     */
+    override fun SymbolResolver.handleSuperExpression(
+        memberExpression: MemberAccess,
+        curClass: Record,
+    ): Boolean {
+        val base = memberExpression.base as? Reference ?: return false
+
+        // `base` still refers to the same object as `this`, so it has to be connected to the
+        // receiver of the enclosing method. This has to happen before the type is set, since a
+        // reference observes the type of what it refers to.
+        val function = scopeManager.currentFunction
+        if (function is Method) {
+            base.refersTo = function.receiver
+        }
+
+        // C# requires the base class to come first in a base list, which makes it the first entry.
+        // There is not always one: a class without an explicit base class implicitly derives from
+        // `System.Object`, and a base list may consist of interfaces only.
+        // The syntax does not tell a base class and an interface apart, so a class that only
+        // implements interfaces has one of them as its first entry and we pick that instead.
+        val target = curClass.superClasses.firstOrNull()?.root?.recordDeclaration
+        if (target == null) {
+            Util.warnWithFileLocation(
+                memberExpression,
+                LOGGER,
+                "Cannot type a `base` access in {}, since it has no known base class",
+                curClass.name,
+            )
+            return false
+        }
+
+        // "Cast" the receiver to the base class. We deliberately do not retype the receiver itself,
+        // since it is shared with every `this` in the method and those keep referring to the
+        // current class.
+        val superType = target.toType()
+        base.type = superType
+        base.assignedTypes = mutableSetOf(superType)
+
+        return true
+    }
 
     override fun propagateTypeOfBinaryOperation(
         operatorCode: String?,

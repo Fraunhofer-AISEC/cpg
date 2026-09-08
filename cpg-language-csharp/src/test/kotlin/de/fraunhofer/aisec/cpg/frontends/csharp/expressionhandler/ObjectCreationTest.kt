@@ -49,7 +49,7 @@ import kotlin.test.assertTrue
 class ObjectCreationTest : BaseTest() {
 
     @Test
-    fun objectCreationTest() {
+    fun testObjectCreation() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -96,7 +96,7 @@ class ObjectCreationTest : BaseTest() {
     }
 
     @Test
-    fun implicitObjectCreationTest() {
+    fun testImplicitObjectCreation() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -140,7 +140,7 @@ class ObjectCreationTest : BaseTest() {
     }
 
     @Test
-    fun objectCreationWithInitializerTest() {
+    fun testObjectCreationWithInitializer() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -214,7 +214,7 @@ class ObjectCreationTest : BaseTest() {
     }
 
     @Test
-    fun nestedObjectCreationWithInitializerTest() {
+    fun testNestedObjectCreationWithInitializer() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -318,7 +318,7 @@ class ObjectCreationTest : BaseTest() {
     }
 
     @Test
-    fun nestedObjectInitializerWithoutNewTest() {
+    fun testNestedObjectInitializerWithoutNew() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(

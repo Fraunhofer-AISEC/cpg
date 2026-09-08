@@ -12,4 +12,6 @@ class Foo
     }
 
     Foo(int x) => this.x = x;
+
+    Foo(int x, string y, int z = 42) { }
 }

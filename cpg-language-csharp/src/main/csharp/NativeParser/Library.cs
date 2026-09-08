@@ -421,6 +421,16 @@ public static class Library
         return Register(((ParameterSyntax)Nodes[handlePtr]).Type);
     }
 
+    // The default value of an optional parameter, i.e. "5" for "int x = 5". We skip the
+    // `EqualsValueClauseSyntax` in between and hand out the expression directly, since the "="
+    // itself carries no information we need.
+    [UnmanagedCallersOnly(EntryPoint = "GetParameterDefault")]
+    public static IntPtr GetParameterDefault(IntPtr handlePtr)
+    {
+        var @default = ((ParameterSyntax)Nodes[handlePtr]).Default;
+        return @default != null ? Register(@default.Value) : IntPtr.Zero;
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetConstructorDeclarationIdentifier")]
     public static IntPtr GetConstructorDeclarationIdentifier(IntPtr handlePtr)
     {
@@ -471,6 +481,62 @@ public static class Library
     public static IntPtr GetArrayTypeElementType(IntPtr handlePtr)
     {
         return Register(((ArrayTypeSyntax)Nodes[handlePtr]).ElementType);
+    }
+
+    // The type the "?" is attached to, i.e. "string" for "string?".
+    [UnmanagedCallersOnly(EntryPoint = "GetNullableTypeElementType")]
+    public static IntPtr GetNullableTypeElementType(IntPtr handlePtr)
+    {
+        return Register(((NullableTypeSyntax)Nodes[handlePtr]).ElementType);
+    }
+
+    // The type the "scoped" modifier is attached to, i.e. "Span<byte>" for "scoped Span<byte>".
+    [UnmanagedCallersOnly(EntryPoint = "GetScopedTypeType")]
+    public static IntPtr GetScopedTypeType(IntPtr handlePtr)
+    {
+        return Register(((ScopedTypeSyntax)Nodes[handlePtr]).Type);
+    }
+
+    // The bare identifier without the type argument list, i.e. "List" for "List<int>". `GetTypeName`
+    // returns the whole "List<int>", which is what we want for a type but not for a name.
+    [UnmanagedCallersOnly(EntryPoint = "GetGenericNameIdentifier")]
+    public static IntPtr GetGenericNameIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((GenericNameSyntax)Nodes[handlePtr]).Identifier.Text
+        );
+    }
+
+    // The type arguments of a generic name, i.e. "int" for "List<int>". Together with
+    // `GetGenericNameIdentifier` this splits a "List<int>" into the parts a generic type is built
+    // from.
+    [UnmanagedCallersOnly(EntryPoint = "GetGenericNameTypeArgumentCount")]
+    public static int GetGenericNameTypeArgumentCount(IntPtr handlePtr)
+    {
+        return ((GenericNameSyntax)Nodes[handlePtr]).TypeArgumentList.Arguments.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetGenericNameTypeArgument")]
+    public static IntPtr GetGenericNameTypeArgument(IntPtr handlePtr, int index)
+    {
+        return Register(
+            ((GenericNameSyntax)Nodes[handlePtr]).TypeArgumentList.Arguments[index]
+        );
+    }
+
+    // The two halves of a dotted name, i.e. "System.Collections.Generic" and "List<int>" for
+    // "System.Collections.Generic.List<int>". We need them separately, because only the right half
+    // can carry type arguments and `GetTypeName` would hand us the whole thing including them.
+    [UnmanagedCallersOnly(EntryPoint = "GetQualifiedNameLeft")]
+    public static IntPtr GetQualifiedNameLeft(IntPtr handlePtr)
+    {
+        return Register(((QualifiedNameSyntax)Nodes[handlePtr]).Left);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetQualifiedNameRight")]
+    public static IntPtr GetQualifiedNameRight(IntPtr handlePtr)
+    {
+        return Register(((QualifiedNameSyntax)Nodes[handlePtr]).Right);
     }
 
     // We use `BaseMethodDeclarationSyntax` to get the body for Methods and Constructors.
@@ -853,6 +919,39 @@ public static class Library
         return Register(((ThrowExpressionSyntax)Nodes[handlePtr]).Expression);
     }
 
+    // Covers both `checked(x)` and `unchecked(x)`; they share CheckedExpressionSyntax and only
+    // differ in their syntax kind.
+    [UnmanagedCallersOnly(EntryPoint = "GetCheckedExpressionExpression")]
+    public static IntPtr GetCheckedExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((CheckedExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    // Covers both `checked { ... }` and `unchecked { ... }`, see GetCheckedExpressionExpression.
+    [UnmanagedCallersOnly(EntryPoint = "GetCheckedStatementBlock")]
+    public static IntPtr GetCheckedStatementBlock(IntPtr handlePtr)
+    {
+        return Register(((CheckedStatementSyntax)Nodes[handlePtr]).Block);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetUnsafeStatementBlock")]
+    public static IntPtr GetUnsafeStatementBlock(IntPtr handlePtr)
+    {
+        return Register(((UnsafeStatementSyntax)Nodes[handlePtr]).Block);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetFixedStatementDeclaration")]
+    public static IntPtr GetFixedStatementDeclaration(IntPtr handlePtr)
+    {
+        return Register(((FixedStatementSyntax)Nodes[handlePtr]).Declaration);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetFixedStatementStatement")]
+    public static IntPtr GetFixedStatementStatement(IntPtr handlePtr)
+    {
+        return Register(((FixedStatementSyntax)Nodes[handlePtr]).Statement);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetSwitchStatementExpression")]
     public static IntPtr GetSwitchStatementExpression(IntPtr handlePtr)
     {
@@ -945,6 +1044,12 @@ public static class Library
     public static IntPtr GetInvocationExpressionArgumentList(IntPtr handlePtr)
     {
         return Register(((InvocationExpressionSyntax)Nodes[handlePtr]).ArgumentList);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetDefaultExpressionType")]
+    public static IntPtr GetDefaultExpressionType(IntPtr handlePtr)
+    {
+        return Register(((DefaultExpressionSyntax)Nodes[handlePtr]).Type);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetCastExpressionType")]

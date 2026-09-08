@@ -39,7 +39,7 @@ import kotlin.test.assertTrue
 class ElementAccessTest : BaseTest() {
 
     @Test
-    fun arrayAccessTest() {
+    fun testArrayAccess() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -72,7 +72,7 @@ class ElementAccessTest : BaseTest() {
     }
 
     @Test
-    fun arrayWriteTest() {
+    fun testArrayWrite() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -102,7 +102,7 @@ class ElementAccessTest : BaseTest() {
     }
 
     @Test
-    fun indexerAccessTest() {
+    fun testIndexerAccess() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -131,7 +131,7 @@ class ElementAccessTest : BaseTest() {
     }
 
     @Test
-    fun multiDimensionalTest() {
+    fun testMultiDimensional() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -164,7 +164,7 @@ class ElementAccessTest : BaseTest() {
     }
 
     @Test
-    fun jaggedTest() {
+    fun testJagged() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -195,7 +195,7 @@ class ElementAccessTest : BaseTest() {
     }
 
     @Test
-    fun nestedIndexTest() {
+    fun testNestedIndex() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -226,7 +226,7 @@ class ElementAccessTest : BaseTest() {
     }
 
     @Test
-    fun memberAccessBaseTest() {
+    fun testMemberAccessBase() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(

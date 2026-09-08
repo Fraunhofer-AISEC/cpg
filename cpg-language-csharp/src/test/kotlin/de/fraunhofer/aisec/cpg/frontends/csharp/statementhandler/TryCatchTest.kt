@@ -62,7 +62,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun tryCatchTest() {
+    fun testTryCatch() {
         val tryStmt = tryOf(analyze(), "TryCatchStmt")
 
         // try { return Convert(s); }
@@ -90,7 +90,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun tryCatchFinallyTest() {
+    fun testTryCatchFinally() {
         val tryStmt = tryOf(analyze(), "TryCatchFinally")
 
         assertNotNull(tryStmt.tryBlock)
@@ -105,7 +105,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun tryFinallyTest() {
+    fun testTryFinally() {
         val tryStmt = tryOf(analyze(), "TryFinally")
 
         assertNotNull(tryStmt.tryBlock)
@@ -114,7 +114,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun multipleCatchesTest() {
+    fun testMultipleCatches() {
         val tryStmt = tryOf(analyze(), "MultipleCatches")
         assertEquals(3, tryStmt.catchClauses.size)
 
@@ -136,7 +136,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun catchFilterTest() {
+    fun testCatchFilter() {
         val tryStmt = tryOf(analyze(), "CatchFilter")
 
         // catch (IOException e) when (e.Message == "retry") { Retry(); }
@@ -170,7 +170,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun throwStatementTest() {
+    fun testThrowStatement() {
         val tu = analyze()
         val method = tu.methods["ThrowStmt"]
         assertNotNull(method)
@@ -186,7 +186,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun rethrowTest() {
+    fun testRethrow() {
         val tryStmt = tryOf(analyze(), "Rethrow")
 
         // catch (IOException) { throw; }
@@ -198,7 +198,7 @@ class TryCatchTest : BaseTest() {
     }
 
     @Test
-    fun throwExpressionTest() {
+    fun testThrowExpression() {
         val tu = analyze()
         val method = tu.methods["ThrowExpr"]
         assertNotNull(method)

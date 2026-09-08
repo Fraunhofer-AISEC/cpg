@@ -73,10 +73,13 @@ interface Csharp : Library {
                 }
                 return when (INSTANCE.GetType(nativeValue)) {
                     "ArrayTypeSyntax" -> ArrayTypeSyntax(nativeValue)
+                    "NullableTypeSyntax" -> NullableTypeSyntax(nativeValue)
+                    "ScopedTypeSyntax" -> ScopedTypeSyntax(nativeValue)
                     "PredefinedTypeSyntax" -> PredefinedTypeSyntax(nativeValue)
                     "GenericNameSyntax" -> GenericNameSyntax(nativeValue)
                     "QualifiedNameSyntax" -> QualifiedNameSyntax(nativeValue)
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
+                    "OmittedTypeArgumentSyntax" -> OmittedTypeArgumentSyntax(nativeValue)
                     else -> TypeSyntax(nativeValue)
                 }
             }
@@ -93,6 +96,26 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`NullableTypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.nullabletypesyntax)
+         * class, i.e. a type followed by a `?`, such as `int?` or `string?`.
+         */
+        class NullableTypeSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
+            /** The type the `?` is attached to, i.e. `string` for `string?`. */
+            val elementType: TypeSyntax by lazy { INSTANCE.GetNullableTypeElementType(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ScopedTypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.scopedtypesyntax)
+         * class, i.e. a type preceded by the `scoped` modifier, such as `scoped Span<byte>`.
+         */
+        class ScopedTypeSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
+            /** The type the `scoped` is attached to, i.e. `Span<byte>` for `scoped Span<byte>`. */
+            val type: TypeSyntax by lazy { INSTANCE.GetScopedTypeType(this) }
+        }
+
+        /**
+         * Represents the Roslyn
          * [`PredefinedTypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.predefinedtypesyntax)
          * class, i.e. a keyword type such as `int` or `string`.
          */
@@ -103,14 +126,46 @@ interface Csharp : Library {
          * [`GenericNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.genericnamesyntax)
          * class, i.e. a name with type arguments such as `List<int>`.
          */
-        class GenericNameSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p)
+        class GenericNameSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
+            /**
+             * The bare identifier without the type argument list, i.e. `List` for `List<int>`. This
+             * is in contrast to [name], which is the whole `List<int>`.
+             */
+            val identifier: String by lazy { INSTANCE.GetGenericNameIdentifier(this) }
+
+            /** The type arguments, i.e. `int` for `List<int>`. */
+            val typeArguments: List<TypeSyntax> by lazy {
+                val count = INSTANCE.GetGenericNameTypeArgumentCount(this)
+                (0 until count).map { i -> INSTANCE.GetGenericNameTypeArgument(this, i) }
+            }
+        }
 
         /**
          * Represents the Roslyn
          * [`QualifiedNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.qualifiednamesyntax)
          * class, i.e. a dotted name such as `System.String`.
          */
-        class QualifiedNameSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p)
+        class QualifiedNameSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
+            /**
+             * The qualifier, i.e. `System.Collections.Generic` for
+             * `System.Collections.Generic.List<int>`.
+             */
+            val left: TypeSyntax by lazy { INSTANCE.GetQualifiedNameLeft(this) }
+
+            /**
+             * The qualified name itself, i.e. `List<int>` for
+             * `System.Collections.Generic.List<int>`. Only this half can carry type arguments.
+             */
+            val right: TypeSyntax by lazy { INSTANCE.GetQualifiedNameRight(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`OmittedTypeArgumentSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.omittedtypeargumentsyntax)
+         * class, i.e. the empty spot in an unbound generic name such as `List<>`, which is only
+         * possible inside a `typeof`.
+         */
+        class OmittedTypeArgumentSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p)
 
         /**
          * Represents the Roslyn
@@ -390,6 +445,10 @@ interface Csharp : Library {
                     "ContinueStatementSyntax" -> ContinueStatementSyntax(nativeValue)
                     "TryStatementSyntax" -> TryStatementSyntax(nativeValue)
                     "ThrowStatementSyntax" -> ThrowStatementSyntax(nativeValue)
+                    "CheckedStatementSyntax" -> CheckedStatementSyntax(nativeValue)
+                    "UnsafeStatementSyntax" -> UnsafeStatementSyntax(nativeValue)
+                    "FixedStatementSyntax" -> FixedStatementSyntax(nativeValue)
+                    "EmptyStatementSyntax" -> EmptyStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -632,6 +691,45 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`CheckedStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.checkedstatementsyntax)
+         * class, i.e. `checked { ... }` or `unchecked { ... }`. Both share this class and differ
+         * only in their syntax kind.
+         */
+        class CheckedStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val block: BlockSyntax by lazy { INSTANCE.GetCheckedStatementBlock(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`UnsafeStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.unsafestatementsyntax)
+         * class, i.e. `unsafe { ... }`.
+         */
+        class UnsafeStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val block: BlockSyntax by lazy { INSTANCE.GetUnsafeStatementBlock(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`FixedStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.fixedstatementsyntax)
+         * class, i.e. `fixed (byte* p = &bytes[0]) { ... }`.
+         */
+        class FixedStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val declaration: VariableDeclarationSyntax by lazy {
+                INSTANCE.GetFixedStatementDeclaration(this)
+            }
+
+            val statement: StatementSyntax by lazy { INSTANCE.GetFixedStatementStatement(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`EmptyStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.emptystatementsyntax)
+         * class, i.e. a lone `;`.
+         */
+        class EmptyStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p)
+
+        /**
+         * Represents the Roslyn
          * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax)
          * class.
          */
@@ -841,6 +939,10 @@ interface Csharp : Library {
                             "CharacterLiteralExpression" ->
                                 CharacterLiteralExpressionSyntax(nativeValue)
                             "NullLiteralExpression" -> NullLiteralExpressionSyntax(nativeValue)
+                            "DefaultLiteralExpression" ->
+                                DefaultLiteralExpressionSyntax(nativeValue)
+                            "Utf8StringLiteralExpression" ->
+                                Utf8StringLiteralExpressionSyntax(nativeValue)
                             else -> LiteralExpressionSyntax(nativeValue)
                         }
                     // The `as` operator is a binary expression in Roslyn,
@@ -865,9 +967,12 @@ interface Csharp : Library {
                     "InvocationExpressionSyntax" -> InvocationExpressionSyntax(nativeValue)
                     "ElementAccessExpressionSyntax" -> ElementAccessExpressionSyntax(nativeValue)
                     "CastExpressionSyntax" -> CastExpressionSyntax(nativeValue)
+                    "DefaultExpressionSyntax" -> DefaultExpressionSyntax(nativeValue)
                     "ParenthesizedExpressionSyntax" -> ParenthesizedExpressionSyntax(nativeValue)
                     "ThisExpressionSyntax" -> ThisExpressionSyntax(nativeValue)
+                    "BaseExpressionSyntax" -> BaseExpressionSyntax(nativeValue)
                     "ThrowExpressionSyntax" -> ThrowExpressionSyntax(nativeValue)
+                    "CheckedExpressionSyntax" -> CheckedExpressionSyntax(nativeValue)
                     "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
                     "ImplicitObjectCreationExpressionSyntax" ->
                         ImplicitObjectCreationExpressionSyntax(nativeValue)
@@ -914,6 +1019,18 @@ interface Csharp : Library {
             LiteralExpressionSyntax(p)
 
         class NullLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : LiteralExpressionSyntax(p)
+
+        /**
+         * The bare `default` literal, i.e. a `default` without a type in parentheses. Its [value]
+         * is the `default` keyword itself. Since Roslyn has no value to provide: which value it
+         * stands for depends on the target type, which is only known after type inference.
+         */
+        class DefaultLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            LiteralExpressionSyntax(p)
+
+        /** A UTF-8 string literal such as `"abc"u8`, whose type is a `ReadOnlySpan<byte>`. */
+        class Utf8StringLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            LiteralExpressionSyntax(p)
 
         /**
          * Represents the Roslyn
@@ -992,11 +1109,30 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`BaseExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.baseexpressionsyntax)
+         * class, i.e. the `base` keyword.
+         */
+        class BaseExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
          * [`ThrowExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.throwexpressionsyntax)
          * class, i.e. a `throw` in expression position such as `x ?? throw new Exception()`.
          */
         class ThrowExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val expression: ExpressionSyntax by lazy { INSTANCE.GetThrowExpressionExpression(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`CheckedExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.checkedexpressionsyntax)
+         * class, i.e. `checked(a + b)` or `unchecked(a + b)`. Both share this class and differ only
+         * in their syntax kind.
+         */
+        class CheckedExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetCheckedExpressionExpression(this)
+            }
         }
 
         /**
@@ -1021,6 +1157,16 @@ interface Csharp : Library {
         class CastExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val type: TypeSyntax by lazy { INSTANCE.GetCastExpressionType(this) }
             val expression: ExpressionSyntax by lazy { INSTANCE.GetCastExpressionExpression(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`DefaultExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.defaultexpressionsyntax)
+         * class, i.e. a default value expression that names its type, such as `default(int)`. The
+         * bare `default` is a [DefaultLiteralExpressionSyntax] instead.
+         */
+        class DefaultExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetDefaultExpressionType(this) }
         }
 
         /**
@@ -1092,6 +1238,12 @@ interface Csharp : Library {
         class ParameterSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val identifier: String by lazy { INSTANCE.GetParameterIdentifier(this) }
             val type: TypeSyntax by lazy { INSTANCE.GetParameterType(this) }
+
+            /**
+             * The default value of an optional parameter, i.e. `5` for `int x = 5`, or `null` if
+             * the parameter is required.
+             */
+            val default: ExpressionSyntax? by lazy { INSTANCE.GetParameterDefault(this) }
         }
 
         /**
@@ -1313,9 +1465,25 @@ interface Csharp : Library {
 
     fun GetParameterType(handle: AST.ParameterSyntax): AST.TypeSyntax
 
+    fun GetParameterDefault(handle: AST.ParameterSyntax): AST.ExpressionSyntax?
+
     fun GetTypeName(handle: AST.TypeSyntax): String
 
     fun GetArrayTypeElementType(handle: AST.ArrayTypeSyntax): AST.TypeSyntax
+
+    fun GetNullableTypeElementType(handle: AST.NullableTypeSyntax): AST.TypeSyntax
+
+    fun GetScopedTypeType(handle: AST.ScopedTypeSyntax): AST.TypeSyntax
+
+    fun GetGenericNameIdentifier(handle: AST.GenericNameSyntax): String
+
+    fun GetGenericNameTypeArgumentCount(handle: AST.GenericNameSyntax): Int
+
+    fun GetGenericNameTypeArgument(handle: AST.GenericNameSyntax, index: Int): AST.TypeSyntax
+
+    fun GetQualifiedNameLeft(handle: AST.QualifiedNameSyntax): AST.TypeSyntax
+
+    fun GetQualifiedNameRight(handle: AST.QualifiedNameSyntax): AST.TypeSyntax
 
     fun GetConstructorDeclarationIdentifier(handle: AST.ConstructorDeclarationSyntax): String
 
@@ -1455,6 +1623,18 @@ interface Csharp : Library {
 
     fun GetThrowExpressionExpression(handle: AST.ThrowExpressionSyntax): AST.ExpressionSyntax
 
+    fun GetCheckedExpressionExpression(handle: AST.CheckedExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetCheckedStatementBlock(handle: AST.CheckedStatementSyntax): AST.BlockSyntax
+
+    fun GetUnsafeStatementBlock(handle: AST.UnsafeStatementSyntax): AST.BlockSyntax
+
+    fun GetFixedStatementDeclaration(
+        handle: AST.FixedStatementSyntax
+    ): AST.VariableDeclarationSyntax
+
+    fun GetFixedStatementStatement(handle: AST.FixedStatementSyntax): AST.StatementSyntax
+
     fun GetSwitchStatementExpression(handle: AST.SwitchStatementSyntax): AST.ExpressionSyntax
 
     fun GetSwitchStatementSectionCount(handle: AST.SwitchStatementSyntax): Int
@@ -1495,6 +1675,8 @@ interface Csharp : Library {
     fun GetInvocationExpressionArgumentList(
         handle: AST.InvocationExpressionSyntax
     ): AST.BaseArgumentListSyntax
+
+    fun GetDefaultExpressionType(handle: AST.DefaultExpressionSyntax): AST.TypeSyntax
 
     fun GetCastExpressionType(handle: AST.CastExpressionSyntax): AST.TypeSyntax
 

@@ -204,7 +204,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         // A struct cannot inherit, so every entry here is an implemented interface.
         node.baseList?.let {
             for (baseType in it.types) {
-                record.superClasses += frontend.typeOf(baseType)
+                record.implementedInterfaces += frontend.typeOf(baseType)
             }
         }
 
@@ -267,9 +267,10 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         record.modifiers = node.modifiers.toSet()
         frontend.scopeManager.enterScope(record)
 
+        // An interface can only extend other interfaces, so every entry here is one.
         node.baseList?.let {
             for (baseType in it.types) {
-                record.superClasses += frontend.typeOf(baseType)
+                record.implementedInterfaces += frontend.typeOf(baseType)
             }
         }
 
@@ -341,6 +342,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
                     type = frontend.typeOf(parameter.type),
                     rawNode = parameter,
                 )
+            parameter.default?.let { param.default = frontend.expressionHandler.handle(it) }
             frontend.scopeManager.addDeclaration(param)
             method.parameters += param
         }
@@ -531,6 +533,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
                     type = frontend.typeOf(parameter.type),
                     rawNode = parameter,
                 )
+            parameter.default?.let { param.default = frontend.expressionHandler.handle(it) }
             frontend.scopeManager.addDeclaration(param)
             constructor.parameters += param
         }

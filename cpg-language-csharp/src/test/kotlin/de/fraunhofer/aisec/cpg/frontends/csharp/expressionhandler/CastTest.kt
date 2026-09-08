@@ -38,7 +38,7 @@ import kotlin.test.assertNotNull
 class CastTest : BaseTest() {
 
     @Test
-    fun primitiveCastTest() {
+    fun testPrimitiveCast() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {
@@ -64,7 +64,7 @@ class CastTest : BaseTest() {
     }
 
     @Test
-    fun referenceCastTest() {
+    fun testReferenceCast() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {
@@ -87,7 +87,7 @@ class CastTest : BaseTest() {
     }
 
     @Test
-    fun nestedCastTest() {
+    fun testNestedCast() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {
@@ -114,7 +114,7 @@ class CastTest : BaseTest() {
     }
 
     @Test
-    fun castOfCallTest() {
+    fun testCastOfCall() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {
@@ -141,7 +141,7 @@ class CastTest : BaseTest() {
     }
 
     @Test
-    fun safeCastTest() {
+    fun testSafeCast() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {
@@ -167,7 +167,7 @@ class CastTest : BaseTest() {
     }
 
     @Test
-    fun safeCastToPredefinedTypeTest() {
+    fun testSafeCastToPredefinedType() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {
@@ -190,7 +190,7 @@ class CastTest : BaseTest() {
     }
 
     @Test
-    fun safeCastInConditionTest() {
+    fun testSafeCastInCondition() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {
@@ -217,7 +217,7 @@ class CastTest : BaseTest() {
     }
 
     @Test
-    fun castInBinaryOperatorTest() {
+    fun testCastInBinaryOperator() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Casts.cs").toFile()), topLevel, true) {

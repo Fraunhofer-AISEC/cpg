@@ -46,7 +46,7 @@ import kotlin.test.assertTrue
 class CollectionInitializerTest : BaseTest() {
 
     @Test
-    fun collectionInitializerTest() {
+    fun testCollectionInitializer() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -124,7 +124,7 @@ class CollectionInitializerTest : BaseTest() {
     }
 
     @Test
-    fun complexCollectionInitializerTest() {
+    fun testComplexCollectionInitializer() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(

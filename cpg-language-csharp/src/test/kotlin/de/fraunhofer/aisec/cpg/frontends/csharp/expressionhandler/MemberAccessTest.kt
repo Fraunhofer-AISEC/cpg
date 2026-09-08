@@ -43,7 +43,7 @@ import kotlin.test.assertNotNull
 class MemberAccessTest : BaseTest() {
 
     @Test
-    fun simpleMemberAccessTest() {
+    fun testSimpleMemberAccess() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -88,7 +88,7 @@ class MemberAccessTest : BaseTest() {
     }
 
     @Test
-    fun thisMemberAccessTest() {
+    fun testThisMemberAccess() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -128,7 +128,7 @@ class MemberAccessTest : BaseTest() {
     }
 
     @Test
-    fun thisFieldAccessTest() {
+    fun testThisFieldAccess() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(

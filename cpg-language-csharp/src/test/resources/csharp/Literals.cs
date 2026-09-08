@@ -23,4 +23,12 @@ class Foo
     char returnChar() { return 'a'; }
 
     char returnNulChar() { return '\0'; }
+
+    int returnDefault() { return default; }
+
+    int returnDefaultOfInt() { return default(int); }
+
+    System.Collections.Generic.List<int> returnDefaultOfList() { return default(System.Collections.Generic.List<int>); }
+
+    System.ReadOnlySpan<byte> returnUtf8() { return "hello"u8; }
 }

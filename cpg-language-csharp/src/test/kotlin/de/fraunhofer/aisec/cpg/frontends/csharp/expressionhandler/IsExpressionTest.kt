@@ -38,7 +38,7 @@ import kotlin.test.assertNotNull
 class IsExpressionTest : BaseTest() {
 
     @Test
-    fun isReferenceTypeTest() {
+    fun testIsReferenceType() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -75,7 +75,7 @@ class IsExpressionTest : BaseTest() {
     }
 
     @Test
-    fun isPredefinedTypeTest() {
+    fun testIsPredefinedType() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -105,7 +105,7 @@ class IsExpressionTest : BaseTest() {
     }
 
     @Test
-    fun isInConditionTest() {
+    fun testIsInCondition() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(

@@ -16,4 +16,14 @@ class Bar
     {
         Add(3, 4);
     }
+
+    int Offset(int a, int b = 10)
+    {
+        return a + b;
+    }
+
+    void callWithOmittedArgument()
+    {
+        Offset(1);
+    }
 }

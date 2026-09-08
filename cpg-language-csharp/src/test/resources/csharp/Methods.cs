@@ -6,6 +6,8 @@ class Foo
 
     void Baz(int a, string b) { }
 
+    void Optional(int x = 5, string label = "none", int? limit = null) { }
+
     int returnSomething()
     {
         return 1;

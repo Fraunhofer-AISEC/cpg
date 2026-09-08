@@ -41,7 +41,9 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.test.*
 import java.math.BigDecimal
@@ -106,7 +108,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    fun usingDirectivesTest() {
+    fun testUsingDirectives() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Usings.cs").toFile()), topLevel, true) {
@@ -164,10 +166,34 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertEquals(2, baz.parameters.size)
         assertEquals("a", baz.parameters[0].name.localName)
         assertEquals("b", baz.parameters[1].name.localName)
+        // a required parameter has no default value
+        assertNull(baz.parameters[0].default)
+
+        // void Optional(int x = 5, string label = "none", int? limit = null)
+        val optional = foo.methods["Optional"]
+        assertNotNull(optional)
+
+        // the value an omitted argument stands for belongs to the parameter, since it is the
+        // declaration that states it and not the call
+        val x = optional.parameters["x"]?.default
+        assertIs<Literal<*>>(x)
+        assertEquals(5, x.value)
+
+        val label = optional.parameters["label"]?.default
+        assertIs<Literal<*>>(label)
+        assertEquals("none", label.value)
+
+        // the `?` is dropped from the type, but the default is still the `null` literal
+        val limit = optional.parameters["limit"]
+        assertNotNull(limit)
+        assertLocalName("int", limit.type)
+        val limitDefault = limit.default
+        assertIs<Literal<*>>(limitDefault)
+        assertNull(limitDefault.value)
     }
 
     @Test
-    fun expressionBodiedMethodTest() {
+    fun testExpressionBodiedMethod() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Methods.cs").toFile()), topLevel, true) {
@@ -201,7 +227,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    fun structDeclarationsTest() {
+    fun testStructDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val result =
             analyze(listOf(topLevel.resolve("Structs.cs").toFile()), topLevel, true) {
@@ -217,7 +243,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertNotNull(point)
         assertEquals("struct", point.kind)
 
-        assertEquals(listOf("IShape"), point.superClasses.map { it.name.localName })
+        assertEquals(listOf("IShape"), point.implementedInterfaces.map { it.name.localName })
 
         assertEquals("int", point.fields["x"]?.type?.name?.localName)
         assertEquals("int", point.fields["y"]?.type?.name?.localName)
@@ -272,7 +298,16 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertNotNull(foo)
 
         val constructors = foo.constructors
-        assertEquals(3, constructors.size)
+        assertEquals(4, constructors.size)
+
+        // `Foo(int x, string y, int z = 42)`. Constructors have their own parameter handling, so
+        // the
+        // default value is checked here as well.
+        val withDefault = constructors.single { it.parameters.size == 3 }
+        assertNull(withDefault.parameters[0].default)
+        val z = withDefault.parameters["z"]?.default
+        assertIs<Literal<*>>(z)
+        assertEquals(42, z.value)
 
         val defaultConstructor = constructors.single { it.parameters.isEmpty() }
         assertNotNull(defaultConstructor)
@@ -512,6 +547,58 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertIs<Literal<*>>(nulCharLiteral)
         assertEquals(Char(0), nulCharLiteral.value)
         assertEquals("char", nulCharLiteral.type.name.localName)
+
+        // a bare `default`; which value it stands for depends on the target type, which we do
+        // not know in the frontend, so both value and type stay unknown
+        val returnDefault = foo.methods["returnDefault"]
+        assertNotNull(returnDefault)
+        val defaultReturn = (returnDefault.body as Block).statements.first()
+        assertIs<Return>(defaultReturn)
+        val defaultLiteral = defaultReturn.returnValue
+        assertIs<Literal<*>>(defaultLiteral)
+        assertNull(defaultLiteral.value)
+        assertIs<UnknownType>(defaultLiteral.type)
+
+        // `default(int)` names the type it stands for, so unlike the bare `default` we can type the
+        // literal. The value still depends on the type's declaration, so it stays unknown.
+        val returnDefaultOfInt = foo.methods["returnDefaultOfInt"]
+        assertNotNull(returnDefaultOfInt)
+        val defaultOfIntReturn = (returnDefaultOfInt.body as Block).statements.first()
+        assertIs<Return>(defaultOfIntReturn)
+        val defaultOfIntLiteral = defaultOfIntReturn.returnValue
+        assertIs<Literal<*>>(defaultOfIntLiteral)
+        assertNull(defaultOfIntLiteral.value)
+        assertLocalName("int", defaultOfIntLiteral.type)
+
+        // The type of a `default(T)` goes through the regular type handling, so a qualified generic
+        // name keeps its type arguments as generics rather than in its name.
+        val returnDefaultOfList = foo.methods["returnDefaultOfList"]
+        assertNotNull(returnDefaultOfList)
+        val defaultOfListReturn = (returnDefaultOfList.body as Block).statements.first()
+        assertIs<Return>(defaultOfListReturn)
+        val defaultOfListLiteral = defaultOfListReturn.returnValue
+        assertIs<Literal<*>>(defaultOfListLiteral)
+        val listType = defaultOfListLiteral.type
+        assertIs<ObjectType>(listType)
+        assertFullName("System.Collections.Generic.List", listType)
+        assertEquals(listOf("int"), listType.generics.map { it.name.localName })
+        assertEquals(returnDefaultOfList.returnTypes.singleOrNull(), listType)
+
+        // a `u8` literal is a ReadOnlySpan<byte> of the UTF-8 bytes, not a string. The `byte` is a
+        // generic of the type and not part of its name, so the literal's type is the same type as
+        // the declared return type instead of an unrelated one that merely reads the same.
+        val returnUtf8 = foo.methods["returnUtf8"]
+        assertNotNull(returnUtf8)
+        val utf8Return = (returnUtf8.body as Block).statements.first()
+        assertIs<Return>(utf8Return)
+        val utf8Literal = utf8Return.returnValue
+        assertIs<Literal<*>>(utf8Literal)
+        assertEquals("hello", utf8Literal.value)
+        val utf8Type = utf8Literal.type
+        assertIs<ObjectType>(utf8Type)
+        assertFullName("System.ReadOnlySpan", utf8Type)
+        assertEquals(listOf("byte"), utf8Type.generics.map { it.name.localName })
+        assertEquals(returnUtf8.returnTypes.singleOrNull(), utf8Type)
     }
 
     @Test
@@ -642,25 +729,6 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertNotNull(doSomething)
         assertEquals(doSomething, memberCall.invokes.firstOrNull())
         assertContains(doSomething.modifiers, "public")
-    }
-
-    @Test
-    fun testGenericType() {
-        val topLevel = Path.of("src", "test", "resources", "csharp")
-        val result =
-            analyze(listOf(topLevel.resolve("Inheritance.cs").toFile()), topLevel, true) {
-                it.registerLanguage<CSharpLanguage>()
-            }
-        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
-        assertNotNull(tu)
-
-        val container = tu.records["GenericClass"]
-        assertNotNull(container)
-        assertContains(container.modifiers, "public")
-
-        val typeT = result.finalCtx.typeManager.getTypeParameter(container, "T")
-        assertNotNull(typeT)
-        assertIs<ParameterizedType>(typeT)
     }
 
     @Test

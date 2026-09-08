@@ -39,7 +39,7 @@ import kotlin.test.assertNotNull
 class SwitchTest : BaseTest() {
 
     @Test
-    fun switchStatementTest() {
+    fun testSwitchStatement() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Switch.cs").toFile()), topLevel, true) {
@@ -116,7 +116,7 @@ class SwitchTest : BaseTest() {
     }
 
     @Test
-    fun caseWithDefaultTest() {
+    fun testCaseWithDefault() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Switch.cs").toFile()), topLevel, true) {
@@ -155,7 +155,7 @@ class SwitchTest : BaseTest() {
     }
 
     @Test
-    fun stringSwitchTest() {
+    fun testStringSwitch() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Switch.cs").toFile()), topLevel, true) {
@@ -199,7 +199,7 @@ class SwitchTest : BaseTest() {
     }
 
     @Test
-    fun patternMatchSwitchTest() {
+    fun testPatternMatchSwitch() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Switch.cs").toFile()), topLevel, true) {

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.implicit
@@ -37,10 +38,12 @@ import de.fraunhofer.aisec.cpg.graph.newContinue
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newDefault
 import de.fraunhofer.aisec.cpg.graph.newDoWhile
+import de.fraunhofer.aisec.cpg.graph.newEmpty
 import de.fraunhofer.aisec.cpg.graph.newExpressionList
 import de.fraunhofer.aisec.cpg.graph.newFor
 import de.fraunhofer.aisec.cpg.graph.newForEach
 import de.fraunhofer.aisec.cpg.graph.newIfElse
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.newSwitch
 import de.fraunhofer.aisec.cpg.graph.newThrow
@@ -69,6 +72,9 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.ContinueStatementSyntax -> handleContinue(node)
             is Csharp.AST.TryStatementSyntax -> handleTry(node)
             is Csharp.AST.ThrowStatementSyntax -> handleThrow(node)
+            is Csharp.AST.CheckedStatementSyntax -> handleCheckedStatement(node)
+            is Csharp.AST.UnsafeStatementSyntax -> handleUnsafeStatement(node)
+            is Csharp.AST.EmptyStatementSyntax -> handleEmptyStatement(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -429,6 +435,61 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
         val throwStmt = newThrow(rawNode = node)
         node.expression?.let { throwStmt.exception = frontend.expressionHandler.handle(it) }
         return throwStmt
+    }
+
+    /**
+     * Translates a [CheckedStatementSyntax][Csharp.AST.CheckedStatementSyntax] (e.g. `checked { ...
+     * }` or `unchecked { ... }`) into the [Block] of its body.
+     *
+     * Whether arithmetic overflow throws an `OverflowException` or wraps around is not modeled, as
+     * it has no direct effect on control or data flow, but it is recorded as a
+     * [ProblemNode.ProblemType.TRANSLATION] problem.
+     *
+     * C# spec:
+     * [The checked and unchecked statements](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1312-the-checked-and-unchecked-statements)
+     */
+    private fun handleCheckedStatement(node: Csharp.AST.CheckedStatementSyntax): Expression {
+        val block = handle(node.block)
+        // `checked` and `unchecked` share the syntax class, so the kind tells them apart
+        block.additionalProblems +=
+            newProblemExpression(
+                "The overflow behaviour of a ${Csharp.INSTANCE.GetKind(node.pointer)} is not modeled",
+                type = ProblemNode.ProblemType.TRANSLATION,
+                rawNode = node,
+            )
+        return block
+    }
+
+    /**
+     * Translates an [UnsafeStatementSyntax][Csharp.AST.UnsafeStatementSyntax] (e.g. `unsafe { ...
+     * }`) into the [Block] of its body.
+     *
+     * The unsafe context, which only permits pointer types and pointer arithmetic inside the block,
+     * is not modeled, but it is recorded as a [ProblemNode.ProblemType.TRANSLATION] problem.
+     *
+     * C# spec:
+     * [Unsafe contexts](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/unsafe-code#232-unsafe-contexts)
+     */
+    private fun handleUnsafeStatement(node: Csharp.AST.UnsafeStatementSyntax): Expression {
+        val block = handle(node.block)
+        block.additionalProblems +=
+            newProblemExpression(
+                "The unsafe context of an UnsafeStatement is not modeled",
+                type = ProblemNode.ProblemType.TRANSLATION,
+                rawNode = node,
+            )
+        return block
+    }
+
+    /**
+     * Translates an [EmptyStatementSyntax][Csharp.AST.EmptyStatementSyntax], i.e. a lone `;`, into
+     * an [Empty].
+     *
+     * C# spec:
+     * [The empty statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#134-the-empty-statement)
+     */
+    private fun handleEmptyStatement(node: Csharp.AST.EmptyStatementSyntax): Empty {
+        return newEmpty(rawNode = node)
     }
 
     /**

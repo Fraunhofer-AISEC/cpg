@@ -45,7 +45,7 @@ import kotlin.test.assertNotNull
 class CallTest : BaseTest() {
 
     @Test
-    fun memberCallTest() {
+    fun testMemberCall() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Calls.cs").toFile()), topLevel, true) {
@@ -95,7 +95,7 @@ class CallTest : BaseTest() {
     }
 
     @Test
-    fun simpleCallTest() {
+    fun testSimpleCall() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("Calls.cs").toFile()), topLevel, true) {
@@ -135,5 +135,36 @@ class CallTest : BaseTest() {
         assertIs<Literal<*>>(arg1)
         assertIs<IntegerType>(arg1.type)
         assertEquals(4, arg1.value)
+    }
+
+    @Test
+    fun testCallWithOmittedArgument() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Calls.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val bar = tu.records["Bar"]
+        assertNotNull(bar)
+
+        // int Offset(int a, int b = 10)
+        val offsetMethod = bar.methods["Offset"]
+        assertNotNull(offsetMethod)
+
+        val method = bar.methods["callWithOmittedArgument"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+
+        // Offset(1);
+        val call = body.statements.single()
+        assertIs<Call>(call)
+        assertEquals(1, call.arguments.size)
+
+        // the call passes fewer arguments than the method has parameters, which is only a match
+        // because the missing one has a default value
+        assertInvokes(call, offsetMethod)
     }
 }
