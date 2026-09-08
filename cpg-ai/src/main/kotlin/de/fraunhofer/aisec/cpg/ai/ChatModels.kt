@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai
 
 import ai.koog.agents.core.tools.annotations.LLMDescription
-import java.nio.file.Path
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
 
 @Serializable data class ChatMessageJSON(val role: String, val content: String)
@@ -82,14 +80,6 @@ data class McpCapabilitiesJSON(
     val tools: List<McpToolJSON>,
     val prompts: List<McpPromptJSON>,
     val resources: List<McpResourceJSON>,
-)
-
-@Serializable
-data class Skill(
-    val name: String,
-    val description: String,
-    val body: String,
-    @Transient val location: Path? = null,
 )
 
 /**

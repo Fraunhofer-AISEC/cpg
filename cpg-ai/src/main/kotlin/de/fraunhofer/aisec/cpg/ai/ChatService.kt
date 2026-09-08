@@ -47,14 +47,17 @@ import ai.koog.prompt.tokenizer.CachingTokenizer
 import ai.koog.prompt.tokenizer.PromptTokenizer
 import ai.koog.prompt.tokenizer.SimpleRegexBasedTokenizer
 import ai.koog.serialization.kotlinx.toKotlinxJsonElement
+import ai.koog.skills.discovery.discoverSkills
+import ai.koog.skills.model.Skill
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.cpg.ai.clients.*
-import de.fraunhofer.aisec.cpg.ai.skills.ACTIVATE_SKILL_TOOL_NAME
-import de.fraunhofer.aisec.cpg.ai.skills.SkillLoader
-import de.fraunhofer.aisec.cpg.ai.skills.buildActivateSkillToolRegistry
+import de.fraunhofer.aisec.cpg.ai.skills.LIST_DIRECTORY_TOOL_NAME
+import de.fraunhofer.aisec.cpg.ai.skills.READ_FILE_TOOL_NAME
 import de.fraunhofer.aisec.cpg.ai.skills.buildSkillCatalog
+import de.fraunhofer.aisec.cpg.ai.skills.buildSkillFileToolRegistry
 import de.fraunhofer.aisec.cpg.ai.skills.defaultSkillDirectories
+import de.fraunhofer.aisec.cpg.ai.skills.jailedSkillsFileSystem
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -137,10 +140,26 @@ class ChatService(
                 mcpClient = mcp,
                 serverInfo = McpServerInfo(url = mcpServerUrl),
             )
+
+        val skillsFs = jailedSkillsFileSystem(defaultSkillDirectories)
+        skills =
+            discoverSkills(
+                skillsFs,
+                defaultSkillDirectories.map { it.toAbsolutePath().normalize().toString() },
+            )
+        skillFileToolRegistry = buildSkillFileToolRegistry(skillsFs)
     }
 
-    private val skillLoader = SkillLoader(defaultSkillDirectories)
-    private var skills: List<Skill> = skillLoader.discoverSkills()
+    /** Discovered by [connect] via Koog's native Agent Skills discovery. */
+    private var skills: List<Skill> = emptyList()
+
+    /**
+     * The tool registry the model uses to "activate" a discovered skill (list + read its
+     * `SKILL.md`), jailed to [defaultSkillDirectories] - built once in [connect] alongside
+     * [skills]. See `SkillFileTools.kt` for why this uses Koog's generic file tools rather than a
+     * dedicated activation tool.
+     */
+    private var skillFileToolRegistry: ToolRegistry = ToolRegistry.EMPTY
 
     /**
      * Once the running prompt grows beyond this many messages, [chatStrategy] compresses the
@@ -471,7 +490,8 @@ class ChatService(
             // tool_calls response (see extractFallbackToolCall doc). Both "first attempt" and
             // "after the nudge" responses get this same check before falling through to the
             // nudge/finish behavior above, since a text-only reply can happen at either point.
-            fun validToolNames() = tools.map { it.name }.toSet() + ACTIVATE_SKILL_TOOL_NAME
+            fun validToolNames() =
+                tools.map { it.name }.toSet() + LIST_DIRECTORY_TOOL_NAME + READ_FILE_TOOL_NAME
 
             val detectFallbackToolCall by
                 node<String, Pair<String, MessagePart.Tool.Call?>>("detectFallbackToolCall") { text
@@ -709,7 +729,7 @@ class ChatService(
                     }
                 }
 
-            val toolRegistry = mcpToolRegistry + buildActivateSkillToolRegistry(skills)
+            val toolRegistry = mcpToolRegistry + skillFileToolRegistry
 
             val agent =
                 AIAgent(
