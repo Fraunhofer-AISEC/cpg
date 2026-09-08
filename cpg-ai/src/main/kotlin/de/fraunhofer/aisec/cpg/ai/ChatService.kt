@@ -155,11 +155,14 @@ class ChatService(
 
     /**
      * The model's real context window, in tokens, used by [chatStrategy]'s token-based compression
-     * trigger below. [chat] tries to resolve this dynamically (see
-     * [resolveHistoryCompressionTokenLimit]) and only keeps this fallback if that fails. 262144 is
-     * Qwen 3.6's context length, used as a reasonable general-purpose default.
+     * trigger below. Set once per instance by [resolveHistoryCompressionTokenLimit] from the same
+     * already-resolved value as the [ChatLlm]'s `model.contextLength` (see
+     * [LlmProviderConfig.clientFor]/[LlmProviderConfig.resolveContextLength]) - both consumers
+     * share one resolution (override → live-detected → generic default) instead of maintaining
+     * their own separate fallback. This initial value is only a placeholder until the first [chat]
+     * call resolves it for real - matches [LlmProviderConfig]'s own generic fallback constant.
      */
-    private var historyCompressionTokenLimit = 262_144L
+    private var historyCompressionTokenLimit = 128_000L
 
     /** Whether [resolveHistoryCompressionTokenLimit] has already run once for this instance. */
     private var resolvedHistoryCompressionTokenLimit = false
@@ -182,18 +185,16 @@ class ChatService(
     private val tokenizer: PromptTokenizer = CachingTokenizer(SimpleRegexBasedTokenizer())
 
     /**
-     * Tries [LlmProviderConfig.contextLengthFor] once per [ChatService] instance to replace the
-     * hardcoded [historyCompressionTokenLimit] fallback with the real value for [clientName]'s
-     * [model], if the server reports it. A no-op (including on failure) once already attempted, so
-     * a slow/unreachable server only costs one extra request per instance, not one per [chat] call.
+     * Sets [historyCompressionTokenLimit] to [contextLength] - the same value
+     * [LlmProviderConfig.clientFor] already resolved (override → live-detected → generic default)
+     * for the [ChatLlm]'s `model.contextLength` - once per [ChatService] instance. A no-op on
+     * subsequent calls, so later [chat] calls in the same instance don't keep re-applying it.
      */
-    private suspend fun resolveHistoryCompressionTokenLimit(clientName: String, model: String) {
+    private fun resolveHistoryCompressionTokenLimit(contextLength: Long) {
         if (resolvedHistoryCompressionTokenLimit) return
         resolvedHistoryCompressionTokenLimit = true
-        llmProviderConfig.contextLengthFor(clientName, model)?.let {
-            log.info("Resolved real context length for {}/{}: {} tokens", clientName, model, it)
-            historyCompressionTokenLimit = it
-        }
+        historyCompressionTokenLimit = contextLength
+        log.info("Using context length {} for history-compression budget", contextLength)
     }
 
     /**
@@ -679,7 +680,11 @@ class ChatService(
                     send(Events.text("Unknown or unavailable LLM client"))
                     return@channelFlow
                 }
-        resolveHistoryCompressionTokenLimit(request.client, request.model)
+        // clientFor already resolved contextLength (override → live-detected → generic default);
+        // the `?:` here is only defensive - LlmProviderConfig.resolveContextLength always returns
+        // non-null, this just guards against LLModel.contextLength being nullable by Koog's own
+        // type.
+        resolveHistoryCompressionTokenLimit(chatLlm.model.contextLength ?: 128_000L)
 
         try {
             // When ChatMemory is active (sessionId != null), the initial prompt carries only the

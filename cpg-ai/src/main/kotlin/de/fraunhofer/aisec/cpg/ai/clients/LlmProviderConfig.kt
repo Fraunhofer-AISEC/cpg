@@ -69,22 +69,55 @@ private val transientFailureRetryConfig =
     RetryConfig(maxAttempts = 3, initialDelay = 1.seconds, maxDelay = 5.seconds)
 
 /**
- * Generic context-length fallbacks used when constructing an [LLModel] for a model chosen
+ * Generic context-length fallback used when constructing an [LLModel] for a model chosen
  * dynamically (by name) via config/`listAvailableProviders`, rather than one of Koog's predefined
- * per-provider model catalogs (e.g. `OpenAIModels`, `GoogleModels`). We don't know the true context
- * window of an arbitrary/local model up front, so these are just reasonable, generous defaults.
+ * per-provider model catalogs (e.g. `OpenAIModels`, `GoogleModels`), and neither
+ * [ClientConfig.contextLengthOverride] nor live detection ([LlmProviderConfig.contextLengthFor]) is
+ * available. This is glm-4.5-air's real context length - the smallest of the models actually used
+ * with this codebase, chosen deliberately as a conservative fallback: underestimating a model's
+ * window just makes history-compression trigger a bit earlier than strictly necessary, while
+ * overestimating it risks an actual context-overflow error from the provider.
  */
-private const val OPENAI_COMPATIBLE_DEFAULT_CONTEXT_LENGTH = 128_000L
-private const val GEMINI_DEFAULT_CONTEXT_LENGTH = 1_000_000L
+private const val DEFAULT_CONTEXT_LENGTH = 128_000L
+
+/**
+ * Decides the context length to actually use for [config], given [liveDetected] (the value
+ * [LlmProviderConfig.contextLengthFor] fetched from the server, if any).
+ * [ClientConfig.contextLengthOverride] always wins when set - even over a disagreeing
+ * [liveDetected] value, in which case a warning is logged so the mismatch isn't silently swallowed.
+ * Otherwise, prefers [liveDetected] and only falls back to [DEFAULT_CONTEXT_LENGTH] if neither is
+ * available.
+ */
+private fun resolveContextLength(config: ClientConfig, liveDetected: Long?): Long {
+    val override = config.contextLengthOverride
+    if (override != null) {
+        if (liveDetected != null && liveDetected != override) {
+            log.warn(
+                "Configured context length ({}) for {} disagrees with the server-reported value " +
+                    "({}) - using the configured value.",
+                override,
+                config.name,
+                liveDetected,
+            )
+        }
+        return override
+    }
+    return liveDetected ?: DEFAULT_CONTEXT_LENGTH
+}
 
 class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
     /**
      * Resolves the [ClientProvider] name with the chosen model to a [ChatLlm] (a Koog prompt
      * executor bound to a specific model). Returns `null` if the provider is unknown, or if a
      * required API key is missing.
+     *
+     * The returned [ChatLlm]'s `model.contextLength` is resolved via [resolveContextLength]:
+     * [ClientConfig.contextLengthOverride] if set, otherwise the live-detected value from
+     * [contextLengthFor] if the server reports one, otherwise [DEFAULT_CONTEXT_LENGTH].
      */
-    fun clientFor(clientName: String, model: String): ChatLlm? {
+    suspend fun clientFor(clientName: String, model: String): ChatLlm? {
         val config = clients.firstOrNull { it.name == clientName } ?: return null
+        val contextLength = resolveContextLength(config, contextLengthFor(clientName, model))
 
         return when (config.provider) {
             ClientProvider.GEMINI -> {
@@ -115,7 +148,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                                     // with "Model <id> does not support completion".
                                     LLMCapability.Completion,
                                 ),
-                            contextLength = GEMINI_DEFAULT_CONTEXT_LENGTH,
+                            contextLength = contextLength,
                         ),
                 )
             }
@@ -206,7 +239,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                                     // own precedent for local/Qwen-class models.
                                     LLMCapability.Schema.JSON.Basic,
                                 ),
-                            contextLength = OPENAI_COMPATIBLE_DEFAULT_CONTEXT_LENGTH,
+                            contextLength = contextLength,
                         ),
                 )
             }
@@ -345,6 +378,8 @@ fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
                         ClientProvider.OPENAI_COMPATIBLE
                     },
                 requiresApiKey = requiresApiKey,
+                contextLengthOverride =
+                    if (client.hasPath("contextLength")) client.getLong("contextLength") else null,
             )
         }
     // Put local providers first, openai and gemini last.
