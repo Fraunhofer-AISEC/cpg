@@ -82,6 +82,8 @@ dependencies {
     implementation(libs.mcp.client)
     implementation(libs.koog.agents)
     implementation(libs.koog.agents.mcp)
+    implementation(libs.koog.skills)
+    implementation(libs.koog.agents.ext)
     api(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cors)
