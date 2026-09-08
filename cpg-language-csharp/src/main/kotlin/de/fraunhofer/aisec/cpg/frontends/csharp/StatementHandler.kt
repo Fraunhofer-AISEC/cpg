@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
@@ -43,13 +44,17 @@ import de.fraunhofer.aisec.cpg.graph.newExpressionList
 import de.fraunhofer.aisec.cpg.graph.newFor
 import de.fraunhofer.aisec.cpg.graph.newForEach
 import de.fraunhofer.aisec.cpg.graph.newIfElse
+import de.fraunhofer.aisec.cpg.graph.newMemberAccess
+import de.fraunhofer.aisec.cpg.graph.newMemberCall
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.newSwitch
 import de.fraunhofer.aisec.cpg.graph.newThrow
 import de.fraunhofer.aisec.cpg.graph.newTry
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.newWhile
+import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Expression, Csharp.AST.StatementSyntax>(
@@ -74,6 +79,7 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.ThrowStatementSyntax -> handleThrow(node)
             is Csharp.AST.CheckedStatementSyntax -> handleCheckedStatement(node)
             is Csharp.AST.UnsafeStatementSyntax -> handleUnsafeStatement(node)
+            is Csharp.AST.UsingStatementSyntax -> handleUsing(node)
             is Csharp.AST.EmptyStatementSyntax -> handleEmptyStatement(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
@@ -500,10 +506,319 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleBlock(node: Csharp.AST.BlockSyntax): Block {
         val block = newBlock(rawNode = node)
-        for (stmt in node.statements) {
-            val statement = handle(stmt)
-            statement.let { block.statements += it }
-        }
+        block.statements += handleStatements(node.statements)
         return block
+    }
+
+    /**
+     * Translates the statements of a block.
+     *
+     * This is more than a loop over [handle], because a using declaration (`using var f = ...;`)
+     * disposes its resource at the end of the *enclosing* block and therefore needs the statements
+     * that follow it, see [handleUsing]. Blocks without a using declaration are unaffected.
+     */
+    private fun handleStatements(statements: List<Csharp.AST.StatementSyntax>): List<Expression> {
+        val result = mutableListOf<Expression>()
+
+        for ((index, stmt) in statements.withIndex()) {
+            if (
+                stmt is Csharp.AST.LocalDeclarationStatementSyntax && stmt.usingKeyword.isNotEmpty()
+            ) {
+                // The using declaration takes the rest of the block as its body, so we are done
+                result += handleUsing(stmt, statementsAfter = statements.drop(index + 1))
+                break
+            }
+            result += handle(stmt)
+        }
+
+        return result
+    }
+
+    /**
+     * Translates a `using` into a [Try], both the statement form
+     * ([UsingStatementSyntax][Csharp.AST.UsingStatementSyntax]) and the declaration form (a
+     * [LocalDeclarationStatementSyntax][Csharp.AST.LocalDeclarationStatementSyntax] carrying a
+     * `using` keyword). The two forms differ only in how they delimit the body of the `using`; the
+     * declaration form takes the [statementsAfter] it in the enclosing block.
+     *
+     * Since we do not have a direct representation for a `using`, we destructure it into the
+     * `try`/`finally` that C# defines it to be. For example:
+     * ```csharp
+     * using (var f = File.OpenRead(path))
+     * {
+     *     Read(f);
+     * }
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * var f = File.OpenRead(path);
+     * try
+     * {
+     *     Read(f);
+     * }
+     * finally
+     * {
+     *     f.Dispose();
+     * }
+     * ```
+     *
+     * The [Try] contains:
+     * 1. A [DeclarationStatement] as its [Try.resources]: `f = File.OpenRead(path)`
+     * 2. The body of the `using` as its [Try.tryBlock]
+     * 3. An implicit `f.Dispose()` [MemberCall] as its [Try.finallyBlock]
+     *
+     * Modeling the [Try.resources] instead of as a statement preceding the [Try] keeps the C#
+     * semantics that an exception thrown *while acquiring* a resource skips both the body and the
+     * disposal. Putting the disposal in the [Try.finallyBlock] puts it on every path leaving the
+     * body, including `return`, `break` and exceptions.
+     *
+     * The declaration form has no body of its own, it disposes at the end of the *enclosing* block.
+     * So everything following it becomes the [Try.tryBlock], see [handleStatements]:
+     * ```csharp
+     * var path = "log.txt";
+     * using var f = File.OpenRead(path);
+     * Read(f);
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * var path = "log.txt";
+     * var f = File.OpenRead(path);
+     * try
+     * {
+     *     Read(f);
+     * }
+     * finally
+     * {
+     *     f.Dispose();
+     * }
+     * ```
+     *
+     * The expression form disposes an already existing value and therefore has no variable to
+     * dispose. Like the C# compiler, we bind the value to an implicit temporary first:
+     * ```csharp
+     * using (f)
+     * {
+     *     Read(f);
+     * }
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * var usingResource_0 = f;
+     * try
+     * {
+     *     Read(f);
+     * }
+     * finally
+     * {
+     *     usingResource_0.Dispose();
+     * }
+     * ```
+     *
+     * Two details of the lowering specified by C# are deliberately not modeled: the `if (f !=
+     * null)` guard around the disposal, because a conditional disposal would make a correctly
+     * disposed resource look undisposed on some paths, and the `await` around `DisposeAsync` for an
+     * `await using`, because `await` is not modeled at all yet.
+     *
+     * C# spec:
+     * [The using statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1314-the-using-statement)
+     */
+    private fun handleUsing(
+        node: Csharp.AST.UsingStatementOrDeclaration,
+        statementsAfter: List<Csharp.AST.StatementSyntax> = emptyList(),
+    ): Expression {
+        val awaitKeyword = node.awaitKeyword.isNotEmpty()
+
+        /** Prepares the block the resource is used in, which the two forms delimit differently. */
+        val body = {
+            if (node is Csharp.AST.UsingStatementSyntax) {
+                bodyOf(node.statement)
+            } else {
+                newBlock().implicit().apply { statements += handleStatements(statementsAfter) }
+            }
+        }
+
+        /**
+         * Prepares the resource declaration of a `using` that declares a variable. Represents the
+         * line
+         *
+         * ```csharp
+         * var f = File.OpenRead(path);
+         * ```
+         */
+        fun generateDeclaredResource(
+            declarator: Csharp.AST.VariableDeclaratorSyntax,
+            type: Type,
+        ): Pair<DeclarationStatement, Variable> {
+            val variable =
+                newVariable(name = declarator.identifier, type = type, rawNode = declarator)
+            declarator.initializer?.let {
+                variable.initializer = frontend.expressionHandler.handle(it)
+            }
+            frontend.scopeManager.addDeclaration(variable)
+
+            val declStmt = newDeclarationStatement(rawNode = declarator)
+            declStmt.declarations += variable
+            return Pair(declStmt, variable)
+        }
+
+        /**
+         * Prepares the implicit temporary holding the resource of a `using (f)`, which disposes an
+         * already existing value instead of declaring a variable. Represents the line
+         *
+         * ```csharp
+         * var usingResource_... = f;
+         * ```
+         *
+         * C# declares the same temporary, called `resource` in the expansion of the spec. It is not
+         * in scope for the body, which keeps referring to the original value:
+         * ```csharp
+         * TextWriter resource = f;
+         * try
+         * {
+         *     Read(f);
+         * }
+         * finally
+         * {
+         *     resource.Dispose();
+         * }
+         * ```
+         */
+        fun generateTemporaryResource(
+            tryStmt: Try,
+            expression: Csharp.AST.ExpressionSyntax,
+        ): Pair<DeclarationStatement, Variable> {
+            val resource = frontend.expressionHandler.handle(expression)
+            val tmpName = Name.temporary(prefix = USING_RESOURCE, separatorChar = '_', tryStmt)
+            val tmpVar =
+                newVariable(name = tmpName, type = resource.type)
+                    .implicit(code = resource.code, location = resource.location)
+            tmpVar.initializer = resource
+            frontend.scopeManager.addDeclaration(tmpVar)
+
+            val declStmt =
+                newDeclarationStatement()
+                    .implicit(code = resource.code, location = resource.location)
+            declStmt.declarations += tmpVar
+            return Pair(declStmt, tmpVar)
+        }
+
+        /**
+         * Prepares the `finally` block disposing [resource]. Represents the line
+         *
+         * ```csharp
+         * f.Dispose();
+         * ```
+         */
+        fun generateDisposeBlock(resource: Variable): Block {
+            val code = resource.code
+            val location = resource.location
+
+            val base = newReference(name = resource.name).implicit(code = code, location = location)
+            base.refersTo = resource
+            val dispose =
+                newMemberCall(
+                        newMemberAccess(
+                                name = if (awaitKeyword) "DisposeAsync" else "Dispose",
+                                base = base,
+                            )
+                            .implicit(code = code, location = location)
+                    )
+                    .implicit(code = code, location = location)
+
+            return newBlock().implicit(code = code, location = location).apply {
+                statements += dispose
+            }
+        }
+
+        /**
+         * Builds the [Try] for the first of [declarators] and nests the remaining ones inside it,
+         * since a `using` declaring several resources is defined as nested `using` statements:
+         * ```csharp
+         * using (var a = File.OpenRead("a"), b = File.OpenRead("b"))
+         * {
+         *     Read(a, b);
+         * }
+         * ```
+         *
+         * is equivalent to:
+         * ```csharp
+         * using (var a = File.OpenRead("a"))
+         * {
+         *     using (var b = File.OpenRead("b"))
+         *     {
+         *         Read(a, b);
+         *     }
+         * }
+         * ```
+         *
+         * The nesting is what gives us the reverse disposal order, `b` before `a`. The resources
+         * are declared in the scope of their own [Try], matching C#, where a resource is not
+         * visible after its `using`.
+         */
+        fun generateTry(declarators: List<Csharp.AST.VariableDeclaratorSyntax>, type: Type): Try {
+            val tryStmt = newTry(rawNode = node)
+            frontend.scopeManager.enterScope(tryStmt)
+
+            val (declStmt, variable) = generateDeclaredResource(declarators.first(), type)
+            tryStmt.resources += declStmt
+            tryStmt.tryBlock =
+                if (declarators.size > 1) {
+                    newBlock().implicit().apply {
+                        statements += generateTry(declarators.drop(1), type)
+                    }
+                } else {
+                    body()
+                }
+            tryStmt.finallyBlock = generateDisposeBlock(variable)
+
+            frontend.scopeManager.leaveScope(tryStmt)
+            return tryStmt
+        }
+
+        val declaration = node.declaration
+        // Only the statement form can dispose an already existing value, a using declaration
+        // always declares one.
+        val expression = (node as? Csharp.AST.UsingStatementSyntax)?.expression
+
+        return when {
+            // using (var f = File.OpenRead(path)) { ... } and using var f = File.OpenRead(path);
+            declaration != null ->
+                generateTry(declaration.variables, frontend.typeOf(declaration.type))
+
+            // using (f) { ... }
+            expression != null -> {
+                val tryStmt = newTry(rawNode = node)
+                frontend.scopeManager.enterScope(tryStmt)
+
+                val (declStmt, variable) = generateTemporaryResource(tryStmt, expression)
+                tryStmt.resources += declStmt
+                tryStmt.tryBlock = body()
+                tryStmt.finallyBlock = generateDisposeBlock(variable)
+
+                frontend.scopeManager.leaveScope(tryStmt)
+                tryStmt
+            }
+
+            else -> newProblemExpression("using statement without a resource", rawNode = node)
+        }
+    }
+
+    /**
+     * Returns the body of a `using` statement as a [Block]. The body does not have to be a block
+     * (e.g. `using (f) Read(f);`), in which case we wrap the single statement in an implicit one,
+     * since [Try.tryBlock] requires a [Block].
+     */
+    private fun bodyOf(node: Csharp.AST.StatementSyntax): Block {
+        if (node is Csharp.AST.BlockSyntax) {
+            return handleBlock(node)
+        }
+
+        val statement = handle(node)
+        return newBlock().implicit(code = statement.code, location = statement.location).apply {
+            statements += statement
+        }
     }
 }

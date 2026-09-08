@@ -940,6 +940,57 @@ public static class Library
         return Register(((UnsafeStatementSyntax)Nodes[handlePtr]).Block);
     }
 
+    // A using statement acquires its resource either through a variable declaration
+    // (`using (var f = File.OpenRead(p))`) or through a plain expression (`using (f)`), so exactly
+    // one of GetUsingStatementDeclaration and GetUsingStatementExpression returns a node.
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingStatementDeclaration")]
+    public static IntPtr GetUsingStatementDeclaration(IntPtr handlePtr)
+    {
+        var declaration = ((UsingStatementSyntax)Nodes[handlePtr]).Declaration;
+        return declaration != null ? Register(declaration) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingStatementExpression")]
+    public static IntPtr GetUsingStatementExpression(IntPtr handlePtr)
+    {
+        var expression = ((UsingStatementSyntax)Nodes[handlePtr]).Expression;
+        return expression != null ? Register(expression) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingStatementStatement")]
+    public static IntPtr GetUsingStatementStatement(IntPtr handlePtr)
+    {
+        return Register(((UsingStatementSyntax)Nodes[handlePtr]).Statement);
+    }
+
+    // Empty unless the resource is disposed asynchronously, i.e. `await using (...)`.
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingStatementAwaitKeyword")]
+    public static IntPtr GetUsingStatementAwaitKeyword(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((UsingStatementSyntax)Nodes[handlePtr]).AwaitKeyword.Text
+        );
+    }
+
+    // Empty unless the local declaration is a using declaration, i.e. `using var f = ...;`. This is
+    // the only thing that distinguishes it from an ordinary local declaration.
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalDeclarationStatementUsingKeyword")]
+    public static IntPtr GetLocalDeclarationStatementUsingKeyword(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((LocalDeclarationStatementSyntax)Nodes[handlePtr]).UsingKeyword.Text
+        );
+    }
+
+    // Empty unless the using declaration disposes asynchronously, i.e. `await using var f = ...;`.
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalDeclarationStatementAwaitKeyword")]
+    public static IntPtr GetLocalDeclarationStatementAwaitKeyword(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((LocalDeclarationStatementSyntax)Nodes[handlePtr]).AwaitKeyword.Text
+        );
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetFixedStatementDeclaration")]
     public static IntPtr GetFixedStatementDeclaration(IntPtr handlePtr)
     {

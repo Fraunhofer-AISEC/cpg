@@ -50,4 +50,12 @@ abstract class CSharpHandler<ResultNode : Node, HandlerNode : Csharp.AST.Node>(
     }
 
     abstract fun handleNode(node: HandlerNode): ResultNode
+
+    companion object {
+        /**
+         * A prefix to add to random names representing the implicit temporary that holds the
+         * resource of a `using` statement without a declaration, e.g. `using (f) { }`.
+         */
+        const val USING_RESOURCE = "usingResource"
+    }
 }

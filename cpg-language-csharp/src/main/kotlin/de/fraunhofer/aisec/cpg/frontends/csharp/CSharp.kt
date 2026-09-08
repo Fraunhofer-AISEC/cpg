@@ -447,6 +447,7 @@ interface Csharp : Library {
                     "ThrowStatementSyntax" -> ThrowStatementSyntax(nativeValue)
                     "CheckedStatementSyntax" -> CheckedStatementSyntax(nativeValue)
                     "UnsafeStatementSyntax" -> UnsafeStatementSyntax(nativeValue)
+                    "UsingStatementSyntax" -> UsingStatementSyntax(nativeValue)
                     "FixedStatementSyntax" -> FixedStatementSyntax(nativeValue)
                     "EmptyStatementSyntax" -> EmptyStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
@@ -709,6 +710,46 @@ interface Csharp : Library {
         }
 
         /**
+         * A `using` is either a [UsingStatementSyntax] (`using (var f = Open()) { ... }`) or a
+         * [LocalDeclarationStatementSyntax] carrying a `using` keyword (`using var f = Open();`).
+         * The two are not related according to the C# syntax, they only differ in how they delimit
+         * the body. However, they acquire and dispose their resource identically.
+         */
+        interface UsingStatementOrDeclaration {
+            /** The resource acquisition, if the `using` declares a variable. */
+            val declaration: VariableDeclarationSyntax?
+            /** Empty unless the resource is disposed asynchronously, i.e. `await using`. */
+            val awaitKeyword: String
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`UsingStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.usingstatementsyntax)
+         * class, i.e. `using (var f = File.OpenRead(p)) { ... }`.
+         *
+         * Note that this is unrelated to a [UsingDirectiveSyntax][Csharp.AST.UsingDirectiveSyntax],
+         * which shares the keyword but imports a namespace instead.
+         */
+        class UsingStatementSyntax(p: Pointer? = Pointer.NULL) :
+            StatementSyntax(p), UsingStatementOrDeclaration {
+            /**
+             * The resource acquisition, if it declares a variable (`using (var f = Open())`).
+             * Exactly one of [declaration] and [expression] is present.
+             */
+            override val declaration: VariableDeclarationSyntax? by lazy {
+                INSTANCE.GetUsingStatementDeclaration(this)
+            }
+            /** The resource acquisition, if it is a plain expression (`using (f)`). */
+            val expression: ExpressionSyntax? by lazy { INSTANCE.GetUsingStatementExpression(this) }
+            /** The body. Not necessarily a [BlockSyntax], e.g. `using (f) Read(f);`. */
+            val statement: StatementSyntax by lazy { INSTANCE.GetUsingStatementStatement(this) }
+            /** Empty unless the resource is disposed asynchronously, i.e. `await using (...)`. */
+            override val awaitKeyword: String by lazy {
+                INSTANCE.GetUsingStatementAwaitKeyword(this)
+            }
+        }
+
+        /**
          * Represents the Roslyn
          * [`FixedStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.fixedstatementsyntax)
          * class, i.e. `fixed (byte* p = &bytes[0]) { ... }`.
@@ -802,9 +843,21 @@ interface Csharp : Library {
          * [`LocalDeclarationStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.localdeclarationstatementsyntax)
          * class.
          */
-        class LocalDeclarationStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
-            val declaration: VariableDeclarationSyntax by lazy {
+        class LocalDeclarationStatementSyntax(p: Pointer? = Pointer.NULL) :
+            StatementSyntax(p), UsingStatementOrDeclaration {
+            override val declaration: VariableDeclarationSyntax by lazy {
                 INSTANCE.GetVariableDeclarationSyntax(this)
+            }
+            /**
+             * Empty unless this is a using declaration (`using var f = Open();`), which is the only
+             * thing distinguishing it from an ordinary local declaration.
+             */
+            val usingKeyword: String by lazy {
+                INSTANCE.GetLocalDeclarationStatementUsingKeyword(this)
+            }
+            /** Empty unless this is an `await using var f = ...;` declaration. */
+            override val awaitKeyword: String by lazy {
+                INSTANCE.GetLocalDeclarationStatementAwaitKeyword(this)
             }
         }
 
@@ -1628,6 +1681,24 @@ interface Csharp : Library {
     fun GetCheckedStatementBlock(handle: AST.CheckedStatementSyntax): AST.BlockSyntax
 
     fun GetUnsafeStatementBlock(handle: AST.UnsafeStatementSyntax): AST.BlockSyntax
+
+    fun GetUsingStatementDeclaration(
+        handle: AST.UsingStatementSyntax
+    ): AST.VariableDeclarationSyntax?
+
+    fun GetUsingStatementExpression(handle: AST.UsingStatementSyntax): AST.ExpressionSyntax?
+
+    fun GetUsingStatementStatement(handle: AST.UsingStatementSyntax): AST.StatementSyntax
+
+    fun GetUsingStatementAwaitKeyword(handle: AST.UsingStatementSyntax): String
+
+    fun GetLocalDeclarationStatementUsingKeyword(
+        handle: AST.LocalDeclarationStatementSyntax
+    ): String
+
+    fun GetLocalDeclarationStatementAwaitKeyword(
+        handle: AST.LocalDeclarationStatementSyntax
+    ): String
 
     fun GetFixedStatementDeclaration(
         handle: AST.FixedStatementSyntax
