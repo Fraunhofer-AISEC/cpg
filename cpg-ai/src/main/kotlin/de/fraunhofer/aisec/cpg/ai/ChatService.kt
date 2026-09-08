@@ -683,8 +683,11 @@ class ChatService(
             edge(finishWithTaskStatus forwardTo nodeFinish)
         }
 
-    /** Return the discovered skills. */
-    fun getSkills(): List<Skill> = skills
+    /**
+     * Return the discovered skills' name/description as [SkillInfo] - deliberately not Koog's own
+     * [Skill] type, which isn't visible to callers outside this module (see [SkillInfo]'s doc).
+     */
+    fun getSkills(): List<SkillInfo> = skills.map { SkillInfo(it.name, it.description) }
 
     /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {

@@ -83,6 +83,16 @@ data class McpCapabilitiesJSON(
 )
 
 /**
+ * A discovered skill's name/description, as exposed to callers outside `cpg-ai` (e.g. DUST's
+ * `--skill` validation via [ChatService.getSkills]). Deliberately doesn't expose Koog's own
+ * `ai.koog.skills.model.Skill` across the module boundary - that dependency is `implementation`,
+ * not `api`, in `cpg-ai`'s `build.gradle.kts` on purpose (consistent with `koog-agents` itself), so
+ * returning it directly fails to compile for any consumer (confirmed: DUST's `Main.kt` failed with
+ * "Cannot access class 'ai.koog.skills.model.Skill'" before this indirection was added).
+ */
+data class SkillInfo(val name: String, val description: String)
+
+/**
  * Structured completion signal requested once from the LLM whenever [ChatService.chatStrategy]
  * believes a turn is finished (see [ChatService.requestTaskStatus]), as a more reliable alternative
  * to a caller inferring completion by re-parsing whatever the skill happened to persist to disk.
