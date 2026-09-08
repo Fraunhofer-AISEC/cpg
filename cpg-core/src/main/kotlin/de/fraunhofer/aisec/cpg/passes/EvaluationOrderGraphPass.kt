@@ -1322,12 +1322,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /** We use the scope where the current [node] is in, to find a statement labeled with [label] */
     fun getLabeledASTNode(node: Node, label: String): Node? {
-        scopeManager.jumpTo(node.scope)
-        val labelStatement = scopeManager.getLabel(label)
-        labelStatement?.subStatement?.let {
-            return it
+        // Temporarily jump to the node's scope to perform label lookup and restore the old scope
+        val oldScope = scopeManager.jumpTo(node.scope)
+        try {
+            val labelStatement = scopeManager.getLabel(label)
+            labelStatement?.subStatement?.let {
+                return it
+            }
+            return null
+        } finally {
+            // restore previous scope (may be null)
+            scopeManager.jumpTo(oldScope)
         }
-        return null
     }
 
     /**
