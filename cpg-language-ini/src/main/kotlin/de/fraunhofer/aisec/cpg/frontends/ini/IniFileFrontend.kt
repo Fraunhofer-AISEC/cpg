@@ -104,47 +104,42 @@ open class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFr
         val tud = newTranslationUnit(name = file.name, rawNode = ini)
         scopeManager.resetToGlobal(tud)
 
-        val nsd = newNamespace(name = namespace, rawNode = ini)
-        scopeManager.addDeclaration(nsd)
-        tud.addDeclaration(nsd)
-
-        scopeManager.enterScope(nsd)
-
-        ini.values.forEach {
-            val record = handleSection(it)
-            scopeManager.addDeclaration(record)
-            nsd.addDeclaration(record)
+        newNamespace(name = namespace, rawNode = ini, holder = tud, enterScope = true) { nsd ->
+            ini.values.forEach { handleSection(it, holder = nsd) }
         }
 
-        scopeManager.leaveScope(nsd)
         return tud
     }
 
     /** Translates a `Section` into a [Record] and handles all `entries` using [handleEntry]. */
-    private fun handleSection(section: Section): Record {
-        val record = newRecord(name = section.name, kind = "section", rawNode = section)
-        scopeManager.enterScope(record)
-        section.entries.forEach {
-            val field = handleEntry(it)
-            scopeManager.addDeclaration(field)
-            record.fields += field
+    private fun handleSection(section: Section, holder: DeclarationHolder? = null): Record {
+        return newRecord(
+            name = section.name,
+            kind = "section",
+            rawNode = section,
+            holder = holder,
+            enterScope = true,
+        ) { record ->
+            section.entries.forEach { handleEntry(it, holder = record) }
         }
-        scopeManager.leaveScope(record)
-
-        return record
     }
 
     /**
      * Translates an `MutableEntry` to a new [Field] with the [Field.initializer] being set to the
      * `entry`s value.
      */
-    private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>): Field {
-        val field =
-            newField(name = entry.key, type = primitiveType("string"), rawNode = entry).apply {
-                initializer = newLiteral(value = entry.value, rawNode = entry)
-            }
-
-        return field
+    private fun handleEntry(
+        entry: MutableMap.MutableEntry<String?, String?>,
+        holder: DeclarationHolder? = null,
+    ): Field {
+        return newField(
+            name = entry.key,
+            type = primitiveType("string"),
+            rawNode = entry,
+            holder = holder,
+        ) { field ->
+            field.initializer = newLiteral(value = entry.value, rawNode = entry)
+        }
     }
 
     override fun typeOf(type: Any?): Type {

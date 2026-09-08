@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.newNamespace
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.mapNotNullFiltered
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
@@ -557,7 +558,7 @@ fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
 
 val Record.embeddedStructs: List<Record>
     get() {
-        return this.fields
-            .filter { "embedded" in it.modifiers }
-            .mapNotNull { it.type.root.recordDeclaration }
+        return this.fields.mapNotNullFiltered({ "embedded" in it.modifiers }) {
+            it.type.root.recordDeclaration
+        }
     }

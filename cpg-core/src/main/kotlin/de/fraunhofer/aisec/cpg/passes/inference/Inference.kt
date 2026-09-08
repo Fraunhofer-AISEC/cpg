@@ -601,9 +601,39 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             return targetType
         }
 
-        // Look for an "argument holder". These can be different kind of nodes
+        // Look for a node which "holds" the hint as one of its arguments. These can be different
+        // kinds of nodes.
         val holder =
-            ctx.currentComponent.allChildren<ArgumentHolder> { it.hasArgument(hint) }.singleOrNull()
+            ctx.currentComponent
+                .allChildren<Node> {
+                    when (it) {
+                        is Assign -> hint in it.lhs || hint in it.rhs
+                        is BinaryOperator -> it.lhs == hint || it.rhs == hint
+                        is Call -> hint in it.arguments
+                        is Cast -> it.expression == hint
+                        is CollectionComprehension ->
+                            it.statement == hint ||
+                                it.comprehensionExpressions.any { comp -> comp == hint }
+                        is Comprehension ->
+                            it.variable == hint || it.iterable == hint || it.predicate == hint
+                        is Conditional -> it.thenExpression == hint || it.elseExpression == hint
+                        is DoWhile -> it.condition == hint
+                        is IfElse -> it.condition == hint
+                        is InitializerList -> hint in it.initializers
+                        is KeyValue -> it.key == hint || it.value == hint
+                        is MemberAccess -> it.base == hint
+                        is Parameter -> it.default == hint
+                        is Return -> hint in it.returnValues
+                        is Subscription ->
+                            it.arrayExpression == hint || it.subscriptExpression == hint
+                        is Throw -> it.exception == hint || it.parentException == hint
+                        is UnaryOperator -> it.input == hint
+                        is While -> it.condition == hint
+                        is HasInitializer -> it.initializer == hint
+                        else -> false
+                    }
+                }
+                .singleOrNull()
         when (holder) {
             is UnaryOperator -> {
                 // If it's a boolean operator, the return type is probably a boolean
