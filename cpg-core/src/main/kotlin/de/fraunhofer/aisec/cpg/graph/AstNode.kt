@@ -124,7 +124,7 @@ abstract class AstNode : Node() {
                     "${name}_${astParent.functions.filter { it.name == name }.indexOfFirst { it === this }}"
                 }
                 is Literal<*> -> {
-                    "${value}_${astParent.literals.filter { it.value == value }.indexOfFirst { it === this }}"
+                    "${value}_${astParent.literals.filter { "${it.value}" == "${value}" }.indexOfFirst { it === this }}"
                 }
                 is Block -> {
                     // only indices
