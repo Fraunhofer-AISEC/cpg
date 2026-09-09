@@ -33,7 +33,7 @@ mavenPublishing {
 }
 
 dependencies {
-    implementation(projects.cpgAnalysis)
+    api(projects.cpgCore)
 
     // parsing YAML files
     implementation(libs.jacksonyml)
@@ -48,6 +48,8 @@ dependencies {
     findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
     findProject(":cpg-language-ini")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(projects.cpgAnalysis)
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
     // concept generator deps
     implementation("com.squareup:kotlinpoet:2.3.0")

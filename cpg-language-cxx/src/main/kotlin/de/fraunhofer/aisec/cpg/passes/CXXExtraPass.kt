@@ -237,8 +237,11 @@ class CXXExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             candidate.definition = declaration
 
             // Set the (visibility) modifiers from the declaration to the definition, since they are
-            // usually in the declaration
+            // usually in the declaration. This includes the canonical [Declaration.visibility], so
+            // that an out-of-line definition (e.g. `void A::foo() {}`) inherits the access control
+            // of its in-class declaration and the SymbolResolver treats both consistently.
             declaration.modifiers = candidate.modifiers
+            declaration.visibility = candidate.visibility
 
             // Do some additional magic with default parameters, which I do not really
             // understand

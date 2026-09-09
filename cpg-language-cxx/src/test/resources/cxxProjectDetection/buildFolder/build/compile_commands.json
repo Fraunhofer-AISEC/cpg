@@ -1,0 +1,8 @@
+[
+  {
+    "directory": "src/test/resources/cxxProjectDetection/buildFolder/src/libfoo",
+    "command": "gcc -c foo.c",
+    "file": "foo.c",
+    "output": "foo.o"
+  }
+]

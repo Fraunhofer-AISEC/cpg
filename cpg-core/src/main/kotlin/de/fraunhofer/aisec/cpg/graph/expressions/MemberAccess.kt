@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -44,13 +43,20 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * access of a member function (method) as part of the [MemberCall.callee] property of a
  * [MemberCall].
  */
-class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
+class MemberAccess : Reference(), HasOverloadedOperation, HasBase {
     @Relationship("BASE")
     var baseEdge =
         astEdgeOf<Expression>(
             ProblemExpression("could not parse base expression"),
             onChanged = { old, new ->
-                exchangeTypeObserverWithAccessPropagation(old, new)
+                if (new?.end is PointerDereference) {
+                    exchangeTypeObserverWithAccessPropagation(
+                        old,
+                        (new.end as? PointerDereference)?.inputEdge?.element,
+                    )
+                } else {
+                    exchangeTypeObserverWithAccessPropagation(old, new)
+                }
                 updateName()
             },
         )
@@ -71,23 +77,6 @@ class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBas
             .toString()
     }
 
-    override fun addArgument(expression: Expression) {
-        this.base = expression
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (old == base) {
-            base = new
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return base == expression
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is MemberAccess) return false
@@ -99,7 +88,7 @@ class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBas
     override fun typeChanged(newType: Type, src: HasType) {
         // We are basically only interested in type changes from our base to update the naming. We
         // need to ignore actual changes to the type because otherwise things go horribly wrong
-        if (src == base) {
+        if (src == ((base as? PointerDereference)?.input ?: base)) {
             updateName()
         } else {
             super.typeChanged(newType, src)
@@ -107,7 +96,8 @@ class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBas
     }
 
     private fun updateName() {
-        this.name = base.type.root.name.fqn(name.localName)
+        val baseType = (base as? PointerDereference)?.input?.type ?: base.type
+        this.name = baseType.root.name.fqn(name.localName)
     }
 
     override fun getStartingPrevEOG(): Collection<Node> {

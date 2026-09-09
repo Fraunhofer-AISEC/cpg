@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
@@ -292,8 +293,8 @@ class CXXDeclarationTest {
         assertNotNull(size)
 
         val p = result.refs["p"]
-        assertNotNull(p)
-        assertEquals(proxy.toType(), p.type)
+        assertIs<PointerDereference>(p)
+        assertEquals(proxy.toType(), p.input.type)
 
         val sizeRef = result.memberExpressions["size"]
         assertNotNull(sizeRef)
@@ -332,8 +333,8 @@ class CXXDeclarationTest {
         assertNotNull(funcFoo)
 
         val p = result.refs["p"]
-        assertNotNull(p)
-        assertEquals(proxy.toType(), p.type)
+        assertIs<PointerDereference>(p)
+        assertEquals(proxy.toType(), p.input.type)
 
         val funcFooRef = result.memberExpressions["foo"]
         assertNotNull(funcFooRef)

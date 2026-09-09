@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.codyze.console.ai.ChatService
-import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
+import de.fraunhofer.aisec.cpg.ai.ChatService
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.configureDefaultServer
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.runHttpMcpServerUsingKtorPlugin
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -47,13 +49,7 @@ private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.codyze.console.Ma
  * the [configureWebconsole] function.
  */
 fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
-    val chatService: ChatService? =
-        if (McpServerHelper.isEnabled) {
-            runBlocking { initChatService() }
-        } else {
-            log.info("MCP module not enabled, AI chat features will be disabled")
-            null
-        }
+    val chatService: ChatService? = runBlocking { initChatService() }
     embeddedServer(Netty, host = host, port = port) {
             configureWebconsole(this@startConsole, chatService)
         }
@@ -63,15 +59,29 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
 private suspend fun ConsoleService.initChatService(): ChatService? {
     val chatService = ChatService.createIfConfigExist() ?: return null
 
-    McpServerHelper.startMcpServer(8081)
+    return try {
+        log.info("Starting MCP server with streamable HTTP on port {}...", 8081)
+        runHttpMcpServerUsingKtorPlugin(port = 8081, server = configureDefaultServer())
 
-    val translationResult = getTranslationResult()?.analysisResult?.translationResult
-    if (translationResult != null) {
-        McpServerHelper.setGlobalAnalysisResult(translationResult)
+        val translationResult = getTranslationResult()?.analysisResult?.translationResult
+        if (translationResult != null) {
+            globalAnalysisResult = translationResult
+        }
+        chatService.connect()
+        log.info("MCP client connected")
+        chatService
+    } catch (e: Exception) {
+        // Starting the MCP server (e.g. port already in use) or connecting to it (e.g. connection
+        // refused, timeout) can fail for reasons outside our control. Since chatService is treated
+        // as optional everywhere else in this file, a failure here should disable AI chat, not
+        // crash the whole console.
+        log.error(
+            "Failed to start the MCP server or connect the chat client; AI chat will be disabled: {}",
+            e.message,
+            e,
+        )
+        null
     }
-    chatService.connect()
-    log.info("MCP client connected")
-    return chatService
 }
 
 /**
@@ -108,9 +118,9 @@ fun Application.configureWebconsole(
  */
 fun Application.configureRouting(service: ConsoleService, chatService: ChatService? = null) {
     routing {
-        apiRoutes(service)
-        // If the cpg-mcp module is enabled, chatService won't be null, so the endpoints will be
-        // reachable
+        apiRoutes(service, chatEnabled = chatService != null)
+        // Chat routes are only reachable when an LLM provider is configured (see
+        // ChatService.createIfConfigExist), so chatService won't be null.
         if (chatService != null) {
             chatRoutes(chatService)
         }

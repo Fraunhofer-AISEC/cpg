@@ -37,7 +37,16 @@ import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.passes.configuration.*
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
+import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.function.Consumer
 import kotlin.reflect.KClass
@@ -84,6 +93,7 @@ abstract class TranslationUnitPass(
 abstract class EOGStarterPass(
     ctx: TranslationContext,
     sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
+    val orderDependencies: Boolean = false,
 ) : Pass<Node>(ctx, sort)
 
 open class PassConfiguration
@@ -115,9 +125,9 @@ object LeastImportComponentSorter : Sorter<Component>() {
  */
 object LeastImportTranslationUnitSorter : Sorter<TranslationUnit>() {
     override fun invoke(result: TranslationResult): List<TranslationUnit> =
-        LeastImportComponentSorter.invoke(result)
-            .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
-            .toList()
+        LeastImportComponentSorter.invoke(result).flatMap {
+            (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence()
+        }
 }
 
 /**
@@ -127,9 +137,7 @@ object LeastImportTranslationUnitSorter : Sorter<TranslationUnit>() {
  */
 object EOGStarterLeastTUImportSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
-        LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap { it.allUniqueEOGStartersOrSingles }
-            .toList()
+        LeastImportTranslationUnitSorter.invoke(result).flatMap { it.allUniqueEOGStartersOrSingles }
 }
 
 /**
@@ -141,15 +149,13 @@ object EOGStarterLeastTUImportSorter : Sorter<Node>() {
  */
 object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
-        LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap {
-                val allUniqueStarters = it.allUniqueEOGStartersOrSingles
-                val result = mutableListOf<Node>()
-                result.addAll(allUniqueStarters.filter { it !is CatchClause })
-                result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
-                result
-            }
-            .toList()
+        LeastImportTranslationUnitSorter.invoke(result).flatMap {
+            val allUniqueStarters = it.allUniqueEOGStartersOrSingles
+            val result = mutableListOf<Node>()
+            result.addAll(allUniqueStarters.filter { it !is CatchClause })
+            result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
+            result
+        }
 }
 
 /**
@@ -305,6 +311,7 @@ fun executePassesSequentially(
     ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Set<LanguageFrontend<*, *>>,
+    callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     // Execute all passes in sequence. First convert the list of passes to a queue
     val queue = ArrayDeque<KClass<out Pass<out Node>>>()
@@ -329,7 +336,7 @@ fun executePassesSequentially(
         }
 
         // Execute it
-        executePass(pass, ctx, result, executedFrontends)
+        executePass(pass, ctx, result, executedFrontends, callbacks)
 
         // Increment executions
         executions[pass] = numExec + 1
@@ -368,6 +375,7 @@ fun executePass(
     ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Collection<LanguageFrontend<*, *>>,
+    callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     val bench = Benchmark(cls.java, "Executing Pass", false, result)
 
@@ -386,14 +394,16 @@ fun executePass(
                 (prototype as TranslationResultPass)::class,
                 ctx,
                 prototype.sort(result),
-                executedFrontends,
+                result,
+                callbacks,
             )
         is ComponentPass ->
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
                 prototype.sort(result),
-                executedFrontends,
+                result,
+                callbacks,
             )
         is TranslationUnitPass ->
             consumeTargets(
@@ -401,14 +411,20 @@ fun executePass(
                 ctx,
                 // Execute them in the "sorted" order (if available)
                 prototype.sort(result),
-                executedFrontends,
+                result,
+                callbacks,
             )
         is EOGStarterPass -> {
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                prototype.sort(result),
-                executedFrontends,
+                if (prototype.orderDependencies) {
+                    orderEOGStartersBasedOnDependencies(prototype.sort(result))
+                } else {
+                    prototype.sort(result)
+                },
+                result,
+                callbacks,
             )
         }
     }
@@ -427,9 +443,21 @@ inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     targets: Collection<T>,
-    executedFrontends: Collection<LanguageFrontend<*, *>>,
+    result: TranslationResult,
+    callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     targets.forEach { consumeTarget(cls, ctx, it) }
+    callbacks?.forEach { callback ->
+        runCatching { callback.afterPass(cls, ctx, result, targets) }
+            .onFailure {
+                log.warn(
+                    "Progress callback {} failed after pass {}",
+                    callback::class.simpleName ?: callback.javaClass.simpleName,
+                    cls.simpleName,
+                    it,
+                )
+            }
+    }
 }
 
 /**
@@ -496,26 +524,32 @@ val KClass<out Pass<*>>.isLatePass: Boolean
 
 val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<DependsOn>()
-            .filter { it.softDependency }
-            .map { it.value }
-            .toSet()
+        return this.findAnnotations<DependsOn>().mapFilteredTo(
+            mutableSetOf(),
+            { it.softDependency },
+        ) {
+            it.value
+        }
     }
 
 val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<DependsOn>()
-            .filter { !it.softDependency }
-            .map { it.value }
-            .toSet()
+        return this.findAnnotations<DependsOn>().mapFilteredTo(
+            mutableSetOf(),
+            { !it.softDependency },
+        ) {
+            it.value
+        }
     }
 
 val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<ExecuteBefore>()
-            .filter { it.softDependency }
-            .map { it.other }
-            .toSet()
+        return this.findAnnotations<ExecuteBefore>().mapFilteredTo(
+            mutableSetOf(),
+            { it.softDependency },
+        ) {
+            it.other
+        }
     }
 
 val KClass<out Pass<*>>.briefDescription: String
@@ -525,10 +559,12 @@ val KClass<out Pass<*>>.briefDescription: String
 
 val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<ExecuteBefore>()
-            .filter { !it.softDependency }
-            .map { it.other }
-            .toSet()
+        return this.findAnnotations<ExecuteBefore>().mapFilteredTo(
+            mutableSetOf(),
+            { !it.softDependency },
+        ) {
+            it.other
+        }
     }
 
 /**

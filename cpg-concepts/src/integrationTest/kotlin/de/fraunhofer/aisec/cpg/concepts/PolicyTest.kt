@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.returns
+import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.each
@@ -106,9 +107,12 @@ class PolicyTest {
                                     val thenReturns = node.thenStatement.returns
                                     val protectedAsset =
                                         thenReturns
-                                            .mapNotNull { it.returnValue }
-                                            .flatMap {
-                                                it.getOverlaysByPrevDFG<ProtectedAsset>(state)
+                                            .flatMapNotNull {
+                                                it.returnValue?.getOverlaysByPrevDFG<
+                                                    ProtectedAsset
+                                                >(
+                                                    state
+                                                )
                                             }
                                             .single()
                                     if (context != null && principal != null) {

@@ -57,12 +57,14 @@ class NamespaceScope(astNode: Namespace) : NameScope(astNode) {
 
     context(provider: ContextProvider)
     @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-    override fun addSymbol(symbol: Symbol, declaration: Declaration) {
-        super.addSymbol(symbol, declaration)
+    override fun addSymbol(symbol: Symbol, declaration: Declaration): Declaration {
+        val canonical = super.addSymbol(symbol, declaration)
 
         // Update imported symbols of dependent scopes
         for (edge in importedByEdges) {
             edge.declaration?.let { provider.ctx.scopeManager.updateImportedSymbols(it) }
         }
+
+        return canonical
     }
 }

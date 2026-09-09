@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
@@ -42,12 +44,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a C++ union/struct/class or Java class */
 open class Record :
-    Declaration(),
-    DeclarationHolder,
-    StatementHolder,
-    EOGStarterHolder,
-    DeclaresType,
-    HasSecondaryTypeEdge {
+    Declaration(), DeclarationHolder, EOGStarterHolder, DeclaresType, HasSecondaryTypeEdge {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -91,14 +88,32 @@ open class Record :
     /** Virtual property to directly access the nodes in [recordEdges]. */
     var records by unwrapping(Record::recordEdges)
 
+    /** Lazy backing field for [templateEdges]. */
+    private var _templateEdges: AstEdges<Template, AstEdge<Template>>? = null
+
+    /**
+     * The [Template]s declared in this record.
+     *
+     * The backing container is allocated lazily on first access: templates are rare, and
+     * [astEdgesOf] eagerly allocates a backing array. The container is not part of
+     * [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
-    var templateEdges = astEdgesOf<Template>()
-    var templates by unwrapping(Record::templateEdges)
+    var templateEdges: AstEdges<Template, AstEdge<Template>>
+        get() = _templateEdges ?: astEdgesOf<Template>().also { _templateEdges = it }
+        set(value) {
+            _templateEdges = value
+        }
+
+    /** Virtual property for accessing [templateEdges] as plain nodes. */
+    @DoNotPersist
+    val templates: MutableList<Template>
+        get() = templateEdges.unwrap()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Expression>()
-    override var statements by unwrapping(Record::statementEdges)
+    var statementEdges = astEdgesOf<Expression>()
+    var statements by unwrapping(Record::statementEdges)
 
     @DoNotPersist var superClasses: MutableList<Type> = ArrayList()
 

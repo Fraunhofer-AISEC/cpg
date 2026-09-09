@@ -27,10 +27,12 @@ package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -42,11 +44,18 @@ class SizeEvaluator : ValueEvaluator() {
     override val log: Logger
         get() = LoggerFactory.getLogger(SizeEvaluator::class.java)
 
-    override fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node is String) {
             return node.length
         }
-        return evaluateInternal(node as? Node, 0)
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) { evaluateInternal(node as? Node, 0) }
+        else evaluateInternal(node as? Node, 0)
     }
 
     override fun evaluateInternal(node: Node?, depth: Int): Any? {
@@ -65,6 +74,7 @@ class SizeEvaluator : ValueEvaluator() {
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> if (node.value is String) (node.value as String).length else node.value
             is Subscription -> evaluate(node.arrayExpression)
+            is BinaryOperator -> ValueEvaluator().evaluate(node)
             else -> cannotEvaluate(node, this)
         }
     }

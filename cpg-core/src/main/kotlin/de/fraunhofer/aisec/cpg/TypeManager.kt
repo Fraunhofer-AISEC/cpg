@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.flatMapFiltered
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
@@ -237,19 +238,19 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 
     // Recursively call ourselves on our super types.
     types +=
-        superTypes
-            .filter {
-                if (it == this) {
-                    log.warn(
-                        "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
-                        this,
-                    )
-                    false
-                } else {
-                    true
-                }
+        superTypes.flatMapFiltered({
+            if (it == this) {
+                log.warn(
+                    "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                    this,
+                )
+                false
+            } else {
+                true
             }
-            .flatMap { it.getAncestors(depth + 1) }
+        }) {
+            it.getAncestors(depth + 1)
+        }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)
@@ -286,7 +287,7 @@ val Collection<Type>.commonType: Type?
 
         // Make sure, we only compare types of the same "kind" of type (e.g. ObjectType vs.
         // NumericType)
-        val sameKind = this.map { it::class.simpleName }.toSet().size == 1
+        val sameKind = this.mapTo(mutableSetOf()) { it::class.simpleName }.size == 1
         if (!sameKind) {
             return null
         }
@@ -295,7 +296,7 @@ val Collection<Type>.commonType: Type?
         // (which contains the pointer origins), because otherwise we need to re-create the
         // equivalent wrap state at the end. Make sure we only have one wrap state before we
         // proceed.
-        val operations = this.map { it.typeOperations }.toSet()
+        val operations = this.mapTo(mutableSetOf()) { it.typeOperations }
         val typeOp = operations.singleOrNull() ?: return null
 
         // Build all ancestors out of the root types. This way we compare the most inner type,

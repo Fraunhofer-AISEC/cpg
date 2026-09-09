@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasModifiers
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -56,6 +57,18 @@ abstract class Declaration : AstNode(), HasModifiers {
     var declaringScope: Scope? = null
 
     override var modifiers: Set<String> = setOf()
+
+    /**
+     * The canonical, language-independent [Visibility] of this declaration. While [modifiers] keeps
+     * the raw, language-specific spelling (e.g. the strings `public` or `static`), this exposes the
+     * *interpreted* visibility that passes such as the
+     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] can reason about without knowing any
+     * language's concrete keywords. A language frontend maps the relevant [modifiers] onto this
+     * value (see [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]). The default
+     * [Visibility.UNKNOWN] must be treated as "no restriction", so languages that do not model
+     * visibility are unaffected.
+     */
+    var visibility: Visibility = Visibility.UNKNOWN
 
     override fun getExitNextEOG(): Collection<Node> {
         return setOf()

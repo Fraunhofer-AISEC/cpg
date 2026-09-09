@@ -70,10 +70,9 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleThrow(throwStmt: JThrowStmt): Throw {
-        val expr = newThrow(rawNode = throwStmt)
-        expr.exception = frontend.expressionHandler.handle(throwStmt.op)
-
-        return expr
+        return newThrow(rawNode = throwStmt) { expr ->
+            expr.exception = frontend.expressionHandler.handle(throwStmt.op)
+        }
     }
 
     private fun handleBody(body: Body): Block {
@@ -81,10 +80,15 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         val outerBlock = newBlock(rawNode = body)
 
         val printer = NormalStmtPrinter()
-        printer.initializeSootMethod(body.stmtGraph)
+        printer.initializeSootMethod(body.controlFlowGraph)
 
         frontend.printer = printer
         frontend.body = body
+        // Reset the "current statement" tracker. It is used by JVMLanguageFrontend.locationOf() to
+        // give a position to values that do not carry one themselves (e.g. locals). Local
+        // declarations below are intentionally translated while this is null: a Jimple local has no
+        // dedicated declaration site in the source, so its declaration statement gets no location.
+        frontend.currentStmt = null
 
         // Parse locals, these are always at the beginning of the function
         for (local in body.locals) {
@@ -95,56 +99,64 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             val stmt = newDeclarationStatement(rawNode = local)
             frontend.scopeManager.addDeclaration(decl)
             stmt.declarations += decl
-            outerBlock += stmt
+            outerBlock.statements += stmt
         }
 
         // Parse statements and segment them into (sub)-blocks.
         var block = outerBlock
         for (sootStmt in body.stmts) {
+            // Remember which statement we are currently translating so that locationOf() can fall
+            // back to its position for values that do not carry their own (e.g. locals). All
+            // operands of a single Jimple statement share the same source line, so this is exactly
+            // the line we want to attribute to those values.
+            frontend.currentStmt = sootStmt
+
             val label = printer.labels[sootStmt]
             if (label != null) {
                 // If we have a label, we need to create a new label statement, that starts a new
                 // block
-                val stmt = newLabel()
                 block = newBlock()
-                stmt.label = label
-                stmt.subStatement = block
+                val stmt = newLabel { stmt ->
+                    stmt.label = label
+                    stmt.subStatement = block
+                }
 
                 // We need to inform our processing system, since we do it outside of a handler, so
                 // the created goto statements will be informed about our new label
                 frontend.process(Any(), stmt)
 
                 // Always add it to the outer block
-                outerBlock += stmt
+                outerBlock.statements += stmt
             }
 
             // Parse the statement
             val stmt = handle(sootStmt)
             if (stmt != null) {
-                block += stmt
+                block.statements += stmt
             }
         }
+
+        // Clear the tracker so it does not leak into declarations of following methods/classes.
+        frontend.currentStmt = null
 
         // Always return the outer block, since it comprises all the other sub-blocks.
         return outerBlock
     }
 
     private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): Assign {
-        val assign = newAssign("=", rawNode = defStmt)
-        assign.lhs =
-            listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
-        assign.rhs =
-            listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp)).toMutableList()
-
-        return assign
+        return newAssign("=", rawNode = defStmt) { assign ->
+            assign.lhs =
+                listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
+            assign.rhs =
+                listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp)).toMutableList()
+        }
     }
 
     private fun handleIfStmt(ifStmt: JIfStmt): IfElse {
-        val stmt = newIfElse(rawNode = ifStmt)
-        stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
-        stmt.thenStatement = handleBranchingStmt(ifStmt)
-
-        return stmt
+        return newIfElse(rawNode = ifStmt) { stmt ->
+            stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
+            stmt.thenStatement = handleBranchingStmt(ifStmt)
+        }
     }
 
     private fun handleGotoStmt(gotoStmt: JGotoStmt): Goto {
@@ -152,25 +164,23 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleBranchingStmt(branchingStmt: BranchingStmt): Goto {
-        val stmt = newGoto(rawNode = branchingStmt)
+        return newGoto(rawNode = branchingStmt) { stmt ->
+            frontend.body?.let {
+                val target = branchingStmt.getTargetStmts(it).firstOrNull()
+                val label = frontend.printer?.labels?.get(target)
+                if (label != null) {
+                    stmt.labelName = label
+                }
 
-        frontend.body?.let {
-            val target = branchingStmt.getTargetStmts(it).firstOrNull()
-            val label = frontend.printer?.labels?.get(target)
-            if (label != null) {
-                stmt.labelName = label
-            }
-
-            // Register a predicate listener that informs us as soon as new label statement that
-            // matches our label name is created.
-            frontend.registerPredicateListener({ _, to ->
-                (to is Label && to.label == stmt.labelName)
-            }) { _, to ->
-                stmt.targetLabel = to as Label
+                // Register a predicate listener that informs us as soon as new label statement
+                // that matches our label name is created.
+                frontend.registerPredicateListener({ _, to ->
+                    (to is Label && to.label == stmt.labelName)
+                }) { _, to ->
+                    stmt.targetLabel = to as Label
+                }
             }
         }
-
-        return stmt
     }
 
     private fun handleInvokeStmt(invokeStmt: JInvokeStmt) =
@@ -179,10 +189,9 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         }
 
     private fun handleReturnStmt(returnStmt: JReturnStmt): Return {
-        val stmt = newReturn(rawNode = returnStmt)
-        stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
-
-        return stmt
+        return newReturn(rawNode = returnStmt) { stmt ->
+            stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
+        }
     }
 
     private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) = newReturn(rawNode = returnStmt)

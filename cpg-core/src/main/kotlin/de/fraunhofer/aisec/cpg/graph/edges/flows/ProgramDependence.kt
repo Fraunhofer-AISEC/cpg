@@ -86,7 +86,12 @@ open class ProgramDependence(
     var dependence: DependenceType,
 ) : Edge<Node>(start, end) {
 
-    override var labels = setOf("PDG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [ProgramDependence] edges (see [Edge.labels]). */
+        val LABELS = setOf("PDG")
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

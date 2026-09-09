@@ -27,12 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -55,7 +57,7 @@ import org.slf4j.LoggerFactory
  * from the (first) rhs to the [Assign] itself.
  */
 class Assign :
-    Expression(false), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
+    Expression(false), AssignmentHolder, HasType.TypeObserver, HasOperatorCode, DeclarationHolder {
 
     override var operatorCode: String = "="
 
@@ -68,9 +70,44 @@ class Assign :
                 var base = (end as? MemberAccess)?.base as? MemberAccess
                 while (base != null) {
                     base.access = AccessValues.READWRITE
+                    // TODO think about it: base.dfgHandlerHint = true
                     base = base.base as? MemberAccess
                 }
 
+                if (isSimpleAssignment) {
+                    // For SubscriptExpressions, the arrayExpression is not written to, so we ignore
+                    // it
+                    if (end !is Subscription) {
+                        val unwrapped = end.unwrapReference()
+
+                        if (unwrapped is Reference) {
+                            unwrapped.let {
+                                it.access = AccessValues.WRITE
+                                it.dfgHandlerHint = true
+                            }
+                        }
+                    }
+                } else {
+                    val unwrapped = end.unwrapReference()
+                    if (unwrapped is Reference) {
+                        unwrapped.let {
+                            it.access = AccessValues.READWRITE
+                            it.dfgHandlerHint = true
+                        }
+                    }
+
+                    if (!isCompoundAssignment) {
+                        // If this is neither a simple nor a compound assignment, probably something
+                        // went wrong, we still model this as a READWRITE, but we indicate a warning
+                        // to
+                        // the user
+                        Util.warnWithFileLocation(
+                            this,
+                            log,
+                            "Assignment is neither a simple nor a compound assignment. This is suspicious.",
+                        )
+                    }
+                }
                 end.access =
                     if (isSimpleAssignment) {
                         AccessValues.WRITE
@@ -127,6 +164,12 @@ class Assign :
      * [declarations].
      */
     override var declarations by unwrapping(Assign::declarationEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(declarationEdges, declaration)
+        }
+    }
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
     fun findValue(lhsExpression: HasType): Expression? {
@@ -220,30 +263,6 @@ class Assign :
 
         // Propagate any assigned types from the source to the target
         findTargets(src).forEach { it.addAssignedTypes(assignedTypes) }
-    }
-
-    override fun addArgument(expression: Expression) {
-        if (lhs.isEmpty()) {
-            lhs = mutableListOf(expression)
-        } else {
-            rhs = mutableListOf(expression)
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return if (lhs.singleOrNull() == old) {
-            lhs = mutableListOf(new)
-            true
-        } else if (rhs.singleOrNull() == old) {
-            rhs = mutableListOf(new)
-            true
-        } else {
-            false
-        }
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in lhs || expression in rhs
     }
 
     override fun getStartingPrevEOG(): Collection<Node> {

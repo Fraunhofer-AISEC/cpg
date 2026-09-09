@@ -58,8 +58,10 @@ class StronglyConnectedComponentTest : BaseTest() {
             // All 3 Fors should have one edge with an SCC of priority respective to their
             // level ( +1 b/c we start counting at 1), and one without or with different SCC
             // (exiting the loop)
-            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == (level + 1) }.size)
-            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc != (level + 1) }.size)
+            val condition = forStmt.condition
+            assertNotNull(condition)
+            assertEquals(1, condition.nextEOGEdges.filter { it.scc == (level + 1) }.size)
+            assertEquals(1, condition.nextEOGEdges.filter { it.scc != (level + 1) }.size)
 
             // The respective merge points are the conditions. Those should have one incoming edge
             // with SCC-Label, and one without/different SCC-Label
@@ -69,7 +71,7 @@ class StronglyConnectedComponentTest : BaseTest() {
             assertEquals(1, mergeNode.prevEOGEdges.filter { it.scc != (level + 1) }.size)
 
             // The same applies on BB-Level
-            val forLoopBlock = forStmt.basicBlock.singleOrNull()
+            val forLoopBlock = condition.basicBlock.singleOrNull()
             assertNotNull(forLoopBlock)
             // The forLoop BB has 2 next Edges. On into the loop (with SCC), and one to the outside
             // without or with different SCC

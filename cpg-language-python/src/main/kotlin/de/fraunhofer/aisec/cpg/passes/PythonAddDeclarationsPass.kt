@@ -156,6 +156,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) :
                 }
             }
 
+        // Let the language turn the declaration's "modifiers" into semantics. For Python this
+        // projects the PEP 8 naming convention onto the visibility of a record member. A field is
+        // always a record member, but the current scope is not necessarily the record scope: for
+        // instance attributes (`self.x`) we are inside a method here. We therefore hand over the
+        // record scope the field belongs to.
+        (decl as? Field)?.let { field ->
+            language.applyModifiers(field, scopeManager.firstScopeIsInstanceOrNull<RecordScope>())
+        }
+
         // If we didn't create any declaration up to this point and are still here, we need to
         // create a (local) variable. We need to take scope modifications into account.
         if (decl == null) {

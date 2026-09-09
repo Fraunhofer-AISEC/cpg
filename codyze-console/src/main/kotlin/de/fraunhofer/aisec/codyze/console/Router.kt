@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.codyze.console.ai.ChatRequestJSON
-import de.fraunhofer.aisec.codyze.console.ai.ChatService
-import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
+import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
+import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -38,6 +37,7 @@ import io.ktor.server.routing.*
 import io.ktor.utils.io.ClosedWriteChannelException
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonObject
 
 /**
  * This function sets up the API routes for the web application. It defines the endpoints for
@@ -64,7 +64,7 @@ import kotlinx.coroutines.CancellationException
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
-fun Routing.apiRoutes(service: ConsoleService) {
+fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
     // The API routes are prefixed with /api
     route("/api") {
         // The endpoint to analyze a project
@@ -251,7 +251,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
         }
 
         // Feature flags endpoint
-        get("/features") { call.respond(mapOf("mcpEnabled" to McpServerHelper.isEnabled)) }
+        get("/features") { call.respond(mapOf("mcpEnabled" to chatEnabled)) }
 
         // The endpoint to get a QueryTree with its parent IDs for tree expansion
         get("/querytrees/{queryTreeId}/parents") {
@@ -267,6 +267,20 @@ fun Routing.apiRoutes(service: ConsoleService) {
                 call.respond(queryTreeWithParents)
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
+            }
+        }
+
+        // The endpoint to execute a Kotlin query script against the current TranslationResult
+        post("/execute-query") {
+            try {
+                val request = call.receive<ExecuteQueryRequestJSON>()
+                val result = service.executeQuery(request.scriptCode)
+                call.respond(mapOf("result" to result))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Failed to execute query: ${e.message}"),
+                )
             }
         }
     }
@@ -300,6 +314,8 @@ fun Route.chatRoutes(chatService: ChatService) {
             }
         }
 
+        get("/providers") { call.respond(chatService.listAvailableProviders()) }
+
         get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
 
         post("/mcp/prompts/{name}") {
@@ -308,6 +324,16 @@ fun Route.chatRoutes(chatService: ChatService) {
             val arguments = call.receiveNullable<Map<String, String>>() ?: emptyMap()
             call.respond(chatService.getPrompt(name, arguments))
         }
+
+        post("/mcp/tools/{toolName}") {
+            val toolName =
+                call.parameters["toolName"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val body = call.receive<JsonObject>()
+            val result = chatService.callTool(toolName, body)
+            call.respond(result)
+        }
+
+        get("/skills") { call.respond(chatService.getSkills()) }
     }
 }
 

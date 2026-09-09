@@ -11,7 +11,7 @@ Key modules:
 - **cpg-analysis** – Higher-level analyses built on top of cpg-core (dataflow, control flow, call graphs, etc.)
 - **cpg-language-\*** – Language frontends, one module per language (e.g., `cpg-language-go`, `cpg-language-python`)
 - **cpg-concepts** – Concept and operation definitions
-- **cpg-mcp** – MCP server exposing CPG analysis tools (dataflow, symbol analysis, concept application) to LLMs via streamable HTTP
+- **cpg-ai** – AI components for the CPG: an MCP server exposing CPG analysis tools (dataflow, symbol analysis, concept application) to LLMs via streamable HTTP, plus chat/skills integration
 - **codyze-console** – Web-based analysis UI with AI agent chat (see [Architecture](#codyze-console-architecture) below)
 
 ## Technology Stack
@@ -71,12 +71,12 @@ pnpm run format     # Format
 ./gradlew :codyze-console:compileKotlin --console=plain
 ```
 
-### MCP Server (`cpg-mcp`)
+### MCP Server (`cpg-ai`)
 
 ```bash
-./gradlew :cpg-mcp:installDist           # Build & install
-./gradlew :cpg-mcp:run                   # Run (stdio)
-./gradlew :cpg-mcp:run --args="--http 8080"  # Run with streamable HTTP on port 8080
+./gradlew :cpg-ai:installDist           # Build & install
+./gradlew :cpg-ai:run                   # Run (stdio)
+./gradlew :cpg-ai:run --args="--http 8080"  # Run with streamable HTTP on port 8080
 ```
 
 ## Code Conventions
@@ -94,32 +94,39 @@ codyze-console is a full-stack web application with a Ktor backend and a Svelte 
 
 | File / Package | Responsibility |
 |---|---|
-| `Main.kt` | Ktor/Netty entry point (port 8080), optionally starts MCP server on port 8081 |
+| `Main.kt` | Ktor/Netty entry point (port 8080), starts the MCP server on port 8081 |
 | `Router.kt` | REST API routes (`/api/analyze`, `/api/chat`, `/api/querytrees`, etc.) |
 | `ConsoleService.kt` | Core business logic: CPG analysis, QueryTree caching, concept management |
 | `Nodes.kt` | JSON serialization models and CPG node-to-JSON conversion |
-| `ai/ChatClient.kt` | MCP client + agentic tool-calling loop (connects to cpg-mcp via streamable HTTP) |
-| `ai/ChatService.kt` | Loads LLM config from HOCON, creates `ChatClient` with configured provider |
-| `ai/LlmClient.kt` | Provider-agnostic LLM interface (`sendPrompt` -> `List<ToolCall>`) |
-| `ai/OpenAiClient.kt` | OpenAI-compatible client (also works with Ollama, vLLM, MLX) |
-| `ai/GeminiClient.kt` | Google Gemini API client |
-| `ai/McpServerHelper.kt` | Reflection-based bridge to cpg-mcp; loads module dynamically so it remains an optional dependency |
-| `ai/ClientModels.kt` | Data classes for OpenAI/Gemini request/response formats |
+
+The AI chat/tool-calling implementation itself (`ChatService`, LLM clients, skills) lives in the `cpg-ai` module, not in `codyze-console`:
+
+| File / Package (in `cpg-ai`) | Responsibility |
+|---|---|
+| `ai/ChatService.kt` | Loads LLM config from HOCON, runs the agentic tool-calling loop, MCP client connection |
+| `ai/ChatModels.kt` | Data classes for chat/MCP request and response JSON |
+| `ai/clients/LlmClient.kt` | Provider-agnostic LLM interface (`sendPrompt` -> `List<ToolCall>`) |
+| `ai/clients/OpenAiClient.kt` | OpenAI-compatible client (also works with Ollama, vLLM, MLX) |
+| `ai/clients/GeminiClient.kt` | Google Gemini API client |
+| `ai/skills/SkillLoader.kt` | Discovers and parses skill definitions |
+| `ai/mcp/` | The MCP server itself (see below) |
 
 #### AI Agent Data Flow
 
 1. Frontend sends chat messages via `POST /api/chat` (SSE stream)
-2. `ChatClient` forwards to LLM with MCP tool definitions
-3. If LLM returns tool calls, `ChatClient` executes them against cpg-mcp via `mcp.callTool()`
+2. `ChatService` forwards to the LLM with MCP tool definitions
+3. If the LLM returns tool calls, `ChatService` executes them against the local MCP server via `mcp.callTool()`
 4. Tool results are streamed to the frontend and fed back to the LLM
-5. Loop repeats (max 8 iterations) until the LLM produces a text response
+5. Loop repeats (max 50 iterations) until the LLM produces a text response
 
 #### MCP Integration
 
-codyze-console acts as both **MCP server host** and **MCP client**:
-- It starts the cpg-mcp server on port 8081 (via reflection, so cpg-mcp is an optional dependency)
-- `ChatClient` connects to it as a client using `StreamableHttpClientTransport`
-- After analysis, the global `TranslationResult` is injected into the MCP server so tools can access the CPG
+codyze-console acts as both **MCP server host** and **MCP client**, entirely through the `cpg-ai` module, which it depends on directly (no reflection):
+- It starts the MCP server on port 8081 via `runHttpMcpServerUsingKtorPlugin`
+- `ChatService` connects to it as a client using `StreamableHttpClientTransport`
+- After analysis, the global `TranslationResult` is injected into the MCP server (`globalAnalysisResult` in `cpg.ai.mcp.mcpserver.tools`) so tools can access the CPG
+
+`cpg-ai` is optional at the `settings.gradle.kts` level (`enableAIModule` in `gradle.properties`, like the language frontends), but codyze-console requires it to compile - if the module is disabled, building codyze-console fails with a clear error rather than degrading gracefully.
 
 ### Frontend (`codyze-console/src/main/webapp/src/`)
 

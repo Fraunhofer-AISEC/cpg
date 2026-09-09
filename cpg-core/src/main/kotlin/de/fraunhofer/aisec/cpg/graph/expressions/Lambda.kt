@@ -26,20 +26,46 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 /**
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner
  * anonymous function to the user of a lambda function with an expression.
  */
-class Lambda : Expression(), HasType.TypeObserver {
+class Lambda : Expression(), HasType.TypeObserver, DeclarationHolder {
+
+    /**
+     * The local [ValueDeclaration]s (e.g. init-capture variables) declared by this lambda. These
+     * members were moved down from [Expression] because only a few expression types actually hold
+     * locals; see [DeclarationHolder].
+     */
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    @DoNotPersist var locals by unwrapping(Lambda::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 
     /**
      * If [areVariablesMutable] is false, only the (outer) variables in this list can be modified

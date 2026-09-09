@@ -48,6 +48,7 @@ class TestCommon {
                 "isStatic",
                 "location",
                 "name",
+                "visibility",
             ),
             properties.keys,
         )
@@ -70,6 +71,9 @@ class TestCommon {
                 "EOG",
                 "FIRST_BASIC_BLOCK",
                 "LANGUAGE",
+                "MEMORY_ADDRESS",
+                "MEMORY_VALUE",
+                "MEMORY_VALUE_USAGE",
                 "OVERLAY",
                 "OVERRIDES",
                 "PARAMETERS",

@@ -27,10 +27,11 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
@@ -38,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.*
@@ -81,9 +83,9 @@ class ControlFlowSensitiveDFGPassTest {
         with(s1) {
             // The DFG from the variable declaration of s1 should go to base of the member
             // expression s1.field1 of the first doSomething call (line 11) as well as the s1.field1
-            // in the assignment (line 13)
+            // in the assignment (line 13) and the base of the second doSomething call (line 15)
             val next = this.nextDFGEdges.sortedBy { it.end.location?.region?.startLine }
-            assertEquals(2, next.size)
+            assertEquals(3, next.size)
 
             val baseOfMemberRead11 = assertNotNull(next.firstOrNull()?.end)
             assertEquals(11, baseOfMemberRead11.location?.region?.startLine)
@@ -121,8 +123,10 @@ class ControlFlowSensitiveDFGPassTest {
                         .filter { it.granularity is FullDataflowGranularity }
                         .map(Dataflow::start),
                 )
-                // ... and only have one outgoing DFG edge to the "i" parameter of doSomething
-                assertEquals(mutableSetOf<Node>(i), me.nextDFG)
+                // ... and only have one outgoing Full DFG edge to the "i" parameter of doSomething
+                assertEquals(listOf<Node>(i), me.nextFullDFG)
+                // ... plus the shortFSEdge back to the call
+                assertEquals(listOf<Node>(calls[0]), me.nextFunctionSummaryDFG)
             }
 
             // Back to the second case (the member write).
@@ -161,7 +165,9 @@ class ControlFlowSensitiveDFGPassTest {
                 assertEquals(15, memberRead15.location?.region?.startLine)
 
                 // This finally flows to "i"
-                assertEquals(mutableSetOf<Node>(i), memberRead15.nextDFG)
+                assertEquals(listOf<Node>(i), memberRead15.nextFullDFG)
+                // And the shortFS directly to the CallExpression
+                assertEquals(calls[1], memberRead15.nextFunctionSummaryDFG.singleOrNull())
 
                 // We should also have a full flow between the member write and the member read.
                 // This is a FULL flow because both occasions are only referring to the field.
@@ -174,15 +180,28 @@ class ControlFlowSensitiveDFGPassTest {
             }
         }
 
-        // The DFG from the variable declaration of s2 should only go the s2.field1 of the
-        // assignment (line 14)
+        // The DFG from the variable declaration of s2 should go the base of s2.field1 of the
+        // assignment (line 14) and to the base of argument of the call doSomething (line 16)
         with(s2) {
             val next = this.nextDFGEdges.sortedBy { it.end.location?.region?.startLine }
-            val single = assertNotNull(next.singleOrNull()?.end)
-            assertEquals(14, single.location?.region?.startLine)
-            assertIs<Reference>(single)
-            val me = assertIs<MemberAccess>(single.astParent)
-            assertEquals(AccessValues.WRITE, me.access)
+            assertEquals(2, next.size)
+
+            val baseOfMemberWrite14 = assertNotNull(next.getOrNull(0)?.end)
+            assertEquals(14, baseOfMemberWrite14.location?.region?.startLine)
+            assertIs<Reference>(baseOfMemberWrite14)
+            assertIs<MemberAccess>(baseOfMemberWrite14.astParent)
+            assertEquals(AccessValues.READ, baseOfMemberWrite14.access)
+
+            val baseOfArg16 = assertNotNull(next.getOrNull(1)?.end)
+            assertEquals(16, baseOfArg16.location?.region?.startLine)
+            assertIs<Reference>(baseOfArg16)
+            assertIs<MemberAccess>(baseOfArg16.astParent)
+            assertEquals(AccessValues.READ, baseOfMemberWrite14.access)
+
+            assertEquals(
+                mutableSetOf<Node>(baseOfMemberWrite14, baseOfArg16),
+                next.mapTo(mutableSetOf()) { it.end },
+            )
 
             // The rest should be the same as s1, so we can probably skip the rest of the asserts
         }
@@ -217,11 +236,32 @@ class ControlFlowSensitiveDFGPassTest {
         val refO = main.refs("o")
         assertEquals(2, refO.size)
 
-        // There should be a full flow from each first individual ref and member expression (line
-        // 13) to the second one (line 15)
+        // There should be a full flow from the field to the argument (since this is the only one
+        // that is fully written) and partial flows between the middle MemberAccess and the second
+        // as well as for the ref
         assertFullEdgeBetween(meFields[0], meFields[1])
-        assertFullEdgeBetween(meIn[0], meIn[1])
-        assertFullEdgeBetween(refO[0], refO[1])
+        assertEquals(
+            meIn[1],
+            meIn[0]
+                .nextDFGEdges
+                .singleOrNull {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.toString() == "inner.field"
+                }
+                ?.end,
+        )
+        assertEquals(
+            refO[1],
+            refO[0]
+                .nextDFGEdges
+                .singleOrNull {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.toString() == "outer.in"
+                }
+                ?.end,
+        )
 
         // There should be a partial flow from the first '.field' which writes to the first '.in'
         assertPartialEdgeBetween(meFields[0], meIn[0], field)
@@ -292,27 +332,50 @@ class ControlFlowSensitiveDFGPassTest {
                     .build()
             )
             .build {
-                translationResult {
-                    translationUnit("forEach.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                forEachStmt {
-                                    declare { variable("loopVar", t("string")) }
-                                    call("magicFunction")
-                                    loopBody {
-                                        call("printf") {
-                                            literal("loop: \${}\n", t("string"))
-                                            ref("loopVar")
-                                        }
+                singleTranslationUnit("forEach.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("i", objectType("int"), holder = declStmt) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
                                 }
-                                call("printf") { literal("1\n", t("string")) }
 
-                                returnStmt { ref("i") }
+                                block.statements +=
+                                    newForEach(enterScope = true) { forEach ->
+                                        forEach.variable =
+                                            newDeclarationStatement { loopVarDeclStmt ->
+                                                newVariable(
+                                                    "loopVar",
+                                                    objectType("string"),
+                                                    holder = loopVarDeclStmt,
+                                                )
+                                            }
+                                        forEach.statement =
+                                            newBlock(enterScope = true) { loopBody ->
+                                                loopBody.statements +=
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "loop: \${}\n",
+                                                                objectType("string"),
+                                                            )
+                                                        it.arguments += newReference("loopVar")
+                                                    }
+                                            }
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("printf")) {
+                                        it.arguments += newLiteral("1\n", objectType("string"))
+                                    }
+
+                                block.statements += newReturn { it.returnValue = newReference("i") }
                             }
-                        }
                     }
                 }
             }

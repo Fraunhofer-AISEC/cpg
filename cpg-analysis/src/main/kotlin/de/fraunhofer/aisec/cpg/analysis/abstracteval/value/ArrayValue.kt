@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.Allocate
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
@@ -41,18 +42,29 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.query.value
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A [ValueEvaluator] which evaluates the size of arrays. It uses the [ArrayValue] class to track
  * the size of the collection.
  */
 class ArraySizeEvaluator : ValueEvaluator() {
-    override fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node !is Node) return cannotEvaluate(null, this)
 
-        return AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) {
+                AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
+            }
+        else AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
     }
 }
 
@@ -70,22 +82,33 @@ class ArrayValue : Value<LatticeInterval> {
     ): LatticeInterval {
         var size: LatticeInterval = LatticeInterval.BOTTOM
         var target: Node? = null
-        if (node is Variable && node.initializer != null && node.type is PointerType) {
-            size = getSize(node.initializer!!)
-            target = node
+        if (node is Variable && node.type is PointerType) {
+            node.initializer?.let { init ->
+                size = getSize(init)
+                target = node
+            }
         } else if (node is Assign && node.rhs.size == 1 && node.lhs.size == 1) {
             size = getSize(node.rhs.single())
-            target = node.lhs.single()
+            // Anchor on the underlying Variable rather than the LHS Reference so that branches
+            // writing to the same variable (e.g. `if (c) buf = malloc(16) else buf = malloc(64)`)
+            // share a single key in general state — without this, each branch pushes against its
+            // own Reference instance and the join doesn't merge them.
+            target = (node.lhs.single() as? Reference)?.refersTo as? Variable ?: node.lhs.single()
         }
         if (target != null) {
             lattice.pushToGeneralState(state, target, size)
             lattice.pushToDeclarationState(state, target, size)
-            lattice.pushToGeneralState(state, node, state.intervalOf(node))
             return size
         }
 
-        lattice.pushToGeneralState(state, node, state.intervalOf(node))
-        return state.intervalOf(node)
+        // Don't pollute general state with a TOP entry for nodes we have no info about — a later
+        // `pushToGeneralState` for the same node lubs against TOP and would clamp any refined
+        // value (e.g. an Assign's [16, 16]) right back to TOP.
+        val current = state.intervalOf(node)
+        if (current !is LatticeInterval.TOP) {
+            lattice.pushToGeneralState(state, node, current)
+        }
+        return current
     }
 
     private fun getSize(node: Node): LatticeInterval {
@@ -107,26 +130,38 @@ class ArrayValue : Value<LatticeInterval> {
                 // node.initializers.fold(0L) { acc, init -> acc + getSize(init) }
             }
             is ArrayConstruction -> {
-                if (node.initializer != null) {
-                    getSize(node.initializer!!)
+                val init = node.initializer
+                if (init != null) {
+                    getSize(init)
                 } else {
-                    val length =
-                        node.dimensions
-                            .map { (it.value.value as Number).toLong() }
-                            .reduce { acc, dimension -> acc * dimension }
-                    LatticeInterval.Bounded(length, length)
+                    // Each dimension must constant-evaluate to a Number; if any doesn't (or
+                    // there are no dimensions at all), we can't determine the size statically and
+                    // must return BOTTOM rather than crash on a ClassCastException / empty reduce.
+                    val lengths = node.dimensions.map { (it.value.value as? Number)?.toLong() }
+                    if (lengths.isEmpty() || lengths.any { it == null }) {
+                        LatticeInterval.BOTTOM
+                    } else {
+                        val length =
+                            lengths.filterNotNull().reduce { acc, dimension -> acc * dimension }
+                        LatticeInterval.Bounded(length, length)
+                    }
                 }
             }
             is Call -> {
-                if (node.name.localName == "malloc") {
-                    val length = (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()
-                    length?.let { LatticeInterval.Bounded(length, length) }
-                        ?: LatticeInterval.BOTTOM
+                // Read the allocation size in bytes from an attached [Allocate] concept overlay; a
+                // language-specific concept pass (e.g. CXXMemoryAllocationPass) is responsible
+                // for recognising allocator calls per language and populating this. Without a
+                // concept attached we can't tell whether the call is even an allocator.
+                val sizeExpr = node.overlays.filterIsInstance<Allocate>().firstOrNull()?.size
+                if (sizeExpr != null) {
+                    (sizeExpr.value.value as? Number)?.toLong()?.let {
+                        LatticeInterval.Bounded(it, it)
+                    } ?: LatticeInterval.BOTTOM
                 } else {
                     LatticeInterval.BOTTOM
                 }
             }
-            else -> TODO()
+            else -> LatticeInterval.BOTTOM
         }
     }
 }

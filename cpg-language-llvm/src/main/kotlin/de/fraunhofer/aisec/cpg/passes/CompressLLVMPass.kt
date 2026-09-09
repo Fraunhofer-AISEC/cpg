@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.filterIsInstanceAndFilterTo
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import java.util.*
@@ -48,7 +49,7 @@ class CompressLLVMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         val allGotos = flatAST.filterIsInstance<Goto>()
         // Get all Labels which are only referenced from a single Goto
         val singleEntryLabels =
-            flatAST.filterIsInstance<Label>().filter { l ->
+            flatAST.filterIsInstanceAndFilterTo<Label, _>(mutableListOf()) { l ->
                 allGotos.filter { g -> g.targetLabel == l }.size == 1
             }
 
@@ -176,7 +177,9 @@ class CompressLLVMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      */
     private fun fixThrowsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filterIsInstance<Throw>().filter { n ->
+            getAllChildrenRecursively(catch).filterIsInstanceAndFilterTo<Throw, _>(
+                mutableListOf()
+            ) { n ->
                 n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {

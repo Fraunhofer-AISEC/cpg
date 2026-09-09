@@ -1,3 +1,5 @@
+import de.undercouch.gradle.tasks.download.Download
+
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -23,7 +25,6 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.undercouch.gradle.tasks.download.Download
 
 plugins {
     id("cpg.frontend-conventions")
@@ -38,7 +39,7 @@ mavenPublishing {
 }
 
 dependencies {
-    implementation("net.java.dev.jna:jna:5.18.1")
+    implementation("net.java.dev.jna:jna:5.19.1")
     testImplementation(project(":cpg-analysis"))
 }
 
