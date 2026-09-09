@@ -265,7 +265,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param file The file this entry applies to. E.g. `file:/foo/bar/baz/concepts.yaml`.
      * @param region The region within the [file]. E.g. `1:1-2:2`.
      * @param type Optionally, the type of the node to match against. E.g.
-     *   `de.fraunhofer.aisec.cpg.graph.statements.expressions.Call`.
+     *   `de.fraunhofer.aisec.cpg.graph.expressions.Call`.
      */
     data class LocationEntry(val file: String, val region: String, val type: String?)
 

@@ -73,9 +73,11 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         for (enumDecl in enums) {
             val directSupertypeRecords =
-                enumDecl.superTypes.mapNotNull { (it as? ObjectType)?.recordDeclaration }.toSet()
+                enumDecl.superTypes.mapNotNullTo(mutableSetOf()) {
+                    (it as? ObjectType)?.recordDeclaration
+                }
             val allSupertypes =
-                directSupertypeRecords.map { findSupertypeRecords(it) }.flatten().toSet()
+                directSupertypeRecords.flatMapTo(mutableSetOf()) { findSupertypeRecords(it) }
             enumDecl.superTypeDeclarations = allSupertypes
         }
     }
@@ -97,14 +99,14 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun getAllMethodsFromSupertypes(supertypeRecords: Set<Record>): List<Method> {
-        return supertypeRecords.map { it.methods }.flatten()
+        return supertypeRecords.flatMap { it.methods }
     }
 
     protected fun findSupertypeRecords(recordDeclaration: Record): Set<Record> {
         val superTypeDeclarations =
-            recordDeclaration.superTypes
-                .mapNotNull { (it as? ObjectType)?.recordDeclaration }
-                .toSet()
+            recordDeclaration.superTypes.mapNotNullTo(mutableSetOf()) {
+                (it as? ObjectType)?.recordDeclaration
+            }
         recordDeclaration.superTypeDeclarations = superTypeDeclarations
 
         // This will make sure that the type is correctly registered with the type system and that

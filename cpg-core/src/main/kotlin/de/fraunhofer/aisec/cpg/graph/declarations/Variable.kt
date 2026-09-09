@@ -26,9 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
@@ -37,19 +40,39 @@ import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents the declaration of a local variable. */
 open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
 
+    /** Lazy backing field for [templateParameterEdges]. */
+    private var _templateParameterEdges: AstEdges<AstNode, AstEdge<AstNode>>? = null
+
     /**
      * We need a way to store the templateParameters that a [Variable] might have before the
      * [Construction] is created.
+     *
+     * The backing container is allocated lazily on first access: template parameters are rare, and
+     * [astEdgesOf] eagerly allocates a backing array. The container is not part of
+     * [equals]/[hashCode], so lazy-on-access is safe.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var templateParameterEdges = astEdgesOf<AstNode>()
-    var templateParameters by unwrapping(Variable::templateParameterEdges)
+    var templateParameterEdges: AstEdges<AstNode, AstEdge<AstNode>>
+        get() =
+            _templateParameterEdges ?: astEdgesOf<AstNode>().also { _templateParameterEdges = it }
+        set(value) {
+            _templateParameterEdges = value
+        }
+
+    /** Virtual property for accessing [templateParameterEdges] as plain nodes. */
+    @DoNotPersist
+    var templateParameters: MutableList<AstNode>
+        get() = templateParameterEdges.unwrap()
+        set(value) {
+            templateParameterEdges.resetTo(value)
+        }
 
     /** Determines if this is a global variable. */
     val isGlobal: Boolean
@@ -74,6 +97,12 @@ open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 if (value is Reference) {
                     value.resolutionHelper = this
+                    // If we are dealing with Pointer(De)References, we also have to set the
+                    // resolutionHelper for the input
+                    val input =
+                        ((value as? PointerReference)?.input as? Reference)
+                            ?: ((value as? PointerDereference)?.input as? Reference)
+                    input?.let { it.resolutionHelper = this }
                 }
             }
         )

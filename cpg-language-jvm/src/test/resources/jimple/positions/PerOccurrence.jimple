@@ -1,0 +1,19 @@
+public class PerOccurrence extends java.lang.Object
+{
+    public void <init>()
+    {
+        PerOccurrence r0;
+        r0 := @this: PerOccurrence;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+        return;
+    }
+
+    public static int compute()
+    {
+        int $i0, $i1, $i2;
+        $i0 = 1;
+        $i1 = $i0;
+        $i2 = $i0 + $i0;
+        return $i2;
+    }
+}

@@ -32,6 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -304,6 +306,50 @@ interface HasBuiltins : LanguageTrait {
     /** Name of files that may contain the builtin functions of a language */
     val builtinsFileCandidates: Set<File>
 }
+
+/**
+ * A language trait that specifies that this language allows multiple textual declarations to refer
+ * to the same underlying object, and that [Scope.addSymbol] may therefore merge an incoming
+ * declaration into an already-registered one of the same kind and symbol (see [isRedeclaration]),
+ * instead of appending a duplicate. A common example is C's `extern` declarations and tentative
+ * definitions.
+ */
+interface HasRedeclarations : LanguageTrait {
+    /**
+     * Determines whether [incoming] is a redeclaration of [existing] that should be merged rather
+     * than registered as a separate declaration.
+     */
+    fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean
+
+    /**
+     * Merges state from [incoming] into [existing] when [isRedeclaration] returned `true`.
+     * [existing] remains the canonical node; [incoming] is discarded by the caller afterwards.
+     */
+    fun mergeRedeclaration(existing: Declaration, incoming: Declaration)
+}
+
+/**
+ * A language trait marking languages that *enforce* member access control, i.e. where a
+ * [Declaration.visibility] of [Visibility.PRIVATE] or [Visibility.PROTECTED] genuinely restricts
+ * *from where* a record member may be accessed (as C++, Java or TypeScript do with `public` /
+ * `protected` / `private`).
+ *
+ * This is deliberately distinct from merely *recording* a visibility: every [Declaration] carries a
+ * [Declaration.visibility], but only a language with this trait has the [SymbolResolver] act on it,
+ * dropping members that are inaccessible from the point of access while resolving a member by name
+ * (see [SymbolResolver.resolveMemberByName]). A language may therefore record visibility *without*
+ * declaring this trait: consider a language that maps a naming convention such as Python's `__x` to
+ * [Visibility.PRIVATE] purely for documentation, without actually forbidding access — enforcing
+ * that would wrongly hide reachable members, so such a frontend records the visibility but omits
+ * the trait.
+ *
+ * The trait only gates *record-relative* access control ([Visibility.PRIVATE] /
+ * [Visibility.PROTECTED]). Linkage- and module-level visibility ([Visibility.INTERNAL],
+ * [Visibility.PACKAGE]) is enforced by a separate mechanism in the [SymbolResolver] independently
+ * of this trait, so a language whose only restriction is package/linkage visibility (e.g. Go's
+ * unexported identifiers) does not declare it.
+ */
+interface HasVisibilityModifiers : LanguageTrait
 
 /**
  * Creates a [Pair] of class and operator code used in

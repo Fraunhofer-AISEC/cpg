@@ -51,7 +51,12 @@ class Usage(
         return result
     }
 
-    override var labels = setOf("USAGE")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [Usage] edges (see [Edge.labels]). */
+        val LABELS = setOf("USAGE")
+    }
 }
 
 /** A container for [Usage] edges. [NodeType] is necessary for type safety. */

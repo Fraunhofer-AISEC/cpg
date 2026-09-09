@@ -20,11 +20,17 @@
 
     <div class="space-y-4">
       <div class="rounded-lg border border-amber-200 bg-white p-4">
-        <h3 class="mb-2 text-sm font-semibold text-gray-800">LLM Provider</h3>
-        <p class="mb-2 text-xs text-gray-500">Choose one of the supported providers and set the model and base URL:</p>
+        <h3 class="mb-2 text-sm font-semibold text-gray-800">LLM Providers</h3>
+        <p class="mb-2 text-xs text-gray-500">
+          Configure one or more clients. Each entry sets a
+          <span class="font-mono">baseUrl</span> and, if the provider needs authentication, an
+          <span class="font-mono">apiKeyEnv</span> pointing at the env variable that holds the key. The model itself
+          can be selected in the chat UI.
+        </p>
         <ul class="space-y-1 text-xs text-gray-600">
-          <li><span class="font-mono font-medium">ollama, vLLM, or mlx</span> — OpenAI-compatible endpoints, e.g. <span class="font-mono">http://localhost:11434</span></li>
-          <li><span class="font-mono font-medium">gemini</span> — requires <span class="font-mono">GEMINI_API_KEY</span> env variable</li>
+          <li><span class="font-mono font-medium">vLLM, mlx</span> — local OpenAI-compatible endpoints, e.g. <span class="font-mono">http://localhost:8000</span> (no API key needed)</li>
+          <li><span class="font-mono font-medium">openai</span> — requires API key, e.g. <span class="font-mono">apiKeyEnv = "CODYZE_OPENAI_API_KEY"</span></li>
+          <li><span class="font-mono font-medium">gemini</span> — requires API key, e.g. <span class="font-mono">apiKeyEnv = "CODYZE_GEMINI_API_KEY"</span></li>
         </ul>
       </div>
 

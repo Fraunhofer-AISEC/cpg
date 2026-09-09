@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
@@ -90,7 +91,7 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
         // Loop through all groups and options and create ProvideConfigurationGroup and
         // ProvideConfigurationOption nodes
-        source.groups.mapNotNull { handleConfigurationGroup(conf, it) }.flatten()
+        source.groups.flatMapNotNull { handleConfigurationGroup(conf, it) }
 
         newProvideConfiguration(
                 underlyingNode = tu,

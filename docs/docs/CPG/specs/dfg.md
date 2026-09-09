@@ -5,6 +5,16 @@ of incoming data flows (`prevDFG`) and outgoing data flows (`nextDFG`). In the
 following, we summarize how different types of nodes construct the respective
 data flows.
 
+## Levels of Analysis
+There are three different levels of the analysis which correspond to which passes are enabled.
+
+The `DFGPass` constructs flow-insensitive, field-insensitive DFG edges. Interprocedural edges (i.e., those between arguments and parameters, and return values and wherever they flow to), do get a label specifying the call, so that subsequent analyses can be context-sensitive. If neither of the other two passes is registered, the `DFGPass` also draws these edges itself, as an over-approximation, so that the resulting graph still has meaningful (if less precise) `Reference` and interprocedural edges. If one of the subsequent passes is registered but fails, the current implementation won't recover any missing edges.
+
+The `ControlFlowSensitiveDFGPass`, as the name suggests, constructs flow-sensitive DFG edges for `Reference`s and, for calls to functions with an existing function summary, interprocedural edges labelled with the calling context. It is meant to be run instead of the `DFGPass`'s fallback described above, not in addition to it.
+
+The `PointsToPass` is more precise and takes into account a certain level of pointer arithmetic which is ignored by the other two passes. It computes the same flow-sensitive `Reference` and interprocedural edges as the `ControlFlowSensitiveDFGPass` (the two are meant to be run exclusively of one another), and additionally handles calls to functions without any function summary via a conservative fallback. This yields the most precise results but is also the slowest pass.
+
+See [DFG Passes](../impl/dfg-passes.md) for a detailed, per-feature breakdown of which pass is responsible for what.
 
 ## Call
 
@@ -596,94 +606,6 @@ Scheme:
     statement -.- localVars[variables]
     localVars -. "last" .-> variable
     iterable -- DFG --> variable
-    variable -- DFG --> node
-```
-
-### Do
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([Do]) -.- condition(condition)
-    condition -- DFG --> node
-```
-
-### While
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-* `conditionDeclaration: Statement`: A declaration containing the condition in
-  the initializer, used instead of the condition.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([While]) -.- condition(condition)
-    node -.- conditionDeclaration(conditionDeclaration)
-    condition -- DFG --> node
-    conditionDeclaration  -- DFG --> node
-```
-
-### For
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-* `conditionDeclaration: Statement`: A declaration containing the condition in
-  the initializer, used instead of the condition.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([For]) -.- condition(condition)
-    node -.- conditionDeclaration(conditionDeclaration)
-    condition -- DFG --> node
-    conditionDeclaration  -- DFG --> node
-```
-
-
-### If
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-* `conditionDeclaration: Statement`: A declaration with an initializer
-  containing the condition which can be used instead of the condition.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([If]) -.- condition(condition)
-    node -.- conditionDeclaration(conditionDeclaration)
-    condition -- DFG --> node
-    conditionDeclaration  -- DFG --> node
-```
-
-
-### Switch
-Interesting fields:
-
-* `selector: Statement`: The expression that is evaluated before making the
-  branching decision.
-* `selectorDeclaration: Statement`: A declaration containing the selector in the
-  initializer, used instead of the selector.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([Switch]) -.- selector(selector)
-    node -.- selectorDeclaration(selectorDeclaration)
-    selector -- DFG --> node
-    selectorDeclaration  -- DFG --> node
 ```
 
 ## FunctionDeclaration

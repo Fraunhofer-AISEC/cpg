@@ -265,7 +265,7 @@ class InitializerTypePropagation(private var decl: HasType, private var tupleIdx
         // with dynamic types because we rely on the assigned types and the dynamic type always
         // stays the "dynamic type".
         val assignedTypes =
-            assignedTypes.map {
+            assignedTypes.mapTo(mutableSetOf()) {
                 if (it is TupleType && tupleIdx != -1) {
                     it.types.getOrElse(tupleIdx) { decl.unknownType() }
                 } else {
@@ -273,6 +273,6 @@ class InitializerTypePropagation(private var decl: HasType, private var tupleIdx
                 }
             }
 
-        decl.addAssignedTypes(assignedTypes.toSet())
+        decl.addAssignedTypes(assignedTypes)
     }
 }

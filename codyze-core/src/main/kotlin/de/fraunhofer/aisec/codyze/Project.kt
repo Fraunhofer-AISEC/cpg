@@ -36,15 +36,18 @@ import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
+import kotlin.io.path.listDirectoryEntries
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -238,7 +241,9 @@ class AnalysisProject(
 
         /**
          * Builds a temporary [AnalysisProject] from the given values without having a `.codyze.kts`
-         * file in place.
+         * file in place. This is based on the [Project] API of the CPG: if neither [sources] nor
+         * [components] are specified, the project structure is auto-detected from the [projectDir],
+         * e.g., based on Go modules or a C/C++ compilation database.
          */
         fun temporary(
             projectDir: Path,
@@ -256,72 +261,37 @@ class AnalysisProject(
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
-            var builder =
-                TranslationConfiguration.builder()
-                    .defaultPasses()
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                    .optionalLanguage(
-                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
-                    )
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
-
-            // We can either have a single source (using --sources) or multiple components (using
-            // --components)
-            sources?.let {
-                builder =
-                    builder
-                        .sourceLocations(it.map { source -> source.toFile() })
-                        .topLevel(projectDir.toFile())
-            }
-
-            components?.let {
-                val componentDir = projectDir.resolve("components")
-                val pairs =
-                    it.map { component ->
-                        Pair(
-                            component,
-                            mutableListOf<File>(componentDir.resolve(component).toFile()),
-                        )
+            val project =
+                Project.from(projectDir) {
+                    // A single list of source files (using --sources) becomes one component
+                    sources?.let {
+                        component(DEFAULT_APPLICATION_NAME, root = projectDir, sources = it)
                     }
-                builder =
-                    builder
-                        .softwareComponents(
-                            pairs
-                                .groupingBy { it.first }
-                                .aggregate { _, accumulator: MutableList<File>?, element, _ ->
-                                    if (accumulator != null) {
-                                        accumulator.addAll(element.second)
-                                        accumulator
-                                    } else {
-                                        element.second
-                                    }
-                                }
-                                .toMutableMap()
-                        )
-                        .topLevels(it.associateWith { componentDir.resolve(it).toFile() })
-            }
 
-            val addSourcesFolder = librariesPath?.toFile()
+                    // Explicitly named components (using --components) are located inside the
+                    // "components" folder
+                    components?.forEach {
+                        component(it, root = projectDir.resolve("components").resolve(it))
+                    }
 
-            if (librariesPath?.isDirectory() == true) {
-                builder.loadIncludes(true)
-                addSourcesFolder?.listFiles()?.forEach {
-                    builder = builder.includePath(it.toPath())
+                    exclusionPatterns?.forEach { exclude(it) }
+
+                    translation {
+                        // The "libraries" folder can contain additional libraries (or stubs) that
+                        // are added as includes
+                        if (librariesPath?.isDirectory() == true) {
+                            it.loadIncludes(true)
+                            librariesPath.listDirectoryEntries().forEach { library ->
+                                it.includePath(library)
+                            }
+                        }
+
+                        configModifier?.invoke(it)
+                    }
                 }
-            }
-
-            exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
-            configModifier?.invoke(builder)
 
             return AnalysisProject(
-                config = builder.build(),
+                config = project.config,
                 name = projectDir.fileName.toString(),
                 librariesPath = librariesPath,
                 projectDir = projectDir,

@@ -45,7 +45,7 @@ import kotlin.reflect.KClass
  * by the frontend during parsing and type resolution.
  */
 open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
-    override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
+    override val fileExtensions: List<String> = listOf("class", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
 
@@ -81,13 +81,13 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
                 // We can also check if the signature matches to account for overloading.
                 val targetType = ref.type as? FunctionType
                 val filteredFunctions =
-                    functionDecls
-                        .filter { it.parameters.map { it.type } == targetType?.parameters }
-                        .toSet()
+                    functionDecls.filterTo(mutableSetOf()) {
+                        it.parameters.any { it.type == targetType?.parameters }
+                    }
                 if (filteredFunctions.isNotEmpty()) ref.candidates = filteredFunctions
                 else ref.candidates = functionDecls.toSet()
             } else {
-                ref.candidates = ref.candidates.filter { it is Variable }.toSet()
+                ref.candidates = ref.candidates.filterIsInstanceTo<Variable, _>(mutableSetOf())
             }
         }
 

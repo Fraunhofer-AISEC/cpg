@@ -10,10 +10,15 @@ export interface StreamingCallbacks {
 class LLMAgent {
   private apiService = new ApiService();
 
-  async chat(messages: LLMMessage[], callbacks: StreamingCallbacks): Promise<void> {
+  async chat(
+    messages: LLMMessage[],
+    client: string,
+    model: string,
+    callbacks: StreamingCallbacks
+  ): Promise<void> {
     await this.apiService.streamPost(
       '/api/chat',
-      { messages },
+      { messages, client, model },
       callbacks.onChunk,
       callbacks.onError,
       callbacks.onComplete

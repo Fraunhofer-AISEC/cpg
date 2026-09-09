@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
@@ -40,7 +41,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * contain other statements, but not declarations. Therefore, declarations are wrapped in a
  * [DeclarationStatement].
  */
-open class DeclarationStatement : Expression(false) {
+open class DeclarationStatement : Expression(false), DeclarationHolder {
 
     /**
      * The list of declarations declared or defined by this statement. It is always a list, even if

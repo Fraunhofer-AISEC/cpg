@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
+import de.fraunhofer.aisec.cpg.frontends.HasRedeclarations
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
@@ -44,9 +45,11 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.LookupScope
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import java.util.concurrent.ConcurrentHashMap
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -124,6 +127,38 @@ sealed class Scope(
      */
     @DoNotPersist val typedefs = mutableMapOf<Name, Typedef>()
 
+    /** Lazy backing field for [objectTypeCache]. */
+    @DoNotPersist
+    @Volatile
+    private var _objectTypeCache: ConcurrentHashMap<String, ObjectType>? = null
+
+    /**
+     * A per-scope cache of non-generic [ObjectType]s, keyed by their (local) name. It lets the
+     * frontend reuse a single [ObjectType] instance for repeated references to the same named type
+     * within this scope (see [de.fraunhofer.aisec.cpg.graph.objectType]), instead of allocating a
+     * fresh, redundant [ObjectType] for each use.
+     *
+     * Sharing is sound because a type's resolution (its [ObjectType.recordDeclaration], fully
+     * qualified name and supertypes) is fully determined by its name and scope; all references to
+     * the same name within this scope resolve identically.
+     *
+     * The cache is stored directly on the scope instead of in a map keyed by the scope on purpose:
+     * [Scope.equals]/[hashCode] are derived from mutable fields ([astNode], [name]), so using a
+     * [Scope] as a map key would strand entries (and silently stop interning) if those fields ever
+     * changed after insertion. Keying by the scope's own identity — i.e. hanging the cache off the
+     * instance — sidesteps that entirely, and, because each translation context has its own scopes,
+     * it preserves the previous per-context isolation. The container is allocated lazily on first
+     * use.
+     */
+    @DoNotPersist
+    val objectTypeCache: ConcurrentHashMap<String, ObjectType>
+        get() =
+            _objectTypeCache
+                ?: synchronized(this) {
+                    _objectTypeCache
+                        ?: ConcurrentHashMap<String, ObjectType>().also { _objectTypeCache = it }
+                }
+
     /**
      * Adds a [typedef] declaration to the scope. This is used to store typedefs in the scope, so
      * that they can be resolved later on.
@@ -132,20 +167,34 @@ sealed class Scope(
         typedefs[typedef.alias.name] = typedef
     }
 
-    /** Adds a [declaration] with the defined [symbol]. */
+    /**
+     * Adds a [declaration] with the defined [symbol]. Returns the canonical declaration for this
+     * symbol: either [declaration] itself, or a pre-existing declaration that [declaration] was
+     * merged into (see [HasRedeclarations.isRedeclaration]). Callers that wire [declaration] into
+     * an AST [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] afterwards MUST use the returned
+     * value instead of [declaration], to avoid re-introducing the duplicate the merge just
+     * collapsed.
+     */
     context(provider: ContextProvider)
-    open fun addSymbol(symbol: Symbol, declaration: Declaration) {
-        if (
-            declaration is Import &&
-                declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
-        ) {
-            // Because a wildcard import does not really have a valid "symbol", we store it in a
-            // separate list
-            wildcardImports += declaration
-        } else {
-            val list = symbols.computeIfAbsent(symbol) { mutableListOf() }
-            list += declaration
-        }
+    open fun addSymbol(symbol: Symbol, declaration: Declaration): Declaration {
+        val canonical =
+            if (
+                declaration is Import &&
+                    declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
+            ) {
+                // Because a wildcard import does not really have a valid "symbol", we store it in a
+                // separate list
+                wildcardImports += declaration
+                declaration
+            } else {
+                val list = symbols.computeIfAbsent(symbol) { mutableListOf() }
+                mergeOrAppend(list, declaration)
+            }
+
+        // This scope's symbol table changed, so any cached ScopeManager.lookupSymbolByName results
+        // may no longer be valid.
+        provider.ctx.scopeManager.invalidateSymbolLookupCache()
+        return canonical
     }
 
     /**
@@ -166,7 +215,19 @@ sealed class Scope(
      *   current scopes parents if no match was found.
      * @param replaceImports whether any symbols pointing to [Import.importedSymbols] or wildcards
      *   should be replaced with their actual nodes
-     * @param predicate An optional predicate which should be used in the lookup.
+     * @param localSymbols An optional override for where to source a given [Scope]'s directly
+     *   declared symbols (matching [Symbol]) from, in place of the default `scope.symbols[symbol]`.
+     *   If it returns `null` for a given scope, we fall back to `scope.symbols[symbol]` for that
+     *   scope. This is the hook flow-sensitive callers (see
+     *   [de.fraunhofer.aisec.cpg.passes.acceptWithIterateEOG]) use to answer "which declarations
+     *   have been reached by this point in the EOG" for
+     *   [de.fraunhofer.aisec.cpg.graph.scopes.LocalScope]s, returning `null` for every other
+     *   [Scope] kind so its (non-flow-sensitive) symbols are read the usual, cheap way. Every other
+     *   part of this algorithm (shadowing, [predefinedLookupScopes], wildcard imports, the
+     *   [HasBuiltins] fallback) stays identical.
+     * @param predicate An optional predicate which should be used in the lookup. Kept as the last
+     *   parameter (after [localSymbols]) so existing trailing-lambda call sites keep binding to
+     *   this one.
      */
     context(provider: ContextProvider)
     fun lookupSymbol(
@@ -174,17 +235,20 @@ sealed class Scope(
         languageOnly: Language<*>? = null,
         qualifiedLookup: Boolean = false,
         replaceImports: Boolean = true,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
+        val languageOnlyClass = languageOnly?.javaClass
+
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
-        var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
+        val modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
         var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
 
         while (scope != null) {
-            list = scope.symbols[symbol]?.toMutableList()
+            list = (localSymbols?.invoke(scope, symbol) ?: scope.symbols[symbol])?.toMutableList()
 
             // Also add any wildcard imports that we have to the list
             val wildcards = scope.wildcardImports
@@ -201,7 +265,11 @@ sealed class Scope(
 
             // Filter according to the language
             if (languageOnly != null) {
-                list.removeIf { it.language != languageOnly }
+                list.removeIf {
+                    val candidateLanguageClass = it.language::class.java
+                    languageOnlyClass?.isAssignableFrom(candidateLanguageClass) == false &&
+                        !candidateLanguageClass.isAssignableFrom(languageOnlyClass)
+                }
             }
 
             // Filter the list according to the predicate, if we have any
@@ -252,6 +320,7 @@ sealed class Scope(
                                 languageOnly = languageOnly,
                                 replaceImports = replaceImports,
                                 predicate = predicate,
+                                localSymbols = localSymbols,
                             )
                             .toMutableList()
                 }
@@ -329,5 +398,40 @@ fun SymbolMap.mergeFrom(symbolMap: SymbolMap) {
     for (entry in symbolMap) {
         val list = this.computeIfAbsent(entry.key) { mutableListOf() }
         list += entry.value
+    }
+}
+
+/**
+ * Attempts to fold [declaration] into an existing, compatible entry of [list], per [declaration]'s
+ * language-specific redeclaration policy (see [HasRedeclarations.isRedeclaration]). Returns the
+ * canonical declaration: an existing entry that [declaration] was merged into, or [declaration]
+ * itself if it was appended as a new entry.
+ */
+private fun mergeOrAppend(list: MutableList<Declaration>, declaration: Declaration): Declaration {
+    val language = declaration.language
+    if (language is HasRedeclarations) {
+        val existing =
+            list.firstOrNull { it !== declaration && language.isRedeclaration(it, declaration) }
+        if (existing != null) {
+            language.mergeRedeclaration(existing, declaration)
+            return existing
+        }
+    }
+    list += declaration
+    return declaration
+}
+
+/**
+ * Re-applies each declaration's redeclaration-merge policy across this [SymbolMap], collapsing
+ * duplicates that were introduced by a blind [mergeFrom] (e.g., when combining scopes from multiple
+ * translation units parsed in parallel).
+ */
+fun SymbolMap.collapseRedeclarations() {
+    for (entry in this) {
+        val deduped = mutableListOf<Declaration>()
+        for (declaration in entry.value) {
+            mergeOrAppend(deduped, declaration)
+        }
+        entry.setValue(deduped)
     }
 }

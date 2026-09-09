@@ -25,20 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
-class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+class UnaryOperator : Expression(), HasOverloadedOperation, HasType.TypeObserver {
     @Relationship("INPUT")
     var inputEdge =
         astEdgeOf<Expression>(
@@ -75,6 +74,10 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     var isPrefix = false
 
     private fun changeExpressionAccess() {
+        if (operatorCode == "++" || operatorCode == "--") {
+            (input as? Reference)?.dfgHandlerHint = true
+        }
+
         var access =
             if (operatorCode == "++" || operatorCode == "--") {
                 AccessValues.READWRITE
@@ -117,35 +120,14 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
 
         // Apply our operator to all assigned types and forward them to us
         this.addAssignedTypes(
-            assignedTypes
-                .map {
-                    when (operatorCode) {
-                        "*" -> it.dereference()
-                        "&" -> it.pointer()
-                        else -> it
-                    }
+            assignedTypes.mapTo(mutableSetOf()) {
+                when (operatorCode) {
+                    "*" -> it.dereference()
+                    "&" -> it.pointer()
+                    else -> it
                 }
-                .toSet()
+            }
         )
-    }
-
-    override fun addArgument(expression: Expression) {
-        this.input = expression
-        this.input.access = access
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (this.input == old) {
-            this.input = new
-            this.input.access = access
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return this.input == expression
     }
 
     override fun equals(other: Any?): Boolean {

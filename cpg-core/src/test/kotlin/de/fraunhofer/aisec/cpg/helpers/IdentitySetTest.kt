@@ -122,4 +122,33 @@ class IdentitySetTest {
 
         assertEquals(listOf(1, 2, 3, 4, 5, 6), set.toSortedList())
     }
+
+    /**
+     * The backing map is allocated lazily; these operations must all behave correctly while it is
+     * still `null` (i.e. before anything was added).
+     */
+    @Test
+    fun testEmptyBeforeFirstAdd() {
+        val set = IdentitySet<Int>()
+
+        assertEquals(0, set.size)
+        assertTrue(set.isEmpty())
+        assertFalse(set.contains(1))
+        assertFalse(set.iterator().hasNext())
+        assertTrue(set.containsAll(emptyList()))
+        assertFalse(set.containsAll(listOf(1)))
+        assertTrue(set.toSortedList().isEmpty())
+        assertFalse(set.remove(1))
+        assertFalse(set.removeAll(listOf(1, 2)))
+        assertEquals(0, set.hashCode())
+        assertEquals(IdentitySet<Int>(), set)
+
+        // Adding all of an empty set is a no-op that must not allocate/break anything.
+        set.addAllWithoutCheck(IdentitySet())
+        assertTrue(set.isEmpty())
+
+        // Clearing an empty (never-allocated) set is safe.
+        set.clear()
+        assertTrue(set.isEmpty())
+    }
 }

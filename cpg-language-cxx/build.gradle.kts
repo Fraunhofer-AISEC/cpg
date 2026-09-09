@@ -44,6 +44,11 @@ dependencies {
     // CDT
     implementation(libs.eclipse.cdt.core)
 
+    // C/C++ concept passes (DynamicLoading, EntryPoints, MemoryAllocation, …) live in this
+    // module — they recognise C/C++ stdlib/runtime functions by name, so they belong with the
+    // frontend rather than in the generic cpg-concepts module.
+    implementation(projects.cpgConcepts)
+
     testImplementation(libs.junit.params)
     testImplementation(project(":cpg-analysis"))
 }

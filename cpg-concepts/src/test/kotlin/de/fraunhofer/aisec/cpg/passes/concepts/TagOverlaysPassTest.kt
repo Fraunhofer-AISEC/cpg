@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
 import kotlin.test.Test
 import kotlin.test.assertIs
@@ -72,6 +73,7 @@ class TagOverlaysPassTest {
                             config =
                                 TranslationConfiguration.builder()
                                     .registerPass<TagOverlaysPass>()
+                                    .registerPass<PointsToPass>()
                                     .configurePass<TagOverlaysPass>(
                                         TagOverlaysPass.Configuration(
                                             tag =
@@ -120,16 +122,28 @@ class TagOverlaysPassTest {
                         )
                 )
             ) {
-                translationResult {
-                    translationUnit {
-                        record("Encryption") {}
-                        function("main") {
-                            body {
-                                declare {
-                                    variable("key", t("string"), init = { literal("secret") })
+                build {
+                    singleTranslationUnit { tu ->
+                        newRecord("Encryption", "class", holder = tu, enterScope = true)
+
+                        newFunction("main", holder = tu, enterScope = true) { main ->
+                            main.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable(
+                                            "key",
+                                            objectType("string"),
+                                            holder = declStmt,
+                                        ) {
+                                            it.initializer = newLiteral("secret")
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newCall(newReference("encrypt")) {
+                                            it.arguments += newReference("key")
+                                        }
                                 }
-                                call("encrypt") { ref("key") }
-                            }
                         }
                     }
                 }

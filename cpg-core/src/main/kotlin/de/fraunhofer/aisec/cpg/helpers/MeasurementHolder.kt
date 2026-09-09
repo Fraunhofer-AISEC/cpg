@@ -190,7 +190,7 @@ constructor(
 
     /** Stops the time and computes the difference between */
     override fun addMeasurement(measurementKey: String?, measurementValue: String?): Any? {
-        var duration = Duration.between(start, Instant.now()).toMillis()
+        val duration = Duration.between(start, Instant.now()).toMillis()
         measurements["${caller}: $message"] = "$duration ms"
 
         logDebugMsg("$caller: $message done in $duration ms")

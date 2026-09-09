@@ -90,187 +90,161 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): Try {
-        val tryStatement = newTry()
-        frontend.scopeManager.enterScope(tryStatement)
-        val statement = handle(tryBlockStatement.tryBody) as Block?
-        val catchClauses =
-            Arrays.stream(tryBlockStatement.catchHandlers)
-                .map { handleCatchHandler(it) }
-                .collect(Collectors.toList())
-        tryStatement.tryBlock = statement
-        tryStatement.catchClauses = catchClauses
-        frontend.scopeManager.leaveScope(tryStatement)
-        return tryStatement
+        return newTry(enterScope = true) { tryStatement ->
+            val statement = handle(tryBlockStatement.tryBody) as Block?
+            val catchClauses =
+                Arrays.stream(tryBlockStatement.catchHandlers)
+                    .map { handleCatchHandler(it) }
+                    .collect(Collectors.toList())
+            tryStatement.tryBlock = statement
+            tryStatement.catchClauses = catchClauses
+        }
     }
 
     private fun handleCatchHandler(catchHandler: ICPPASTCatchHandler): CatchClause {
-        val catchClause = newCatchClause(rawNode = catchHandler)
-        frontend.scopeManager.enterScope(catchClause)
+        return newCatchClause(rawNode = catchHandler, enterScope = true) { catchClause ->
+            val body = frontend.statementHandler.handle(catchHandler.catchBody)
 
-        val body = frontend.statementHandler.handle(catchHandler.catchBody)
+            // TODO: can also be an 'unnamed' parameter. In this case we should not declare a
+            // variable
+            var decl: Declaration? = null
+            if (catchHandler.declaration != null) { // can be null for "catch(...)"
+                decl = frontend.declarationHandler.handle(catchHandler.declaration)
+            }
 
-        // TODO: can also be an 'unnamed' parameter. In this case we should not declare a variable
-        var decl: Declaration? = null
-        if (catchHandler.declaration != null) { // can be null for "catch(...)"
-            decl = frontend.declarationHandler.handle(catchHandler.declaration)
+            catchClause.body = body as? Block
+
+            if (decl is Variable) {
+                frontend.scopeManager.addDeclaration(decl)
+                catchClause.parameter = decl
+            }
         }
-
-        catchClause.body = body as? Block
-
-        if (decl is Variable) {
-            frontend.scopeManager.addDeclaration(decl)
-            catchClause.parameter = decl
-        }
-        frontend.scopeManager.leaveScope(catchClause)
-        return catchClause
     }
 
     private fun handleIf(ctx: IASTIfStatement): IfElse {
-        val statement = newIfElse(rawNode = ctx)
+        return newIfElse(rawNode = ctx, enterScope = true) { statement ->
+            // We need some special treatment for C++ IfStatements
+            if (ctx is CPPASTIfStatement) {
+                if (ctx.initializerStatement != null) {
+                    statement.initializerStatement = handle(ctx.initializerStatement)
+                }
+                if (ctx.conditionDeclaration != null) {
+                    statement.conditionDeclaration =
+                        frontend.declarationHandler.handle(ctx.conditionDeclaration)
+                }
 
-        frontend.scopeManager.enterScope(statement)
-
-        // We need some special treatment for C++ IfStatements
-        if (ctx is CPPASTIfStatement) {
-            if (ctx.initializerStatement != null) {
-                statement.initializerStatement = handle(ctx.initializerStatement)
+                statement.isConstExpression = ctx.isConstexpr
             }
-            if (ctx.conditionDeclaration != null) {
+
+            if (ctx.conditionExpression != null)
+                statement.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
+            statement.thenStatement = handle(ctx.thenClause)
+            if (ctx.elseClause != null) {
+                statement.elseStatement = handle(ctx.elseClause)
+            }
+        }
+    }
+
+    private fun handleLabel(ctx: IASTLabelStatement): Label {
+        return newLabel(rawNode = ctx) { statement ->
+            statement.subStatement = handle(ctx.nestedStatement)
+            statement.label = ctx.name.toString()
+            statement.name = newName(name = ctx.name.toString())
+        }
+    }
+
+    private fun handleGoto(ctx: IASTGotoStatement): Goto {
+        return newGoto(rawNode = ctx) { statement ->
+            val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
+                statement.targetLabel = to as Label
+                to.label?.let {
+                    statement.labelName = it
+                    statement.name = newName(it)
+                }
+            }
+            val b: IBinding?
+            try {
+                b = ctx.name.resolveBinding()
+                if (b is ILabel) {
+                    // If the bound AST node is/or was transformed into a CPG node the cpg node is
+                    // bound to the CPG goto statement
+                    frontend.registerObjectListener(b.labelStatement, assigneeTargetLabel)
+                }
+            } catch (_: Exception) {
+                // If the Label AST node could not be resolved, the matching is done based on label
+                // names of CPG nodes using the predicate listeners
+                frontend.registerPredicateListener(
+                    { _, to -> (to is Label && to.label == statement.labelName) },
+                    assigneeTargetLabel,
+                )
+            }
+        }
+    }
+
+    private fun handleWhile(ctx: IASTWhileStatement): While {
+        return newWhile(rawNode = ctx, enterScope = true) { statement ->
+            // Special treatment for C++ while
+            if (ctx is CPPASTWhileStatement && ctx.conditionDeclaration != null) {
                 statement.conditionDeclaration =
                     frontend.declarationHandler.handle(ctx.conditionDeclaration)
             }
 
-            statement.isConstExpression = ctx.isConstexpr
-        }
-
-        if (ctx.conditionExpression != null)
-            statement.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
-        statement.thenStatement = handle(ctx.thenClause)
-        if (ctx.elseClause != null) {
-            statement.elseStatement = handle(ctx.elseClause)
-        }
-
-        frontend.scopeManager.leaveScope(statement)
-
-        return statement
-    }
-
-    private fun handleLabel(ctx: IASTLabelStatement): Label {
-        val statement = newLabel(rawNode = ctx)
-        statement.subStatement = handle(ctx.nestedStatement)
-        statement.label = ctx.name.toString()
-        statement.name = newName(name = ctx.name.toString())
-        return statement
-    }
-
-    private fun handleGoto(ctx: IASTGotoStatement): Goto {
-        val statement = newGoto(rawNode = ctx)
-        val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
-            statement.targetLabel = to as Label
-            to.label?.let {
-                statement.labelName = it
-                statement.name = newName(it)
+            if (ctx.condition != null) {
+                statement.condition = frontend.expressionHandler.handle(ctx.condition)
             }
+
+            statement.statement = handle(ctx.body)
         }
-        val b: IBinding?
-        try {
-            b = ctx.name.resolveBinding()
-            if (b is ILabel) {
-                // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
-                // to the CPG goto statement
-                frontend.registerObjectListener(b.labelStatement, assigneeTargetLabel)
-            }
-        } catch (_: Exception) {
-            // If the Label AST node could not be resolved, the matching is done based on label
-            // names of CPG nodes using the predicate listeners
-            frontend.registerPredicateListener(
-                { _, to -> (to is Label && to.label == statement.labelName) },
-                assigneeTargetLabel,
-            )
-        }
-        return statement
-    }
-
-    private fun handleWhile(ctx: IASTWhileStatement): While {
-        val statement = newWhile(rawNode = ctx)
-
-        frontend.scopeManager.enterScope(statement)
-
-        // Special treatment for C++ while
-        if (ctx is CPPASTWhileStatement && ctx.conditionDeclaration != null) {
-            statement.conditionDeclaration =
-                frontend.declarationHandler.handle(ctx.conditionDeclaration)
-        }
-
-        if (ctx.condition != null) {
-            statement.condition = frontend.expressionHandler.handle(ctx.condition)
-        }
-
-        statement.statement = handle(ctx.body)
-
-        frontend.scopeManager.leaveScope(statement)
-
-        return statement
     }
 
     private fun handleDo(ctx: IASTDoStatement): DoWhile {
-        val statement = newDoWhile(rawNode = ctx)
-        frontend.scopeManager.enterScope(statement)
-        statement.condition = frontend.expressionHandler.handle(ctx.condition)
-        statement.statement = handle(ctx.body)
-        frontend.scopeManager.leaveScope(statement)
-        return statement
+        return newDoWhile(rawNode = ctx, enterScope = true) { statement ->
+            statement.condition = frontend.expressionHandler.handle(ctx.condition)
+            statement.statement = handle(ctx.body)
+        }
     }
 
     private fun handleFor(ctx: IASTForStatement): For {
-        val statement = newFor(rawNode = ctx)
+        return newFor(rawNode = ctx, enterScope = true) { statement ->
+            statement.initializerStatement = handle(ctx.initializerStatement)
 
-        frontend.scopeManager.enterScope(statement)
+            // Special treatment for C++ while
+            if (ctx is CPPASTForStatement && ctx.conditionDeclaration != null) {
+                statement.conditionDeclaration =
+                    frontend.declarationHandler.handle(ctx.conditionDeclaration)
+            }
 
-        statement.initializerStatement = handle(ctx.initializerStatement)
+            if (ctx.conditionExpression != null) {
+                statement.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
+            }
 
-        // Special treatment for C++ while
-        if (ctx is CPPASTForStatement && ctx.conditionDeclaration != null) {
-            statement.conditionDeclaration =
-                frontend.declarationHandler.handle(ctx.conditionDeclaration)
+            // Adds true expression node where default empty condition evaluates to true, remove
+            // here and in java StatementAnalyzer
+            if (statement.conditionDeclaration == null && statement.condition == null) {
+                val literal: Literal<*> =
+                    newLiteral(true, primitiveType("bool")).implicit(code = "true")
+                statement.condition = literal
+            }
+
+            if (ctx.iterationExpression != null) {
+                statement.iterationStatement =
+                    frontend.expressionHandler.handle(ctx.iterationExpression)
+            }
+
+            statement.statement = handle(ctx.body)
         }
-
-        if (ctx.conditionExpression != null) {
-            statement.condition = frontend.expressionHandler.handle(ctx.conditionExpression)
-        }
-
-        // Adds true expression node where default empty condition evaluates to true, remove here
-        // and in java StatementAnalyzer
-        if (statement.conditionDeclaration == null && statement.condition == null) {
-            val literal: Literal<*> =
-                newLiteral(true, primitiveType("bool")).implicit(code = "true")
-            statement.condition = literal
-        }
-
-        if (ctx.iterationExpression != null) {
-            statement.iterationStatement =
-                frontend.expressionHandler.handle(ctx.iterationExpression)
-        }
-
-        statement.statement = handle(ctx.body)
-
-        frontend.scopeManager.leaveScope(statement)
-
-        return statement
     }
 
     private fun handleForEach(ctx: CPPASTRangeBasedForStatement): ForEach {
-        val statement = newForEach(rawNode = ctx)
-        frontend.scopeManager.enterScope(statement)
-        val decl = frontend.declarationHandler.handle(ctx.declaration)
-        val `var` = newDeclarationStatement()
-        `var`.singleDeclaration = decl
-        val iterable: Expression? = frontend.expressionHandler.handle(ctx.initializerClause)
-        statement.variable = `var`
-        statement.iterable = iterable
-        statement.statement = handle(ctx.body)
-        frontend.scopeManager.leaveScope(statement)
-        return statement
+        return newForEach(rawNode = ctx, enterScope = true) { statement ->
+            val decl = frontend.declarationHandler.handle(ctx.declaration)
+            val `var` = newDeclarationStatement()
+            `var`.singleDeclaration = decl
+            val iterable: Expression? = frontend.expressionHandler.handle(ctx.initializerClause)
+            statement.variable = `var`
+            statement.iterable = iterable
+            statement.statement = handle(ctx.body)
+        }
     }
 
     private fun handleBreak(ctx: IASTBreakStatement): Break {
@@ -297,81 +271,68 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             //  frontend for sub-block if available
             newDistinctLanguageBlock(rawNode = ctx)
         } else {
-            val declarationStatement = newDeclarationStatement(rawNode = ctx)
-            val declaration = frontend.declarationHandler.handle(ctx.declaration)
-            val declarations =
-                if (declaration is DeclarationSequence) {
-                    declaration.asMutableList()
-                } else {
-                    listOfNotNull(declaration)
+            newDeclarationStatement(rawNode = ctx) { declarationStatement ->
+                val declaration = frontend.declarationHandler.handle(ctx.declaration)
+                val declarations =
+                    if (declaration is DeclarationSequence) {
+                        declaration.asMutableList()
+                    } else {
+                        listOfNotNull(declaration)
+                    }
+                declarations.forEach {
+                    frontend.scopeManager.addDeclaration(it)
+                    declarationStatement.addDeclaration(it)
                 }
-            declarations.forEach {
-                frontend.scopeManager.addDeclaration(it)
-                declarationStatement.addDeclaration(it)
             }
-            declarationStatement
         }
     }
 
     private fun handleReturn(ctx: IASTReturnStatement): Return {
-        val returnStatement = newReturn(rawNode = ctx)
-
-        // Parse the return value
-        if (ctx.returnValue != null) {
-            returnStatement.returnValue = frontend.expressionHandler.handle(ctx.returnValue)
+        return newReturn(rawNode = ctx) { returnStatement ->
+            // Parse the return value
+            if (ctx.returnValue != null) {
+                returnStatement.returnValue = frontend.expressionHandler.handle(ctx.returnValue)
+            }
         }
-
-        return returnStatement
     }
 
     private fun handleCompoundStatement(ctx: IASTCompoundStatement): Block {
-        val block = newBlock(rawNode = ctx)
-
-        frontend.scopeManager.enterScope(block)
-
-        for (statement in ctx.statements) {
-            val handled = handle(statement)
-            if (handled != null) {
-                block.statements += handled
+        return newBlock(rawNode = ctx, enterScope = true) { block ->
+            for (statement in ctx.statements) {
+                val handled = handle(statement)
+                if (handled != null) {
+                    block.statements += handled
+                }
             }
         }
-
-        frontend.scopeManager.leaveScope(block)
-
-        return block
     }
 
     private fun handleSwitch(ctx: IASTSwitchStatement): Switch {
-        val switchStatement = newSwitch(rawNode = ctx)
-
-        frontend.scopeManager.enterScope(switchStatement)
-
-        // Special treatment for C++ switch
-        if (ctx is CPPASTSwitchStatement) {
-            if (ctx.initializerStatement != null) {
-                switchStatement.initializerStatement = handle(ctx.initializerStatement)
+        return newSwitch(rawNode = ctx, enterScope = true) { switchStatement ->
+            // Special treatment for C++ switch
+            if (ctx is CPPASTSwitchStatement) {
+                if (ctx.initializerStatement != null) {
+                    switchStatement.initializerStatement = handle(ctx.initializerStatement)
+                }
+                if (ctx.controllerDeclaration != null) {
+                    switchStatement.selectorDeclaration =
+                        frontend.declarationHandler.handle(ctx.controllerDeclaration)
+                }
             }
-            if (ctx.controllerDeclaration != null) {
-                switchStatement.selectorDeclaration =
-                    frontend.declarationHandler.handle(ctx.controllerDeclaration)
+
+            if (ctx.controllerExpression != null) {
+                switchStatement.selector =
+                    frontend.expressionHandler.handle(ctx.controllerExpression)
             }
+
+            switchStatement.statement = handle(ctx.body)
         }
-
-        if (ctx.controllerExpression != null) {
-            switchStatement.selector = frontend.expressionHandler.handle(ctx.controllerExpression)
-        }
-
-        switchStatement.statement = handle(ctx.body)
-
-        frontend.scopeManager.leaveScope(switchStatement)
-
-        return switchStatement
     }
 
     private fun handleCase(ctx: IASTCaseStatement): Case {
-        val caseStatement = newCase(rawNode = ctx)
-        caseStatement.caseExpression = frontend.expressionHandler.handle(ctx.expression)
-        return caseStatement
+        return newCase(rawNode = ctx) { caseStatement ->
+            caseStatement.caseExpression = frontend.expressionHandler.handle(ctx.expression)
+        }
     }
 
     private fun handleDefault(ctx: IASTDefaultStatement): Default {

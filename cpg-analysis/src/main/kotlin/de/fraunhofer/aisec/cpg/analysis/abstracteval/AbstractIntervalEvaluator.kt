@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
+import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.collections.component1
@@ -39,6 +41,7 @@ import kotlin.collections.set
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.to
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -53,11 +56,12 @@ class TupleState<NodeId>(
         innerLattice2,
     ) {
 
-    override fun lub(
+    override suspend fun lub(
         one: TupleStateElement<NodeId>,
         two: TupleStateElement<NodeId>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): TupleStateElement<NodeId> {
         return if (allowModify) {
             innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
@@ -85,110 +89,108 @@ class TupleState<NodeId>(
 typealias TupleStateElement<NodeId> =
     TupleLattice.Element<DeclarationState.DeclarationStateElement<NodeId>, NewIntervalStateElement>
 
-class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
-    MapLattice<NodeId, IntervalLattice.Element>(innerLattice) {
+/**
+ * Per-declaration interval state. Keys are autoboxed [Int]s produced by [Node.objectIdentifier]
+ * (or, for nodes without an identifier, the [Node] itself). Because the same logical variable
+ * yields equal-but-not-identical `Integer` instances across branches, this lattice must compare
+ * keys by `equals` rather than reference identity — hence [HashMapLattice] rather than the default
+ * [ConcurrentMapLattice]. Without that, an `if/else` writing the same variable in both arms would
+ * survive [lub] as two separate entries.
+ */
+class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>) :
+    HashMapLattice<NodeId, NewIntervalLattice.Element>(innerLattice) {
     override val bottom: DeclarationStateElement<NodeId>
         get() = DeclarationStateElement()
 
-    override fun lub(
-        one: Element<NodeId, IntervalLattice.Element>,
-        two: Element<NodeId, IntervalLattice.Element>,
+    // HashMapLattice's lub/glb return a plain `Element`, but the typealias `TupleStateElement`
+    // pins `.first` to `DeclarationStateElement`. Re-wrap so the cast at call sites holds.
+    override suspend fun lub(
+        one: Element<NodeId, NewIntervalLattice.Element>,
+        two: Element<NodeId, NewIntervalLattice.Element>,
         allowModify: Boolean,
         widen: Boolean,
-    ): Element<NodeId, IntervalLattice.Element> {
-        val result = super.lub(one, two, allowModify, widen)
-        // If the result is a DeclarationStateElement, we can return it directly
-        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
+        concurrencyCounter: Int,
+    ): DeclarationStateElement<NodeId> {
+        val result = super.lub(one, two, allowModify, widen, concurrencyCounter)
+        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement(result)
     }
 
-    override fun glb(
-        one: Element<NodeId, IntervalLattice.Element>,
-        two: Element<NodeId, IntervalLattice.Element>,
-    ): Element<NodeId, IntervalLattice.Element> {
+    override suspend fun glb(
+        one: Element<NodeId, NewIntervalLattice.Element>,
+        two: Element<NodeId, NewIntervalLattice.Element>,
+    ): DeclarationStateElement<NodeId> {
         val result = super.glb(one, two)
-        // If the result is a DeclarationStateElement, we can return it directly
-        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
+        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement(result)
     }
 
     class DeclarationStateElement<NodeId>(expectedMaxSize: Int) :
-        Element<NodeId, IntervalLattice.Element>(expectedMaxSize) {
+        Element<NodeId, NewIntervalLattice.Element>(expectedMaxSize) {
         constructor() : this(32)
 
-        constructor(m: Map<NodeId, IntervalLattice.Element>) : this(m.size) {
+        constructor(m: Map<NodeId, NewIntervalLattice.Element>) : this(m.size) {
             putAll(m)
         }
 
         constructor(
-            entries: Collection<Pair<NodeId, IntervalLattice.Element>>
+            entries: Collection<Pair<NodeId, NewIntervalLattice.Element>>
         ) : this(entries.size) {
             putAll(entries)
         }
 
-        constructor(vararg entries: Pair<NodeId, IntervalLattice.Element>) : this(entries.size) {
+        constructor(vararg entries: Pair<NodeId, NewIntervalLattice.Element>) : this(entries.size) {
             putAll(entries)
         }
 
+        // Narrow the equality contract to `DeclarationStateElement` so two structurally-equal
+        // maps of different concrete subtypes still don't compare equal.
         override fun equals(other: Any?): Boolean {
-            return other is DeclarationStateElement<NodeId> && this.compare(other) == Order.EQUAL
+            return other is DeclarationStateElement<*> &&
+                this@DeclarationStateElement.compare(other) == Order.EQUAL
         }
 
         override fun hashCode(): Int {
             return super.hashCode()
         }
 
+        // Narrow the return type so callers see `DeclarationStateElement`, not the parent
+        // `HashMapLattice.Element`.
         override fun duplicate(): DeclarationStateElement<NodeId> {
             return DeclarationStateElement(
-                this.map { (k, v) -> Pair<NodeId, IntervalLattice.Element>(k, v.duplicate()) }
+                this.map { (k, v) -> Pair<NodeId, NewIntervalLattice.Element>(k, v.duplicate()) }
             )
         }
 
-        fun findKey(nodeId: NodeId): NodeId {
-            return if (nodeId is Int) {
-                this.entries.singleOrNull { it.key == nodeId }?.key ?: nodeId
-            } else nodeId
-        }
-
-        override fun containsKey(key: NodeId?): Boolean {
-            return if (key is Int) {
-                this.entries.singleOrNull { it.key == key } != null
-            } else {
-                super.containsKey(key)
-            }
-        }
-
-        override fun put(key: NodeId?, value: IntervalLattice.Element?): IntervalLattice.Element? {
-            val actualKey = key?.let { findKey(it) }
-            return super.put(actualKey, value)
-        }
-
         /**
-         * Retrieves the interval element for the given [nodeId] from the declaration state element.
-         *
-         * @param nodeId The identifier of the node.
-         * @return The [IntervalLattice.Element] for the node, or null if not found.
+         * Accept a nullable key so callers can write `state[node.objectIdentifier()] = v` directly
+         * — `objectIdentifier()` returns `Int?` and Kotlin's strict-typed `[]=` operator (from the
+         * `MutableMap` extension) would otherwise reject a nullable key. A `null` key is silently
+         * dropped: nodes without an identifier have no canonical home in the state, so storing them
+         * would just leak unreachable entries.
          */
-        override operator fun get(nodeId: NodeId): IntervalLattice.Element? {
-            return if (nodeId is Int) {
-                this.entries.singleOrNull { it.key == nodeId }?.value
-            } else {
-                super.get(nodeId)
-            }
+        operator fun set(key: NodeId?, value: NewIntervalLattice.Element) {
+            if (key != null) super.put(key, value)
         }
     }
 }
 
-typealias NewIntervalState = MapLattice<Node, IntervalLattice.Element>
+typealias NewIntervalState = ConcurrentMapLattice<Node, NewIntervalLattice.Element>
 
-typealias NewIntervalStateElement = MapLattice.Element<Node, IntervalLattice.Element>
+typealias NewIntervalStateElement = ConcurrentMapLattice.Element<Node, NewIntervalLattice.Element>
 
-class IntervalLattice() :
-    Lattice<IntervalLattice.Element>,
-    HasWidening<IntervalLattice.Element>,
-    HasNarrowing<IntervalLattice.Element> {
-    override var elements: Set<Element> = setOf()
+class NewIntervalLattice() :
+    Lattice<NewIntervalLattice.Element>,
+    HasWidening<NewIntervalLattice.Element>,
+    HasNarrowing<NewIntervalLattice.Element> {
+    override var elements: ConcurrentIdentitySet<Element> = concurrentIdentitySetOf()
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
+    override suspend fun lub(
+        one: Element,
+        two: Element,
+        allowModify: Boolean,
+        widen: Boolean,
+        concurrencyCounter: Int,
+    ): Element {
         val oneElem = one.element
         val twoElem = two.element
         if (allowModify) {
@@ -215,7 +217,7 @@ class IntervalLattice() :
                 }
                 else -> {
                     log.warn(
-                        "Cannot handle this case in IntervalLattice.lub: $oneElem and $twoElem"
+                        "Cannot handle this case in NewIntervalLattice.lub: $oneElem and $twoElem"
                     )
                     Element(LatticeInterval.TOP)
                 }
@@ -242,7 +244,7 @@ class IntervalLattice() :
                 }
                 else -> {
                     log.warn(
-                        "Cannot handle this case in IntervalLattice.lub: $oneElem and $twoElem"
+                        "Cannot handle this case in NewIntervalLattice.lub: $oneElem and $twoElem"
                     )
                     Element(LatticeInterval.TOP)
                 }
@@ -250,7 +252,7 @@ class IntervalLattice() :
         }
     }
 
-    override fun glb(one: Element, two: Element): Element {
+    override suspend fun glb(one: Element, two: Element): Element {
         val oneElem = one.element
         val twoElem = two.element
         return when {
@@ -275,7 +277,7 @@ class IntervalLattice() :
             }
 
             else -> {
-                log.warn("Cannot handle this case in IntervalLattice.glb: $oneElem and $twoElem")
+                log.warn("Cannot handle this case in NewIntervalLattice.glb: $oneElem and $twoElem")
                 Element(LatticeInterval.TOP)
             }
         }
@@ -303,6 +305,12 @@ class IntervalLattice() :
         }
 
         override fun compare(other: Lattice.Element): Order {
+            //            var ret: Order
+            //            runBlocking { ret = innerCompare(other) }
+            //            return ret
+            //        }
+            //
+            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (other !is Element) {
                 throw IllegalArgumentException("Cannot compare IntervalLattice.Element with $other")
             }
@@ -385,8 +393,8 @@ class AbstractIntervalEvaluator {
         interval: LatticeInterval = LatticeInterval.BOTTOM, // TODO: Maybe should be top?
     ): LatticeInterval {
         analysisType = type
-        val declarationState = DeclarationState<Any>(IntervalLattice())
-        val intervalState = NewIntervalState(IntervalLattice())
+        val declarationState = DeclarationState<Any>(NewIntervalLattice())
+        val intervalState = NewIntervalState(NewIntervalLattice())
         val startState = TupleState(declarationState, intervalState)
 
         // evaluate effect of each operation on the list until we reach "node"
@@ -395,13 +403,15 @@ class AbstractIntervalEvaluator {
         intervalState.push(startInterval, start, interval)
         declarationState.push(startStateElement.first, start, interval)
 
-        val finalState =
-            startState.iterateEOG(
-                start.nextEOGEdges,
-                startStateElement,
-                ::handleNode,
-                strategy = Lattice.Strategy.WIDENING_NARROWING,
-            )
+        val (finalState, _) =
+            runBlocking {
+                startState.iterateEOG(
+                    start.nextEOGEdges,
+                    startStateElement,
+                    ::handleNode,
+                    strategy = Lattice.Strategy.WIDENING_NARROWING,
+                )
+            }
         return finalState?.second?.get(targetNode)?.element ?: LatticeInterval.BOTTOM
     }
 
@@ -471,7 +481,7 @@ fun <NodeId> TupleState<NodeId>.changeDeclarationState(
         (node.objectIdentifier() as? NodeId)?.let { tmpId ->
             current.first.keys.singleOrNull { it == tmpId } ?: tmpId
         } ?: node as NodeId ?: TODO()
-    current.first[id] = IntervalLattice.Element(interval)
+    current.first[id] = NewIntervalLattice.Element(interval)
     return current
 }
 
@@ -493,11 +503,13 @@ fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
         (node.objectIdentifier() as? NodeId)?.let { tmpId ->
             current.first.keys.singleOrNull { it == tmpId } ?: tmpId
         } ?: node as NodeId ?: TODO()
-    this.innerLattice1.lub(
-        current.first,
-        DeclarationState.DeclarationStateElement(id to IntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@pushToDeclarationState.innerLattice1.lub(
+            current.first,
+            DeclarationState.DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
     return current
 }
 
@@ -514,11 +526,13 @@ fun <NodeId> TupleState<NodeId>.pushToGeneralState(
     node: Node,
     interval: LatticeInterval,
 ): TupleStateElement<NodeId> {
-    this.innerLattice2.lub(
-        current.second,
-        NewIntervalStateElement(node to IntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@pushToGeneralState.innerLattice2.lub(
+            current.second,
+            NewIntervalStateElement(node to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
     return current
 }
 
@@ -534,11 +548,13 @@ private fun <NodeId> DeclarationState<NodeId>.push(
     start: NodeId,
     interval: LatticeInterval,
 ) {
-    this.lub(
-        current,
-        DeclarationState.DeclarationStateElement(start to IntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@push.lub(
+            current,
+            DeclarationState.DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
 }
 
 /**
@@ -553,9 +569,11 @@ private fun NewIntervalState.push(
     start: Node,
     interval: LatticeInterval,
 ) {
-    this.lub(
-        current,
-        NewIntervalStateElement(start to IntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@push.lub(
+            current,
+            NewIntervalStateElement(start to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
 }

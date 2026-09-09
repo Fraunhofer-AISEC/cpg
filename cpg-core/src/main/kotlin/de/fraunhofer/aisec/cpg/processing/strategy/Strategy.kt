@@ -28,11 +28,13 @@ package de.fraunhofer.aisec.cpg.processing.strategy
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.*
 import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -64,7 +66,7 @@ object Strategy {
 
     /** A strategy to traverse the EOG in forward direction, but only if the edge is reachable. */
     fun REACHABLE_EOG_FORWARD(x: Node): Iterator<Node> {
-        return x.nextEOGEdges.filter { !it.unreachable }.map { it.end }.iterator()
+        return x.nextEOGEdges.mapFiltered({ !it.unreachable }) { it.end }.iterator()
     }
 
     fun COMPONENTS_LEAST_IMPORTS(x: TranslationResult): Iterator<Component> {
@@ -125,6 +127,15 @@ object Strategy {
      */
     fun AST_FORWARD(x: AstNode): Iterator<AstNode> {
         return x.astChildren.iterator()
+    }
+
+    fun MEMORY_VALUES_FORWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueEdges.iterator() else x.nextDFGEdges.iterator()
+    }
+
+    fun MEMORY_VALUES_BACKWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueUsageEdges.iterator()
+        else x.prevDFGEdges.iterator()
     }
 
     /**

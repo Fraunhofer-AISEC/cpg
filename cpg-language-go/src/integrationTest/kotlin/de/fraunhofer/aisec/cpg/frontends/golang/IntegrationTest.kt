@@ -25,13 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.test.analyzeWithBuilder
+import de.fraunhofer.aisec.cpg.project.Architecture
+import de.fraunhofer.aisec.cpg.project.OperatingSystem
+import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.test.assertInvokes
+import kotlin.io.path.Path
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
@@ -41,27 +43,35 @@ class IntegrationTest {
     @Test
     fun testProject() {
         val project =
-            Project.buildProject("src/test/resources/golang/integration", "darwin", "arm64")
+            Project.from(Path("src/test/resources/golang/integration")) {
+                registerLanguage<GoLanguage>()
+                environment {
+                    os = OperatingSystem.MACOS
+                    architecture = Architecture.ARM64
+                }
+                detector(GoBuildDetector())
+            }
 
-        val app = project.components[TranslationResult.DEFAULT_APPLICATION_NAME]
+        // The component is named after the Go module and its sources are resolved (and
+        // pre-filtered by build constraints) using the Go toolchain
+        val app = project.components.singleOrNull()
         assertNotNull(app)
-        assertNotNull(app.firstOrNull { it.endsWith("main.go") })
-        assertNotNull(app.firstOrNull { it.endsWith("func_darwin.go") })
-        assertNotNull(app.firstOrNull { it.endsWith("func_darwin_arm64.go") })
-        assertNull(app.firstOrNull { it.endsWith("func_darwin_ios.go") })
-        assertNull(app.firstOrNull { it.endsWith("func_linux_arm64.go") })
-        assertNotNull(app.firstOrNull { it.endsWith("fmt/print.go") })
+        assertEquals("integration", app.name)
 
-        val tus =
-            analyzeWithBuilder(
-                TranslationConfiguration.builder()
-                    .softwareComponents(project.components)
-                    .symbols(project.symbols)
-                    .includePath(project.includePaths.first().path)
-                    .registerLanguage<GoLanguage>()
-                    .defaultPasses()
-            )
-        assertNotNull(tus)
+        val sources = app.sources.map { it.toString() }
+        assertNotNull(sources.firstOrNull { it.endsWith("main.go") })
+        assertNotNull(sources.firstOrNull { it.endsWith("func_darwin.go") })
+        assertNotNull(sources.firstOrNull { it.endsWith("func_darwin_arm64.go") })
+        assertNull(sources.firstOrNull { it.endsWith("func_darwin_ios.go") })
+        assertNull(sources.firstOrNull { it.endsWith("func_linux_arm64.go") })
+        assertNotNull(sources.firstOrNull { it.endsWith("fmt/print.go") })
+
+        // GOOS/GOARCH are derived from the target environment
+        assertEquals("darwin", project.config.symbols["GOOS"])
+        assertEquals("arm64", project.config.symbols["GOARCH"])
+
+        val result = project.analyze()
+        val tus = result.components.flatMap { it.translationUnits }
 
         val printTU = tus.firstOrNull { it.name.endsWith("fmt/print.go") }
         assertNotNull(printTU)

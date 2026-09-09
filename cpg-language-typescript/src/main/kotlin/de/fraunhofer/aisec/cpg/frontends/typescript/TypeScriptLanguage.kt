@@ -25,7 +25,33 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-/** The TypeScript language. */
+import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+
+/**
+ * The TypeScript language.
+ *
+ * In addition to the JavaScript concepts inherited from [JavaScriptLanguage] (`static` members and
+ * `#name` hard-private members), TypeScript has genuine compile-time member access control via the
+ * `public`/`protected`/`private` access specifiers, which map onto the corresponding [Visibility].
+ */
 class TypeScriptLanguage : JavaScriptLanguage() {
     override val fileExtensions = listOf("ts", "tsx")
+
+    /**
+     * Projects the TypeScript modifiers onto [declaration]. In addition to the `static` and `#name`
+     * hard-private handling inherited from [JavaScriptLanguage.applyModifiers], TypeScript has the
+     * compile-time access specifiers `public`/`protected`/`private` (only occurring on record
+     * members), which map onto the corresponding [Visibility] and take precedence over the
+     * JavaScript default.
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        super.applyModifiers(declaration, scope)
+        when {
+            PUBLIC in declaration.modifiers -> declaration.visibility = Visibility.PUBLIC
+            PROTECTED in declaration.modifiers -> declaration.visibility = Visibility.PROTECTED
+            PRIVATE in declaration.modifiers -> declaration.visibility = Visibility.PRIVATE
+        }
+    }
 }

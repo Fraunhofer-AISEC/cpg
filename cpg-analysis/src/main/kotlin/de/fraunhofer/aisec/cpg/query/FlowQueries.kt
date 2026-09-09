@@ -61,7 +61,8 @@ fun FulfilledAndFailedPaths.toQueryTree(
             value = true,
             children =
                 mutableListOf(
-                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE)
+                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE),
+                    QueryTree(value = it.edges, operator = GenericQueryOperators.EVALUATE),
                 ),
             stringRepresentation =
                 "$queryType from ${startNode.compactToString()} to ${it.nodes.last().compactToString()} fulfills the requirement",
@@ -76,7 +77,8 @@ fun FulfilledAndFailedPaths.toQueryTree(
                 children =
                     mutableListOf(
                         QueryTree(value = nodePath.nodes, operator = GenericQueryOperators.EVALUATE)
-                            .addAssumptionDependence(nodePath)
+                            .addAssumptionDependence(nodePath),
+                        QueryTree(value = nodePath.edges, operator = GenericQueryOperators.EVALUATE),
                     ),
                 stringRepresentation =
                     "$queryType from $startNode to ${nodePath.nodes.last()} does not fulfill the requirement",
@@ -350,7 +352,7 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
                     }
                 tempAssumptions.addAll(tmp.fulfilled)
 
-                tmp.fulfilled.map { it.nodes.last() }.toSet()
+                tmp.fulfilled.mapTo(mutableSetOf()) { it.nodes.last() }
             }
             /* A new object is constructed and our data flow into this object -> track the new object. */
             this is Construction ||
@@ -412,9 +414,8 @@ fun Node.identifyInfoToTrack(
                 interproceduralAnalysis = scope is Interprocedural,
                 contextSensitive = ContextSensitive in sensitivities,
             )
-            .map { it.nodes }
-            .flatten()
-            .toSet()
+            .flatMapTo(mutableSetOf()) { it.nodes }
+
     val result = mutableSetOf(NodeWithAssumption(this))
     for (node in reachableDFGNodes) {
         // Is this node a node copying the data? If so, add its targets to the list.
@@ -493,9 +494,8 @@ internal fun Node.alwaysFlowsToInternal(
                     interproceduralAnalysis = scope is Interprocedural,
                     contextSensitive = ContextSensitive in sensitivities,
                 )
-                .map { it.nodes }
-                .flatten()
-                .toSet()
+                .flatMapTo(mutableSetOf()) { it.nodes }
+
         val earlyTerminationPredicate = { n: Node, _: Context ->
             earlyTermination?.let { it(n) } == true ||
                 // If we are not allowed to overwrite the value, we need to check if the node may
@@ -512,7 +512,9 @@ internal fun Node.alwaysFlowsToInternal(
                     maxCallDepth = scope.maxCallDepth,
                     maxSteps = scope.maxSteps,
                     allReachableNodes =
-                        nextDFGPaths.filter { it.scope != null && it !is Function }.toSet(),
+                        nextDFGPaths.filterTo(mutableSetOf()) {
+                            it.scope != null && it !is Function
+                        },
                 )
             } else scope
         val nextEOGEvaluation =
@@ -596,7 +598,7 @@ internal fun Node.alwaysFlowsToInternal(
                 "Some EOG paths failed to fulfill the predicate"
             },
         node = this,
-        assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
+        assumptions = nodesToTrack.flatMapTo(mutableSetOf()) { it.assumptions },
         operator = GenericQueryOperators.ALL,
     )
 }

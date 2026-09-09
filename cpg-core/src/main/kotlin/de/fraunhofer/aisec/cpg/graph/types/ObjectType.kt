@@ -175,6 +175,6 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
             alreadySeen.add(next)
         }
 
-        return members.toSet()
+        return members
     }
 }

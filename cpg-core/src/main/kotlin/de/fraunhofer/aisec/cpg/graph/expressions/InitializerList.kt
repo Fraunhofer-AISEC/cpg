@@ -43,7 +43,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * before adding any values to [InitializerList.initializers].
  */
 // TODO Merge and/or refactor
-class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
+class InitializerList : Expression(), HasType.TypeObserver {
 
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
@@ -67,28 +67,6 @@ class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
             .toString()
     }
 
-    override fun addArgument(expression: Expression) {
-        this.initializers += expression
-        expression.access = this.access
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        val idx = initializerEdges.indexOfFirst { it.end == old }
-        if (idx != -1) {
-            old.unregisterTypeObserver(this)
-            initializerEdges[idx].end = new
-            new.registerTypeObserver(this)
-            new.access = this.access
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in this.initializers
-    }
-
     override fun typeChanged(newType: Type, src: HasType) {
         // Normally, we would check, if the source comes from our initializers, but we want to limit
         // the iteration of the initializer list (which can potentially contain tens of thousands of
@@ -110,7 +88,7 @@ class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
         // if we are initializing an array
         val type = type
         if (type is PointerType && type.pointerOrigin == PointerType.PointerOrigin.ARRAY) {
-            addAssignedTypes(assignedTypes.map { it.array() }.toSet())
+            addAssignedTypes(assignedTypes.mapTo(mutableSetOf()) { it.array() })
         }
     }
 

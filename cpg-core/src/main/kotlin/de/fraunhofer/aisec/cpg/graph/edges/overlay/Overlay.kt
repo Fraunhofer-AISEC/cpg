@@ -42,7 +42,12 @@ import kotlin.reflect.KProperty
  * @constructor Constructs an [OverlayEdge] with a specified [start] and [end] node.
  */
 class OverlayEdge(start: Node, end: Node) : Edge<Node>(start, end) {
-    override var labels: Set<String> = setOf("OVERLAY")
+    override var labels: Set<String> = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [OverlayEdge]s (see [Edge.labels]). */
+        val LABELS = setOf("OVERLAY")
+    }
 }
 
 /**

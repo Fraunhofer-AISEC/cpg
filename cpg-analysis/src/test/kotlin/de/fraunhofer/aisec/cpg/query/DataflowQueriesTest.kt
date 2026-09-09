@@ -77,7 +77,9 @@ class DataflowQueriesTest {
         queryResultMayA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -102,7 +104,9 @@ class DataflowQueriesTest {
         queryResultMayAMax1.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             assertEquals(
                 2,
@@ -135,7 +139,9 @@ class DataflowQueriesTest {
         queryResultMustA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -164,7 +170,9 @@ class DataflowQueriesTest {
         queryResultMayB.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -193,7 +201,9 @@ class DataflowQueriesTest {
         queryResultMustB.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -242,7 +252,9 @@ class DataflowQueriesTest {
         queryResultMay.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -274,7 +286,9 @@ class DataflowQueriesTest {
         queryResultMust.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -336,7 +350,9 @@ class DataflowQueriesTest {
         queryResultMayA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -397,7 +413,9 @@ class DataflowQueriesTest {
         queryResultMustA.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -426,7 +444,9 @@ class DataflowQueriesTest {
         queryResultMayBTo5.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -455,7 +475,9 @@ class DataflowQueriesTest {
         queryResultMustBTo5.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -484,7 +506,9 @@ class DataflowQueriesTest {
         queryResultMayBToBla.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")
@@ -513,7 +537,9 @@ class DataflowQueriesTest {
         queryResultMustBToBla.children.forEach {
             // There are multiple paths which have their own query tree. The children here hold the
             // list of visited nodes in the value.
-            val path = it.children.singleOrNull()?.value as? List<*>
+            val path =
+                it.children.singleOrNull { (it.value as? List<*>)?.firstOrNull() is Node }?.value
+                    as? List<*>
             assertNotNull(path, "There should be a path represented by a list of nodes")
             path.forEach { node ->
                 assertIs<Node>(node, "The list should contain nodes")

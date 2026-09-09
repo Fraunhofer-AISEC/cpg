@@ -29,19 +29,24 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -80,68 +85,147 @@ class DFGFunctionSummariesTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("DfgInferredCall.c") {
-                            namespace("test") {
-                                // We need three types with a type hierarchy.
-                                val objectType = t("test.Object")
-                                val listType = t("test.List")
-                                var recordDecl =
-                                    startInference(ctx)?.inferRecordDeclaration(listType)
-                                listType.recordDeclaration = recordDecl
-                                recordDecl?.addSuperClass(objectType)
-                                listType.superTypes.add(objectType)
+                    singleTranslationUnit("DfgInferredCall.c") { tu ->
+                        newNamespace("test", holder = tu, enterScope = true) { ns ->
+                            // We need three types with a type hierarchy.
+                            val objType = objectType("test.Object")
+                            val listType = objectType("test.List")
+                            var recordDecl =
+                                ns.startInference(ctx)?.inferRecordDeclaration(listType)
+                            listType.recordDeclaration = recordDecl
+                            recordDecl?.addSuperClass(objType)
+                            listType.superTypes.add(objType)
 
-                                val specialListType = t("test.SpecialList")
-                                recordDecl =
-                                    startInference(ctx)?.inferRecordDeclaration(specialListType)
-                                specialListType.recordDeclaration = recordDecl
-                                recordDecl?.addSuperClass(listType)
-                                specialListType.superTypes.add(listType)
+                            val specialListType = objectType("test.SpecialList")
+                            recordDecl =
+                                ns.startInference(ctx)?.inferRecordDeclaration(specialListType)
+                            specialListType.recordDeclaration = recordDecl
+                            recordDecl?.addSuperClass(listType)
+                            specialListType.superTypes.add(listType)
 
-                                val verySpecialListType = t("test.VerySpecialList")
-                                recordDecl =
-                                    startInference(ctx)?.inferRecordDeclaration(verySpecialListType)
-                                verySpecialListType.recordDeclaration = recordDecl
-                                recordDecl?.addSuperClass(specialListType)
-                                verySpecialListType.superTypes.add(listType)
-                            }
+                            val verySpecialListType = objectType("test.VerySpecialList")
+                            recordDecl =
+                                ns.startInference(ctx)?.inferRecordDeclaration(verySpecialListType)
+                            verySpecialListType.recordDeclaration = recordDecl
+                            recordDecl?.addSuperClass(specialListType)
+                            verySpecialListType.superTypes.add(listType)
+                        }
 
-                            function("main", t("int")) {
-                                body {
-                                    memberCall("addAll", construct("test.VerySpecialList")) {
-                                        literal(1, t("int"))
-                                        construct("test.Object")
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    // The constructed base is also added as a standalone block
+                                    // statement (in addition to being the member call's base) so it
+                                    // appears in the block's EOG. The same applies to the other
+                                    // `addAll` member calls whose base is a construction below.
+                                    val verySpecialListConstruction =
+                                        newConstruction("test.VerySpecialList") {
+                                            it.type = objectType("test.VerySpecialList")
+                                        }
+                                    block.statements += verySpecialListConstruction
+                                    val addAll1 =
+                                        newMemberCall(
+                                            newMemberAccess("addAll", verySpecialListConstruction)
+                                        )
+                                    addAll1.arguments += newLiteral(1, objectType("int"))
+                                    addAll1.arguments +=
+                                        newConstruction("test.Object") {
+                                            it.type = objectType("test.Object")
+                                        }
+                                    block.statements += addAll1
+
+                                    val specialListConstruction1 =
+                                        newConstruction("test.SpecialList") {
+                                            it.type = objectType("test.SpecialList")
+                                        }
+                                    block.statements += specialListConstruction1
+                                    val addAll2 =
+                                        newMemberCall(
+                                            newMemberAccess("addAll", specialListConstruction1)
+                                        )
+                                    addAll2.arguments += newLiteral(1, objectType("int"))
+                                    addAll2.arguments +=
+                                        newConstruction("test.List") {
+                                            it.type = objectType("test.List")
+                                        }
+                                    block.statements += addAll2
+
+                                    val specialListConstruction2 =
+                                        newConstruction("test.SpecialList") {
+                                            it.type = objectType("test.SpecialList")
+                                        }
+                                    block.statements += specialListConstruction2
+                                    val addAll3 =
+                                        newMemberCall(
+                                            newMemberAccess("addAll", specialListConstruction2)
+                                        )
+                                    addAll3.arguments += newLiteral(1, objectType("int"))
+                                    addAll3.arguments +=
+                                        newConstruction("test.Object") {
+                                            it.type = objectType("test.Object")
+                                        }
+                                    block.statements += addAll3
+
+                                    block.statements += newDeclarationStatement { declStmtA ->
+                                        newVariable(
+                                            "a",
+                                            objectType("test.List"),
+                                            holder = declStmtA,
+                                        ) {
+                                            it.initializer =
+                                                newConstruction("test.List") {
+                                                    it.type = objectType("test.List")
+                                                }
+                                        }
                                     }
 
-                                    memberCall("addAll", construct("test.SpecialList")) {
-                                        literal(1, t("int"))
-                                        construct("test.List")
-                                    }
+                                    // Here the member call's base is a reference to `a`, which is
+                                    // not
+                                    // added as a standalone block statement, so no orphan reference
+                                    // appears in the block.
+                                    val addAll4 =
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "addAll",
+                                                newReference("a", objectType("test.List")),
+                                            )
+                                        )
+                                    addAll4.arguments += newLiteral(1, objectType("int"))
+                                    addAll4.arguments +=
+                                        newConstruction("test.Object") {
+                                            it.type = objectType("test.Object")
+                                        }
+                                    block.statements += addAll4
 
-                                    memberCall("addAll", construct("test.SpecialList")) {
-                                        literal(1, t("int"))
-                                        construct("test.Object")
-                                    }
+                                    block.statements +=
+                                        newCall(newReference("print")) {
+                                            it.arguments +=
+                                                newReference("a", objectType("test.List"))
+                                        }
 
-                                    declare {
-                                        variable("a", t("test.List")) { construct("test.List") }
-                                    }
+                                    val randomTypeConstruction =
+                                        newConstruction("random.Type") {
+                                            it.type = objectType("random.Type")
+                                        }
+                                    block.statements += randomTypeConstruction
+                                    val addAll5 =
+                                        newMemberCall(
+                                            newMemberAccess("addAll", randomTypeConstruction)
+                                        )
+                                    addAll5.arguments += newLiteral(1, objectType("int"))
+                                    addAll5.arguments +=
+                                        newConstruction("test.Object") {
+                                            it.type = objectType("test.Object")
+                                        }
+                                    block.statements += addAll5
 
-                                    memberCall("addAll", ref("a", t("test.List"))) {
-                                        literal(1, t("int"))
-                                        construct("test.Object")
+                                    block.statements += newReturn {
+                                        it.returnValue = newLiteral(0, objectType("int"))
                                     }
-                                    call("print") { ref("a", t("test.List")) }
-
-                                    memberCall("addAll", construct("random.Type")) {
-                                        literal(1, t("int"))
-                                        construct("test.Object")
-                                    }
-
-                                    returnStmt { literal(0, t("int")) }
                                 }
-                            }
                         }
                     }
                 }
@@ -151,8 +235,12 @@ class DFGFunctionSummariesTest {
         val listAddAllTwoArgs = code.methods["test.List.addAll"]
         assertNotNull(listAddAllTwoArgs)
         assertEquals(2, listAddAllTwoArgs.parameters.size)
+        // The param flows to this, and to all uses after
         assertEquals(
-            setOf<Node>(listAddAllTwoArgs.receiver!!),
+            setOf<Node>(
+                listAddAllTwoArgs.receiver!!,
+                code.calls("print").single().arguments.single(),
+            ),
             listAddAllTwoArgs.parameters[1].nextDFG,
         )
         // No flow from param0 or receiver specified => Should be empty and differ from default
@@ -211,7 +299,8 @@ class DFGFunctionSummariesTest {
             verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG,
         )
 
-        // Not specified => Default behavior (param0 and param1 and receiver to method declaration).
+        // Not specified => Default behavior (param0 and param1 and receiver to method
+        // declaration).
         val randomTypeAddAllTwoArgs = code.methods["random.Type.addAll"]
         assertNotNull(randomTypeAddAllTwoArgs)
         assertEquals(2, randomTypeAddAllTwoArgs.parameters.size)
@@ -236,7 +325,14 @@ class DFGFunctionSummariesTest {
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
         val param0 = memcpy.parameters[0]
+        val param0PMV =
+            param0.fullMemoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
+        assertNotNull(param0PMV)
+        val param0DerefPMV = param0.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(param0DerefPMV)
         val param1 = memcpy.parameters[1]
+        val param1DerefPMV = param1.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(param1DerefPMV)
 
         val call = main.calls["memcpy"]
         assertNotNull(call)
@@ -245,41 +341,131 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        Variable["a"] -> Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
+        Variable["a"] -CallingContextIn-> ParameterMemoryvalue["memcpy.param0.derefvalue"] -CallingContextOut-> Reference["a" (return)]
          */
 
         assertEquals(1, argA.nextDFG.size)
-        assertEquals(1, argA.prevDFG.size)
+        // The MemoryAddress a
+        assertEquals(1, argA.prevFullDFG.size)
+        assertEquals(1, argA.prevDFGEdges.filter { it.derefDepth != null }.size)
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
-            call,
-            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call,
+            mutableListOf(call),
+            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls,
         )
         assertEquals(param0, nextDfg.end)
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
-        assertEquals(mutableSetOf<Node>(variableA), argA.prevDFG)
+        assertNotNull(variableA.memoryAddresses.firstOrNull())
+        assertEquals(
+            mutableSetOf<Node>(variableA.memoryAddresses.first()),
+            argA.prevFullDFG.toMutableSet(),
+        )
 
-        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
-        assertNotNull(prevDfgOfParam0)
-        assertEquals(param1, prevDfgOfParam0.start)
+        val prevDfgOfParam0Deref =
+            param0DerefPMV.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
+        assertNotNull(prevDfgOfParam0Deref)
+        assertEquals(param1DerefPMV, prevDfgOfParam0Deref.start)
 
         val returnA = main.allChildren<Return>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
-        assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
+        val literal5 = main.literals.first { it.value?.equals(5) == true }
+        assertNotNull(literal5)
 
-        // Check that also the CallingContext property is set correctly
-        val nextDfgOfParam0 =
-            param0.nextDFGEdges.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.call ==
-                    call
+        // Check that also the CallingContext property (in and out) is set correctly
+        val valA = dfgTest.variables["a"]
+        assertNotNull(valA)
+        val memcpySrcDerefPMV =
+            dfgTest.functions("memcpy").single().parameters.first().memoryValues.singleOrNull {
+                it.name.localName == "derefvalue"
             }
-        assertEquals(returnA, nextDfgOfParam0?.end)
+        assertNotNull(memcpySrcDerefPMV)
+
+        val nextDfgOfValA =
+            valA.nextDFGEdges?.singleOrNull {
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls ==
+                    listOf(call)
+            }
+        assertEquals(memcpySrcDerefPMV, nextDfgOfValA?.end)
+
+        val nextDFGOfPMV =
+            memcpySrcDerefPMV.nextDFGEdges.singleOrNull() {
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
+                    listOf(call)
+            }
+        val returnedA = dfgTest.returns.single().returnValues.single()
+        assertEquals(returnedA, nextDFGOfPMV?.end)
     }
 
+    @Test
+    fun testLanguageHierarchyMatching() {
+        val config =
+            TranslationConfiguration.builder()
+                .registerLanguage<TestLanguageWithColon>()
+                .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
+                .inferenceConfiguration(
+                    InferenceConfiguration.builder()
+                        .inferDfgForUnresolvedCalls(true)
+                        .inferFunctions(true)
+                        .build()
+                )
+                .defaultPasses()
+                .build()
+
+        val dfgTest =
+            testFrontend(config).build {
+                singleTranslationUnit("DfgInferredCall.c") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { declStmtA ->
+                                    newVariable("a", objectType("int"), holder = declStmtA) {
+                                        it.initializer = newLiteral(7, objectType("char"))
+                                    }
+                                }
+
+                                block.statements += newDeclarationStatement { declStmtB ->
+                                    newVariable("b", objectType("int"), holder = declStmtB) {
+                                        it.initializer = newLiteral(5, objectType("char"))
+                                    }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("memcpy")) {
+                                        it.arguments +=
+                                            newPointerReference("a").also { ref ->
+                                                ref.input = newReference("a")
+                                            }
+                                        it.arguments +=
+                                            newPointerReference("b").also { ref ->
+                                                ref.input = newReference("b")
+                                            }
+                                        it.arguments += newLiteral(1, objectType("int"))
+                                    }
+
+                                block.statements += newReturn { it.returnValue = newReference("a") }
+                            }
+                    }
+                }
+            }
+
+        val memcpy = dfgTest.functions["memcpy"]
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary.isNotEmpty(),
+            "Expected memcpy to have a non-empty function summary",
+        )
+    }
+
+    @Ignore(
+        "We keep this ignored for now as the DFGPass does not draw these edges anymore, this should be done by the PointsToPass. In the future, the DFGPass could still draw the edges and the PtP could remove them again to have a more lightweight but less precise version of the DFG"
+    )
     @Test
     fun testPropagateArgumentsControlFlowInsensitive() {
         // We don't use the ControlFlowSensitiveDFGPass here to check the method
@@ -318,8 +504,8 @@ class DFGFunctionSummariesTest {
 
         val nextDfg =
             argA.nextDFGEdges.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call ==
-                    call
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls ==
+                    setOf(call)
             }
         assertNotNull(nextDfg)
         assertEquals(param0, nextDfg.end)
@@ -342,8 +528,8 @@ class DFGFunctionSummariesTest {
         // Check that also the CallingContext property is set correctly
         val nextDfgOfParam0 =
             param0.nextDFGEdges.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.call ==
-                    call
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
+                    setOf(call)
             }
         assertEquals(argA, nextDfgOfParam0?.end)
     }
@@ -369,34 +555,47 @@ class DFGFunctionSummariesTest {
                     .build()
             /*
             int main() {
-              char *a = 7;
-              char *b = 5;
-              memcpy(a, b, 1);
+              int a = 7;
+              int b = 5;
+              memcpy(&a, &b, 1);
               return a;
             }
              */
             return testFrontend(config).build {
-                translationResult {
-                    translationUnit("DfgInferredCall.c") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("a", t("char").pointer()) { literal(7, t("char")) }
+                singleTranslationUnit("DfgInferredCall.c") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { declStmtA ->
+                                    newVariable("a", objectType("int"), holder = declStmtA) {
+                                        it.initializer = newLiteral(7, objectType("char"))
+                                    }
                                 }
 
-                                declare {
-                                    variable("b", t("char").pointer()) { literal(5, t("char")) }
+                                block.statements += newDeclarationStatement { declStmtB ->
+                                    newVariable("b", objectType("int"), holder = declStmtB) {
+                                        it.initializer = newLiteral(5, objectType("char"))
+                                    }
                                 }
 
-                                call("memcpy") {
-                                    ref("a")
-                                    ref("b")
-                                    literal(1, t("int"))
-                                }
+                                block.statements +=
+                                    newCall(newReference("memcpy")) {
+                                        it.arguments +=
+                                            newPointerReference("a").also { ref ->
+                                                ref.input = newReference("a")
+                                            }
+                                        it.arguments +=
+                                            newPointerReference("b").also { ref ->
+                                                ref.input = newReference("b")
+                                            }
+                                        it.arguments += newLiteral(1, objectType("int"))
+                                    }
 
-                                returnStmt { ref("a") }
+                                block.statements += newReturn { it.returnValue = newReference("a") }
                             }
-                        }
                     }
                 }
             }

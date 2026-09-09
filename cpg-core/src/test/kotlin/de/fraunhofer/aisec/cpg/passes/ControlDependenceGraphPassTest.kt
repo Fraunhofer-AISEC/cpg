@@ -26,20 +26,44 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithShortCircuit
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.assertNotNull
+import kotlin.time.Duration.Companion.seconds
+import org.junit.jupiter.api.assertInstanceOf
 
 class ControlDependenceGraphPassTest {
+
+    @Test
+    fun testFlatFunction() {
+        val result = getFlatTest()
+        assertNotNull(result)
+        val main = result.functions["main"]
+        assertNotNull(main)
+        val allNodes = main.body.allChildren<AstNode>().filter { it != main.body }
+        allNodes.forEach { node ->
+            assertEquals(
+                main,
+                node.prevCDG.singleOrNull(),
+                "Expected node ${node} to have a CDG edge to main, but found ${node.prevCDG}",
+            )
+        }
+    }
+
     @Test
     fun testIfStatements() {
         val result = getIfTest()
@@ -48,6 +72,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(main)
         val if0 = (main.body as Block).statements[1]
         assertNotNull(if0)
+        assertInstanceOf<IfElse>(if0)
         assertEquals(1, if0.prevCDG.size)
         assertTrue(main in if0.prevCDG)
 
@@ -55,7 +80,8 @@ class ControlDependenceGraphPassTest {
             result.assignments.firstOrNull { 1 == (it.value as? Literal<*>)?.value }?.start
         assertNotNull(assignment1)
         assertEquals(1, assignment1.prevCDG.size)
-        assertTrue(if0 in assignment1.prevCDG)
+        val branchingNodes = listOfNotNull(if0.condition, if0.conditionDeclaration)
+        branchingNodes.forEach { assertTrue(it in assignment1.prevCDG) }
 
         val print0 =
             result.calls("printf").first {
@@ -63,7 +89,7 @@ class ControlDependenceGraphPassTest {
             }
         assertNotNull(print0)
         assertEquals(1, print0.prevCDG.size)
-        assertTrue(if0 in print0.prevCDG)
+        branchingNodes.forEach { assertTrue(it in print0.prevCDG) }
 
         val print1 =
             result.calls("printf").first {
@@ -90,6 +116,11 @@ class ControlDependenceGraphPassTest {
         assertNotNull(main)
         val forEachStmt = (main.body as Block).statements[1]
         assertNotNull(forEachStmt)
+        assertInstanceOf<ForEach>(forEachStmt)
+
+        val variableDecl = forEachStmt.variable
+        assertNotNull(variableDecl)
+
         assertEquals(1, forEachStmt.prevCDG.size)
         assertTrue(main in forEachStmt.prevCDG)
 
@@ -99,7 +130,7 @@ class ControlDependenceGraphPassTest {
             }
         assertNotNull(printInLoop)
         assertEquals(1, printInLoop.prevCDG.size)
-        assertTrue(forEachStmt in printInLoop.prevCDG)
+        assertTrue(variableDecl in printInLoop.prevCDG)
 
         val printAfterLoop =
             result.calls("printf").first {
@@ -108,7 +139,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(printAfterLoop)
         assertEquals(1, printAfterLoop.prevCDG.size)
         assertTrue(main in printAfterLoop.prevCDG)
-        assertFalse(forEachStmt in printAfterLoop.prevCDG)
+        assertFalse(variableDecl in printAfterLoop.prevCDG)
     }
 
     @Test
@@ -165,16 +196,66 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    call("foo") logicAnd call("bar")
-                                    call("baz") logicOr call("quux")
-                                    returnStmt { literal(1, t("int")) }
+                    singleTranslationUnit("if.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newBinaryOperator("&&") {
+                                            it.lhs = newCall(newReference("foo"))
+                                            it.rhs = newCall(newReference("bar"))
+                                        }
+
+                                    block.statements +=
+                                        newBinaryOperator("||") {
+                                            it.lhs = newCall(newReference("baz"))
+                                            it.rhs = newCall(newReference("quux"))
+                                        }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newLiteral(1, objectType("int"))
+                                    }
                                 }
-                            }
+                        }
+                    }
+                }
+
+        fun getFlatTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithColon>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .build()
+                )
+                .build {
+                    singleTranslationUnit("if.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("i", objectType("int"), holder = declStmt) {
+                                            it.initializer = newLiteral(0, objectType("int"))
+                                        }
+                                    }
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("1\n", objectType("string"))
+                                        }
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("2\n", objectType("string"))
+                                        }
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("i")
+                                    }
+                                }
                         }
                     }
                 }
@@ -187,33 +268,86 @@ class ControlDependenceGraphPassTest {
                         .registerPass<ControlDependenceGraphPass>()
                         .build()
                 )
-                .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(1, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign literal(1, t("int"))
-                                            call("printf") { literal("0\n", t("string")) }
-                                        }
-                                    }
-                                    call("printf") { literal("1\n", t("string")) }
-                                    ifStmt {
-                                        condition { ref("i") gt literal(0, t("int")) }
-                                        thenStmt { ref("i") assign literal(2, t("int")) }
-                                        elseStmt { ref("i") assign literal(3, t("int")) }
-                                    }
-                                    call("printf") { literal("2\n", t("string")) }
-                                    returnStmt { ref("i") }
+                .build { buildIfTestBody("if.cpp") }
+
+        private fun LanguageFrontend<*, *>.buildIfTestBody(tuName: String): TranslationResult {
+            return singleTranslationUnit(tuName) { tu ->
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newVariable("i", objectType("int"), holder = declStmt) {
+                                    it.initializer = newLiteral(0, objectType("int"))
                                 }
                             }
+
+                            block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("<") {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(1, objectType("int"))
+                                    }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(1, objectType("int"))),
+                                            )
+
+                                        thenBlock.statements +=
+                                            newCall(newReference("printf")) {
+                                                it.arguments +=
+                                                    newLiteral("0\n", objectType("string"))
+                                            }
+                                    }
+                            }
+
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newLiteral("1\n", objectType("string"))
+                                }
+
+                            block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator(">") {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(0, objectType("int"))
+                                    }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(2, objectType("int"))),
+                                            )
+                                    }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        elseBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(3, objectType("int"))),
+                                            )
+                                    }
+                            }
+
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newLiteral("2\n", objectType("string"))
+                                }
+
+                            block.statements += newReturn { it.returnValue = newReference("i") }
                         }
-                    }
                 }
+            }
+        }
 
         fun getForEachTest() =
             testFrontend(
@@ -224,27 +358,53 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("forEach.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    forEachStmt {
-                                        declare { variable("loopVar", t("string")) }
-                                        call("magicFunction")
-                                        loopBody {
-                                            call("printf") {
-                                                literal("loop: \${}\n", t("string"))
-                                                ref("loopVar")
-                                            }
+                    singleTranslationUnit("forEach.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("i", objectType("int"), holder = declStmt) {
+                                            it.initializer = newLiteral(0, objectType("int"))
                                         }
                                     }
-                                    call("printf") { literal("1\n", t("string")) }
 
-                                    returnStmt { ref("i") }
+                                    block.statements += newForEach { forEach ->
+                                        forEach.variable =
+                                            newDeclarationStatement { loopVarDeclStmt ->
+                                                newVariable(
+                                                    "loopVar",
+                                                    objectType("string"),
+                                                    holder = loopVarDeclStmt,
+                                                )
+                                            }
+                                        val magicCall = newCall(newReference("magicFunction"))
+                                        forEach.iterable = magicCall
+                                        forEach.statement =
+                                            newBlock(enterScope = true) { loopBody ->
+                                                loopBody.statements +=
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "loop: \${}\n",
+                                                                objectType("string"),
+                                                            )
+                                                        it.arguments += newReference("loopVar")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("1\n", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("i")
+                                    }
                                 }
-                            }
                         }
                     }
                 }
@@ -256,36 +416,10 @@ class ControlDependenceGraphPassTest {
                         .defaultPasses()
                         .registerPass<ControlDependenceGraphPass>()
                         .configurePass<ControlDependenceGraphPass>(
-                            ControlDependenceGraphPass.Configuration(timeout = 0L)
+                            ControlDependenceGraphPass.Configuration(timeout = 0.seconds)
                         )
                         .build()
                 )
-                .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(1, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign literal(1, t("int"))
-                                            call("printf") { literal("0\n", t("string")) }
-                                        }
-                                    }
-                                    call("printf") { literal("1\n", t("string")) }
-                                    ifStmt {
-                                        condition { ref("i") gt literal(0, t("int")) }
-                                        thenStmt { ref("i") assign literal(2, t("int")) }
-                                        elseStmt { ref("i") assign literal(3, t("int")) }
-                                    }
-                                    call("printf") { literal("2\n", t("string")) }
-                                    returnStmt { ref("i") }
-                                }
-                            }
-                        }
-                    }
-                }
+                .build { buildIfTestBody("if.cpp") }
     }
 }

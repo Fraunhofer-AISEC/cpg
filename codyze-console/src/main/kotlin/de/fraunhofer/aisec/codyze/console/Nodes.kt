@@ -269,6 +269,9 @@ data class ConceptRequestJSON(
     }
 }
 
+/** Request body for the `/api/execute-query` endpoint. */
+@Serializable data class ExecuteQueryRequestJSON(val scriptCode: String)
+
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
     with(translationResult) {
@@ -488,7 +491,7 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
                     lineNumber = it.lineNumber,
                 )
             },
-        assumptions = this.relevantAssumptions().map { it.toJSON() }.toSet(),
+        assumptions = this.relevantAssumptions().mapTo(mutableSetOf()) { it.toJSON() },
     )
 }
 
