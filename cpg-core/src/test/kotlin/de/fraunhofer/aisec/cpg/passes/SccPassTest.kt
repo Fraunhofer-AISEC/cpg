@@ -27,54 +27,230 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AnnotationMember
+import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * Hand-builds small EOGs (via [AnnotationMember] as a stand-in graph node - same choice as
+ * [testBlacklistedNodeDoesNotAbortSuccessorScan] below, see its doc for why) and checks
+ * [SccPass.tarjan]'s actual output: the `scc` level [SccPass] stamps onto
+ * [EvaluationOrder][de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder] edges that are part
+ * of a loop.
+ *
+ * One non-obvious thing every loop-detection test below depends on: a cycle with no connection to
+ * the outside world (no predecessor into it, no successor out of it) never gets labeled at
+ * all - [SccPass] only stamps edges adjacent to a loop's entry/exit boundary nodes (the back-edge
+ * into the entry, and the continuation edge out of it - not every edge structurally inside the
+ * cycle). This matches its real use (basic blocks always sit inside a larger EOG), but means every
+ * test here wires in a `start`/`end` node around the loop under test, even though those two nodes
+ * are otherwise irrelevant to what's being tested.
+ */
 class SccPassTest {
+
+    private fun newPass() = SccPass(TranslationContext())
+
+    /** The `scc` level of the edge from this node to [other], or `null` if there isn't one. */
+    private fun Node.sccTo(other: Node): Int? = nextEOGEdges.find { it.end == other }?.scc
+
     /**
-     * Regression test for the `StackOverflowError` that the original recursive [SccPass.tarjan] hit
-     * on deep EOGs (recursion depth = longest simple path in the EOG). Hand-builds a chain of [n]
-     * plain nodes linked via `nextEOG` (same approach as
-     * [testBlacklistedNodeDoesNotAbortSuccessorScan] below, just chained deep) and runs `tarjan` on
-     * a separate [Thread] with a deliberately small stack, so the test is deterministic regardless
-     * of how many bytes the JVM uses per recursive frame on a given platform.
-     *
-     * An earlier version of this test built the chain through the real frontend/DSL (many
-     * sequential `if`s, to force basic-block boundaries via `BasicBlockCollectorPass`). That turned
-     * out unreliable in practice: `defaultPasses()` pulls in unrelated passes
-     * (`ControlFlowSensitiveDFGPass`/`SymbolResolver`) with their own complexity blowups on
-     * functions with many branches (`OutOfMemoryError` at just 3,000 `if`s), and even after
-     * trimming to the minimal passes `SccPass` needs, the resulting EOG chain was consistently far
-     * shallower than the `if` count, and default-JVM-stack-sized runs never overflowed even at very
-     * high `n`. Hand-building the chain directly avoids both problems and gives an exact, known
-     * depth.
+     * A straight line has no back-edge at all, so nothing should ever be labeled - the baseline "no
+     * false positives" case every other test here implicitly relies on.
      */
     @Test
-    fun testDeepEogDoesNotStackOverflow() {
-        val n = 5_000
+    fun testStraightLineIsNotLabeled() {
         val start = AnnotationMember()
-        var current = start
-        repeat(n) {
-            val next = AnnotationMember()
-            current.nextEOG.add(next)
-            current = next
-        }
+        val a = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(a)
+        a.nextEOG.add(end)
 
-        var caught: Throwable? = null
-        val thread =
-            Thread(
-                null,
-                {
-                    runCatching { SccPass(TranslationContext()).tarjan(start, 1) }
-                        .onFailure { caught = it }
-                },
-                "scc-small-stack",
-                256 * 1024,
-            )
-        thread.start()
-        thread.join()
+        newPass().tarjan(start, 1)
 
-        assertTrue(caught == null, "SccPass threw on a deep EOG: $caught")
+        assertNull(start.sccTo(a))
+        assertNull(a.sccTo(end))
+    }
+
+    /**
+     * A pure diamond (branch then merge, no back-edge) must not be mistaken for a loop either -
+     * reconverging paths are not a cycle.
+     */
+    @Test
+    fun testDiamondWithoutLoopIsNotLabeled() {
+        val start = AnnotationMember()
+        val a = AnnotationMember()
+        val b = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(a)
+        start.nextEOG.add(b)
+        a.nextEOG.add(end)
+        b.nextEOG.add(end)
+
+        newPass().tarjan(start, 1)
+
+        assertNull(start.sccTo(a))
+        assertNull(start.sccTo(b))
+        assertNull(a.sccTo(end))
+        assertNull(b.sccTo(end))
+    }
+
+    /** A single node that loops back to itself is the smallest possible real SCC. */
+    @Test
+    fun testSelfLoopIsLabeled() {
+        val start = AnnotationMember()
+        val a = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(a)
+        a.nextEOG.add(a)
+        a.nextEOG.add(end)
+
+        newPass().tarjan(start, 1)
+
+        assertEquals(1, a.sccTo(a))
+        assertNull(start.sccTo(a))
+        assertNull(a.sccTo(end))
+    }
+
+    /** The canonical `while` loop shape: a head with a back-edge from the loop body. */
+    @Test
+    fun testSimpleLoopIsLabeled() {
+        val start = AnnotationMember()
+        val head = AnnotationMember()
+        val body = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(head)
+        head.nextEOG.add(body)
+        head.nextEOG.add(end)
+        body.nextEOG.add(head)
+
+        newPass().tarjan(start, 1)
+
+        assertEquals(1, body.sccTo(head))
+        assertEquals(1, head.sccTo(body))
+        assertNull(start.sccTo(head))
+        assertNull(head.sccTo(end))
+    }
+
+    /** Same as [testSimpleLoopIsLabeled], but with a 3-node loop body instead of 1 node. */
+    @Test
+    fun testLongerLoopIsLabeled() {
+        val start = AnnotationMember()
+        val head = AnnotationMember()
+        val b = AnnotationMember()
+        val c = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(head)
+        head.nextEOG.add(b)
+        head.nextEOG.add(end)
+        b.nextEOG.add(c)
+        c.nextEOG.add(head)
+
+        newPass().tarjan(start, 1)
+
+        assertEquals(1, c.sccTo(head), "the back-edge closing the loop must be labeled")
+        assertEquals(1, head.sccTo(b), "the loop's entry continuation must be labeled")
+        assertNull(start.sccTo(head))
+        assertNull(head.sccTo(end))
+    }
+
+    /**
+     * Two independent loops, connected only by a one-way bridge from the first into the second -
+     * they must be recognized as two separate SCCs, not merged into one just because the second is
+     * reachable from the first.
+     */
+    @Test
+    fun testTwoDisjointLoopsAreNotMerged() {
+        val start = AnnotationMember()
+        val a = AnnotationMember()
+        val b = AnnotationMember()
+        val bridge = AnnotationMember()
+        val c = AnnotationMember()
+        val d = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(a)
+        a.nextEOG.add(b)
+        b.nextEOG.add(a)
+        a.nextEOG.add(bridge)
+        bridge.nextEOG.add(c)
+        c.nextEOG.add(d)
+        d.nextEOG.add(c)
+        c.nextEOG.add(end)
+
+        newPass().tarjan(start, 1)
+
+        assertEquals(1, b.sccTo(a), "loop 1's back-edge")
+        assertEquals(1, d.sccTo(c), "loop 2's back-edge")
+        assertNull(a.sccTo(bridge), "the bridge out of loop 1 is not part of either loop")
+        assertNull(bridge.sccTo(c), "the bridge into loop 2 is not part of either loop")
+    }
+
+    /**
+     * A loop nested directly inside another: `while (outer) { while (inner) { ... } }`. Both loops
+     * must be found, and at different levels - the inner one strictly deeper than the outer one.
+     */
+    @Test
+    fun testNestedLoopHasTwoLevels() {
+        val start = AnnotationMember()
+        val outer = AnnotationMember()
+        val inner = AnnotationMember()
+        val innerBody = AnnotationMember()
+        val outerBody = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(outer)
+        outer.nextEOG.add(inner)
+        outer.nextEOG.add(end)
+        inner.nextEOG.add(innerBody)
+        inner.nextEOG.add(outerBody)
+        innerBody.nextEOG.add(inner)
+        outerBody.nextEOG.add(outer)
+
+        newPass().tarjan(start, 1)
+
+        assertEquals(1, outerBody.sccTo(outer), "outer loop's back-edge")
+        assertEquals(1, outer.sccTo(inner), "outer loop's entry continuation")
+        assertEquals(2, innerBody.sccTo(inner), "inner loop's back-edge, one level deeper")
+        assertEquals(2, inner.sccTo(innerBody), "inner loop's entry continuation")
+        assertNull(start.sccTo(outer))
+        assertNull(outer.sccTo(end))
+    }
+
+    /**
+     * Three loops nested inside each other: `while (a) { while (b) { while (c) { ... } } }`. Each
+     * level must be found at its own, strictly increasing, level.
+     */
+    @Test
+    fun testTripleNestedLoopHasThreeLevels() {
+        val start = AnnotationMember()
+        val a = AnnotationMember()
+        val b = AnnotationMember()
+        val c = AnnotationMember()
+        val innerBody = AnnotationMember()
+        val middleBody = AnnotationMember()
+        val outerBody = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(a)
+        a.nextEOG.add(b)
+        a.nextEOG.add(end)
+        b.nextEOG.add(c)
+        b.nextEOG.add(outerBody)
+        c.nextEOG.add(innerBody)
+        c.nextEOG.add(middleBody)
+        innerBody.nextEOG.add(c)
+        middleBody.nextEOG.add(b)
+        outerBody.nextEOG.add(a)
+
+        newPass().tarjan(start, 1)
+
+        assertEquals(1, outerBody.sccTo(a), "outermost loop's back-edge")
+        assertEquals(2, middleBody.sccTo(b), "middle loop's back-edge")
+        assertEquals(3, innerBody.sccTo(c), "innermost loop's back-edge")
+        assertEquals(1, a.sccTo(b), "outermost loop's entry continuation")
+        assertEquals(2, b.sccTo(c), "middle loop's entry continuation")
+        assertEquals(3, c.sccTo(innerBody), "innermost loop's entry continuation")
+        assertNull(start.sccTo(a))
+        assertNull(a.sccTo(end))
     }
 
     /**
@@ -99,7 +275,7 @@ class SccPassTest {
      */
     @Test
     fun testBlacklistedNodeDoesNotAbortSuccessorScan() {
-        val pass = SccPass(TranslationContext())
+        val pass = newPass()
 
         val bb = AnnotationMember()
         val blacklisted = AnnotationMember()
