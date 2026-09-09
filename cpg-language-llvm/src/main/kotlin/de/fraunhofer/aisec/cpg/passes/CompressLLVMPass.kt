@@ -98,6 +98,8 @@ class CompressLLVMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             val newStatements = node.statements.dropLast(1).toMutableList()
             newStatements.addAll(gotoSubstatement.statements)
             node.statements = newStatements
+            // Detach the inlined block from its original Label to avoid AST duplication
+            goto.targetLabel?.subStatementEdge?.clear()
         }
     }
 
@@ -109,12 +111,17 @@ class CompressLLVMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         val caseBodyStatements = node.statement as? Block ?: return
         val newStatements = caseBodyStatements.statements.toMutableList()
         for (i in 0 until newStatements.size) {
-            val subStatement = (newStatements[i] as? Goto)?.targetLabel?.subStatement
+            val gotoStatement = newStatements[i] as? Goto
+            val subStatement = gotoStatement?.targetLabel?.subStatement
             if (
                 newStatements[i] in gotosToReplace &&
                     newStatements[i] !in (subStatement?.astChildren ?: listOf())
             ) {
-                subStatement?.let { newStatements[i] = it }
+                subStatement?.let {
+                    newStatements[i] = it
+                    // Detach the inlined block from its original Label to avoid AST duplication
+                    gotoStatement.targetLabel?.subStatementEdge?.clear()
+                }
             }
         }
         caseBodyStatements.statements = newStatements
@@ -127,14 +134,28 @@ class CompressLLVMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private fun handleIf(node: IfElse, gotosToReplace: List<Goto>) {
 
         // Replace the then-statement
-        val thenGoto = (node.thenStatement as? Goto)?.targetLabel?.subStatement
-        if (node.thenStatement in gotosToReplace && node !in thenGoto.allChildren<IfElse>()) {
-            node.thenStatement = thenGoto
+        val thenGotoStatement = node.thenStatement as? Goto
+        val thenSub = thenGotoStatement?.targetLabel?.subStatement
+        if (
+            thenGotoStatement in gotosToReplace &&
+                thenSub != null &&
+                node !in thenSub.allChildren<IfElse>()
+        ) {
+            node.thenStatement = thenSub
+            // Detach the inlined block from its original Label to avoid AST duplication
+            thenGotoStatement.targetLabel?.subStatementEdge?.clear()
         }
         // Replace the else-statement
-        val elseGoto = (node.elseStatement as? Goto)?.targetLabel?.subStatement
-        if (node.elseStatement in gotosToReplace && node !in elseGoto.allChildren<IfElse>()) {
-            node.elseStatement = elseGoto
+        val elseGotoStatement = node.elseStatement as? Goto
+        val elseSub = elseGotoStatement?.targetLabel?.subStatement
+        if (
+            elseGotoStatement in gotosToReplace &&
+                elseSub != null &&
+                node !in elseSub.allChildren<IfElse>()
+        ) {
+            node.elseStatement = elseSub
+            // Detach the inlined block from its original Label to avoid AST duplication
+            elseGotoStatement.targetLabel?.subStatementEdge?.clear()
         }
     }
 

@@ -198,17 +198,14 @@ class LLVMIRLanguageFrontendTest {
         val onzeroLabel = main.labels.getOrNull(0)
         assertNotNull(onzeroLabel)
         assertLocalName("onzero", onzeroLabel)
-        assertIs<Block>(onzeroLabel.subStatement)
 
         val ononeLabel = main.labels.getOrNull(1)
         assertNotNull(ononeLabel)
         assertLocalName("onone", ononeLabel)
-        assertIs<Block>(ononeLabel.subStatement)
 
         val defaultLabel = main.labels.getOrNull(2)
         assertNotNull(defaultLabel)
         assertLocalName("otherwise", defaultLabel)
-        assertIs<Block>(defaultLabel.subStatement)
 
         // Check that the type of %a is i32
         val a = main.variables["a"]
@@ -229,17 +226,17 @@ class LLVMIRLanguageFrontendTest {
         val case1 = cases.statements[0]
         assertIs<Case>(case1)
         assertLiteralValue(0L, case1.caseExpression)
-        assertSame(onzeroLabel.subStatement, cases.statements[1])
+        assertIs<Block>(cases.statements[1])
         // Check that the second case is case 1 -> goto onone and that the BB is inlined
         val case2 = cases.statements[2]
         assertIs<Case>(case2)
         assertLiteralValue(1L, case2.caseExpression)
-        assertSame(ononeLabel.subStatement, cases.statements[3])
+        assertIs<Block>(cases.statements[3])
 
         // Check that the default location is inlined
         val defaultStatement = cases.statements[4] as? Default
         assertIs<Default>(defaultStatement)
-        assertSame(defaultLabel.subStatement, cases.statements[5])
+        assertIs<Block>(cases.statements[5])
     }
 
     @Test

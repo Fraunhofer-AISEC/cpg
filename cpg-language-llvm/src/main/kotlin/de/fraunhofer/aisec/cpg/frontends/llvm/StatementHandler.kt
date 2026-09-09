@@ -649,7 +649,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
-                arrayExpr.subscriptExpression = operand
+                arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 0)
                 expr = arrayExpr
 
                 // deference the type to get the new base type
@@ -710,17 +710,18 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     @FunctionReplacement(["llvm.freeze"], "freeze")
     private fun handleFreeze(instr: LLVMValueRef): Expression {
         val operand = frontend.getOperandValueAtIndex(instr, 0)
+        val type = operand.type
 
         // condition: arg != undef && arg != poison
         val condition = newBinaryOperator("&&", rawNode = instr)
         val undefCheck = newBinaryOperator("!=", rawNode = instr)
-        undefCheck.lhs = operand
-        undefCheck.rhs = newLiteral(null, operand.type, rawNode = instr)
+        undefCheck.lhs = frontend.getOperandValueAtIndex(instr, 0)
+        undefCheck.rhs = newLiteral(null, type, rawNode = instr)
         condition.lhs = undefCheck
         val poisonCheck = newBinaryOperator("!=", rawNode = instr)
-        poisonCheck.lhs = operand
+        poisonCheck.lhs = frontend.getOperandValueAtIndex(instr, 0)
         // This could be e.g. NAN. Not sure for complex types
-        poisonCheck.rhs = newReference("poison", operand.type, rawNode = instr)
+        poisonCheck.rhs = newReference("poison", type, rawNode = instr)
         condition.rhs = poisonCheck
 
         // Call to a dummy function "llvm.freeze" which would fill the undef or poison values
@@ -729,10 +730,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // could be rand())
         val callExpression =
             newCall(llvmInternalRef("llvm.freeze"), "llvm.freeze", false, rawNode = instr)
-        callExpression.addArgument(operand)
+        callExpression.addArgument(frontend.getOperandValueAtIndex(instr, 0))
 
         // res = (arg != undef && arg != poison) ? arg : llvm.freeze(arg)
-        val conditional = newConditional(condition, operand, callExpression, operand.type)
+        // Re-fetch operand for the conditional to avoid sharing the same AST node across parents
+        val conditional =
+            newConditional(
+                condition,
+                frontend.getOperandValueAtIndex(instr, 0),
+                callExpression,
+                type,
+            )
         return declarationOrNot(conditional, instr)
     }
 
@@ -914,7 +922,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val ptrDerefConditional =
                     newPointerDereference(ptrDerefConditionalInput.name, rawNode = instr)
                 ptrDerefConditional.input = ptrDerefConditionalInput
-                val conditional = newConditional(condition, ptrDerefConditional, value, ty)
+                // Re-fetch value to avoid sharing the same AST node across multiple parents
+                val conditional =
+                    newConditional(
+                        condition,
+                        ptrDerefConditional,
+                        frontend.getOperandValueAtIndex(instr, 1),
+                        ty,
+                    )
                 exchOp.rhs = mutableListOf(conditional)
             }
             LLVMAtomicRMWBinOpUMax,
@@ -940,7 +955,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 val ptrDerefConditional =
                     newPointerDereference(ptrDerefConditionalInput.name, rawNode = instr)
                 ptrDerefConditional.input = ptrDerefConditionalInput
-                val conditional = newConditional(condition, ptrDerefConditional, value, ty)
+                // Re-fetch value to avoid sharing the same AST node across multiple parents
+                val conditional =
+                    newConditional(
+                        condition,
+                        ptrDerefConditional,
+                        frontend.getOperandValueAtIndex(instr, 1),
+                        ty,
+                    )
                 exchOp.rhs = mutableListOf(conditional)
             }
             else -> {
@@ -1546,8 +1568,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binOpUnordered.rhs = binaryOperator
                 val unorderedCall =
                     newCall(llvmInternalRef("isunordered"), "isunordered", false, rawNode = instr)
-                unorderedCall.addArgument(op1)
-                unorderedCall.addArgument(op2)
+                // Re-fetch operands to avoid sharing the same AST node across multiple parents
+                unorderedCall.addArgument(frontend.getOperandValueAtIndex(instr, 0))
+                unorderedCall.addArgument(frontend.getOperandValueAtIndex(instr, 1))
                 binOpUnordered.lhs = unorderedCall
             }
         }
