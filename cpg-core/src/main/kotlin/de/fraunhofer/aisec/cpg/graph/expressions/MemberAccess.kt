@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -44,7 +43,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * access of a member function (method) as part of the [MemberCall.callee] property of a
  * [MemberCall].
  */
-class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
+class MemberAccess : Reference(), HasOverloadedOperation, HasBase {
     @Relationship("BASE")
     var baseEdge =
         astEdgeOf<Expression>(
@@ -76,23 +75,6 @@ class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBas
             .appendSuper(super.toString())
             .append("base", base)
             .toString()
-    }
-
-    override fun addArgument(expression: Expression) {
-        this.base = expression
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (old == base) {
-            base = new
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return base == expression
     }
 
     override fun equals(other: Any?): Boolean {

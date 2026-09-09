@@ -47,12 +47,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [Function].
  */
-open class Call :
-    Expression(),
-    HasOverloadedOperation,
-    HasType.TypeObserver,
-    ArgumentHolder,
-    HasSecondaryTypeEdge {
+open class Call : Expression(), HasOverloadedOperation, HasType.TypeObserver, HasSecondaryTypeEdge {
     /**
      * Connection to its [Function]. This will be populated by the [SymbolResolver]. This will have
      * an effect on the [type]
@@ -120,36 +115,12 @@ open class Call :
         argumentEdges[index].end = argument
     }
 
-    override fun addArgument(expression: Expression) {
-        return addArgument(expression, null)
-    }
-
     /** Adds the specified [expression] with an optional [name] to this call. */
     fun addArgument(expression: Expression, name: String? = null) {
         val edge = AstEdge(this, expression)
         edge.name = name
 
         argumentEdges.add(edge)
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        // First, we need to find the old index
-        val idx = this.arguments.indexOf(old)
-        if (idx == -1) {
-            return false
-        }
-
-        setArgument(idx, new)
-        return true
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in this.arguments
-    }
-
-    override fun removeArgument(expression: Expression): Boolean {
-        arguments -= expression
-        return true
     }
 
     /** Specifies, whether this call has any template arguments. */

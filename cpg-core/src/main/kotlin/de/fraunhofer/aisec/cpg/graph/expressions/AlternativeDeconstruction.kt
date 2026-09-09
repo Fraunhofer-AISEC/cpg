@@ -25,14 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import kotlin.collections.plusAssign
 
 /**
  * Represents an "or-pattern": a set of [alternatives], any one of which may match the scrutinee.
@@ -51,7 +49,7 @@ import kotlin.collections.plusAssign
  * where each of `1`, `2`, `3` becomes one entry in [alternatives], or nested inside a larger
  * pattern, e.g. `Message::Hello { id: 1..=3 | 7..=9 }`.
  */
-class AlternativeDeconstruction : Deconstruction(), ArgumentHolder, HasType.TypeObserver {
+class AlternativeDeconstruction : Deconstruction(), HasType.TypeObserver {
 
     @Relationship("ALTERNATIVES") var alternativeEdges = astEdgesOf<Expression>()
     var alternatives by unwrapping(AlternativeDeconstruction::alternativeEdges)
@@ -63,28 +61,6 @@ class AlternativeDeconstruction : Deconstruction(), ArgumentHolder, HasType.Type
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), alternatives)
-
-    override fun addArgument(expression: Expression) {
-        this.alternatives += expression
-        expression.access = this.access
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        val idx = alternativeEdges.indexOfFirst { it.end == old }
-        if (idx != -1) {
-            old.unregisterTypeObserver(this)
-            alternativeEdges[idx].end = new
-            new.registerTypeObserver(this)
-            new.access = this.access
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in this.alternatives
-    }
 
     override fun typeChanged(newType: Type, src: HasType) {
         val type = type
