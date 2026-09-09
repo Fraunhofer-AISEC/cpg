@@ -308,12 +308,15 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
     }
 
+    // Note: no need to guard against processing the same basic block twice - EOGStarterPass
+    // creates a fresh SccPass instance per starter node and calls accept() on it exactly once
+    // (see PassManager.consumeTarget), so tarjanInfoMap is never shared across multiple accept()
+    // calls in the first place. An earlier version of this method guarded on
+    // tarjanInfoMap[0].visited, but nothing ever populated that set, so the guard was always
+    // true and never did anything.
     override fun accept(node: Node) {
         if (node.basicBlock.isEmpty()) return
         val bb = node.basicBlock.single() as BasicBlock
-        val entry = tarjanInfoMap.computeIfAbsent(0) { TarjanInfo(emptyList()) }
-        if (bb !in entry.visited) {
-            tarjan(bb)
-        }
+        tarjan(bb)
     }
 }
