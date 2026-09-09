@@ -82,18 +82,32 @@ fun buildSkillFileToolRegistry(fs: FileSystemProvider.ReadOnly<Path>): ToolRegis
 
 /**
  * Build the skill-catalog section appended to the system prompt: Koog's own [generateSkillsPrompt]
- * (with `includeLocation = true`, since the model needs each skill's absolute path to actually
- * list/read it), plus a short instruction on how to load a skill using the tools from
- * [buildSkillFileToolRegistry] - adapted from Koog's own recommended system-prompt wording in
- * `docs/docs/skills.md`.
+ * (with `includeLocation = true`, since the model needs each skill's absolute path to actually read
+ * it), plus a short instruction on how to load a skill using the tools from
+ * [buildSkillFileToolRegistry].
+ *
+ * Two things tuned here based on `log_skills_module`'s real-LLM test run (2026-09-08):
+ * - Says "read" only, not "list its directory and read" - the model was doing both per activation,
+ *   costing an extra tool round trip it doesn't need (the catalog already gives the exact file
+ *   path). Cut per-activation cost roughly in half.
+ * - States the access restriction explicitly, since [ReadFileTool]/[ListDirectoryTool]'s own
+ *   descriptions can't be changed (they're Koog's own non-`open` classes) and the rejection message
+ *   a jailed path actually gets back - "File not found: ... (ensure the path is absolute)" - reads
+ *   like the file doesn't exist rather than that it's out of bounds. Telling the model the boundary
+ *   upfront is cheaper than letting it find out by trial and error: the same real run also had the
+ *   model wander into listing `/home/cpg/dust`/`/home/cpg` and reading an unrelated `/tmp/...` path
+ *   before giving up and proceeding correctly - both safely rejected by [jailedSkillsFileSystem],
+ *   but wasted tokens/round trips getting there.
  */
 fun buildSkillCatalog(skills: List<Skill>): String? {
     if (skills.isEmpty()) return null
     val catalog = generateSkillsPrompt(skills, SkillsPromptFormat.XML, includeLocation = true)
     return """
         The following skills provide specialized instructions for specific tasks. Use the
-        available skills listed below. Before following a skill, disclose it by listing its
-        directory and reading its SKILL.md file (at the listed location) with your file tools.
+        available skills listed below. To follow a skill, read its SKILL.md file directly at
+        the listed location with your file tools - no need to list the directory first. Your
+        file tools are restricted to `.agents/skills/` only; listing or reading any other path
+        will fail.
 
         $catalog
     """
