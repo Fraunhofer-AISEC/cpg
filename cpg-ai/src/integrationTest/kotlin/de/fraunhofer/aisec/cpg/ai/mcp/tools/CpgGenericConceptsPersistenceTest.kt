@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
 import de.fraunhofer.aisec.cpg.graph.literals
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
@@ -187,7 +188,12 @@ class CpgGenericConceptsPersistenceTest {
                 assertIs<GenericLLMConcept>(reloadedConcept)
                 assertEquals("SecretKey", reloadedConcept.conceptName)
                 assertEquals("A hardcoded API secret key", reloadedConcept.description)
-                assertEquals("CRITICAL", reloadedConcept.properties.properties["severity"])
+                assertEquals(
+                    "CRITICAL",
+                    (reloadedConcept.properties.properties["severity"]
+                            as GenericPropertyValue.StringValue)
+                        .value,
+                )
                 assertEquals(
                     (secretLiteral as AstNode).idAst,
                     (reloadedConcept.underlyingNode as AstNode).idAst,
@@ -197,7 +203,12 @@ class CpgGenericConceptsPersistenceTest {
                 assertIs<GenericLLMOperation>(reloadedOp)
                 assertEquals("AccessSecret", reloadedOp.operationName)
                 assertEquals("Accesses the secret value", reloadedOp.description)
-                assertEquals("READ", reloadedOp.properties.properties["accessType"])
+                assertEquals(
+                    "READ",
+                    (reloadedOp.properties.properties["accessType"]
+                            as GenericPropertyValue.StringValue)
+                        .value,
+                )
                 assertSame(reloadedConcept, reloadedOp.genericLLMConcept)
             } finally {
                 cleanFiles()

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
@@ -152,13 +153,19 @@ class LoadPersistedConceptsTest : BaseTest() {
         assertIs<GenericLLMConcept>(concept)
         assertEquals("Authentication", concept.conceptName)
         assertEquals("Handles user authentication", concept.description)
-        assertEquals("high", concept.properties.properties["tier"])
+        assertEquals(
+            "high",
+            (concept.properties.properties["tier"] as GenericPropertyValue.StringValue).value,
+        )
 
         val op = concept.ops.singleOrNull()
         assertIs<GenericLLMOperation>(op)
         assertEquals("Login", op.operationName)
         assertEquals("Performs user login", op.description)
-        assertEquals("POST", op.properties.properties["method"])
+        assertEquals(
+            "POST",
+            (op.properties.properties["method"] as GenericPropertyValue.StringValue).value,
+        )
         assertSame(concept, op.genericLLMConcept)
     }
 
@@ -184,7 +191,8 @@ class LoadPersistedConceptsTest : BaseTest() {
                     underlyingNode = target,
                     conceptName = "Authentication",
                     description = "Handles user authentication",
-                    properties = GenericProperties(mapOf("tier" to "high")),
+                    properties =
+                        GenericProperties(mapOf("tier" to GenericPropertyValue.StringValue("high"))),
                 )
                 .apply {
                     this.codeAndLocationFrom(target)
@@ -198,7 +206,10 @@ class LoadPersistedConceptsTest : BaseTest() {
                     operationName = "Login",
                     description = "Performs user login",
                     genericLLMConcept = concept,
-                    properties = GenericProperties(mapOf("method" to "POST")),
+                    properties =
+                        GenericProperties(
+                            mapOf("method" to GenericPropertyValue.StringValue("POST"))
+                        ),
                 )
                 .apply {
                     this.codeAndLocationFrom(target)
@@ -235,13 +246,20 @@ class LoadPersistedConceptsTest : BaseTest() {
         assertIs<GenericLLMConcept>(reloadedConcept)
         assertEquals("Authentication", reloadedConcept.conceptName)
         assertEquals("Handles user authentication", reloadedConcept.description)
-        assertEquals("high", reloadedConcept.properties.properties["tier"])
+        assertEquals(
+            "high",
+            (reloadedConcept.properties.properties["tier"] as GenericPropertyValue.StringValue)
+                .value,
+        )
         assertEquals((target as AstNode).idAst, (reloadedConcept.underlyingNode as AstNode).idAst)
 
         val reloadedOp = reloadedConcept.ops.singleOrNull()
         assertIs<GenericLLMOperation>(reloadedOp)
         assertEquals("Login", reloadedOp.operationName)
-        assertEquals("POST", reloadedOp.properties.properties["method"])
+        assertEquals(
+            "POST",
+            (reloadedOp.properties.properties["method"] as GenericPropertyValue.StringValue).value,
+        )
         assertSame(reloadedConcept, reloadedOp.genericLLMConcept)
         assertNull(reloadedConcept.notes)
         assertNull(reloadedOp.notes)
@@ -269,7 +287,10 @@ class LoadPersistedConceptsTest : BaseTest() {
                     underlyingNode = target,
                     conceptName = "Authentication",
                     description = "Handles user authentication",
-                    properties = GenericProperties(mapOf("tier" to "high")),
+                    properties =
+                        GenericProperties(
+                            mapOf("tier" to GenericPropertyValue.StringValue("high"))
+                        ),
                     notes = "Must run after the session init call.",
                 )
                 .apply {
@@ -284,7 +305,10 @@ class LoadPersistedConceptsTest : BaseTest() {
                     operationName = "Login",
                     description = "Performs user login",
                     genericLLMConcept = concept,
-                    properties = GenericProperties(mapOf("method" to "POST")),
+                    properties =
+                        GenericProperties(
+                            mapOf("method" to GenericPropertyValue.StringValue("POST"))
+                        ),
                     notes = "Requires a valid session cookie.",
                 )
                 .apply {
