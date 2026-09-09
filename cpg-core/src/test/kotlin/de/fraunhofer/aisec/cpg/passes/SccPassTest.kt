@@ -67,7 +67,7 @@ class SccPassTest {
         start.nextEOG.add(a)
         a.nextEOG.add(end)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertNull(start.sccTo(a))
         assertNull(a.sccTo(end))
@@ -88,7 +88,7 @@ class SccPassTest {
         a.nextEOG.add(end)
         b.nextEOG.add(end)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertNull(start.sccTo(a))
         assertNull(start.sccTo(b))
@@ -106,7 +106,7 @@ class SccPassTest {
         a.nextEOG.add(a)
         a.nextEOG.add(end)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertEquals(1, a.sccTo(a))
         assertNull(start.sccTo(a))
@@ -125,7 +125,7 @@ class SccPassTest {
         head.nextEOG.add(end)
         body.nextEOG.add(head)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertEquals(1, body.sccTo(head))
         assertEquals(1, head.sccTo(body))
@@ -147,7 +147,7 @@ class SccPassTest {
         b.nextEOG.add(c)
         c.nextEOG.add(head)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertEquals(1, c.sccTo(head), "the back-edge closing the loop must be labeled")
         assertEquals(1, head.sccTo(b), "the loop's entry continuation must be labeled")
@@ -178,7 +178,7 @@ class SccPassTest {
         d.nextEOG.add(c)
         c.nextEOG.add(end)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertEquals(1, b.sccTo(a), "loop 1's back-edge")
         assertEquals(1, d.sccTo(c), "loop 2's back-edge")
@@ -206,7 +206,7 @@ class SccPassTest {
         innerBody.nextEOG.add(inner)
         outerBody.nextEOG.add(outer)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertEquals(1, outerBody.sccTo(outer), "outer loop's back-edge")
         assertEquals(1, outer.sccTo(inner), "outer loop's entry continuation")
@@ -241,7 +241,7 @@ class SccPassTest {
         middleBody.nextEOG.add(b)
         outerBody.nextEOG.add(a)
 
-        newPass().tarjan(start, 1)
+        newPass().tarjan(start)
 
         assertEquals(1, outerBody.sccTo(a), "outermost loop's back-edge")
         assertEquals(2, middleBody.sccTo(b), "middle loop's back-edge")
@@ -260,10 +260,11 @@ class SccPassTest {
      * come after it - instead of just skipping that one blacklisted successor and continuing to
      * scan the others.
      *
-     * The blacklist is only ever non-empty for `level >= 2` (nested-loop decomposition, see
-     * [SccPass.tarjan]'s call at the end of the method), so we exercise this directly by
-     * pre-seeding a [SccPass.TarjanInfo] with a blacklist, bypassing the need for a real nested
-     * loop to be parsed from source.
+     * The blacklist is normally only ever non-empty for a nested decomposition (populated by
+     * [handleSccRoot] itself when it re-decomposes an SCC one level deeper - see its doc), so we
+     * exercise the same code path directly here instead: pre-seed depth 1's [SccPass.TarjanInfo]
+     * with a blacklist before calling [SccPass.tarjan] (which always starts at depth 1), bypassing
+     * the need for a real nested loop to be parsed from source.
      *
      * We use [AnnotationMember] as a stand-in graph node rather than
      * [BasicBlock][de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock]: `BasicBlock.location` is a
@@ -286,10 +287,10 @@ class SccPassTest {
         bb.nextEOG.add(blacklisted)
         bb.nextEOG.add(live)
 
-        val level = 2
+        val level = 1 // tarjan() always starts at depth 1
         pass.tarjanInfoMap[level] = SccPass.TarjanInfo(listOf(blacklisted))
 
-        pass.tarjan(bb, level)
+        pass.tarjan(bb)
 
         assertTrue(
             live in pass.tarjanInfoMap.getValue(level).visited,

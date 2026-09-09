@@ -113,10 +113,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * Runs Tarjan's algorithm from [bb] at decomposition [level]; see the class doc for the
-     * algorithm.
+     * Runs Tarjan's algorithm from [bb], the root of a top-level (not nested) decomposition; see
+     * the class doc for the algorithm. Always starts at depth 1 - nested loops found along the way
+     * are decomposed one level deeper by [handleSccRoot] itself, within the same call, not by
+     * calling [tarjan] again.
      */
-    fun tarjan(bb: Node, level: Int) {
+    fun tarjan(bb: Node) {
+        val level = 1
         val workStack = ArrayDeque<WorkItem>()
         val startInfo = tarjanInfoMap.computeIfAbsent(level) { TarjanInfo(emptyList()) }
         initNode(bb, startInfo)
@@ -310,7 +313,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val bb = node.basicBlock.single() as BasicBlock
         val entry = tarjanInfoMap.computeIfAbsent(0) { TarjanInfo(emptyList()) }
         if (bb !in entry.visited) {
-            tarjan(bb, 1)
+            tarjan(bb)
         }
     }
 }
