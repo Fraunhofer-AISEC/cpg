@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -246,7 +247,10 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                     .associate { arg -> arg.name to (arg.value as Any?) }
                     .toMutableMap()
             if (concept.properties != null && ctorParams?.any { it.name == "properties" } == true) {
-                args["properties"] = GenericProperties(concept.properties)
+                args["properties"] =
+                    GenericProperties(
+                        concept.properties.mapValues { GenericPropertyValue.StringValue(it.value) }
+                    )
             }
 
             val builtConcept =
@@ -305,7 +309,10 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                     args["genericLLMConcept"] = concept
                 }
                 if (op.properties != null && ctorParams?.any { it.name == "properties" } == true) {
-                    args["properties"] = GenericProperties(op.properties)
+                    args["properties"] =
+                        GenericProperties(
+                            op.properties.mapValues { GenericPropertyValue.StringValue(it.value) }
+                        )
                 }
 
                 node.operationBuildHelper(
@@ -463,7 +470,10 @@ fun TranslationResult.persistLLMConcepts(file: File = File("llm-tagged-concepts.
                                     LoadPersistedConcepts.ConstructorArgumentEntry("notes", it)
                                 },
                             ),
-                        properties = concept.properties.properties,
+                        properties =
+                            concept.properties.properties.mapValues {
+                                it.value.rawValue?.toString() ?: ""
+                            },
                         operations =
                             concept.ops.filterIsInstance<GenericLLMOperation>().map { op ->
                                 LoadPersistedConcepts.OperationEntry(
@@ -485,7 +495,10 @@ fun TranslationResult.persistLLMConcepts(file: File = File("llm-tagged-concepts.
                                                 )
                                             },
                                         ),
-                                    properties = op.properties.properties,
+                                    properties =
+                                        op.properties.properties.mapValues {
+                                            it.value.rawValue?.toString() ?: ""
+                                        },
                                     astId =
                                         op.underlyingNode
                                             ?.takeIf { it != concept.underlyingNode }
