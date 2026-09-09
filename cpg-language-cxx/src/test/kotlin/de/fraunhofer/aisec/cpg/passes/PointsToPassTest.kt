@@ -3311,7 +3311,7 @@ class PointsToPassTest {
         assertTrue(fsecallkeytoout2.entries.firstOrNull()?.key is Parameter)
         assertLocalName("outptr", fsecallkeytoout2.entries.firstOrNull()?.key)
         assertEquals(
-            2,
+            3,
             fsecallkeytoout2.entries
                 .singleOrNull()
                 ?.value
@@ -3354,9 +3354,9 @@ class PointsToPassTest {
             "pms",
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.key,
         )
-        // 5: 3 from the in_outptr, and 2 from the in_ucptr
+        // 6: 4 from the in_outptr, and 2 from the in_ucptr
         assertEquals(
-            5,
+            6,
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
         )
         assertEquals(
