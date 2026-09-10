@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai
 
 import ai.koog.agents.core.tools.annotations.LLMDescription
-import java.nio.file.Path
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
 
 @Serializable data class ChatMessageJSON(val role: String, val content: String)
@@ -84,13 +82,15 @@ data class McpCapabilitiesJSON(
     val resources: List<McpResourceJSON>,
 )
 
-@Serializable
-data class Skill(
-    val name: String,
-    val description: String,
-    val body: String,
-    @Transient val location: Path? = null,
-)
+/**
+ * A discovered skill's name/description, as exposed to callers outside `cpg-ai` (e.g. DUST's
+ * `--skill` validation via [ChatService.getSkills]). Deliberately doesn't expose Koog's own
+ * `ai.koog.skills.model.Skill` across the module boundary - that dependency is `implementation`,
+ * not `api`, in `cpg-ai`'s `build.gradle.kts` on purpose (consistent with `koog-agents` itself), so
+ * returning it directly fails to compile for any consumer (confirmed: DUST's `Main.kt` failed with
+ * "Cannot access class 'ai.koog.skills.model.Skill'" before this indirection was added).
+ */
+data class SkillInfo(val name: String, val description: String)
 
 /**
  * Structured completion signal requested once from the LLM whenever [ChatService.chatStrategy]

@@ -83,12 +83,16 @@ mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0
 mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = "0.15.0"}
 
 # Koog (JetBrains Kotlin AI agent framework): the LLM prompt executors and agent/tool runtime that
-# replace our own hand-rolled LLM clients and MCP client usage in cpg-ai. `agents-mcp` is
-# independently versioned (currently only published as a "-beta" of the same release train) and
-# provides the MCP client integration (McpToolRegistryProvider).
+# replace our own hand-rolled LLM clients and MCP client usage in cpg-ai. `agents-mcp`, `skills`,
+# and `agents-ext` are independently versioned (currently only published as a "-beta" of the same
+# release train) - `agents-mcp` provides the MCP client integration (McpToolRegistryProvider),
+# `skills` provides Agent Skills discovery/catalog generation, and `agents-ext` provides the
+# generic file tools (ListDirectoryTool/ReadFileTool) used to read discovered skills.
 koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
 koog-agents-mcp = { module = "ai.koog:agents-mcp", version = "1.2.0-beta" }
 koog-agents-features-memory = { module = "ai.koog:agents-features-memory", version.ref = "koog" }
+koog-skills = { module = "ai.koog:skills", version = "1.2.0-beta" }
+koog-agents-ext = { module = "ai.koog:agents-ext", version = "1.2.0-beta" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}
