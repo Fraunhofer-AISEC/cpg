@@ -48,7 +48,7 @@ data class LLMPropertyDescription(
             "attached to). Any unrecognized type name is treated as text."
     )
     val type: String,
-    @Description("A short description of the property.") val description: String?,
+    @Description("A short description of the property.") val description: String,
     @Description(
         "If set, this property has a value that is intrinsic to the concept/operation definition itself " +
             "(e.g. a specific ID from a taxonomy) and must not vary between applications of this concept/operation. " +
@@ -120,7 +120,7 @@ data class LLMProperty(
             "tagged function's actual parameters, mention which one here (name and/or position " +
             "in the signature)."
     )
-    val description: String? = null,
+    val description: String,
     @Description(
         "The value to set for the property (as string representation). The value must be parsable as the type " +
             "given in the `type` field, otherwise applying the concept/operation fails: use e.g. \"42\" for an " +

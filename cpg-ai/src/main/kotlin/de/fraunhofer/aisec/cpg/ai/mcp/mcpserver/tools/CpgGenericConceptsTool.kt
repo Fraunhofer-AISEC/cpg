@@ -293,20 +293,30 @@ fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
 
 /**
  * Overrides the value of every property in [properties] for which [descriptions] declares a
- * [LLMPropertyDescription.fixedValue], and injects any fixed property from [descriptions] that is
- * missing from [properties] altogether. This ensures values that are intrinsic to a concept's/
- * operation's definition (e.g. a specific ID from a taxonomy) cannot drift between applications and
- * do not need to be supplied by the caller.
+ * [LLMPropertyDescription.fixedValue], backfills [LLMProperty.description] from the matching
+ * [LLMPropertyDescription.description] whenever the caller left it blank, and injects any fixed
+ * property from [descriptions] that is missing from [properties] altogether.
+ *
+ * The description backfill exists as a defense-in-depth measure: even now that
+ * [LLMProperty.description] is a required field in the tool's generated JSON schema, "required"
+ * only means the caller must supply the key - a model can still comply with an empty string rather
+ * than actually repeating the description it already gave once when the concept/operation's schema
+ * was declared. Reusing the schema's own [LLMPropertyDescription.description] in that case doesn't
+ * depend on the model bothering to repeat itself correctly.
  */
-private fun applyFixedValues(
+internal fun applyFixedValues(
     properties: List<LLMProperty>,
     descriptions: List<LLMPropertyDescription>,
 ): List<LLMProperty> {
     val descriptionsByName = descriptions.associateBy { it.name }
     val overridden =
         properties.map { property ->
-            val fixedValue = descriptionsByName[property.name]?.fixedValue
-            if (fixedValue != null) property.copy(value = fixedValue) else property
+            val schema = descriptionsByName[property.name]
+            property.copy(
+                value = schema?.fixedValue ?: property.value,
+                description =
+                    property.description.ifBlank { schema?.description ?: property.description },
+            )
         }
     val missingFixed =
         descriptions

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescriptio
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMOperation
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMProperty
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.literals
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.io.File
@@ -253,6 +254,82 @@ class CpgGenericConceptsToolTest {
                     (listResult.content.single() as TextContent).text
                 )
             assertEquals("Secret", description.name)
+        }
+
+    /**
+     * Regression test for the property-description-always-null bug: a model applying an
+     * already-declared concept/operation can leave [LLMProperty.description] blank (it's no longer
+     * nullable, but "required" only forces the key to be present, not a real value) since it feels
+     * redundant with the description already given when the schema was first declared. Asserts the
+     * applied [GenericLLMConcept] overlay's property still ends up with the schema's description,
+     * backfilled by [de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.applyFixedValues].
+     */
+    @Test
+    fun addLLMConceptAndOperationsBackfillsBlankPropertyDescriptionTest() =
+        withClient(
+            registerTools = {
+                addOrUpdateConcept()
+                addLLMConceptAndOperations()
+            }
+        ) { client ->
+            client.callTool(
+                name = "cpg_add_or_update_llm_concept",
+                arguments =
+                    mapOf(
+                        "name" to "Logging",
+                        "description" to "Writes log entries",
+                        "properties" to
+                            listOf(
+                                mapOf(
+                                    "name" to "level",
+                                    "type" to "string",
+                                    "description" to "Log level",
+                                )
+                            ),
+                        "operations" to emptyList<LLMOperation>(),
+                    ),
+            )
+
+            val secretInitializer =
+                globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
+            assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
+            val nodeId = secretInitializer.id.toString()
+
+            client.callTool(
+                name = "cpg_add_llm_concept_and_operations",
+                arguments =
+                    mapOf(
+                        "concepts" to
+                            listOf(
+                                mapOf(
+                                    "name" to "Logging",
+                                    "description" to "Writes log entries",
+                                    "nodeId" to nodeId,
+                                    "properties" to
+                                        listOf(
+                                            mapOf(
+                                                "name" to "level",
+                                                "type" to "string",
+                                                "description" to "",
+                                                "value" to "debug",
+                                            )
+                                        ),
+                                    "operations" to emptyList<LLMOperation>(),
+                                )
+                            )
+                    ),
+            )
+
+            val concept =
+                secretInitializer.overlays.filterIsInstance<GenericLLMConcept>().single {
+                    it.conceptName == "Logging"
+                }
+            val level = concept.properties.properties.getValue("level")
+            assertEquals(
+                "Log level",
+                level.description,
+                "A blank live description should be backfilled from the concept's declared schema",
+            )
         }
 
     @Test
