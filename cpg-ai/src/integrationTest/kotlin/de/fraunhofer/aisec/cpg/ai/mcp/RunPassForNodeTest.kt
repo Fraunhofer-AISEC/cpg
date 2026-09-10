@@ -25,12 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.ctx
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.nodeToPass
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runPassForNode
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -48,27 +46,25 @@ class RunPassForNodeTest {
     fun runEOGPass() {
         // Build a small CPG without passes
         runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
             runPasses = false,
             cleanup = true,
         )
-        val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
-        assertNotNull(globalAnalysisResult)
-        assertNotNull(ctx)
+        val session = getSession()
+        assertNotNull(session)
 
         // Pick any node (i.e., the function declaration "hello")
-        val functionDecl = globalAnalysisResult.functions["hello"]
+        val functionDecl = session.translationResult.functions["hello"]
         assertNotNull(functionDecl)
 
         // Use a concrete TU-related pass on the child
         val result =
             runPassForNode(
-                nodeToPass,
-                globalAnalysisResult,
+                session.nodeToPass,
+                session.translationResult,
                 functionDecl,
                 SymbolResolver::class,
-                ctx,
+                session.translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -78,27 +74,25 @@ class RunPassForNodeTest {
     fun runsPassOnNearestParent() {
         // Build a small CPG without passes
         runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
             runPasses = false,
             cleanup = true,
         )
-        val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
-        assertNotNull(globalAnalysisResult)
-        assertNotNull(ctx)
+        val session = getSession()
+        assertNotNull(session)
 
         // Pick any node (i.e., the function declaration "hello")
-        val functionDecl = globalAnalysisResult.functions["hello"]
+        val functionDecl = session.translationResult.functions["hello"]
         assertNotNull(functionDecl)
 
         // Use a concrete TU-related pass on the child
         val result =
             runPassForNode(
-                nodeToPass,
-                globalAnalysisResult,
+                session.nodeToPass,
+                session.translationResult,
                 functionDecl,
                 ResolveMemberAmbiguityPass::class,
-                ctx,
+                session.translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -108,23 +102,21 @@ class RunPassForNodeTest {
     fun runsPassOnNearestChild() {
         // Build a small CPG without passes
         runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
             runPasses = false,
             cleanup = true,
         )
-        val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
-        assertNotNull(globalAnalysisResult)
-        assertNotNull(ctx)
+        val session = getSession()
+        assertNotNull(session)
 
         // Use a concrete TU-related pass on the parent
         val result =
             runPassForNode(
-                nodeToPass,
-                globalAnalysisResult,
-                globalAnalysisResult,
+                session.nodeToPass,
+                session.translationResult,
+                session.translationResult,
                 ResolveMemberAmbiguityPass::class,
-                ctx,
+                session.translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -134,23 +126,21 @@ class RunPassForNodeTest {
     fun runsPassOnCorrectNode() {
         // Build a small CPG without passes
         runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
             runPasses = false,
             cleanup = true,
         )
-        val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
-        assertNotNull(globalAnalysisResult)
-        assertNotNull(ctx)
+        val session = getSession()
+        assertNotNull(session)
 
         // Use a concrete TU-related pass on the parent
         val result =
             runPassForNode(
-                nodeToPass,
-                globalAnalysisResult,
-                globalAnalysisResult,
+                session.nodeToPass,
+                session.translationResult,
+                session.translationResult,
                 ResolveMemberAmbiguityPass::class,
-                ctx,
+                session.translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -160,25 +150,23 @@ class RunPassForNodeTest {
     fun returnsErrorWhenPassPrototypeCannotBeConstructed() {
         // Ensure analysis and context exist
         runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
             runPasses = false,
             cleanup = true,
         )
-        val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
-        assertNotNull(globalAnalysisResult)
-        assertNotNull(ctx)
+        val session = getSession()
+        assertNotNull(session)
 
-        val someNode: Node = globalAnalysisResult.nodes.first()
+        val someNode: Node = session.translationResult.nodes.first()
         // TranslationUnitPass is abstract; primary constructor call should fail with
         // IllegalArgumentException
         assertFailsWith<IllegalArgumentException> {
             runPassForNode(
-                nodeToPass,
-                globalAnalysisResult,
+                session.nodeToPass,
+                session.translationResult,
                 someNode,
                 TranslationUnitPass::class,
-                ctx,
+                session.translationContext,
             )
         }
     }

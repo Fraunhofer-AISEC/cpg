@@ -222,6 +222,8 @@ data class CpgAnalysisResult(
     val components: List<String> = listOf(),
     /** Notes about what the project auto-detection recognized, e.g., a compilation database. */
     val detectionNotes: List<String> = listOf(),
+    /** The names of all currently analyzed projects that can be targeted via `projectName`. */
+    val projectNames: List<String> = listOf(),
 )
 
 @Serializable

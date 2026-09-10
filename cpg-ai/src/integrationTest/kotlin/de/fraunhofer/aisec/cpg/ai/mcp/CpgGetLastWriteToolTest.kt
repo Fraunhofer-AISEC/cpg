@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.ai.mcp
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getLastWrite
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.graph.assigns
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
@@ -55,11 +55,15 @@ class CpgGetLastWriteToolTest {
             """
                 .trimIndent()
 
-        runCpgAnalyze(CpgAnalyzePayload(source, "py"), runPasses = true, cleanup = true)
-        val analysisResult = globalAnalysisResult
-        assertNotNull(analysisResult)
+        runCpgAnalyze(
+            CpgAnalyzePayload(content = source, extension = "py"),
+            runPasses = true,
+            cleanup = true,
+        )
+        val session = getSession()
+        assertNotNull(session)
 
-        val foo = analysisResult.functions["foo"]
+        val foo = session.translationResult.functions["foo"]
         assertNotNull(foo)
         val readRef = foo.returns.single().returnValue
         assertNotNull(readRef)
@@ -69,7 +73,7 @@ class CpgGetLastWriteToolTest {
         val writeIds = foo.assigns.map { it.lhs.single().id.toString() }
         assertEquals(2, writeIds.size)
 
-        val result = getLastWrite(analysisResult, CpgIdPayload(id = readRef.id.toString()))
+        val result = getLastWrite(session, CpgIdPayload(id = readRef.id.toString()))
         val text = (result.content.single() as TextContent).text
         assertNotNull(text)
         writeIds.forEach { writeId -> assertTrue(text.contains(writeId)) }
@@ -79,16 +83,20 @@ class CpgGetLastWriteToolTest {
     fun returnsEmptyListForALiteral() {
         val source = "def foo():\n    return 1"
 
-        runCpgAnalyze(CpgAnalyzePayload(source, "py"), runPasses = true, cleanup = true)
-        val analysisResult = globalAnalysisResult
-        assertNotNull(analysisResult)
+        runCpgAnalyze(
+            CpgAnalyzePayload(content = source, extension = "py"),
+            runPasses = true,
+            cleanup = true,
+        )
+        val session = getSession()
+        assertNotNull(session)
 
-        val foo = analysisResult.functions["foo"]
+        val foo = session.translationResult.functions["foo"]
         assertNotNull(foo)
         val readRef = foo.returns.single().returnValue
         assertNotNull(readRef)
 
-        val result = getLastWrite(analysisResult, CpgIdPayload(id = readRef.id.toString()))
+        val result = getLastWrite(session, CpgIdPayload(id = readRef.id.toString()))
         val text = (result.content.single() as TextContent).text
         assertEquals("[]", text)
     }

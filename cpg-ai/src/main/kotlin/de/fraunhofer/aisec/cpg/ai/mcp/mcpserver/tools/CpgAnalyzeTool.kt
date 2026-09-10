@@ -57,8 +57,12 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_PROJECT_NAME
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -115,9 +119,19 @@ import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 
-var globalAnalysisResult: TranslationResult? = null
-
-var ctx: TranslationContext? = null
+/**
+ * The [TranslationResult] of the session stored under [DEFAULT_PROJECT_NAME], i.e. the one that
+ * tool calls without a `projectName` operate on.
+ *
+ * This is the entry point for consumers outside this module (e.g. codyze-console) that run their
+ * own analysis instead of going through [runCpgAnalyze]: assigning a result here registers it as a
+ * [CpgSession], so that from then on every tool call is resolved through [analysisSessions] alone.
+ */
+var globalAnalysisResult: TranslationResult?
+    get() = getSession()?.translationResult
+    set(value) {
+        value?.let { analysisSessions[DEFAULT_PROJECT_NAME] = CpgSession(it, it.ctx) }
+    }
 
 val toolDescription =
     """
@@ -220,21 +234,16 @@ fun runCpgAnalyze(
         }
     project.config.disableCleanup = !cleanup
 
-    if (ctx != null) {
-        ctx?.executedFrontends?.forEach { frontend ->
-            // If there has been another analysis before, reset the context and clean up all
-            // frontends.
-            frontend.cleanup()
-        }
+    val projectName = payload.projectName ?: DEFAULT_PROJECT_NAME
 
-        ctx = null
+    // If this project has been analyzed before, its session is replaced below, so clean up the
+    // frontends it still holds on to.
+    getSession(projectName)?.translationContext?.executedFrontends?.forEach { frontend ->
+        frontend.cleanup()
     }
 
     val result = project.analyze()
-    ctx = result.ctx
-
-    // Store the result globally
-    globalAnalysisResult = result
+    analysisSessions[projectName] = CpgSession(result, result.ctx)
 
     val allNodes = result.nodes
     val functions = result.functions
@@ -251,6 +260,7 @@ fun runCpgAnalyze(
             project.detectionResults.flatMap { result ->
                 result.notes.map { "${result.detector}: $it" }
             },
+        projectNames = analysisSessions.keys.toList(),
     )
 }
 
@@ -408,9 +418,6 @@ fun Server.addListPasses() {
     }
 }
 
-/** Keeps track of which passes have been run on which nodes to avoid redundant executions. */
-val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
-
 /**
  * Registers a tool which runs a [Pass] on a specified [Node] or the closest suitable node(s) for
  * the pass by first searching upwards and then (in case no suitable node was found) downwards the
@@ -422,7 +429,7 @@ fun Server.addRunPass() {
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
-    ) { result: TranslationResult, payload: CpgRunPassPayload ->
+    ) { session: CpgSession, payload: CpgRunPassPayload ->
         val passClass =
             try {
                 (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
@@ -436,7 +443,7 @@ fun Server.addRunPass() {
                 )
             }
 
-        val nodes = result.nodes.filter { it.id.toString() == payload.nodeId }
+        val nodes = session.translationResult.nodes.filter { it.id.toString() == payload.nodeId }
 
         if (nodes.isEmpty())
             return@addTool CallToolResult(
@@ -460,32 +467,30 @@ fun Server.addRunPass() {
         for (node in nodes) {
             for (passToExecute in orderedPassesToExecute) {
                 // Check if pass has already been executed for the respective node
-                if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+                if (passToExecute !in session.nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
                     // Execute the pass for the node
-                    ctx?.let { ctx ->
-                        val passResult =
-                            runPassForNode(nodeToPass, result, node, passToExecute, ctx)
-                        if (passResult.success) {
-                            executedPasses.add(TextContent(passResult.message))
-                        } else {
-                            // Return if there was an error during pass execution
-                            return@addTool CallToolResult(
-                                content =
-                                    listOf(
-                                        TextContent(passResult.message),
-                                        *executedPasses.toTypedArray(),
-                                    )
-                            )
-                        }
-                        // Mark pass as executed
-                        nodeToPass[node]?.add(passToExecute)
-                    }
-                        ?: return@addTool CallToolResult(
+                    val passResult =
+                        runPassForNode(
+                            session.nodeToPass,
+                            session.translationResult,
+                            node,
+                            passToExecute,
+                            session.translationContext,
+                        )
+                    if (passResult.success) {
+                        executedPasses.add(TextContent(passResult.message))
+                    } else {
+                        // Return if there was an error during pass execution
+                        return@addTool CallToolResult(
                             content =
                                 listOf(
-                                    TextContent("Cannot run run_pass without translation context.")
+                                    TextContent(passResult.message),
+                                    *executedPasses.toTypedArray(),
                                 )
                         )
+                    }
+                    // Mark pass as executed
+                    session.nodeToPass[node]?.add(passToExecute)
                 }
             }
         }

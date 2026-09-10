@@ -31,6 +31,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CpgAnalyzePayload(
     @Description(
+        "The name to identify this analyzed project by. Use it to refer to this project in subsequent tool calls. If omitted, the project is analyzed under the name 'default', which is what tool calls that also omit projectName operate on."
+    )
+    val projectName: String? = null,
+    @Description(
         "The contents of the file which should be analyzed. Alternatively, 'path' can be used to analyze files or whole projects on the local filesystem."
     )
     val content: String? = null,
