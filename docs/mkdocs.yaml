@@ -186,6 +186,7 @@ nav:
       - "Symbol Resolution": CPG/impl/symbol-resolver.md
       - "DFG Passes": CPG/impl/dfg-passes.md
       - "Type System": CPG/impl/types.md
+      - "String Analysis": CPG/impl/string-analysis.md
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
     # This assumes that the most recent dokka build was generated with the "main" tag!
