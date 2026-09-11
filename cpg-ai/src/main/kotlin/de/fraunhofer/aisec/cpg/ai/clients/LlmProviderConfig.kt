@@ -173,6 +173,12 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                                     }
                                 }
                             level = if (log.isDebugEnabled) LogLevel.ALL else LogLevel.INFO
+                            // At LogLevel.ALL, Ktor logs the full request including headers - an
+                            // unredacted Authorization header (a real API key, e.g. via
+                            // --api-key-env) would otherwise leak into DUST's debug logs verbatim.
+                            sanitizeHeader { header ->
+                                header.equals(HttpHeaders.Authorization, ignoreCase = true)
+                            }
                         }
                     }
                 // Reuses Koog's own KtorKoogHttpClient.Factory (rather than hand-rolling the
