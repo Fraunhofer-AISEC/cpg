@@ -36,6 +36,17 @@ import kotlinx.serialization.Serializable
  */
 const val NODE_REFERENCE_TYPE = "NodeReference"
 
+/**
+ * [LLMPropertyDescription.type] and [LLMOperationDescription.properties] default rather than being
+ * hard-required: unlike [LLMPropertyDescription.description] (whose omission is silent, undetected
+ * data loss - see [LLMProperty.description]'s doc), omitting either of these two throws a
+ * `MissingFieldException` that aborts the whole `cpg_add_or_update_llm_concept` call (confirmed via
+ * `log_dedupe_persist_entries`/`log_consolidate_generic_concepts_tool`'s logs), abandoning an
+ * otherwise-fine schema registration over one recoverable field. A property with no declared type
+ * defaulting to `"String"` matches [GenericPropertyValue.of]'s own fallback for an unrecognized
+ * type name; an operation with no declared properties defaulting to an empty list is simply a
+ * legitimate operation that takes none.
+ */
 @Serializable
 data class LLMPropertyDescription(
     @Description("The name of the property. It should be short and precises, preferably one word.")
@@ -47,7 +58,7 @@ data class LLMPropertyDescription(
             "of another node in the graph (e.g. to relate this concept to a different node than the one it is " +
             "attached to). Any unrecognized type name is treated as text."
     )
-    val type: String,
+    val type: String = "String",
     @Description("A short description of the property.") val description: String,
     @Description(
         "If set, this property has a value that is intrinsic to the concept/operation definition itself " +
@@ -70,7 +81,8 @@ data class LLMOperationDescription(
         "The description of the operation. It should explain what the operation does and provide guidance on when to apply it."
     )
     val description: String,
-    @Description("The parameters of the operation.") val properties: List<LLMPropertyDescription>,
+    @Description("The parameters of the operation.")
+    val properties: List<LLMPropertyDescription> = emptyList(),
 ) {
     constructor(
         operation: LLMOperation
