@@ -41,15 +41,15 @@ class PaginatedTextContentTest {
     }
 
     @Test
-    fun defaultLimitCapsAtTwoHundredAndAddsSummary() {
-        val texts = (1..250).map { "item$it" }
+    fun defaultLimitCapsAtTwentyAndAddsSummary() {
+        val texts = (1..30).map { "item$it" }
 
         val result = paginatedTextContent(texts, CpgListPayload())
 
-        assertEquals(201, result.size, "200 items + 1 summary entry")
+        assertEquals(21, result.size, "20 items + 1 summary entry")
         assertEquals("item1", result.first().text)
-        assertEquals("item200", result[199].text)
-        assertTrue(result.last().text.contains("offset=200"))
+        assertEquals("item20", result[19].text)
+        assertTrue(result.last().text.contains("offset=20"))
     }
 
     @Test

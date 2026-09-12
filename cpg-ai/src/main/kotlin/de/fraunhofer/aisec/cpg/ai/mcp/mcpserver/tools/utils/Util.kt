@@ -227,7 +227,7 @@ fun Record.toInfo() = RecordInfo(this)
 fun Call.toInfo(includeCode: Boolean = true) = CallInfo(this, includeCode)
 
 /** The default maximum number of items returned by paginated list tools. */
-const val DEFAULT_LIST_LIMIT = 200
+const val DEFAULT_LIST_LIMIT = 20
 
 /**
  * Paginates [texts] according to the `limit`/`offset` in [payload] and wraps each item of the
