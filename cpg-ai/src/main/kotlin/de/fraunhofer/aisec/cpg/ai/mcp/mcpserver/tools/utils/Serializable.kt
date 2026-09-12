@@ -157,6 +157,19 @@ data class FunctionInfo(
     )
 }
 
+/**
+ * A minimal per-function entry for bulk listing: just enough to find a candidate by name and
+ * disambiguate same-named functions (via [signature], which already encodes parameter/return
+ * types), without [FunctionInfo]'s full parameters/callees/file-line/code detail. Use
+ * `cpg_get_node` with [nodeId] for full details on a specific function once picked.
+ */
+@Serializable
+data class FunctionSignatureInfo(val nodeId: String, val signature: String) {
+    constructor(
+        functionDeclaration: Function
+    ) : this(nodeId = functionDeclaration.id.toString(), signature = functionDeclaration.signature)
+}
+
 @Serializable
 data class RecordInfo(
     val nodeId: String,

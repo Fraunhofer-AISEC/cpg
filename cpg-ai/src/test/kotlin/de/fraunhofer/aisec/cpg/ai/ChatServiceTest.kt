@@ -117,21 +117,71 @@ class ChatServiceTest {
 
     @Test
     fun eventsToolResultTest() {
+        val args = buildJsonObject { put("nodeId", "42") }
         val content = buildJsonObject { put("result", "data") }
-        val event = Events.toolResult("my_tool", content)
+        val event = Events.toolResult("my_tool", args, content)
         val json = Json.parseToJsonElement(event).jsonObject
         assertEquals("tool_result", json["type"]?.jsonPrimitive?.content)
         assertEquals("my_tool", json["toolName"]?.jsonPrimitive?.content)
+        assertEquals("42", json["args"]?.jsonObject?.get("nodeId")?.jsonPrimitive?.content)
         assertEquals("data", json["content"]?.jsonObject?.get("result")?.jsonPrimitive?.content)
     }
 
     @Test
     fun eventsToolResultWithEmptyArrayTest() {
+        val args = buildJsonObject {}
         val content = JsonArray(emptyList())
-        val event = Events.toolResult("empty_tool", content)
+        val event = Events.toolResult("empty_tool", args, content)
         val json = Json.parseToJsonElement(event).jsonObject
         assertEquals("tool_result", json["type"]?.jsonPrimitive?.content)
         assertIs<JsonArray>(json["content"])
         assertEquals(0, json["content"]?.jsonArray?.size)
+    }
+
+    @Test
+    fun eventsUsageTest() {
+        val event = Events.usage("gpt-4", 100, 20, 120)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("usage", json["type"]?.jsonPrimitive?.content)
+        assertEquals("gpt-4", json["model"]?.jsonPrimitive?.content)
+        assertEquals(100, json["inputTokens"]?.jsonPrimitive?.int)
+        assertEquals(20, json["outputTokens"]?.jsonPrimitive?.int)
+        assertEquals(120, json["totalTokens"]?.jsonPrimitive?.int)
+    }
+
+    @Test
+    fun eventsUsageWithNullModelTest() {
+        val event = Events.usage(null, 0, 0, 0)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("usage", json["type"]?.jsonPrimitive?.content)
+        assertIs<JsonNull>(json["model"])
+    }
+
+    @Test
+    fun truncateForLlmLeavesSmallResultUnchangedTest() {
+        val service = createChatService()
+        val output = "a small tool result"
+
+        val result = service.truncateForLlm(output, "some_tool")
+
+        assertEquals(output, result)
+    }
+
+    @Test
+    fun truncateForLlmCapsOversizedResultTest() {
+        val service = createChatService()
+        // Comfortably over the single-result budget (half of the 128_000-token placeholder
+        // context length used before resolveHistoryCompressionTokenLimit ever runs) regardless of
+        // the tokenizer's exact per-word ratio.
+        val output = "word ".repeat(200_000)
+
+        val result = service.truncateForLlm(output, "some_tool")
+
+        assertTrue(result.length < output.length, "Oversized result should have been shortened")
+        assertTrue(
+            result.endsWith(
+                "... [truncated: this tool result alone was too large for the model's context window]"
+            )
+        )
     }
 }

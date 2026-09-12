@@ -39,6 +39,8 @@ import java.util.*
  * @param description A human-readable description of the operation.
  * @param genericLLMConcept The concept this operation belongs to.
  * @param properties The properties of the operation.
+ * @param notes Free-text notes about this operation's application, e.g. other functions that must
+ *   be called before this one (such as an init/setKey call before encrypt).
  */
 class GenericLLMOperation(
     underlyingNode: Node? = null,
@@ -46,6 +48,7 @@ class GenericLLMOperation(
     val description: String,
     val genericLLMConcept: GenericLLMConcept,
     @Convert(GenericPropertiesConverter::class) override val properties: GenericProperties,
+    val notes: String? = null,
 ) : Operation(concept = genericLLMConcept, underlyingNode = underlyingNode), HasGenericProperties {
 
     /** Lazy backing field for [propertyReferenceEdges]. */
@@ -71,9 +74,17 @@ class GenericLLMOperation(
             other.operationName == this.operationName &&
             other.description == this.description &&
             other.genericLLMConcept == this.genericLLMConcept &&
-            other.properties == this.properties
+            other.properties == this.properties &&
+            other.notes == this.notes
     }
 
     override fun hashCode() =
-        Objects.hash(super.hashCode(), operationName, description, genericLLMConcept, properties)
+        Objects.hash(
+            super.hashCode(),
+            operationName,
+            description,
+            genericLLMConcept,
+            properties,
+            notes,
+        )
 }

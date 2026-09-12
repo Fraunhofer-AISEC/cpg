@@ -53,6 +53,19 @@ data class CpgNamePayload(@Description("The local name of the node to consider."
 data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
 
 @Serializable
+@Description("The payload to identify a batch of functions by their names.")
+data class CpgNamesPayload(
+    @Description(
+        "The local names of the functions to look up. Keep this batch reasonably small (e.g. around 10 names) to avoid overly large responses."
+    )
+    val names: List<String>,
+    @Description(
+        "Whether to include each function's source code in the response. Defaults to true. Set to false if you only need to confirm a function exists or inspect its signature/parameters - use cpg_get_node afterwards to fetch the full source for a specific one once picked."
+    )
+    val includeCode: Boolean = true,
+)
+
+@Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
     @Description("ID of the method/function call whose arguments should be listed.")
     val nodeId: String,
@@ -62,6 +75,14 @@ data class CpgCallArgumentByNameOrIndexPayload(
         "The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here."
     )
     val index: Int? = null,
+)
+
+@Serializable
+data class CpgListPayload(
+    @Description("Maximum number of items to return. Defaults to 200 if not specified.")
+    val limit: Int? = null,
+    @Description("Number of items to skip before returning results, for pagination. Defaults to 0.")
+    val offset: Int? = null,
 )
 
 @Serializable
