@@ -156,4 +156,32 @@ class ChatServiceTest {
         assertEquals("usage", json["type"]?.jsonPrimitive?.content)
         assertIs<JsonNull>(json["model"])
     }
+
+    @Test
+    fun truncateForLlmLeavesSmallResultUnchangedTest() {
+        val service = createChatService()
+        val output = "a small tool result"
+
+        val result = service.truncateForLlm(output, "some_tool")
+
+        assertEquals(output, result)
+    }
+
+    @Test
+    fun truncateForLlmCapsOversizedResultTest() {
+        val service = createChatService()
+        // Comfortably over the single-result budget (half of the 128_000-token placeholder
+        // context length used before resolveHistoryCompressionTokenLimit ever runs) regardless of
+        // the tokenizer's exact per-word ratio.
+        val output = "word ".repeat(200_000)
+
+        val result = service.truncateForLlm(output, "some_tool")
+
+        assertTrue(result.length < output.length, "Oversized result should have been shortened")
+        assertTrue(
+            result.endsWith(
+                "... [truncated: this tool result alone was too large for the model's context window]"
+            )
+        )
+    }
 }

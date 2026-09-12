@@ -32,6 +32,7 @@ import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.dsl.builder.node
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.*
+import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.features.eventHandler.feature.handleEvents
 import ai.koog.agents.mcp.McpToolRegistryProvider
@@ -196,12 +197,59 @@ class ChatService(
 
     /**
      * Rough, dependency-free token estimate (regex-based, not a real tokenizer for any specific
-     * model) used only to decide *when* to compress, not for anything requiring precision. Wraps it
-     * in a [CachingTokenizer] since [chatStrategy]'s compression-trigger edge conditions re-check
-     * the token count on every [ChatService.chatStrategy] node transition, and most of the
-     * conversation's messages don't change between checks.
+     * model), shared by [tokenizer] (wrapped for the [Message]/[ai.koog.prompt.Prompt]-based
+     * compression-trigger checks) and [truncateForLlm] (used directly, for a raw-string
+     * estimate - [PromptTokenizer] itself has no such overload).
      */
-    private val tokenizer: PromptTokenizer = CachingTokenizer(SimpleRegexBasedTokenizer())
+    private val rawTokenizer = SimpleRegexBasedTokenizer()
+
+    /**
+     * Used only to decide *when* to compress, not for anything requiring precision. Wraps
+     * [rawTokenizer] in a [CachingTokenizer] since [chatStrategy]'s compression-trigger edge
+     * conditions re-check the token count on every [ChatService.chatStrategy] node transition, and
+     * most of the conversation's messages don't change between checks.
+     */
+    private val tokenizer: PromptTokenizer = CachingTokenizer(rawTokenizer)
+
+    /**
+     * Maximum fraction of [historyCompressionTokenLimit] a single tool result may occupy in the
+     * LLM-facing history before [truncateForLlm] caps it - deliberately much larger than
+     * [historyCompressionTokenFraction] (which reacts to *cumulative* history size):
+     * [compressHistory] can only ever shrink *older* turns to make room, never the *one new* tool
+     * result that just arrived, so a single result already this large would overflow the context
+     * regardless of how aggressively everything else gets compressed. This is the actual
+     * last-resort safety valve for that specific case, not a routine cap - it should almost never
+     * fire in practice.
+     */
+    private val singleResultTokenFraction = 0.5
+
+    /**
+     * Caps [output] (a [ReceivedToolResult.output], identified by [toolName] only for the warning
+     * message) if it alone would already occupy more than [singleResultTokenFraction] of
+     * [historyCompressionTokenLimit] - see that field's doc for why this, not [chatStrategy]'s
+     * history compression, is the only mechanism that can address this case. Logs a warning
+     * whenever it actually truncates, since this should be rare and is worth an operator's
+     * attention. Takes/returns a plain [String] rather than a [ReceivedToolResult] so this stays
+     * directly testable without constructing Koog's internal result type.
+     */
+    internal fun truncateForLlm(output: String, toolName: String): String {
+        val budget = (historyCompressionTokenLimit * singleResultTokenFraction).toInt()
+        val tokenCount = rawTokenizer.countTokens(output)
+        if (tokenCount <= budget) return output
+
+        val charBudget = (output.length.toLong() * budget / tokenCount).toInt()
+        log.warn(
+            "Truncating oversized tool result for '{}': ~{} tokens exceeds the {}-token " +
+                "single-result budget ({}% of the model's {}-token context window)",
+            toolName,
+            tokenCount,
+            budget,
+            (singleResultTokenFraction * 100).toInt(),
+            historyCompressionTokenLimit,
+        )
+        return output.take(charBudget) +
+            "\n... [truncated: this tool result alone was too large for the model's context window]"
+    }
 
     /**
      * Sets [historyCompressionTokenLimit] to [contextLength] - the same value
@@ -446,8 +494,9 @@ class ChatService(
                     val (parallelSafe, sequential) =
                         toolCalls.toolCalls.partition { it.tool in parallelSafeToolNames }
                     ReceivedToolResults(
-                        environment.executeTools(parallelSafe) +
-                            sequential.map { environment.executeTool(it) }
+                        (environment.executeTools(parallelSafe) +
+                                sequential.map { environment.executeTool(it) })
+                            .map { it.copy(output = truncateForLlm(it.output, it.tool)) }
                     )
                 }
             val sendToolResultStream by nodeLLMSendToolResultsStreaming()
