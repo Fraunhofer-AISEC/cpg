@@ -44,9 +44,10 @@ import kotlinx.serialization.json.Json
 fun Server.listFunctions() {
     val toolDescription =
         """
-        This tool lists all functions, more precisely function declarations, which are held in the graph.
-        Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
-        the full node details (including its code) for a specific function once picked.
+        This tool lists all functions, more precisely function declarations, which are held in the
+        graph, as a minimal nodeId + signature index (no parameters/callees/file-line/code detail).
+        Use cpg_get_node with a id to retrieve the full node details (including its code) for a
+        specific function once picked.
         Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
@@ -58,7 +59,7 @@ fun Server.listFunctions() {
     this.addTool<CpgListPayload>(name = "cpg_list_functions", description = toolDescription) {
         result: TranslationResult,
         payload: CpgListPayload ->
-        val texts = result.functions.map { Json.encodeToString(it.toInfo(includeCode = false)) }
+        val texts = result.functions.map { Json.encodeToString(it.toSignatureInfo()) }
         CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
