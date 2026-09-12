@@ -75,6 +75,41 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 
+/**
+ * Generic, domain-agnostic default for [ChatService]'s `historyCompressionConcepts` - deliberately
+ * shaped around any CPG-analysis agent's workflow (explore graph entities, complete/skip targets),
+ * not any one consumer's specific skill/workflow vocabulary. A consumer with its own task-specific
+ * concepts (e.g. named skills/workflows) should pass its own list instead.
+ */
+val defaultHistoryCompressionConcepts =
+    listOf(
+        HistoryCompressionConcept(
+            keyword = "CompletedWork",
+            description =
+                "Targets or entities already fully handled so far, with their outcome/status " +
+                    "and any noted properties or prerequisites.",
+        ),
+        HistoryCompressionConcept(
+            keyword = "OpenIssues",
+            description =
+                "Targets or entities noted as ambiguous, unresolved, or blocked so far, and " +
+                    "why - so they aren't silently dropped from the eventual summary.",
+        ),
+        HistoryCompressionConcept(
+            keyword = "ExploredCpgEntities",
+            description =
+                "Functions, records, or files already looked up via CPG tools so far, and a " +
+                    "brief note of what was found, to avoid redundant re-querying.",
+        ),
+        HistoryCompressionConcept(
+            keyword = "SkippedTargets",
+            description =
+                "Targets explicitly marked as unresolvable or given up on so far, and why - so " +
+                    "an already-abandoned target isn't independently re-investigated after " +
+                    "history compression.",
+        ),
+    )
+
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService(
     private val httpClient: HttpClient,
@@ -82,6 +117,18 @@ class ChatService(
     private val mcpServerUrl: String,
     /** Maximum number of tool-calling round trips the agent may take before it must respond. */
     private val maxAgentIterations: Int = 100,
+    /**
+     * Concepts [chatStrategy]'s [HistoryCompressionStrategy.FactRetrieval] compression extracts as
+     * explicit facts (one dedicated LLM call per concept, over the full history-so-far) before
+     * falling back to [HistoryCompressionStrategy.FromLastNMessages] for anything not captured by
+     * these - so specific, decision-relevant progress survives compression as structured facts
+     * instead of depending on how much of it a single generic prose summary happens to retain.
+     * Defaults to [defaultHistoryCompressionConcepts]; a caller with its own task/skill vocabulary
+     * should pass its own list instead, since [chatStrategy] is built once from this value and
+     * shared across every [chat] call on this instance.
+     */
+    private val historyCompressionConcepts: List<HistoryCompressionConcept> =
+        defaultHistoryCompressionConcepts,
 ) {
     /**
      * In-memory backing store for Koog `ChatMemory`, shared across [chat] calls on this
@@ -270,51 +317,6 @@ class ChatService(
      * [historyCompressionConcepts] once its own dedicated per-concept fact extraction is done.
      */
     private val historyCompressionKeepLastN = 30
-
-    /**
-     * Concepts [chatStrategy]'s [HistoryCompressionStrategy.FactRetrieval] compression extracts as
-     * explicit facts (one dedicated LLM call per concept, over the full history-so-far) before
-     * falling back to [HistoryCompressionStrategy.FromLastNMessages] for anything not captured by
-     * these - so specific, decision-relevant progress survives compression as structured facts
-     * instead of depending on how much of it a single generic prose summary happens to retain.
-     * Deliberately skill-agnostic (tag-library vs. match-library) since [chatStrategy] is built
-     * once and shared across every [chat] call.
-     */
-    private val historyCompressionConcepts =
-        listOf(
-            Concept(
-                keyword = "CompletedWork",
-                description =
-                    "Functions or concepts/operations already tagged (tag-library) or matched to " +
-                        "a substitute (match-library) so far, with their outcome/status and any " +
-                        "noted properties or prerequisites.",
-                factType = FactType.MULTIPLE,
-            ),
-            Concept(
-                keyword = "OpenIssues",
-                description =
-                    "Functions, concepts, or operations noted as ambiguous, unmatched, or blocked " +
-                        "so far, and why - so they aren't silently dropped from the eventual " +
-                        "summary.",
-                factType = FactType.MULTIPLE,
-            ),
-            Concept(
-                keyword = "ExploredCpgEntities",
-                description =
-                    "Functions, records, or files already looked up via CPG tools so far, and a " +
-                        "brief note of what was found, to avoid redundant re-querying.",
-                factType = FactType.MULTIPLE,
-            ),
-            Concept(
-                keyword = "SkippedFunctions",
-                description =
-                    "Functions or entries explicitly marked as unresolvable or given up on so " +
-                        "far (e.g. via a skip/give-up tool call), and why - so a function already " +
-                        "confirmed unresolvable isn't independently re-investigated and " +
-                        "re-skipped after history compression.",
-                factType = FactType.MULTIPLE,
-            ),
-        )
 
     /**
      * Nudge sent to the model when it replies with plain text instead of calling a tool, to
@@ -507,7 +509,14 @@ class ChatService(
                 }
             val compressionStrategy =
                 FactRetrievalHistoryCompressionStrategy(
-                    concepts = historyCompressionConcepts,
+                    concepts =
+                        historyCompressionConcepts.map {
+                            Concept(
+                                keyword = it.keyword,
+                                description = it.description,
+                                factType = if (it.multiple) FactType.MULTIPLE else FactType.SINGLE,
+                            )
+                        },
                     fallback =
                         HistoryCompressionStrategy.FromLastNMessages(historyCompressionKeepLastN),
                 )

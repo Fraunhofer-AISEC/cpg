@@ -93,6 +93,21 @@ data class McpCapabilitiesJSON(
 data class SkillInfo(val name: String, val description: String)
 
 /**
+ * One fact-extraction concept for [ChatService]'s `historyCompressionConcepts` constructor
+ * parameter, as exposed to callers outside `cpg-ai`. Deliberately doesn't expose Koog's own
+ * `ai.koog.agents.core.dsl.extension.Concept`/`FactType` across the module boundary - `koog-agents`
+ * is `implementation`, not `api`, in `cpg-ai`'s `build.gradle.kts` on purpose (see [SkillInfo] for
+ * the same reasoning/precedent), so a consumer constructing a real `Concept` directly would fail to
+ * compile. [multiple] mirrors Koog's `FactType.MULTIPLE` (true, the common case - a concept can
+ * have several distinct facts extracted over the conversation) vs. `FactType.SINGLE` (false).
+ */
+data class HistoryCompressionConcept(
+    val keyword: String,
+    val description: String,
+    val multiple: Boolean = true,
+)
+
+/**
  * Structured completion signal requested once from the LLM whenever [ChatService.chatStrategy]
  * believes a turn is finished (see [ChatService.requestTaskStatus]), as a more reliable alternative
  * to a caller inferring completion by re-parsing whatever the skill happened to persist to disk.
