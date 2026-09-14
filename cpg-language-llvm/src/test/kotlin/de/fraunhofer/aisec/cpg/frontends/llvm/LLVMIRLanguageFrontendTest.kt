@@ -181,6 +181,90 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
+    fun testIdentifiedStructOpaquePointers() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("struct_opaque_ptr.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertNotNull(tu)
+
+        val rt = tu.records["struct.RT"]
+        assertNotNull(rt)
+
+        val st = tu.records["struct.ST"]
+        assertNotNull(st)
+
+        assertEquals(3, st.fields.size)
+
+        var field = st.fields.firstOrNull()
+        assertNotNull(field)
+        assertLocalName("i32", field.type)
+
+        field = st.fields[1]
+        assertNotNull(field)
+        assertLocalName("double", field.type)
+
+        field = st.fields[2]
+        assertNotNull(field)
+        assertLocalName("struct.RT", field.type)
+        assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        val s = foo.parameters.firstOrNull { it.name.localName == "s" }
+        assertNotNull(s)
+
+        val arrayidx = foo.variables["arrayidx"]
+        assertNotNull(arrayidx)
+
+        // arrayidx will be assigned to a chain of the following expressions:
+        // &s[1].field2.field1[5][13]
+        // we will check them in the reverse order (after the unary operator)
+        //
+        // This is the same chain as in testIdentifiedStruct, but here it is derived purely from
+        // the getelementptr instruction's explicit source element type, since the IR uses opaque
+        // pointers ("ptr") everywhere and the pointers themselves carry no pointee type.
+
+        val unary = arrayidx.initializer
+        assertIs<PointerReference>(unary)
+
+        var arrayExpr = unary.input
+        assertIs<Subscription>(arrayExpr)
+        assertLocalName("13", arrayExpr)
+        assertLiteralValue(13L, arrayExpr.subscriptExpression)
+
+        arrayExpr = arrayExpr.arrayExpression
+        assertIs<Subscription>(arrayExpr)
+        assertLocalName("5", arrayExpr)
+        assertLiteralValue(5L, arrayExpr.subscriptExpression)
+
+        var memberExpression = arrayExpr.arrayExpression
+        assertIs<MemberAccess>(memberExpression)
+        assertLocalName("field_1", memberExpression)
+
+        memberExpression = memberExpression.base
+        assertIs<MemberAccess>(memberExpression)
+        assertLocalName("field_2", memberExpression)
+
+        arrayExpr = memberExpression.base
+        assertIs<Subscription>(arrayExpr)
+        assertLocalName("1", arrayExpr)
+        assertLiteralValue(1L, arrayExpr.subscriptExpression)
+
+        val ref = arrayExpr.arrayExpression
+        assertIs<Reference>(ref)
+        assertLocalName("s", ref)
+        assertRefersTo(ref, s)
+    }
+
+    @Test
     fun testSwitchCase() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
