@@ -25,10 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.ctx
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
@@ -39,22 +38,23 @@ class CpgAnalyzeToolTest {
     fun testReanalyze() {
         // Build a small CPG without passes
         runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
             runPasses = false,
             cleanup = true,
         )
-        val oldGlobalAnalysisResult = globalAnalysisResult
-        val oldCtx = ctx
-        assertNotNull(oldGlobalAnalysisResult)
-        assertNotNull(oldCtx)
+        val oldSession = getSession()
+        assertNotNull(oldSession)
 
-        // Bild the CPG again but we expect a new ctx and globalAnalysisResult
+        // Build the CPG again; we expect the session to be replaced by one with a new result and a
+        // new context
         runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
             runPasses = false,
             cleanup = true,
         )
-        assertNotSame(oldCtx, ctx)
-        assertNotSame(oldGlobalAnalysisResult, globalAnalysisResult)
+        val newSession = getSession()
+        assertNotNull(newSession)
+        assertNotSame(oldSession.translationResult, newSession.translationResult)
+        assertNotSame(oldSession.translationContext, newSession.translationContext)
     }
 }
