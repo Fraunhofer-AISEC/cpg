@@ -213,18 +213,57 @@ fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
 /**
  * Converts to a [FunctionInfo], omitting the (often large - can be an entire function body)
- * [FunctionInfo.code] field when [includeCode] is false. Bulk-listing tools (e.g.
- * `cpg_list_functions`) should pass `false`: they're for finding candidates by name/signature, and
- * embedding every returned function's full body multiplies context size for code the model will
- * mostly never read - `cpg_get_node` fetches the full details (code included) for a specific one
- * once picked.
+ * [FunctionInfo.code] field when [includeCode] is false. Used for a single targeted lookup (e.g.
+ * `cpg_get_functions_by_name`) where the caller already knows which function(s) it wants and the
+ * full parameter/callee/file-line detail is worth the size - for bulk listing, see
+ * [Function.toSignatureInfo] instead.
  */
 fun Function.toInfo(includeCode: Boolean = true) = FunctionInfo(this, includeCode)
+
+/**
+ * Converts to a minimal [FunctionSignatureInfo] (just enough to find a candidate by name/signature
+ * and disambiguate same-named overloads, without [FunctionInfo]'s full
+ * parameters/callees/file-line/ code detail). Used by bulk-listing tools (e.g.
+ * `cpg_list_functions`): embedding every returned function's full detail multiplies context size
+ * for data the model will mostly never read - `cpg_get_node` fetches the full details (code
+ * included) for a specific one once picked.
+ */
+fun Function.toSignatureInfo() = FunctionSignatureInfo(this)
 
 fun Record.toInfo() = RecordInfo(this)
 
 /** See [Function.toInfo] - the same reasoning applies to [Call]/[CallInfo.code]. */
 fun Call.toInfo(includeCode: Boolean = true) = CallInfo(this, includeCode)
+
+/** The default maximum number of items returned by paginated list tools. */
+const val DEFAULT_LIST_LIMIT = 20
+
+/**
+ * Paginates [texts] according to the `limit`/`offset` in [payload] and wraps each item of the
+ * resulting page in a [TextContent]. If the page does not reach the end of [texts], an additional
+ * summary [TextContent] is appended, noting how many items were shown and which offset to use next
+ * to see more - so a caller relying only on the tool's textual result (not a separate total-count
+ * field) still knows there's more to fetch.
+ */
+fun paginatedTextContent(texts: List<String>, payload: CpgListPayload): List<TextContent> {
+    val offset = (payload.offset ?: 0).coerceAtLeast(0)
+    val limit = (payload.limit ?: DEFAULT_LIST_LIMIT).coerceAtLeast(1)
+
+    val page = texts.drop(offset).take(limit)
+    val content = page.map { TextContent(it) }.toMutableList()
+
+    val end = offset + page.size
+    if (end < texts.size) {
+        content.add(
+            TextContent(
+                "Showing ${page.size} of ${texts.size} items (offset=$offset, limit=$limit). " +
+                    "To see more, call this tool again with offset=$end."
+            )
+        )
+    }
+
+    return content
+}
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {
