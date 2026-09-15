@@ -94,7 +94,23 @@ private data class UnknownValueKey(val node: Node, val name: Name) {
  * [PointsToPass.finalCleanup].
  */
 private val nodesCreatingUnknownValues = ConcurrentHashMap<UnknownValueKey, MemoryAddress>()
+/**
+ * The number of [Function]s in the [TranslationResult] we are analyzing, i.e. the number of targets
+ * this pass is going to be handed. Note that this counts declarations and definitions separately,
+ * so a function which is declared in a header and defined in a source file contributes two.
+ *
+ * This is global rather than a field because [consumeTarget] creates a fresh pass instance for
+ * every single target, so an instance field could never accumulate anything.
+ */
 var totalFunctionCount = 0
+
+/**
+ * The number of targets we have been handed so far, used to report the progress against
+ * [totalFunctionCount]. Only the top-level analysis of a target is counted: a function which we
+ * analyze early because somebody calls it (see [PointsToPass.calculateFunctionSummaries]) is
+ * counted when its own turn comes, not when it is analyzed as a callee. Otherwise this would count
+ * *visits* rather than targets and would run past [totalFunctionCount].
+ */
 var analyzedFunctionCount = 0
 private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
 private const val FIELD_ACCESS_SUMMARY_SEGMENT = "<summary>"
@@ -521,13 +537,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     suspend fun acceptInternal(node: Node) {
         var analysisTimeout = false
 
+        // Whether somebody else is already analyzing a function and we are only being called to
+        // compute a summary for one of its callees. [accept] clears the chain for every target, and
+        // the enclosing analysis has put itself on it, so an empty chain means that this is the
+        // top-level analysis of a target.
+        val isCalleeAnalysis = functionSummaryAnalysisChain.isNotEmpty()
+
         if (node is Function) {
             // If we haven't done so yet, set the total number of functions
             if (totalFunctionCount == 0)
                 totalFunctionCount =
                     node.firstParentOrNull<TranslationResult>()?.functions?.size ?: 0
 
-            analyzedFunctionCount++
+            // Only count the targets, not the callees we analyze on the way: a callee is counted
+            // when its own turn comes. See [analyzedFunctionCount].
+            if (!isCalleeAnalysis) analyzedFunctionCount++
 
             // If the node has a body and a function summary, we have visited it before and can
             // return here.
@@ -563,13 +587,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 node.functionSummary.computeIfAbsent(Return()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
                 }
+                // We have put ourselves on the chain above and are leaving again, so we have to
+                // take ourselves off it. Otherwise we would stay on it for the rest of this target
+                // and every further call of this function would be mistaken for a recursive one.
+                functionSummaryAnalysisChain.remove(node)
                 return
             }
 
             log.info(
                 "Analyzing function ${node.name}. Complexity: ${
                             NumberFormat.getNumberInstance(Locale.US).format(c)
-                        }. (Function $analyzedFunctionCount / $totalFunctionCount)"
+                        }. (Function $analyzedFunctionCount / $totalFunctionCount${
+                            if (isCalleeAnalysis) ", as a callee at depth ${functionSummaryAnalysisChain.size}" else ""
+                        })"
             )
         } else {
             if (log.isTraceEnabled) {
