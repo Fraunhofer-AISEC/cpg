@@ -1691,6 +1691,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             it.start
                         }
                     }
+                // These tasks all add to the one state which [push] modifies in place, so the
+                // assignment stores the same reference that `doubleState` already holds and no
+                // task can lose the contribution of another one. It would be a lost update if
+                // [push] ever started to return a new element instead.
                 argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
                     doubleState =
                         innerCalculateIncomingCallingContexts(
@@ -3718,6 +3722,14 @@ fun PointsToState.Element.getFromDecl(key: Node): DeclarationStateEntryElement? 
     return this.declarationsState[key]
 }
 
+/**
+ * Adds [newLatticeElement] to what the [generalState] of [currentState] holds for [newNode].
+ *
+ * This modifies [currentState] and returns that very same object rather than a new one, which is
+ * what lets several coroutines push into one state in parallel: they all contribute to the same
+ * element, and assigning the result back to the variable they read it from stores the reference it
+ * already held. Anybody who needs the state to stay as it is has to [Lattice.duplicate] it first.
+ */
 suspend fun PointsToState.push(
     currentState: PointsToState.Element,
     newNode: Node,
@@ -3746,7 +3758,10 @@ suspend fun PointsToState.push(
     return currentState
 }
 
-/** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
+/**
+ * Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. Like [push], this
+ * modifies [currentState] and hands back the same object.
+ */
 suspend fun PointsToState.pushToDeclarationsState(
     currentState: PointsToState.Element,
     newNode: Node,
@@ -4709,6 +4724,8 @@ suspend fun PointsToState.Element.updateValues(
                     )
                 }
             } else {
+                // As in [calculateIncomingCallingContexts], the parallel tasks all modify the one
+                // state that [push] returns to them, so nothing is lost here.
                 destinations.forEachMaybeParallel { d ->
                     doubleState =
                         lattice.push(
