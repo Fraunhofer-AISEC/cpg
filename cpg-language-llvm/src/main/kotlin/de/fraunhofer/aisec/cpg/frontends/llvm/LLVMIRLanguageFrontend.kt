@@ -87,9 +87,10 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         // create a new LLVM context
         ctxRef = LLVMContextCreate()
 
-        // disable opaque pointers, until all necessary new functions are available in the C API.
-        // See https://llvm.org/docs/OpaquePointers.html
-        LLVMContextSetOpaquePointers(ctxRef, 0)
+        // Enable opaque pointers. LLVM auto-upgrades typed-pointer IR/bitcode parsed into an
+        // opaque-pointer context, so this supports both older (typed pointer) and newer (opaque
+        // pointer) IR. See https://llvm.org/docs/OpaquePointers.html
+        LLVMContextSetOpaquePointers(ctxRef, 1)
 
         // allocate a buffer for a possible error message
         val errorMessage = ByteBuffer.allocate(10000)
@@ -208,8 +209,16 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
                     elementType.array()
                 }
                 LLVMPointerTypeKind -> {
-                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.pointer()
+                    if (LLVMPointerTypeIsOpaque(typeRef) != 0) {
+                        // Opaque pointers no longer carry a pointee type in the LLVM type
+                        // system. The actual pointee type has to be resolved at each use site
+                        // instead (e.g. from a GEP's source element type, a global's value
+                        // type, an alloca's allocated type, or a load's result type).
+                        unknownType().pointer()
+                    } else {
+                        val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                        elementType.pointer()
+                    }
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
