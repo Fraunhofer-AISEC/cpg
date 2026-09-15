@@ -112,6 +112,14 @@ var totalFunctionCount = 0
  * *visits* rather than targets and would run past [totalFunctionCount].
  */
 var analyzedFunctionCount = 0
+
+/**
+ * The multiple of the configured [PointsToPass.Configuration.timeout] which the analysis of a
+ * single function may take in total, including the analyses of the callees it triggers. See
+ * [PointsToPass.calculateFunctionSummaries] for why the budget grows at all.
+ */
+private const val MAX_TIMEOUT_EXTENSION_FACTOR = 4
+
 private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
 private const val FIELD_ACCESS_SUMMARY_SEGMENT = "<summary>"
 
@@ -1970,6 +1978,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 inv
             }
         invokes.forEach { invoke ->
+            // Handling a single call is the most expensive thing the analysis does: it may analyze
+            // the callee, and it applies the callee's whole function summary to our state. The
+            // timeout of the enclosing [iterateEOG] can only cut that short where we let it, so we
+            // offer it a cancellation point per callee and per dereference depth below.
+            currentCoroutineContext().ensureActive()
             val inv = calculateFunctionSummaries(invoke)
             if (inv != null) {
                 doubleState =
@@ -2076,6 +2089,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // We can't go through all levels at once as a change at a lower level may
                 // affect a higher level. So let's do this step by step
                 for (depth in 0..3) {
+                    currentCoroutineContext().ensureActive()
                     // Create a snapshot of mapDstToSrc. calculateCallDestinations reads from this,
                     // it should contain all the required information (the info from the previous
                     // depths). This allows us to use threads in which addEntryToMap at the same
@@ -2126,6 +2140,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
         mapDstToSrc.forEach { (dstAddr, values) ->
+            currentCoroutineContext().ensureActive()
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
@@ -2238,14 +2253,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // acceptInternal ran its own, independently timed nested analysis. Credit
                         // the time it took back to our own (enclosing) budget, if any, so that we
                         // aren't unfairly penalized for time spent in a callee that has already
-                        // been charged against its own budget.
+                        // been charged against its own budget. The credit is capped at
+                        // MAX_TIMEOUT_EXTENSION_FACTOR times the configured timeout: a function
+                        // with many callees, each of which has callees of its own, would otherwise
+                        // extend its budget over and over and could run for an arbitrary multiple
+                        // of the configured timeout. The cap is what makes the wall clock time of
+                        // one analysis bounded again.
                         val budget = currentCoroutineContext()[TimeoutBudget]
                         if (budget != null) {
                             val elapsed = startTime.elapsedNow()
                             if (log.isTraceEnabled) {
                                 log.trace("Old remaining timeout: ${budget.remaining}")
                             }
-                            budget.credit(elapsed)
+                            val configuredTimeout = passConfig<Configuration>()?.timeout
+                            if (configuredTimeout != null) {
+                                budget.creditUpTo(
+                                    elapsed,
+                                    configuredTimeout * MAX_TIMEOUT_EXTENSION_FACTOR,
+                                )
+                            } else {
+                                budget.credit(elapsed)
+                            }
                             if (log.isTraceEnabled) {
                                 log.trace(
                                     "Increased remaining timeout to consider time spent in acceptInternal. New remaining timeout: ${budget.remaining}"
