@@ -49,6 +49,9 @@ import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.math.ceil
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
@@ -81,6 +84,158 @@ private const val FIRST_STATE_SAMPLE_AFTER_EDGES = 64
 private const val STATES_PER_SAMPLE = 8
 
 /**
+ * How long a single edge may be transformed before [EdgeStallWatchdog] reports that we are stuck on
+ * it. Every further report about the same edge is due after twice the time of the previous one, so
+ * a genuinely unbounded operation costs us a logarithmic number of log lines.
+ *
+ * The transformation of one edge is expected to take milliseconds, so anything in the minutes range
+ * is a bug. Note that this only *reports*; whether we can actually abandon the edge is up to
+ * [withTimeout] and thus up to the transformation reaching a cancellation point.
+ */
+private val SINGLE_EDGE_STALL_REPORT_AFTER = 1.minutes
+
+/** How often [EdgeStallWatchdog] looks whether an analysis is still working on the same edge. */
+private val STALL_POLL_INTERVAL = 15.seconds
+
+/**
+ * Watches the [Lattice.iterateEOG] runs which are currently in progress and reports an edge whose
+ * transformation does not finish, *while* it does not finish.
+ *
+ * We need this because the transformation of a single edge is not interruptible in general: it is
+ * ordinary Kotlin code, and [withTimeout] can only cancel it where it reaches a cancellation point.
+ * If it does not, the analysis is stuck with no way to tell from the outside what it is stuck in --
+ * the log stays silent for however long the operation takes, and the stack of the thread that runs
+ * the worklist only shows that it is waiting for its children. So we sample the stack traces of the
+ * worker threads instead, which is the only thing that actually names the operation to blame.
+ *
+ * Runs are strictly nested: a transformation may analyze a callee, which starts another run inside
+ * the current one. Only the innermost run reports, because all the outer ones are stuck by
+ * construction while it is working and would just repeat each other.
+ */
+private object EdgeStallWatchdog {
+
+    /**
+     * One [Lattice.iterateEOG] run in progress. [enter] and [leave] are called for every single
+     * edge, so they do no more than write two fields; everything which costs anything - describing
+     * the edge, walking the stacks - happens on the watchdog thread and only if we are actually
+     * stuck.
+     */
+    class Run(private val name: String) {
+        /** The edge we are working on, or `null` if we are between edges. */
+        @Volatile private var edge: EvaluationOrder? = null
+
+        /** When we started with [edge], in [System.nanoTime]. */
+        @Volatile private var sinceNanos: Long = 0
+
+        /** How long [edge] has to take before we report about it again. */
+        @Volatile
+        private var reportAfterNanos: Long = SINGLE_EDGE_STALL_REPORT_AFTER.inWholeNanoseconds
+
+        /** Records that we are about to transform [edge]. */
+        fun enter(edge: EvaluationOrder) {
+            sinceNanos = System.nanoTime()
+            reportAfterNanos = SINGLE_EDGE_STALL_REPORT_AFTER.inWholeNanoseconds
+            this.edge = edge
+        }
+
+        /** Records that we are done with the current edge. */
+        fun leave() {
+            edge = null
+        }
+
+        /** Logs a stall if the current edge has been running for too long. */
+        fun reportIfStalled() {
+            val stuckOn = edge ?: return
+            val elapsed = System.nanoTime() - sinceNanos
+            if (elapsed < reportAfterNanos) return
+            // Back off first: if the logging below throws, we still do not want to spin on it.
+            reportAfterNanos = elapsed * 2
+            Pass.log.warn(
+                "The analysis of {} has been transforming the single edge {} for {}. This is a bug: " +
+                    "the transformation of one edge is expected to take milliseconds. The threads " +
+                    "are currently here:\n{}",
+                name,
+                describe(stuckOn),
+                elapsed.nanoseconds,
+                workerStackTraces(),
+            )
+        }
+    }
+
+    /**
+     * The runs in progress, innermost last. Guarded by the monitor of this object, which the worker
+     * threads only ever take for the very short [register]/[unregister], never while transforming.
+     */
+    private val runs = mutableListOf<Run>()
+
+    private var poller: Thread? = null
+
+    /** Registers a new, innermost run under the given name and returns its handle. */
+    @Synchronized
+    fun register(name: String): Run {
+        val run = Run(name)
+        runs.add(run)
+        if (poller == null) {
+            poller =
+                Thread { poll() }
+                    .apply {
+                        this.name = "cpg-iterate-eog-watchdog"
+                        // Must not keep the JVM alive: this thread never finishes on its own.
+                        this.isDaemon = true
+                        start()
+                    }
+        }
+        return run
+    }
+
+    /** Removes [run] again. */
+    @Synchronized
+    fun unregister(run: Run) {
+        runs.remove(run)
+    }
+
+    @Synchronized private fun innermost(): Run? = runs.lastOrNull()
+
+    private fun poll() {
+        while (true) {
+            try {
+                Thread.sleep(STALL_POLL_INTERVAL.inWholeMilliseconds)
+                innermost()?.reportIfStalled()
+            } catch (_: InterruptedException) {
+                return
+            } catch (e: Exception) {
+                // A watchdog which takes the analysis down with it would be worse than no watchdog.
+                Pass.log.warn("The iterateEOG watchdog failed and stops watching", e)
+                return
+            }
+        }
+    }
+
+    /**
+     * The stacks of the threads which could be doing the work, which are the one running the
+     * worklist and the coroutine dispatcher's workers. We deliberately do not dump every thread of
+     * the JVM: the interesting ones are few and the uninteresting ones are many.
+     */
+    private fun workerStackTraces(): String =
+        Thread.getAllStackTraces()
+            .asSequence()
+            .filter { (thread, stack) ->
+                stack.isNotEmpty() &&
+                    (thread.name.startsWith("DefaultDispatcher-worker-") ||
+                        thread.name.startsWith("main") ||
+                        thread.name.startsWith("cpg-"))
+            }
+            .joinToString("\n") { (thread, stack) ->
+                val frames =
+                    stack.take(STALL_STACK_FRAMES).joinToString("\n") { frame -> "\tat $frame" }
+                "\"${thread.name}\" ${thread.state}\n$frames"
+            }
+}
+
+/** The number of stack frames [EdgeStallWatchdog] logs per thread. */
+private const val STALL_STACK_FRAMES = 25
+
+/**
  * Bookkeeping for a single [Lattice.iterateEOG] run. Memory consumption of the analysis is driven
  * by the product of [peakLiveStates] and the number of entries in each of them, neither of which is
  * visible from the outside, so we report both.
@@ -107,6 +262,15 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
     /** The number of entries of the biggest state we looked at, or -1 if we never sampled one. */
     private var sampledStateEntries = -1
 
+    /** How long the whole run spent in the transformation, as opposed to the worklist itself. */
+    private var transformationTime = Duration.ZERO
+
+    /** How long the single slowest transformation of this run took. */
+    private var slowestTransformation = Duration.ZERO
+
+    /** The edge whose transformation took [slowestTransformation]. */
+    private var slowestEdge: String? = null
+
     /** The number of processed edges at which we take the next sample. */
     private var nextSampleEdge = FIRST_STATE_SAMPLE_AFTER_EDGES
 
@@ -125,6 +289,20 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
      * [states] is therefore not a collection but a function: we do not even want to iterate the
      * states unless we are going to sample them.
      */
+    /**
+     * Records that transforming [edge] took [duration], so that [report] can name the edge which
+     * cost us the most. A run whose time is dominated by a single edge is a very different problem
+     * from one which is slow because it processes many of them, and the two are indistinguishable
+     * from the outside.
+     */
+    fun recordTransformation(edge: EvaluationOrder, duration: Duration) {
+        transformationTime += duration
+        if (duration > slowestTransformation) {
+            slowestTransformation = duration
+            slowestEdge = describe(edge)
+        }
+    }
+
     fun sample(liveStates: Int, states: () -> Iterable<Lattice.Element>): Long {
         processedEdges++
         if (liveStates > peakLiveStates) {
@@ -178,6 +356,59 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
                 peakEntries,
             )
         }
+
+        // A run whose time went into a single edge is a bug in the transformation, not a big
+        // analysis, so it gets its own message and it gets it unconditionally.
+        if (slowestTransformation > SINGLE_EDGE_STALL_REPORT_AFTER) {
+            Pass.log.warn(
+                "The analysis of {} spent {} of its {} in the transformation of the single edge {}. " +
+                    "This edge, not the size of the function, is what made the analysis slow.",
+                name,
+                slowestTransformation,
+                transformationTime,
+                slowestEdge,
+            )
+        } else if (Pass.log.isDebugEnabled) {
+            Pass.log.debug(
+                "The analysis of {} spent {} in {} transformations, at most {} in a single one ({}).",
+                name,
+                transformationTime,
+                processedEdges,
+                slowestTransformation,
+                slowestEdge,
+            )
+        }
+    }
+}
+
+/**
+ * A short description of [edge] which is good enough to find the corresponding source location
+ * again. We describe the node the edge leads to, because that is the one the transformation looks
+ * at.
+ */
+private fun describe(edge: EvaluationOrder): String {
+    val target = edge.end
+    return "${target.javaClass.simpleName} \"${target.name.localName}\" at ${target.location}"
+}
+
+/**
+ * Runs [block], which is the transformation of [edge], and tells both [statistics] and [watchdog]
+ * how long it took. The two serve different purposes: [statistics] reports afterwards which edge
+ * was the most expensive one, [watchdog] reports *while* an edge refuses to finish.
+ */
+private suspend fun <R> measureAndRecord(
+    edge: EvaluationOrder,
+    statistics: IterationStatistics,
+    watchdog: EdgeStallWatchdog.Run,
+    block: suspend () -> R,
+): R {
+    watchdog.enter(edge)
+    val started = TimeSource.Monotonic.markNow()
+    try {
+        return block()
+    } finally {
+        statistics.recordTransformation(edge, started.elapsedNow())
+        watchdog.leave()
     }
 }
 
@@ -629,6 +860,10 @@ interface Lattice<T : Lattice.Element> {
         }
 
         val statistics = IterationStatistics(startEdges)
+        val watchdog =
+            EdgeStallWatchdog.register(
+                startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+            )
         try {
             val result =
                 iterateEogWorklist(
@@ -639,10 +874,12 @@ interface Lattice<T : Lattice.Element> {
                     timeout,
                     maxStateEntries,
                     statistics,
+                    watchdog,
                 )
             statistics.finalStateEntries = result.first.entryCount()
             return result
         } finally {
+            EdgeStallWatchdog.unregister(watchdog)
             statistics.report()
             while (timeouts.size > timeoutStackDepth) {
                 timeouts.removeLast()
@@ -663,6 +900,7 @@ interface Lattice<T : Lattice.Element> {
         timeout: Duration,
         maxStateEntries: Long,
         statistics: IterationStatistics,
+        watchdog: EdgeStallWatchdog.Run,
     ): Pair<T, Boolean> {
         // mark the time when we started the calculation to know when we stop
         val startTime = TimeSource.Monotonic.markNow()
@@ -862,15 +1100,29 @@ interface Lattice<T : Lattice.Element> {
             val remainingTime =
                 if (timeout != Duration.INFINITE) timeouts.last() - startTime.elapsedNow()
                 else Duration.INFINITE
-            @Suppress("UNCHECKED_CAST")
-            val newState =
-                transformation(
-                    this@Lattice,
-                    nextEdge,
-                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
-                )
+            // What the transformation produced, or null if it did not get that far. The handler for
+            // the timeout below needs it, so it cannot live inside the block.
+            var transformed: T? = null
             try {
                 withTimeout(remainingTime) {
+                    // The transformation has to run *inside* the timeout. It is by far the most
+                    // expensive part of an iteration - it is the one which analyzes callees and
+                    // walks the graph - so a timeout which only covers the bookkeeping below is a
+                    // timeout which does not limit anything. Note that this only helps as far as
+                    // the transformation is cooperative: cancellation takes effect at its
+                    // suspension points and wherever it calls `ensureActive`, and not in between.
+                    @Suppress("UNCHECKED_CAST")
+                    val newState =
+                        measureAndRecord(nextEdge, statistics, watchdog) {
+                            transformation(
+                                this@Lattice,
+                                nextEdge,
+                                if (isNotNearStartOrEndOfBasicBlock) nextGlobal
+                                else nextGlobal.duplicate() as T,
+                            )
+                        }
+                    transformed = newState
+
                     nextEdge.end.nextEOGEdges.forEach {
                         currentCoroutineContext().ensureActive()
                         // We continue with the nextEOG edge if we haven't seen it before or if we
@@ -982,7 +1234,12 @@ interface Lattice<T : Lattice.Element> {
                     "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
                 )
                 // Note that our caller pops the timeout we pushed, on every exit path.
-                finalState = this@Lattice.lub(finalState, newState, false)
+                // If we were cancelled before the transformation finished, we do not have its
+                // result and fold in the state we had on entering the edge instead. That state
+                // holds at this program point too, so the result stays an over-approximation -
+                // which is all we promise for an aborted run, and the caller is told that this is
+                // not a fixpoint.
+                finalState = this@Lattice.lub(finalState, transformed ?: nextGlobal, false)
                 Pass.log.info("Finished calculating final lub")
                 return Pair(finalState, true)
             }

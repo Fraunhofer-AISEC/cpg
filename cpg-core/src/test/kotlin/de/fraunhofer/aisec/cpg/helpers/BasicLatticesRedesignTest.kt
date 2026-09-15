@@ -46,7 +46,10 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
@@ -647,6 +650,49 @@ class BasicLatticesRedesignTest {
             )
         }
         assertEquals(depthBefore, timeouts.size)
+    }
+
+    /**
+     * The transformation of a single edge is where an [Lattice.iterateEOG] run spends almost all of
+     * its time, so the timeout has to be able to cut a transformation short. It used to run outside
+     * the timeout, which meant that a single slow edge could keep the analysis busy for arbitrarily
+     * long - we saw a single edge run for twelve hours against a budget of thirty minutes.
+     */
+    @Test
+    @Timeout(60)
+    fun testIterateEOGTimesOutDuringASlowTransformation() {
+        val lattice = PowersetLattice<String>()
+
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+
+        val budget = 500.milliseconds
+        // Far more than the budget, so that a run which waits for the transformation to finish is
+        // clearly distinguishable from one which cancels it.
+        val transformationDuration = 30.seconds
+
+        var aborted = false
+        val elapsed = measureTime {
+            aborted =
+                lattice
+                    .iterateEOG(
+                        start.nextEOGEdges.toList(),
+                        lattice.bottom,
+                        { _, _, state ->
+                            delay(transformationDuration)
+                            state
+                        },
+                        timeout = budget,
+                    )
+                    .second
+        }
+
+        assertTrue(aborted, "The run has to report that it did not reach a fixpoint")
+        assertTrue(
+            elapsed < transformationDuration / 2,
+            "The timeout has to cancel the transformation instead of waiting for it, but the run took $elapsed",
+        )
     }
 
     @Test
