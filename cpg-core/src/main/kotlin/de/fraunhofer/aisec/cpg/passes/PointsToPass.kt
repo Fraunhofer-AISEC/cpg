@@ -470,7 +470,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
-        /** The timeout after which we stop analyzing a function. Default 60 minutes */
+        /**
+         * The timeout after which we stop analyzing a function. Default 60 minutes.
+         *
+         * Analyzing a function has two phases which are both bounded by this, so one function can
+         * take up to twice as long: first the fixpoint iteration over its EOG, and then the work of
+         * writing the resulting state into the graph and deriving the function summary from it.
+         *
+         * Whichever phase runs out of time keeps the results it has and the analysis continues with
+         * the next function, so a function which hits the timeout ends up with fewer dataflows than
+         * it should have. Note that the analyses of the callees which this function triggers are
+         * charged to their own budget and not to this one, but only up to a multiple of it; see
+         * [calculateFunctionSummaries].
+         */
         var timeout: Duration = 60.minutes,
 
         /**
@@ -662,7 +674,71 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 result as PointsToState.Element
             }
 
+        // Turning the final state into graph edges and deriving the function summary from it is
+        // linear in the size of that state, and for a state with more than a hundred thousand
+        // entries that took over an hour - on top of whatever the fixpoint iteration above was
+        // allowed to take, because this phase had no budget at all. It gets one now, so the time we
+        // spend on a single function is bounded by twice the timeout instead of by nothing.
+        //
+        // Running out of the budget means we stop where we are, so the function ends up with fewer
+        // dataflow edges, and possibly a smaller function summary, than the state we computed would
+        // justify. That is a loss of completeness rather than of correctness, and it is the same
+        // kind of loss that configuring a timeout at all already accepts.
+        val postProcessingFinished =
+            withTimeoutOrNull(passConfig<Configuration>()?.timeout ?: Duration.INFINITE) {
+                drawDataflowEdges(finalState)
+
+                if (log.isTraceEnabled) {
+                    log.trace("Finished drawing DFG Edges")
+                }
+
+                /* Store function summary for this Function. */
+                if (node is Function && node.body != null && !analysisTimeout) {
+                    storeFunctionSummary(node, finalState)
+                }
+                true
+            }
+        if (postProcessingFinished == null) {
+            log.warn(
+                "Ran out of time while writing the analysis result of {} into the graph. Its " +
+                    "dataflows are incomplete and we fall back to a dummy function summary.",
+                node.name,
+            )
+            if (node is Function) {
+                // Whatever of the summary we got to write is derived from a graph we did not finish
+                // drawing, so it says less than it should. We throw it away and fall back to the
+                // over-approximation instead, which is both on the safe side and keeps the callers
+                // of this function from analyzing it again and hitting the same timeout once per
+                // call site. The edges we did draw stay: each of them is a flow we found, we only
+                // did not find all of them.
+                node.functionSummary.clear()
+                addDummyFunctionSummary(node)
+            }
+        }
+
+        if (node is Function) {
+            if (functionSummaryAnalysisChain.last() == node)
+                functionSummaryAnalysisChain.remove(node)
+            else
+                log.error(
+                    "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+                )
+        }
+        if (log.isTraceEnabled) {
+            log.trace("Finished with acceptInternal for ${node.name.localName}")
+        }
+    }
+
+    /**
+     * Writes the result of the analysis into the graph: the memory addresses and the memory values
+     * we computed for a node, and the dataflows which produced them.
+     */
+    private suspend fun drawDataflowEdges(finalState: PointsToState.Element) {
         for ((key, value) in finalState.generalState) {
+            // This loop is the bulk of a phase which is bounded by a timeout, and nothing in it
+            // suspends, so it has to offer that timeout a point at which it can take effect.
+            currentCoroutineContext().ensureActive()
+
             // The generalState values have 3 items: The address, the value, and the
             // prevDFG-Edges with a set of properties
             // Let's start with fetching the addresses
@@ -726,24 +802,54 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     )
             }
         }
+    }
 
-        if (log.isTraceEnabled) {
-            log.trace("Finished drawing DFG Edges")
-        }
-
-        if (node is Function) {
-            /* Store function summary for this Function. */
-            if (node.body != null && !analysisTimeout) storeFunctionSummary(node, finalState)
-            if (functionSummaryAnalysisChain.last() == node)
-                functionSummaryAnalysisChain.remove(node)
-            else
-                log.error(
-                    "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+    /**
+     * Gives [function] the summary we use when we cannot determine its real one: every parameter
+     * flows into the return value. That over-approximates whatever the function actually does, so
+     * the callers stay on the safe side, and it stops us from analyzing [function] again for every
+     * call site.
+     *
+     * Returns the dataflows such a summary implies, namely one from each parameter (and, for a
+     * [Method], from the receiver) into the function. It is up to the caller to put them into the
+     * state; see [handleEmptyFunction] for that.
+     */
+    private fun addDummyFunctionSummary(
+        function: Function
+    ): PowersetLattice.Element<NodeWithPropertiesKey> {
+        // TODO: Also add possible dereference values to the input?
+        val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
+        val newEntries =
+            ConcurrentHashMap.newKeySet<FSEntry>().apply {
+                add(FSEntry(0, function, 1, "", isDummy = true))
+            }
+        function.parameters.forEach { param ->
+            // The short FS
+            newEntries.add(
+                FSEntry(
+                    0,
+                    null,
+                    1,
+                    "",
+                    mutableSetOf(
+                        NodeWithPropertiesKey(param, equalLinkedHashSetOf(param.argumentIndex))
+                    ),
+                    equalLinkedHashSetOf(true),
+                    true,
                 )
+            )
+            // Since we can't determine the DFs, we draw a DFG-Edge from every parameter
+            prevDFGs.add(NodeWithPropertiesKey(param, equalLinkedHashSetOf()))
         }
-        if (log.isTraceEnabled) {
-            log.trace("Finished with acceptInternal for ${node.name.localName}")
-        }
+        // For Methods, we also add an edge to the receiver
+        if (function is Method)
+            function.receiver?.let {
+                prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf()))
+            }
+        val rets = identitySetOf<Node>()
+        if (function.returns.isNotEmpty()) rets.addAll(function.returns) else rets.add(function)
+        rets.forEach { ret -> function.functionSummary.put(ret, newEntries) }
+        return prevDFGs
     }
 
     /**
@@ -758,40 +864,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = startState
 
         if (function.functionSummary.isEmpty()) {
-            // Add a dummy function summary so that we don't try this every time
-            // In this dummy, all parameters point to the return
-            // TODO: Also add possible dereference values to the input?
-            val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
-            val newEntries =
-                ConcurrentHashMap.newKeySet<FSEntry>().apply {
-                    add(FSEntry(0, function, 1, "", isDummy = true))
-                }
-            function.parameters.forEach { param ->
-                // The short FS
-                newEntries.add(
-                    FSEntry(
-                        0,
-                        null,
-                        1,
-                        "",
-                        mutableSetOf(
-                            NodeWithPropertiesKey(param, equalLinkedHashSetOf(param.argumentIndex))
-                        ),
-                        equalLinkedHashSetOf(true),
-                        true,
-                    )
-                )
-                // Since we can't determine the DFs, we draw a DFG-Edge from every parameter
-                prevDFGs.add(NodeWithPropertiesKey(param, equalLinkedHashSetOf()))
-            }
-            // For Methods, we also add an edge to the receiver
-            if (function is Method)
-                function.receiver?.let {
-                    prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf()))
-                }
-            val rets = identitySetOf<Node>()
-            if (function.returns.isNotEmpty()) rets.addAll(function.returns) else rets.add(function)
-            rets.forEach { ret -> function.functionSummary.put(ret, newEntries) }
+            val prevDFGs = addDummyFunctionSummary(function)
             // draw a DFG-Edge from all parameters to the Function
             doubleState =
                 lattice.push(
@@ -1104,6 +1177,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             parallelism = innerCoroutineCounter,
                             minChunkSize = 1,
                         ) { (value, shortFS, subAccessName, lastWrites) ->
+                            // [addParameterInfoToFS] walks the DFG for every entry, which is the
+                            // expensive half of this function, so we give the timeout around us a
+                            // chance to stop us before each of them.
+                            currentCoroutineContext().ensureActive()
+
                             /* See if we can find something that is different from the initial value.*/
                             if (
                                 value.name != param.name &&
