@@ -9,7 +9,7 @@ publish = "0.37.0"
 # JitPack git ref: a branch SNAPSHOT ("feature~positions-SNAPSHOT", '/' -> '~'),
 # a tag (e.g. "v3.0.1-pos1"), or a commit hash. Branch SNAPSHOTs are mutable and
 # rebuilt on new pushes; pin a tag/commit for a reproducible build.
-sootup = "feature~positions-SNAPSHOT"
+sootup = "3.0.0-alpha3"
 slf4j = "2.0.16"
 clikt = "5.1.0"
 kaml = "0.104.0"
