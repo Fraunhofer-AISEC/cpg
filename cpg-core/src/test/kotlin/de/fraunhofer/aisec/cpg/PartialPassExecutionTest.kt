@@ -27,9 +27,16 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.While
+import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.SccPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
@@ -39,6 +46,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -227,5 +235,140 @@ class PartialPassExecutionTest {
         assertEquals(fullFoo.parameters.size, incrementalFoo.parameters.size)
         assertTrue(incrementalFooCall.prevDFG.contains(incrementalFoo))
         assertTrue(fullFooCall.prevDFG.contains(fullFoo))
+    }
+
+    @Test
+    fun testRunDirtyPassesComputesControlFlowStructureForNewFunctionWithoutTouchingUnrelatedGraph() {
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-execution-cfg-test").toFile().apply {
+                deleteOnExit()
+            }
+        val appSeedFile = tempSource(topLevel, "app_seed.stale", "define:seed")
+        val unrelatedFile = tempSource(topLevel, "unrelated.stale", "loopfunc:untouched")
+
+        // "app" only has an unrelated, pre-existing declaration; "untouched" lives in the
+        // separate "lib" component so we can prove that computing EOG/BB/CDG/SCC for the newly
+        // added function does not re-touch it.
+        val config =
+            TranslationConfiguration.builder()
+                .topLevels(mapOf("app" to topLevel, "lib" to topLevel))
+                .softwareComponents(
+                    mutableMapOf("app" to listOf(appSeedFile), "lib" to listOf(unrelatedFile))
+                )
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .registerPass<ControlDependenceGraphPass>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single { it.name.localName == "app" }
+
+        val untouchedFn = result.functions.single { it.name.localName == "untouched" }
+        val untouchedWhile = untouchedFn.body.allChildren<While>().single()
+        val untouchedWhileEogEdgeBefore = untouchedWhile.prevEOGEdges.single()
+        val untouchedAssign = untouchedWhile.statement.allChildren<Reference>().first()
+        val untouchedAssignCdgBefore = untouchedAssign.prevCDG.toList()
+
+        // Now add a brand-new function, with its own loop, into "app". It has never been seen by
+        // any pass before.
+        val newSource = tempSource(topLevel, "new.stale", "loopfunc:newFn")
+        val tu = manager.addSource(result, component, newSource)
+        assertNotNull(tu)
+        val newFn = tu.declarations.filterIsInstance<Function>().single()
+
+        // Before runDirtyPasses: purely additive dirty-marking has happened, but no pass has run
+        // on the new function yet, so it has no control-flow structure at all.
+        assertTrue(newFn.nextEOG.isEmpty())
+        assertNull(newFn.firstBasicBlock)
+
+        manager.runDirtyPasses(result)
+
+        // EOG: the function and its loop now have EOG edges.
+        assertTrue(newFn.nextEOG.isNotEmpty())
+        val newWhile = (newFn.body as Block).allChildren<While>().single()
+        assertTrue(newWhile.prevEOG.isNotEmpty())
+        assertTrue(newWhile.nextEOG.isNotEmpty())
+
+        // Basic blocks were computed.
+        assertNotNull(newFn.firstBasicBlock)
+
+        // CDG: the assignment inside the loop body is control-dependent on the loop condition.
+        val newAssignRef = newWhile.statement.allChildren<Reference>().first()
+        assertTrue(newAssignRef.prevCDG.isNotEmpty())
+
+        // SCC: the loop introduces a back edge, so at least one EOG edge reachable from newFn must
+        // be labeled with a non-null scc id.
+        val sccLabeled =
+            newFn.allChildren<Node>().flatMap { it.nextEOGEdges }.any { it.scc != null }
+        assertTrue(sccLabeled, "Expected SccPass to label at least one EOG edge of the new loop")
+
+        // Intraprocedural DFG: the final `return x` reads the value written in the loop.
+        val returnRef = (newFn.body as Block).allChildren<Return>().single().returnValue
+        assertNotNull(returnRef)
+        assertTrue(
+            returnRef.prevDFG.isNotEmpty(),
+            "Expected ControlFlowSensitiveDFGPass to connect the loop's writes of `x` to the " +
+                "final read",
+        )
+
+        // Dirty markings for the passes we just ran must be cleared.
+        assertTrue(result.dirtyNodes[newFn].orEmpty().isEmpty())
+
+        // The unrelated, pre-existing "untouched" function (in a different component) must remain
+        // completely untouched: same EOG/CDG edge objects, proving none of
+        // EvaluationOrderGraphPass/BasicBlockCollectorPass/ControlDependenceGraphPass/SccPass were
+        // re-run on it.
+        assertSame(untouchedWhileEogEdgeBefore, untouchedWhile.prevEOGEdges.single())
+        assertEquals(untouchedAssignCdgBefore, untouchedAssign.prevCDG.toList())
+    }
+
+    @Test
+    fun testAddSourceDoesNotMarkUnregisteredEOGStarterPassesDirty() {
+        // Regression test: BasicBlockCollectorPass/ControlDependenceGraphPass/SccPass must only be
+        // marked dirty if they are actually registered -- unlike PointsToPass/
+        // ControlFlowSensitiveDFGPass a few lines above them (in markDfgRelatedPassesDirty), an
+        // earlier version of updateIncrementally marked all three of them dirty unconditionally.
+        // ControlDependenceGraphPass in particular is not part of defaultPasses(), so this would
+        // make an addSource()+runDirtyPasses() pipeline run a pass a full analyze() never would,
+        // breaking incremental-vs-full parity. `minimalPasses()` here deliberately registers none
+        // of the three.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-execution-gating-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "define:seed")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val newSource = tempSource(topLevel, "new.stale", "loopfunc:newFn")
+        val tu = manager.addSource(result, component, newSource)
+        assertNotNull(tu)
+        val newFn = tu.declarations.filterIsInstance<Function>().single()
+
+        val dirtyPassesForNewFn = result.dirtyNodes[newFn].orEmpty()
+        assertFalse(dirtyPassesForNewFn.contains(BasicBlockCollectorPass::class))
+        assertFalse(dirtyPassesForNewFn.contains(ControlDependenceGraphPass::class))
+        assertFalse(dirtyPassesForNewFn.contains(SccPass::class))
+
+        // Sanity check: it is still correctly marked dirty for the passes that ARE registered, so
+        // this isn't just a case of nothing being marked dirty at all. EvaluationOrderGraphPass is
+        // marked dirty on the enclosing TranslationUnit, not on newFn itself (TranslationUnitPass
+        // granularity).
+        assertTrue(dirtyPassesForNewFn.contains(SymbolResolver::class))
+        assertTrue(dirtyPassesForNewFn.contains(DFGPass::class))
+        assertTrue(result.dirtyNodes[tu]?.contains(EvaluationOrderGraphPass::class) == true)
     }
 }

@@ -32,15 +32,25 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
+import de.fraunhofer.aisec.cpg.passes.SccPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.markDirty
 import kotlin.reflect.KClass
 import org.slf4j.LoggerFactory
@@ -55,15 +65,17 @@ private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.IncrementalUp
  * surgery to remove stale edges that a re-run would otherwise leave dangling alongside newly
  * resolved ones.
  *
- * Every new [Function]-like declaration in [tu] is marked dirty for [SymbolResolver] and [DFGPass].
- * In addition, for every such declaration we check whether an inferred stub with the same symbol
- * already exists in the live [ScopeManager] (i.e., a previous call to this name could not be
- * resolved and [de.fraunhofer.aisec.cpg.passes.inference.Inference] created a placeholder
- * [Function] for it). If so, every [de.fraunhofer.aisec.cpg.graph.expressions.Call] that still
- * invokes that stub has its stale [de.fraunhofer.aisec.cpg.graph.expressions.Call.invokes] edge
- * (and the DFG edges that [de.fraunhofer.aisec.cpg.passes.DFGPass] attached because of it) removed,
- * and its enclosing function is marked dirty for [SymbolResolver] and [DFGPass] too. Once the stub
- * is no longer invoked by anyone, it is detached from the graph entirely.
+ * Every new [Function]-like declaration in [tu] is marked dirty for [SymbolResolver] and the
+ * DFG-family/EOG-family passes described in [markDfgRelatedPassesDirty], and [tu] itself is marked
+ * dirty for [EvaluationOrderGraphPass]. In addition, for every such declaration we check whether an
+ * inferred stub with the same symbol already exists in the live [ScopeManager] (i.e., a previous
+ * call to this name could not be resolved and [de.fraunhofer.aisec.cpg.passes.inference.Inference]
+ * created a placeholder [Function] for it). If so, every
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call] that still invokes that stub has its stale
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call.invokes] edge (and the DFG edges that
+ * [de.fraunhofer.aisec.cpg.passes.DFGPass] attached because of it) removed, and its enclosing
+ * function is marked dirty for [SymbolResolver] and [DFGPass] too. Once the stub is no longer
+ * invoked by anyone, it is detached from the graph entirely.
  */
 internal fun TranslationManager.updateIncrementally(
     result: TranslationResult,
@@ -74,6 +86,32 @@ internal fun TranslationManager.updateIncrementally(
     val registeredPasses = result.finalCtx.config.registeredPasses.flatten()
     var detachedAnyStub = false
 
+    // EvaluationOrderGraphPass is purely intraprocedural/AST-driven (no @DependsOn at all -- it
+    // builds the EOG straight from the fresh AST and only touches the ScopeManager for label
+    // lookups, not symbol resolution) and tu is a brand-new TranslationUnit no pass has ever seen,
+    // so there are no pre-existing EOG edges to roll back here -- this is purely additive. Like the
+    // DFG-family marking below, this is gated on actual registration so we never schedule a pass
+    // that a full analyze() would not have run either.
+    if (registeredPasses.contains(EvaluationOrderGraphPass::class)) {
+        tu.markDirty<EvaluationOrderGraphPass>()
+    }
+    // TypeResolver/TypeHierarchyResolver/ImportResolver never ran on this new subtree either, so
+    // e.g. a new function's parameter/return ObjectTypes never get `recordDeclaration` resolved,
+    // and imports referenced from the new code are never resolved -- both of which SymbolResolver
+    // relies on for member-call/constructor resolution. These are ComponentPass-granularity (see
+    // PartialPassExecution.kt), so marking them dirty triggers a whole-component rerun; that
+    // inherent lack of finer granularity is a pre-existing, accepted limitation, not something to
+    // fix here.
+    if (registeredPasses.contains(TypeResolver::class)) {
+        tu.markDirty<TypeResolver>()
+    }
+    if (registeredPasses.contains(TypeHierarchyResolver::class)) {
+        tu.markDirty<TypeHierarchyResolver>()
+    }
+    if (registeredPasses.contains(ImportResolver::class)) {
+        tu.markDirty<ImportResolver>()
+    }
+
     val newFunctions = tu.allChildren<Function>()
     for (newFunction in newFunctions) {
         newFunction.markDirty<SymbolResolver>()
@@ -82,6 +120,26 @@ internal fun TranslationManager.updateIncrementally(
         // function yet (it is not invoked by anyone so far), DFGPass has nothing to do for it yet
         // either -- but it must be re-run once it starts being called (see below).
         newFunction.markDfgRelatedPassesDirty(registeredPasses)
+        // BasicBlockCollectorPass/ControlDependenceGraphPass/SccPass are all per-EOG-starter
+        // passes that only depend on EvaluationOrderGraphPass's output for the same starter, so,
+        // like the DFG-family marking above, this is purely additive: newFunction has never been
+        // visited by any of them before, so there is nothing to roll back. resolveEOGStarterTargets
+        // in PartialPassExecution.kt resolves a dirty node to the nearest enclosing/contained
+        // EOGStarterHolder with no incoming EOG edges -- newFunction (a Function, hence an
+        // EOGStarterHolder with empty prevEOG until EvaluationOrderGraphPass runs) already *is*
+        // that target, so marking it directly lines up exactly with what runDirtyPasses looks for.
+        // Each is gated on actual registration -- ControlDependenceGraphPass in particular is NOT
+        // part of defaultPasses(), so unconditionally marking it dirty would make an
+        // addSource()+runDirtyPasses() pipeline run a pass a full analyze() never would.
+        if (registeredPasses.contains(BasicBlockCollectorPass::class)) {
+            newFunction.markDirty<BasicBlockCollectorPass>()
+        }
+        if (registeredPasses.contains(ControlDependenceGraphPass::class)) {
+            newFunction.markDirty<ControlDependenceGraphPass>()
+        }
+        if (registeredPasses.contains(SccPass::class)) {
+            newFunction.markDirty<SccPass>()
+        }
         if (cleanUpStaleInferredStubs(result, newFunction, registeredPasses)) {
             detachedAnyStub = true
         }
@@ -97,16 +155,20 @@ internal fun TranslationManager.updateIncrementally(
 /**
  * Marks [DFGPass] dirty (it always attaches the "invoked function flows into the call" DFG edge for
  * every entry of [de.fraunhofer.aisec.cpg.graph.expressions.Call.invokes]), plus, mirroring
- * [DFGPass.handleCall]'s own gating, whichever of [PointsToPass] / [ControlFlowSensitiveDFGPass] is
- * actually registered -- one of these (rather than [DFGPass] itself) attaches the
- * argument-to-parameter DFG edges once either is registered (the default).
+ * [DFGPass.handleCall]'s own gating, every one of [PointsToPass] / [ControlFlowSensitiveDFGPass]
+ * that is actually registered -- one of these (rather than [DFGPass] itself) attaches the
+ * argument-to-parameter DFG edges once either is registered (the default). Normally at most one of
+ * the two is registered (mutually exclusive in [TranslationConfiguration.Builder.defaultPasses]),
+ * but a manually-assembled pass list could register both, so we must not stop after the first
+ * match.
  */
-private fun Function.markDfgRelatedPassesDirty(registeredPasses: List<KClass<out Pass<out Node>>>) {
+private fun Node.markDfgRelatedPassesDirty(registeredPasses: List<KClass<out Pass<out Node>>>) {
     markDirty<DFGPass>()
-    when {
-        registeredPasses.contains(PointsToPass::class) -> markDirty<PointsToPass>()
-        registeredPasses.contains(ControlFlowSensitiveDFGPass::class) ->
-            markDirty<ControlFlowSensitiveDFGPass>()
+    if (registeredPasses.contains(PointsToPass::class)) {
+        markDirty<PointsToPass>()
+    }
+    if (registeredPasses.contains(ControlFlowSensitiveDFGPass::class)) {
+        markDirty<ControlFlowSensitiveDFGPass>()
     }
 }
 
@@ -132,15 +194,36 @@ private fun cleanUpStaleInferredStubs(
             startScope = newFunction.scope ?: scopeManager.globalScope,
         )
 
-    val newSignature = newFunction.parameters.map { it.type }
     val stubs =
-        candidates.filterIsInstance<Function>().filter {
-            it.isInferred &&
-                it !== newFunction &&
-                // Only treat same-named stubs as stale if their (inferred) signature is actually
-                // compatible with the new declaration's signature; otherwise we might rip out
-                // edges that still belong to a different, still-unresolved overload.
-                it.matchesSignature(newSignature) is SignatureMatches
+        candidates.filterIsInstance<Function>().filter { stub ->
+            stub.isInferred &&
+                stub !== newFunction &&
+                // Only treat same-named stubs as stale if newFunction is actually a viable
+                // resolution target for the call(s) that produced this stub.
+                //
+                // [Function.matchesSignature] is designed to be called as
+                // `candidate.matchesSignature(callArgumentTypes)` (see
+                // SymbolResolver.resolveWithArguments): it walks the *candidate's* parameters and
+                // requires them to consume the entire `signature` list, only tolerating a
+                // candidate with MORE parameters than `signature` if `useDefaultArguments` is set
+                // and the extra ones have defaults.
+                //
+                // A stub's parameters are typed 1:1 from the original call's argument types (see
+                // Inference.createInferredParameters), so stub.parameters.map { it.type } is
+                // exactly that original call's argument-type signature. The previous version of
+                // this check called it backwards -- `stub.matchesSignature(newFunction's
+                // parameter types)` -- which fails whenever the real function has MORE parameters
+                // than the call the stub was inferred from (e.g. trailing default/optional
+                // parameters), since the stub's (few) parameters could never consume the real
+                // function's (more) parameter types. Calling it in the correct direction,
+                // `newFunction.matchesSignature(stub's parameter types)`, mirrors how
+                // SymbolResolver itself would resolve that original call against newFunction, and
+                // correctly allows newFunction to have extra trailing default parameters that the
+                // call simply didn't supply.
+                newFunction.matchesSignature(
+                    stub.parameters.map { it.type },
+                    useDefaultArguments = true,
+                ) is SignatureMatches
         }
 
     // DFGPass.connectInferredCallArguments consults Function.functionSummary to attach extra
@@ -186,53 +269,119 @@ private fun cleanUpStaleInferredStubs(
 
         for (call in staleCalls) {
             if (!skipDfgTeardown) {
-                // Remove the argument -> parameter DFG edges that DFGPass/Util.attachCallParameters
-                // added specifically because of this call invoking the stub. We must only touch
-                // edges whose source is one of THIS call's arguments, since other calls may share
-                // the same stub (and thus the same parameter nodes).
-                //
-                // Note: Util.detachCallParameters looks like the "obvious" inverse of
-                // Util.attachCallParameters, but it is pre-existing, unused, dead code with a bug
-                // (it removes from param.nextDFGEdges after searching param.prevDFGEdges, which are
-                // different mirrored collections) -- do not consolidate onto it without fixing that
-                // first.
-                for (param in stub.parameters) {
-                    param.prevDFGEdges.removeIf { it.start in call.arguments }
-                }
-
-                // Remove the receiver -> stub.receiver DFG edge for member calls.
-                if (stub is Method && call is MemberCall) {
-                    stub.receiver?.let { receiver ->
-                        call.base?.nextDFGEdges?.removeIf { it.end == receiver }
-                    }
-                }
-
-                // Remove the "invoked function flows into the call" DFG edge that DFGPass adds for
-                // every entry of call.invokes.
-                call.prevDFGEdges.removeIf { it.start === stub }
+                tearDownStandardDfgEdges(stub, call)
             }
 
             // Remove the stale invokes edge itself. This also removes the mirrored entry in
             // stub.calledByEdges.
             call.invokeEdges.removeIf { it.end === stub }
 
+            // Construction.constructor is a separate backing field that the setter forwards
+            // one-directionally to `invokes` (setting `constructor` also sets `invokes`, but not
+            // the other way around) -- so clearing `invokes` above leaves
+            // `construction.constructor`
+            // still dangling at the now-stale stub until SymbolResolver happens to rerun. Reset it
+            // explicitly here so there is no window of inconsistency between the two. Note: when
+            // `anonymousClass` is set, the getter ignores this backing field entirely, making this
+            // a no-op for that path; correctness there instead comes from detachInferredDeclaration
+            // removing the stub from the anonymous class's `constructors` a few lines below.
+            if (call is Construction && call.constructor === stub) {
+                call.constructor = null
+            }
+
             // The caller is where SymbolResolver needs to re-resolve the call, and where DFGPass
             // needs to re-attach the argument/parameter and invoked-function/call edges once the
-            // call resolves to the new, real function.
-            call.firstParentOrNull<Function>()?.let {
-                it.markDirty<SymbolResolver>()
-                it.markDfgRelatedPassesDirty(registeredPasses)
+            // call resolves to the new, real function. Some calls (e.g. top-level/module-scope
+            // statements) have no enclosing Function -- TranslationUnit is itself an
+            // EOGStarterHolder ("to catch any static statements in the TU"), so fall back to
+            // marking the enclosing TranslationUnit dirty instead of silently doing nothing; the
+            // stale invokes/DFG edges above were already unconditionally removed, so leaving this
+            // case unmarked would strand the call worse off than before cleanup ran.
+            val enclosingFunction = call.firstParentOrNull<Function>()
+            if (enclosingFunction != null) {
+                enclosingFunction.markDirty<SymbolResolver>()
+                enclosingFunction.markDfgRelatedPassesDirty(registeredPasses)
+            } else {
+                call.firstParentOrNull<TranslationUnit>()?.let {
+                    it.markDirty<SymbolResolver>()
+                    it.markDfgRelatedPassesDirty(registeredPasses)
+                }
             }
         }
 
         // If nobody invokes the stub anymore, it is dead weight: detach it from the AST and from
         // the scope's symbol table so it doesn't linger as a phantom declaration.
         if (stub.calledBy.isEmpty()) {
+            if (skipDfgTeardown) {
+                // staleCalls was a full snapshot of stub.calledBy taken before this loop, and
+                // every one of those calls just had its invokes edge to stub removed above, so
+                // stub.calledBy being empty here means none of them (or anyone else) can still
+                // need the DFG edges we left alone earlier -- it is now safe to tear those down
+                // too, without the "some other call might still justify them" risk that justified
+                // skipping this at the time.
+                for (call in staleCalls) {
+                    tearDownStandardDfgEdges(stub, call)
+                    tearDownFunctionSummaryDerivedDfgEdges(stub, call)
+                }
+            }
             detachInferredDeclaration(stub)
             detachedAnyStub = true
         }
     }
     return detachedAnyStub
+}
+
+/**
+ * Removes the "standard" DFG edges that DFGPass attached because [call] invoked [stub]: the
+ * argument -> parameter edges (from [de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters]),
+ * the receiver -> stub.receiver edge for member calls, and the "invoked function flows into the
+ * call" edge. We must only touch edges whose source is one of THIS call's arguments/this stub,
+ * since other calls may share the same stub (and thus the same parameter nodes).
+ *
+ * Note: [de.fraunhofer.aisec.cpg.helpers.Util.detachCallParameters] looks like the "obvious"
+ * inverse of `attachCallParameters`, but it is pre-existing, unused, dead code with a bug (it
+ * removes from `param.nextDFGEdges` after searching `param.prevDFGEdges`, which are different
+ * mirrored collections) -- do not consolidate onto it without fixing that first.
+ */
+private fun tearDownStandardDfgEdges(stub: Function, call: Call) {
+    for (param in stub.parameters) {
+        param.prevDFGEdges.removeIf { it.start in call.arguments }
+    }
+
+    // Uses `===` (identity), like every other edge-removal check in this file, rather than `==`
+    // (structural equality): two distinct receivers can be structurally equal per Node.equals
+    // (e.g. synthetic "this" receivers sharing a placeholder location), and we must only ever
+    // remove the edge that actually points at *this* stub's receiver.
+    if (stub is Method && call is MemberCall) {
+        stub.receiver?.let { receiver -> call.base?.nextDFGEdges?.removeIf { it.end === receiver } }
+    }
+
+    call.prevDFGEdges.removeIf { it.start === stub }
+}
+
+/**
+ * Mirrors and undoes exactly the edges
+ * [de.fraunhofer.aisec.cpg.passes.DFGPass.connectInferredCallArguments] adds for [call] based on
+ * [stub]'s [Function.functionSummary]: the reverse arg <- stub-parameter edge (or, for a receiver
+ * parameter, the reverse call.base <- stub.receiver edge). Only ever called once [stub] is fully
+ * orphaned (see the caller), since some other call sharing the same stub could otherwise still
+ * depend on these edges. Deliberately does not attempt to revert the `arg.access =
+ * AccessValues.READWRITE` flip or the `arg.refersTo`-derived write-back edge that
+ * `connectInferredCallArguments` also adds for by-reference parameters -- those encode "this
+ * argument's underlying variable was (possibly) written by the call" and cannot be soundly reverted
+ * without knowing whether some other, still-valid data flow also justifies them; leaving them in
+ * place is a conservative over-approximation, not a dangling/leaked edge.
+ */
+private fun tearDownFunctionSummaryDerivedDfgEdges(stub: Function, call: Call) {
+    for ((param, _) in stub.functionSummary) {
+        if (param === (stub as? Method)?.receiver) {
+            (call as? MemberCall)?.base?.prevDFGEdges?.removeIf { it.start === param }
+        } else if (param is Parameter) {
+            call.arguments.getOrNull(param.argumentIndex)?.prevDFGEdges?.removeIf {
+                it.start === param
+            }
+        }
+    }
 }
 
 /**

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -47,6 +48,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
@@ -95,6 +98,30 @@ class StaleStubTestLanguageFrontend(
                 // real declaration's signature is compatible with the stale stub's.
                 val name = content.removePrefix("define:")
                 newFunction(name, holder = tu, enterScope = true) { newParameter("p", holder = it) }
+            }
+            content.startsWith("topcall:") -> {
+                // "topcall:<name>" creates a top-level, module-scope call to <name>(p) directly in
+                // the TU's statements -- i.e. with NO enclosing Function -- so that
+                // SymbolResolver infers a stub for it exactly like "call:", but any later stub
+                // cleanup has no Function to mark dirty and must fall back to the enclosing
+                // TranslationUnit instead.
+                val name = content.removePrefix("topcall:")
+                val call = newCall(newReference(name))
+                call.arguments += newLiteral(0)
+                tu.statements += call
+            }
+            content.startsWith("definewithdefault:") -> {
+                // "definewithdefault:<name>" declares a real, top-level function <name>(p, extra =
+                // <default>) with a SECOND, trailing parameter that has a default value -- unlike
+                // "define:", which matches the stub's arity 1:1. This exercises the case where the
+                // real definition has MORE parameters than the call the stub was inferred from
+                // (the stub for "call:<name>" only has 1 parameter, matching that call's single
+                // argument).
+                val name = content.removePrefix("definewithdefault:")
+                newFunction(name, holder = tu, enterScope = true) { function ->
+                    newParameter("p", holder = function)
+                    newParameter("extra", holder = function) { it.default = newLiteral(0) }
+                }
             }
             content.startsWith("classcall:") -> {
                 // "classcall:ClassName:methodName" declares a record ClassName with a method
@@ -160,6 +187,50 @@ class StaleStubTestLanguageFrontend(
                             val construct = newConstruction(className)
                             construct.type = objectType(className)
                             block.statements += construct
+                        }
+                }
+            }
+            content.startsWith("loopfunc:") -> {
+                // "loopfunc:<name>" declares a top-level function <name>(p) with a local variable
+                // `x` that is written before, read in a loop condition, rewritten in the loop
+                // body, and read again after the loop. Unlike "call:"/"define:", this gives
+                // EvaluationOrderGraphPass/BasicBlockCollectorPass/ControlDependenceGraphPass/
+                // SccPass (branch + loop) and DFGPass/ControlFlowSensitiveDFGPass (write-then-read
+                // of `x`) something genuinely non-trivial to compute.
+                val name = content.removePrefix("loopfunc:")
+                newFunction(name, holder = tu, enterScope = true) { function ->
+                    newParameter("p", holder = function)
+                    function.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newVariable("x", holder = declStmt) {
+                                    it.initializer = newLiteral(0)
+                                }
+                            }
+                            block.statements +=
+                                newWhile(enterScope = true) { whileStmt ->
+                                    whileStmt.condition =
+                                        newBinaryOperator("<") {
+                                            it.lhs = newReference("x")
+                                            it.rhs = newLiteral(10)
+                                        }
+                                    whileStmt.statement =
+                                        newBlock(enterScope = true) { innerBlock ->
+                                            innerBlock.statements +=
+                                                newAssign(
+                                                    operatorCode = "=",
+                                                    lhs = listOf(newReference("x")),
+                                                    rhs =
+                                                        listOf(
+                                                            newBinaryOperator("+") {
+                                                                it.lhs = newReference("x")
+                                                                it.rhs = newLiteral(1)
+                                                            }
+                                                        ),
+                                                )
+                                        }
+                                }
+                            block.statements += newReturn { it.returnValue = newReference("x") }
                         }
                 }
             }
@@ -367,6 +438,10 @@ class IncrementalUpdateTest {
         assertTrue(record.constructors.contains(stub))
         assertTrue(stub.calledBy.isNotEmpty())
 
+        val main = result.functions.single { it.name.localName == "main" }
+        val construction = main.body.allChildren<Construction>().single()
+        assertSame(stub, construction.constructor)
+
         // Add the real (zero-arg) constructor to the (pre-existing) record.
         val second = tempSource(topLevel, "foo.stale", "defineconstructor:Foo")
         val tu = manager.addSource(result, component, second)
@@ -380,6 +455,120 @@ class IncrementalUpdateTest {
         assertTrue(stub.calledBy.isEmpty())
         assertFalse(record.constructors.contains(stub))
 
+        // Regression test: Construction.constructor is a separate backing field that the setter
+        // forwards one-directionally to `invokes` -- clearing `construction.invokes` alone must
+        // not leave `construction.constructor` still dangling at the now-detached stub.
+        assertTrue(construction.invokes.isEmpty())
+        assertNull(
+            construction.constructor,
+            "Expected Construction.constructor to be reset alongside the cleared invokes edge",
+        )
+
         assertTrue(result.dirtyNodes[realConstructor]?.contains(SymbolResolver::class) == true)
+    }
+
+    @Test
+    fun testAddSourceRecognizesStaleStubWithFewerArgsThanRealFunctionsDefaultParameters() {
+        // Regression test: Function.matchesSignature is designed to be called as
+        // `candidate.matchesSignature(callArgumentTypes)`. Calling it the other way around --
+        // `stub.matchesSignature(newFunction's parameter types)` -- incorrectly reports
+        // IncompatibleSignature whenever the real function has MORE parameters than the call the
+        // stub was inferred from (e.g. a trailing default/optional parameter), since the stub's
+        // (few) parameters can never consume the real function's (more) parameter types. This
+        // must not prevent the stale stub from being recognized and cleaned up.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-default-param-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        val stub = fooCall.invokes.singleOrNull()
+        assertNotNull(stub, "Expected the unresolved call to 'foo' to create an inferred stub")
+        assertTrue(stub.isInferred)
+        assertEquals(1, stub.parameters.size)
+
+        // The real 'foo' has TWO parameters (the second one with a default), i.e. strictly more
+        // than the 1-argument call the stub was inferred from.
+        val second = tempSource(topLevel, "foo.stale", "definewithdefault:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val realFoo = tu.declarations.filterIsInstance<Function>().single()
+        assertEquals("foo", realFoo.name.localName)
+        assertEquals(2, realFoo.parameters.size)
+        assertFalse(realFoo.isInferred)
+
+        // The stub must still be recognized as stale and cleaned up, despite the arity mismatch.
+        assertTrue(fooCall.invokes.isEmpty())
+        assertTrue(stub.calledBy.isEmpty())
+        assertFalse(component.translationUnits.first().declarations.contains(stub))
+        assertTrue(result.dirtyNodes[realFoo]?.contains(SymbolResolver::class) == true)
+    }
+
+    @Test
+    fun testAddSourceMarksEnclosingTranslationUnitDirtyForTopLevelStaleCall() {
+        // Regression test: a stale call with NO enclosing Function (e.g. a top-level/module-scope
+        // statement -- TranslationUnit is itself an EOGStarterHolder "to catch any static
+        // statements in the TU") must still get dirty-marked for re-resolution once its stale
+        // invokes/DFG edges are torn down; `call.firstParentOrNull<Function>()` silently no-op'ing
+        // on null must not leave the call permanently unresolved.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-toplevel-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "topcall:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+        val callerTu = component.translationUnits.single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        assertNull(
+            fooCall.firstParentOrNull<Function>(),
+            "Expected the top-level call to have no enclosing Function",
+        )
+        val stub = fooCall.invokes.singleOrNull()
+        assertNotNull(stub, "Expected the unresolved top-level call to 'foo' to create a stub")
+        assertTrue(stub.isInferred)
+
+        val second = tempSource(topLevel, "foo.stale", "define:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val realFoo = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(realFoo.isInferred)
+
+        // The stale invokes edge is gone...
+        assertTrue(fooCall.invokes.isEmpty())
+        // ...and the enclosing TranslationUnit (not a Function, since there is none) must have
+        // been marked dirty for SymbolResolver, so a later runDirtyPasses actually revisits it.
+        assertTrue(result.dirtyNodes[callerTu]?.contains(SymbolResolver::class) == true)
+
+        manager.runDirtyPasses(result)
+        assertEquals(listOf(realFoo), fooCall.invokes)
     }
 }
