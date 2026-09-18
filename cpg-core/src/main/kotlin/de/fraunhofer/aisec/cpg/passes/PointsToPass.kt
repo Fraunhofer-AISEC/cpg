@@ -920,9 +920,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Check if the value is influenced by a Parameter and if so, add this information
                 // to the functionSummary
                 val paths =
-                    value.followDFGEdgesUntilHit(
-                        collectFailedPaths = false,
-                        findAllPossiblePaths = false,
+                    value.followDFGEdgesUntilHitNodes(
                         direction = Backward(GraphToFollow.DFG),
                         sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
                         // We need to search interprocedural here.
@@ -949,40 +947,36 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 } || it in node.parameters
                         },
                     )
-                paths.fulfilled
-                    .mapTo(IdentitySet()) { it.nodes.last() }
-                    .forEach { sourceParamValue ->
-                        val matchingDeclarations =
-                            if (sourceParamValue is ParameterMemoryValue)
-                                node.parameters.singleOrNull {
-                                    it.name.localName == sourceParamValue.name.parent?.localName
-                                }
-                            else sourceParamValue as? Parameter
-                        if (matchingDeclarations != null) {
-                            node.functionSummary
-                                .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
-                                .add(
-                                    FSEntry(
-                                        dstValueDepth,
-                                        matchingDeclarations,
-                                        stringToDepth(sourceParamValue.name.localName),
-                                        subAccessName,
-                                        mutableSetOf(
-                                            NodeWithPropertiesKey(
-                                                matchingDeclarations,
-                                                // Add the parameter index to indicate to the
-                                                // calculatePrevDFGs function that we need to
-                                                // replace the value of the call argument
-                                                equalLinkedHashSetOf(
-                                                    matchingDeclarations.argumentIndex
-                                                ),
-                                            )
-                                        ),
-                                        equalLinkedHashSetOf(true),
-                                    )
+                paths.forEach { sourceParamValue ->
+                    val matchingDeclarations =
+                        if (sourceParamValue is ParameterMemoryValue)
+                            node.parameters.singleOrNull {
+                                it.name.localName == sourceParamValue.name.parent?.localName
+                            }
+                        else sourceParamValue as? Parameter
+                    if (matchingDeclarations != null) {
+                        node.functionSummary
+                            .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
+                            .add(
+                                FSEntry(
+                                    dstValueDepth,
+                                    matchingDeclarations,
+                                    stringToDepth(sourceParamValue.name.localName),
+                                    subAccessName,
+                                    mutableSetOf(
+                                        NodeWithPropertiesKey(
+                                            matchingDeclarations,
+                                            // Add the parameter index to indicate to the
+                                            // calculatePrevDFGs function that we need to
+                                            // replace the value of the call argument
+                                            equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
+                                        )
+                                    ),
+                                    equalLinkedHashSetOf(true),
                                 )
-                        }
+                            )
                     }
+                }
             }
         }
     }
