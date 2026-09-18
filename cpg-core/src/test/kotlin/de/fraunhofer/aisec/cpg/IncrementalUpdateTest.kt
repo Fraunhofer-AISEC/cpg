@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.passes.markDirty
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.file.Files
@@ -1686,5 +1687,80 @@ class IncrementalUpdateTest {
         assertFalse(secretCall.invokes.contains(privateSecret))
         assertEquals(listOf<Function>(stub), secretCall.invokes)
         assertTrue(stub.calledBy.isNotEmpty())
+    }
+
+    @Test
+    fun testAddSourceMarksTypeAndImportResolversDirtyForNewTranslationUnit() {
+        // Regression test for the dirty-marking in updateIncrementally (IncrementalUpdate.kt
+        // ~116-134): a newly added TranslationUnit has never been visited by
+        // EvaluationOrderGraphPass/TypeResolver/TypeHierarchyResolver/ImportResolver, so it must be
+        // marked dirty for all four whenever they are registered -- otherwise a
+        // runDirtyPasses()-driven incremental rerun would silently skip them, unlike what a full
+        // analyze() would do. Uses .defaultPasses(), under which all four are registered.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-type-import-dirty-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "define:seed")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val newSource = tempSource(topLevel, "new.stale", "define:another")
+        val tu = manager.addSource(result, component, newSource)
+        assertNotNull(tu)
+
+        val dirtyForTu = result.dirtyNodes[tu].orEmpty()
+        assertTrue(dirtyForTu.contains(EvaluationOrderGraphPass::class))
+        assertTrue(dirtyForTu.contains(TypeResolver::class))
+        assertTrue(dirtyForTu.contains(TypeHierarchyResolver::class))
+        assertTrue(dirtyForTu.contains(ImportResolver::class))
+    }
+
+    @Test
+    fun testMarkDirtyDedupesRepeatedCallsForSamePassAndMarkCleanRemovesIt() {
+        // Regression test for TranslationResult.markDirty's dedup-on-insert (see its own doc):
+        // multiple, independent call sites in updateIncrementally may mark the same node dirty for
+        // the same pass in one go (e.g. a node that is both newly added and the caller of a
+        // just-cleaned-up stale call). Without deduping, a single markClean call would only remove
+        // one of the duplicate entries, leaving the node permanently (and incorrectly) dirty.
+        val topLevel =
+            Files.createTempDirectory("cpg-translation-result-mark-dirty-dedup-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "define:seed")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val seed = result.functions.single { it.name.localName == "seed" }
+
+        seed.markDirty<SymbolResolver>()
+        seed.markDirty<SymbolResolver>()
+
+        val dirtyForSeed = result.dirtyNodes[seed]
+        assertEquals(1, dirtyForSeed?.size)
+        assertTrue(dirtyForSeed?.contains(SymbolResolver::class) == true)
+
+        result.markClean(seed, SymbolResolver::class)
+        assertFalse(result.dirtyNodes[seed]?.contains(SymbolResolver::class) == true)
     }
 }
