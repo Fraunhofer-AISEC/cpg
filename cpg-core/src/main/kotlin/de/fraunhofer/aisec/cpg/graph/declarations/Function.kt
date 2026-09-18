@@ -128,20 +128,44 @@ open class Function :
         // Additional properties such the granularity or the shortFS
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
         // without going into functions. Not as detailed, but faster
-        var properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
+        val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
         // Sometimes, we need a dummy of a functionSummary, for example to avoid recursion. We
         // indicate here if this is one
         val isDummy: Boolean = false,
     ) {
+        /**
+         * Compares everything except [lastWrites]: two entries that agree on all of this represent
+         * the same relationship, merely discovered via a different write-site, and [lastWrites] is
+         * exactly where those write-sites are meant to accumulate - see the merge helpers in
+         * [de.fraunhofer.aisec.cpg.passes.PointsToPass] that rely on that. [srcNode] is compared by
+         * reference rather than with `==`: it is often a graph [Node], and [Node.equals] can be a
+         * deep structural comparison (see e.g. [Function.equals]), which is both wrong here - two
+         * structurally similar but distinct nodes are not the same source - and slow.
+         */
         override fun equals(other: Any?): Boolean =
             other is FSEntry &&
                 destValueDepth == other.destValueDepth &&
-                srcNode == other.srcNode &&
+                srcNode === other.srcNode &&
                 srcValueDepth == other.srcValueDepth &&
                 subAccessName == other.subAccessName &&
-                lastWrites == other.lastWrites &&
                 properties == other.properties &&
                 isDummy == other.isDummy
+
+        /**
+         * Deliberately consistent with the equals override above, and for the same reason: this
+         * must stay stable while an entry is a live member of a hash-based `Set`/`Map`, which rules
+         * out depending on [lastWrites] (mutated in place by the merge helpers after insertion) the
+         * way the data-class-generated hashCode would.
+         */
+        override fun hashCode(): Int {
+            var result = destValueDepth
+            result = 31 * result + System.identityHashCode(srcNode)
+            result = 31 * result + srcValueDepth
+            result = 31 * result + subAccessName.hashCode()
+            result = 31 * result + properties.hashCode()
+            result = 31 * result + isDummy.hashCode()
+            return result
+        }
     }
 
     var functionSummary = ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>()
