@@ -510,6 +510,56 @@ class StaleStubTestLanguageFrontend(
 
                 tu.addDeclaration(constructor)
             }
+            content.startsWith("defineidentity:") -> {
+                // "defineidentity:<name>" declares a single, real, top-level function <name>(p)
+                // with an actual body ("return p"), unlike "define:" (whose declaration has NO
+                // body at all). Used where a *genuine*, non-dummy PointsToPass function summary
+                // (distinct in kind, not just identity, from the "all parameters flow to the
+                // return" dummy summary `PointsToPass.handleEmptyFunction` creates for any
+                // no-body Function -- including an inferred stub) is needed to meaningfully tell
+                // apart "stale, stub-derived state" from "correct, real-function-derived state".
+                val name = content.removePrefix("defineidentity:")
+                newFunction(name, holder = tu, enterScope = true) { function ->
+                    newParameter("p", holder = function)
+                    function.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newReturn { it.returnValue = newReference("p") }
+                        }
+                }
+            }
+            content.startsWith("twofuncs:") -> {
+                // "twofuncs:<callerName>:<calleeName>" declares TWO real, top-level, single-
+                // parameter functions in ONE TU/addSource call: <calleeName>(p), an identity
+                // function ("return p"), and <callerName>(x), which calls <calleeName>(x) and
+                // returns the result. Both are genuinely new declarations (neither existed before
+                // this addSource call), so both get marked dirty for every DFG-family pass --
+                // including PointsToPass -- directly in updateIncrementally (see
+                // markDfgRelatedPassesDirty), with NO reconciliation/invalidation involved at all.
+                // Used to exercise PartialPassExecution.kt's orderDependencies-aware ordering of
+                // dirty EOGStarterPass targets: <calleeName> must be (or, thanks to
+                // PointsToPass.calculateFunctionSummaries's own on-demand recursion into an
+                // as-yet-unanalyzed callee, effectively is regardless) fully analyzed before -- or
+                // as part of -- <callerName>'s own PointsToPass run, so that the call's function-
+                // summary-derived edges reflect <calleeName>'s real (identity) summary rather than
+                // an incomplete/absent one.
+                val (callerName, calleeName) = content.removePrefix("twofuncs:").split(":")
+                newFunction(calleeName, holder = tu, enterScope = true) { callee ->
+                    newParameter("p", holder = callee)
+                    callee.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newReturn { it.returnValue = newReference("p") }
+                        }
+                }
+                newFunction(callerName, holder = tu, enterScope = true) { caller ->
+                    newParameter("x", holder = caller)
+                    caller.body =
+                        newBlock(enterScope = true) { block ->
+                            val call = newCall(newReference(calleeName))
+                            call.arguments += newReference("x")
+                            block.statements += newReturn { it.returnValue = call }
+                        }
+                }
+            }
         }
 
         return tu
@@ -1463,10 +1513,17 @@ class IncrementalUpdateTest {
         // call is now attached directly (see the test above), the caller must never be marked dirty
         // for DFGPass specifically -- that pass is ComponentPass-granularity, so marking it dirty
         // would trigger a whole-component rerun, exactly the cost this feature avoids. Uses the
-        // actual `.defaultPasses()` configuration (PointsToPass registered), which is also the
-        // config under which the accepted argument->parameter-edge gap documented on
-        // attachStandardDfgEdges applies -- PointsToPass/ControlFlowSensitiveDFGPass are NOT marked
-        // dirty either, not even as a fallback (see that doc for why).
+        // actual `.defaultPasses()` configuration (PointsToPass registered).
+        //
+        // Unlike DFGPass/ControlFlowSensitiveDFGPass (never marked dirty by this path, not even as
+        // a fallback -- see attachStandardDfgEdges's doc), `main` IS expected to be marked dirty
+        // for
+        // PointsToPass specifically here: "call:foo" + "define:foo" is exactly the
+        // previously-resolved-to-an-inferred-stub case the PointsToPass-specific
+        // invalidate-and-redo
+        // path (see markCallerDirtyForPointsToPass, invoked from reconcileCalls) targets --
+        // PointsToPass's own state for this call (derived from the stub's dummy summary) is stale
+        // and must be recomputed once the real 'foo' exists.
         val topLevel =
             Files.createTempDirectory("cpg-incremental-update-no-dfg-dirty-test").toFile().apply {
                 deleteOnExit()
@@ -1495,7 +1552,7 @@ class IncrementalUpdateTest {
         assertTrue(dirtyForMain.contains(SymbolResolver::class))
         assertFalse(dirtyForMain.contains(DFGPass::class))
         assertFalse(dirtyForMain.contains(ControlFlowSensitiveDFGPass::class))
-        assertFalse(dirtyForMain.contains(PointsToPass::class))
+        assertTrue(dirtyForMain.contains(PointsToPass::class))
     }
 
     @Test

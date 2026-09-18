@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -192,7 +193,31 @@ private fun runPassOnDirtyNodes(
             val targets =
                 dirtyNodes.flatMap { resolveEOGStarterTargets(it) }.filter { seen.add(it) }
             if (targets.isNotEmpty()) {
-                consumeTargets((prototype as EOGStarterPass)::class, ctx, targets, result)
+                // Mirrors the ordering `Pass.kt`'s full-run `executePass` applies to
+                // `prototype.sort(result)` (the whole graph's EOG starters) for a pass declaring
+                // `orderDependencies = true` (e.g. PointsToPass): callees must be processed before
+                // callers so that a caller's own `PointsToPass` run can see an already-computed,
+                // up-to-date `Function.functionSummary` for anything it (still) calls. Without
+                // this,
+                // if two dirty targets of the same such pass class happen to be caller and callee
+                // of
+                // each other (e.g. two new functions added in the same `addSource` call, or a newly
+                // reconciled caller alongside the newly added callee it now invokes -- see
+                // `IncrementalUpdate.kt`), the resolution order here would depend only on however
+                // `dirtyNodes`'s map iterates, which is unordered and can process the caller first,
+                // silently working off a stale/empty summary.
+                //
+                // `orderEOGStartersBasedOnDependencies` only needs the dirty subset, not every EOG
+                // starter in the graph -- it derives the ordering purely from `Function.invokes`
+                // edges among the nodes it is given, so restricting it to `targets` is sound and
+                // stays as narrow as the rest of this dirty-target resolution.
+                val orderedTargets =
+                    if (prototype.orderDependencies) {
+                        orderEOGStartersBasedOnDependencies(targets)
+                    } else {
+                        targets
+                    }
+                consumeTargets((prototype as EOGStarterPass)::class, ctx, orderedTargets, result)
             }
         }
     }

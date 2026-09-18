@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
@@ -296,12 +297,31 @@ private fun reconcileExistingUsagesWithNewSymbols(
             it == ControlFlowSensitiveDFGPass::class || it == PointsToPass::class
         }
 
+    // Gates the PointsToPass-specific invalidation/redo path in reconcileCalls (see
+    // tearDownPointsToPassCallEdges/markCallerDirtyForPointsToPass): deliberately narrower than
+    // dfgHandlesArgumentEdgesItself (which is also false when ControlFlowSensitiveDFGPass is
+    // registered instead) -- per this project's investigation, ControlFlowSensitiveDFGPass's own
+    // function-summary consumption (ControlFlowSensitiveDFGPass.kt's `is Call ->` branch) reads
+    // `ctx.config.functionSummaries`, a DFGFunctionSummaries instance built once, at configuration
+    // time, from external summary files (TranslationConfiguration.kt's
+    // `DFGFunctionSummaries.fromFiles(functionSummaries)`) -- entirely independent of
+    // `Function.functionSummary` (the per-user-function map PointsToPass alone populates). Adding a
+    // new user-defined function via addSource can therefore never change what
+    // ControlFlowSensitiveDFGPass would compute for a caller that now invokes it, so there is
+    // nothing to invalidate/redo for that pass in the first place -- see this file's class-level
+    // doc
+    // and markDfgRelatedPassesDirty for where ControlFlowSensitiveDFGPass is still handled (only
+    // for
+    // the genuinely-new-declaration path, which needs no redo logic at all).
+    val pointsToPassRegistered = registeredPasses.contains(PointsToPass::class)
+
     val detachedByCalls =
         reconcileCalls(
             candidateCalls,
             byName,
             result.finalCtx.scopeManager,
             dfgHandlesArgumentEdgesItself,
+            pointsToPassRegistered,
         )
     val detachedByReferences =
         reconcileReferences(
@@ -492,6 +512,19 @@ private fun ScopeManager.isReachableFrom(source: Node, declaration: Declaration)
  * bridge"). Once a stub is no longer invoked by anyone at all ([Function.calledBy] empty), it is
  * detached from the graph entirely by [detachInferredDeclaration].
  *
+ * [pointsToPassRegistered] additionally gates the [PointsToPass]-specific invalidate-and-redo path
+ * (see [tearDownPointsToPassCallEdges]/[markCallerDirtyForPointsToPass]) applied below for exactly
+ * the two cases [PointsToPass] can produce a stale or missing result for a reconciled call: a
+ * previously-inferred-stub call being replaced by a real candidate (tainted
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow] edges reflecting the stub's
+ * dummy summary must be torn down and the caller redone), and a previously fully unresolved call
+ * gaining its first real candidate (nothing to tear down -- [PointsToPass.handleCall] does nothing
+ * at all for a call with empty `invokes`, see its own doc -- but the caller must still be redone so
+ * [PointsToPass] actually processes this call for the first time). This is narrower than
+ * [dfgHandlesArgumentEdgesItself] (which is also `false` for [ControlFlowSensitiveDFGPass]) --
+ * deliberately: see [reconcileExistingUsagesWithNewSymbols]'s own doc for why
+ * [ControlFlowSensitiveDFGPass] needs no equivalent handling.
+ *
  * Returns `true` if at least one stub was fully detached.
  */
 private fun reconcileCalls(
@@ -499,6 +532,7 @@ private fun reconcileCalls(
     byName: Map<Symbol, List<Declaration>>,
     scopeManager: ScopeManager,
     dfgHandlesArgumentEdgesItself: Boolean,
+    pointsToPassRegistered: Boolean,
 ): Boolean {
     // Calls (possibly several) whose invokes edge to a given stub was just removed, so we can
     // decide -- once every candidate call has been processed -- whether the stub is now fully
@@ -523,6 +557,25 @@ private fun reconcileCalls(
         // must be cleared once a real candidate arrives.
         val wasFullyUnresolved = call.invokes.isEmpty()
         var invokesChanged = false
+
+        // Whether this call was previously resolved against a stale inferred stub -- computed
+        // against the ORIGINAL, not-yet-modified `invokes` (unlike `staleStubs` inside the
+        // functionCandidates loop below, which recomputes off the CURRENT, possibly
+        // already-updated `invokes`). Used to invalidate any PointsToPass state derived from that
+        // stub BEFORE the loop below adds any real candidate and attaches its own, fresh boundary
+        // edge (also a ContextSensitiveDataflow tagged with this exact `call`, via
+        // attachStandardDfgEdges) -- doing this teardown first, rather than after (inside the
+        // staleStubs loop, alongside tearDownStandardDfgEdges), is required:
+        // tearDownPointsToPassCallEdges
+        // cannot distinguish "a stale edge derived from the old stub's dummy summary" from "the
+        // brand new, correct edge attachStandardDfgEdges just attached for the real candidate" --
+        // both are tagged with the identical CallingContextOut([call]) -- so it must never run
+        // AFTER the new edge already exists.
+        val hadStaleInferredStub = call.invokes.any { it.isInferred }
+        if (hadStaleInferredStub && pointsToPassRegistered) {
+            tearDownPointsToPassCallEdges(call)
+            markCallerDirtyForPointsToPass(call)
+        }
 
         for (candidate in functionCandidates) {
             if (
@@ -557,6 +610,14 @@ private fun reconcileCalls(
                 // markCallerDirtyForSymbolResolver and attachStandardDfgEdges's doc for why (and
                 // for the accepted gap when dfgHandlesArgumentEdgesItself is false).
                 attachStandardDfgEdges(call, candidate, dfgHandlesArgumentEdgesItself)
+                if (wasFullyUnresolved && pointsToPassRegistered) {
+                    // Pure addition, per this function's own doc: PointsToPass.handleCall never
+                    // wrote anything for this call while it had no invokes at all, so there is
+                    // nothing to tear down -- but the caller must still be redone so PointsToPass
+                    // actually computes the argument/parameter- and function-summary-derived state
+                    // for this call now that it has a real target.
+                    markCallerDirtyForPointsToPass(call)
+                }
                 invokesChanged = true
             }
 
@@ -575,6 +636,9 @@ private fun reconcileCalls(
                 // edges was never attached in the first place, so calling this unconditionally is
                 // always safe.
                 tearDownStandardDfgEdges(stub, call)
+                // The PointsToPass-specific invalidation/redo for this stub (if applicable) already
+                // happened ABOVE, before this loop, off `hadStaleInferredStub` -- see that comment
+                // for why it must run before, not here alongside tearDownStandardDfgEdges.
                 // In-place removal (like the rest of this file), not a property reassignment --
                 // see the `add` comment above for why that distinction matters here too.
                 call.invokeEdges.removeIf { it.end === stub }
@@ -1024,6 +1088,72 @@ private fun tearDownFunctionSummaryDerivedDfgEdges(stub: Function, call: Call) {
             }
         }
     }
+}
+
+/**
+ * Removes every [ContextSensitiveDataflow] edge [PointsToPass] previously attached anywhere inside
+ * [call]'s enclosing [Function] (the caller) because of [call]'s (now stale) effect -- i.e. every
+ * edge whose [de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext.calls] contains [call] by
+ * identity (`===`, like every other node-identity check in this file), found by scanning
+ * [Node.prevDFGEdges] for every node in the caller's own AST subtree.
+ *
+ * Sound and complete for exactly this purpose, per how [PointsToPass.acceptInternal] actually
+ * writes these edges (see its finalization loop, PointsToPass.kt ~576-639): every
+ * [ContextSensitiveDataflow] edge it ever creates is written via
+ * `key.prevDFGEdges.addContextSensitive(...)`, where `key` ranges over every node touched while
+ * analyzing [call]'s enclosing function -- so an edge tagged with [call]'s [CallingContextOut]
+ * always has that function somewhere in its ancestry, whether it is the immediate call-boundary
+ * edge on [call] itself or a later, propagated edge on some downstream node whose value derives
+ * from the call's effect (see [CallingContext]'s class-level background in this file's originating
+ * task description for how that propagation works). Scanning only `prevDFGEdges` (not
+ * `nextDFGEdges`) is enough: [de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows] is a
+ * [de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection], so removing an edge
+ * from one side's `prevDFGEdges` also removes its mirror from the other side's `nextDFGEdges` --
+ * including the mirror sitting on a node in the *callee* (e.g. the invoked function's
+ * [de.fraunhofer.aisec.cpg.graph.declarations.Parameter]/[de.fraunhofer.aisec.cpg.graph.statements.Return]
+ * that is the edge's `start`), without having to separately walk the callee's subtree at all.
+ *
+ * [PointsToPass] never tags a [Dataflow] with a
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContext] anywhere except via that one
+ * `addContextSensitive` call on `prevDFGEdges` -- the `memoryValueEdges`/ `memoryAddresses` writes
+ * in the very same finalization loop are always plain and untagged (see PointsToPass.kt ~583 and
+ * ~603) -- so there is nothing to check in those two collections here.
+ */
+private fun tearDownPointsToPassCallEdges(call: Call) {
+    val caller = call.firstParentOrNull<Function>() ?: return
+    for (node in caller.allChildren<Node>()) {
+        node.prevDFGEdges.removeIf {
+            it is ContextSensitiveDataflow && it.callingContext.calls.any { c -> c === call }
+        }
+    }
+}
+
+/**
+ * Marks [call]'s enclosing [Function] (the caller) dirty for [PointsToPass], first clearing its own
+ * [Function.functionSummary] map.
+ *
+ * The clear is required, not optional: [PointsToPass.acceptInternal] -- the very same entry point a
+ * dirty-marking-aware rerun goes through, there being no separate "please redo this one" signal --
+ * skips reprocessing a [Function] node entirely once `node.functionSummary.isNotEmpty() &&
+ * node.body != null` and the summary already mentions a parameter/return/dummy-marker key
+ * (PointsToPass.kt ~483-501). Without clearing it first, marking the caller dirty here would be a
+ * no-op once [de.fraunhofer.aisec.cpg.runDirtyPasses] actually gets to it. Clearing it is sound:
+ * `functionSummary` is purely internal analysis bookkeeping (an [Function.FSEntry] map consulted
+ * only when some *other* function's own [PointsToPass] run analyzes a call into this one), not
+ * itself a set of graph edges -- it is fully, deterministically rebuilt from scratch by
+ * `storeFunctionSummary` at the end of every `acceptInternal` run, so clearing it here orphans
+ * nothing.
+ *
+ * Deliberately only ever invoked (from [reconcileCalls]) for the one, directly reconciled caller:
+ * if that caller's own externally-visible function summary changes as a result of this redo (e.g.
+ * it itself returns a value now derived differently because of the reconciled call), propagating
+ * that further up to the caller's *own* callers is explicitly NOT attempted here -- deferred, the
+ * same category of accepted limitation as the other gaps already documented throughout this file.
+ */
+private fun markCallerDirtyForPointsToPass(call: Call) {
+    val caller = call.firstParentOrNull<Function>() ?: return
+    caller.functionSummary.clear()
+    caller.markDirty<PointsToPass>()
 }
 
 /**
