@@ -1872,7 +1872,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     )
 
     private data class AddEntryDestinationDedupCache(
-        val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap()
+        val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap(),
+        /**
+         * Looks up the [MapDstToSrcEntry] for one destination that matches a given (param, srcNode,
+         * propertySet, dst) combination, which is exactly what [MapDstToSrcEntry.equals] and
+         * [MapDstToSrcEntry.hashCode] compare - they deliberately ignore `lastWrites` so that a
+         * lookup key does not have to carry one. See [insertOrMerge], which is the only reader and
+         * writer of this map.
+         *
+         * Without this index, [insertOrMerge] scanned the (unindexed, identity-keyed)
+         * [DestinationContext.currentSet] with `firstOrNull` for every source it inserts. That set
+         * accumulates over the whole [handleCall] of a Call - across every dereference depth and
+         * every one of its invokes - so a Call with many invokes made every insert scan a set that
+         * kept growing, which is quadratic in the number of entries. A production run got stuck for
+         * over ten minutes transforming a single Call edge because of exactly this.
+         */
+        val entryIndex: ConcurrentHashMap<MapDstToSrcEntry, MapDstToSrcEntry> = ConcurrentHashMap(),
     )
 
     private class AddEntryToMapCache {
@@ -2512,6 +2527,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * into an existing entry that matches the same logical key (srcNode, param, propertySet,
          * dst).
          *
+         * The lookup goes through [AddEntryDestinationDedupCache.entryIndex], which is keyed by
+         * exactly that logical key - see the KDoc there for why: [context.currentSet] itself is
+         * identity-keyed and unindexed, and used to be scanned with `firstOrNull` here, which does
+         * not scale to the size this set reaches over a whole [handleCall].
+         *
          * @param context the destination context holding the current set of entries
          * @param source the source node that the entry points from (compared by reference)
          * @param newLastWrites collection of keys to add to the matching entry's `lastWrites`
@@ -2523,18 +2543,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             newLastWrites: Collection<NodeWithPropertiesKey>,
             entry: () -> MapDstToSrcEntry,
         ) {
-            val existing =
-                context.currentSet.firstOrNull {
-                    it.srcNode === source &&
-                        it.param === param &&
-                        it.propertySet == context.updatedPropertySet &&
-                        it.dst == destinations
+            // Only used as a lookup key: equals/hashCode ignore lastWrites, so an empty one here
+            // does not affect the lookup, and we never mutate or expose this object.
+            val probe =
+                MapDstToSrcEntry(
+                    param = param,
+                    srcNode = source,
+                    lastWrites = mutableSetOf(),
+                    propertySet = context.updatedPropertySet,
+                    dst = destinations,
+                )
+            // computeIfAbsent runs the lambda at most once per key and atomically publishes its
+            // result, so concurrent inserters of the same key cannot create two entries for it -
+            // exactly one of them creates the entry and adds it to currentSet, and the others get
+            // that same entry back below to merge their newLastWrites into.
+            var created: MapDstToSrcEntry? = null
+            val stored =
+                context.dedupCache.entryIndex.computeIfAbsent(probe) {
+                    entry().also {
+                        created = it
+                        context.currentSet += it
+                    }
                 }
-
-            if (existing != null) {
-                existing.lastWrites.addAll(newLastWrites)
-            } else {
-                context.currentSet += entry()
+            if (stored !== created) {
+                // Somebody already inserted a matching entry; extend it instead of creating a
+                // duplicate we would otherwise never find again.
+                stored.lastWrites.addAll(newLastWrites)
             }
         }
 
