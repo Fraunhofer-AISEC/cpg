@@ -511,6 +511,53 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     // circles. Therefore, we store the chain of Functions we currently analyze
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
+    /**
+     * Index for [mergeFSEntry], keyed by the same [Node] (a parameter or a [Return]) that
+     * [Function.functionSummary] itself is keyed by. See [mergeFSEntry] for why this is needed at
+     * all. Scoped to this pass instance rather than made global: unlike
+     * [nodesCreatingUnknownValues] or [CallToMemAddrMap], nothing here needs to survive past this
+     * instance's own targets, and a fresh instance is created per target anyway (see
+     * [consumeTarget]).
+     */
+    private val fsEntryIndex =
+        ConcurrentIdentityHashMap<Node, ConcurrentHashMap<FSEntry, FSEntry>>()
+
+    /**
+     * Adds [newEntry] to the [Function.functionSummary] of the function it belongs to, under [key]
+     * (one of its parameters, or a [Return]), merging its `lastWrites` into a matching existing
+     * entry instead of adding a redundant, separate one.
+     *
+     * Without this, a set of [FSEntry] accumulates one entry *per write-site* instead of one entry
+     * *per relationship*: [FSEntry.equals] ignores `lastWrites` on purpose, but a plain `Set.add()`
+     * only checks equals to decide whether to skip an insert - it does not merge into whatever it
+     * found equal. A widely-aliased parameter (many field addresses, each with its own partial
+     * `lastWrites`) or a [Return] revisited many times while [Lattice.iterateEOG] converges to a
+     * fixpoint both funnel through here, and either can turn one logical fact into many thousands
+     * of entries that never collapse back down - which is how a single function's summary grows to
+     * gigabytes.
+     *
+     * The index is keyed by [FSEntry] itself, using its `lastWrites`-excluding equals/hashCode, so
+     * finding the existing entry (if any) is an O(1) lookup rather than a scan.
+     */
+    private fun mergeFSEntry(
+        functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>,
+        key: Node,
+        newEntry: FSEntry,
+    ) {
+        val index = fsEntryIndex.computeIfAbsent(key) { ConcurrentHashMap() }
+        // computeIfAbsent runs the lambda at most once per key and atomically publishes its result,
+        // so concurrent inserters of the same logical entry cannot end up with two of them -
+        // exactly
+        // one of them wins and adds newEntry to functionSummary, and the others merge into it
+        // below.
+        val stored = index.computeIfAbsent(newEntry) { it }
+        if (stored === newEntry) {
+            functionSummary.computeIfAbsent(key) { ConcurrentHashMap.newKeySet() }.add(stored)
+        } else {
+            stored.lastWrites.addAll(newEntry.lastWrites)
+        }
+    }
+
     override fun cleanup() {
         // Nothing to do. Note that the caches below are shared between all targets of one pass
         // execution, so they must not be cleared here, only in [finalCleanup].
@@ -819,10 +866,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PowersetLattice.Element<NodeWithPropertiesKey> {
         // TODO: Also add possible dereference values to the input?
         val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
+        // Every per-parameter entry below shares (destValueDepth=0, srcNode=null, srcValueDepth=1,
+        // subAccessName="") and differs only in lastWrites, which is what actually identifies which
+        // parameter it is about. FSEntry.equals()/hashCode() deliberately ignore lastWrites - it is
+        // where write-sites for one relationship are meant to accumulate - so a hash-based Set
+        // would
+        // treat every parameter's entry here as a duplicate of the first and silently drop it. This
+        // has to stay identity-based instead.
         val newEntries =
-            ConcurrentHashMap.newKeySet<FSEntry>().apply {
-                add(FSEntry(0, function, 1, "", isDummy = true))
-            }
+            identitySetOf<FSEntry>().apply { add(FSEntry(0, function, 1, "", isDummy = true)) }
         function.parameters.forEach { param ->
             // The short FS
             newEntries.add(
@@ -993,9 +1045,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) {
         // Extract the value depth from the value's localName
         val srcValueDepth = stringToDepth(value.name.localName)
-        // Store the information in the functionSummary
-        val existingEntry =
-            node.functionSummary.computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
         val filteredLastWrites =
             lastWrites
                 // for shortFS,only use these, and for !shortFS, only those
@@ -1006,7 +1055,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val v =
             if (addressName?.startsWith("NewMemoryAddress") == true) Name(addressName, node.name)
             else value
-        existingEntry.add(
+        // Store the information in the functionSummary. This same (param, value, depth)
+        // relationship
+        // is typically discovered again from a different field address or a different write-site,
+        // so
+        // this merges into a matching entry instead of adding a new one for every occurrence.
+        mergeFSEntry(
+            node.functionSummary,
+            param,
             FSEntry(
                 dstValueDepth,
                 v,
@@ -1014,11 +1070,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 subAccessName,
                 filteredLastWrites,
                 equalLinkedHashSetOf(shortFS),
-            )
+            ),
         )
         // Additionally, we store this as a shortFunctionSummary
         // where the function writes to the parameter
-        val shortFSEntry =
+        mergeFSEntry(
+            node.functionSummary,
+            param,
             FSEntry(
                 dstValueDepth,
                 node,
@@ -1026,13 +1084,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 subAccessName,
                 PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf())),
                 equalLinkedHashSetOf(true),
-            )
-        // Add the new entry if it doesn't exist yet
-        synchronized(existingEntry) {
-            // TODO: Do we need the synchronized? Can we be more efficient in finding matching
-            // entries?
-            if (existingEntry.none { it == shortFSEntry }) existingEntry.add(shortFSEntry)
-        }
+            ),
+        )
         val propertySet = identitySetOf<Any>(true)
         if (subAccessName != "") propertySet.add(Field().apply { name = Name(subAccessName) })
 
@@ -1080,26 +1133,34 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
                         else sourceParamValue as? Parameter
                     if (matchingDeclarations != null) {
-                        node.functionSummary
-                            .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
-                            .add(
-                                FSEntry(
-                                    dstValueDepth,
-                                    matchingDeclarations,
-                                    stringToDepth(sourceParamValue.name.localName),
-                                    subAccessName,
-                                    mutableSetOf(
-                                        NodeWithPropertiesKey(
-                                            matchingDeclarations,
-                                            // Add the parameter index to indicate to the
-                                            // calculatePrevDFGs function that we need to
-                                            // replace the value of the call argument
-                                            equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
-                                        )
-                                    ),
-                                    equalLinkedHashSetOf(true),
-                                )
-                            )
+                        // One matching entry per path found, same reasoning as above: a widely-used
+                        // parameter can be reached via many distinct paths, so this merges rather
+                        // than accumulating one FSEntry per path.
+                        mergeFSEntry(
+                            node.functionSummary,
+                            param,
+                            FSEntry(
+                                dstValueDepth,
+                                matchingDeclarations,
+                                stringToDepth(sourceParamValue.name.localName),
+                                subAccessName,
+                                // mergeFSEntry may fold this into an existing entry and then call
+                                // .addAll() on its lastWrites concurrently with other mergeFSEntry
+                                // calls for the same key, so this has to be a thread-safe set
+                                // rather
+                                // than a plain mutableSetOf().
+                                PowersetLattice.Element(
+                                    NodeWithPropertiesKey(
+                                        matchingDeclarations,
+                                        // Add the parameter index to indicate to the
+                                        // calculatePrevDFGs function that we need to
+                                        // replace the value of the call argument
+                                        equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
+                                    )
+                                ),
+                                equalLinkedHashSetOf(true),
+                            ),
+                        )
                     }
                 }
             }
@@ -1475,10 +1536,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val parentFD = currentNode.firstParentOrNull<Function>()
             if (parentFD != null) {
                 currentNode.returnValues.forEach { rV ->
-                    val fsEntry =
-                        parentFD.functionSummary.computeIfAbsent(currentNode) {
-                            ConcurrentHashMap.newKeySet<FSEntry>()
-                        }
                     // Filter shortFS Values
                     var values =
                         doubleState.getValues(rV, rV).mapFilteredTo(
@@ -1489,28 +1546,39 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     var addresses = mutableSetOf<Node>()
                     for (depth in 1..3) {
-                        fsEntry.addAll(
-                            values.map { value ->
-                                // If the value is a newly created MemoryAddress, we only set the
-                                // name so that we know later that we have to create a new
-                                // MemoryAddress for each Call
-                                val addressName = (value as? MemoryAddress)?.name?.localName
-                                val v =
-                                    if (addressName?.startsWith("NewMemoryAddress") == true)
-                                        Name(addressName, parentFD.name)
-                                    else value
-                                val lastWrite =
-                                    if (depth == 1)
-                                        mutableSetOf(
-                                            NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
-                                        )
-                                    else
-                                        addresses.flatMapTo(mutableSetOf()) { address ->
-                                            doubleState.getLastWrites(address)
-                                        }
-                                FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false))
-                            }
-                        )
+                        // This Return is visited again every time Lattice.iterateEOG revisits this
+                        // edge while converging to a fixpoint, so this runs far more than once per
+                        // Return in the source. Without merging, every revisit would add its own
+                        // FSEntry for the same (depth, v) relationship instead of contributing to
+                        // one entry's lastWrites, which is how a summary balloons to way more
+                        // entries than there are actual relationships.
+                        values.forEach { value ->
+                            // If the value is a newly created MemoryAddress, we only set the
+                            // name so that we know later that we have to create a new
+                            // MemoryAddress for each Call
+                            val addressName = (value as? MemoryAddress)?.name?.localName
+                            val v =
+                                if (addressName?.startsWith("NewMemoryAddress") == true)
+                                    Name(addressName, parentFD.name)
+                                else value
+                            // A thread-safe set: mergeFSEntry may fold this into an existing entry
+                            // and .addAll() its contents concurrently with other revisits of this
+                            // same edge.
+                            val lastWrite =
+                                if (depth == 1)
+                                    PowersetLattice.Element(
+                                        NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
+                                    )
+                                else
+                                    addresses.flatMapTo(PowersetLattice.Element()) { address ->
+                                        doubleState.getLastWrites(address)
+                                    }
+                            mergeFSEntry(
+                                parentFD.functionSummary,
+                                currentNode,
+                                FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false)),
+                            )
+                        }
                         // Try to deref the values. If we have nothing there, stop, otherwise,
                         // continue
                         val derefValues =
