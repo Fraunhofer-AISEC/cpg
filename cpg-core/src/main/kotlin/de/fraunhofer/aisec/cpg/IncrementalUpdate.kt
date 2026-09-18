@@ -25,8 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -37,6 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
@@ -46,9 +51,11 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
@@ -61,6 +68,7 @@ import de.fraunhofer.aisec.cpg.passes.SccPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.passes.isGlobal
 import de.fraunhofer.aisec.cpg.passes.markDirty
 import kotlin.reflect.KClass
 import org.slf4j.LoggerFactory
@@ -168,19 +176,26 @@ internal fun TranslationManager.updateIncrementally(
 /**
  * Declarations in this [TranslationUnit] that are visible from outside their own declaration site
  * -- i.e. that a pre-existing [Call] or [Reference] elsewhere in the graph could plausibly target
- * now that they exist. [Function]s (including [Method]s and [Constructor]s) and [Record]s are
- * always included, since both are callable/referenceable from wherever their scope/visibility
- * allows. A [Variable] (which also covers [de.fraunhofer.aisec.cpg.graph.declarations.Field]) is
- * only included if it is declared outside a function body: a function-local variable or [Parameter]
- * lives in a [FunctionScope] or [LocalScope] and can never be referenced from outside the function
- * it was declared in, so it can never be the target of a pre-existing, already-parsed reference --
- * including it in the scan below would be pure overhead.
+ * now that they exist. [Function]s (including [Method]s and [Constructor]s) are included unless
+ * they are themselves declared inside a [FunctionScope]/[LocalScope] (e.g. a lexically-nested/local
+ * function, which some languages allow) -- such a declaration can never be the target of a
+ * pre-existing, already-parsed call/reference from outside the function it lives in, exactly like
+ * the [Variable]/[de.fraunhofer.aisec.cpg.graph.declarations.Field] case right below it: without
+ * this check, a local function's [declaringRecordOrNull] fallback ([firstParentOrNull]) would
+ * incidentally find an unrelated, lexically enclosing [Record] and make it look like a reachable
+ * member of that class.
+ *
+ * [Record]s are deliberately NOT collected here: a new record's own callable/referenceable members
+ * (e.g. a newly-declared class's constructors) are separately collected via the [Function] branch
+ * above, and neither [reconcileCalls] nor [reconcileReferences] ever look a candidate up by
+ * treating it as a [Record] -- a [Call]/[Reference] can only ever target a [Function]/[Variable],
+ * never a [Record] itself -- so including [Record]s here would only add candidates to the phase-1
+ * scan that phase 2 can never act on.
  */
 private fun TranslationUnit.collectNewNonLocalSymbols(): List<Declaration> =
     allChildren<Declaration> { declaration ->
         when (declaration) {
-            is Function -> true
-            is Record -> true
+            is Function -> declaration.scope !is FunctionScope && declaration.scope !is LocalScope
             is Variable -> declaration.scope !is FunctionScope && declaration.scope !is LocalScope
             else -> false
         }
@@ -195,6 +210,16 @@ private fun TranslationUnit.collectNewNonLocalSymbols(): List<Declaration> =
  * the two is registered (mutually exclusive in [TranslationConfiguration.Builder.defaultPasses]),
  * but a manually-assembled pass list could register both, so we must not stop after the first
  * match.
+ *
+ * Only used for the genuinely-new-declaration path (a brand-new [Function] that no pass has ever
+ * seen yet, marked dirty directly in [updateIncrementally]): [DFGPass] is
+ * [de.fraunhofer.aisec.cpg.passes.ComponentPass]-granularity, so marking it dirty triggers a
+ * whole-[de.fraunhofer.aisec.cpg.graph.Component] rerun once
+ * [de.fraunhofer.aisec.cpg.runDirtyPasses] resolves the target -- acceptable overhead for new code
+ * (there is nothing cheaper to fall back on; the new subtree was never visited by any pass), but
+ * far too coarse to pay for every *reconciled, pre-existing* call/reference elsewhere in a large
+ * component -- see [attachStandardDfgEdges]/[attachReferenceDfgEdges], which handle that case via
+ * direct, single-edge graph surgery instead, without marking these passes dirty at all.
  */
 private fun Node.markDfgRelatedPassesDirty(registeredPasses: List<KClass<out Pass<out Node>>>) {
     markDirty<DFGPass>()
@@ -244,14 +269,29 @@ private fun reconcileExistingUsagesWithNewSymbols(
             it.resolutionHelper !is Call
         }
 
-    // DFGPass.connectInferredCallArguments consults Function.functionSummary to attach extra
-    // reverse edges (arg <- stub-parameter, plus arg.access flipped to READWRITE for by-reference
-    // parameters) for calls to inferred functions -- but ONLY if it actually runs, which DFGPass
-    // itself gates on neither ControlFlowSensitiveDFGPass nor PointsToPass being registered (see
-    // DFGPass.runsPointsToPassOrCfsDFG). If either of those passes IS registered (the default),
-    // connectInferredCallArguments never runs, so functionSummary being non-empty is irrelevant
-    // here (PointsToPass/ControlFlowSensitiveDFGPass populate it for their own, unrelated reasons).
-    val connectInferredCallArgumentsMayHaveRun =
+    // Mirrors DFGPass's own private `runsPointsToPassOrCfsDFG` field (negated): true iff neither
+    // ControlFlowSensitiveDFGPass nor PointsToPass is registered, i.e. DFGPass itself would own
+    // attaching argument/parameter edges, function-summary-derived edges (via
+    // connectInferredCallArguments), and global-reference read/write edges, rather than leaving
+    // that to one of those two passes. Threaded through to [attachStandardDfgEdges]/
+    // [attachReferenceDfgEdges] so the direct-attach graph surgery below gates on the exact same
+    // condition DFGPass itself would.
+    //
+    // When this is `false` (the actual default configuration, since
+    // TranslationConfiguration.Builder.defaultPasses() always registers PointsToPass unless
+    // explicitly configured for ControlFlowSensitiveDFGPass instead), attachStandardDfgEdges/
+    // attachReferenceDfgEdges deliberately do NOT attach the argument/parameter or
+    // global-reference edges, and this file deliberately does NOT mark the caller dirty for
+    // PointsToPass/ControlFlowSensitiveDFGPass as a fallback either: unlike DFGPass, correctly
+    // re-running either of those two passes on an already-processed function would require first
+    // deleting the edges it previously computed for that function -- which those passes do not
+    // support doing selectively -- so a partial rerun could not be relied on to produce a correct
+    // (rather than duplicated/inconsistent) result. This is a known, deliberately accepted gap: a
+    // reconciled call/reference's argument/parameter-level or global-reference DFG edges are
+    // simply never computed by the incremental path in this configuration, not even after
+    // runDirtyPasses. It matches this project's existing, already-documented stance that
+    // PointsToPass/ControlFlowSensitiveDFGPass do not compose with partial/incremental rerun.
+    val dfgHandlesArgumentEdgesItself =
         registeredPasses.none {
             it == ControlFlowSensitiveDFGPass::class || it == PointsToPass::class
         }
@@ -261,15 +301,14 @@ private fun reconcileExistingUsagesWithNewSymbols(
             candidateCalls,
             byName,
             result.finalCtx.scopeManager,
-            registeredPasses,
-            connectInferredCallArgumentsMayHaveRun,
+            dfgHandlesArgumentEdgesItself,
         )
     val detachedByReferences =
         reconcileReferences(
             candidateReferences,
             byName,
             result.finalCtx.scopeManager,
-            registeredPasses,
+            dfgHandlesArgumentEdgesItself,
         )
 
     return detachedByCalls || detachedByReferences
@@ -346,6 +385,45 @@ private fun isSameOrAncestorRecord(receiverRecord: Record, declaringRecord: Reco
 }
 
 /**
+ * Whether [this] declaration's access-control visibility permits access from [from], the [Record]
+ * in which the access syntactically occurs -- a local, narrower equivalent of [SymbolResolver]'s
+ * own (private) `isAccessibleFrom`/`onlyAccessibleFrom`, which cannot be reused directly (both are
+ * `private` members of [SymbolResolver], and this file must not modify that class). Reimplemented
+ * here to mirror [SymbolResolver]'s exact per-[Visibility] semantics, using only the same public
+ * building blocks it itself relies on ([Visibility], [HasVisibilityModifiers]) plus this file's own
+ * [isSameOrAncestorRecord] for the [Visibility.PROTECTED] ancestor-chain check:
+ * - [Visibility.PRIVATE] requires an EXACT match -- [declaringRecordOrNull] must be [from] itself
+ *   (identity, per this file's identity-comparison convention -- see [isSameOrAncestorRecord]'s
+ *   doc). Unlike [Visibility.PROTECTED], a subclass must NOT gain access to a base class's private
+ *   member this way -- [isSameOrAncestorRecord]'s self-inclusive ancestor set must NOT be reused
+ *   here, since it would incorrectly also accept any (transitive) subclass of the declaring record.
+ * - [Visibility.PROTECTED] additionally permits any [from] that (transitively) inherits from the
+ *   declaring record, via [isSameOrAncestorRecord].
+ * - Any other visibility (including [Visibility.UNKNOWN]), and any language without
+ *   [HasVisibilityModifiers], imposes no restriction.
+ *
+ * Unlike [SymbolResolver]'s `onlyAccessibleFrom`, this does NOT fall back to "permit anyway" when
+ * every candidate would be rejected -- there is no equivalent here of "the only candidate a lexical
+ * lookup could ever find", since [reconcileCalls]/[reconcileReferences] check one brand-new
+ * candidate at a time rather than narrowing a whole pre-existing candidate set; silently linking a
+ * pre-existing call/reference to a `private` member it cannot legally access would be the same kind
+ * of unsound resolution this file otherwise deliberately avoids (see [isReachableFrom]'s own doc).
+ */
+private fun Declaration.isAccessibleFrom(from: Record?): Boolean {
+    if (language !is HasVisibilityModifiers) {
+        return true
+    }
+    return when (visibility) {
+        Visibility.PRIVATE -> from != null && declaringRecordOrNull === from
+        Visibility.PROTECTED -> {
+            val declaringRecord = declaringRecordOrNull ?: return false
+            from != null && isSameOrAncestorRecord(from, declaringRecord)
+        }
+        else -> true
+    }
+}
+
+/**
  * Whether [declaration] is actually visible from [source]'s point of resolution -- the
  * "scope/visibility check" half of the precise, phase-2 check. Two deliberately different
  * mechanisms are used, matching how [SymbolResolver] itself resolves each case:
@@ -356,10 +434,15 @@ private fun isSameOrAncestorRecord(receiverRecord: Record, declaringRecord: Reco
  *   lexically written. A lexical scope-chain walk would be wrong here: e.g. `other.foo()` on an
  *   object of an unrelated class must never resolve against a same-named, same-signature free
  *   function or a different class's method just because that declaration happens to be lexically
- *   visible from the call site.
+ *   visible from the call site. In addition, [declaration] must be [Declaration.isAccessibleFrom]
+ *   the [Record] enclosing [source] -- mirroring [SymbolResolver.resolveMemberByName]'s own
+ *   `onlyAccessibleFrom` filter -- so that e.g. a new `private` method on a base class does not
+ *   wrongly get linked to an unrelated pre-existing call that cannot legally see it.
  * - Otherwise (a plain [Call]/[Reference], including one resolved via an *implicit* receiver),
  *   reachability is a lexical scope-chain walk via [ScopeManager.lookupSymbolByName] -- the same
- *   mechanism [SymbolResolver] itself uses to resolve a [Reference]/[Call.callee].
+ *   mechanism [SymbolResolver] itself uses to resolve a [Reference]/[Call.callee]. This already
+ *   implicitly enforces normal lexical visibility, so no separate access-control check is layered
+ *   on top here.
  *
  * Note: if an explicit member access's receiver type cannot be resolved to a [Record] at all (e.g.
  * its base type is still unknown), [memberReceiverRecord] returns `null` and we fall back to the
@@ -371,7 +454,12 @@ private fun ScopeManager.isReachableFrom(source: Node, declaration: Declaration)
     val receiverRecord = memberReceiverRecord(source)
     if (receiverRecord != null) {
         val declaringRecord = declaration.declaringRecordOrNull ?: return false
-        return isSameOrAncestorRecord(receiverRecord, declaringRecord)
+        if (!isSameOrAncestorRecord(receiverRecord, declaringRecord)) {
+            return false
+        }
+        val accessingRecord =
+            firstScopeIsInstanceOrNull<RecordScope>(source.scope ?: globalScope)?.astNode as? Record
+        return declaration.isAccessibleFrom(accessingRecord)
     }
 
     val candidates =
@@ -410,8 +498,7 @@ private fun reconcileCalls(
     candidateCalls: List<Call>,
     byName: Map<Symbol, List<Declaration>>,
     scopeManager: ScopeManager,
-    registeredPasses: List<KClass<out Pass<out Node>>>,
-    connectInferredCallArgumentsMayHaveRun: Boolean,
+    dfgHandlesArgumentEdgesItself: Boolean,
 ): Boolean {
     // Calls (possibly several) whose invokes edge to a given stub was just removed, so we can
     // decide -- once every candidate call has been processed -- whether the stub is now fully
@@ -429,7 +516,14 @@ private fun reconcileCalls(
                         matchesConstructionTarget(call as Construction, candidate as Constructor))
             }
 
+        // Whether this call had NO invokes at all before this reconciliation touched it -- i.e. it
+        // was genuinely, completely unresolved (as opposed to already resolved to a stale inferred
+        // stub). Only in that case could DFGPass.handleUnresolvedCalls have attached its
+        // base/argument -> call placeholder edges (see tearDownUnresolvedCallDfgEdges's doc), which
+        // must be cleared once a real candidate arrives.
+        val wasFullyUnresolved = call.invokes.isEmpty()
         var invokesChanged = false
+
         for (candidate in functionCandidates) {
             if (
                 candidate.matchesSignature(
@@ -445,6 +539,11 @@ private fun reconcileCalls(
             }
 
             if (call.invokes.none { it === candidate }) {
+                if (wasFullyUnresolved) {
+                    // Idempotent no-op if these placeholder edges were never attached in the first
+                    // place (e.g. inferDfgForUnresolvedSymbols is disabled).
+                    tearDownUnresolvedCallDfgEdges(call)
+                }
                 // Use the edge list's own `add`, not a whole-property reassignment: assigning
                 // `call.invokes = ...` goes through EdgeCollection.resetTo, which discards and
                 // rebuilds EVERY edge from scratch -- silently resetting Invoke.dynamicInvoke back
@@ -453,6 +552,11 @@ private fun reconcileCalls(
                 // not just the newly-added one. `invokeEdges.add` only ever creates the one new
                 // edge and leaves every existing edge (and its flags) untouched.
                 call.invokeEdges.add(candidate)
+                // Attach the DFG edges DFGPass.handleCall would attach for this one, newly-viable
+                // candidate directly, rather than marking DFGPass dirty for the caller -- see
+                // markCallerDirtyForSymbolResolver and attachStandardDfgEdges's doc for why (and
+                // for the accepted gap when dfgHandlesArgumentEdgesItself is false).
+                attachStandardDfgEdges(call, candidate, dfgHandlesArgumentEdgesItself)
                 invokesChanged = true
             }
 
@@ -460,9 +564,17 @@ private fun reconcileCalls(
             // still sitting in `invokes` (see the function doc).
             val staleStubs = call.invokes.filterIsInstance<Function>().filter { it.isInferred }
             for (stub in staleStubs) {
-                if (!connectInferredCallArgumentsMayHaveRun || stub.functionSummary.isEmpty()) {
-                    tearDownStandardDfgEdges(stub, call)
-                }
+                // Always torn down, regardless of dfgHandlesArgumentEdgesItself/functionSummary:
+                // the "invoked function flows into the call" edge
+                // (`call.prevDFGEdges.removeIf { it.start === stub }` inside
+                // tearDownStandardDfgEdges) is attached by DFGPass unconditionally, independent of
+                // which pass owns the argument/parameter edges, and the function-summary-derived
+                // edges (handled separately below, once the stub is fully orphaned) are always an
+                // ADDITIONAL layer on top of -- never a replacement for -- the standard edges
+                // tearDownStandardDfgEdges removes. removeIf is a no-op for whichever of these
+                // edges was never attached in the first place, so calling this unconditionally is
+                // always safe.
+                tearDownStandardDfgEdges(stub, call)
                 // In-place removal (like the rest of this file), not a property reassignment --
                 // see the `add` comment above for why that distinction matters here too.
                 call.invokeEdges.removeIf { it.end === stub }
@@ -471,6 +583,19 @@ private fun reconcileCalls(
                     // when assigned a non-null value (see the resync comment below); assigning
                     // null is a plain field write with no such side effect.
                     call.constructor = null
+                }
+                // Mirrors the tail of SymbolResolver.decideInvokesBasedOnCandidates, which also
+                // keeps the callee reference's refersTo in sync with `invokes`. Unlike the
+                // null-check below (for a call that had no candidate at all before),
+                // `callee.refersTo`
+                // here is virtually always non-null already (SymbolResolver unconditionally points
+                // it at `invokes.firstOrNull()`, i.e. this very stub, during the initial
+                // resolution) -- so we must check identity against the stub actually being removed,
+                // not nullness, to ever resync it away from a now-dangling reference to `stub`.
+                (call.callee as? Reference)?.let { callee ->
+                    if (callee.refersTo === stub) {
+                        callee.refersTo = call.invokes.firstOrNull()
+                    }
                 }
                 callsByRemovedStub.getOrPut(stub) { mutableListOf() }.add(call)
                 invokesChanged = true
@@ -499,16 +624,18 @@ private fun reconcileCalls(
         }
 
         if (invokesChanged) {
-            // Mirrors the tail of SymbolResolver.decideInvokesBasedOnCandidates, which also keeps
-            // the callee reference's refersTo in sync with `invokes`. Only done if it was not
-            // already resolved -- e.g. to a Variable/Parameter for a dynamic/function-pointer
-            // invoke -- which we must not overwrite.
+            // Handles the case this call had NO candidate at all before this reconciliation (so
+            // `callee.refersTo` was never set by SymbolResolver in the first place) -- the
+            // stale-stub case above already handles resyncing away from a removed stub via its own
+            // identity check. Only done if it was not already resolved -- e.g. to a
+            // Variable/Parameter for a dynamic/function-pointer invoke -- which we must not
+            // overwrite.
             (call.callee as? Reference)?.let { callee ->
                 if (callee.refersTo == null) {
                     callee.refersTo = call.invokes.firstOrNull()
                 }
             }
-            markCallerDirty(call, registeredPasses)
+            markCallerDirtyForSymbolResolver(call)
         }
     }
 
@@ -519,21 +646,27 @@ private fun reconcileCalls(
         // reverse list, so we use that (rather than re-deriving orphanhood from the candidate
         // list) to decide whether the stub is now fully orphaned.
         if (stub.calledBy.isEmpty()) {
-            val skipDfgTeardown =
-                connectInferredCallArgumentsMayHaveRun && stub.functionSummary.isNotEmpty()
+            val skipDfgTeardown = dfgHandlesArgumentEdgesItself && stub.functionSummary.isNotEmpty()
             if (skipDfgTeardown) {
+                // Detaching the stub now would leave these calls' arguments with DFG edges into a
+                // now AST/scope-detached node -- reachable via DFG traversal but not via AST
+                // traversal, a "zombie subgraph". Since the function-summary-derived edges cannot
+                // be soundly removed here (see tearDownFunctionSummaryDerivedDfgEdges's doc), the
+                // stub itself is deliberately left attached (still unreachable from any NEW caller,
+                // since its invokes edges were already removed above, but AST/scope-consistent)
+                // until a full re-analysis cleans it up.
                 log.warn(
-                    "Not tearing down function-summary-derived DFG edges for inferred stub {} " +
-                        "because they cannot be soundly removed here.",
+                    "Not detaching orphaned inferred stub {} because its function-summary-derived " +
+                        "DFG edges cannot be soundly removed here.",
                     stub.name,
                 )
             } else {
                 for (call in calls) {
                     tearDownFunctionSummaryDerivedDfgEdges(stub, call)
                 }
+                detachInferredDeclaration(stub)
+                detachedAnyStub = true
             }
-            detachInferredDeclaration(stub)
-            detachedAnyStub = true
         }
     }
     return detachedAnyStub
@@ -548,7 +681,10 @@ private fun reconcileCalls(
  */
 private fun matchesConstructionTarget(construction: Construction, candidate: Constructor): Boolean {
     val recordDeclaration = construction.instantiates as? Record ?: construction.type.recordOrNull()
-    return recordDeclaration == null || candidate.recordDeclaration == recordDeclaration
+    // Uses `===` (identity), like every other node-identity check in this file (see
+    // isSameOrAncestorRecord's doc for why): Record.equals is fully structural, so two distinct,
+    // structurally identical Records could otherwise be wrongly treated as the same type.
+    return recordDeclaration == null || candidate.recordDeclaration === recordDeclaration
 }
 
 /**
@@ -576,7 +712,7 @@ private fun reconcileReferences(
     candidateReferences: List<Reference>,
     byName: Map<Symbol, List<Declaration>>,
     scopeManager: ScopeManager,
-    registeredPasses: List<KClass<out Pass<out Node>>>,
+    dfgHandlesArgumentEdgesItself: Boolean,
 ): Boolean {
     var detachedAnyStub = false
 
@@ -611,7 +747,12 @@ private fun reconcileReferences(
         }
 
         ref.refersTo = realCandidate
-        markCallerDirty(ref, registeredPasses)
+        // Attach the read/write DFG edge(s) DFGPass.handleReference would attach for this
+        // resolution directly, rather than marking DFGPass dirty for the caller -- see
+        // markCallerDirtyForSymbolResolver and attachReferenceDfgEdges's doc for why (and for the
+        // accepted gap when dfgHandlesArgumentEdgesItself is false).
+        attachReferenceDfgEdges(ref, realCandidate, dfgHandlesArgumentEdgesItself)
+        markCallerDirtyForSymbolResolver(ref)
 
         if (inferredTarget != null && inferredTarget.usages.isEmpty()) {
             // ValueDeclaration.usages is the authoritative, edge-backed reverse list of every
@@ -631,18 +772,191 @@ private fun reconcileReferences(
  * The caller-side counterpart of [reconcileCalls]/[reconcileReferences]'s edge surgery: marks the
  * nearest enclosing [Function] (or, if there is none -- e.g. a top-level/module-scope statement --
  * the enclosing [TranslationUnit], itself an EOGStarterHolder "to catch any static statements in
- * the TU") dirty for [SymbolResolver] and the DFG-family passes, so a later
- * [de.fraunhofer.aisec.cpg.runDirtyPasses] actually revisits [node].
+ * the TU") dirty for [SymbolResolver], so a later [de.fraunhofer.aisec.cpg.runDirtyPasses] actually
+ * revisits [node] with that pass.
+ *
+ * Deliberately does NOT also mark the DFG-family passes dirty anymore (unlike
+ * [Node.markDfgRelatedPassesDirty], still used as-is for the genuinely-new-declaration path): doing
+ * so used to be the only way to get [node]'s DFG edges fixed up, but it comes at the cost of
+ * [DFGPass]'s [de.fraunhofer.aisec.cpg.passes.ComponentPass] granularity -- a full,
+ * whole-[de.fraunhofer.aisec.cpg.graph.Component] rerun just to fix one reconciled call/reference.
+ * [reconcileCalls]/[reconcileReferences] now call
+ * [attachStandardDfgEdges]/[attachReferenceDfgEdges] directly instead, which attach exactly the
+ * edges a real [DFGPass] run would have attached for [node] -- there is nothing left for a
+ * dirty-marked DFGPass/ControlFlowSensitiveDFGPass/PointsToPass rerun to additionally fix here (see
+ * those functions' docs for the one accepted exception: the function-summary-derived edges
+ * [de.fraunhofer.aisec.cpg.passes.DFGPass.connectInferredCallArguments] would add, which cannot
+ * fire from this path at all since [reconcileCalls]'s candidates are always real, never inferred,
+ * declarations).
+ *
+ * [SymbolResolver] dirty-marking itself is unaffected and still needed: unlike the DFG-family edges
+ * (fully re-derived by the direct attach above), [reconcileCalls]/[reconcileReferences] do not
+ * attempt to replicate every side effect a real [SymbolResolver] pass run has on [node] (e.g.
+ * problem-node/ambiguity bookkeeping that later feeds
+ * [de.fraunhofer.aisec.cpg.passes.ResolveCallAmbiguityPass]/
+ * [de.fraunhofer.aisec.cpg.passes.ResolveMemberAmbiguityPass]) -- this was already the pre-existing
+ * behavior (this function never gated the [SymbolResolver] marking on pass registration either) and
+ * is left exactly as it was.
+ *
+ * Note this function never marks [PointsToPass]/[ControlFlowSensitiveDFGPass] dirty either, not
+ * even as a narrower, function-level fallback for the case [attachStandardDfgEdges]/
+ * [attachReferenceDfgEdges] deliberately skip (`dfgHandlesArgumentEdgesItself == false`) -- see
+ * those functions' docs for why that gap is intentionally left as-is rather than papered over with
+ * a dirty-marking fallback.
  */
-private fun markCallerDirty(node: Node, registeredPasses: List<KClass<out Pass<out Node>>>) {
+private fun markCallerDirtyForSymbolResolver(node: Node) {
     val enclosingFunction = node.firstParentOrNull<Function>()
     if (enclosingFunction != null) {
         enclosingFunction.markDirty<SymbolResolver>()
-        enclosingFunction.markDfgRelatedPassesDirty(registeredPasses)
     } else {
-        node.firstParentOrNull<TranslationUnit>()?.let {
-            it.markDirty<SymbolResolver>()
-            it.markDfgRelatedPassesDirty(registeredPasses)
+        node.firstParentOrNull<TranslationUnit>()?.markDirty<SymbolResolver>()
+    }
+}
+
+/**
+ * The ADD-direction counterpart of [tearDownStandardDfgEdges]: attaches exactly the DFG edges
+ * [de.fraunhofer.aisec.cpg.passes.DFGPass.handleCall] would attach for [call] because it (newly)
+ * invokes [candidate] -- the argument -> parameter edges and the receiver -> candidate.receiver
+ * edge for a [MemberCall] (both via [Util.attachCallParameters], reused directly rather than
+ * reimplemented: it is exercised by every normal `analyze()` run, unlike its unused, buggy inverse
+ * [Util.detachCallParameters] -- see [tearDownStandardDfgEdges]'s doc), and the "invoked function
+ * flows into the call" edge (attached unconditionally, regardless of
+ * [dfgHandlesArgumentEdgesItself] -- see below).
+ *
+ * Deliberately does NOT clear/rebuild [call]'s existing `prevDFGEdges` the way
+ * [de.fraunhofer.aisec.cpg.passes.DFGPass.handleCall] itself does first: a real DFGPass run
+ * reprocesses a call's ENTIRE `invokes` list from scratch every time it runs, but this is additive,
+ * single-candidate surgery -- every other, already-correct invokes/edge pair on [call] (from the
+ * initial `analyze()` or an earlier reconciliation) must be left untouched.
+ *
+ * [dfgHandlesArgumentEdgesItself]: mirrors DFGPass's own `!runsPointsToPassOrCfsDFG` gate -- if
+ * either ControlFlowSensitiveDFGPass or PointsToPass is registered (the actual default
+ * configuration, see [TranslationConfiguration.Builder.defaultPasses]), DFGPass itself never
+ * attaches argument/parameter or function-summary edges (attaching those becomes one of those two
+ * passes' job instead), so we must not attach them here either.
+ *
+ * **Known, deliberately accepted limitation**: when [dfgHandlesArgumentEdgesItself] is `false`,
+ * this function does NOT fall back to marking [candidate]/[call]'s caller dirty for PointsToPass/
+ * ControlFlowSensitiveDFGPass either -- so under the actual default configuration, a reconciled
+ * call's argument->parameter/function-summary edges are simply never computed by the incremental
+ * path, not even after a later [de.fraunhofer.aisec.cpg.runDirtyPasses]. This is intentional, not
+ * an oversight: unlike [DFGPass] (whose `handleCall` always starts by clearing `call.prevDFGEdges`
+ * wholesale before rebuilding it), correctly re-running PointsToPass/ControlFlowSensitiveDFGPass on
+ * an already-processed function would first require deleting the edges they previously computed for
+ * it -- neither pass supports doing that selectively -- so a partial rerun cannot be relied on to
+ * produce a correct (rather than duplicated/inconsistent) result. This matches this project's
+ * existing, already-documented stance that PointsToPass/ControlFlowSensitiveDFGPass do not compose
+ * with partial/incremental rerun; solving that composability problem is out of scope here.
+ */
+private fun attachStandardDfgEdges(
+    call: Call,
+    candidate: Function,
+    dfgHandlesArgumentEdgesItself: Boolean,
+) {
+    if (dfgHandlesArgumentEdgesItself) {
+        Util.attachCallParameters(candidate, call)
+        // Mirrors DFGPass.connectInferredCallArguments's own `it.isInferred` filter. In practice
+        // this is unreachable from reconcileCalls today -- every candidate it considers comes from
+        // TranslationUnit.collectNewNonLocalSymbols, i.e. a genuinely new, real declaration parsed
+        // from source, never an Inference-created stub -- but it is kept for exact symmetry with
+        // DFGPass/tearDownFunctionSummaryDerivedDfgEdges, and to stay correct if that invariant
+        // ever changes.
+        if (candidate.isInferred && candidate.functionSummary.isNotEmpty()) {
+            attachFunctionSummaryDerivedDfgEdges(candidate, call)
+        }
+    }
+    call.prevDFGEdges.addContextSensitive(
+        candidate,
+        callingContext = CallingContextOut(mutableListOf(call)),
+    )
+}
+
+/**
+ * Removes the placeholder DFG edges [de.fraunhofer.aisec.cpg.passes.DFGPass.handleUnresolvedCalls]
+ * attaches for a completely unresolved [call] (`call.base -> call` for a non-static [MemberCall],
+ * and `argument -> call` for every argument) -- present only when
+ * [de.fraunhofer.aisec.cpg.InferenceConfiguration.inferDfgForUnresolvedSymbols] is enabled (the
+ * default). Once [call] resolves to a real candidate, a full [DFGPass] rerun would clear
+ * `call.prevDFGEdges` wholesale before rebuilding it from `invokes`
+ * ([de.fraunhofer.aisec.cpg.passes.DFGPass.handleCall]); since [attachStandardDfgEdges]
+ * deliberately does NOT do that broad clear (to protect other, already-correct `invokes`/edge pairs
+ * from an earlier reconciliation -- see its own doc), these specific placeholder edges must be
+ * removed surgically instead, or they would linger alongside the real edges. Safe to call even if
+ * these edges were never attached in the first place -- `removeIf` is then simply a no-op -- and
+ * safe with respect to any legitimate edge from a real resolution, since a resolved call's own
+ * `prevDFGEdges` never has an argument/base as its `start` (see [attachStandardDfgEdges]).
+ */
+private fun tearDownUnresolvedCallDfgEdges(call: Call) {
+    if (call is MemberCall && !call.isStatic) {
+        call.base?.let { base -> call.prevDFGEdges.removeIf { it.start === base } }
+    }
+    call.prevDFGEdges.removeIf { it.start in call.arguments }
+}
+
+/**
+ * Mirrors and attaches exactly the edges
+ * [de.fraunhofer.aisec.cpg.passes.DFGPass.connectInferredCallArguments] adds for [call] based on
+ * [candidate]'s [Function.functionSummary]: the reverse arg <- candidate-parameter edge (or, for a
+ * receiver parameter, the reverse call.base <- candidate.receiver edge), the `arg.access` flip to
+ * [AccessValues.READWRITE], and the write-back edge for a by-reference argument that is itself a
+ * [Reference]. The ADD-direction counterpart of [tearDownFunctionSummaryDerivedDfgEdges]; see
+ * [attachStandardDfgEdges]'s doc for why this is currently unreachable in practice (only ever
+ * called for an [Function.isInferred] candidate, which [reconcileCalls] never produces).
+ */
+private fun attachFunctionSummaryDerivedDfgEdges(candidate: Function, call: Call) {
+    for ((param, _) in candidate.functionSummary) {
+        if (param === (candidate as? Method)?.receiver) {
+            (call as? MemberCall)
+                ?.base
+                ?.prevDFGEdges
+                ?.addContextSensitive(
+                    param,
+                    callingContext = CallingContextOut(mutableListOf(call)),
+                )
+        } else if (param is Parameter) {
+            val arg = call.arguments.getOrNull(param.argumentIndex) ?: continue
+            arg.prevDFGEdges.addContextSensitive(
+                param,
+                callingContext = CallingContextOut(mutableListOf(call)),
+            )
+            arg.access = AccessValues.READWRITE
+            (arg as? Reference)?.refersTo?.let { arg.nextDFGEdges += it }
+        }
+    }
+}
+
+/**
+ * The ADD-direction counterpart of [tearDownReferenceDfgEdges]: attaches exactly the read and/or
+ * write DFG edge(s) [de.fraunhofer.aisec.cpg.passes.DFGPass.handleReference] would attach for [ref]
+ * now that it resolves to [target], depending on [Reference.access].
+ *
+ * Gated exactly like DFGPass's own check (`isGlobal(it) || !runsPointsToPassOrCfsDFG`, see
+ * [de.fraunhofer.aisec.cpg.passes.DFGPass.handleReference]): if [target] is not global/non-local
+ * AND either ControlFlowSensitiveDFGPass or PointsToPass is registered
+ * ([dfgHandlesArgumentEdgesItself] is `false`, the actual default configuration), DFGPass itself
+ * would not attach these edges either -- that becomes one of those two passes' job instead.
+ *
+ * **Known, deliberately accepted limitation**: unlike [attachStandardDfgEdges]'s "invoked function
+ * flows into the call" edge (attached unconditionally regardless of
+ * [dfgHandlesArgumentEdgesItself]), a [ref] whose [target] is not global/non-local gets NO edge at
+ * all here when [dfgHandlesArgumentEdgesItself] is `false`, and this function deliberately does NOT
+ * fall back to marking the caller dirty for PointsToPass/ControlFlowSensitiveDFGPass either -- see
+ * [attachStandardDfgEdges]'s doc for why (the same reasoning applies here: neither pass supports
+ * having its previously-computed edges for an already-processed function selectively deleted before
+ * a partial rerun, so such a rerun cannot be relied on to produce a correct result).
+ */
+private fun attachReferenceDfgEdges(
+    ref: Reference,
+    target: Declaration,
+    dfgHandlesArgumentEdgesItself: Boolean,
+) {
+    if (!isGlobal(target) && !dfgHandlesArgumentEdgesItself) return
+    when (ref.access) {
+        AccessValues.WRITE -> ref.nextDFGEdges += target
+        AccessValues.READ -> ref.prevDFGEdges += Dataflow(start = target, end = ref)
+        else -> {
+            ref.nextDFGEdges += target
+            ref.prevDFGEdges += Dataflow(start = target, end = ref)
         }
     }
 }
@@ -736,11 +1050,23 @@ private fun detachInferredDeclaration(declaration: Declaration) {
                 parent.fields.remove(declaration)
             }
         is DeclarationHolder -> {
+            // Known gap, currently unreachable from any real call site: a DeclarationHolder whose
+            // `declarations` getter is itself computed (e.g. Function/Template, like Record's
+            // above)
+            // rather than a direct view over a single backing MutableList silently no-ops here too
+            // --
+            // the cast below simply fails and nothing is removed.
             @Suppress("UNCHECKED_CAST")
             (parent.declarations as? MutableList<Declaration>)?.remove(declaration)
         }
         else -> {}
     }
 
-    declaration.scope?.symbols?.get(declaration.symbol)?.remove(declaration)
+    // `removeIf { it === declaration }`, not `MutableList.remove(declaration)`: the latter uses
+    // `equals`, and Declaration/Node equality is fully structural (see isSameOrAncestorRecord's
+    // doc)
+    // -- a structurally-identical, distinct declaration sharing this one's symbol could otherwise
+    // be
+    // removed instead of (or as well as) the intended one.
+    declaration.scope?.symbols?.get(declaration.symbol)?.removeIf { it === declaration }
 }

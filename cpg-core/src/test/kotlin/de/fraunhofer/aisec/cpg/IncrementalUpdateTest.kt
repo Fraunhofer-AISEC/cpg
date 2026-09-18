@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
@@ -42,7 +43,14 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.file.Files
@@ -65,7 +73,7 @@ import kotlin.test.assertTrue
  *   [de.fraunhofer.aisec.cpg.graph.declarations.Function] for it (like any other language).
  * - `define:<name>` creates a single, real, top-level function declaration named `<name>`.
  */
-class StaleStubTestLanguage : TestLanguage() {
+class StaleStubTestLanguage : TestLanguage(), HasVisibilityModifiers {
     override val fileExtensions: List<String>
         get() = listOf("stale")
 
@@ -171,6 +179,34 @@ class StaleStubTestLanguageFrontend(
                 val method =
                     newMethod(methodName, recordDeclaration = record, enterScope = true) { m ->
                         m.receiver = newVariable("this", record.toType())
+                    }
+                scopeManager.addDeclaration(method)
+                scopeManager.leaveScope(record)
+
+                tu.addDeclaration(method)
+            }
+            content.startsWith("defineprivatemethod:") -> {
+                // "defineprivatemethod:ClassName:methodName" mirrors "definemethod:" exactly, but
+                // the added method has Visibility.PRIVATE -- used to exercise isAccessibleFrom's
+                // PRIVATE-vs-PROTECTED distinction (a private base-class member must not become
+                // reachable from a subclass just because the subclass inherits from it).
+                val (className, methodName) =
+                    content.removePrefix("defineprivatemethod:").split(":")
+                val record =
+                    scopeManager
+                        .lookupSymbolByName(
+                            Name(className),
+                            language,
+                            startScope = scopeManager.globalScope,
+                        )
+                        .filterIsInstance<Record>()
+                        .single()
+
+                scopeManager.enterScope(record)
+                val method =
+                    newMethod(methodName, recordDeclaration = record, enterScope = true) { m ->
+                        m.receiver = newVariable("this", record.toType())
+                        m.visibility = Visibility.PRIVATE
                     }
                 scopeManager.addDeclaration(method)
                 scopeManager.leaveScope(record)
@@ -410,6 +446,41 @@ class StaleStubTestLanguageFrontend(
                         }
                 }
             }
+            content.startsWith("membercallwithinderived:") -> {
+                // "membercallwithinderived:BaseName:DerivedName:methodName" declares two (initially
+                // empty) records, DerivedName extending BaseName, and a method "caller(other:
+                // DerivedName)" declared INSIDE DerivedName whose body performs an
+                // explicit-receiver member call `other.methodName()` on a DIFFERENT
+                // DerivedName-typed instance (not `this`). Unlike "membercallderived:" (a free
+                // top-level function, so the accessing record is null), the accessing record here
+                // IS DerivedName -- letting us exercise isAccessibleFrom's PRIVATE-vs-PROTECTED
+                // distinction: a `private` method later added to the BASE class must NOT become a
+                // viable candidate just because the caller's own record (Derived) transitively
+                // inherits from Base, even though the receiver's static type is also reachable via
+                // that same ancestor chain.
+                val (baseName, derivedName, methodName) =
+                    content.removePrefix("membercallwithinderived:").split(":")
+                val base = newRecord(baseName, "class", holder = tu, enterScope = true) {}
+                val derived =
+                    newRecord(derivedName, "class", holder = tu, enterScope = true) { record ->
+                        newMethod(
+                            "caller",
+                            recordDeclaration = record,
+                            holder = record,
+                            enterScope = true,
+                        ) { caller ->
+                            caller.receiver = newVariable("this", record.toType())
+                            newParameter("other", objectType(derivedName), holder = caller)
+                            caller.body =
+                                newBlock(enterScope = true) { block ->
+                                    val access =
+                                        newMemberAccess(methodName, base = newReference("other"))
+                                    block.statements += newMemberCall(access)
+                                }
+                        }
+                    }
+                derived.addSuperClass(base.toType())
+            }
             content.startsWith("definezeroarg:") -> {
                 // "definezeroarg:<name>" declares a single, real, top-level, ZERO-parameter free
                 // function <name>().
@@ -465,6 +536,24 @@ class IncrementalUpdateTest {
             writeText(content)
             deleteOnExit()
         }
+    }
+
+    /**
+     * Registers a minimal pass pipeline without [PointsToPass]/[ControlFlowSensitiveDFGPass] (see
+     * the identically-named helper in `PartialPassExecutionTest` for why): with neither registered,
+     * [DFGPass] itself deterministically attaches argument-to-parameter edges
+     * ([de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters]) and reference read/write edges,
+     * which is exactly the condition [IncrementalUpdate.kt]'s `dfgHandlesArgumentEdgesItself` also
+     * gates the new direct-attach graph surgery on -- required for the tests below to observe it.
+     */
+    private fun TranslationConfiguration.Builder.minimalPasses(): TranslationConfiguration.Builder {
+        registerPass<TypeHierarchyResolver>()
+        registerPass<SymbolResolver>()
+        registerPass<ImportResolver>()
+        registerPass<DFGPass>()
+        registerPass<EvaluationOrderGraphPass>()
+        registerPass<TypeResolver>()
+        return this
     }
 
     @Test
@@ -1317,5 +1406,228 @@ class IncrementalUpdateTest {
         // The call must resolve against the inherited method, and the inferred stub must be gone.
         assertEquals(listOf(realGreet), greetCall.invokes)
         assertTrue(stub.calledBy.isEmpty())
+    }
+
+    @Test
+    fun testAddSourceAttachesCallDfgEdgesImmediatelyWithoutRunDirtyPasses() {
+        // Behavioral change under test: reconcileCalls no longer relies on marking DFGPass dirty
+        // and
+        // waiting for a later runDirtyPasses -- it attaches the arg->param and
+        // "invoked function flows into the call" DFG edges directly, so they must already be
+        // present as soon as addSource returns.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-immediate-call-dfg-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        val stub = fooCall.invokes.singleOrNull()
+        assertNotNull(stub, "Expected the unresolved call to 'foo' to create an inferred stub")
+
+        val second = tempSource(topLevel, "foo.stale", "define:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realFoo = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(realFoo.isInferred)
+
+        // No runDirtyPasses call here at all -- the edges must already be correct.
+        assertEquals(listOf(realFoo), fooCall.invokes)
+        assertTrue(
+            fooCall.prevDFG.contains(realFoo),
+            "Expected the 'invoked function flows into the call' edge to be attached immediately",
+        )
+        val param = realFoo.parameters.single()
+        assertTrue(
+            param.prevDFG.isNotEmpty(),
+            "Expected the argument->parameter edge to be attached immediately",
+        )
+    }
+
+    @Test
+    fun testAddSourceReconciledCallDoesNotMarkDfgFamilyPassesDirty() {
+        // Regression test: since the "invoked function flows into the call" edge for a reconciled
+        // call is now attached directly (see the test above), the caller must never be marked dirty
+        // for DFGPass specifically -- that pass is ComponentPass-granularity, so marking it dirty
+        // would trigger a whole-component rerun, exactly the cost this feature avoids. Uses the
+        // actual `.defaultPasses()` configuration (PointsToPass registered), which is also the
+        // config under which the accepted argument->parameter-edge gap documented on
+        // attachStandardDfgEdges applies -- PointsToPass/ControlFlowSensitiveDFGPass are NOT marked
+        // dirty either, not even as a fallback (see that doc for why).
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-no-dfg-dirty-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+        val main = result.functions.single { it.name.localName == "main" }
+
+        val second = tempSource(topLevel, "foo.stale", "define:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val dirtyForMain = result.dirtyNodes[main].orEmpty()
+        assertTrue(dirtyForMain.contains(SymbolResolver::class))
+        assertFalse(dirtyForMain.contains(DFGPass::class))
+        assertFalse(dirtyForMain.contains(ControlFlowSensitiveDFGPass::class))
+        assertFalse(dirtyForMain.contains(PointsToPass::class))
+    }
+
+    @Test
+    fun testAddSourceReconciledCallInvokesEdgeCorrectEvenWithPointsToPassRegistered() {
+        // Under the actual default configuration (PointsToPass registered), the argument->parameter
+        // edge is a known, accepted gap (see attachStandardDfgEdges's doc) -- but the call's
+        // `invokes`/"invoked function flows into the call" edge is unaffected by that gap (attached
+        // unconditionally) and must still be correct immediately, without runDirtyPasses.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-defaultpasses-invokes-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val second = tempSource(topLevel, "foo.stale", "define:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realFoo = tu.declarations.filterIsInstance<Function>().single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        assertEquals(listOf(realFoo), fooCall.invokes)
+        assertTrue(fooCall.prevDFG.contains(realFoo))
+    }
+
+    @Test
+    fun testAddSourceAttachesReferenceDfgEdgesImmediatelyWithoutRunDirtyPasses() {
+        // Reference counterpart of
+        // testAddSourceAttachesCallDfgEdgesImmediatelyWithoutRunDirtyPasses:
+        // once a previously-unresolved reference is repointed at a real declaration,
+        // reconcileReferences must attach the read/write DFG edge directly.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-immediate-ref-dfg-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "refunresolved:x")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val ref = result.allChildren<Reference>().single { it.name.localName == "x" }
+        assertNull(ref.refersTo)
+        val main = result.functions.single { it.name.localName == "main" }
+
+        val second = tempSource(topLevel, "x.stale", "defineglobal:x")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realX = tu.declarations.filterIsInstance<Variable>().single()
+
+        // No runDirtyPasses call here at all.
+        assertSame(realX, ref.refersTo)
+        assertTrue(
+            ref.prevDFG.contains(realX),
+            "Expected the read edge from the resolved declaration to be attached immediately",
+        )
+
+        val dirtyForMain = result.dirtyNodes[main].orEmpty()
+        assertTrue(dirtyForMain.contains(SymbolResolver::class))
+        assertFalse(dirtyForMain.contains(DFGPass::class))
+    }
+
+    @Test
+    fun testAddSourceDoesNotLinkPrivateBaseMethodToCallFromDerivedClass() {
+        // Regression test: isAccessibleFrom must require an EXACT match for Visibility.PRIVATE
+        // (not just "is the same or an ancestor of the declaring record", which is only correct for
+        // Visibility.PROTECTED) -- otherwise a `private` method added to a base class would
+        // incorrectly become reachable from a pre-existing call inside a subclass, just because the
+        // subclass transitively inherits from the declaring record.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-private-base-method-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile =
+            tempSource(topLevel, "caller.stale", "membercallwithinderived:Base:Derived:secret")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val secretCall = result.calls.single { it.name.localName == "secret" }
+        assertTrue(secretCall is MemberCall, "Expected an explicit-receiver MemberCall")
+        val stub = secretCall.invokes.singleOrNull()
+        assertNotNull(
+            stub,
+            "Expected the unresolved member call to 'secret' to create an inferred stub",
+        )
+        assertTrue(stub.isInferred)
+
+        // Add a PRIVATE method named 'secret' to the BASE class -- reachable via the ancestor chain
+        // (Derived extends Base), but NOT accessible from Derived's own "caller" method, since
+        // private members are only accessible from within their own declaring record.
+        val second = tempSource(topLevel, "base_secret.stale", "defineprivatemethod:Base:secret")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val privateSecret = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(privateSecret.isInferred)
+
+        // The call must NOT have been linked to the inaccessible private method -- it must still be
+        // the sole (unresolved-but-inferred) candidate.
+        assertFalse(secretCall.invokes.contains(privateSecret))
+        assertEquals(listOf<Function>(stub), secretCall.invokes)
+        assertTrue(stub.calledBy.isNotEmpty())
     }
 }

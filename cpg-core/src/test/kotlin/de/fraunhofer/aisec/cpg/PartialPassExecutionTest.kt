@@ -372,4 +372,69 @@ class PartialPassExecutionTest {
         assertTrue(dirtyPassesForNewFn.contains(DFGPass::class))
         assertTrue(result.dirtyNodes[tu]?.contains(EvaluationOrderGraphPass::class) == true)
     }
+
+    @Test
+    fun testAddSourceAttachesReconciledCallDfgEdgesWithoutTouchingUnrelatedComponent() {
+        // Regression test for the fix described in IncrementalUpdate.kt's
+        // markCallerDirtyForSymbolResolver: reconciling a call in one component must attach that
+        // call's DFG edges directly, WITHOUT marking DFGPass dirty for the caller and WITHOUT ever
+        // needing runDirtyPasses -- and, since DFGPass is Component-granularity, must not touch (or
+        // even schedule a rerun of) a large, unrelated pre-existing component.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-execution-reconcile-unrelated-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+        val unrelatedCallerFile = tempSource(topLevel, "unrelated_caller.stale", "call:bar")
+        val unrelatedDefFile = tempSource(topLevel, "unrelated_def.stale", "define:bar")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevels(mapOf("app" to topLevel, "lib" to topLevel))
+                .softwareComponents(
+                    mutableMapOf(
+                        "app" to listOf(callerFile),
+                        "lib" to listOf(unrelatedCallerFile, unrelatedDefFile),
+                    )
+                )
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single { it.name.localName == "app" }
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        assertNotNull(fooCall.invokes.singleOrNull()?.takeIf { it.isInferred })
+        val main = fooCall.firstParentOrNull<Function>()!!
+
+        val barCall = result.calls.single { it.name.localName == "bar" }
+        val realBar = result.functions.single { it.name.localName == "bar" }
+        val barInvokeEdgeBefore = barCall.invokeEdges.single()
+        val barParam = realBar.parameters.single()
+        val barParamPrevDfgBefore = barParam.prevDFGEdges.toList()
+
+        val fooDefFile = tempSource(topLevel, "foo.stale", "define:foo")
+        val tu = manager.addSource(result, component, fooDefFile)
+        assertNotNull(tu)
+        val realFoo = tu.declarations.filterIsInstance<Function>().single()
+
+        // The reconciled call's own DFG edges are already correct, with no runDirtyPasses call at
+        // all.
+        assertEquals(listOf(realFoo), fooCall.invokes)
+        assertTrue(fooCall.prevDFG.contains(realFoo))
+        assertTrue(realFoo.parameters.single().prevDFG.isNotEmpty())
+
+        // DFGPass (Component-granularity) must not have been marked dirty for the caller.
+        assertFalse(result.dirtyNodes[main].orEmpty().contains(DFGPass::class))
+
+        // The unrelated "lib" component must be entirely untouched -- proving DFGPass was never
+        // scheduled to rerun on it (which a dirty-marking-based fix would have risked, since
+        // resolving a dirty node to its ComponentPass target reprocesses the WHOLE component).
+        assertEquals(listOf(realBar), barCall.invokes)
+        assertSame(barInvokeEdgeBefore, barCall.invokeEdges.single())
+        assertEquals(barParamPrevDfgBefore, barParam.prevDFGEdges.toList())
+    }
 }
