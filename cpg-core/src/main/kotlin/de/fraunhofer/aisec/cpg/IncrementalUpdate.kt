@@ -30,15 +30,25 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
@@ -67,24 +77,26 @@ private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.IncrementalUp
  *
  * Every new [Function]-like declaration in [tu] is marked dirty for [SymbolResolver] and the
  * DFG-family/EOG-family passes described in [markDfgRelatedPassesDirty], and [tu] itself is marked
- * dirty for [EvaluationOrderGraphPass]. In addition, for every such declaration we check whether an
- * inferred stub with the same symbol already exists in the live [ScopeManager] (i.e., a previous
- * call to this name could not be resolved and [de.fraunhofer.aisec.cpg.passes.inference.Inference]
- * created a placeholder [Function] for it). If so, every
- * [de.fraunhofer.aisec.cpg.graph.expressions.Call] that still invokes that stub has its stale
- * [de.fraunhofer.aisec.cpg.graph.expressions.Call.invokes] edge (and the DFG edges that
- * [de.fraunhofer.aisec.cpg.passes.DFGPass] attached because of it) removed, and its enclosing
- * function is marked dirty for [SymbolResolver] and [DFGPass] too. Once the stub is no longer
- * invoked by anyone, it is detached from the graph entirely.
+ * dirty for [EvaluationOrderGraphPass].
+ *
+ * In addition, [reconcileExistingUsagesWithNewSymbols] reconciles every new, non-local declaration
+ * in [tu] (see [collectNewNonLocalSymbols]) against the *whole* live graph in a single batched
+ * scan: pre-existing [de.fraunhofer.aisec.cpg.graph.expressions.Call]s that were unresolved,
+ * resolved to an [de.fraunhofer.aisec.cpg.passes.inference.Inference]-created stub, or even already
+ * resolved to some other real declaration, get the new declaration added to their
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call.invokes] if it is a viable candidate; a stale
+ * inferred stub still present in `invokes` once a real candidate exists is removed and, once fully
+ * orphaned, detached from the graph. Pre-existing [Reference]s (e.g. variable/field accesses) are
+ * handled more conservatively, since only one resolution can exist at a time -- see
+ * [reconcileReferences] for the exact cases handled (and the one deliberately left alone).
  */
 internal fun TranslationManager.updateIncrementally(
     result: TranslationResult,
     tu: TranslationUnit,
 ) {
     // Never changes within a single call, so compute it once and thread it through instead of
-    // recomputing it per new function/call in markDfgRelatedPassesDirty/cleanUpStaleInferredStubs.
+    // recomputing it per new function/call.
     val registeredPasses = result.finalCtx.config.registeredPasses.flatten()
-    var detachedAnyStub = false
 
     // EvaluationOrderGraphPass is purely intraprocedural/AST-driven (no @DependsOn at all -- it
     // builds the EOG straight from the fresh AST and only touches the ScopeManager for label
@@ -112,8 +124,7 @@ internal fun TranslationManager.updateIncrementally(
         tu.markDirty<ImportResolver>()
     }
 
-    val newFunctions = tu.allChildren<Function>()
-    for (newFunction in newFunctions) {
+    for (newFunction in tu.allChildren<Function>()) {
         newFunction.markDirty<SymbolResolver>()
         // DFGPass connects a resolved call's arguments/return value to the invoked function's
         // parameters based on `Call.invokes`; since SymbolResolver has not run on this new
@@ -140,17 +151,40 @@ internal fun TranslationManager.updateIncrementally(
         if (registeredPasses.contains(SccPass::class)) {
             newFunction.markDirty<SccPass>()
         }
-        if (cleanUpStaleInferredStubs(result, newFunction, registeredPasses)) {
-            detachedAnyStub = true
-        }
     }
 
-    // Invalidate once for the whole call instead of once per detached stub, and skip entirely on
-    // the common path where nothing stale was found.
-    if (detachedAnyStub) {
+    // A single batched scan over the whole live graph (see reconcileExistingUsagesWithNewSymbols),
+    // done exactly once per addSource/updateIncrementally call -- not once per new symbol -- rather
+    // than one scope-lookup per new function like the previous, narrower implementation.
+    val newSymbols = tu.collectNewNonLocalSymbols()
+    if (
+        newSymbols.isNotEmpty() &&
+            reconcileExistingUsagesWithNewSymbols(result, tu, newSymbols, registeredPasses)
+    ) {
         result.finalCtx.scopeManager.invalidateSymbolLookupCache()
     }
 }
+
+/**
+ * Declarations in this [TranslationUnit] that are visible from outside their own declaration site
+ * -- i.e. that a pre-existing [Call] or [Reference] elsewhere in the graph could plausibly target
+ * now that they exist. [Function]s (including [Method]s and [Constructor]s) and [Record]s are
+ * always included, since both are callable/referenceable from wherever their scope/visibility
+ * allows. A [Variable] (which also covers [de.fraunhofer.aisec.cpg.graph.declarations.Field]) is
+ * only included if it is declared outside a function body: a function-local variable or [Parameter]
+ * lives in a [FunctionScope] or [LocalScope] and can never be referenced from outside the function
+ * it was declared in, so it can never be the target of a pre-existing, already-parsed reference --
+ * including it in the scan below would be pure overhead.
+ */
+private fun TranslationUnit.collectNewNonLocalSymbols(): List<Declaration> =
+    allChildren<Declaration> { declaration ->
+        when (declaration) {
+            is Function -> true
+            is Record -> true
+            is Variable -> declaration.scope !is FunctionScope && declaration.scope !is LocalScope
+            else -> false
+        }
+    }
 
 /**
  * Marks [DFGPass] dirty (it always attaches the "invoked function flows into the call" DFG edge for
@@ -173,57 +207,41 @@ private fun Node.markDfgRelatedPassesDirty(registeredPasses: List<KClass<out Pas
 }
 
 /**
- * Looks for a pre-existing inferred [Function] stub that matches [newFunction]'s symbol (and
- * signature) in the same lookup scope and, if found, re-points/cleans-up everything that used to
- * reference the stub. Returns `true` if at least one stale stub was detached from the graph.
+ * Implements steps 2-5 of the class-level design described on [updateIncrementally]: a single
+ * [TranslationResult.allChildren] scan over the whole live graph (the cheap filter, phase 1)
+ * collects every pre-existing [Call]/[Reference] whose name matches one of [newSymbols], and only
+ * that (much smaller) candidate list is then checked against the actual signature/scope of each
+ * matching new declaration (the precise check, phase 2, split across [reconcileCalls] and
+ * [reconcileReferences]). This structure is deliberate: the full-graph walk below must execute
+ * exactly once per [updateIncrementally] call no matter how many new symbols [tu] introduces, and
+ * the expensive per-candidate checks (signature matching, scope lookups) must never run against the
+ * full graph.
+ *
+ * Returns `true` if at least one inferred stub was fully detached from the graph as a result.
  */
-private fun cleanUpStaleInferredStubs(
+private fun reconcileExistingUsagesWithNewSymbols(
     result: TranslationResult,
-    newFunction: Function,
+    tu: TranslationUnit,
+    newSymbols: List<Declaration>,
     registeredPasses: List<KClass<out Pass<out Node>>>,
 ): Boolean {
-    val scopeManager = result.finalCtx.scopeManager
-    // Unqualified lookup only walks *up* the scope chain from the start scope (it never descends
-    // into child scopes), so we must start at newFunction's own scope (e.g. its enclosing
-    // RecordScope/NamespaceScope) rather than unconditionally at the global scope. Otherwise stubs
-    // registered in a class/namespace scope would never be found.
-    val candidates =
-        scopeManager.lookupSymbolByName(
-            newFunction.name,
-            newFunction.language,
-            startScope = newFunction.scope ?: scopeManager.globalScope,
-        )
+    val byName: Map<Symbol, List<Declaration>> = newSymbols.groupBy { it.symbol }
 
-    val stubs =
-        candidates.filterIsInstance<Function>().filter { stub ->
-            stub.isInferred &&
-                stub !== newFunction &&
-                // Only treat same-named stubs as stale if newFunction is actually a viable
-                // resolution target for the call(s) that produced this stub.
-                //
-                // [Function.matchesSignature] is designed to be called as
-                // `candidate.matchesSignature(callArgumentTypes)` (see
-                // SymbolResolver.resolveWithArguments): it walks the *candidate's* parameters and
-                // requires them to consume the entire `signature` list, only tolerating a
-                // candidate with MORE parameters than `signature` if `useDefaultArguments` is set
-                // and the extra ones have defaults.
-                //
-                // A stub's parameters are typed 1:1 from the original call's argument types (see
-                // Inference.createInferredParameters), so stub.parameters.map { it.type } is
-                // exactly that original call's argument-type signature. The previous version of
-                // this check called it backwards -- `stub.matchesSignature(newFunction's
-                // parameter types)` -- which fails whenever the real function has MORE parameters
-                // than the call the stub was inferred from (e.g. trailing default/optional
-                // parameters), since the stub's (few) parameters could never consume the real
-                // function's (more) parameter types. Calling it in the correct direction,
-                // `newFunction.matchesSignature(stub's parameter types)`, mirrors how
-                // SymbolResolver itself would resolve that original call against newFunction, and
-                // correctly allows newFunction to have extra trailing default parameters that the
-                // call simply didn't supply.
-                newFunction.matchesSignature(
-                    stub.parameters.map { it.type },
-                    useDefaultArguments = true,
-                ) is SignatureMatches
+    // Phase 1 (cheap filter): exactly one scan over the whole graph, matching only on name and
+    // language -- no signature/scope inspection happens here.
+    val matches =
+        result.allChildren<Node> { node ->
+            node.language == tu.language && node.symbolName in byName
+        }
+    val candidateCalls = matches.filterIsInstance<Call>()
+    val candidateReferences =
+        matches.filterIsInstance<Reference>().filter {
+            // A Call's callee (whether a plain Reference or, for a MemberCall, a MemberAccess) is
+            // handled via reconcileCalls/Call.invokes instead -- SubgraphWalker sets
+            // resolutionHelper to the owning Call for exactly these nodes (see
+            // ExpressionBuilder.kt), so this is the same check SymbolResolver.handleReference
+            // itself uses to recognize a callee.
+            it.resolutionHelper !is Call
         }
 
     // DFGPass.connectInferredCallArguments consults Function.functionSummary to attach extra
@@ -238,89 +256,279 @@ private fun cleanUpStaleInferredStubs(
             it == ControlFlowSensitiveDFGPass::class || it == PointsToPass::class
         }
 
-    var detachedAnyStub = false
-    for (stub in stubs) {
-        // Tearing down the function-summary-derived reverse edges (arg <- stub-parameter, plus
-        // READWRITE access flips) correctly would require knowing whether some other, still-valid
-        // edge also justifies them, which we cannot determine soundly here. We therefore skip only
-        // the DFG-edge teardown below for this stub, leaving those (and the other, "standard") DFG
-        // edges in place rather than risk leaving a partially/incorrectly cleaned-up graph.
-        //
-        // We must NOT also skip updating `call.invokes` and marking the caller dirty, though: the
-        // real function now exists, so leaving `call.invokes` pointed at the dead stub would strand
-        // the call there forever -- nothing would ever mark it dirty again, so a later
-        // runDirtyPasses would never revisit it. So we always remove the stale invokes edge and
-        // always mark the caller dirty for re-resolution, and only conditionally skip the DFG-edge
-        // surgery.
-        val skipDfgTeardown =
-            connectInferredCallArgumentsMayHaveRun && stub.functionSummary.isNotEmpty()
-        if (skipDfgTeardown) {
-            log.warn(
-                "Not tearing down DFG edges for inferred stub {} because it has " +
-                    "function-summary-derived DFG edges that cannot be soundly removed here. The " +
-                    "stale invokes edge is still removed and the caller still marked dirty.",
-                stub.name,
-            )
+    val detachedByCalls =
+        reconcileCalls(
+            candidateCalls,
+            byName,
+            result.finalCtx.scopeManager,
+            registeredPasses,
+            connectInferredCallArgumentsMayHaveRun,
+        )
+    val detachedByReferences =
+        reconcileReferences(
+            candidateReferences,
+            byName,
+            result.finalCtx.scopeManager,
+            registeredPasses,
+        )
+
+    return detachedByCalls || detachedByReferences
+}
+
+/**
+ * The cheap, name-only key used by phase 1's candidate scan: [Node.name]'s local name for
+ * everything except a [Construction], which -- unlike a regular [Call] -- has no meaningful
+ * `callee` (its inherited [Call.name] resolves to whatever placeholder its unused `callee` edge
+ * defaults to, not the type being constructed). [Construction] is matched by the local name of the
+ * type it instantiates instead, mirroring how
+ * [de.fraunhofer.aisec.cpg.passes.SymbolResolver.handleConstruction] itself resolves it -- via
+ * [Construction.type], not [Call.name]/[Call.callee].
+ */
+private val Node.symbolName: Symbol
+    get() =
+        if (this is Construction) {
+            (type.root as? ObjectType)?.name?.localName ?: name.localName
+        } else {
+            name.localName
         }
 
-        // Take a snapshot: we are about to mutate stub.calledBy (via the mirrored invokes edge)
-        // while iterating over it.
-        val staleCalls = stub.calledBy.toList()
+/** The [Record] this [Type] resolves to, if it is (or wraps) an [ObjectType]. */
+private fun Type.recordOrNull(): Record? = (root as? ObjectType)?.recordDeclaration
 
-        for (call in staleCalls) {
-            if (!skipDfgTeardown) {
-                tearDownStandardDfgEdges(stub, call)
+/**
+ * The [Record] that owns the member [source] statically accesses -- determined via the *static type
+ * of the receiver expression*, exactly like
+ * [de.fraunhofer.aisec.cpg.passes.SymbolResolver.resolveMemberByName]/`handleMemberAccess` resolve
+ * a member call/field access, and completely independent of where [source] is lexically written.
+ *
+ * Returns `null` for anything that is not an *explicit* member access with its own receiver
+ * expression (a [MemberCall] or a [MemberAccess] used as a plain field reference) -- in particular
+ * for a plain [Call]/[Reference] resolved via an *implicit* receiver (e.g. an unqualified `foo()`
+ * inside a method, resolved against `this`). [isReachableFrom] handles that case correctly via the
+ * lexical scope-chain walk instead, which mirrors [SymbolResolver]'s own `HasImplicitReceiver`
+ * fallback in `getPossibleContainingTypes`/`handleReference` -- genuinely lexical there, unlike
+ * member access via an explicit receiver.
+ */
+private fun memberReceiverRecord(source: Node): Record? {
+    val base =
+        when (source) {
+            is MemberCall -> source.base
+            is MemberAccess -> source.base
+            else -> return null
+        } ?: return null
+    val baseType = (base as? PointerDereference)?.input?.type ?: base.type
+    return baseType.recordOrNull()
+}
+
+/**
+ * The [Record] that declares this member, mirroring [SymbolResolver]'s own (private)
+ * `declaringRecord` extension: a [Method] may be defined out-of-line (e.g. C++ `void C::foo() {}`),
+ * where its AST parent is the enclosing namespace/translation unit rather than the record, so we
+ * prefer its explicitly-tracked [Method.recordDeclaration]; everything else (e.g. a [Field]) is
+ * looked up via the closest enclosing [Record] in the AST.
+ */
+private val Declaration.declaringRecordOrNull: Record?
+    get() = (this as? Method)?.recordDeclaration ?: firstParentOrNull<Record>()
+
+/**
+ * Whether [declaringRecord] is [receiverRecord] itself, or one of its (transitive) ancestors --
+ * mirroring [SymbolResolver.resolveMemberByName]/its (private) `ancestorRecords` extension, which
+ * walks [receiverRecord]'s supertype chain via [de.fraunhofer.aisec.cpg.ancestors] (not just an
+ * exact match), so that a member inherited from a base class resolves too.
+ *
+ * Uses `===` (identity), like every other node-identity check in this file, rather than `==`
+ * (structural equality): [Record.equals] is fully structural, so two distinct, structurally
+ * identical (e.g. empty/placeholder) `Record`s could otherwise be wrongly treated as the same type,
+ * linking a member of one to a receiver of the other.
+ */
+private fun isSameOrAncestorRecord(receiverRecord: Record, declaringRecord: Record): Boolean {
+    return receiverRecord.toType().ancestors.any { it.type.recordOrNull() === declaringRecord }
+}
+
+/**
+ * Whether [declaration] is actually visible from [source]'s point of resolution -- the
+ * "scope/visibility check" half of the precise, phase-2 check. Two deliberately different
+ * mechanisms are used, matching how [SymbolResolver] itself resolves each case:
+ * - If [source] is an *explicit* member access (a [MemberCall] or a [MemberAccess] field reference
+ *   with its own receiver expression), reachability is decided by the receiver's static type -> its
+ *   [Record] and that [Record]'s ancestor chain (see
+ *   [memberReceiverRecord]/[isSameOrAncestorRecord]), completely independent of where [source] is
+ *   lexically written. A lexical scope-chain walk would be wrong here: e.g. `other.foo()` on an
+ *   object of an unrelated class must never resolve against a same-named, same-signature free
+ *   function or a different class's method just because that declaration happens to be lexically
+ *   visible from the call site.
+ * - Otherwise (a plain [Call]/[Reference], including one resolved via an *implicit* receiver),
+ *   reachability is a lexical scope-chain walk via [ScopeManager.lookupSymbolByName] -- the same
+ *   mechanism [SymbolResolver] itself uses to resolve a [Reference]/[Call.callee].
+ *
+ * Note: if an explicit member access's receiver type cannot be resolved to a [Record] at all (e.g.
+ * its base type is still unknown), [memberReceiverRecord] returns `null` and we fall back to the
+ * lexical walk, which may then fail to find an otherwise-valid candidate. This residual gap (a stub
+ * that could theoretically still have such an unresolvable-base caller) is accepted as a rare,
+ * pathological edge case rather than something to build further machinery for.
+ */
+private fun ScopeManager.isReachableFrom(source: Node, declaration: Declaration): Boolean {
+    val receiverRecord = memberReceiverRecord(source)
+    if (receiverRecord != null) {
+        val declaringRecord = declaration.declaringRecordOrNull ?: return false
+        return isSameOrAncestorRecord(receiverRecord, declaringRecord)
+    }
+
+    val candidates =
+        lookupSymbolByName(
+            declaration.name,
+            declaration.language,
+            startScope = source.scope ?: globalScope,
+        )
+    return candidates.any { it === declaration }
+}
+
+/**
+ * Phase 2 for [Call]/[de.fraunhofer.aisec.cpg.graph.expressions.Construction] candidates: for every
+ * candidate whose name matched some new declaration in [byName] (phase 1), checks whether that new
+ * declaration is actually a viable resolution target (right kind of declaration -- [Constructor]
+ * for a Construction, any other [Function] otherwise --, a matching signature via
+ * [Function.matchesSignature], and reachable per [isReachableFrom]).
+ *
+ * Per the class-level design: unlike [Reference.refersTo] (a single edge), [Call.invokes] already
+ * tolerates multiple simultaneous targets -- [SymbolResolver]'s own
+ * [de.fraunhofer.aisec.cpg.passes.decideInvokesBasedOnCandidates] leaves more than one candidate in
+ * `invokes` whenever resolution is ambiguous or "problematic" (e.g. overload resolution finding
+ * several equally-viable functions). We mirror that exact mechanism here: a viable new declaration
+ * is simply *added* to `invokes` (idempotently) regardless of whether the call was previously
+ * unresolved, resolved to an inferred stub, or already resolved to some other real declaration --
+ * there is no need to decide which resolution should "win".
+ *
+ * The one exception: once a real (non-inferred) candidate exists for a call, any *inferred*
+ * function stub still present in that call's `invokes` is removed (it "was probably only there as a
+ * bridge"). Once a stub is no longer invoked by anyone at all ([Function.calledBy] empty), it is
+ * detached from the graph entirely by [detachInferredDeclaration].
+ *
+ * Returns `true` if at least one stub was fully detached.
+ */
+private fun reconcileCalls(
+    candidateCalls: List<Call>,
+    byName: Map<Symbol, List<Declaration>>,
+    scopeManager: ScopeManager,
+    registeredPasses: List<KClass<out Pass<out Node>>>,
+    connectInferredCallArgumentsMayHaveRun: Boolean,
+): Boolean {
+    // Calls (possibly several) whose invokes edge to a given stub was just removed, so we can
+    // decide -- once every candidate call has been processed -- whether the stub is now fully
+    // orphaned, and if so, tear down its function-summary-derived DFG edges for exactly those
+    // calls (mirroring the old, per-stub cleanup's deferred teardown).
+    val callsByRemovedStub = mutableMapOf<Function, MutableList<Call>>()
+
+    for (call in candidateCalls) {
+        val declarations = byName[call.symbolName] ?: continue
+        val isConstruction = call is Construction
+        val functionCandidates =
+            declarations.filterIsInstance<Function>().filter { candidate ->
+                (candidate is Constructor) == isConstruction &&
+                    (!isConstruction ||
+                        matchesConstructionTarget(call as Construction, candidate as Constructor))
             }
 
-            // Remove the stale invokes edge itself. This also removes the mirrored entry in
-            // stub.calledByEdges.
-            call.invokeEdges.removeIf { it.end === stub }
-
-            // Construction.constructor is a separate backing field that the setter forwards
-            // one-directionally to `invokes` (setting `constructor` also sets `invokes`, but not
-            // the other way around) -- so clearing `invokes` above leaves
-            // `construction.constructor`
-            // still dangling at the now-stale stub until SymbolResolver happens to rerun. Reset it
-            // explicitly here so there is no window of inconsistency between the two. Note: when
-            // `anonymousClass` is set, the getter ignores this backing field entirely, making this
-            // a no-op for that path; correctness there instead comes from detachInferredDeclaration
-            // removing the stub from the anonymous class's `constructors` a few lines below.
-            if (call is Construction && call.constructor === stub) {
-                call.constructor = null
+        var invokesChanged = false
+        for (candidate in functionCandidates) {
+            if (
+                candidate.matchesSignature(
+                    call.arguments.map { it.type },
+                    call.arguments,
+                    useDefaultArguments = true,
+                ) !is SignatureMatches
+            ) {
+                continue
+            }
+            if (!scopeManager.isReachableFrom(call, candidate)) {
+                continue
             }
 
-            // The caller is where SymbolResolver needs to re-resolve the call, and where DFGPass
-            // needs to re-attach the argument/parameter and invoked-function/call edges once the
-            // call resolves to the new, real function. Some calls (e.g. top-level/module-scope
-            // statements) have no enclosing Function -- TranslationUnit is itself an
-            // EOGStarterHolder ("to catch any static statements in the TU"), so fall back to
-            // marking the enclosing TranslationUnit dirty instead of silently doing nothing; the
-            // stale invokes/DFG edges above were already unconditionally removed, so leaving this
-            // case unmarked would strand the call worse off than before cleanup ran.
-            val enclosingFunction = call.firstParentOrNull<Function>()
-            if (enclosingFunction != null) {
-                enclosingFunction.markDirty<SymbolResolver>()
-                enclosingFunction.markDfgRelatedPassesDirty(registeredPasses)
-            } else {
-                call.firstParentOrNull<TranslationUnit>()?.let {
-                    it.markDirty<SymbolResolver>()
-                    it.markDfgRelatedPassesDirty(registeredPasses)
+            if (call.invokes.none { it === candidate }) {
+                // Use the edge list's own `add`, not a whole-property reassignment: assigning
+                // `call.invokes = ...` goes through EdgeCollection.resetTo, which discards and
+                // rebuilds EVERY edge from scratch -- silently resetting Invoke.dynamicInvoke back
+                // to false for every PRE-EXISTING entry too (corrupting static-vs-dynamic call
+                // tracking for calls previously resolved via DynamicInvokeResolver/PointsToPass),
+                // not just the newly-added one. `invokeEdges.add` only ever creates the one new
+                // edge and leaves every existing edge (and its flags) untouched.
+                call.invokeEdges.add(candidate)
+                invokesChanged = true
+            }
+
+            // A real, non-inferred candidate now exists for this call -- remove any inferred stub
+            // still sitting in `invokes` (see the function doc).
+            val staleStubs = call.invokes.filterIsInstance<Function>().filter { it.isInferred }
+            for (stub in staleStubs) {
+                if (!connectInferredCallArgumentsMayHaveRun || stub.functionSummary.isEmpty()) {
+                    tearDownStandardDfgEdges(stub, call)
+                }
+                // In-place removal (like the rest of this file), not a property reassignment --
+                // see the `add` comment above for why that distinction matters here too.
+                call.invokeEdges.removeIf { it.end === stub }
+                if (isConstruction && (call as Construction).constructor === stub) {
+                    // Safe: Construction.constructor's setter only replaces `invokes` wholesale
+                    // when assigned a non-null value (see the resync comment below); assigning
+                    // null is a plain field write with no such side effect.
+                    call.constructor = null
+                }
+                callsByRemovedStub.getOrPut(stub) { mutableListOf() }.add(call)
+                invokesChanged = true
+            }
+        }
+
+        if (isConstruction) {
+            val constructionCall = call as Construction
+            val constructorCandidates = constructionCall.invokes.filterIsInstance<Constructor>()
+            // Construction.constructor is a separate backing field whose setter forwards a
+            // non-null assignment to `invokes` *wholesale*
+            // (`invokes = mutableListOf(value)`) -- syncing it unconditionally after every edit
+            // would silently collapse a legitimate multi-candidate (ambiguous) `invokes` list down
+            // to a single entry, exactly the kind of destructive replace `reconcileCalls` otherwise
+            // goes out of its way to avoid for plain Calls. Only sync when there is EXACTLY one
+            // candidate -- there, the setter's wholesale replace is a no-op (invokes already
+            // contains just that one entry). With zero candidates it was already reset to null
+            // above (if applicable); with more than one, we deliberately leave both `invokes` and
+            // `constructor` untouched.
+            if (
+                constructorCandidates.size == 1 &&
+                    constructionCall.constructor !== constructorCandidates.single()
+            ) {
+                constructionCall.constructor = constructorCandidates.single()
+            }
+        }
+
+        if (invokesChanged) {
+            // Mirrors the tail of SymbolResolver.decideInvokesBasedOnCandidates, which also keeps
+            // the callee reference's refersTo in sync with `invokes`. Only done if it was not
+            // already resolved -- e.g. to a Variable/Parameter for a dynamic/function-pointer
+            // invoke -- which we must not overwrite.
+            (call.callee as? Reference)?.let { callee ->
+                if (callee.refersTo == null) {
+                    callee.refersTo = call.invokes.firstOrNull()
                 }
             }
+            markCallerDirty(call, registeredPasses)
         }
+    }
 
-        // If nobody invokes the stub anymore, it is dead weight: detach it from the AST and from
-        // the scope's symbol table so it doesn't linger as a phantom declaration.
+    var detachedAnyStub = false
+    for ((stub, calls) in callsByRemovedStub) {
+        // Every call that could possibly still invoke this stub shares its name, so it must
+        // already be among candidateCalls -- but Function.calledBy is an exact, edge-backed
+        // reverse list, so we use that (rather than re-deriving orphanhood from the candidate
+        // list) to decide whether the stub is now fully orphaned.
         if (stub.calledBy.isEmpty()) {
+            val skipDfgTeardown =
+                connectInferredCallArgumentsMayHaveRun && stub.functionSummary.isNotEmpty()
             if (skipDfgTeardown) {
-                // staleCalls was a full snapshot of stub.calledBy taken before this loop, and
-                // every one of those calls just had its invokes edge to stub removed above, so
-                // stub.calledBy being empty here means none of them (or anyone else) can still
-                // need the DFG edges we left alone earlier -- it is now safe to tear those down
-                // too, without the "some other call might still justify them" risk that justified
-                // skipping this at the time.
-                for (call in staleCalls) {
-                    tearDownStandardDfgEdges(stub, call)
+                log.warn(
+                    "Not tearing down function-summary-derived DFG edges for inferred stub {} " +
+                        "because they cannot be soundly removed here.",
+                    stub.name,
+                )
+            } else {
+                for (call in calls) {
                     tearDownFunctionSummaryDerivedDfgEdges(stub, call)
                 }
             }
@@ -329,6 +537,126 @@ private fun cleanUpStaleInferredStubs(
         }
     }
     return detachedAnyStub
+}
+
+/**
+ * Whether [candidate] is actually a viable constructor for [construction] -- i.e. declared in the
+ * record [construction] instantiates, if that record is already known. If it is not yet known (e.g.
+ * [de.fraunhofer.aisec.cpg.passes.SymbolResolver.handleConstruction] has not run on this particular
+ * Construction yet), we fall back to allowing the match; [isReachableFrom] still guards against
+ * completely unrelated same-named constructors.
+ */
+private fun matchesConstructionTarget(construction: Construction, candidate: Constructor): Boolean {
+    val recordDeclaration = construction.instantiates as? Record ?: construction.type.recordOrNull()
+    return recordDeclaration == null || candidate.recordDeclaration == recordDeclaration
+}
+
+/**
+ * Phase 2 for [Reference] candidates (variable/field accesses, i.e. explicitly NOT [Call] callees
+ * -- see [reconcileExistingUsagesWithNewSymbols]). Unlike [Call.invokes], [Reference.refersTo] is a
+ * single edge, so we cannot simply "add" a viable candidate the way [reconcileCalls] does; only one
+ * resolution can exist at a time. Three cases, per the class-level design:
+ * - Currently unresolved (`refersTo == null`): resolved to a viable new [Variable]/
+ *   [de.fraunhofer.aisec.cpg.graph.declarations.Field], if one exists.
+ * - Currently resolved to an *inferred* declaration: replaced by a viable new, real declaration,
+ *   mirroring the stub-is-a-bridge behavior for calls. The old inferred declaration's DFG edges to
+ *   this reference are torn down, and if it turns out to be referenced from nowhere else in the
+ *   graph, it is detached entirely.
+ * - Currently resolved to a real, non-inferred declaration: deliberately left untouched. Silently
+ *   swapping an already-correctly-resolved reference for a new, same-named declaration based on a
+ *   name/scope heuristic would be unsound -- shadowing and visibility rules differ per language,
+ *   and there is no principled way to decide here whether the existing resolution or the new
+ *   declaration is the "correct" one. This mirrors the deferred function-overload-selection
+ *   concerns already documented for [reconcileCalls]'s ambiguity handling, just without the
+ *   multi-edge escape hatch a [Call] has.
+ *
+ * Returns `true` if at least one stub was fully detached.
+ */
+private fun reconcileReferences(
+    candidateReferences: List<Reference>,
+    byName: Map<Symbol, List<Declaration>>,
+    scopeManager: ScopeManager,
+    registeredPasses: List<KClass<out Pass<out Node>>>,
+): Boolean {
+    var detachedAnyStub = false
+
+    for (ref in candidateReferences) {
+        val variableCandidates = byName[ref.symbolName]?.filterIsInstance<Variable>() ?: continue
+        if (variableCandidates.isEmpty()) continue
+
+        val existingTarget = ref.refersTo
+        if (existingTarget != null && (existingTarget !is Variable || !existingTarget.isInferred)) {
+            // Case 3, deliberately left alone -- see the function doc. This also conservatively
+            // skips any already-resolved target that is not itself a Variable/Field (e.g. an
+            // inferred Function reached via a function-pointer-style reference), which is out of
+            // scope for this Reference-specific path.
+            continue
+        }
+        // At this point existingTarget is either null, or an inferred Variable/Field.
+        val inferredTarget = existingTarget as? Variable
+
+        val realCandidate =
+            variableCandidates.firstOrNull { candidate ->
+                !candidate.isInferred && scopeManager.isReachableFrom(ref, candidate)
+            } ?: continue
+
+        if (inferredTarget != null) {
+            tearDownReferenceDfgEdges(inferredTarget, ref)
+            // Reference.refersTo's setter only ever APPENDS `this` to the new target's
+            // usageEdges on (re)assignment -- it never removes the reverse edge from the OLD
+            // target, which would otherwise leave a dangling usage edge on inferredTarget (and
+            // make it look "still referenced" by the orphan check below, even after we just
+            // repointed `ref` away from it).
+            inferredTarget.usageEdges.removeIf { it.end === ref }
+        }
+
+        ref.refersTo = realCandidate
+        markCallerDirty(ref, registeredPasses)
+
+        if (inferredTarget != null && inferredTarget.usages.isEmpty()) {
+            // ValueDeclaration.usages is the authoritative, edge-backed reverse list of every
+            // Reference resolving to this declaration -- unlike a hand-built list derived from
+            // candidateReferences (phase 1's cheap-filter shortlist), this stays correct even for
+            // referrers phase 1 excludes (e.g. a dynamic/function-pointer call callee, filtered
+            // out via `resolutionHelper !is Call`).
+            detachInferredDeclaration(inferredTarget)
+            detachedAnyStub = true
+        }
+    }
+
+    return detachedAnyStub
+}
+
+/**
+ * The caller-side counterpart of [reconcileCalls]/[reconcileReferences]'s edge surgery: marks the
+ * nearest enclosing [Function] (or, if there is none -- e.g. a top-level/module-scope statement --
+ * the enclosing [TranslationUnit], itself an EOGStarterHolder "to catch any static statements in
+ * the TU") dirty for [SymbolResolver] and the DFG-family passes, so a later
+ * [de.fraunhofer.aisec.cpg.runDirtyPasses] actually revisits [node].
+ */
+private fun markCallerDirty(node: Node, registeredPasses: List<KClass<out Pass<out Node>>>) {
+    val enclosingFunction = node.firstParentOrNull<Function>()
+    if (enclosingFunction != null) {
+        enclosingFunction.markDirty<SymbolResolver>()
+        enclosingFunction.markDfgRelatedPassesDirty(registeredPasses)
+    } else {
+        node.firstParentOrNull<TranslationUnit>()?.let {
+            it.markDirty<SymbolResolver>()
+            it.markDfgRelatedPassesDirty(registeredPasses)
+        }
+    }
+}
+
+/**
+ * Removes the DFG edges [de.fraunhofer.aisec.cpg.passes.DFGPass.handleReference] attaches for a
+ * [Reference] resolved to [stub] (see there): the read edge (`stub -> ref`) and/or the write edge
+ * (`ref -> stub`), depending on [Reference.access]. Safe to call even if neither edge was ever
+ * attached (e.g. because DFGPass's own `isGlobal`/`runsPointsToPassOrCfsDFG` gating skipped it) --
+ * `removeIf` on an edge list that does not contain a matching edge is simply a no-op.
+ */
+private fun tearDownReferenceDfgEdges(stub: Declaration, ref: Reference) {
+    ref.nextDFGEdges.removeIf { it.end === stub }
+    ref.prevDFGEdges.removeIf { it.start === stub }
 }
 
 /**
@@ -394,11 +722,18 @@ private fun detachInferredDeclaration(declaration: Declaration) {
         is Record ->
             // Constructor extends Method, so this must be checked first -- Record.addDeclaration
             // stores constructors in a separate constructorEdges/constructors collection, not in
-            // methods, and mirrors this same is-Constructor-before-is-Method order.
+            // methods, and mirrors this same is-Constructor-before-is-Method order. Record also
+            // implements DeclarationHolder, but its `declarations` getter (unlike a plain
+            // DeclarationHolder's) aggregates fields/methods/constructors/records into a freshly
+            // built, read-only List rather than exposing a single backing MutableList, so we must
+            // handle Record explicitly here instead of falling through to the generic
+            // `is DeclarationHolder` branch below (which would silently no-op on it).
             if (declaration is Constructor) {
                 parent.constructors.remove(declaration)
             } else if (declaration is Method) {
                 parent.methods.remove(declaration)
+            } else if (declaration is Field) {
+                parent.fields.remove(declaration)
             }
         is DeclarationHolder -> {
             @Suppress("UNCHECKED_CAST")

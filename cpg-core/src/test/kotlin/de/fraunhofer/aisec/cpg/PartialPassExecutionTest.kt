@@ -153,9 +153,10 @@ class PartialPassExecutionTest {
         assertEquals("foo", realFoo.name.localName)
         assertFalse(realFoo.isInferred)
 
-        // Before the partial pass re-run: the call is left unresolved (stale edge already
-        // removed by updateIncrementally, but SymbolResolver has not run again yet).
-        assertTrue(fooCall.invokes.isEmpty())
+        // Before the partial pass re-run: updateIncrementally's batched reconciliation already
+        // added the real function to `invokes` directly (removing the now-stale stub), even though
+        // SymbolResolver itself has not run again yet.
+        assertEquals(listOf(realFoo), fooCall.invokes)
 
         assertTrue(result.dirtyNodes[realFoo]?.contains(SymbolResolver::class) == true)
 

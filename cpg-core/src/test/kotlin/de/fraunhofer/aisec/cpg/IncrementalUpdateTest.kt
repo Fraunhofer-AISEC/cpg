@@ -31,11 +31,15 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -48,6 +52,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -257,6 +262,183 @@ class StaleStubTestLanguageFrontend(
 
                 tu.addDeclaration(constructor)
             }
+            content.startsWith("refunresolved:") -> {
+                // "refunresolved:<name>" creates a top-level function "main(p)" whose body returns
+                // a bare, unqualified reference to <name>. StaleStubTestLanguage does not implement
+                // HasGlobalVariables, so SymbolResolver.tryVariableInference cannot infer a global
+                // for it -- the reference is left genuinely unresolved (refersTo == null), unlike
+                // "call:", which always gets an inferred stub.
+                val name = content.removePrefix("refunresolved:")
+                newFunction("main", holder = tu, enterScope = true) { main ->
+                    newParameter("p", holder = main)
+                    main.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newReturn { it.returnValue = newReference(name) }
+                        }
+                }
+            }
+            content.startsWith("defineglobal:") -> {
+                // "defineglobal:<name>" declares a single, real, top-level (GlobalScope) Variable
+                // named <name>.
+                val name = content.removePrefix("defineglobal:")
+                newVariable(name, holder = tu)
+            }
+            content.startsWith("globalwithref:") -> {
+                // "globalwithref:<name>" declares a real, top-level Variable <name> AND a function
+                // "mainRef(p)" that returns a reference to it, both in the same TU, so the initial
+                // analyze() resolves the reference directly to this real declaration (never
+                // unresolved, never inferred).
+                val name = content.removePrefix("globalwithref:")
+                newVariable(name, holder = tu)
+                newFunction("mainRef", holder = tu, enterScope = true) { main ->
+                    newParameter("p", holder = main)
+                    main.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newReturn { it.returnValue = newReference(name) }
+                        }
+                }
+            }
+            content.startsWith("localvar:") -> {
+                // "localvar:<funcName>:<varName>" declares a top-level function <funcName>(p) with
+                // a function-local variable <varName> that is never referenced. Used to verify that
+                // a local declaration is never treated as a "new non-local symbol" candidate for
+                // the batched reconciliation scan.
+                val (funcName, varName) = content.removePrefix("localvar:").split(":")
+                newFunction(funcName, holder = tu, enterScope = true) { function ->
+                    newParameter("p", holder = function)
+                    function.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newVariable(varName, holder = declStmt)
+                            }
+                        }
+                }
+            }
+            content.startsWith("multidefine:") -> {
+                // "multidefine:<name1>,<name2>,..." declares several real, top-level, single
+                // parameter functions in ONE file/TU, so a single addSource call introduces several
+                // new non-local symbols at once.
+                val names = content.removePrefix("multidefine:").split(",")
+                for (name in names) {
+                    newFunction(name, holder = tu, enterScope = true) {
+                        newParameter("p", holder = it)
+                    }
+                }
+            }
+            content.startsWith("classref:") -> {
+                // "classref:ClassName:fieldName" declares a record ClassName with a method "reader"
+                // that returns a bare, unqualified reference to fieldName on the implicit receiver,
+                // so SymbolResolver infers a Field stub inside ClassName's RecordScope (since
+                // StaleStubTestLanguage/TestLanguage implements HasImplicitReceiver).
+                val (className, fieldName) = content.removePrefix("classref:").split(":")
+                newRecord(className, "class", holder = tu, enterScope = true) { record ->
+                    newMethod(
+                        "reader",
+                        recordDeclaration = record,
+                        holder = record,
+                        enterScope = true,
+                    ) { reader ->
+                        reader.receiver = newVariable("this", record.toType())
+                        reader.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newReturn {
+                                    it.returnValue = newReference(fieldName)
+                                }
+                            }
+                    }
+                }
+            }
+            content.startsWith("definefield:") -> {
+                // "definefield:ClassName:fieldName" adds a real Field named fieldName to the
+                // *pre-existing* record ClassName (looked up via the live, shared ScopeManager),
+                // mirroring "definemethod:" but for a Field/Reference instead of a Method/Call.
+                val (className, fieldName) = content.removePrefix("definefield:").split(":")
+                val record =
+                    scopeManager
+                        .lookupSymbolByName(
+                            Name(className),
+                            language,
+                            startScope = scopeManager.globalScope,
+                        )
+                        .filterIsInstance<Record>()
+                        .single()
+
+                scopeManager.enterScope(record)
+                val field = newField(fieldName, holder = record)
+                scopeManager.leaveScope(record)
+
+                tu.addDeclaration(field)
+            }
+            content.startsWith("membercall:") -> {
+                // "membercall:ClassName:methodName" declares an (initially empty) record ClassName
+                // and a top-level, ZERO-argument function "main(p: ClassName)" whose body performs
+                // an EXPLICIT-receiver member call `p.methodName()` -- a genuine MemberCall/
+                // MemberAccess resolved via `p`'s static type, not an implicit "this" receiver like
+                // "classcall:". `main` is not lexically inside ClassName at all, so this exercises
+                // reconcileCalls's receiver-type-based (not lexical-scope-based) reachability check
+                // for explicit member calls/accesses. Zero-argument to match "definemethod:"'s
+                // signature (which only ever adds a receiver, no other parameters).
+                val (className, methodName) = content.removePrefix("membercall:").split(":")
+                newRecord(className, "class", holder = tu, enterScope = true) {}
+                newFunction("main", holder = tu, enterScope = true) { main ->
+                    newParameter("p", objectType(className), holder = main)
+                    main.body =
+                        newBlock(enterScope = true) { block ->
+                            val access = newMemberAccess(methodName, base = newReference("p"))
+                            block.statements += newMemberCall(access)
+                        }
+                }
+            }
+            content.startsWith("membercallderived:") -> {
+                // "membercallderived:BaseName:DerivedName:methodName" declares two (initially
+                // empty) records, DerivedName extending BaseName, and a top-level, zero-argument
+                // function "main(p: DerivedName)" whose body performs an explicit-receiver member
+                // call `p.methodName()`. Used to exercise isReachableFrom's ancestor-chain walk: a
+                // method later added to the BASE class must still resolve a pre-existing call whose
+                // receiver's static type is the DERIVED class.
+                val (baseName, derivedName, methodName) =
+                    content.removePrefix("membercallderived:").split(":")
+                val base = newRecord(baseName, "class", holder = tu, enterScope = true) {}
+                val derived = newRecord(derivedName, "class", holder = tu, enterScope = true) {}
+                derived.addSuperClass(base.toType())
+                newFunction("main", holder = tu, enterScope = true) { main ->
+                    newParameter("p", objectType(derivedName), holder = main)
+                    main.body =
+                        newBlock(enterScope = true) { block ->
+                            val access = newMemberAccess(methodName, base = newReference("p"))
+                            block.statements += newMemberCall(access)
+                        }
+                }
+            }
+            content.startsWith("definezeroarg:") -> {
+                // "definezeroarg:<name>" declares a single, real, top-level, ZERO-parameter free
+                // function <name>().
+                val name = content.removePrefix("definezeroarg:")
+                newFunction(name, holder = tu, enterScope = true) {}
+            }
+            content.startsWith("defineconstructor2:") -> {
+                // "defineconstructor2:ClassName" adds a SECOND, distinct, real zero-arg constructor
+                // to the *pre-existing* record ClassName, so that a Construction resolved against
+                // BOTH constructors is genuinely ambiguous (two equally-viable candidates).
+                val className = content.removePrefix("defineconstructor2:")
+                val record =
+                    scopeManager
+                        .lookupSymbolByName(
+                            Name(className),
+                            language,
+                            startScope = scopeManager.globalScope,
+                        )
+                        .filterIsInstance<Record>()
+                        .single()
+
+                scopeManager.enterScope(record)
+                val constructor =
+                    newConstructor(className, recordDeclaration = record, enterScope = true) {}
+                scopeManager.addDeclaration(constructor)
+                scopeManager.leaveScope(record)
+
+                tu.addDeclaration(constructor)
+            }
         }
 
         return tu
@@ -332,8 +514,10 @@ class IncrementalUpdateTest {
         assertEquals("foo", realFoo.name.localName)
         assertFalse(realFoo.isInferred)
 
-        // The stale invokes edge (and the DFG edges that hung off it) must be gone.
-        assertTrue(fooCall.invokes.isEmpty())
+        // The stale invokes edge (and the DFG edges that hung off it) must be gone, replaced by the
+        // real declaration -- the batched reconciliation adds it immediately rather than leaving
+        // `invokes` empty until a later runDirtyPasses.
+        assertEquals(listOf(realFoo), fooCall.invokes)
         assertFalse(fooCall.prevDFG.contains(stub))
         assertTrue(param.prevDFG.isEmpty())
 
@@ -396,8 +580,9 @@ class IncrementalUpdateTest {
         assertEquals("helper", realHelper.name.localName)
         assertFalse(realHelper.isInferred)
 
-        // The stale invokes edge must be gone, and the now-orphaned stub detached from the record.
-        assertTrue(helperCall.invokes.isEmpty())
+        // The stale invokes edge must be gone (replaced by the real declaration), and the
+        // now-orphaned stub detached from the record.
+        assertEquals(listOf(realHelper), helperCall.invokes)
         assertTrue(stub.calledBy.isEmpty())
         assertFalse(record.methods.contains(stub))
 
@@ -456,12 +641,14 @@ class IncrementalUpdateTest {
         assertFalse(record.constructors.contains(stub))
 
         // Regression test: Construction.constructor is a separate backing field that the setter
-        // forwards one-directionally to `invokes` -- clearing `construction.invokes` alone must
-        // not leave `construction.constructor` still dangling at the now-detached stub.
-        assertTrue(construction.invokes.isEmpty())
-        assertNull(
+        // forwards one-directionally to `invokes` -- mutating `construction.invokes` directly must
+        // not leave `construction.constructor` stale; it must be resynced to the real constructor
+        // that replaced the now-detached stub.
+        assertEquals(listOf<Function>(realConstructor), construction.invokes)
+        assertSame(
+            realConstructor,
             construction.constructor,
-            "Expected Construction.constructor to be reset alongside the cleared invokes edge",
+            "Expected Construction.constructor to be resynced to the new real constructor",
         )
 
         assertTrue(result.dirtyNodes[realConstructor]?.contains(SymbolResolver::class) == true)
@@ -513,7 +700,7 @@ class IncrementalUpdateTest {
         assertFalse(realFoo.isInferred)
 
         // The stub must still be recognized as stale and cleaned up, despite the arity mismatch.
-        assertTrue(fooCall.invokes.isEmpty())
+        assertEquals(listOf(realFoo), fooCall.invokes)
         assertTrue(stub.calledBy.isEmpty())
         assertFalse(component.translationUnits.first().declarations.contains(stub))
         assertTrue(result.dirtyNodes[realFoo]?.contains(SymbolResolver::class) == true)
@@ -562,13 +749,573 @@ class IncrementalUpdateTest {
         val realFoo = tu.declarations.filterIsInstance<Function>().single()
         assertFalse(realFoo.isInferred)
 
-        // The stale invokes edge is gone...
-        assertTrue(fooCall.invokes.isEmpty())
+        // The stale invokes edge is gone, replaced by the real declaration...
+        assertEquals(listOf(realFoo), fooCall.invokes)
         // ...and the enclosing TranslationUnit (not a Function, since there is none) must have
         // been marked dirty for SymbolResolver, so a later runDirtyPasses actually revisits it.
         assertTrue(result.dirtyNodes[callerTu]?.contains(SymbolResolver::class) == true)
 
         manager.runDirtyPasses(result)
         assertEquals(listOf(realFoo), fooCall.invokes)
+    }
+
+    @Test
+    fun testAddSourceResolvesCompletelyUnresolvedCall() {
+        // Unlike "call:" with the default configuration (which always gets an inferred stub),
+        // disabling function inference leaves the call genuinely, completely unresolved -- no stub
+        // is ever created. reconcileCalls must still pick this up once the real function arrives.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-unresolved-call-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .inferenceConfiguration(
+                    InferenceConfiguration.Builder().inferFunctions(false).build()
+                )
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        assertTrue(
+            fooCall.invokes.isEmpty(),
+            "Expected the call to remain completely unresolved with function inference disabled",
+        )
+        val main = result.functions.single { it.name.localName == "main" }
+
+        val second = tempSource(topLevel, "foo.stale", "define:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val realFoo = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(realFoo.isInferred)
+
+        assertEquals(listOf(realFoo), fooCall.invokes)
+        assertTrue(result.dirtyNodes[realFoo]?.contains(SymbolResolver::class) == true)
+        assertTrue(result.dirtyNodes[main]?.contains(SymbolResolver::class) == true)
+    }
+
+    @Test
+    fun testAddSourceAddsNewCandidateAlongsideExistingRealInvoke() {
+        // A call already resolved to a real, non-inferred function must not lose that resolution
+        // just because a second, equally-viable real function shows up later -- Call.invokes
+        // tolerates multiple candidates, so the new one is simply added.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-multi-candidate-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val firstBarFile = tempSource(topLevel, "bar.stale", "define:bar")
+        val callerFile = tempSource(topLevel, "caller.stale", "call:bar")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(firstBarFile, callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val barCall = result.calls.single { it.name.localName == "bar" }
+        val firstBar = result.functions.single { it.name.localName == "bar" }
+        assertFalse(firstBar.isInferred)
+        assertEquals(listOf(firstBar), barCall.invokes)
+        val main = result.functions.single { it.name.localName == "main" }
+
+        val second = tempSource(topLevel, "bar2.stale", "define:bar")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val secondBar = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(secondBar.isInferred)
+        assertNotSame(firstBar, secondBar)
+
+        // Both candidates must be present -- the pre-existing, valid one was not removed.
+        assertEquals(setOf(firstBar, secondBar), barCall.invokes.toSet())
+        assertTrue(result.dirtyNodes[secondBar]?.contains(SymbolResolver::class) == true)
+        assertTrue(result.dirtyNodes[main]?.contains(SymbolResolver::class) == true)
+    }
+
+    @Test
+    fun testAddSourceRemovesInferredStubButKeepsExistingRealCandidate() {
+        // A call whose `invokes` contains BOTH a real candidate and an inferred stub: once a
+        // matching real declaration is added, only the inferred stub (the "bridge") is removed;
+        // the pre-existing real candidate is left alone.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-mixed-invokes-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:baz")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val bazCall = result.calls.single { it.name.localName == "baz" }
+        val stub = bazCall.invokes.singleOrNull()
+        assertNotNull(stub, "Expected the unresolved call to 'baz' to create an inferred stub")
+        assertTrue(stub.isInferred)
+
+        // SymbolResolver never actually leaves an invokes edge in exactly this state itself (a real
+        // candidate never coexists with an inferred one for the same, still-unresolved call), so we
+        // construct it directly here to exercise reconcileCalls's "remove only the inferred one,
+        // keep everything else" behavior in isolation.
+        val decoyFile = tempSource(topLevel, "decoy.stale", "define:decoy")
+        val decoyTu = manager.addSource(result, component, decoyFile)
+        assertNotNull(decoyTu)
+        val decoyFn = decoyTu.declarations.filterIsInstance<Function>().single()
+        bazCall.invokes = (bazCall.invokes + decoyFn).toMutableList()
+        assertEquals(setOf(stub, decoyFn), bazCall.invokes.toSet())
+
+        val second = tempSource(topLevel, "baz.stale", "define:baz")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val realBaz = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(realBaz.isInferred)
+
+        assertEquals(setOf(decoyFn, realBaz), bazCall.invokes.toSet())
+        assertTrue(stub.calledBy.isEmpty())
+        assertFalse(component.translationUnits.flatMap { it.declarations }.contains(stub))
+    }
+
+    @Test
+    fun testAddSourceResolvesUnresolvedReference() {
+        // A plain, non-call Reference (e.g. a global variable access) that is currently unresolved
+        // gets resolved once a matching real, non-local declaration is added.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-unresolved-ref-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "refunresolved:x")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val ref = result.allChildren<Reference>().single { it.name.localName == "x" }
+        assertNull(ref.refersTo, "Expected the reference to 'x' to be completely unresolved")
+        val main = result.functions.single { it.name.localName == "main" }
+
+        val second = tempSource(topLevel, "x.stale", "defineglobal:x")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val realX = tu.declarations.filterIsInstance<Variable>().single()
+        assertFalse(realX.isInferred)
+
+        assertSame(realX, ref.refersTo)
+        assertTrue(result.dirtyNodes[main]?.contains(SymbolResolver::class) == true)
+    }
+
+    @Test
+    fun testAddSourceReplacesInferredFieldReference() {
+        // A Reference resolved to an inferred Field gets replaced by the real Field once it is
+        // added, mirroring the inferred-stub-is-a-bridge behavior for calls, generalized to the
+        // single-edge Reference case.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-inferred-field-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "classref:Greeter:secret")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val ref = result.allChildren<Reference>().single { it.name.localName == "secret" }
+        val inferredField = ref.refersTo
+        assertNotNull(inferredField, "Expected the reference to 'secret' to infer a Field")
+        assertTrue(inferredField.isInferred)
+        assertTrue(inferredField is Field, "Expected the inferred declaration to be a Field")
+
+        val record = result.records.single { it.name.localName == "Greeter" }
+        assertTrue(record.fields.contains(inferredField))
+
+        val second = tempSource(topLevel, "secret.stale", "definefield:Greeter:secret")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val realField = tu.declarations.filterIsInstance<Field>().single()
+        assertFalse(realField.isInferred)
+
+        assertSame(realField, ref.refersTo)
+        assertFalse(record.fields.contains(inferredField))
+    }
+
+    @Test
+    fun testAddSourceLeavesReferenceResolvedToRealDeclarationUntouched() {
+        // Case 3 for references (deliberately left alone): a Reference already resolved to a real,
+        // non-inferred declaration must not be re-pointed at a new, same-named declaration based on
+        // a name/scope heuristic.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-already-resolved-ref-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "globalwithref:x")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val ref = result.allChildren<Reference>().single { it.name.localName == "x" }
+        val originalX = ref.refersTo
+        assertNotNull(originalX)
+        assertFalse(originalX.isInferred)
+
+        val second = tempSource(topLevel, "x2.stale", "defineglobal:x")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val newX = tu.declarations.filterIsInstance<Variable>().single()
+        assertNotSame(originalX, newX)
+
+        // Untouched: still the original declaration, not the new, same-named one.
+        assertSame(originalX, ref.refersTo)
+    }
+
+    @Test
+    fun testAddSourceIgnoresLocalVariableAsNewSymbol() {
+        // A function-local variable introduced by addSource must never be treated as a new
+        // non-local symbol -- even if its name collides with an existing unresolved reference
+        // elsewhere in the graph, that reference must be left untouched.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-local-var-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "refunresolved:x")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val ref = result.allChildren<Reference>().single { it.name.localName == "x" }
+        assertNull(ref.refersTo)
+
+        val second = tempSource(topLevel, "local.stale", "localvar:helper:x")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        assertNull(
+            ref.refersTo,
+            "A function-local variable must not be treated as a new non-local symbol",
+        )
+    }
+
+    @Test
+    fun testAddSourceReconcilesMultipleNewSymbolsFromOneScan() {
+        // A single addSource call introducing several new non-local symbols at once must resolve
+        // ALL of them correctly -- exercising the batched, single-scan reconciliation with more
+        // than one candidate.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-batched-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerA = tempSource(topLevel, "a.stale", "call:alpha")
+        val callerB = tempSource(topLevel, "b.stale", "call:beta")
+        val callerC = tempSource(topLevel, "c.stale", "call:gamma")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerA, callerB, callerC)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val alphaCall = result.calls.single { it.name.localName == "alpha" }
+        val betaCall = result.calls.single { it.name.localName == "beta" }
+        val gammaCall = result.calls.single { it.name.localName == "gamma" }
+        val alphaStub = alphaCall.invokes.single()
+        val betaStub = betaCall.invokes.single()
+        val gammaStub = gammaCall.invokes.single()
+        assertTrue(alphaStub.isInferred && betaStub.isInferred && gammaStub.isInferred)
+
+        val second = tempSource(topLevel, "defs.stale", "multidefine:alpha,beta,gamma")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+
+        val realFunctions =
+            tu.declarations.filterIsInstance<Function>().associateBy { it.name.localName }
+        assertEquals(setOf("alpha", "beta", "gamma"), realFunctions.keys)
+
+        assertEquals(listOf(realFunctions["alpha"]), alphaCall.invokes)
+        assertEquals(listOf(realFunctions["beta"]), betaCall.invokes)
+        assertEquals(listOf(realFunctions["gamma"]), gammaCall.invokes)
+
+        assertTrue(alphaStub.calledBy.isEmpty())
+        assertTrue(betaStub.calledBy.isEmpty())
+        assertTrue(gammaStub.calledBy.isEmpty())
+    }
+
+    @Test
+    fun testAddSourceDoesNotLinkUnrelatedFreeFunctionToMemberCall() {
+        // Regression test: reachability for an EXPLICIT member call (`p.render()`) must be decided
+        // via the receiver's static type -> its RecordDeclaration, not via a lexical scope-chain
+        // walk from the call site. A lexical walk would incorrectly find an unrelated, same-named,
+        // same-signature top-level free function (since `main` and the free function share the same
+        // top-level/global scope), even though real SymbolResolver would never conflate a member
+        // call with a free function.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-membercall-unrelated-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "membercall:Widget:render")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val renderCall = result.calls.single { it.name.localName == "render" }
+        assertTrue(renderCall is MemberCall, "Expected an explicit-receiver MemberCall")
+        val stub = renderCall.invokes.singleOrNull()
+        assertNotNull(
+            stub,
+            "Expected the unresolved member call to 'render' to create an inferred stub",
+        )
+        assertTrue(stub.isInferred)
+        assertTrue(stub is Method)
+
+        val widget = result.records.single { it.name.localName == "Widget" }
+        assertTrue(widget.methods.contains(stub))
+
+        // Add an UNRELATED, top-level free function that shares the name and a compatible
+        // (zero-arg) signature, but is not a member of Widget at all.
+        val second = tempSource(topLevel, "unrelated.stale", "definezeroarg:render")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val freeRender = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(freeRender.isInferred)
+
+        // The MemberCall must NOT have linked to the unrelated free function, and the inferred
+        // stub must still be the sole (unresolved-but-inferred) candidate.
+        assertFalse(renderCall.invokes.contains(freeRender))
+        assertEquals(listOf<Function>(stub), renderCall.invokes)
+        assertTrue(widget.methods.contains(stub))
+    }
+
+    @Test
+    fun testAddSourceResolvesMemberCallViaReceiverTypeRegardlessOfLexicalLocation() {
+        // Positive counterpart of the test above: once the REAL method is added to the receiver's
+        // actual record, the explicit member call must resolve correctly via the receiver-type-
+        // based reachability check, even though the caller (`main`) is not lexically inside Widget
+        // at all.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-membercall-resolved-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "membercall:Widget:render")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val renderCall = result.calls.single { it.name.localName == "render" }
+        val stub = renderCall.invokes.singleOrNull()
+        assertNotNull(
+            stub,
+            "Expected the unresolved member call to 'render' to create an inferred stub",
+        )
+        assertTrue(stub.isInferred)
+
+        val second = tempSource(topLevel, "widget_render.stale", "definemethod:Widget:render")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realRender = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(realRender.isInferred)
+
+        assertEquals(listOf(realRender), renderCall.invokes)
+        assertTrue(stub.calledBy.isEmpty())
+    }
+
+    @Test
+    fun testAddSourcePreservesAmbiguousConstructionCandidates() {
+        // Regression test: Construction.constructor's setter forwards a non-null assignment to
+        // `invokes` WHOLESALE (`invokes = mutableListOf(value)`). If reconcileCalls resynced it
+        // unconditionally, a SECOND addSource call that adds another, equally-viable real
+        // constructor would silently collapse the (now genuinely ambiguous) `invokes` back down to
+        // a single entry instead of preserving both candidates.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-ambiguous-construction-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "classnew:Foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val record = result.records.single { it.name.localName == "Foo" }
+        val main = result.functions.single { it.name.localName == "main" }
+        val construction = main.body.allChildren<Construction>().single()
+
+        val stub = record.constructors.singleOrNull()
+        assertNotNull(stub, "Expected `new Foo()` to create an inferred Constructor stub")
+        assertTrue(stub.isInferred)
+
+        // First addSource: adds the first real constructor. This is the already-covered
+        // (0 -> 1) safe-resync case -- the inferred stub is replaced by ctor1 alone.
+        val first = tempSource(topLevel, "ctor1.stale", "defineconstructor:Foo")
+        val firstTu = manager.addSource(result, component, first)
+        assertNotNull(firstTu)
+        val ctor1 = firstTu.declarations.filterIsInstance<Constructor>().single()
+        assertFalse(ctor1.isInferred)
+        assertEquals(listOf<Function>(ctor1), construction.invokes)
+        assertSame(ctor1, construction.constructor)
+
+        // Second addSource: adds a SECOND, distinct, equally-viable real constructor. Since ctor1
+        // is real (not inferred), it must be kept, and ctor2 simply added alongside it -- this is
+        // now a genuinely ambiguous Construction with two real candidates.
+        val second = tempSource(topLevel, "ctor2.stale", "defineconstructor2:Foo")
+        val secondTu = manager.addSource(result, component, second)
+        assertNotNull(secondTu)
+        val ctor2 = secondTu.declarations.filterIsInstance<Constructor>().single()
+        assertFalse(ctor2.isInferred)
+        assertNotSame(ctor1, ctor2)
+
+        // Both candidates must be present -- `constructor`'s destructive resync must have been
+        // skipped once `invokes` held more than one candidate.
+        assertEquals(setOf<Function>(ctor1, ctor2), construction.invokes.toSet())
+    }
+
+    @Test
+    fun testAddSourceResolvesMemberCallAgainstMethodAddedToBaseClass() {
+        // Regression test: isReachableFrom's member-access branch must walk the receiver's
+        // ancestor chain (like SymbolResolver.resolveMemberByName does), not just check for an
+        // exact declaring-type match. A pre-existing call `p.methodName()` where `p`'s static type
+        // is Derived, and a new method later added to Derived's BASE class, must still resolve --
+        // an exact-match-only check would wrongly conclude the base method is unreachable from a
+        // Derived-typed receiver.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-inherited-membercall-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile =
+            tempSource(topLevel, "caller.stale", "membercallderived:Base:Derived:greet")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val greetCall = result.calls.single { it.name.localName == "greet" }
+        assertTrue(greetCall is MemberCall, "Expected an explicit-receiver MemberCall")
+        val stub = greetCall.invokes.singleOrNull()
+        assertNotNull(
+            stub,
+            "Expected the unresolved member call to 'greet' to create an inferred stub",
+        )
+        assertTrue(stub.isInferred)
+
+        // Add the real method to the BASE class, not Derived (whose static type is what the
+        // receiver `p` actually has).
+        val second = tempSource(topLevel, "base_greet.stale", "definemethod:Base:greet")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realGreet = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(realGreet.isInferred)
+
+        // The call must resolve against the inherited method, and the inferred stub must be gone.
+        assertEquals(listOf(realGreet), greetCall.invokes)
+        assertTrue(stub.calledBy.isEmpty())
     }
 }
