@@ -1008,6 +1008,8 @@ interface Csharp : Library {
                         }
                     "ConditionalExpressionSyntax" -> ConditionalExpressionSyntax(nativeValue)
                     "TypeOfExpressionSyntax" -> TypeOfExpressionSyntax(nativeValue)
+                    "InterpolatedStringExpressionSyntax" ->
+                        InterpolatedStringExpressionSyntax(nativeValue)
                     "PrefixUnaryExpressionSyntax" -> PrefixUnaryExpressionSyntax(nativeValue)
                     "PostfixUnaryExpressionSyntax" -> PostfixUnaryExpressionSyntax(nativeValue)
                     // In Roslyn all of these are a TypeSyntax and therefore an ExpressionSyntax,
@@ -1126,6 +1128,75 @@ interface Csharp : Library {
          */
         class TypeOfExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val type: TypeSyntax by lazy { INSTANCE.GetTypeOfExpressionType(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`InterpolatedStringExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.interpolatedstringexpressionsyntax)
+         * class, i.e. `$"Hello {name}!"`.
+         */
+        class InterpolatedStringExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val contents: List<InterpolatedStringContentSyntax> by lazy {
+                val count = INSTANCE.GetInterpolatedStringContentCount(this)
+                (0 until count).map { i -> INSTANCE.GetInterpolatedStringContent(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`InterpolatedStringContentSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.interpolatedstringcontentsyntax)
+         * class, i.e. one piece of an interpolated string: either a literal text run
+         * ([InterpolatedStringTextSyntax]) or an interpolation, the `{...}` part
+         * ([InterpolationSyntax]).
+         */
+        open class InterpolatedStringContentSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any? {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "InterpolatedStringTextSyntax" -> InterpolatedStringTextSyntax(nativeValue)
+                    "InterpolationSyntax" -> InterpolationSyntax(nativeValue)
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        /** A literal text of an [InterpolatedStringExpressionSyntax]. */
+        class InterpolatedStringTextSyntax(p: Pointer? = Pointer.NULL) :
+            InterpolatedStringContentSyntax(p) {
+            val text: String by lazy { INSTANCE.GetInterpolatedStringTextValue(this) }
+        }
+
+        /** An interpolation, the `{...}` part of an [InterpolatedStringExpressionSyntax]. */
+        class InterpolationSyntax(p: Pointer? = Pointer.NULL) : InterpolatedStringContentSyntax(p) {
+            val expression: ExpressionSyntax by lazy { INSTANCE.GetInterpolationExpression(this) }
+
+            /** The `:format` part of `{x:format}`, e.g. `F2` for `{x:F2}`. `null` without one. */
+            val formatClause: InterpolationFormatClauseSyntax? by lazy {
+                INSTANCE.GetInterpolationFormatClause(this)
+            }
+
+            /** The `,alignment` part of `{x,10}`. `null` without one. */
+            val alignmentClause: InterpolationAlignmentClauseSyntax? by lazy {
+                INSTANCE.GetInterpolationAlignmentClause(this)
+            }
+        }
+
+        /** The format string of an [InterpolationSyntax.formatClause], e.g. `F2` for `{x:F2}`. */
+        class InterpolationFormatClauseSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val value: String by lazy { INSTANCE.GetInterpolationFormatClauseValue(this) }
+        }
+
+        /**
+         * The alignment of an [InterpolationSyntax.alignmentClause], e.g. `10` for `{x,10}`. A
+         * positive value right-aligns (pads on the left), a negative one left-aligns (pads on the
+         * right).
+         */
+        class InterpolationAlignmentClauseSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val value: ExpressionSyntax by lazy {
+                INSTANCE.GetInterpolationAlignmentClauseValue(this)
+            }
         }
 
         /**
@@ -1651,6 +1722,31 @@ interface Csharp : Library {
     ): AST.ExpressionSyntax
 
     fun GetTypeOfExpressionType(handle: AST.TypeOfExpressionSyntax): AST.TypeSyntax
+
+    fun GetInterpolatedStringContentCount(handle: AST.InterpolatedStringExpressionSyntax): Int
+
+    fun GetInterpolatedStringContent(
+        handle: AST.InterpolatedStringExpressionSyntax,
+        index: Int,
+    ): AST.InterpolatedStringContentSyntax
+
+    fun GetInterpolatedStringTextValue(handle: AST.InterpolatedStringTextSyntax): String
+
+    fun GetInterpolationExpression(handle: AST.InterpolationSyntax): AST.ExpressionSyntax
+
+    fun GetInterpolationFormatClause(
+        handle: AST.InterpolationSyntax
+    ): AST.InterpolationFormatClauseSyntax?
+
+    fun GetInterpolationFormatClauseValue(handle: AST.InterpolationFormatClauseSyntax): String
+
+    fun GetInterpolationAlignmentClause(
+        handle: AST.InterpolationSyntax
+    ): AST.InterpolationAlignmentClauseSyntax?
+
+    fun GetInterpolationAlignmentClauseValue(
+        handle: AST.InterpolationAlignmentClauseSyntax
+    ): AST.ExpressionSyntax
 
     fun GetPrefixUnaryExpressionOperand(
         handle: AST.PrefixUnaryExpressionSyntax

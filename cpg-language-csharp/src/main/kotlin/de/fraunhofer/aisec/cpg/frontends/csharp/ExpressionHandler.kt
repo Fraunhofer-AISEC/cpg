@@ -84,6 +84,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.GenericNameSyntax -> handleGenericName(node)
             is Csharp.AST.PredefinedTypeSyntax -> handlePredefinedTypeExpression(node)
             is Csharp.AST.TypeOfExpressionSyntax -> handleTypeOfExpression(node)
+            is Csharp.AST.InterpolatedStringExpressionSyntax ->
+                handleInterpolatedStringExpression(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -141,6 +143,88 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             referencedType = frontend.typeOf(node.type),
             rawNode = node,
         )
+    }
+
+    /**
+     * Translates an
+     * [InterpolatedStringExpressionSyntax][Csharp.AST.InterpolatedStringExpressionSyntax] (e.g.
+     * `$"Hello {name}!"`) into string concatenation: the text pieces become string [Literal]s, the
+     * interpolations (the `{...}` parts) are translated as-is, and all of it is joined with
+     * implicit `+` [BinaryOperator]s.
+     *
+     * An interpolation with a format clause, e.g. `{x:F2}`, formats its value before it is
+     * concatenated. At runtime, this calls
+     * [`IFormattable.ToString(format, provider)`](https://learn.microsoft.com/en-us/dotnet/api/system.iformattable.tostring)
+     * on it, so we model it as a call to `x.ToString("F2")`.
+     *
+     * Note: The alignment of an interpolation, e.g. `{x,10}`, is not modeled yet and is recorded as
+     * a problem instead.
+     *
+     * C# spec:
+     * [Interpolated string expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1283-interpolated-string-expressions)
+     */
+    private fun handleInterpolatedStringExpression(
+        node: Csharp.AST.InterpolatedStringExpressionSyntax
+    ): Expression {
+        val stringType = frontend.language.builtInTypes.getValue("string")
+
+        val parts =
+            node.contents.map { content ->
+                when (content) {
+                    is Csharp.AST.InterpolatedStringTextSyntax ->
+                        newLiteral(content.text, stringType, rawNode = content)
+                    is Csharp.AST.InterpolationSyntax -> {
+                        var value = handle(content.expression)
+                        val format = content.formatClause
+                        val alignment = content.alignmentClause
+
+                        if (format != null) {
+                            // x.ToString("F2")
+                            val code = frontend.codeOf(content)
+                            val location = frontend.locationOf(content)
+                            value =
+                                newMemberCall(
+                                        newMemberAccess(name = "ToString", base = value)
+                                            .implicit(code = code, location = location)
+                                    )
+                                    .implicit(code = code, location = location)
+                                    .apply {
+                                        addArgument(
+                                            newLiteral(format.value, stringType, rawNode = format)
+                                        )
+                                    }
+                        }
+
+                        if (alignment != null) {
+                            value.additionalProblems +=
+                                newProblemExpression(
+                                    "The alignment of an interpolation is not modeled",
+                                    type = ProblemNode.ProblemType.TRANSLATION,
+                                    rawNode = alignment.value,
+                                )
+                        }
+
+                        value
+                    }
+                    else ->
+                        ProblemExpression(
+                            "Not supported in an interpolated string: ${content.csharpType}"
+                        )
+                }
+            }
+
+        return when {
+            parts.isEmpty() -> newLiteral("", stringType, rawNode = node)
+            parts.size == 1 -> parts.single()
+            else ->
+                parts.reduce { lhs, rhs ->
+                    newBinaryOperator(operatorCode = "+", rawNode = node).apply {
+                        this.lhs = lhs
+                        this.rhs = rhs
+                        this.isImplicit = true
+                    }
+                }
+        }
     }
 
     /**

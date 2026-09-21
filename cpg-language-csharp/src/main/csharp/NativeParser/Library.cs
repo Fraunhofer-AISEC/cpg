@@ -1205,6 +1205,56 @@ public static class Library
         return Register(((TypeOfExpressionSyntax)Nodes[handlePtr]).Type);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolatedStringContentCount")]
+    public static int GetInterpolatedStringContentCount(IntPtr handlePtr)
+    {
+        return ((InterpolatedStringExpressionSyntax)Nodes[handlePtr]).Contents.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolatedStringContent")]
+    public static IntPtr GetInterpolatedStringContent(IntPtr handlePtr, int index)
+    {
+        return Register(((InterpolatedStringExpressionSyntax)Nodes[handlePtr]).Contents[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolatedStringTextValue")]
+    public static IntPtr GetInterpolatedStringTextValue(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((InterpolatedStringTextSyntax)Nodes[handlePtr]).TextToken.ValueText);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolationExpression")]
+    public static IntPtr GetInterpolationExpression(IntPtr handlePtr)
+    {
+        return Register(((InterpolationSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolationFormatClause")]
+    public static IntPtr GetInterpolationFormatClause(IntPtr handlePtr)
+    {
+        var formatClause = ((InterpolationSyntax)Nodes[handlePtr]).FormatClause;
+        return formatClause != null ? Register(formatClause) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolationFormatClauseValue")]
+    public static IntPtr GetInterpolationFormatClauseValue(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((InterpolationFormatClauseSyntax)Nodes[handlePtr]).FormatStringToken.ValueText);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolationAlignmentClause")]
+    public static IntPtr GetInterpolationAlignmentClause(IntPtr handlePtr)
+    {
+        var alignmentClause = ((InterpolationSyntax)Nodes[handlePtr]).AlignmentClause;
+        return alignmentClause != null ? Register(alignmentClause) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInterpolationAlignmentClauseValue")]
+    public static IntPtr GetInterpolationAlignmentClauseValue(IntPtr handlePtr)
+    {
+        return Register(((InterpolationAlignmentClauseSyntax)Nodes[handlePtr]).Value);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetObjectCreationExpressionType")]
     public static IntPtr GetObjectCreationExpressionType(IntPtr handlePtr)
     {
