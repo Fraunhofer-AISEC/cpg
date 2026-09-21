@@ -1175,6 +1175,30 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(((MemberAccessExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetConditionalAccessExpressionExpression")]
+    public static IntPtr GetConditionalAccessExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((ConditionalAccessExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConditionalAccessExpressionWhenNotNull")]
+    public static IntPtr GetConditionalAccessExpressionWhenNotNull(IntPtr handlePtr)
+    {
+        return Register(((ConditionalAccessExpressionSyntax)Nodes[handlePtr]).WhenNotNull);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMemberBindingExpressionName")]
+    public static IntPtr GetMemberBindingExpressionName(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((MemberBindingExpressionSyntax)Nodes[handlePtr]).Name.Identifier.ToString());
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetElementBindingExpressionArgumentList")]
+    public static IntPtr GetElementBindingExpressionArgumentList(IntPtr handlePtr)
+    {
+        return Register(((ElementBindingExpressionSyntax)Nodes[handlePtr]).ArgumentList);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetObjectCreationExpressionType")]
     public static IntPtr GetObjectCreationExpressionType(IntPtr handlePtr)
     {

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newAssign
@@ -72,6 +73,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.DefaultExpressionSyntax -> handleDefaultExpression(node)
             is Csharp.AST.ParenthesizedExpressionSyntax -> handleParenthesizedExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
+            is Csharp.AST.ConditionalAccessExpressionSyntax ->
+                handleConditionalAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
             is Csharp.AST.BaseExpressionSyntax -> handleBaseExpression(node)
             is Csharp.AST.ThrowExpressionSyntax -> handleThrowExpression(node)
@@ -459,6 +462,145 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             operatorCode = node.operatorToken,
             rawNode = node,
         )
+    }
+
+    /**
+     * Translates a
+     * [ConditionalAccessExpressionSyntax][Csharp.AST.ConditionalAccessExpressionSyntax] (e.g.
+     * `a?.b`, `a?.b()`, `a?[i]`).
+     *
+     * We model this as the conditional expression the C# spec defines it:
+     * ```csharp
+     * a?.b
+     * ```
+     *
+     * is equalivalent to:
+     * ```csharp
+     * var tmp = a;
+     * tmp == null ? null : tmp.b;
+     * ```
+     *
+     * `tmp` is modeled as an implicit [ExpressionList]: a [DeclarationStatement] declaring `tmp`,
+     * followed by the [Conditional] that is the value of the whole expression.
+     *
+     * [whenNotNull][Csharp.AST.ConditionalAccessExpressionSyntax.whenNotNull] (`.b` above) starts
+     * with a [MemberBindingExpressionSyntax][Csharp.AST.MemberBindingExpressionSyntax] or
+     * [ElementBindingExpressionSyntax][Csharp.AST.ElementBindingExpressionSyntax] instead of
+     * repeating `a`, since it's implicitly the same, already-null-checked target again.
+     * [translateWhenNotNull] passes `tmp` in for that missing receiver as an explicit parameter
+     *
+     * Note: chained null-conditional operators such as `a?.b?.c` are not supported yet.
+     *
+     * C# spec:
+     * [Null-conditional member access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1288-null-conditional-member-access)
+     */
+    private fun handleConditionalAccessExpression(
+        node: Csharp.AST.ConditionalAccessExpressionSyntax
+    ): ExpressionList {
+        val exprList = newExpressionList()
+
+        /** Builds the temporary holding the target of the access, e.g. `var tmp = a;`. */
+        fun generateReceiver(): Pair<DeclarationStatement, Variable> {
+            val target = handle(node.expression)
+            val tmpName =
+                Name.temporary(prefix = "conditionalAccess", separatorChar = '_', exprList)
+            val tmpVar = newVariable(name = tmpName, type = target.type).implicit()
+            tmpVar.initializer = target
+            frontend.scopeManager.addDeclaration(tmpVar)
+
+            val declStmt = newDeclarationStatement().implicit()
+            declStmt.declarations += tmpVar
+            return Pair(declStmt, tmpVar)
+        }
+
+        /** Translates [whenNotNull] */
+        fun translateWhenNotNull(
+            whenNotNull: Csharp.AST.ExpressionSyntax,
+            receiver: Expression,
+        ): Expression {
+            return when (whenNotNull) {
+                // a?.b
+                is Csharp.AST.MemberBindingExpressionSyntax ->
+                    newMemberAccess(
+                        name = whenNotNull.name,
+                        base = receiver,
+                        operatorCode = ".",
+                        rawNode = whenNotNull,
+                    )
+                // a?[i]
+                is Csharp.AST.ElementBindingExpressionSyntax ->
+                    newSubscription(rawNode = whenNotNull).apply {
+                        this.arrayExpression = receiver
+                        val arguments =
+                            whenNotNull.argumentList.arguments.map { handle(it.expression) }
+                        this.subscriptExpression =
+                            arguments.singleOrNull()
+                                ?: newInitializerList(rawNode = whenNotNull.argumentList)
+                                    .implicit()
+                                    .apply { this.initializers = arguments.toMutableList() }
+                    }
+                // a?.b.c -> a member access chained after the binding
+                is Csharp.AST.MemberAccessExpressionSyntax ->
+                    newMemberAccess(
+                        name = whenNotNull.name,
+                        base = translateWhenNotNull(whenNotNull.expression, receiver),
+                        operatorCode = whenNotNull.operatorToken,
+                        rawNode = whenNotNull,
+                    )
+                // a?.b() -> a call chained after the binding
+                is Csharp.AST.InvocationExpressionSyntax -> {
+                    val callee = translateWhenNotNull(whenNotNull.expression, receiver)
+                    val call =
+                        if (callee is MemberAccess) {
+                            newMemberCall(callee, rawNode = whenNotNull)
+                        } else {
+                            newCall(callee, rawNode = whenNotNull)
+                        }
+                    for (arg in whenNotNull.argumentList.arguments) {
+                        call.addArgument(handle(arg.expression))
+                    }
+                    call
+                }
+                // a?.b[i] -> an element access chained after the binding
+                is Csharp.AST.ElementAccessExpressionSyntax ->
+                    newSubscription(rawNode = whenNotNull).apply {
+                        this.arrayExpression =
+                            translateWhenNotNull(whenNotNull.expression, receiver)
+                        val arguments =
+                            whenNotNull.argumentList.arguments.map { handle(it.expression) }
+                        this.subscriptExpression =
+                            arguments.singleOrNull()
+                                ?: newInitializerList(rawNode = whenNotNull.argumentList)
+                                    .implicit()
+                                    .apply { this.initializers = arguments.toMutableList() }
+                    }
+                else ->
+                    ProblemExpression(
+                        "Not supported in a null-conditional access: ${whenNotNull.csharpType}"
+                    )
+            }
+        }
+
+        val (declStmt, receiver) = generateReceiver()
+        exprList.expressions += declStmt
+
+        fun receiverRef() =
+            newReference(name = receiver.name).implicit().apply { refersTo = receiver }
+
+        val isNull =
+            newBinaryOperator(operatorCode = "==").implicit().apply {
+                this.lhs = receiverRef()
+                this.rhs = newLiteral(null, objectType("null")).implicit()
+            }
+        exprList.expressions +=
+            newConditional(
+                condition = isNull,
+                thenExpression = newLiteral(null, objectType("null")).implicit(),
+                elseExpression = translateWhenNotNull(node.whenNotNull, receiverRef()),
+                rawNode = node,
+            )
+
+        return exprList
     }
 
     /**

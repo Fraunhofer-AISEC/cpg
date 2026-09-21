@@ -1018,6 +1018,10 @@ interface Csharp : Library {
                     "ArrayTypeSyntax" -> ArrayTypeSyntax(nativeValue)
                     "AssignmentExpressionSyntax" -> AssignmentExpressionSyntax(nativeValue)
                     "MemberAccessExpressionSyntax" -> MemberAccessExpressionSyntax(nativeValue)
+                    "ConditionalAccessExpressionSyntax" ->
+                        ConditionalAccessExpressionSyntax(nativeValue)
+                    "MemberBindingExpressionSyntax" -> MemberBindingExpressionSyntax(nativeValue)
+                    "ElementBindingExpressionSyntax" -> ElementBindingExpressionSyntax(nativeValue)
                     "InvocationExpressionSyntax" -> InvocationExpressionSyntax(nativeValue)
                     "ElementAccessExpressionSyntax" -> ElementAccessExpressionSyntax(nativeValue)
                     "CastExpressionSyntax" -> CastExpressionSyntax(nativeValue)
@@ -1329,6 +1333,48 @@ interface Csharp : Library {
             val name: String by lazy { INSTANCE.GetMemberAccessExpressionName(this) }
             val operatorToken: String by lazy {
                 INSTANCE.GetMemberAccessExpressionOperatorToken(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ConditionalAccessExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.conditionalaccessexpressionsyntax)
+         * class, i.e. the null-conditional access `a?.b`, `a?.b()` or `a?[i]`.
+         *
+         * [expression] is the part before the `?`, e.g. `a`. [whenNotNull] is everything after it,
+         * e.g. `.b` for `a?.b`. It starts with a [MemberBindingExpressionSyntax] or
+         * [ElementBindingExpressionSyntax], which stands for the implicit, already-null-checked
+         * access to [expression] and does not repeat it.
+         */
+        class ConditionalAccessExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetConditionalAccessExpressionExpression(this)
+            }
+            val whenNotNull: ExpressionSyntax by lazy {
+                INSTANCE.GetConditionalAccessExpressionWhenNotNull(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`MemberBindingExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.memberbindingexpressionsyntax)
+         * class, i.e. the `.b` in `a?.b`. Unlike [MemberAccessExpressionSyntax] it has no
+         * [expression][MemberAccessExpressionSyntax.expression] of its own: the receiver is the
+         * [ConditionalAccessExpressionSyntax.expression] of the enclosing conditional access.
+         */
+        class MemberBindingExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val name: String by lazy { INSTANCE.GetMemberBindingExpressionName(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ElementBindingExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.elementbindingexpressionsyntax)
+         * class, i.e. the `[i]` in `a?[i]`. Like [MemberBindingExpressionSyntax], it has no
+         * receiver of its own.
+         */
+        class ElementBindingExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val argumentList: BaseArgumentListSyntax by lazy {
+                INSTANCE.GetElementBindingExpressionArgumentList(this)
             }
         }
 
@@ -1811,6 +1857,20 @@ interface Csharp : Library {
     fun GetMemberAccessExpressionName(handle: AST.MemberAccessExpressionSyntax): String
 
     fun GetMemberAccessExpressionOperatorToken(handle: AST.MemberAccessExpressionSyntax): String
+
+    fun GetConditionalAccessExpressionExpression(
+        handle: AST.ConditionalAccessExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetConditionalAccessExpressionWhenNotNull(
+        handle: AST.ConditionalAccessExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetMemberBindingExpressionName(handle: AST.MemberBindingExpressionSyntax): String
+
+    fun GetElementBindingExpressionArgumentList(
+        handle: AST.ElementBindingExpressionSyntax
+    ): AST.BaseArgumentListSyntax
 
     fun GetObjectCreationExpressionType(handle: AST.ObjectCreationExpressionSyntax): AST.TypeSyntax
 
