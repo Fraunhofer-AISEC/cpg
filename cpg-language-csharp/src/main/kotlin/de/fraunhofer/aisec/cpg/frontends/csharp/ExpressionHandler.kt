@@ -76,6 +76,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.CheckedExpressionSyntax -> handleCheckedExpression(node)
             is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
             is Csharp.AST.GenericNameSyntax -> handleGenericName(node)
+            is Csharp.AST.PredefinedTypeSyntax -> handlePredefinedTypeExpression(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -106,6 +107,17 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleGenericName(node: Csharp.AST.GenericNameSyntax): Reference {
         return newReference(name = node.identifier, rawNode = node)
+    }
+
+    /**
+     * Translates a [PredefinedTypeSyntax][Csharp.AST.PredefinedTypeSyntax] used in expression (e.g.
+     * `int.Parse("1")`, `string.Empty`) into a [Reference].
+     *
+     * C# spec:
+     * [Simple types](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#835-simple-types)
+     */
+    private fun handlePredefinedTypeExpression(node: Csharp.AST.PredefinedTypeSyntax): Reference {
+        return newReference(name = node.name, rawNode = node)
     }
 
     /**
