@@ -1007,6 +1007,7 @@ interface Csharp : Library {
                             else -> BinaryExpressionSyntax(nativeValue)
                         }
                     "ConditionalExpressionSyntax" -> ConditionalExpressionSyntax(nativeValue)
+                    "TypeOfExpressionSyntax" -> TypeOfExpressionSyntax(nativeValue)
                     "PrefixUnaryExpressionSyntax" -> PrefixUnaryExpressionSyntax(nativeValue)
                     "PostfixUnaryExpressionSyntax" -> PostfixUnaryExpressionSyntax(nativeValue)
                     // In Roslyn all of these are a TypeSyntax and therefore an ExpressionSyntax,
@@ -1116,6 +1117,15 @@ interface Csharp : Library {
             val whenFalse: ExpressionSyntax by lazy {
                 INSTANCE.GetConditionalExpressionWhenFalse(this)
             }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`TypeOfExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typeofexpressionsyntax)
+         * class, i.e. `typeof(T)`.
+         */
+        class TypeOfExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetTypeOfExpressionType(this) }
         }
 
         /**
@@ -1639,6 +1649,8 @@ interface Csharp : Library {
     fun GetConditionalExpressionWhenFalse(
         handle: AST.ConditionalExpressionSyntax
     ): AST.ExpressionSyntax
+
+    fun GetTypeOfExpressionType(handle: AST.TypeOfExpressionSyntax): AST.TypeSyntax
 
     fun GetPrefixUnaryExpressionOperand(
         handle: AST.PrefixUnaryExpressionSyntax

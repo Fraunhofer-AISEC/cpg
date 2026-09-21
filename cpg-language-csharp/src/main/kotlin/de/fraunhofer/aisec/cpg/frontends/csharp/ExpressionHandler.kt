@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.newSubscription
 import de.fraunhofer.aisec.cpg.graph.newThrow
 import de.fraunhofer.aisec.cpg.graph.newTypeExpression
+import de.fraunhofer.aisec.cpg.graph.newTypeReference
 import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -82,6 +83,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
             is Csharp.AST.GenericNameSyntax -> handleGenericName(node)
             is Csharp.AST.PredefinedTypeSyntax -> handlePredefinedTypeExpression(node)
+            is Csharp.AST.TypeOfExpressionSyntax -> handleTypeOfExpression(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -123,6 +125,22 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handlePredefinedTypeExpression(node: Csharp.AST.PredefinedTypeSyntax): Reference {
         return newReference(name = node.name, rawNode = node)
+    }
+
+    /**
+     * Translates a [TypeOfExpressionSyntax][Csharp.AST.TypeOfExpressionSyntax] (e.g. `typeof(int)`)
+     * into a [TypeReference].
+     *
+     * C# spec:
+     * [The typeof operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12818-the-typeof-operator)
+     */
+    private fun handleTypeOfExpression(node: Csharp.AST.TypeOfExpressionSyntax): TypeReference {
+        return newTypeReference(
+            operatorCode = "typeof",
+            type = objectType(Name("Type", parseName("System"))),
+            referencedType = frontend.typeOf(node.type),
+            rawNode = node,
+        )
     }
 
     /**

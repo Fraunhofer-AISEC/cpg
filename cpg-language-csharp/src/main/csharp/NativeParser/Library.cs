@@ -1199,6 +1199,12 @@ public static class Library
         return Register(((ElementBindingExpressionSyntax)Nodes[handlePtr]).ArgumentList);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeOfExpressionType")]
+    public static IntPtr GetTypeOfExpressionType(IntPtr handlePtr)
+    {
+        return Register(((TypeOfExpressionSyntax)Nodes[handlePtr]).Type);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetObjectCreationExpressionType")]
     public static IntPtr GetObjectCreationExpressionType(IntPtr handlePtr)
     {
