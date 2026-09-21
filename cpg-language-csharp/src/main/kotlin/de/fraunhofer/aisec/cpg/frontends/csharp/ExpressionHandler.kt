@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newCall
 import de.fraunhofer.aisec.cpg.graph.newCast
+import de.fraunhofer.aisec.cpg.graph.newConditional
 import de.fraunhofer.aisec.cpg.graph.newConstruction
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newExpressionList
@@ -61,6 +62,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.AsExpressionSyntax -> handleAsExpression(node)
             is Csharp.AST.IsExpressionSyntax -> handleIsExpression(node)
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
+            is Csharp.AST.ConditionalExpressionSyntax -> handleConditionalExpression(node)
             is Csharp.AST.PrefixUnaryExpressionSyntax -> handlePrefixUnaryExpression(node)
             is Csharp.AST.PostfixUnaryExpressionSyntax -> handlePostfixUnaryExpression(node)
             is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
@@ -132,6 +134,24 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             this.lhs = handle(node.left)
             this.rhs = handle(node.right)
         }
+    }
+
+    /**
+     * Translates a [ConditionalExpressionSyntax][Csharp.AST.ConditionalExpressionSyntax] (e.g. `c ?
+     * x : y`) into a [Conditional].
+     *
+     * C# spec:
+     * [Conditional operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1221-conditional-operator)
+     */
+    private fun handleConditionalExpression(
+        node: Csharp.AST.ConditionalExpressionSyntax
+    ): Conditional {
+        return newConditional(
+            condition = handle(node.condition),
+            thenExpression = handle(node.whenTrue),
+            elseExpression = handle(node.whenFalse),
+            rawNode = node,
+        )
     }
 
     /**

@@ -1006,6 +1006,7 @@ interface Csharp : Library {
                             "IsExpression" -> IsExpressionSyntax(nativeValue)
                             else -> BinaryExpressionSyntax(nativeValue)
                         }
+                    "ConditionalExpressionSyntax" -> ConditionalExpressionSyntax(nativeValue)
                     "PrefixUnaryExpressionSyntax" -> PrefixUnaryExpressionSyntax(nativeValue)
                     "PostfixUnaryExpressionSyntax" -> PostfixUnaryExpressionSyntax(nativeValue)
                     // In Roslyn all of these are a TypeSyntax and therefore an ExpressionSyntax,
@@ -1094,6 +1095,23 @@ interface Csharp : Library {
             val left: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionLeft(this) }
             val operatorToken: String by lazy { INSTANCE.GetBinaryExpressionOperator(this) }
             val right: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionRight(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ConditionalExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.conditionalexpressionsyntax)
+         * class, i.e. the ternary conditional operator `condition ? whenTrue : whenFalse`.
+         */
+        class ConditionalExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val condition: ExpressionSyntax by lazy {
+                INSTANCE.GetConditionalExpressionCondition(this)
+            }
+            val whenTrue: ExpressionSyntax by lazy {
+                INSTANCE.GetConditionalExpressionWhenTrue(this)
+            }
+            val whenFalse: ExpressionSyntax by lazy {
+                INSTANCE.GetConditionalExpressionWhenFalse(this)
+            }
         }
 
         /**
@@ -1563,6 +1581,18 @@ interface Csharp : Library {
     fun GetBinaryExpressionOperator(handle: AST.BinaryExpressionSyntax): String
 
     fun GetBinaryExpressionRight(handle: AST.BinaryExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetConditionalExpressionCondition(
+        handle: AST.ConditionalExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetConditionalExpressionWhenTrue(
+        handle: AST.ConditionalExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetConditionalExpressionWhenFalse(
+        handle: AST.ConditionalExpressionSyntax
+    ): AST.ExpressionSyntax
 
     fun GetPrefixUnaryExpressionOperand(
         handle: AST.PrefixUnaryExpressionSyntax

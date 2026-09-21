@@ -656,6 +656,24 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(((BinaryExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetConditionalExpressionCondition")]
+    public static IntPtr GetConditionalExpressionCondition(IntPtr handlePtr)
+    {
+        return Register(((ConditionalExpressionSyntax)Nodes[handlePtr]).Condition);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConditionalExpressionWhenTrue")]
+    public static IntPtr GetConditionalExpressionWhenTrue(IntPtr handlePtr)
+    {
+        return Register(((ConditionalExpressionSyntax)Nodes[handlePtr]).WhenTrue);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConditionalExpressionWhenFalse")]
+    public static IntPtr GetConditionalExpressionWhenFalse(IntPtr handlePtr)
+    {
+        return Register(((ConditionalExpressionSyntax)Nodes[handlePtr]).WhenFalse);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetPrefixUnaryExpressionOperand")]
     public static IntPtr GetPrefixUnaryExpressionOperand(IntPtr handlePtr)
     {
