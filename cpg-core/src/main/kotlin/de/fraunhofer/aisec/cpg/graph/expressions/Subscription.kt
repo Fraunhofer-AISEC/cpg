@@ -38,7 +38,7 @@ import java.util.*
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class Subscription : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+class Subscription : Expression(), HasBase, HasType.TypeObserver {
     override var access = AccessValues.READ
         set(value) {
             field = value
@@ -101,30 +101,6 @@ class Subscription : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder
         }
 
         addAssignedTypes(assignedTypes.mapTo(mutableSetOf()) { getSubscriptType(it) })
-    }
-
-    override fun addArgument(expression: Expression) {
-        if (arrayExpression is ProblemExpression) {
-            arrayExpression = expression
-        } else if (subscriptExpression is ProblemExpression) {
-            subscriptExpression = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return if (arrayExpression == old) {
-            arrayExpression = new
-            true
-        } else if (subscriptExpression == old) {
-            subscriptExpression = new
-            true
-        } else {
-            false
-        }
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return arrayExpression == expression || subscriptExpression == expression
     }
 
     override fun equals(other: Any?): Boolean {

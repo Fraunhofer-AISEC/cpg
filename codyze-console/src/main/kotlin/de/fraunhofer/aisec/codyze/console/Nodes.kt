@@ -491,7 +491,7 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
                     lineNumber = it.lineNumber,
                 )
             },
-        assumptions = this.relevantAssumptions().map { it.toJSON() }.toSet(),
+        assumptions = this.relevantAssumptions().mapTo(mutableSetOf()) { it.toJSON() },
     )
 }
 

@@ -52,6 +52,7 @@ import java.text.NumberFormat
 import java.util.Locale
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.time.Duration
 import kotlinx.coroutines.runBlocking
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
@@ -74,7 +75,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
          * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
          * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
          */
-        var timeout: Long? = null,
+        var timeout: Duration = Duration.INFINITE,
         /**
          * If set to true, CDG edges will be drawn even if the analysis did not finish correctly,
          * e.g., due to a timeout.
@@ -152,7 +153,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     firstBasicBlock.nextEOGEdges,
                     startState,
                     ::transfer,
-                    timeout = passConfig<Configuration>()?.timeout,
+                    timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
                 )
             if (timeout)
                 log.warn(

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,33 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import kotlin.test.Test
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
-class InterfacesTest {
+class NameCacheTest {
+    @Test
+    fun testInternReturnsSameInstanceForEqualNames() {
+        val a = NameCache.intern(Name("x"))
+        val b = NameCache.intern(Name("x"))
+
+        assertSame(a, b)
+    }
 
     @Test
-    fun testRemoveArgument() {
-        val v: HasInitializer = Variable()
-        val lit = Literal<String>()
-        v.initializer = lit
-        assertTrue(v.removeArgument(lit))
+    fun testInternDistinguishesDifferentParents() {
+        val a = NameCache.intern(Name("x", Name("outer1")))
+        val b = NameCache.intern(Name("x", Name("outer2")))
+
+        assertEquals("outer1.x", a.toString())
+        assertEquals("outer2.x", b.toString())
+    }
+
+    @Test
+    fun testInternedValueEqualsUninterned() {
+        val interned = NameCache.intern(Name("x"))
+        val plain = Name("x")
+
+        assertEquals(interned, plain)
     }
 }

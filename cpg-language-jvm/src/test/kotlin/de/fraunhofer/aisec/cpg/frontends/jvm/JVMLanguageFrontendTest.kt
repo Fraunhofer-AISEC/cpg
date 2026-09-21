@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
+import java.io.File
 import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.Disabled
@@ -1232,5 +1233,164 @@ class JVMLanguageFrontendTest {
             "Expected at least one user field declaration with a source location from the APK, " +
                 "but none of ${userFields.size} user fields had one",
         )
+    }
+
+    /**
+     * Verifies the opt-in [JVMFrontendConfiguration.useJimpleTextPositions] mode. Instead of the
+     * coarse, frequently collapsed line numbers a compiled artifact carries (many statements
+     * sharing one line, no columns), every class is round-tripped through its textual Jimple
+     * representation so that each statement lands on its own, distinct line of a written `.jimple`
+     * file. This is the "pick the node on line N" guarantee: the reported line resolves to a real,
+     * readable line of a real file.
+     */
+    @Test
+    fun testJimpleTextPositions() {
+        val topLevel = Path.of("src", "test", "resources", "class", "operators")
+        val result =
+            analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(useJimpleTextPositions = true)
+                )
+            }
+        assertNotNull(result)
+
+        val testArithmetic = result.methods["testArithmetic"]
+        assertNotNull(testArithmetic)
+
+        // (1) Every located statement points into a real `.jimple` file, and the line it reports is
+        //     a real, non-blank line of that file -- i.e. "line N" actually resolves to content.
+        val assigns = testArithmetic.allChildren<Assign>()
+        val located = assigns.filter { (it.location?.region?.startLine ?: -1) >= 1 }
+        assertTrue(located.isNotEmpty(), "Expected located assignments in text-position mode")
+
+        located.forEach { assign ->
+            val region = assign.location?.region
+            assertNotNull(region)
+            val fileName = assign.location?.artifactLocation?.uri?.path
+            assertNotNull(fileName, "text-position nodes must carry a file URI")
+            assertTrue(
+                fileName.endsWith(".jimple"),
+                "in text-position mode the location file must be the reprinted .jimple, was $fileName",
+            )
+            val lines = File(fileName).readLines()
+            assertTrue(
+                region.startLine <= lines.size,
+                "reported line ${region.startLine} is outside the ${lines.size}-line file",
+            )
+            assertTrue(
+                lines[region.startLine - 1].isNotBlank(),
+                "statement reported on blank line ${region.startLine} of $fileName",
+            )
+        }
+
+        // (2) Statements land on DISTINCT lines -- the whole point of the round-trip (the compiled
+        //     artifact collapses many onto one). No two of our assignments share a start line.
+        val startLines = located.mapNotNull { it.location?.region?.startLine }
+        assertEquals(
+            startLines.size,
+            startLines.toSet().size,
+            "statements must occupy distinct lines in text-position mode, but some collapsed: " +
+                startLines.sorted(),
+        )
+
+        // (3) Line bases are reconciled: a value-level node (binary operator) reports the SAME line
+        //     as its enclosing statement (no 0-/1-based off-by-one), while still carrying real
+        //     columns -- so the line matches the file and the columns pinpoint the sub-expression.
+        val assignWithBinop = located.firstOrNull { it.allChildren<BinaryOperator>().isNotEmpty() }
+        assertNotNull(assignWithBinop, "expected an assignment containing a binary operator")
+        val binop = assignWithBinop.allChildren<BinaryOperator>().first()
+        assertEquals(
+            assignWithBinop.location?.region?.startLine,
+            binop.location?.region?.startLine,
+            "a value's line must match its enclosing statement's line (no off-by-one)",
+        )
+        val binopRegion = binop.location?.region
+        assertNotNull(binopRegion)
+        assertTrue(
+            binopRegion.startColumn >= 0 && binopRegion.endColumn > binopRegion.startColumn,
+            "a value should carry a real, non-degenerate column span, was $binopRegion",
+        )
+    }
+
+    /**
+     * In text-position mode a method body is only rebuilt from the reprinted Jimple text when it is
+     * first requested, i.e. *after* the class-level round-trip succeeded. A single body that does
+     * not survive the round-trip is therefore degraded per method (it is translated from the
+     * original compiled class instead, see `JVMLanguageFrontend.withMethodPositions`), which this
+     * test pins down through the invariants that fallback has to keep:
+     * 1. no method and no body is lost, and
+     * 2. a method is never a mix of both position sources -- its declaration and its statements
+     *    always point into the same file.
+     */
+    @Test
+    fun testJimpleTextPositionsPerMethod() {
+        val topLevel = Path.of("src", "test", "resources", "class", "operators")
+        val result =
+            analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(useJimpleTextPositions = true)
+                )
+            }
+        assertNotNull(result)
+
+        val record = result.records["Operators"]
+        assertNotNull(record)
+
+        // (1) Every method the class declares is still there, with a translated body. A method
+        //     whose body cannot be built is kept (body-less) rather than dropped, and a method
+        //     without text positions is translated from the compiled artifact -- either way it must
+        //     not disappear from the record.
+        val expected =
+            setOf(
+                "<init>",
+                "testArithmetic",
+                "testComparison",
+                "testBitwise",
+                "testUnary",
+                "testArrayLength",
+                "testCast",
+                "testInstanceOf",
+            )
+        // (constructors are modelled separately from the other methods)
+        val methods = record.methods + record.constructors
+        assertEquals(
+            expected,
+            methods.map { it.name.localName }.toSet(),
+            "no method may be lost in text-position mode",
+        )
+        methods.forEach {
+            assertNotNull(it.body, "method '${it.name}' lost its body in text-position mode")
+        }
+
+        // (2) Each method is coherent: whichever of the two position sources it ended up using, its
+        //     declaration and all of its located statements refer to the same, existing file. (For
+        //     this fixture everything round-trips, so that file is the reprinted `.jimple`; a
+        //     degraded method would consistently point at the compiled artifact instead.)
+        methods.forEach { method ->
+            val methodFile = method.location?.artifactLocation?.uri?.path
+            assertNotNull(methodFile, "method '${method.name}' must carry a file URI")
+            assertTrue(
+                File(methodFile).isFile,
+                "the location of method '${method.name}' must resolve to a real file, was " +
+                    methodFile,
+            )
+            val statementFiles =
+                method
+                    .allChildren<Expression>()
+                    .filter { (it.location?.region?.startLine ?: -1) >= 1 }
+                    .mapNotNull { it.location?.artifactLocation?.uri?.path }
+                    .toSet()
+            assertTrue(
+                statementFiles.isNotEmpty(),
+                "method '${method.name}' has no located statement at all",
+            )
+            assertTrue(
+                statementFiles.all { it == methodFile },
+                "method '${method.name}' mixes position sources: its declaration is in " +
+                    "$methodFile but statements are in ${statementFiles - methodFile}",
+            )
+        }
     }
 }

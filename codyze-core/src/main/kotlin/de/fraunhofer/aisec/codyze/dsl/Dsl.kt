@@ -219,10 +219,11 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
      */
     val allRequirements: Map<String, RequirementBuilder>
         get() {
-            return requirementsBuilder.categoryBuilders
-                .map { it.value }
-                .flatMap { it.requirements.entries }
-                .associate { it.key to it.value }
+            return buildMap {
+                for (category in requirementsBuilder.categoryBuilders.values) {
+                    putAll(category.requirements)
+                }
+            }
         }
 
     /** Builds an [AnalysisProject] out of the current state of the builder. */
@@ -274,11 +275,13 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             }
 
         // Collect all requirements functions from all categories
-        val requirementFunctions =
-            requirementsBuilder.categoryBuilders
-                .map { it.value }
-                .flatMap { it.requirements.map { rq -> Pair(rq.key, rq.value.fulfilledBy) } }
-                .associate { it }
+        val requirementFunctions = buildMap {
+            for (category in requirementsBuilder.categoryBuilders.values) {
+                for ((key, value) in category.requirements) {
+                    put(key, value.fulfilledBy)
+                }
+            }
+        }
 
         return AnalysisProject(
             builder = this,

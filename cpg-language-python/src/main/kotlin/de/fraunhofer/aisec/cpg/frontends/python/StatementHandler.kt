@@ -206,10 +206,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Throw].
      */
     private fun handleRaise(node: Python.AST.Raise): Throw {
-        val ret = newThrow(rawNode = node)
-        node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
-        node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
-        return ret
+        return newThrow(rawNode = node) { ret ->
+            node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
+            node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
+        }
     }
 
     /**
@@ -447,22 +447,22 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun handleBaseExcepthandler(node: Python.AST.BaseExcepthandler): CatchClause {
         return when (node) {
             is Python.AST.ExceptHandler -> {
-                val catchClause = newCatchClause(rawNode = node)
-                catchClause.body = makeBlock(node.body, node)
-                // The parameter can have a type but if the type is None/null, it's the "catch-all"
-                // clause.
-                // In this case, it also cannot have a name, so we can skip the variable
-                // declaration.
-                if (node.type != null) {
-                    // the parameter can have a name, or we use the anonymous identifier _
-                    catchClause.parameter =
-                        newVariable(
-                            name = node.name ?: "",
-                            type = frontend.typeOf(node.type),
-                            rawNode = node,
-                        )
+                newCatchClause(rawNode = node) { catchClause ->
+                    catchClause.body = makeBlock(node.body, node)
+                    // The parameter can have a type but if the type is None/null, it's the
+                    // "catch-all" clause.
+                    // In this case, it also cannot have a name, so we can skip the variable
+                    // declaration.
+                    if (node.type != null) {
+                        // the parameter can have a name, or we use the anonymous identifier _
+                        catchClause.parameter =
+                            newVariable(
+                                name = node.name ?: "",
+                                type = frontend.typeOf(node.type),
+                                rawNode = node,
+                            )
+                    }
                 }
-                catchClause
             }
         }
     }
@@ -471,19 +471,18 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * Translates a Python [`Try`](https://docs.python.org/3/library/ast.html#ast.Try) into a [Try].
      */
     private fun handleTry(node: Python.AST.Try): Try {
-        val tryStatement = newTry(rawNode = node)
-        tryStatement.tryBlock = makeBlock(node.body, node)
-        tryStatement.catchClauses.addAll(node.handlers.map { handleBaseExcepthandler(it) })
+        return newTry(rawNode = node) { tryStatement ->
+            tryStatement.tryBlock = makeBlock(node.body, node)
+            tryStatement.catchClauses.addAll(node.handlers.map { handleBaseExcepthandler(it) })
 
-        if (node.orelse.isNotEmpty()) {
-            tryStatement.elseBlock = makeBlock(node.orelse, node)
+            if (node.orelse.isNotEmpty()) {
+                tryStatement.elseBlock = makeBlock(node.orelse, node)
+            }
+
+            if (node.finalbody.isNotEmpty()) {
+                tryStatement.finallyBlock = makeBlock(node.finalbody, node)
+            }
         }
-
-        if (node.finalbody.isNotEmpty()) {
-            tryStatement.finallyBlock = makeBlock(node.finalbody, node)
-        }
-
-        return tryStatement
     }
 
     /**
@@ -491,21 +490,20 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Delete].
      */
     private fun handleDelete(node: Python.AST.Delete): Delete {
-        val delete = newDelete(rawNode = node)
-        node.targets.forEach { target ->
-            delete.operands.add(frontend.expressionHandler.handle(target))
+        return newDelete(rawNode = node) { delete ->
+            node.targets.forEach { target ->
+                delete.operands.add(frontend.expressionHandler.handle(target))
 
-            if (target !is Python.AST.Subscript) {
-                delete.additionalProblems +=
-                    newProblemExpression(
-                        problem =
-                            "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
-                        rawNode = target,
-                    )
+                if (target !is Python.AST.Subscript) {
+                    delete.additionalProblems +=
+                        newProblemExpression(
+                            problem =
+                                "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
+                            rawNode = target,
+                        )
+                }
             }
         }
-
-        return delete
     }
 
     /**
@@ -513,12 +511,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Assert].
      */
     private fun handleAssert(node: Python.AST.Assert): Assert {
-        val assertStatement = newAssert(rawNode = node)
-        val testExpression = frontend.expressionHandler.handle(node.test)
-        assertStatement.condition = testExpression
-        node.msg?.let { assertStatement.message = frontend.expressionHandler.handle(it) }
-
-        return assertStatement
+        return newAssert(rawNode = node) { assertStatement ->
+            val testExpression = frontend.expressionHandler.handle(node.test)
+            assertStatement.condition = testExpression
+            node.msg?.let { assertStatement.message = frontend.expressionHandler.handle(it) }
+        }
     }
 
     /**
@@ -536,37 +533,41 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      *   for details:
      */
     private fun handleImport(node: Python.AST.Import): Expression {
-        val declStmt = newDeclarationStatement(rawNode = node)
-        for (imp in node.names) {
-            val alias = imp.asname
-            if (alias != null) {
-                // If we have an alias, we import the package with the alias and do NOT import the
-                // parent packages
-                val decl =
+        return newDeclarationStatement(rawNode = node) { declStmt ->
+            for (imp in node.names) {
+                val alias = imp.asname
+                if (alias != null) {
+                    // If we have an alias, we import the package with the alias and do NOT import
+                    // the
+                    // parent packages
                     newImport(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
                         rawNode = imp,
-                    )
-                conditionallyAddAdditionalSourcesToAnalysis(decl.import)
-                frontend.scopeManager.addDeclaration(decl)
-                declStmt.declarations += decl
-            } else {
-                // If we do not have an alias, we import all the packages along the path - unless we
-                // already have an import for the package in the scope
-                var importName: Name? = parseName(imp.name)
-                while (importName != null) {
-                    val decl =
-                        newImport(importName, style = ImportStyle.IMPORT_NAMESPACE, rawNode = imp)
-                    conditionallyAddAdditionalSourcesToAnalysis(decl.import)
-                    frontend.scopeManager.addDeclaration(decl)
-                    declStmt.declarations += decl
-                    importName = importName.parent
+                        holder = declStmt,
+                    ) {
+                        conditionallyAddAdditionalSourcesToAnalysis(it.import)
+                    }
+                } else {
+                    // If we do not have an alias, we import all the packages along the path -
+                    // unless
+                    // we already have an import for the package in the scope
+                    var importName: Name? = parseName(imp.name)
+                    while (importName != null) {
+                        newImport(
+                            importName,
+                            style = ImportStyle.IMPORT_NAMESPACE,
+                            rawNode = imp,
+                            holder = declStmt,
+                        ) {
+                            conditionallyAddAdditionalSourcesToAnalysis(it.import)
+                        }
+                        importName = importName.parent
+                    }
                 }
             }
         }
-        return declStmt
     }
 
     private fun handleImportFrom(node: Python.AST.ImportFrom): Expression {
@@ -680,13 +681,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
     private fun handleWhile(node: Python.AST.While): Expression {
-        val ret = newWhile(rawNode = node)
-        ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.statement = makeBlock(node.body, parentNode = node)
-        if (node.orelse.isNotEmpty()) {
-            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
+        return newWhile(rawNode = node) { ret ->
+            ret.condition = frontend.expressionHandler.handle(node.test)
+            ret.statement = makeBlock(node.body, parentNode = node)
+            if (node.orelse.isNotEmpty()) {
+                ret.elseStatement = makeBlock(node.orelse, parentNode = node)
+            }
         }
-        return ret
     }
 
     /**
@@ -709,43 +710,43 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * ```
      */
     private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEach {
-        val ret = newForEach(rawNode = node)
-        addAsyncWarning(node, ret)
+        return newForEach(rawNode = node) { ret ->
+            addAsyncWarning(node, ret)
 
-        ret.iterable = frontend.expressionHandler.handle(node.iter)
+            ret.iterable = frontend.expressionHandler.handle(node.iter)
 
-        when (val loopVar = frontend.expressionHandler.handle(node.target)) {
-            is InitializerList -> { // unpacking
-                val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
+            when (val loopVar = frontend.expressionHandler.handle(node.target)) {
+                is InitializerList -> { // unpacking
+                    val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
 
-                ret.variable = tempVarRef
+                    ret.variable = tempVarRef
 
-                val body = makeBlock(node.body, parentNode = node)
-                body.statements.add(
-                    0,
-                    unpackingAssignment,
-                ) // add the unpacking instruction to the top of the loop body
-                ret.statement = body
+                    val body = makeBlock(node.body, parentNode = node)
+                    body.statements.add(
+                        0,
+                        unpackingAssignment,
+                    ) // add the unpacking instruction to the top of the loop body
+                    ret.statement = body
+                }
+                is Reference -> { // only one var
+                    ret.variable = loopVar
+                    ret.statement = makeBlock(node.body, parentNode = node)
+                }
+                else -> {
+                    ret.variable =
+                        newProblemExpression(
+                            problem =
+                                "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
+                            rawNode = node.target,
+                        )
+                    ret.statement = makeBlock(node.body, parentNode = node)
+                }
             }
-            is Reference -> { // only one var
-                ret.variable = loopVar
-                ret.statement = makeBlock(node.body, parentNode = node)
-            }
-            else -> {
-                ret.variable =
-                    newProblemExpression(
-                        problem =
-                            "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
-                        rawNode = node.target,
-                    )
-                ret.statement = makeBlock(node.body, parentNode = node)
+
+            if (node.orelse.isNotEmpty()) {
+                ret.elseStatement = makeBlock(node.orelse, parentNode = node)
             }
         }
-
-        if (node.orelse.isNotEmpty()) {
-            ret.elseStatement = makeBlock(node.orelse, parentNode = node)
-        }
-        return ret
     }
 
     /**
@@ -783,27 +784,27 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleIf(node: Python.AST.If): Expression {
-        val ret = newIfElse(rawNode = node)
-        ret.condition = frontend.expressionHandler.handle(node.test)
-        ret.thenStatement =
-            if (node.body.isNotEmpty()) {
-                makeBlock(node.body, parentNode = node)
-            } else {
-                null
-            }
-        ret.elseStatement =
-            if (node.orelse.isNotEmpty()) {
-                makeBlock(node.orelse, parentNode = node)
-            } else {
-                null
-            }
-        return ret
+        return newIfElse(rawNode = node) { ret ->
+            ret.condition = frontend.expressionHandler.handle(node.test)
+            ret.thenStatement =
+                if (node.body.isNotEmpty()) {
+                    makeBlock(node.body, parentNode = node)
+                } else {
+                    null
+                }
+            ret.elseStatement =
+                if (node.orelse.isNotEmpty()) {
+                    makeBlock(node.orelse, parentNode = node)
+                } else {
+                    null
+                }
+        }
     }
 
     private fun handleReturn(node: Python.AST.Return): Expression {
-        val ret = newReturn(rawNode = node)
-        node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
-        return ret
+        return newReturn(rawNode = node) { ret ->
+            node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
+        }
     }
 
     /**
@@ -885,20 +886,20 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         statements: List<Python.AST.BaseStmt>,
         parentNode: Python.AST.WithLocation,
     ): Block {
-        val result = newBlock()
+        return newBlock { result ->
+            for (stmt in statements) {
+                result.statements += handle(stmt)
+            }
 
-        for (stmt in statements) {
-            result.statements += handle(stmt)
+            // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
+            // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
+            // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
+            // other nodes that are not "statements", but also handled as part of this handler,
+            // e.g., the Python.AST.ExceptHandler.
+            with(frontend) {
+                result.codeAndLocationFromChildren(parentNode, frontend.lineSeparator)
+            }
         }
-
-        // We need to scope the call to codeAndLocationFromChildren to our frontend, so that
-        // all Python.AST.AST nodes are accepted, otherwise it would be scoped to the handler
-        // and only Python.AST.BaseStmt nodes would be accepted. This would cause issues with
-        // other nodes that are not "statements", but also handled as part of this handler,
-        // e.g., the Python.AST.ExceptHandler.
-        with(frontend) { result.codeAndLocationFromChildren(parentNode, frontend.lineSeparator) }
-
-        return result
     }
 
     /**

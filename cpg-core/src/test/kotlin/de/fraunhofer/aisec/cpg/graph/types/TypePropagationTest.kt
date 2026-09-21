@@ -27,13 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
@@ -47,20 +48,48 @@ class TypePropagationTest {
             )
         val result =
             frontend.build {
-                translationResult {
-                    translationUnit("test") {
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("intVar", t("int")) {} }
-                                declare { variable("intVar2", t("int")) { literal(5) } }
-                                declare {
-                                    variable("addResult", t("int")) {
-                                        ref("intVar") + ref("intVar2")
+                singleTranslationUnit("test") { tu ->
+                    val mainReturnType = objectType("int")
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(mainReturnType)
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { intVarDeclStmt ->
+                                    newVariable(
+                                        "intVar",
+                                        objectType("int"),
+                                        holder = intVarDeclStmt,
+                                    )
+                                }
+
+                                block.statements += newDeclarationStatement { intVar2DeclStmt ->
+                                    newVariable(
+                                        "intVar2",
+                                        objectType("int"),
+                                        holder = intVar2DeclStmt,
+                                    ) {
+                                        it.initializer = newLiteral(5)
                                     }
                                 }
-                                returnStmt { literal(0) }
+
+                                block.statements += newDeclarationStatement { addResultDeclStmt ->
+                                    newVariable(
+                                        "addResult",
+                                        objectType("int"),
+                                        holder = addResultDeclStmt,
+                                    ) {
+                                        it.initializer =
+                                            newBinaryOperator("+") { bin ->
+                                                bin.lhs = newReference("intVar")
+                                                bin.rhs = newReference("intVar2")
+                                            }
+                                    }
+                                }
+
+                                block.statements += newReturn { it.returnValue = newLiteral(0) }
                             }
-                        }
                     }
                 }
             }
@@ -107,16 +136,41 @@ class TypePropagationTest {
          */
         val result =
             frontend.build {
-                translationResult {
-                    translationUnit("test") {
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("intVar", t("int")) {} }
-                                declare { variable("shortVar", t("short")) {} }
-                                ref("shortVar") assign ref("intVar")
-                                returnStmt { ref("shortVar") }
+                singleTranslationUnit("test") { tu ->
+                    val mainReturnType = objectType("int")
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(mainReturnType)
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { intVarDeclStmt ->
+                                    newVariable(
+                                        "intVar",
+                                        objectType("int"),
+                                        holder = intVarDeclStmt,
+                                    )
+                                }
+
+                                block.statements += newDeclarationStatement { shortVarDeclStmt ->
+                                    newVariable(
+                                        "shortVar",
+                                        objectType("short"),
+                                        holder = shortVarDeclStmt,
+                                    )
+                                }
+
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("shortVar")),
+                                        listOf(newReference("intVar")),
+                                    )
+
+                                block.statements += newReturn {
+                                    it.returnValue = newReference("shortVar")
+                                }
                             }
-                        }
                     }
                 }
             }
@@ -178,21 +232,37 @@ class TypePropagationTest {
          */
         val result =
             frontend.build {
-                translationResult {
-                    translationUnit("test") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("b", t("BaseClass").pointer()) {
-                                        new {
-                                            construct("DerivedClass")
-                                            type = t("DerivedClass").pointer()
-                                        }
+                singleTranslationUnit("test") { tu ->
+                    val mainReturnType = objectType("int")
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(mainReturnType)
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable(
+                                        "b",
+                                        objectType("BaseClass").pointer(),
+                                        holder = bDeclStmt,
+                                    ) { v ->
+                                        v.initializer =
+                                            newNew().also { newExpr ->
+                                                newExpr.initializer =
+                                                    newConstruction("DerivedClass") {
+                                                        it.type = objectType("DerivedClass")
+                                                    }
+                                                newExpr.type = objectType("DerivedClass").pointer()
+                                            }
                                     }
                                 }
-                                call("b.doSomething")
+
+                                block.statements +=
+                                    newMemberCall(
+                                        newMemberAccess("doSomething", newReference("b")),
+                                        false,
+                                    )
                             }
-                        }
                     }
                 }
             }
@@ -265,63 +335,142 @@ class TypePropagationTest {
          */
         val result =
             frontend.build {
-                translationResult {
-                    translationUnit("test") {
-                        record("BaseClass") { method("doSomething") }
-                        record("DerivedClassA") {
-                            superClasses = mutableListOf(t("BaseClass"))
-                            method("doSomething")
+                singleTranslationUnit("test") { tu ->
+                    newRecord("BaseClass", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("doSomething", holder = record, enterScope = true) { m ->
+                            m.returnTypes = listOf(unknownType())
+                            m.type = computeType(m)
                         }
-                        record("DerivedClassB") {
-                            superClasses = mutableListOf(t("BaseClass"))
-                            method("doSomething")
+                    }
+                    newRecord("DerivedClassA", "class", holder = tu, enterScope = true) { record ->
+                        record.superClasses = mutableListOf(objectType("BaseClass"))
+                        newMethod("doSomething", holder = record, enterScope = true) { m ->
+                            m.returnTypes = listOf(unknownType())
+                            m.type = computeType(m)
                         }
-                        function("create", t("BaseClass").pointer().pointer()) {
-                            param("flip", t("boolean"))
-                            body {
-                                declare { variable("b", t("BaseClass").pointer()) }
-                                ref("b") assign
-                                    {
-                                        conditional(
-                                            ref("flip") eq literal(true),
-                                            cast(t("BaseClass").pointer()) {
-                                                new {
-                                                    construct("DerivedClassA")
-                                                    type = t("DerivedClassA").pointer()
-                                                }
-                                            },
-                                            cast(t("BaseClass").pointer()) {
-                                                new {
-                                                    construct("DerivedClassB")
-                                                    type = t("DerivedClassB").pointer()
-                                                }
-                                            },
-                                        )
-                                    }
-                                declare {
-                                    variable("bb", autoType()) {
-                                        ile(t("BaseClass").pointer().array()) { ref("b") }
+                    }
+                    newRecord("DerivedClassB", "class", holder = tu, enterScope = true) { record ->
+                        record.superClasses = mutableListOf(objectType("BaseClass"))
+                        newMethod("doSomething", holder = record, enterScope = true) { m ->
+                            m.returnTypes = listOf(unknownType())
+                            m.type = computeType(m)
+                        }
+                    }
+
+                    val createReturnType = objectType("BaseClass").pointer().pointer()
+                    newFunction("create", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(createReturnType)
+                        func.type = computeType(func)
+
+                        newParameter("flip", objectType("boolean"), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable(
+                                        "b",
+                                        objectType("BaseClass").pointer(),
+                                        holder = bDeclStmt,
+                                    )
+                                }
+
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("b")),
+                                        listOf(
+                                            newConditional(
+                                                newBinaryOperator("==") {
+                                                    it.lhs = newReference("flip")
+                                                    it.rhs = newLiteral(true)
+                                                },
+                                                newCast().also { cast ->
+                                                    cast.castType =
+                                                        objectType("BaseClass").pointer()
+                                                    cast.expression =
+                                                        newNew().also { newExpr ->
+                                                            newExpr.initializer =
+                                                                newConstruction("DerivedClassA") {
+                                                                    it.type =
+                                                                        objectType("DerivedClassA")
+                                                                }
+                                                            newExpr.type =
+                                                                objectType("DerivedClassA")
+                                                                    .pointer()
+                                                        }
+                                                },
+                                                newCast().also { cast ->
+                                                    cast.castType =
+                                                        objectType("BaseClass").pointer()
+                                                    cast.expression =
+                                                        newNew().also { newExpr ->
+                                                            newExpr.initializer =
+                                                                newConstruction("DerivedClassB") {
+                                                                    it.type =
+                                                                        objectType("DerivedClassB")
+                                                                }
+                                                            newExpr.type =
+                                                                objectType("DerivedClassB")
+                                                                    .pointer()
+                                                        }
+                                                },
+                                            )
+                                        ),
+                                    )
+
+                                block.statements += newDeclarationStatement { bbDeclStmt ->
+                                    newVariable("bb", autoType(), holder = bbDeclStmt) { v ->
+                                        v.initializer =
+                                            newInitializerList(
+                                                    objectType("BaseClass").pointer().array()
+                                                )
+                                                .also { it.initializers += newReference("b") }
                                     }
                                 }
-                                returnStmt {
-                                    subscriptExpr {
-                                        ref("bb")
-                                        literal(1)
+
+                                block.statements += newReturn { ret ->
+                                    ret.returnValue = newSubscription { sub ->
+                                        sub.arrayExpression = newReference("bb")
+                                        sub.subscriptExpression = newLiteral(1)
                                     }
                                 }
                             }
-                        }
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("random", t("boolean")) }
-                                declare {
-                                    variable("b", t("BaseClass").pointer()) {
-                                        call("create") { ref("random") }
+                    }
+
+                    val mainReturnType = objectType("int")
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(mainReturnType)
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { randomDeclStmt ->
+                                    newVariable(
+                                        "random",
+                                        objectType("boolean"),
+                                        holder = randomDeclStmt,
+                                    )
+                                }
+
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable(
+                                        "b",
+                                        objectType("BaseClass").pointer(),
+                                        holder = bDeclStmt,
+                                    ) { v ->
+                                        v.initializer =
+                                            newCall(newReference("create")) { call ->
+                                                call.arguments += newReference("random")
+                                            }
                                     }
                                 }
-                                call("b.doSomething")
+
+                                block.statements +=
+                                    newMemberCall(
+                                        newMemberAccess("doSomething", newReference("b")),
+                                        false,
+                                    )
                             }
-                        }
                     }
                 }
             }

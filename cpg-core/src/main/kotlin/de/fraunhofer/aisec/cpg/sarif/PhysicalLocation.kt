@@ -31,6 +31,30 @@ import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * A file's full text plus a precomputed line-start index, so a (line, column) region can be
+ * converted to a char offset in O(1) instead of re-scanning from the start of the file for every
+ * node (which would make interning O(fileSize) per node, i.e. O(fileSize * nodeCount) overall).
+ */
+internal class IndexedContent(val text: String) {
+    /** `lineStarts[i]` is the char offset where line `i + 1` (1-indexed) begins. */
+    private val lineStarts: IntArray =
+        buildList {
+                add(0)
+                for (i in text.indices) {
+                    if (text[i] == '\n') add(i + 1)
+                }
+            }
+            .toIntArray()
+
+    /** Converts a 1-indexed (line, column) position to a char offset, or `null` if out of range. */
+    fun offsetOf(line: Int, column: Int): Int? {
+        val lineStart = lineStarts.getOrNull(line - 1) ?: return null
+        val offset = lineStart + (column - 1)
+        return if (offset in 0..text.length) offset else null
+    }
+}
+
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
 class PhysicalLocation(uri: URI?, region: Region) {
     class ArtifactLocation(val uri: URI?) {
@@ -45,6 +69,17 @@ class PhysicalLocation(uri: URI?, region: Region) {
             } else {
                 "unknown"
             }
+
+        /**
+         * Populated once, the first time this file's
+         * [de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit] is parsed (see
+         * `NodeBuilder.setCodeAndLocation`), with that TU's own code -- which is the whole file's
+         * text. Other nodes in the same file can then intern their `code` as an offset range into
+         * it directly (via this already-interned [ArtifactLocation], reached through
+         * [PhysicalLocation.artifactLocation]) without a separate cache lookup or reading the file
+         * from disk a second time.
+         */
+        @Volatile internal var indexedContent: IndexedContent? = null
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -86,8 +121,24 @@ class PhysicalLocation(uri: URI?, region: Region) {
         }
     }
 
-    var artifactLocation: ArtifactLocation
+    val artifactLocation: ArtifactLocation
+
+    // The region is stored as four flat Int fields rather than a dedicated Region object, saving
+    // one object header per location; Region (still the public type everywhere else) is
+    // materialized on demand by the region getter/setter below.
+    private var startLine = 0
+    private var startColumn = 0
+    private var endLine = 0
+    private var endColumn = 0
+
     var region: Region
+        get() = Region(startLine, startColumn, endLine, endColumn)
+        set(value) {
+            startLine = value.startLine
+            startColumn = value.startColumn
+            endLine = value.endLine
+            endColumn = value.endColumn
+        }
 
     init {
         artifactLocation = ArtifactLocation.of(uri)
@@ -101,9 +152,19 @@ class PhysicalLocation(uri: URI?, region: Region) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is PhysicalLocation) return false
-        return artifactLocation == other.artifactLocation && region == other.region
+        // Compares the flattened fields directly rather than via the region getter (which would
+        // otherwise allocate two throwaway Region instances just to compare them).
+        return artifactLocation == other.artifactLocation &&
+            startLine == other.startLine &&
+            startColumn == other.startColumn &&
+            endLine == other.endLine &&
+            endColumn == other.endColumn
     }
 
+    // Delegates to the region getter (rather than hashing the flattened fields directly) so the
+    // computed value is byte-for-byte identical to before this class stored a Region object --
+    // Node.id (used for persistence) is derived from this transitively, so the actual hashCode
+    // *value*, not just self-consistency with equals(), matters here.
     override fun hashCode() = Objects.hash(artifactLocation, region)
 
     companion object {

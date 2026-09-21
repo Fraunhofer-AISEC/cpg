@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.flatMapFiltered
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
@@ -237,19 +238,19 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 
     // Recursively call ourselves on our super types.
     types +=
-        superTypes
-            .filter {
-                if (it == this) {
-                    log.warn(
-                        "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
-                        this,
-                    )
-                    false
-                } else {
-                    true
-                }
+        superTypes.flatMapFiltered({
+            if (it == this) {
+                log.warn(
+                    "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                    this,
+                )
+                false
+            } else {
+                true
             }
-            .flatMap { it.getAncestors(depth + 1) }
+        }) {
+            it.getAncestors(depth + 1)
+        }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)

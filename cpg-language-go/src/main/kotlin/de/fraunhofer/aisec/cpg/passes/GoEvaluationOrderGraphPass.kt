@@ -57,29 +57,32 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
 
     /** Handles the EOG for a [`defer`](https://go.dev/ref/spec#Defer_statements) statement. */
     private fun handleDeferUnaryOperator(node: UnaryOperator, input: Call) {
-        val function = scopeManager.currentFunction
-        if (function != null) {
-            // We need to disrupt the regular EOG handling here and store this deferred call. We
-            // will pick it up again in handleFunction.
-            val calls = deferredCalls.computeIfAbsent(function) { mutableListOf() }
-            calls += node
+        scopeManager.withScope(node.scope) {
+            val function = scopeManager.currentFunction
 
-            // Push the node itself to the EOG, not its "input" (the deferred call). However, it
-            // seems that the arguments of the deferred call are evaluated at the point of the
-            // deferred statement, duh!
-            attachToEOG(node)
+            if (function != null) {
+                // We need to disrupt the regular EOG handling here and store this deferred call. We
+                // will pick it up again in handleFunction.
+                val calls = deferredCalls.computeIfAbsent(function) { mutableListOf() }
+                calls += node
 
-            // Evaluate the callee
-            handleEOG(input.callee)
+                // Push the node itself to the EOG, not its "input" (the deferred call). However, it
+                // seems that the arguments of the deferred call are evaluated at the point of the
+                // deferred statement, duh!
+                attachToEOG(node)
 
-            // Then the arguments
-            for (arg in input.arguments) {
-                handleEOG(arg)
+                // Evaluate the callee
+                handleEOG(input.callee)
+
+                // Then the arguments
+                for (arg in input.arguments) {
+                    handleEOG(arg)
+                }
+            } else {
+                log.error(
+                    "Tried to parse a defer statement but could not retrieve current function from scope manager."
+                )
             }
-        } else {
-            log.error(
-                "Tried to parse a defer statement but could not retrieve current function from scope manager."
-            )
         }
     }
 
@@ -95,7 +98,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
      */
     override fun handleRecord(node: Record) {
         scopeManager.enterScope(node)
-        handleStatementHolder(node)
+        handleStatementHolder(node, node.statements)
         currentPredecessors.clear()
         scopeManager.leaveScope(node)
     }

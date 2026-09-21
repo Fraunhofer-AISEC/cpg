@@ -391,13 +391,14 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
     private fun handleAttributes(owner: IASTAttributeOwner): List<Annotation> {
         val list: MutableList<Annotation> = ArrayList()
         for (attribute in owner.attributes) {
-            val annotation = newAnnotation(String(attribute.name), rawNode = owner)
-
-            // go over the parameters
-            if (attribute.argumentClause is IASTTokenList) {
-                val members = handleTokenList(attribute.argumentClause as IASTTokenList)
-                annotation.members = members
-            }
+            val annotation =
+                newAnnotation(String(attribute.name), rawNode = owner) { annotation ->
+                    // go over the parameters
+                    if (attribute.argumentClause is IASTTokenList) {
+                        annotation.members =
+                            handleTokenList(attribute.argumentClause as IASTTokenList)
+                    }
+                }
             list.add(annotation)
         }
         return list
