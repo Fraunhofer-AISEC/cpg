@@ -1,0 +1,1136 @@
+/*
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.frontends.csharp
+
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.implicit
+import de.fraunhofer.aisec.cpg.graph.newArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.newAssign
+import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
+import de.fraunhofer.aisec.cpg.graph.newCall
+import de.fraunhofer.aisec.cpg.graph.newCast
+import de.fraunhofer.aisec.cpg.graph.newConditional
+import de.fraunhofer.aisec.cpg.graph.newConstruction
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.newExpressionList
+import de.fraunhofer.aisec.cpg.graph.newInitializerList
+import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.newMemberAccess
+import de.fraunhofer.aisec.cpg.graph.newMemberCall
+import de.fraunhofer.aisec.cpg.graph.newNew
+import de.fraunhofer.aisec.cpg.graph.newProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.newSubscription
+import de.fraunhofer.aisec.cpg.graph.newThrow
+import de.fraunhofer.aisec.cpg.graph.newTypeExpression
+import de.fraunhofer.aisec.cpg.graph.newTypeReference
+import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
+import de.fraunhofer.aisec.cpg.graph.newVariable
+import de.fraunhofer.aisec.cpg.graph.objectType
+import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.unknownType
+
+class ExpressionHandler(frontend: CSharpLanguageFrontend) :
+    CSharpHandler<Expression, Csharp.AST.ExpressionSyntax>(::ProblemExpression, frontend) {
+    override fun handleNode(node: Csharp.AST.ExpressionSyntax): Expression {
+        return when (node) {
+            is Csharp.AST.IdentifierNameSyntax -> handleIdentifierName(node)
+            is Csharp.AST.LiteralExpressionSyntax -> handleLiteralExpression(node)
+            is Csharp.AST.AsExpressionSyntax -> handleAsExpression(node)
+            is Csharp.AST.IsExpressionSyntax -> handleIsExpression(node)
+            is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
+            is Csharp.AST.ConditionalExpressionSyntax -> handleConditionalExpression(node)
+            is Csharp.AST.PrefixUnaryExpressionSyntax -> handlePrefixUnaryExpression(node)
+            is Csharp.AST.PostfixUnaryExpressionSyntax -> handlePostfixUnaryExpression(node)
+            is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
+            is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
+            is Csharp.AST.ElementAccessExpressionSyntax -> handleElementAccessExpression(node)
+            is Csharp.AST.CastExpressionSyntax -> handleCastExpression(node)
+            is Csharp.AST.DefaultExpressionSyntax -> handleDefaultExpression(node)
+            is Csharp.AST.ParenthesizedExpressionSyntax -> handleParenthesizedExpression(node)
+            is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
+            is Csharp.AST.ConditionalAccessExpressionSyntax ->
+                handleConditionalAccessExpression(node)
+            is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
+            is Csharp.AST.BaseExpressionSyntax -> handleBaseExpression(node)
+            is Csharp.AST.ThrowExpressionSyntax -> handleThrowExpression(node)
+            is Csharp.AST.CheckedExpressionSyntax -> handleCheckedExpression(node)
+            is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
+            is Csharp.AST.ArrayCreationExpressionSyntax -> handleArrayCreationExpression(node)
+            is Csharp.AST.ImplicitArrayCreationExpressionSyntax ->
+                handleImplicitArrayCreationExpression(node)
+            is Csharp.AST.ArrayInitializerExpressionSyntax -> handleArrayInitializerExpression(node)
+            is Csharp.AST.GenericNameSyntax -> handleGenericName(node)
+            is Csharp.AST.PredefinedTypeSyntax -> handlePredefinedTypeExpression(node)
+            is Csharp.AST.TypeOfExpressionSyntax -> handleTypeOfExpression(node)
+            is Csharp.AST.InterpolatedStringExpressionSyntax ->
+                handleInterpolatedStringExpression(node)
+            else -> ProblemExpression("Not supported: ${node.csharpType}")
+        }
+    }
+
+    /**
+     * Translates an [IdentifierNameSyntax][Csharp.AST.IdentifierNameSyntax] into a [Reference].
+     *
+     * C# spec:
+     * [Simple names](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1284-simple-names)
+     */
+    private fun handleIdentifierName(node: Csharp.AST.IdentifierNameSyntax): Reference {
+        return newReference(name = node.identifier, rawNode = node)
+    }
+
+    /**
+     * Translates a [GenericNameSyntax][Csharp.AST.GenericNameSyntax] (e.g. `Foo<int>`) into a
+     * [Reference] to its [identifier][Csharp.AST.GenericNameSyntax.identifier], i.e. `Foo`.
+     *
+     * C# allows a type wherever an expression is expected, so Roslyn models a generic name as an
+     * `ExpressionSyntax`. In that case it is most often the callee of a generic method invocation
+     * such as `Create<Foo>(x)`, so it becomes a [Reference]. That name is the bare identifier,
+     * since `Foo<int>` would never match the declaration of `Foo`.
+     *
+     * Note: Currently, the type arguments are dropped. We may want to model them in the future.
+     *
+     * C# spec:
+     * [Type arguments](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#843-type-arguments)
+     */
+    private fun handleGenericName(node: Csharp.AST.GenericNameSyntax): Reference {
+        return newReference(name = node.identifier, rawNode = node)
+    }
+
+    /**
+     * Translates a [PredefinedTypeSyntax][Csharp.AST.PredefinedTypeSyntax] used in expression (e.g.
+     * `int.Parse("1")`, `string.Empty`) into a [Reference].
+     *
+     * C# spec:
+     * [Simple types](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/types#835-simple-types)
+     */
+    private fun handlePredefinedTypeExpression(node: Csharp.AST.PredefinedTypeSyntax): Reference {
+        return newReference(name = node.name, rawNode = node)
+    }
+
+    /**
+     * Translates a [TypeOfExpressionSyntax][Csharp.AST.TypeOfExpressionSyntax] (e.g. `typeof(int)`)
+     * into a [TypeReference].
+     *
+     * C# spec:
+     * [The typeof operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12818-the-typeof-operator)
+     */
+    private fun handleTypeOfExpression(node: Csharp.AST.TypeOfExpressionSyntax): TypeReference {
+        return newTypeReference(
+            operatorCode = "typeof",
+            type = objectType(Name("Type", parseName("System"))),
+            referencedType = frontend.typeOf(node.type),
+            rawNode = node,
+        )
+    }
+
+    /**
+     * Translates an
+     * [InterpolatedStringExpressionSyntax][Csharp.AST.InterpolatedStringExpressionSyntax] (e.g.
+     * `$"Hello {name}!"`) into string concatenation: the text pieces become string [Literal]s, the
+     * interpolations (the `{...}` parts) are translated as-is, and all of it is joined with
+     * implicit `+` [BinaryOperator]s.
+     *
+     * An interpolation with a format clause, e.g. `{x:F2}`, formats its value before it is
+     * concatenated. At runtime, this calls
+     * [`IFormattable.ToString(format, provider)`](https://learn.microsoft.com/en-us/dotnet/api/system.iformattable.tostring)
+     * on it, so we model it as a call to `x.ToString("F2")`.
+     *
+     * Note: The alignment of an interpolation, e.g. `{x,10}`, is not modeled yet and is recorded as
+     * a problem instead.
+     *
+     * C# spec:
+     * [Interpolated string expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1283-interpolated-string-expressions)
+     */
+    private fun handleInterpolatedStringExpression(
+        node: Csharp.AST.InterpolatedStringExpressionSyntax
+    ): Expression {
+        val stringType = frontend.language.builtInTypes.getValue("string")
+
+        val parts =
+            node.contents.map { content ->
+                when (content) {
+                    is Csharp.AST.InterpolatedStringTextSyntax ->
+                        newLiteral(content.text, stringType, rawNode = content)
+                    is Csharp.AST.InterpolationSyntax -> {
+                        var value = handle(content.expression)
+                        val format = content.formatClause
+                        val alignment = content.alignmentClause
+
+                        if (format != null) {
+                            // x.ToString("F2")
+                            val code = frontend.codeOf(content)
+                            val location = frontend.locationOf(content)
+                            value =
+                                newMemberCall(
+                                        newMemberAccess(name = "ToString", base = value)
+                                            .implicit(code = code, location = location)
+                                    )
+                                    .implicit(code = code, location = location)
+                                    .apply {
+                                        addArgument(
+                                            newLiteral(format.value, stringType, rawNode = format)
+                                        )
+                                    }
+                        }
+
+                        if (alignment != null) {
+                            value.additionalProblems +=
+                                newProblemExpression(
+                                    "The alignment of an interpolation is not modeled",
+                                    type = ProblemNode.ProblemType.TRANSLATION,
+                                    rawNode = alignment.value,
+                                )
+                        }
+
+                        value
+                    }
+                    else ->
+                        ProblemExpression(
+                            "Not supported in an interpolated string: ${content.csharpType}"
+                        )
+                }
+            }
+
+        return when {
+            parts.isEmpty() -> newLiteral("", stringType, rawNode = node)
+            parts.size == 1 -> parts.single()
+            else ->
+                parts.reduce { lhs, rhs ->
+                    newBinaryOperator(operatorCode = "+", rawNode = node).apply {
+                        this.lhs = lhs
+                        this.rhs = rhs
+                        this.isImplicit = true
+                    }
+                }
+        }
+    }
+
+    /**
+     * Translates a [BinaryExpressionSyntax][Csharp.AST.BinaryExpressionSyntax] into a
+     * [BinaryOperator].
+     *
+     * C# spec:
+     * [Binary operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1245-binary-operator-overload-resolution)
+     */
+    private fun handleBinaryExpression(node: Csharp.AST.BinaryExpressionSyntax): BinaryOperator {
+        return newBinaryOperator(operatorCode = node.operatorToken, rawNode = node).apply {
+            this.lhs = handle(node.left)
+            this.rhs = handle(node.right)
+        }
+    }
+
+    /**
+     * Translates a [ConditionalExpressionSyntax][Csharp.AST.ConditionalExpressionSyntax] (e.g. `c ?
+     * x : y`) into a [Conditional].
+     *
+     * C# spec:
+     * [Conditional operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1221-conditional-operator)
+     */
+    private fun handleConditionalExpression(
+        node: Csharp.AST.ConditionalExpressionSyntax
+    ): Conditional {
+        return newConditional(
+            condition = handle(node.condition),
+            thenExpression = handle(node.whenTrue),
+            elseExpression = handle(node.whenFalse),
+            rawNode = node,
+        )
+    }
+
+    /**
+     * Translates a [PrefixUnaryExpressionSyntax][Csharp.AST.PrefixUnaryExpressionSyntax] (e.g.
+     * `++a`) into a [UnaryOperator].
+     *
+     * C# spec:
+     * [Unary operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#129-unary-operators)
+     */
+    private fun handlePrefixUnaryExpression(
+        node: Csharp.AST.PrefixUnaryExpressionSyntax
+    ): UnaryOperator {
+        return newUnaryOperator(
+                operatorCode = node.operatorToken,
+                postfix = false,
+                prefix = true,
+                rawNode = node,
+            )
+            .apply { this.input = handle(node.operand) }
+    }
+
+    /**
+     * Translates a [PostfixUnaryExpressionSyntax][Csharp.AST.PostfixUnaryExpressionSyntax] (e.g.
+     * `a++`, `a--`) into a [UnaryOperator].
+     *
+     * C# spec:
+     * [Postfix increment and decrement operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12816-postfix-increment-and-decrement-operators)
+     */
+    private fun handlePostfixUnaryExpression(
+        node: Csharp.AST.PostfixUnaryExpressionSyntax
+    ): UnaryOperator {
+        return newUnaryOperator(
+                operatorCode = node.operatorToken,
+                postfix = true,
+                prefix = false,
+                rawNode = node,
+            )
+            .apply { this.input = handle(node.operand) }
+    }
+
+    /**
+     * Translates an [AssignmentExpressionSyntax][Csharp.AST.AssignmentExpressionSyntax] into an
+     * [Assign].
+     *
+     * C# spec:
+     * [Assignment operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1223-assignment-operators)
+     */
+    private fun handleAssignmentExpression(node: Csharp.AST.AssignmentExpressionSyntax): Assign {
+        return newAssign(
+            operatorCode = node.operatorToken,
+            lhs = listOf(handle(node.left)),
+            rhs = listOf(handle(node.right)),
+            rawNode = node,
+        )
+    }
+
+    /**
+     * Translates a [LiteralExpressionSyntax][Csharp.AST.LiteralExpressionSyntax] into a [Literal].
+     * The concrete literal subclass is determined by the Roslyn SyntaxKind.
+     *
+     * C# spec:
+     * [Literals](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/lexical-structure#645-literals)
+     */
+    private fun handleLiteralExpression(node: Csharp.AST.LiteralExpressionSyntax): Expression {
+        val builtInTypes = frontend.language.builtInTypes
+        return when (node) {
+            is Csharp.AST.NumericLiteralExpressionSyntax -> handleNumericLiteralExpression(node)
+
+            is Csharp.AST.StringLiteralExpressionSyntax ->
+                newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
+
+            is Csharp.AST.BooleanLiteralExpressionSyntax ->
+                newLiteral(node.value.toBoolean(), builtInTypes.getValue("bool"), rawNode = node)
+
+            // The value is the character's code point, see
+            // [LiteralExpressionSyntax][Csharp.AST.LiteralExpressionSyntax].
+            is Csharp.AST.CharacterLiteralExpressionSyntax ->
+                newLiteral(Char(node.value.toInt()), builtInTypes.getValue("char"), rawNode = node)
+
+            is Csharp.AST.NullLiteralExpressionSyntax ->
+                newLiteral(null, objectType("null"), rawNode = node)
+
+            // A bare `default` stands for the default value of whatever type it is used at: `0` for
+            // the numeric types, `null` for the reference types and an all-zero value for a struct.
+            // Which one it is depends on the target type, which we do not know here, so the value
+            // stays `null` and the type stays unknown.
+            is Csharp.AST.DefaultLiteralExpressionSyntax ->
+                newLiteral(null, unknownType(), rawNode = node)
+
+            // A `u8` literal is a `ReadOnlySpan<byte>` holding the UTF-8 bytes of the string, not a
+            // `string`. We keep the characters as the value, since it is what we get from Roslyn.
+            // The `byte` must be a generic of the type rather than part of its name, or the literal
+            // would never match a declaration of `ReadOnlySpan`, see
+            // [CSharpLanguageFrontend.typeOf].
+            is Csharp.AST.Utf8StringLiteralExpressionSyntax ->
+                newLiteral(
+                    node.value,
+                    objectType(
+                        Name("ReadOnlySpan", parseName("System")),
+                        listOf(builtInTypes.getValue("byte")),
+                    ),
+                    rawNode = node,
+                )
+
+            // TODO: Return unknownType()?
+            else -> newProblemExpression("Unknown literal type: ${node.csharpType}", rawNode = node)
+        }
+    }
+
+    /**
+     * Translates a [NumericLiteralExpressionSyntax][Csharp.AST.NumericLiteralExpressionSyntax] into
+     * a [Literal]. Every number shares the same SyntaxKind, so the concrete type is taken from the
+     * .NET type Roslyn boxed the value in: an integer literal without a suffix has the first of
+     * `int`, `uint`, `long`, `ulong` that can represent it, while a suffix such as `L` or `m` names
+     * the type directly.
+     *
+     * C# spec:
+     * [Integer literals](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/lexical-structure#6453-integer-literals)
+     */
+    private fun handleNumericLiteralExpression(
+        node: Csharp.AST.NumericLiteralExpressionSyntax
+    ): Expression {
+        val builtInTypes = frontend.language.builtInTypes
+        return when (node.valueType) {
+            "Int32" -> newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
+
+            "UInt32" ->
+                newLiteral(node.value.toLong(), builtInTypes.getValue("uint"), rawNode = node)
+
+            "Int64" ->
+                newLiteral(node.value.toLong(), builtInTypes.getValue("long"), rawNode = node)
+
+            "UInt64" ->
+                newLiteral(
+                    node.value.toBigInteger(),
+                    builtInTypes.getValue("ulong"),
+                    rawNode = node,
+                )
+
+            "Single" ->
+                newLiteral(node.value.toFloat(), builtInTypes.getValue("float"), rawNode = node)
+
+            "Double" ->
+                newLiteral(node.value.toDouble(), builtInTypes.getValue("double"), rawNode = node)
+
+            "Decimal" ->
+                newLiteral(
+                    node.value.toBigDecimal(),
+                    builtInTypes.getValue("decimal"),
+                    rawNode = node,
+                )
+
+            else ->
+                newProblemExpression(
+                    "Unknown numeric literal type: ${node.valueType}",
+                    rawNode = node,
+                )
+        }
+    }
+
+    /**
+     * Translates an [InvocationExpressionSyntax][Csharp.AST.InvocationExpressionSyntax] into a
+     * [Call]. If the callee is a [MemberAccess] (e.g. `member.Method()`), a `MemberCall` is
+     * created. Otherwise (e.g. `Foo()`), a [Call] is created.
+     *
+     * C# spec:
+     * [Invocation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12810-invocation-expressions)
+     */
+    private fun handleInvocationExpression(node: Csharp.AST.InvocationExpressionSyntax): Call {
+        val callee = handle(node.expression)
+        val call =
+            if (callee is MemberAccess) {
+                newMemberCall(callee, rawNode = node)
+            } else {
+                newCall(callee, rawNode = node)
+            }
+        for (arg in node.argumentList.arguments) {
+            call.addArgument(handle(arg.expression))
+        }
+        return call
+    }
+
+    /**
+     * Translates an [IsExpressionSyntax][Csharp.AST.IsExpressionSyntax] (e.g. `x is Base`) into a
+     * [BinaryOperator] with the operator `is`. Unlike the `as` operator this is a type check and,
+     * so its result is a `bool`. The type is set by
+     * [CSharpLanguage.propagateTypeOfBinaryOperation].
+     *
+     * Note: its right-hand side is a type and not a value, so it becomes a [TypeExpression].
+     *
+     * C# spec:
+     * [The is operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12123-the-is-operator)
+     */
+    private fun handleIsExpression(node: Csharp.AST.IsExpressionSyntax): BinaryOperator {
+        return newBinaryOperator(operatorCode = node.operatorToken, rawNode = node).apply {
+            this.lhs = handle(node.left)
+            val testedType = frontend.typeOf(node.right)
+            this.rhs = newTypeExpression(testedType.name, testedType, rawNode = node.right)
+        }
+    }
+
+    /**
+     * Translates an [AsExpressionSyntax][Csharp.AST.AsExpressionSyntax] (e.g. `x as string`) into a
+     * [Cast]. Its [BinaryExpressionSyntax.right][Csharp.AST.BinaryExpressionSyntax.right] is a type
+     * and therefore becomes the [Cast.castType] instead of a second operand.
+     *
+     * Note: `as` is a safe cast, i.e. it yields `null` instead of throwing when the conversion is
+     * not possible.
+     *
+     * C# spec:
+     * [The as operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12124-the-as-operator)
+     */
+    private fun handleAsExpression(node: Csharp.AST.AsExpressionSyntax): Cast {
+        return newCast(rawNode = node).apply {
+            this.expression = handle(node.left)
+            this.castType = frontend.typeOf(node.right)
+        }
+    }
+
+    /**
+     * Translates a [CastExpressionSyntax][Csharp.AST.CastExpressionSyntax] (e.g. `(int)x`) into a
+     * [Cast].
+     *
+     * C# spec:
+     * [Cast expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1299-cast-expressions)
+     */
+    private fun handleCastExpression(node: Csharp.AST.CastExpressionSyntax): Cast {
+        return newCast(rawNode = node).apply {
+            this.expression = handle(node.expression)
+            this.castType = frontend.typeOf(node.type)
+        }
+    }
+
+    /**
+     * Translates a [DefaultExpressionSyntax][Csharp.AST.DefaultExpressionSyntax] (e.g.
+     * `default(int)`) into a [Literal].
+     *
+     * Unlike the bare `default`, this form names the type it stands for, so we can type the literal
+     * even though we still do not know the value: it is `0` for the numeric types, `null` for the
+     * reference types and an all-zero value for a struct, which depends on the type's declaration
+     * rather than on the syntax.
+     *
+     * C# spec:
+     * [Default value expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12820-default-value-expressions)
+     */
+    private fun handleDefaultExpression(node: Csharp.AST.DefaultExpressionSyntax): Literal<*> {
+        return newLiteral(null, frontend.typeOf(node.type), rawNode = node)
+    }
+
+    /**
+     * Translates a [ParenthesizedExpressionSyntax][Csharp.AST.ParenthesizedExpressionSyntax] (e.g.
+     * `(a + b)`) into the [Expression] of the enclosed expression.
+     *
+     * TODO: Double-check the handling of parentheses
+     *
+     * C# spec:
+     * [Parenthesized expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1287-parenthesized-expressions)
+     */
+    private fun handleParenthesizedExpression(
+        node: Csharp.AST.ParenthesizedExpressionSyntax
+    ): Expression {
+        return handle(node.expression)
+    }
+
+    /**
+     * Translates an [ElementAccessExpressionSyntax][Csharp.AST.ElementAccessExpressionSyntax] (e.g.
+     * `a[i]`) into a [Subscription].
+     *
+     * A [Subscription] holds a single [Subscription.subscriptExpression], but C# allows several
+     * arguments for a multi-dimensional array (`m[i, j]`). In that case we model the collected
+     * arguments in an implicit [InitializerList].
+     *
+     * C# spec:
+     * [Element access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12818-element-access)
+     */
+    private fun handleElementAccessExpression(
+        node: Csharp.AST.ElementAccessExpressionSyntax
+    ): Subscription {
+        return newSubscription(rawNode = node).apply {
+            this.arrayExpression = handle(node.expression)
+
+            val arguments = node.argumentList.arguments.map { handle(it.expression) }
+            this.subscriptExpression =
+                arguments.singleOrNull()
+                    ?: newInitializerList(rawNode = node.argumentList).implicit().apply {
+                        this.initializers = arguments.toMutableList()
+                    }
+        }
+    }
+
+    /**
+     * Translates a [MemberAccessExpressionSyntax][Csharp.AST.MemberAccessExpressionSyntax] into a
+     * [MemberAccess].
+     *
+     * C# spec:
+     * [Member access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1287-member-access)
+     */
+    private fun handleMemberAccessExpression(
+        node: Csharp.AST.MemberAccessExpressionSyntax
+    ): MemberAccess {
+        val base = handle(node.expression)
+        return newMemberAccess(
+            name = node.name,
+            base = base,
+            operatorCode = node.operatorToken,
+            rawNode = node,
+        )
+    }
+
+    /**
+     * Translates a
+     * [ConditionalAccessExpressionSyntax][Csharp.AST.ConditionalAccessExpressionSyntax] (e.g.
+     * `a?.b`, `a?.b()`, `a?[i]`).
+     *
+     * We model this as the conditional expression the C# spec defines it:
+     * ```csharp
+     * a?.b
+     * ```
+     *
+     * is equalivalent to:
+     * ```csharp
+     * var tmp = a;
+     * tmp == null ? null : tmp.b;
+     * ```
+     *
+     * `tmp` is modeled as an implicit [ExpressionList]: a [DeclarationStatement] declaring `tmp`,
+     * followed by the [Conditional] that is the value of the whole expression.
+     *
+     * [whenNotNull][Csharp.AST.ConditionalAccessExpressionSyntax.whenNotNull] (`.b` above) starts
+     * with a [MemberBindingExpressionSyntax][Csharp.AST.MemberBindingExpressionSyntax] or
+     * [ElementBindingExpressionSyntax][Csharp.AST.ElementBindingExpressionSyntax] instead of
+     * repeating `a`, since it's implicitly the same, already-null-checked target again.
+     * [translateWhenNotNull] passes `tmp` in for that missing receiver as an explicit parameter
+     *
+     * Note: chained null-conditional operators such as `a?.b?.c` are not supported yet.
+     *
+     * C# spec:
+     * [Null-conditional member access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1288-null-conditional-member-access)
+     */
+    private fun handleConditionalAccessExpression(
+        node: Csharp.AST.ConditionalAccessExpressionSyntax
+    ): ExpressionList {
+        val exprList = newExpressionList()
+
+        /** Builds the temporary holding the target of the access, e.g. `var tmp = a;`. */
+        fun generateReceiver(): Pair<DeclarationStatement, Variable> {
+            val target = handle(node.expression)
+            val tmpName =
+                Name.temporary(prefix = "conditionalAccess", separatorChar = '_', exprList)
+            val tmpVar = newVariable(name = tmpName, type = target.type).implicit()
+            tmpVar.initializer = target
+            frontend.scopeManager.addDeclaration(tmpVar)
+
+            val declStmt = newDeclarationStatement().implicit()
+            declStmt.declarations += tmpVar
+            return Pair(declStmt, tmpVar)
+        }
+
+        /** Translates [whenNotNull] */
+        fun translateWhenNotNull(
+            whenNotNull: Csharp.AST.ExpressionSyntax,
+            receiver: Expression,
+        ): Expression {
+            return when (whenNotNull) {
+                // a?.b
+                is Csharp.AST.MemberBindingExpressionSyntax ->
+                    newMemberAccess(
+                        name = whenNotNull.name,
+                        base = receiver,
+                        operatorCode = ".",
+                        rawNode = whenNotNull,
+                    )
+                // a?[i]
+                is Csharp.AST.ElementBindingExpressionSyntax ->
+                    newSubscription(rawNode = whenNotNull).apply {
+                        this.arrayExpression = receiver
+                        val arguments =
+                            whenNotNull.argumentList.arguments.map { handle(it.expression) }
+                        this.subscriptExpression =
+                            arguments.singleOrNull()
+                                ?: newInitializerList(rawNode = whenNotNull.argumentList)
+                                    .implicit()
+                                    .apply { this.initializers = arguments.toMutableList() }
+                    }
+                // a?.b.c -> a member access chained after the binding
+                is Csharp.AST.MemberAccessExpressionSyntax ->
+                    newMemberAccess(
+                        name = whenNotNull.name,
+                        base = translateWhenNotNull(whenNotNull.expression, receiver),
+                        operatorCode = whenNotNull.operatorToken,
+                        rawNode = whenNotNull,
+                    )
+                // a?.b() -> a call chained after the binding
+                is Csharp.AST.InvocationExpressionSyntax -> {
+                    val callee = translateWhenNotNull(whenNotNull.expression, receiver)
+                    val call =
+                        if (callee is MemberAccess) {
+                            newMemberCall(callee, rawNode = whenNotNull)
+                        } else {
+                            newCall(callee, rawNode = whenNotNull)
+                        }
+                    for (arg in whenNotNull.argumentList.arguments) {
+                        call.addArgument(handle(arg.expression))
+                    }
+                    call
+                }
+                // a?.b[i] -> an element access chained after the binding
+                is Csharp.AST.ElementAccessExpressionSyntax ->
+                    newSubscription(rawNode = whenNotNull).apply {
+                        this.arrayExpression =
+                            translateWhenNotNull(whenNotNull.expression, receiver)
+                        val arguments =
+                            whenNotNull.argumentList.arguments.map { handle(it.expression) }
+                        this.subscriptExpression =
+                            arguments.singleOrNull()
+                                ?: newInitializerList(rawNode = whenNotNull.argumentList)
+                                    .implicit()
+                                    .apply { this.initializers = arguments.toMutableList() }
+                    }
+                else ->
+                    ProblemExpression(
+                        "Not supported in a null-conditional access: ${whenNotNull.csharpType}"
+                    )
+            }
+        }
+
+        val (declStmt, receiver) = generateReceiver()
+        exprList.expressions += declStmt
+
+        fun receiverRef() =
+            newReference(name = receiver.name).implicit().apply { refersTo = receiver }
+
+        val isNull =
+            newBinaryOperator(operatorCode = "==").implicit().apply {
+                this.lhs = receiverRef()
+                this.rhs = newLiteral(null, objectType("null")).implicit()
+            }
+        exprList.expressions +=
+            newConditional(
+                condition = isNull,
+                thenExpression = newLiteral(null, objectType("null")).implicit(),
+                elseExpression = translateWhenNotNull(node.whenNotNull, receiverRef()),
+                rawNode = node,
+            )
+
+        return exprList
+    }
+
+    /**
+     * Translates a [ThisExpressionSyntax][Csharp.AST.ThisExpressionSyntax] into a [Reference] with
+     * the name `this`.
+     *
+     * C# spec:
+     * [This access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12814-this-access)
+     */
+    private fun handleThisExpression(node: Csharp.AST.ThisExpressionSyntax): Reference {
+        val type = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
+        return newReference(name = "this", type = type, rawNode = node)
+    }
+
+    /**
+     * Translates a [BaseExpressionSyntax][Csharp.AST.BaseExpressionSyntax] into a [Reference] with
+     * the name `base`.
+     *
+     * Like `this`, `base` refers to the current instance, but views it as its base class so that
+     * `base.M()` calls the inherited rather than the overriding member.
+     *
+     * The type is left unknown here, since the base class may be declared in a file that has not
+     * been parsed yet. Both the type and the reference to the enclosing method's receiver are set
+     * once all records are known, in [handleSuperExpression][CSharpLanguage.handleSuperExpression].
+     *
+     * C# spec:
+     * [Base access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12815-base-access)
+     */
+    private fun handleBaseExpression(node: Csharp.AST.BaseExpressionSyntax): Reference {
+        return newReference(
+            name = (frontend.language as CSharpLanguage).superClassKeyword,
+            type = unknownType(),
+            rawNode = node,
+        )
+    }
+
+    /**
+     * Translates a [CheckedExpressionSyntax][Csharp.AST.CheckedExpressionSyntax] (e.g. `checked(a +
+     * b)` or `unchecked(a + b)`) into the [Expression] of the enclosed expression.
+     *
+     * Whether arithmetic overflow throws an `OverflowException` or wraps around is not modeled, as
+     * it has no direct effect on control or data flow, but it is recorded as a
+     * [ProblemNode.ProblemType.TRANSLATION] problem.
+     *
+     * C# spec:
+     * [The checked and unchecked operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12820-the-checked-and-unchecked-operators)
+     */
+    private fun handleCheckedExpression(node: Csharp.AST.CheckedExpressionSyntax): Expression {
+        val expression = handle(node.expression)
+        // `checked` and `unchecked` share the syntax class, so the kind tells them apart
+        expression.additionalProblems +=
+            newProblemExpression(
+                "The overflow behaviour of a ${Csharp.INSTANCE.GetKind(node.pointer)} is not modeled",
+                type = ProblemNode.ProblemType.TRANSLATION,
+                rawNode = node,
+            )
+        return expression
+    }
+
+    /**
+     * Translates a [ThrowExpressionSyntax][Csharp.AST.ThrowExpressionSyntax] into a [Throw]. Unlike
+     * the throw statement, a throw expression always has an exception, since only the statement
+     * form can rethrow.
+     *
+     * C# spec:
+     * [The throw expression operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1310-the-throw-statement)
+     */
+    private fun handleThrowExpression(node: Csharp.AST.ThrowExpressionSyntax): Throw {
+        return newThrow(rawNode = node).apply { this.exception = handle(node.expression) }
+    }
+
+    /**
+     * Translates a
+     * [BaseObjectCreationExpressionSyntax][Csharp.AST.BaseObjectCreationExpressionSyntax] into a
+     * [New] with a [Construction][Construction] initializer. Handles both explicit (`new Foo()`)
+     * and implicit (`new()`) object creations. For implicit cases, the type is [unknownType] and
+     * will be resolved later.
+     *
+     * If the expression has an object initializer (e.g. `new Foo(1) { X = 2, Y = 3 }`), the result
+     * is wrapped in an [ExpressionList] via [handleObjectInitializer].
+     *
+     * C# spec:
+     * [Object creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128172-object-creation-expressions)
+     */
+    private fun handleObjectCreationExpression(
+        node: Csharp.AST.BaseObjectCreationExpressionSyntax
+    ): Expression {
+        val type =
+            if (node is Csharp.AST.ObjectCreationExpressionSyntax) {
+                frontend.typeOf(node.type)
+            } else {
+                unknownType()
+            }
+        val newExpression = newNew(type, rawNode = node)
+        val construction = newConstruction(type.name.localName, rawNode = node)
+        construction.type = type
+        val argumentList = node.argumentList
+        if (argumentList != null) {
+            for (arg in argumentList.arguments) {
+                construction.addArgument(handle(arg.expression))
+            }
+        }
+        newExpression.initializer = construction
+
+        val initializer = node.initializer
+        if (initializer != null) {
+            return when (initializer) {
+                is Csharp.AST.ObjectInitializerExpressionSyntax ->
+                    handleObjectInitializer(initializer, newExpression, type)
+                is Csharp.AST.CollectionInitializerExpressionSyntax ->
+                    handleCollectionInitializer(initializer, newExpression, type)
+                else -> newExpression
+            }
+        }
+        return newExpression
+    }
+
+    /**
+     * Translates an [ArrayCreationExpressionSyntax][Csharp.AST.ArrayCreationExpressionSyntax] (e.g.
+     * `new int[1]`, `new int[1, 2]`, `new int[] { 1, 2, 3 }`) into an [ArrayConstruction].
+     *
+     * Each size in the type, e.g. `10`, becomes a [ArrayConstruction.dimensions] entry, skipping a
+     * left-out size such as the one in `new int[] { ... }`. Its (optional) initializer becomes the
+     * [ArrayConstruction.initializer].
+     *
+     * Note: We currently do not sub-arrays, e.g. `new int[1][]`.
+     *
+     * C# spec:
+     * [Array creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128175-array-creation-expressions)
+     */
+    private fun handleArrayCreationExpression(
+        node: Csharp.AST.ArrayCreationExpressionSyntax
+    ): ArrayConstruction {
+        val type = frontend.typeOf(node.type)
+        return newArrayConstruction(rawNode = node).apply {
+            this.type = type
+            for (rankSpecifier in node.type.rankSpecifiers) {
+                for (size in rankSpecifier.sizes) {
+                    if (size !is Csharp.AST.OmittedArraySizeExpressionSyntax) {
+                        addDimension(handle(size))
+                    }
+                }
+            }
+            node.initializer?.let { this.initializer = handle(it).apply { this.type = type } }
+        }
+    }
+
+    /**
+     * Translates an
+     * [ImplicitArrayCreationExpressionSyntax][Csharp.AST.ImplicitArrayCreationExpressionSyntax]
+     * (e.g. `new[] { 1, 2, 3 }`) into an [ArrayConstruction].
+     *
+     * Unlike [handleArrayCreationExpression], there is no type to take the element type or
+     * dimensions from: C# infers the element type from the initializer's elements, which we do not
+     * replicate, so [ArrayConstruction.type] stays [unknownType].
+     *
+     * C# spec:
+     * [Array creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128175-array-creation-expressions)
+     */
+    private fun handleImplicitArrayCreationExpression(
+        node: Csharp.AST.ImplicitArrayCreationExpressionSyntax
+    ): ArrayConstruction {
+        return newArrayConstruction(rawNode = node).apply {
+            this.initializer = handle(node.initializer)
+        }
+    }
+
+    /**
+     * Translates an [ArrayInitializerExpressionSyntax][Csharp.AST.ArrayInitializerExpressionSyntax]
+     * (e.g. the `{ 1, 2, 3 }` in `new int[] { 1, 2, 3 }`) into an [InitializerList]. A nested
+     * initializer, e.g. both `{ 1, 2 }` in `new int[,] { { 1, 2 }, { 3, 4 } }` is the same syntax
+     * and therefore handled the same way.
+     *
+     * C# spec:
+     * [Array creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128175-array-creation-expressions)
+     */
+    private fun handleArrayInitializerExpression(
+        node: Csharp.AST.ArrayInitializerExpressionSyntax
+    ): InitializerList {
+        return newInitializerList(rawNode = node).apply {
+            this.initializers = node.expressions.map { handle(it) }.toMutableList()
+        }
+    }
+
+    /**
+     * Handles an object initializer by wrapping the expressions in an [ExpressionList]. Since we do
+     * not have a direct representation for object initializers, we destructure them into an
+     * equivalent form. For example:
+     * ```csharp
+     * var p = new Point(1) { X = 0, Y = 1 };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * Point __tmp = new Point(1);
+     * __tmp.X = 0;
+     * __tmp.Y = 1;
+     * var p = __tmp;
+     * ```
+     *
+     * The [ExpressionList] contains:
+     * 1. A [DeclarationStatement] with an implicit temporary variable: `__tmp = new Point(1)`
+     * 2. Implicit [Assign] statements for each member: `__tmp.X = 0`, `__tmp.Y = 1`
+     * 3. A [Reference] to the temporary variable
+     *
+     * C# spec:
+     * [Object initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281722-object-initializers)
+     */
+    private fun handleObjectInitializer(
+        initializer: Csharp.AST.InitializerExpressionSyntax,
+        newExpression: New,
+        type: de.fraunhofer.aisec.cpg.graph.types.Type,
+    ): ExpressionList {
+        val exprList = newExpressionList()
+        // Create an implicit temporary variable to hold the new object
+        val tmpName = Name.temporary(prefix = type.name.localName, separatorChar = '_', exprList)
+        val tmpVar = newVariable(name = tmpName, type = type).implicit()
+        tmpVar.initializer = newExpression
+        val declStmt = newDeclarationStatement().implicit()
+        declStmt.addDeclaration(tmpVar)
+        exprList.expressions += declStmt
+
+        for (expr in initializer.expressions) {
+            if (expr is Csharp.AST.AssignmentExpressionSyntax) {
+                val memberName = (expr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
+                val baseRef = newReference(name = tmpName).implicit()
+                baseRef.refersTo = tmpVar
+                val memberAccess =
+                    newMemberAccess(name = memberName, base = baseRef)
+                        .implicit(code = newExpression.code, location = newExpression.location)
+
+                if (expr.right is Csharp.AST.ObjectInitializerExpressionSyntax) {
+                    // Nested object initializer: member = { X = 0, Y = 1 }
+                    // -> __tmp.member.X = 0, __tmp.member.Y = 1
+                    exprList.expressions +=
+                        handleNestedObjectInitializer(
+                            expr.right as Csharp.AST.ObjectInitializerExpressionSyntax,
+                            memberAccess,
+                            newExpression,
+                        )
+                } else if (expr.right is Csharp.AST.CollectionInitializerExpressionSyntax) {
+                    // Nested collection initializer: member = { "a", "b" }
+                    // -> __tmp.member.Add("a"), __tmp.member.Add("b")
+                    exprList.expressions +=
+                        handleNestedCollectionInitializer(
+                            expr.right as Csharp.AST.CollectionInitializerExpressionSyntax,
+                            memberAccess,
+                            newExpression,
+                        )
+                } else {
+                    val assign =
+                        newAssign(
+                                operatorCode = "=",
+                                lhs = listOf(memberAccess),
+                                rhs = listOf(handle(expr.right)),
+                            )
+                            .implicit(code = newExpression.code, location = newExpression.location)
+                    exprList.expressions += assign
+                }
+            }
+        }
+
+        // Add a reference to the temporary variable
+        exprList.expressions +=
+            newReference(name = tmpName).implicit().apply { this.refersTo = tmpVar }
+        return exprList
+    }
+
+    /**
+     * Handles a nested object initializer where no new object is created. Instead, the members are
+     * only initialized. For example:
+     * ```csharp
+     * Rectangle r = new Rectangle { P1 = { X = 0, Y = 1 } };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * Rectangle __tmp = new Rectangle();
+     * __tmp.P1.X = 0;
+     * __tmp.P1.Y = 1;
+     * Rectangle r = __tmp;
+     * ```
+     *
+     * C# spec:
+     * [Object initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281722-object-initializers)
+     */
+    private fun handleNestedObjectInitializer(
+        initializer: Csharp.AST.ObjectInitializerExpressionSyntax,
+        memberAccess: MemberAccess,
+        newExpression: New,
+    ): List<Assign> {
+        val assigns = mutableListOf<Assign>()
+        for (innerExpr in initializer.expressions) {
+            if (innerExpr is Csharp.AST.AssignmentExpressionSyntax) {
+                val innerName = (innerExpr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
+                val innerAccess =
+                    newMemberAccess(name = innerName, base = memberAccess)
+                        .implicit(code = newExpression.code, location = newExpression.location)
+                val assign =
+                    newAssign(
+                            operatorCode = "=",
+                            lhs = listOf(innerAccess),
+                            rhs = listOf(handle(innerExpr.right)),
+                        )
+                        .implicit(code = newExpression.code, location = newExpression.location)
+                assigns += assign
+            }
+        }
+        return assigns
+    }
+
+    /**
+     * Handles a [Csharp.AST.CollectionInitializerExpressionSyntax] by wrapping the expressions in
+     * an [ExpressionList]. Each element in the initializer is translated into an implicit `Add`
+     * call on a temporary variable. For example:
+     * ```csharp
+     * var list = new List<int> { 0, 1, 2 };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * List<int> __tmp = new List<int>();
+     * __tmp.Add(0);
+     * __tmp.Add(1);
+     * __tmp.Add(2);
+     * var list = __tmp;
+     * ```
+     *
+     * For [Csharp.AST.ComplexElementInitializerExpressionSyntax], each `{ key, value }` element is
+     * translated into an `Add(key, value)` call:
+     * ```csharp
+     * var map = new Map<string, int> { { "a", 1 }, { "b", 2 } };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * Map<string, int> __tmp = new Map<string, int>();
+     * __tmp.Add("a", 1);
+     * __tmp.Add("b", 2);
+     * var map = __tmp;
+     * ```
+     *
+     * C# spec:
+     * [Collection initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281723-collection-initializers)
+     */
+    private fun handleCollectionInitializer(
+        initializer: Csharp.AST.CollectionInitializerExpressionSyntax,
+        newExpression: New,
+        type: de.fraunhofer.aisec.cpg.graph.types.Type,
+    ): ExpressionList {
+        val exprList = newExpressionList()
+        val tmpName = Name.temporary(prefix = type.name.localName, separatorChar = '_', exprList)
+        val tmpVar = newVariable(name = tmpName, type = type).implicit()
+        tmpVar.initializer = newExpression
+        val declStmt = newDeclarationStatement().implicit()
+        declStmt.addDeclaration(tmpVar)
+        exprList.expressions += declStmt
+
+        for (expr in initializer.expressions) {
+            val baseRef = newReference(name = tmpName).implicit()
+            baseRef.refersTo = tmpVar
+            val addCall =
+                newMemberCall(
+                        newMemberAccess(name = "Add", base = baseRef)
+                            .implicit(code = newExpression.code, location = newExpression.location)
+                    )
+                    .implicit(code = newExpression.code, location = newExpression.location)
+            if (expr is Csharp.AST.ComplexElementInitializerExpressionSyntax) {
+                // For example { "a", 1 } -> Add("a", 1)
+                for (arg in expr.expressions) {
+                    addCall.addArgument(handle(arg))
+                }
+            } else {
+                // Simple element, e.g. 0 -> Add(0)
+                addCall.addArgument(handle(expr))
+            }
+            exprList.expressions += addCall
+        }
+
+        exprList.expressions +=
+            newReference(name = tmpName).implicit().apply { this.refersTo = tmpVar }
+        return exprList
+    }
+
+    /**
+     * Handles a nested collection initializer where elements are added to an already existing
+     * member via implicit `Add` calls. For example:
+     * ```csharp
+     * new Foo { Items = { 0, 1, 2 } }
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * __tmp.Items.Add(0);
+     * __tmp.Items.Add(1);
+     * __tmp.Items.Add(2);
+     * ```
+     *
+     * C# spec:
+     * [Collection initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281723-collection-initializers)
+     */
+    private fun handleNestedCollectionInitializer(
+        initializer: Csharp.AST.CollectionInitializerExpressionSyntax,
+        memberAccess: MemberAccess,
+        newExpression: New,
+    ): List<MemberCall> {
+        val calls = mutableListOf<MemberCall>()
+        for (expr in initializer.expressions) {
+            val addCall =
+                newMemberCall(
+                        newMemberAccess(name = "Add", base = memberAccess)
+                            .implicit(code = newExpression.code, location = newExpression.location)
+                    )
+                    .implicit(code = newExpression.code, location = newExpression.location)
+            if (expr is Csharp.AST.ComplexElementInitializerExpressionSyntax) {
+                for (arg in expr.expressions) {
+                    addCall.addArgument(handle(arg))
+                }
+            } else {
+                addCall.addArgument(handle(expr))
+            }
+            calls += addCall
+        }
+        return calls
+    }
+}
