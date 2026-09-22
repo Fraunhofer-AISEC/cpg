@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.implicit
+import de.fraunhofer.aisec.cpg.graph.newArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newCall
@@ -81,6 +82,10 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.ThrowExpressionSyntax -> handleThrowExpression(node)
             is Csharp.AST.CheckedExpressionSyntax -> handleCheckedExpression(node)
             is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
+            is Csharp.AST.ArrayCreationExpressionSyntax -> handleArrayCreationExpression(node)
+            is Csharp.AST.ImplicitArrayCreationExpressionSyntax ->
+                handleImplicitArrayCreationExpression(node)
+            is Csharp.AST.ArrayInitializerExpressionSyntax -> handleArrayInitializerExpression(node)
             is Csharp.AST.GenericNameSyntax -> handleGenericName(node)
             is Csharp.AST.PredefinedTypeSyntax -> handlePredefinedTypeExpression(node)
             is Csharp.AST.TypeOfExpressionSyntax -> handleTypeOfExpression(node)
@@ -818,6 +823,73 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             }
         }
         return newExpression
+    }
+
+    /**
+     * Translates an [ArrayCreationExpressionSyntax][Csharp.AST.ArrayCreationExpressionSyntax] (e.g.
+     * `new int[1]`, `new int[1, 2]`, `new int[] { 1, 2, 3 }`) into an [ArrayConstruction].
+     *
+     * Each size in the type, e.g. `10`, becomes a [ArrayConstruction.dimensions] entry, skipping a
+     * left-out size such as the one in `new int[] { ... }`. Its (optional) initializer becomes the
+     * [ArrayConstruction.initializer].
+     *
+     * Note: We currently do not sub-arrays, e.g. `new int[1][]`.
+     *
+     * C# spec:
+     * [Array creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128175-array-creation-expressions)
+     */
+    private fun handleArrayCreationExpression(
+        node: Csharp.AST.ArrayCreationExpressionSyntax
+    ): ArrayConstruction {
+        val type = frontend.typeOf(node.type)
+        return newArrayConstruction(rawNode = node).apply {
+            this.type = type
+            for (rankSpecifier in node.type.rankSpecifiers) {
+                for (size in rankSpecifier.sizes) {
+                    if (size !is Csharp.AST.OmittedArraySizeExpressionSyntax) {
+                        addDimension(handle(size))
+                    }
+                }
+            }
+            node.initializer?.let { this.initializer = handle(it).apply { this.type = type } }
+        }
+    }
+
+    /**
+     * Translates an
+     * [ImplicitArrayCreationExpressionSyntax][Csharp.AST.ImplicitArrayCreationExpressionSyntax]
+     * (e.g. `new[] { 1, 2, 3 }`) into an [ArrayConstruction].
+     *
+     * Unlike [handleArrayCreationExpression], there is no type to take the element type or
+     * dimensions from: C# infers the element type from the initializer's elements, which we do not
+     * replicate, so [ArrayConstruction.type] stays [unknownType].
+     *
+     * C# spec:
+     * [Array creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128175-array-creation-expressions)
+     */
+    private fun handleImplicitArrayCreationExpression(
+        node: Csharp.AST.ImplicitArrayCreationExpressionSyntax
+    ): ArrayConstruction {
+        return newArrayConstruction(rawNode = node).apply {
+            this.initializer = handle(node.initializer)
+        }
+    }
+
+    /**
+     * Translates an [ArrayInitializerExpressionSyntax][Csharp.AST.ArrayInitializerExpressionSyntax]
+     * (e.g. the `{ 1, 2, 3 }` in `new int[] { 1, 2, 3 }`) into an [InitializerList]. A nested
+     * initializer, e.g. both `{ 1, 2 }` in `new int[,] { { 1, 2 }, { 3, 4 } }` is the same syntax
+     * and therefore handled the same way.
+     *
+     * C# spec:
+     * [Array creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128175-array-creation-expressions)
+     */
+    private fun handleArrayInitializerExpression(
+        node: Csharp.AST.ArrayInitializerExpressionSyntax
+    ): InitializerList {
+        return newInitializerList(rawNode = node).apply {
+            this.initializers = node.expressions.map { handle(it) }.toMutableList()
+        }
     }
 
     /**

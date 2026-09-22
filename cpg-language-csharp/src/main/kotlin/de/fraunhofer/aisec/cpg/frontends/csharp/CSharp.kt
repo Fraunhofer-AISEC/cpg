@@ -92,6 +92,27 @@ interface Csharp : Library {
          */
         class ArrayTypeSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
             val elementType: TypeSyntax by lazy { INSTANCE.GetArrayTypeElementType(this) }
+
+            /** One entry per pair of brackets, e.g. two for the sub array type `int[3][]`. */
+            val rankSpecifiers: List<ArrayRankSpecifierSyntax> by lazy {
+                val count = INSTANCE.GetArrayTypeRankSpecifierCount(this)
+                (0 until count).map { i -> INSTANCE.GetArrayTypeRankSpecifier(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ArrayRankSpecifierSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.arrayranksspecifiersyntax)
+         * class, i.e. one pair of brackets of an array type, such as the `[3]` in `int[3]`. It
+         * carries one size per dimension, e.g. two for `int[3, 4]`, each of which is an
+         * [OmittedArraySizeExpressionSyntax] instead of a real expression if it is left out, as in
+         * `int[]`.
+         */
+        class ArrayRankSpecifierSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val sizes: List<ExpressionSyntax> by lazy {
+                val count = INSTANCE.GetArrayRankSpecifierSizeCount(this)
+                (0 until count).map { i -> INSTANCE.GetArrayRankSpecifierSize(this, i) }
+            }
         }
 
         /**
@@ -1037,6 +1058,11 @@ interface Csharp : Library {
                     "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
                     "ImplicitObjectCreationExpressionSyntax" ->
                         ImplicitObjectCreationExpressionSyntax(nativeValue)
+                    "ArrayCreationExpressionSyntax" -> ArrayCreationExpressionSyntax(nativeValue)
+                    "ImplicitArrayCreationExpressionSyntax" ->
+                        ImplicitArrayCreationExpressionSyntax(nativeValue)
+                    "OmittedArraySizeExpressionSyntax" ->
+                        OmittedArraySizeExpressionSyntax(nativeValue)
                     "InitializerExpressionSyntax" ->
                         when (INSTANCE.GetKind(nativeValue)) {
                             "ObjectInitializerExpression" ->
@@ -1045,6 +1071,8 @@ interface Csharp : Library {
                                 CollectionInitializerExpressionSyntax(nativeValue)
                             "ComplexElementInitializerExpression" ->
                                 ComplexElementInitializerExpressionSyntax(nativeValue)
+                            "ArrayInitializerExpression" ->
+                                ArrayInitializerExpressionSyntax(nativeValue)
                             else -> InitializerExpressionSyntax(nativeValue)
                         }
                     else -> super.fromNative(nativeValue, context)
@@ -1490,6 +1518,36 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`ArrayCreationExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.arraycreationexpressionsyntax)
+         * class, i.e. `new int[10]` or `new int[] { 1, 2, 3 }`.
+         */
+        class ArrayCreationExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val type: ArrayTypeSyntax by lazy { INSTANCE.GetArrayCreationExpressionType(this) }
+            val initializer: InitializerExpressionSyntax? by lazy {
+                INSTANCE.GetArrayCreationExpressionInitializer(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ImplicitArrayCreationExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.implicitarraycreationexpressionsyntax)
+         * class, i.e. `new[] { 1, 2, 3 }`. Unlike [ArrayCreationExpressionSyntax], it has no type
+         * of its own, since the element type is inferred from the (therefore required) initializer.
+         */
+        class ImplicitArrayCreationExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            ExpressionSyntax(p) {
+            val initializer: InitializerExpressionSyntax by lazy {
+                INSTANCE.GetImplicitArrayCreationExpressionInitializer(this)
+            }
+        }
+
+        /**
+         * The omitted size of a dimension, e.g. both in `int[,]` or the second one in `int[3,]`.
+         */
+        class OmittedArraySizeExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
          * [`InitializerExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.initializerexpressionsyntax)
          * class.
          */
@@ -1510,6 +1568,14 @@ interface Csharp : Library {
 
         /** A complex element initializer, e.g. `{ "A", 1 }`. */
         class ComplexElementInitializerExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            InitializerExpressionSyntax(p)
+
+        /**
+         * An array initializer, e.g. `{ 1, 2, 3 }` in `new int[] { 1, 2, 3 }`. Also used, nested,
+         * for a dimension of a multi-dimensional array, e.g. both `{ 1, 2 }` in `new int[,] { { 1,
+         * 2 }, { 3, 4 } }`.
+         */
+        class ArrayInitializerExpressionSyntax(p: Pointer? = Pointer.NULL) :
             InitializerExpressionSyntax(p)
     }
 
@@ -1668,6 +1734,32 @@ interface Csharp : Library {
     fun GetTypeName(handle: AST.TypeSyntax): String
 
     fun GetArrayTypeElementType(handle: AST.ArrayTypeSyntax): AST.TypeSyntax
+
+    fun GetArrayTypeRankSpecifierCount(handle: AST.ArrayTypeSyntax): Int
+
+    fun GetArrayTypeRankSpecifier(
+        handle: AST.ArrayTypeSyntax,
+        index: Int,
+    ): AST.ArrayRankSpecifierSyntax
+
+    fun GetArrayRankSpecifierSizeCount(handle: AST.ArrayRankSpecifierSyntax): Int
+
+    fun GetArrayRankSpecifierSize(
+        handle: AST.ArrayRankSpecifierSyntax,
+        index: Int,
+    ): AST.ExpressionSyntax
+
+    fun GetArrayCreationExpressionType(
+        handle: AST.ArrayCreationExpressionSyntax
+    ): AST.ArrayTypeSyntax
+
+    fun GetArrayCreationExpressionInitializer(
+        handle: AST.ArrayCreationExpressionSyntax
+    ): AST.InitializerExpressionSyntax?
+
+    fun GetImplicitArrayCreationExpressionInitializer(
+        handle: AST.ImplicitArrayCreationExpressionSyntax
+    ): AST.InitializerExpressionSyntax
 
     fun GetNullableTypeElementType(handle: AST.NullableTypeSyntax): AST.TypeSyntax
 

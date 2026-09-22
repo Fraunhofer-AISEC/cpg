@@ -1205,6 +1205,49 @@ public static class Library
         return Register(((TypeOfExpressionSyntax)Nodes[handlePtr]).Type);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetArrayCreationExpressionType")]
+    public static IntPtr GetArrayCreationExpressionType(IntPtr handlePtr)
+    {
+        return Register(((ArrayCreationExpressionSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArrayCreationExpressionInitializer")]
+    public static IntPtr GetArrayCreationExpressionInitializer(IntPtr handlePtr)
+    {
+        var initializer = ((ArrayCreationExpressionSyntax)Nodes[handlePtr]).Initializer;
+        return initializer != null ? Register(initializer) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetImplicitArrayCreationExpressionInitializer")]
+    public static IntPtr GetImplicitArrayCreationExpressionInitializer(IntPtr handlePtr)
+    {
+        return Register(((ImplicitArrayCreationExpressionSyntax)Nodes[handlePtr]).Initializer);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArrayTypeRankSpecifierCount")]
+    public static int GetArrayTypeRankSpecifierCount(IntPtr handlePtr)
+    {
+        return ((ArrayTypeSyntax)Nodes[handlePtr]).RankSpecifiers.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArrayTypeRankSpecifier")]
+    public static IntPtr GetArrayTypeRankSpecifier(IntPtr handlePtr, int index)
+    {
+        return Register(((ArrayTypeSyntax)Nodes[handlePtr]).RankSpecifiers[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArrayRankSpecifierSizeCount")]
+    public static int GetArrayRankSpecifierSizeCount(IntPtr handlePtr)
+    {
+        return ((ArrayRankSpecifierSyntax)Nodes[handlePtr]).Sizes.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArrayRankSpecifierSize")]
+    public static IntPtr GetArrayRankSpecifierSize(IntPtr handlePtr, int index)
+    {
+        return Register(((ArrayRankSpecifierSyntax)Nodes[handlePtr]).Sizes[index]);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetInterpolatedStringContentCount")]
     public static int GetInterpolatedStringContentCount(IntPtr handlePtr)
     {
