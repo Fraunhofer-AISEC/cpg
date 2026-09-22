@@ -3360,7 +3360,7 @@ class PointsToPassTest {
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
         )
         assertEquals(
-            4,
+            5,
             fssgxecallkeytoout2
                 .filter { it.key !is Return }
                 .entries
