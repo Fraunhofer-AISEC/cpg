@@ -38,6 +38,8 @@ import ai.koog.agents.features.eventHandler.feature.handleEvents
 import ai.koog.agents.mcp.McpToolRegistryProvider
 import ai.koog.agents.mcp.metadata.McpServerInfo
 import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.executor.clients.openai.OpenAIChatParams
+import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.MessagePart
 import ai.koog.prompt.params.LLMParams
@@ -129,7 +131,42 @@ class ChatService(
      */
     private val historyCompressionConcepts: List<HistoryCompressionConcept> =
         defaultHistoryCompressionConcepts,
+    /** Generation parameters sent on every [chat] call, valid for any client. */
+    private val genericChatParams: GenericChatParams = GenericChatParams(),
+    /**
+     * Generation parameters sent on every [chat] call, only meaningful for an OpenAI-compatible
+     * client - left `null` (the default) for a Gemini client, or to leave every OpenAI-specific
+     * parameter at the provider's own default.
+     */
+    private val openAiCompatibleChatParams: OpenAiCompatibleChatParams? = null,
 ) {
+    /**
+     * [LLMParams] built once from [genericChatParams]/[openAiCompatibleChatParams] and reused for
+     * every [chat] call - an [OpenAIChatParams] (carrying the OpenAI-specific fields on top of the
+     * generic ones) when [openAiCompatibleChatParams] is given, a plain [LLMParams] otherwise.
+     * [LLMParams.ToolChoice.Auto] is always set - not caller-configurable, [chatStrategy] relies on
+     * the model being free to choose whether to call a tool.
+     */
+    private val chatParams: LLMParams =
+        openAiCompatibleChatParams?.let { openAi ->
+            OpenAIChatParams(
+                temperature = genericChatParams.temperature,
+                maxTokens = genericChatParams.maxTokens,
+                toolChoice = LLMParams.ToolChoice.Auto,
+                reasoningEffort =
+                    openAi.reasoningEffort?.let { ReasoningEffort.valueOf(it.uppercase()) },
+                frequencyPenalty = openAi.frequencyPenalty,
+                presencePenalty = openAi.presencePenalty,
+                topP = openAi.topP,
+                stop = openAi.stop,
+            )
+        }
+            ?: LLMParams(
+                temperature = genericChatParams.temperature,
+                maxTokens = genericChatParams.maxTokens,
+                toolChoice = LLMParams.ToolChoice.Auto,
+            )
+
     /**
      * In-memory backing store for Koog `ChatMemory`, shared across [chat] calls on this
      * [ChatService] instance. One [ChatService] per DUST batch, so this typically holds a single
@@ -775,10 +812,7 @@ class ChatService(
             // history from request.messages directly (the pre-ChatMemory behavior).
             val sessionId = request.sessionId
             val history =
-                prompt(
-                    id = "chat-history",
-                    params = LLMParams(toolChoice = LLMParams.ToolChoice.Auto),
-                ) {
+                prompt(id = "chat-history", params = chatParams) {
                     system(buildSystemPrompt(skills))
                     if (sessionId == null) {
                         priorMessages.forEach { msg ->

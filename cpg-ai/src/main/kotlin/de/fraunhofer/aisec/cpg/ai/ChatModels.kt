@@ -108,6 +108,32 @@ data class HistoryCompressionConcept(
 )
 
 /**
+ * LLM generation parameters valid for any [ChatService] client (Gemini or OpenAI-compatible), as
+ * exposed to callers outside `cpg-ai`. Deliberately doesn't expose Koog's own
+ * `ai.koog.prompt.params.LLMParams` across the module boundary - `koog-agents` is `implementation`,
+ * not `api`, in `cpg-ai`'s `build.gradle.kts` on purpose (see [SkillInfo] for the same
+ * reasoning/precedent). Left unset (`null`) fields fall back to the provider's own default.
+ */
+data class GenericChatParams(val temperature: Double? = null, val maxTokens: Int? = null)
+
+/**
+ * LLM generation parameters only meaningful for an OpenAI-compatible [ChatService] client - passing
+ * this to [ChatService] when the client is actually Gemini has no effect there, since Gemini's own
+ * Koog client doesn't accept these. Mirrors (a curated subset of) Koog's
+ * `ai.koog.prompt.executor.clients.openai.OpenAIChatParams`, not exposed directly for the same
+ * module-boundary reason as [GenericChatParams]. [reasoningEffort] is a plain `String` (rather than
+ * Koog's `ReasoningEffort` enum) expected to be one of `"none"`/`"minimal"`/`"low"`/`"medium"`/
+ * `"high"` - validation of that is the caller's responsibility (e.g. DUST's CLI parsing).
+ */
+data class OpenAiCompatibleChatParams(
+    val reasoningEffort: String? = null,
+    val frequencyPenalty: Double? = null,
+    val presencePenalty: Double? = null,
+    val topP: Double? = null,
+    val stop: List<String>? = null,
+)
+
+/**
  * Structured completion signal requested once from the LLM whenever [ChatService.chatStrategy]
  * believes a turn is finished (see [ChatService.requestTaskStatus]), as a more reliable alternative
  * to a caller inferring completion by re-parsing whatever the skill happened to persist to disk.
