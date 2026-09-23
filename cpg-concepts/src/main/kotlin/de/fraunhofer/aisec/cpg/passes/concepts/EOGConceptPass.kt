@@ -97,6 +97,12 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
+            // Keep the (optional) IFDS summary cache honest: a node that just gained overlays may
+            // be
+            // a sink for later reaching-sources queries, so its callee must not be short-circuited.
+            if (overlayNodes.isNotEmpty()) {
+                ctx.currentComponent?.ifdsSummaryCache?.markSink(underlyingNode)
+            }
             overlayNodes.forEach {
                 it.underlyingNode = underlyingNode
                 if (it is Operation) {
@@ -231,6 +237,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
         return if (filteredAddedOverlays.isEmpty()) {
             currentState
         } else {
+            // Keep the (optional) IFDS summary cache honest: this node just gained state overlays
+            // and
+            // may be a sink for later reaching-sources queries, so its callee must stay expandable.
+            ctx.currentComponent?.ifdsSummaryCache?.markSink(currentNode)
             runBlocking {
                 lattice.lub(
                     currentState,

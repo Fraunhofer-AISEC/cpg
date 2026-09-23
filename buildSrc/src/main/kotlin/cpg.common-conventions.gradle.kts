@@ -35,17 +35,6 @@ repositories {
     // com.github.KuechA.SootUp:sootup.* -- see the `sootup` version in
     // gradle/libs.versions.toml.
     maven { setUrl("https://jitpack.io") }
-
-    ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/")
-        metadataSources {
-            artifact()
-        }
-
-        patternLayout {
-            artifact("[organisation].[module]_[revision].[ext]")
-        }
-    }
 }
 
 //

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -48,7 +47,7 @@ import java.util.Objects
  * both `x` (shorthand for `x: x`) and `y: y_coord` become a [NamedDeconstruction] inside the
  * [ObjectDeconstruction] for `Point { .. }`.
  */
-class NamedDeconstruction : Deconstruction(), ArgumentHolder {
+class NamedDeconstruction : Deconstruction() {
 
     @Relationship("VALUE") var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"))
 
@@ -57,25 +56,6 @@ class NamedDeconstruction : Deconstruction(), ArgumentHolder {
      * decompositions.
      */
     var value by unwrapping(NamedDeconstruction::valueEdge)
-
-    override fun addArgument(expression: Expression) {
-        if (value is ProblemExpression) {
-            value = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (value == old) {
-            value = new
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return value == expression
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

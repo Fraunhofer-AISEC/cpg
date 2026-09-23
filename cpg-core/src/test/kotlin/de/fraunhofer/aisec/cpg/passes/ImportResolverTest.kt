@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.newImport
 import de.fraunhofer.aisec.cpg.graph.newNamespace
@@ -49,73 +49,37 @@ class ImportResolverTest {
             )
         var result =
             frontend.build {
+                // We create two translation units with one namespace each. One file directly
+                // imports the other namespace (let's start easy). We intentionally create them in
+                // reverse order.
+                val tuB = newTranslationUnit("file.b")
+                scopeManager.resetToGlobal(tuB)
+                newNamespace("b", holder = tuB, enterScope = true) { pkgB ->
+                    newImport(parseName("a"), style = ImportStyle.IMPORT_NAMESPACE, holder = pkgB)
+                    newImport(
+                        parseName("c.bar"),
+                        style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                        holder = pkgB,
+                    )
+                }
+
+                val tuA = newTranslationUnit("file.a")
+                scopeManager.resetToGlobal(tuA)
+                newNamespace("a", holder = tuA, enterScope = true) { pkgA ->
+                    newVariable(parseName("a.foo"), holder = pkgA)
+                }
+
+                val tuC = newTranslationUnit("file.c")
+                scopeManager.resetToGlobal(tuC)
+                newNamespace("c", holder = tuC, enterScope = true) { pkgC ->
+                    newVariable(parseName("c.bar"), holder = pkgC)
+                }
+
                 translationResult {
-                    with(frontend) {
-                            // We create two translation units with one namespace each. One file
-                            // directly imports the other namespace (let's start easy). We
-                            // intentionally
-                            // create them in reverse order
-                            var tuB = newTranslationUnit("file.b")
-                            scopeManager.resetToGlobal(tuB)
-
-                            var pkgB = newNamespace("b")
-                            scopeManager.addDeclaration(pkgB)
-                            tuB.declarations += pkgB
-
-                            scopeManager.enterScope(pkgB)
-                            var import =
-                                newImport(parseName("a"), style = ImportStyle.IMPORT_NAMESPACE)
-                            scopeManager.addDeclaration(import)
-                            pkgB.declarations += import
-
-                            import =
-                                newImport(
-                                    parseName("c.bar"),
-                                    style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
-                                )
-                            scopeManager.addDeclaration(import)
-                            pkgB.declarations += import
-
-                            scopeManager.leaveScope(pkgB)
-                            tuB
-                        }
-                        .also { this.addTranslationUnit(it) }
-
-                    with(frontend) {
-                            var tuA = newTranslationUnit("file.a")
-                            scopeManager.resetToGlobal(tuA)
-
-                            var pkgA = newNamespace("a")
-                            scopeManager.addDeclaration(pkgA)
-                            tuA.declarations += pkgA
-
-                            scopeManager.enterScope(pkgA)
-                            var foo = newVariable(parseName("a.foo"))
-                            scopeManager.addDeclaration(foo)
-                            pkgA.declarations += foo
-
-                            scopeManager.leaveScope(pkgA)
-                            tuA
-                        }
-                        .also { this.addTranslationUnit(it) }
-
-                    with(frontend) {
-                            var tuA = newTranslationUnit("file.c")
-                            scopeManager.resetToGlobal(tuA)
-
-                            var pkgA = newNamespace("c")
-                            scopeManager.addDeclaration(pkgA)
-                            tuA.declarations += pkgA
-
-                            scopeManager.enterScope(pkgA)
-                            var foo = newVariable(parseName("c.bar"))
-                            scopeManager.addDeclaration(foo)
-                            pkgA.declarations += foo
-
-                            scopeManager.leaveScope(pkgA)
-                            tuA
-                        }
-                        .also { this.addTranslationUnit(it) }
+                    val app = components.firstOrNull()
+                    app?.translationUnits?.add(tuB)
+                    app?.translationUnits?.add(tuA)
+                    app?.translationUnits?.add(tuC)
                 }
             }
 

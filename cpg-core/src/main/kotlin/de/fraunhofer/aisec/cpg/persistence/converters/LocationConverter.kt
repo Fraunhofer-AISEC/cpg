@@ -47,11 +47,12 @@ class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
     override fun toGraphProperty(value: PhysicalLocation?): Map<String, *> {
         val properties: MutableMap<String, Any> = HashMap()
         if (value != null) {
+            val region = value.region
             properties[ARTIFACT] = value.artifactLocation.uri.toString()
-            properties[START_LINE] = value.region.startLine
-            properties[END_LINE] = value.region.endLine
-            properties[START_COLUMN] = value.region.startColumn
-            properties[END_COLUMN] = value.region.endColumn
+            properties[START_LINE] = region.startLine
+            properties[END_LINE] = region.endLine
+            properties[START_COLUMN] = region.startColumn
+            properties[END_COLUMN] = region.endColumn
         }
         return properties
     }

@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -358,7 +359,7 @@ class ConsoleService {
      */
     private fun extractNodes(tu: TranslationUnit, overlayNodes: Boolean): List<NodeJSON> {
         return if (overlayNodes) {
-            tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
+            tu.nodes.mapFlatMapped({ it.overlays }) { it.toJSON() }
         } else {
             tu.declarations.map { it.toJSON() } + tu.statements.map { it.toJSON() }
         }

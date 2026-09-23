@@ -41,7 +41,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * that declares variables, can change them in an iteration statement and is executed until the
  * condition evaluates to false.
  */
-class For : Loop(), BranchingNode, StatementHolder {
+class For : Loop(), BranchingNode {
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Expression>()
@@ -61,7 +61,7 @@ class For : Loop(), BranchingNode, StatementHolder {
     override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
-    override var statementEdges: AstEdges<Expression, AstEdge<Expression>>
+    var statementEdges: AstEdges<Expression, AstEdge<Expression>>
         get() {
             val statements = astEdgesOf<Expression>()
             statements += initializerStatementEdge
@@ -74,7 +74,7 @@ class For : Loop(), BranchingNode, StatementHolder {
             // Nothing to do here
         }
 
-    override var statements: MutableList<Expression>
+    var statements: MutableList<Expression>
         get() = unwrapping(For::statementEdges)
         set(value) {}
 
