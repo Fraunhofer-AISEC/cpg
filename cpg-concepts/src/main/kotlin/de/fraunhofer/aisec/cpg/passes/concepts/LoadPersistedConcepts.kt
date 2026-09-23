@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes.concepts
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -40,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -53,6 +55,9 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
 import kotlin.reflect.KParameter
+
+// Same value as NODE_REFERENCE_TYPE in cpg-ai. cpg-concepts cannot import it from there.
+private const val NODE_REFERENCE_TYPE = "NodeReference"
 
 /**
  * This pass reads a yaml or JSON file and creates a [Concept] for each entry in the file. The pass
@@ -228,7 +233,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                     .associate { arg -> arg.name to (arg.value as Any?) }
                     .toMutableMap()
             if (concept.properties != null && ctorParams?.any { it.name == "properties" } == true) {
-                args["properties"] = GenericProperties(concept.properties)
+                args["properties"] = concept.properties.toGenericProperties(translationResult)
             }
 
             val builtConcept =
@@ -279,7 +284,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                     args["genericLLMConcept"] = concept
                 }
                 if (op.properties != null && ctorParams?.any { it.name == "properties" } == true) {
-                    args["properties"] = GenericProperties(op.properties)
+                    args["properties"] = op.properties.toGenericProperties(translationResult)
                 }
 
                 node.operationBuildHelper(
@@ -294,6 +299,54 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                 log.error("Failed to add operation ${op.name}: ${ex.message}", ex)
             }
         }
+    }
+
+    /** Parses each persisted property into the [GenericPropertyValue] kind its type names. */
+    private fun Map<String, PropertyEntry>.toGenericProperties(
+        translationResult: TranslationResult
+    ): GenericProperties {
+        return GenericProperties(
+            mapNotNull { (name, entry) ->
+                    entry.toGenericPropertyValue(name, translationResult)?.let { name to it }
+                }
+                .toMap()
+        )
+    }
+
+    private fun PropertyEntry.toGenericPropertyValue(
+        name: String,
+        translationResult: TranslationResult,
+    ): GenericPropertyValue? {
+        if (type.equals(NODE_REFERENCE_TYPE, ignoreCase = true)) {
+            // A reference points to exactly one node. If several nodes match, the choice depends
+            // on the order of the node list. So we skip the property instead of guessing.
+            val nodes = location?.let { translationResult.getNodesByLocation(it) }.orEmpty()
+            if (nodes.size != 1) {
+                log.warn(
+                    "Node reference property \"{}\" matches {} nodes instead of exactly one and is skipped.",
+                    name,
+                    nodes.size,
+                )
+                return null
+            }
+            return GenericPropertyValue.NodeReferenceValue(nodes.single(), description)
+        }
+        val raw =
+            value
+                ?: run {
+                    log.warn("Property \"{}\" has no value and is skipped.", name)
+                    return null
+                }
+        return GenericPropertyValue.of(type, raw, description)
+            ?: run {
+                log.warn(
+                    "Property \"{}\" declares type {} but its value \"{}\" cannot be parsed as that type. It is kept as text.",
+                    name,
+                    type,
+                    raw,
+                )
+                GenericPropertyValue.StringValue(raw, description)
+            }
     }
 
     /** The root node of our YAML/JSON structure. It contains a list of [PersistedConceptEntry]s. */
@@ -330,7 +383,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
     data class ConceptEntry(
         val name: String,
         val constructorArguments: List<ConstructorArgumentEntry> = listOf(),
-        val properties: Map<String, String>? = null,
+        val properties: Map<String, PropertyEntry>? = null,
         val operations: List<OperationEntry> = listOf(),
         val dfg: DFGEntry = DFGEntry(fromThisNodeToConcept = false, fromConceptToThisNode = false),
     )
@@ -349,7 +402,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
     data class OperationEntry(
         val name: String,
         val constructorArguments: List<ConstructorArgumentEntry> = listOf(),
-        val properties: Map<String, String>? = null,
+        val properties: Map<String, PropertyEntry>? = null,
         val location: LocationEntry? = null,
         val signature: SignatureEntry? = null,
         val dfg: DFGEntry = DFGEntry(fromThisNodeToConcept = false, fromConceptToThisNode = false),
@@ -376,6 +429,29 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param value The value of the constructor argument.
      */
     data class ConstructorArgumentEntry(val name: String, val value: String)
+
+    /**
+     * This class represents a single persisted property of a generic concept or operation.
+     *
+     * @param type The declared type of the property, for example `string`, `long`, `double`,
+     *   `boolean`.
+     * @param value The string representation of the value.
+     * @param description The description of the property, if any.
+     * @param location The location of the referenced node, only for node references.
+     */
+    data class PropertyEntry(
+        val type: String? = null,
+        val value: String? = null,
+        val description: String? = null,
+        val location: LocationEntry? = null,
+    ) {
+        companion object {
+            /** Keeps the short form `name: "value"` valid for hand-written files. */
+            @JvmStatic
+            @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+            fun fromString(value: String) = PropertyEntry(value = value)
+        }
+    }
 
     /**
      * This class represents a single location entry in the YAML/JSON file.
@@ -423,7 +499,7 @@ fun TranslationResult.persistLLMConcepts(file: File = File("llm-tagged-concepts.
                                     LoadPersistedConcepts.ConstructorArgumentEntry("notes", it)
                                 },
                             ),
-                        properties = concept.properties.properties,
+                        properties = concept.properties.toPropertyEntries(),
                         operations =
                             concept.ops.filterIsInstance<GenericLLMOperation>().map { op ->
                                 LoadPersistedConcepts.OperationEntry(
@@ -445,43 +521,15 @@ fun TranslationResult.persistLLMConcepts(file: File = File("llm-tagged-concepts.
                                                 )
                                             },
                                         ),
-                                    properties = op.properties.properties,
+                                    properties = op.properties.toPropertyEntries(),
                                     location =
                                         op.underlyingNode
                                             ?.takeIf { it != concept.underlyingNode }
-                                            ?.let { node ->
-                                                LoadPersistedConcepts.LocationEntry(
-                                                    file =
-                                                        node.location?.artifactLocation?.uri?.let {
-                                                            uri ->
-                                                            try {
-                                                                File(uri).path
-                                                            } catch (e: Exception) {
-                                                                uri.toString()
-                                                            }
-                                                        } ?: "",
-                                                    region = node.location?.region.toString(),
-                                                    type = node::class.java.name,
-                                                )
-                                            },
+                                            ?.toLocationEntry(),
                                 )
                             },
                     ),
-                location =
-                    concept.underlyingNode?.let { node ->
-                        LoadPersistedConcepts.LocationEntry(
-                            file =
-                                node.location?.artifactLocation?.uri?.let { uri ->
-                                    try {
-                                        File(uri).path
-                                    } catch (e: Exception) {
-                                        uri.toString()
-                                    }
-                                } ?: "",
-                            region = node.location?.region.toString(),
-                            type = node::class.java.name,
-                        )
-                    },
+                location = concept.underlyingNode?.toLocationEntry(),
                 signature = null,
             )
         }
@@ -490,6 +538,71 @@ fun TranslationResult.persistLLMConcepts(file: File = File("llm-tagged-concepts.
         .enable(SerializationFeature.INDENT_OUTPUT)
         .disable(SerializationFeature.WRITE_NULL_MAP_VALUES)
         .writeValue(file, LoadPersistedConcepts.PersistedConcepts(concepts = entries))
+}
+
+/** Describes where this node is, so that the loader finds it again after a new CPG build. */
+private fun Node.toLocationEntry(): LoadPersistedConcepts.LocationEntry {
+    return LoadPersistedConcepts.LocationEntry(
+        file =
+            location?.artifactLocation?.uri?.let { uri ->
+                try {
+                    File(uri).path
+                } catch (e: Exception) {
+                    uri.toString()
+                }
+            } ?: "",
+        region = location?.region.toString(),
+        type = this::class.java.name,
+    )
+}
+
+private fun GenericProperties.toPropertyEntries():
+    Map<String, LoadPersistedConcepts.PropertyEntry> {
+    return properties
+        .map { (name, value) ->
+            val entry =
+                when (value) {
+                    is GenericPropertyValue.StringValue ->
+                        LoadPersistedConcepts.PropertyEntry(
+                            "string",
+                            value.value,
+                            value.description,
+                        )
+                    is GenericPropertyValue.IntegerValue ->
+                        LoadPersistedConcepts.PropertyEntry(
+                            "long",
+                            value.value.toString(),
+                            value.description,
+                        )
+                    is GenericPropertyValue.FloatValue ->
+                        LoadPersistedConcepts.PropertyEntry(
+                            "double",
+                            value.value.toString(),
+                            value.description,
+                        )
+                    is GenericPropertyValue.BooleanValue ->
+                        LoadPersistedConcepts.PropertyEntry(
+                            "boolean",
+                            value.value.toString(),
+                            value.description,
+                        )
+                    is GenericPropertyValue.NodeReferenceValue ->
+                        LoadPersistedConcepts.PropertyEntry(
+                            type = NODE_REFERENCE_TYPE,
+                            description = value.description,
+                            location = value.node.toLocationEntry(),
+                        )
+                    // A value kind contributed by another project.
+                    else ->
+                        LoadPersistedConcepts.PropertyEntry(
+                            null,
+                            value.rawValue?.toString(),
+                            value.description,
+                        )
+                }
+            name to entry
+        }
+        .toMap()
 }
 
 /**

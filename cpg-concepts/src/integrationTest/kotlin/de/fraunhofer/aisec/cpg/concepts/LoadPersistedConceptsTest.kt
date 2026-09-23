@@ -34,8 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.invoke
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.loadLLMConceptsFromFile
 import de.fraunhofer.aisec.cpg.passes.concepts.persistLLMConcepts
@@ -151,13 +153,13 @@ class LoadPersistedConceptsTest : BaseTest() {
         assertIs<GenericLLMConcept>(concept)
         assertEquals("Authentication", concept.conceptName)
         assertEquals("Handles user authentication", concept.description)
-        assertEquals("high", concept.properties.properties["tier"])
+        assertEquals("high", concept.properties.properties["tier"]?.rawValue)
 
         val op = concept.ops.singleOrNull()
         assertIs<GenericLLMOperation>(op)
         assertEquals("Login", op.operationName)
         assertEquals("Performs user login", op.description)
-        assertEquals("POST", op.properties.properties["method"])
+        assertEquals("POST", op.properties.properties["method"]?.rawValue)
         assertSame(concept, op.genericLLMConcept)
     }
 
@@ -183,7 +185,8 @@ class LoadPersistedConceptsTest : BaseTest() {
                     underlyingNode = target,
                     conceptName = "Authentication",
                     description = "Handles user authentication",
-                    properties = GenericProperties(mapOf("tier" to "high")),
+                    properties =
+                        GenericProperties(mapOf("tier" to GenericPropertyValue.StringValue("high"))),
                 )
                 .apply {
                     this.codeAndLocationFrom(target)
@@ -197,7 +200,10 @@ class LoadPersistedConceptsTest : BaseTest() {
                     operationName = "Login",
                     description = "Performs user login",
                     genericLLMConcept = concept,
-                    properties = GenericProperties(mapOf("method" to "POST")),
+                    properties =
+                        GenericProperties(
+                            mapOf("method" to GenericPropertyValue.StringValue("POST"))
+                        ),
                 )
                 .apply {
                     this.codeAndLocationFrom(target)
@@ -228,12 +234,12 @@ class LoadPersistedConceptsTest : BaseTest() {
         assertIs<GenericLLMConcept>(reloadedConcept)
         assertEquals("Authentication", reloadedConcept.conceptName)
         assertEquals("Handles user authentication", reloadedConcept.description)
-        assertEquals("high", reloadedConcept.properties.properties["tier"])
+        assertEquals("high", reloadedConcept.properties.properties["tier"]?.rawValue)
 
         val reloadedOp = reloadedConcept.ops.singleOrNull()
         assertIs<GenericLLMOperation>(reloadedOp)
         assertEquals("Login", reloadedOp.operationName)
-        assertEquals("POST", reloadedOp.properties.properties["method"])
+        assertEquals("POST", reloadedOp.properties.properties["method"]?.rawValue)
         assertSame(reloadedConcept, reloadedOp.genericLLMConcept)
         assertNull(reloadedConcept.notes)
         assertNull(reloadedOp.notes)
@@ -261,7 +267,10 @@ class LoadPersistedConceptsTest : BaseTest() {
                     underlyingNode = target,
                     conceptName = "Authentication",
                     description = "Handles user authentication",
-                    properties = GenericProperties(mapOf("tier" to "high")),
+                    properties =
+                        GenericProperties(
+                            mapOf("tier" to GenericPropertyValue.StringValue("high"))
+                        ),
                     notes = "Must run after the session init call.",
                 )
                 .apply {
@@ -276,7 +285,10 @@ class LoadPersistedConceptsTest : BaseTest() {
                     operationName = "Login",
                     description = "Performs user login",
                     genericLLMConcept = concept,
-                    properties = GenericProperties(mapOf("method" to "POST")),
+                    properties =
+                        GenericProperties(
+                            mapOf("method" to GenericPropertyValue.StringValue("POST"))
+                        ),
                     notes = "Requires a valid session cookie.",
                 )
                 .apply {
@@ -396,5 +408,216 @@ class LoadPersistedConceptsTest : BaseTest() {
         } finally {
             if (defaultFile.exists()) defaultFile.delete()
         }
+    }
+
+    @Test
+    fun testPersistAndLoadTypedPropertiesAndNodeReference() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+        val outFile =
+            Files.createTempFile("llm-concepts-typed-", ".yaml").toFile().apply { deleteOnExit() }
+
+        val analyzeFile = {
+            analyze(
+                files = listOf(topLevel.resolve("file_read.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        }
+
+        val result = analyzeFile()
+        val target = result.calls("open").single()
+        val referenced = result.calls("read").single()
+        GenericLLMConcept(
+                underlyingNode = target,
+                conceptName = "FileAccess",
+                description = "Opens a file",
+                properties =
+                    GenericProperties(
+                        mapOf(
+                            "mode" to GenericPropertyValue.StringValue("r", "open mode"),
+                            "bufferSize" to GenericPropertyValue.IntegerValue(4096),
+                            "ratio" to GenericPropertyValue.FloatValue(0.5),
+                            "binary" to GenericPropertyValue.BooleanValue(false),
+                            "readBy" to GenericPropertyValue.NodeReferenceValue(referenced),
+                        )
+                    ),
+            )
+            .apply {
+                this.codeAndLocationFrom(target)
+                this.name =
+                    Name("${GenericLLMConcept::class.simpleName}[$conceptName]", target.name)
+                NodeBuilder.log(this)
+            }
+
+        result.persistLLMConcepts(outFile)
+
+        val reloaded = analyzeFile()
+        reloaded.loadLLMConceptsFromFile(outFile)
+
+        val properties =
+            assertIs<GenericLLMConcept>(reloaded.conceptNodes.singleOrNull()).properties.properties
+        assertEquals(GenericPropertyValue.StringValue("r", "open mode"), properties["mode"])
+        assertEquals(GenericPropertyValue.IntegerValue(4096), properties["bufferSize"])
+        assertEquals(GenericPropertyValue.FloatValue(0.5), properties["ratio"])
+        assertEquals(GenericPropertyValue.BooleanValue(false), properties["binary"])
+        val reference = assertIs<GenericPropertyValue.NodeReferenceValue>(properties["readBy"])
+        assertSame(reloaded.calls("read").single(), reference.node)
+    }
+
+    @Test
+    fun testUnresolvableNodeReferenceIsSkipped() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+        val file = topLevel.resolve("file_read.py").toFile()
+        val yaml =
+            Files.createTempFile("llm-concepts-dangling-", ".yaml").toFile().apply {
+                deleteOnExit()
+                writeText(
+                    """
+                    concepts:
+                      - concept:
+                          name: "${GenericLLMConcept::class.java.name}"
+                          constructorArguments:
+                            - name: "conceptName"
+                              value: "FileAccess"
+                            - name: "description"
+                              value: "Opens a file"
+                          properties:
+                            mode: "r"
+                            readBy:
+                              type: "NodeReference"
+                              location:
+                                file: "${file.path}"
+                                region: "99:1-99:5"
+                                type: "de.fraunhofer.aisec.cpg.graph.expressions.Call"
+                        location:
+                          file: "${file.path}"
+                          region: "1:6-1:30"
+                          type: "de.fraunhofer.aisec.cpg.graph.expressions.Call"
+                    """
+                        .trimIndent()
+                )
+            }
+
+        val result =
+            analyze(files = listOf(file), topLevel = topLevel, usePasses = true) {
+                it.registerLanguage<PythonLanguage>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        result.loadLLMConceptsFromFile(yaml)
+
+        val properties =
+            assertIs<GenericLLMConcept>(result.conceptNodes.singleOrNull()).properties.properties
+        assertEquals("r", properties["mode"]?.rawValue)
+        assertFalse("readBy" in properties)
+    }
+
+    @Test
+    fun testValueThatDoesNotMatchItsTypeIsKeptAsText() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+        val file = topLevel.resolve("file_read.py").toFile()
+        val yaml =
+            Files.createTempFile("llm-concepts-bad-type-", ".yaml").toFile().apply {
+                deleteOnExit()
+                writeText(
+                    """
+                    concepts:
+                      - concept:
+                          name: "${GenericLLMConcept::class.java.name}"
+                          constructorArguments:
+                            - name: "conceptName"
+                              value: "FileAccess"
+                            - name: "description"
+                              value: "Opens a file"
+                          properties:
+                            bufferSize:
+                              type: "long"
+                              value: "not a number"
+                            validated:
+                              type: "boolean"
+                              value: "1"
+                        location:
+                          file: "${file.path}"
+                          region: "1:6-1:30"
+                          type: "de.fraunhofer.aisec.cpg.graph.expressions.Call"
+                    """
+                        .trimIndent()
+                )
+            }
+
+        val result =
+            analyze(files = listOf(file), topLevel = topLevel, usePasses = true) {
+                it.registerLanguage<PythonLanguage>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        result.loadLLMConceptsFromFile(yaml)
+
+        val properties =
+            assertIs<GenericLLMConcept>(result.conceptNodes.singleOrNull()).properties.properties
+        val bufferSize = assertIs<GenericPropertyValue.StringValue>(properties["bufferSize"])
+        assertEquals("not a number", bufferSize.value)
+        val validated = assertIs<GenericPropertyValue.StringValue>(properties["validated"])
+        assertEquals("1", validated.value)
+    }
+
+    @Test
+    fun testAmbiguousNodeReferenceIsSkipped() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+        val file = topLevel.resolve("file_read.py").toFile()
+
+        val result =
+            analyze(files = listOf(file), topLevel = topLevel, usePasses = true) {
+                it.registerLanguage<PythonLanguage>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+
+        // A location is ambiguous when several nodes sit at exactly the same region. Which nodes
+        // those are depends on the frontend, so the test looks for such a region instead of
+        // naming one.
+        val ambiguous =
+            result.nodes
+                .filter { it.location != null }
+                .groupBy { it.location }
+                .entries
+                .firstOrNull { it.value.size > 1 }
+        assertNotNull(ambiguous, "The fixture has no location shared by several nodes.")
+        val region = assertNotNull(ambiguous.key).region
+
+        val yaml =
+            Files.createTempFile("llm-concepts-ambiguous-", ".yaml").toFile().apply {
+                deleteOnExit()
+                writeText(
+                    """
+                    concepts:
+                      - concept:
+                          name: "${GenericLLMConcept::class.java.name}"
+                          constructorArguments:
+                            - name: "conceptName"
+                              value: "FileAccess"
+                            - name: "description"
+                              value: "Opens a file"
+                          properties:
+                            mode: "r"
+                            readBy:
+                              type: "NodeReference"
+                              location:
+                                file: "${file.path}"
+                                region: "$region"
+                        location:
+                          file: "${file.path}"
+                          region: "1:6-1:30"
+                          type: "de.fraunhofer.aisec.cpg.graph.expressions.Call"
+                    """
+                        .trimIndent()
+                )
+            }
+        result.loadLLMConceptsFromFile(yaml)
+
+        val properties =
+            assertIs<GenericLLMConcept>(result.conceptNodes.singleOrNull()).properties.properties
+        assertEquals("r", properties["mode"]?.rawValue)
+        assertFalse("readBy" in properties)
     }
 }

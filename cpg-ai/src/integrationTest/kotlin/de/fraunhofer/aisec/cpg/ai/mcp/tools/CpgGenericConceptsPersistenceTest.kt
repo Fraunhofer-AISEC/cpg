@@ -180,13 +180,16 @@ class CpgGenericConceptsPersistenceTest {
                 assertIs<GenericLLMConcept>(reloadedConcept)
                 assertEquals("SecretKey", reloadedConcept.conceptName)
                 assertEquals("A hardcoded API secret key", reloadedConcept.description)
-                assertEquals("CRITICAL", reloadedConcept.properties.properties["severity"])
+                assertEquals(
+                    "CRITICAL",
+                    reloadedConcept.properties.properties["severity"]?.rawValue,
+                )
 
                 val reloadedOp = reloadedConcept.ops.singleOrNull()
                 assertIs<GenericLLMOperation>(reloadedOp)
                 assertEquals("AccessSecret", reloadedOp.operationName)
                 assertEquals("Accesses the secret value", reloadedOp.description)
-                assertEquals("READ", reloadedOp.properties.properties["accessType"])
+                assertEquals("READ", reloadedOp.properties.properties["accessType"]?.rawValue)
                 assertSame(reloadedConcept, reloadedOp.genericLLMConcept)
             } finally {
                 cleanFiles()
