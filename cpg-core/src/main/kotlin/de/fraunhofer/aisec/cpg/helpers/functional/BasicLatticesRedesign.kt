@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel
 import de.fraunhofer.aisec.cpg.graph.isBranchOf
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
@@ -50,11 +49,384 @@ import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.math.ceil
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
 val MIN_CHUNK_SIZE = 100
+
+/**
+ * The number of entries below which we never bother to look for dead states while iterating the
+ * EOG. See `pruneGlobalState` in [Lattice.iterateEogInternal].
+ */
+const val MIN_GLOBAL_STATE_PRUNE_SIZE = 256
+
+/**
+ * The number of state entries an [Lattice.iterateEOG] run may keep alive before we warn about it.
+ *
+ * A single entry of a points-to state costs roughly 500 bytes, so this corresponds to about a
+ * gigabyte. If an analysis runs out of memory, the last function warned about here is the one to
+ * look at.
+ */
+const val LARGE_STATE_ENTRY_WARN_THRESHOLD = 2_000_000L
+
+/**
+ * The number of edges after which [IterationStatistics] takes its first sample of how much state an
+ * [Lattice.iterateEOG] run keeps alive. Every further sample is taken after twice as many edges as
+ * the previous one, so the sampling costs are logarithmic in the length of the run.
+ */
+private const val FIRST_STATE_SAMPLE_AFTER_EDGES = 64
+
+/** The number of states [IterationStatistics] looks at when it takes a sample. */
+private const val STATES_PER_SAMPLE = 8
+
+/**
+ * How long a single edge may be transformed before [EdgeStallWatchdog] reports that we are stuck on
+ * it. Every further report about the same edge is due after twice the time of the previous one, so
+ * a genuinely unbounded operation costs us a logarithmic number of log lines.
+ *
+ * The transformation of one edge is expected to take milliseconds, so anything in the minutes range
+ * is a bug. Note that this only *reports*; whether we can actually abandon the edge is up to
+ * [withTimeout] and thus up to the transformation reaching a cancellation point.
+ */
+private val SINGLE_EDGE_STALL_REPORT_AFTER = 1.minutes
+
+/** How often [EdgeStallWatchdog] looks whether an analysis is still working on the same edge. */
+private val STALL_POLL_INTERVAL = 15.seconds
+
+/**
+ * Watches the [Lattice.iterateEOG] runs which are currently in progress and reports an edge whose
+ * transformation does not finish, *while* it does not finish.
+ *
+ * We need this because the transformation of a single edge is not interruptible in general: it is
+ * ordinary Kotlin code, and [withTimeout] can only cancel it where it reaches a cancellation point.
+ * If it does not, the analysis is stuck with no way to tell from the outside what it is stuck in --
+ * the log stays silent for however long the operation takes, and the stack of the thread that runs
+ * the worklist only shows that it is waiting for its children. So we sample the stack traces of the
+ * worker threads instead, which is the only thing that actually names the operation to blame.
+ *
+ * Runs are strictly nested: a transformation may analyze a callee, which starts another run inside
+ * the current one. Only the innermost run reports, because all the outer ones are stuck by
+ * construction while it is working and would just repeat each other.
+ */
+private object EdgeStallWatchdog {
+
+    /**
+     * One [Lattice.iterateEOG] run in progress. [enter] and [leave] are called for every single
+     * edge, so they do no more than write two fields; everything which costs anything - describing
+     * the edge, walking the stacks - happens on the watchdog thread and only if we are actually
+     * stuck.
+     */
+    class Run(private val name: String) {
+        /** The edge we are working on, or `null` if we are between edges. */
+        @Volatile private var edge: EvaluationOrder? = null
+
+        /** When we started with [edge], in [System.nanoTime]. */
+        @Volatile private var sinceNanos: Long = 0
+
+        /** How long [edge] has to take before we report about it again. */
+        @Volatile
+        private var reportAfterNanos: Long = SINGLE_EDGE_STALL_REPORT_AFTER.inWholeNanoseconds
+
+        /** Records that we are about to transform [edge]. */
+        fun enter(edge: EvaluationOrder) {
+            sinceNanos = System.nanoTime()
+            reportAfterNanos = SINGLE_EDGE_STALL_REPORT_AFTER.inWholeNanoseconds
+            this.edge = edge
+        }
+
+        /** Records that we are done with the current edge. */
+        fun leave() {
+            edge = null
+        }
+
+        /** Logs a stall if the current edge has been running for too long. */
+        fun reportIfStalled() {
+            val stuckOn = edge ?: return
+            val elapsed = System.nanoTime() - sinceNanos
+            if (elapsed < reportAfterNanos) return
+            // Back off first: if the logging below throws, we still do not want to spin on it.
+            reportAfterNanos = elapsed * 2
+            Pass.log.warn(
+                "The analysis of {} has been transforming the single edge {} for {}. This is a bug: " +
+                    "the transformation of one edge is expected to take milliseconds. The threads " +
+                    "are currently here:\n{}",
+                name,
+                describe(stuckOn),
+                elapsed.nanoseconds,
+                workerStackTraces(),
+            )
+        }
+    }
+
+    /**
+     * The runs in progress, innermost last. Guarded by the monitor of this object, which the worker
+     * threads only ever take for the very short [register]/[unregister], never while transforming.
+     */
+    private val runs = mutableListOf<Run>()
+
+    private var poller: Thread? = null
+
+    /** Registers a new, innermost run under the given name and returns its handle. */
+    @Synchronized
+    fun register(name: String): Run {
+        val run = Run(name)
+        runs.add(run)
+        if (poller == null) {
+            poller =
+                Thread { poll() }
+                    .apply {
+                        this.name = "cpg-iterate-eog-watchdog"
+                        // Must not keep the JVM alive: this thread never finishes on its own.
+                        this.isDaemon = true
+                        start()
+                    }
+        }
+        return run
+    }
+
+    /** Removes [run] again. */
+    @Synchronized
+    fun unregister(run: Run) {
+        runs.remove(run)
+    }
+
+    @Synchronized private fun innermost(): Run? = runs.lastOrNull()
+
+    private fun poll() {
+        while (true) {
+            try {
+                Thread.sleep(STALL_POLL_INTERVAL.inWholeMilliseconds)
+                innermost()?.reportIfStalled()
+            } catch (_: InterruptedException) {
+                return
+            } catch (e: Exception) {
+                // A watchdog which takes the analysis down with it would be worse than no watchdog.
+                Pass.log.warn("The iterateEOG watchdog failed and stops watching", e)
+                return
+            }
+        }
+    }
+
+    /**
+     * The stacks of the threads which could be doing the work, which are the one running the
+     * worklist and the coroutine dispatcher's workers. We deliberately do not dump every thread of
+     * the JVM: the interesting ones are few and the uninteresting ones are many.
+     */
+    private fun workerStackTraces(): String =
+        Thread.getAllStackTraces()
+            .asSequence()
+            .filter { (thread, stack) ->
+                stack.isNotEmpty() &&
+                    (thread.name.startsWith("DefaultDispatcher-worker-") ||
+                        thread.name.startsWith("main") ||
+                        thread.name.startsWith("cpg-"))
+            }
+            .joinToString("\n") { (thread, stack) ->
+                val frames =
+                    stack.take(STALL_STACK_FRAMES).joinToString("\n") { frame -> "\tat $frame" }
+                "\"${thread.name}\" ${thread.state}\n$frames"
+            }
+}
+
+/** The number of stack frames [EdgeStallWatchdog] logs per thread. */
+private const val STALL_STACK_FRAMES = 25
+
+/**
+ * Bookkeeping for a single [Lattice.iterateEOG] run. Memory consumption of the analysis is driven
+ * by the product of [peakLiveStates] and the number of entries in each of them, neither of which is
+ * visible from the outside, so we report both.
+ *
+ * We report *while* iterating and not only at the end, because a run that exhausts the heap never
+ * reaches the end: without the intermediate reports, the log would name every function but the one
+ * that actually caused the problem.
+ */
+private class IterationStatistics(private val startEdges: List<EvaluationOrder>) {
+    /** The number of edges we took off a worklist. */
+    var processedEdges = 0
+        private set
+
+    /**
+     * The high-water mark of the number of states we kept alive at the same time, sampled before
+     * pruning.
+     */
+    var peakLiveStates = 0
+        private set
+
+    /** The number of entries of the resulting state, or -1 if we did not get that far. */
+    var finalStateEntries = -1
+
+    /** The number of entries of the biggest state we looked at, or -1 if we never sampled one. */
+    private var sampledStateEntries = -1
+
+    /** How long the whole run spent in the transformation, as opposed to the worklist itself. */
+    private var transformationTime = Duration.ZERO
+
+    /** How long the single slowest transformation of this run took. */
+    private var slowestTransformation = Duration.ZERO
+
+    /** The edge whose transformation took [slowestTransformation]. */
+    private var slowestEdge: String? = null
+
+    /** The number of processed edges at which we take the next sample. */
+    private var nextSampleEdge = FIRST_STATE_SAMPLE_AFTER_EDGES
+
+    /** The number of entries above which the next warning is due. */
+    private var nextWarnEntries = LARGE_STATE_ENTRY_WARN_THRESHOLD
+
+    private val name: String
+        get() = startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+
+    /**
+     * Records that we are about to process another edge while [liveStates] states are alive, and
+     * returns our current estimate of the total number of entries they hold.
+     *
+     * Counting the entries of a state is linear in its size, so we only do that every now and then
+     * (see [FIRST_STATE_SAMPLE_AFTER_EDGES]) and for a few states only (see [STATES_PER_SAMPLE]).
+     * [states] is therefore not a collection but a function: we do not even want to iterate the
+     * states unless we are going to sample them.
+     */
+    /**
+     * Records that transforming [edge] took [duration], so that [report] can name the edge which
+     * cost us the most. A run whose time is dominated by a single edge is a very different problem
+     * from one which is slow because it processes many of them, and the two are indistinguishable
+     * from the outside.
+     */
+    fun recordTransformation(edge: EvaluationOrder, duration: Duration) {
+        transformationTime += duration
+        if (duration > slowestTransformation) {
+            slowestTransformation = duration
+            slowestEdge = describe(edge)
+        }
+    }
+
+    fun sample(liveStates: Int, states: () -> Iterable<Lattice.Element>): Long {
+        processedEdges++
+        if (liveStates > peakLiveStates) {
+            peakLiveStates = liveStates
+        }
+
+        if (processedEdges >= nextSampleEdge) {
+            nextSampleEdge *= 2
+            sampledStateEntries =
+                states().take(STATES_PER_SAMPLE).maxOfOrNull { it.entryCount() } ?: 0
+        }
+
+        val entries = liveStates.toLong() * sampledStateEntries.coerceAtLeast(0)
+        if (entries > nextWarnEntries) {
+            Pass.log.warn(
+                "The analysis of {} is keeping {} states of about {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
+                name,
+                liveStates,
+                sampledStateEntries,
+                entries,
+            )
+            // Only warn again once the problem has become noticeably worse.
+            nextWarnEntries = entries * 2
+        }
+
+        return entries
+    }
+
+    /** Logs what the finished - or abandoned - run kept alive. */
+    fun report() {
+        // The final state is the union of all end states, so its size is an upper bound for the
+        // size of every intermediate state. If we never got there, we have to make do with the last
+        // state we sampled.
+        val entriesPerState = if (finalStateEntries >= 0) finalStateEntries else sampledStateEntries
+        val peakEntries = peakLiveStates.toLong() * entriesPerState.coerceAtLeast(0)
+        if (peakEntries > LARGE_STATE_ENTRY_WARN_THRESHOLD) {
+            Pass.log.warn(
+                "The analysis of {} kept up to {} states of up to {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
+                name,
+                peakLiveStates,
+                entriesPerState,
+                peakEntries,
+            )
+        } else if (Pass.log.isDebugEnabled) {
+            Pass.log.debug(
+                "Iterated the EOG of {} in {} steps, keeping up to {} states of up to {} entries alive ({} entries in total).",
+                name,
+                processedEdges,
+                peakLiveStates,
+                entriesPerState,
+                peakEntries,
+            )
+        }
+
+        // A run whose time went into a single edge is a bug in the transformation, not a big
+        // analysis, so it gets its own message and it gets it unconditionally.
+        if (slowestTransformation > SINGLE_EDGE_STALL_REPORT_AFTER) {
+            Pass.log.warn(
+                "The analysis of {} spent {} of its {} in the transformation of the single edge {}. " +
+                    "This edge, not the size of the function, is what made the analysis slow.",
+                name,
+                slowestTransformation,
+                transformationTime,
+                slowestEdge,
+            )
+        } else if (Pass.log.isDebugEnabled) {
+            Pass.log.debug(
+                "The analysis of {} spent {} in {} transformations, at most {} in a single one ({}).",
+                name,
+                transformationTime,
+                processedEdges,
+                slowestTransformation,
+                slowestEdge,
+            )
+        }
+    }
+}
+
+/**
+ * A short description of [edge] which is good enough to find the corresponding source location
+ * again. We describe the node the edge leads to, because that is the one the transformation looks
+ * at.
+ */
+private fun describe(edge: EvaluationOrder): String {
+    val target = edge.end
+    return "${target.javaClass.simpleName} \"${target.name.localName}\" at ${target.location}"
+}
+
+/**
+ * Runs [block], which is the transformation of [edge], and tells both [statistics] and [watchdog]
+ * how long it took. The two serve different purposes: [statistics] reports afterwards which edge
+ * was the most expensive one, [watchdog] reports *while* an edge refuses to finish.
+ */
+private suspend fun <R> measureAndRecord(
+    edge: EvaluationOrder,
+    statistics: IterationStatistics,
+    watchdog: EdgeStallWatchdog.Run,
+    block: suspend () -> R,
+): R {
+    watchdog.enter(edge)
+    val started = TimeSource.Monotonic.markNow()
+    try {
+        return block()
+    } finally {
+        statistics.recordTransformation(edge, started.elapsedNow())
+        watchdog.leave()
+    }
+}
+
+/**
+ * The number of entries this element holds, summed over all nested containers. Together with the
+ * number of states that are alive at the same time, this is what determines the memory consumption
+ * of an [Lattice.iterateEOG] run, so we use it for the diagnostics in [IterationStatistics].
+ */
+private fun Lattice.Element.entryCount(): Int =
+    when (this) {
+        is TupleLattice.Element<*, *> -> first.entryCount() + second.entryCount()
+        is TripleLattice.Element<*, *, *> ->
+            first.entryCount() + second.entryCount() + third.entryCount()
+        is ConcurrentMapLattice.Element<*, *> -> size
+        is HashMapLattice.Element<*, *> -> size
+        is PowersetLattice.Element<*> -> size
+        else -> 1
+    }
 
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
 open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
@@ -192,8 +564,25 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
         return backing.isEmpty()
     }
 
-    fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
+    open fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
         backing.computeIfAbsent(PointsToPass.IdKey(key)) { mappingFunction(it.ref) }
+
+    /**
+     * Atomically replaces the value stored under [key] by the result of [remappingFunction], which
+     * receives the key and the current value (or `null` if there is none). Removes the entry if the
+     * function returns `null`.
+     */
+    fun compute(key: K, remappingFunction: (K, V?) -> V?): V? =
+        backing.compute(PointsToPass.IdKey(key)) { k, v -> remappingFunction(k.ref, v) }
+
+    /**
+     * Copies every entry of [other] into this map, storing [transform] of the value. This reuses
+     * the key wrappers of [other] and does not go through [put], so it is both cheaper than
+     * [putAll] and unaffected by whatever a subclass does in [put].
+     */
+    protected fun putAllTransformed(other: ConcurrentIdentityHashMap<K, V>, transform: (V) -> V) {
+        other.backing.forEach { (key, value) -> backing.put(key, transform(value)) }
+    }
 
     fun putAll(map: Map<out K, V>) {
         val wrapped = HashMap<PointsToPass.IdKey<K>, V>(map.size)
@@ -217,10 +606,6 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
 
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
-
-    internal fun copyFrom(other: ConcurrentIdentityHashMap<K, V>) {
-        backing.putAll(other.backing)
-    }
 
     fun clear() = backing.clear()
 
@@ -289,8 +674,17 @@ interface HasWidening<T : Lattice.Element> {
      * Computes the widening of [one] and [two]. This is used to ensure that the fixpoint iteration
      * converges (faster).
      *
-     * @param one The first element to widen
-     * @param two The second element to widen
+     * By convention, [one] is the stable/previous-iteration value and [two] is the newly computed
+     * value from the current iteration. Implementations are generally NOT symmetric in [one]/[two]:
+     * growth-detection logic (e.g. jumping straight to an unbounded/top-like value once growth is
+     * observed across iterations, as done by `LatticeInterval.widen` and `StringLattice.widen`)
+     * relies on comparing the new value against the stable baseline in this specific order to
+     * converge in bounded steps. Calling `widen(two, one)` instead of `widen(one, two)` may still
+     * be sound but can silently break termination. Callers must pass arguments in this order; do
+     * not assume `widen` is commutative.
+     *
+     * @param one The stable/previous-iteration element
+     * @param two The newly computed element to widen against [one]
      * @return The widened element
      */
     fun widen(one: T, two: T): T
@@ -348,6 +742,36 @@ interface Lattice<T : Lattice.Element> {
 
         /** Duplicates this element, i.e., it creates a new object with equal contents. */
         fun duplicate(): Element
+
+        /**
+         * Whether this kind of element can be handed to more than one owner instead of being
+         * copied, see [isShared].
+         *
+         * Elements which cannot detect (and reject) a modification of themselves must not opt in;
+         * they are deep-copied instead, which is what every [Element] did before copy-on-write was
+         * introduced.
+         */
+        val supportsSharing: Boolean
+            get() = false
+
+        /**
+         * Whether this element is reachable from more than one owner and must therefore not be
+         * modified any more.
+         *
+         * Copies of a state - which the [Lattice.iterateEOG] worklist creates for every basic block
+         * - share their entries instead of deep-copying them, which is what keeps the memory
+         *   consumption of an analysis with many live states manageable. Whoever wants to modify a
+         *   shared entry has to ask its owner for a private copy first, see
+         *   [ConcurrentMapLattice.Element.getForUpdate]; a modification of a shared element is a
+         *   bug and the element is expected to say so rather than to silently corrupt the other
+         *   owners' states.
+         *
+         * Setting this to `true` on an element which does not [support sharing][supportsSharing]
+         * has no effect, so a `false` result after setting it means "this one has to be copied".
+         */
+        var isShared: Boolean
+            get() = false
+            set(@Suppress("UNUSED_PARAMETER") value) {}
     }
 
     /** Allows storing all elements which are part of this lattice */
@@ -397,6 +821,13 @@ interface Lattice<T : Lattice.Element> {
      * [timeout] can be used to limit the time spent in this function. If the timeout is reached and
      * the fixpoint is not reached yet, we return `null`. If [timeout] is `null`, we will not time
      * out.
+     *
+     * [maxStateEntries] is the same kind of budget for memory instead of time: it limits the number
+     * of entries this run may keep alive, i.e. the number of states times the number of entries in
+     * each of them. Exceeding it ends the analysis exactly like a timeout does. It is unlimited by
+     * default, because - unlike a timeout - a run that is too big for the heap takes the whole
+     * analysis down with it, so the right value depends on the heap the caller is willing to spend.
+     * As a rule of thumb, an entry of a points-to state costs about 500 bytes.
      */
     fun iterateEOG(
         startEdges: List<EvaluationOrder>,
@@ -404,9 +835,17 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
         timeout: Duration = Duration.INFINITE,
+        maxStateEntries: Long = Long.MAX_VALUE,
     ): Pair<T, Boolean> {
         return runBlocking {
-            iterateEogInternal(startEdges, startState, transformation, strategy, timeout)
+            iterateEogInternal(
+                startEdges,
+                startState,
+                transformation,
+                strategy,
+                timeout,
+                maxStateEntries,
+            )
         }
     }
 
@@ -416,12 +855,64 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Duration,
+        maxStateEntries: Long = Long.MAX_VALUE,
     ): Pair<T, Boolean> {
-        // mark the time when we started the calculation to know when we stop
-        val startTime = TimeSource.Monotonic.markNow()
+        // [timeouts] is a stack of the budgets of all analyses that are currently running (an
+        // analysis can trigger a nested one, e.g., to compute a function summary). We remember the
+        // depth we started at and restore it in the "finally" below. This guarantees that our entry
+        // is removed on every exit path, including an exception thrown out of [transformation]. If
+        // we leaked entries here, all subsequent analyses would measure their runtime against a
+        // stale budget.
+        val timeoutStackDepth = timeouts.size
         if (timeout != Duration.INFINITE) {
             timeouts.addLast(timeout)
         }
+
+        val statistics = IterationStatistics(startEdges)
+        val watchdog =
+            EdgeStallWatchdog.register(
+                startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+            )
+        try {
+            val result =
+                iterateEogWorklist(
+                    startEdges,
+                    startState,
+                    transformation,
+                    strategy,
+                    timeout,
+                    maxStateEntries,
+                    statistics,
+                    watchdog,
+                )
+            statistics.finalStateEntries = result.first.entryCount()
+            return result
+        } finally {
+            EdgeStallWatchdog.unregister(watchdog)
+            statistics.report()
+            while (timeouts.size > timeoutStackDepth) {
+                timeouts.removeLast()
+            }
+        }
+    }
+
+    /**
+     * The actual worklist algorithm behind [iterateEogInternal]. The [timeout] budget it observes
+     * has already been pushed onto [timeouts] by the caller, which is also responsible for removing
+     * it again.
+     */
+    private suspend fun iterateEogWorklist(
+        startEdges: List<EvaluationOrder>,
+        startState: T,
+        transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
+        strategy: Strategy,
+        timeout: Duration,
+        maxStateEntries: Long,
+        statistics: IterationStatistics,
+        watchdog: EdgeStallWatchdog.Run,
+    ): Pair<T, Boolean> {
+        // mark the time when we started the calculation to know when we stop
+        val startTime = TimeSource.Monotonic.markNow()
 
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
@@ -478,6 +969,68 @@ interface Lattice<T : Lattice.Element> {
             return key
         }
 
+        /**
+         * The size [globalState] has to exceed before we try to prune it again. See
+         * [pruneGlobalState].
+         */
+        var nextPruneSize = MIN_GLOBAL_STATE_PRUNE_SIZE
+
+        /**
+         * Drops all entries of [globalState] which can never be read again.
+         *
+         * [globalState] holds one - deeply copied - state per [EvaluationOrder] edge and nothing
+         * ever removed an entry, so its peak size is the number of visited edges times the size of
+         * a state. For large functions, this dominates the memory consumption of the analysis, even
+         * though most of these states are dead long before the fixpoint is reached.
+         *
+         * There are exactly two places which read `globalState[e]`: for the edge that we pull off
+         * one of the worklists, and for the successors of the edge we are currently processing.
+         * Consequently, `globalState[e]` can only be read again if `e` is still waiting in one of
+         * the worklists, or if `e` can be written again, which in turn requires that some edge in a
+         * worklist can reach `e` by walking forward along the EOG. The set of live edges is
+         * therefore the closure of the worklists' contents under "successor of", and everything
+         * outside of it is garbage.
+         *
+         * Note that this only frees memory; it never changes which states are computed, because we
+         * only remove entries that are provably not read anymore.
+         *
+         * This must be called while all pending edges are in the worklists, i.e. before an edge is
+         * taken off one of them.
+         */
+        fun pruneGlobalState() {
+            if (globalState.size <= nextPruneSize) {
+                return
+            }
+
+            val live = IdentitySet<EvaluationOrder>(globalState.size)
+            val stack = ArrayDeque<EvaluationOrder>()
+            fun markLive(edge: EvaluationOrder) {
+                if (live.add(edge)) {
+                    stack.addLast(edge)
+                }
+            }
+
+            currentBBEdgesList.forEach(::markLive)
+            nextBranchEdgesList.forEach(::markLive)
+            sccEdgesQueue.forEach { (_, edge) -> markLive(edge) }
+            mergePointsEdgesMap.keys.forEach(::markLive)
+
+            while (stack.isNotEmpty()) {
+                stack.removeLast().end.nextEOGEdges.forEach(::markLive)
+            }
+
+            val iterator = globalState.keys.iterator()
+            while (iterator.hasNext()) {
+                if (iterator.next() !in live) {
+                    iterator.remove()
+                }
+            }
+
+            // Prune again once the state has grown considerably, so that the cost of a prune (which
+            // is linear in the number of reachable edges) is amortized over the entries it removes.
+            nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, globalState.size * 2)
+        }
+
         startEdges.forEach { nextBranchEdgesList.add(it) }
 
         while (
@@ -487,6 +1040,14 @@ interface Lattice<T : Lattice.Element> {
                 sccEdgesQueue.isNotEmpty()
         ) {
             currentCoroutineContext().ensureActive()
+
+            // Sample the retention before pruning: that high-water mark is what actually has to fit
+            // into the heap.
+            val liveEntries = statistics.sample(globalState.size) { globalState.values }
+
+            // All edges which are still to be processed are in one of the worklists at this point,
+            // so this is the only place where we can determine which states are still live.
+            pruneGlobalState()
 
             val nextEdge =
                 if (currentBBEdgesList.isNotEmpty()) {
@@ -512,6 +1073,19 @@ interface Lattice<T : Lattice.Element> {
             // its state.
             val nextGlobal = globalState[nextEdge] ?: continue
 
+            if (liveEntries > maxStateEntries) {
+                // We are out of memory budget. We stop here in exactly the same way as we do when
+                // we run out of time: the caller gets what we have computed so far, together with
+                // the information that this is not a fixpoint.
+                Pass.log.warn(
+                    "Exceeded the budget of {} state entries for {}, stopping further analysis",
+                    maxStateEntries,
+                    startEdges.first().start.name.localName,
+                )
+                finalState = this@Lattice.lub(finalState, nextGlobal, false)
+                return Pair(finalState, true)
+            }
+
             // Either immediately before or after this edge, there's a branching node. In these
             // cases, we definitely want to check if there's an update to the state.
             val isNoBranchingPoint =
@@ -535,15 +1109,29 @@ interface Lattice<T : Lattice.Element> {
             val remainingTime =
                 if (timeout != Duration.INFINITE) timeouts.last() - startTime.elapsedNow()
                 else Duration.INFINITE
-            @Suppress("UNCHECKED_CAST")
-            val newState =
-                transformation(
-                    this@Lattice,
-                    nextEdge,
-                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
-                )
+            // What the transformation produced, or null if it did not get that far. The handler for
+            // the timeout below needs it, so it cannot live inside the block.
+            var transformed: T? = null
             try {
                 withTimeout(remainingTime) {
+                    // The transformation has to run *inside* the timeout. It is by far the most
+                    // expensive part of an iteration - it is the one which analyzes callees and
+                    // walks the graph - so a timeout which only covers the bookkeeping below is a
+                    // timeout which does not limit anything. Note that this only helps as far as
+                    // the transformation is cooperative: cancellation takes effect at its
+                    // suspension points and wherever it calls `ensureActive`, and not in between.
+                    @Suppress("UNCHECKED_CAST")
+                    val newState =
+                        measureAndRecord(nextEdge, statistics, watchdog) {
+                            transformation(
+                                this@Lattice,
+                                nextEdge,
+                                if (isNotNearStartOrEndOfBasicBlock) nextGlobal
+                                else nextGlobal.duplicate() as T,
+                            )
+                        }
+                    transformed = newState
+
                     nextEdge.end.nextEOGEdges.forEach {
                         currentCoroutineContext().ensureActive()
                         // We continue with the nextEOG edge if we haven't seen it before or if we
@@ -654,20 +1242,34 @@ interface Lattice<T : Lattice.Element> {
                 Pass.log.info(
                     "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
                 )
-                // We are done, so we remove the current timeout
-                timeouts.removeLast()
-                finalState = this@Lattice.lub(finalState, newState, false)
+                // Note that our caller pops the timeout we pushed, on every exit path.
+                // If we were cancelled before the transformation finished, we do not have its
+                // result and fold in the state we had on entering the edge instead. That state
+                // holds at this program point too, so the result stays an over-approximation -
+                // which is all we promise for an aborted run, and the caller is told that this is
+                // not a fixpoint.
+                finalState = this@Lattice.lub(finalState, transformed ?: nextGlobal, false)
                 Pass.log.info("Finished calculating final lub")
                 return Pair(finalState, true)
             }
         }
 
-        // We are done, so we remove the current timeout
-        if (timeout != Duration.INFINITE) {
-            timeouts.removeLast()
-        }
         return Pair(finalState, false)
     }
+}
+
+/**
+ * Prepares [value] to be handed to a second owner: if it [supports sharing][Lattice.Element
+ * .supportsSharing], it is marked as [shared][Lattice.Element.isShared] and returned as it is,
+ * otherwise the caller gets a private deep copy of it.
+ */
+@Suppress("UNCHECKED_CAST")
+internal fun <V : Lattice.Element> shareValue(value: V): V {
+    if (!value.supportsSharing) {
+        return value.duplicate() as V
+    }
+    value.isShared = true
+    return value
 }
 
 /** Implements a [Lattice] whose elements are the powerset of a given set of values. */
@@ -677,9 +1279,26 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     class Element<T>(expectedMaxSize: Int) :
         ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
 
-        // Secondary track indexes to accelerate 'contains', 'equals', and 'compare' to O(1)
-        private val nodeIndex = ConcurrentHashMap<PointsToPass.NodeWithPropertiesKey, T>()
-        private val pairIndex = ConcurrentHashMap<PairKey, Pair<*, *>>()
+        /**
+         * Points-to sets contain elements whose reference identity is meaningless, because they are
+         * created on the fly while transferring a state: a [Pair] or a
+         * [PointsToPass.NodeWithPropertiesKey] describing the same nodes must count as one element,
+         * no matter how often it was constructed. For those we therefore key the set by a
+         * structural key instead of by reference. Everything else - in particular [Node]s - keeps
+         * the reference semantics of [ConcurrentIdentitySet].
+         *
+         * This is the only place which knows about the special element types; [add], [remove],
+         * [contains] and hence [equals] and [compare] all agree on it because they all go through
+         * this method.
+         */
+        override fun keyFor(element: T): Any =
+            when (element) {
+                is Pair<*, *> -> PairKey(element.first, element.second)
+                // This one is its own key already: it compares its node by reference and its
+                // properties structurally.
+                is PointsToPass.NodeWithPropertiesKey -> element
+                else -> super.keyFor(element)
+            }
 
         private class PairKey(val first: Any?, val second: Any?) {
             override fun equals(other: Any?): Boolean {
@@ -695,83 +1314,24 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         // We make the new element a bit bigger than the current size to avoid resizing
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
-            addAllWithoutCheck(set as? ConcurrentIdentitySet<T> ?: set.toConcurrentIdentitySet())
-            buildIndexFromCurrentElements()
+            addAllWithoutCheck(set)
         }
 
-        constructor() : this(16)
+        // Points-to sets are tiny (usually a single element), and there are millions of them, so we
+        // start small and accept the occasional resize instead of reserving 16 slots up front.
+        constructor() : this(2)
 
         // We make the new element a bit bigger than the current size to avoid resizing
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
-            addAll(entries) // standard addAll loops and calls our overridden add()
+            addAll(entries) // standard addAll loops and calls add(), which uses our keyFor()
         }
 
         /**
-         * Rebuilds the secondary indexes from scratch. Crucial when batch operations like
-         * [addAllWithoutCheck] bypass the standard [add] method.
+         * O(1) containment check. Unlike [contains] this accepts an arbitrary object, which is
+         * handy when comparing two sets of unrelated element types.
          */
-        fun buildIndexFromCurrentElements() {
-            nodeIndex.clear()
-            pairIndex.clear()
-            for (item in this) {
-                when (item) {
-                    is Pair<*, *> -> pairIndex[PairKey(item.first, item.second)] = item
-                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex[item] = item
-                }
-            }
-        }
-
-        override fun add(element: T): Boolean {
-            when (element) {
-                is Pair<*, *> -> {
-                    val key = PairKey(element.first, element.second)
-                    if (pairIndex.containsKey(key)) return false
-                    val added = super.add(element)
-                    if (added) {
-                        pairIndex[key] = element
-                    }
-                    return added
-                }
-                is PointsToPass.NodeWithPropertiesKey -> {
-                    if (nodeIndex.containsKey(element)) return false
-                    val added = super.add(element)
-                    if (added) {
-                        nodeIndex[element] = element
-                    }
-                    return added
-                }
-                else -> {
-                    return super.add(element)
-                }
-            }
-        }
-
-        // Note: If your framework's base class uses 'Any?' for remove, change 'T' to 'Any?'
-        override fun remove(element: T): Boolean {
-            val removed = super.remove(element)
-            if (removed) {
-                when (element) {
-                    is Pair<*, *> -> pairIndex.remove(PairKey(element.first, element.second))
-                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex.remove(element)
-                }
-            }
-            return removed
-        }
-
-        override fun clear() {
-            super.clear()
-            nodeIndex.clear()
-            pairIndex.clear()
-        }
-
-        /** High-performance O(1) containment check utilizing our secondary indexes. */
-        fun containsFast(element: Any?): Boolean {
-            return when (element) {
-                is Pair<*, *> -> pairIndex.containsKey(PairKey(element.first, element.second))
-                is PointsToPass.NodeWithPropertiesKey -> nodeIndex.containsKey(element)
-                else -> (element as? T)?.let { super.contains(it) } ?: false
-            }
-        }
+        @Suppress("UNCHECKED_CAST")
+        fun containsFast(element: Any?): Boolean = contains(element as T)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -844,6 +1404,22 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             return Element(this)
         }
 
+        override val supportsSharing: Boolean
+            get() = true
+
+        override var isShared: Boolean = false
+
+        /**
+         * A shared set belongs to several states at once, so modifying it would silently change all
+         * of them. This is always a programming error: the owner of the entry has to hand out a
+         * private copy first, see [ConcurrentMapLattice.Element.getForUpdate].
+         */
+        override fun onMutate() {
+            check(!isShared) {
+                "Tried to modify a points-to set which is shared between several states. Ask for a private copy (getForUpdate) before modifying it."
+            }
+        }
+
         override fun hashCode(): Int {
             return super.hashCode()
         }
@@ -866,7 +1442,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         val result = Element<T>(one.size + two.size)
         result.addAllWithoutCheck(one)
-        result.buildIndexFromCurrentElements() // Force index generation after raw batch load!
         result += two
         return result
     }
@@ -893,12 +1468,22 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
     override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
-        ConcurrentIdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
+        PersistentIdentityMap<K, V>(expectedMaxSize), Lattice.Element {
 
         constructor() : this(32)
 
+        /**
+         * Copies [m] into a new map. [m] keeps its values, so the two maps share them and everyone
+         * who wants to modify an entry has to ask for a private copy first, see [getForUpdate].
+         */
         constructor(m: Map<K, V>) : this(m.size) {
-            putAll(m)
+            if (m is PersistentIdentityMap<K, V>) {
+                putAllTransformed(m) { shareValue(it) }
+            } else {
+                for ((key, value) in m) {
+                    putShared(key, value)
+                }
+            }
         }
 
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
@@ -1060,9 +1645,74 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
             }
         }
 
+        /**
+         * Copy-on-write: the copy starts out with the very same values as this map, both sides
+         * marked as [shared][Lattice.Element.isShared]. Only the entries which are actually
+         * modified afterwards - via [getForUpdate] - are ever copied, and the analysis modifies
+         * only a handful of entries per state.
+         *
+         * If every value may be shared, the copy also shares the map itself, so that it does not
+         * even cost one map slot per entry. Values which do not
+         * [support sharing][Lattice.Element.supportsSharing] have to be deep-copied, and then we
+         * have to build a new map for them anyway.
+         */
         override fun duplicate(): Element<K, V> {
-            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
+            val snapshot = snapshot()
+            val copy = Element<K, V>()
+            if (snapshot.values.all { it.supportsSharing }) {
+                snapshot.values.forEach { it.isShared = true }
+                copy.restore(snapshot)
+            } else {
+                copy.putAllTransformed(this) { shareValue(it) }
+            }
+            return copy
         }
+
+        /**
+         * Returns the value stored under [key], guaranteeing that it is not shared with any other
+         * [Element], so that the caller may modify it in place. If it currently is shared, this
+         * map's entry is atomically replaced by a private copy.
+         *
+         * Use this - and not [get] - whenever the returned value (or anything reachable from it) is
+         * going to be modified. Everything a plain [get] returns has to be treated as read-only.
+         */
+        @Suppress("UNCHECKED_CAST")
+        fun getForUpdate(key: K): V? =
+            compute(key) { _, value ->
+                if (value == null || !value.isShared) value else value.duplicate() as V
+            }
+
+        /**
+         * Like [getForUpdate], but stores (and returns) the result of [mappingFunction] if there is
+         * no entry for [key] yet. Callers of this one always intend to modify the entry, so it
+         * privatizes a shared value just like [getForUpdate] does.
+         */
+        @Suppress("UNCHECKED_CAST")
+        override fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
+            compute(key) { k, value ->
+                when {
+                    value == null -> mappingFunction(k)
+                    value.isShared -> value.duplicate() as V
+                    else -> value
+                }
+            }!!
+
+        /**
+         * Stores [value] under [key]. The caller hands the value over: it must not keep a reference
+         * to it and modify it later. Use [putShared] if it does.
+         */
+        override fun put(key: K, value: V): V? {
+            check(!value.isShared) {
+                "Tried to store a shared value in a state. Either hand over a private copy or use putShared."
+            }
+            return super.put(key, value)
+        }
+
+        /**
+         * Stores [value] under [key] while the caller keeps its own reference to it. Both sides
+         * have to go through [getForUpdate] before they may modify the entry.
+         */
+        fun putShared(key: K, value: V): V? = super.put(key, shareValue(value))
 
         override fun hashCode(): Int {
             return super.hashCode()
@@ -1088,12 +1738,14 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     val entry = one[k]
                     if (entry == null) {
                         // This key is not in "one", so we add the value from "two"
-                        // to "one"
-                        one.put(k, v)
+                        // to "one". "two" keeps its own reference to it, so the two maps
+                        // share the entry from now on.
+                        one.putShared(k, v)
                     } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
                         // This key already exists in "one" and the values in one and
-                        // two are different, so we have to compute the lub of the values
-                        one[k]?.let { oneValue ->
+                        // two are different, so we have to compute the lub of the values.
+                        // We modify "one"'s value in place, so we need a private copy of it.
+                        one.getForUpdate(k)?.let { oneValue ->
                             innerLattice.lub(
                                 oneValue,
                                 v,
@@ -1117,8 +1769,9 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                 allKeys.forEachMaybeParallel { key ->
                     val otherValue = two[key]
                     val thisValue = one[key]
-                    val newValue =
-                        if (thisValue != null && otherValue != null) {
+                    if (thisValue != null && otherValue != null) {
+                        result.put(
+                            key,
                             innerLattice.lub(
                                 one = thisValue,
                                 two = otherValue,
@@ -1127,9 +1780,13 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                                 // We already run on $CPU_CORES coroutines, so we don't
                                 // need any additional ones
                                 1,
-                            )
-                        } else thisValue ?: otherValue
-                    newValue?.let { result.put(key, it) }
+                            ),
+                        )
+                    } else {
+                        // Only one of the two maps has this key, so its value carries over
+                        // unchanged. We share it with that map instead of copying it.
+                        (thisValue ?: otherValue)?.let { result.putShared(key, it) }
+                    }
                 }
             }
         }
@@ -1287,11 +1944,18 @@ open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) 
                     // Key only in `two` -> copy it across.
                     one.put(k, v)
                 } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                    // Key in both with different values -> lub them in-place.
+                    // Key in both with different values -> lub them in-place. The result must be
+                    // stored back explicitly rather than relying solely on in-place mutation of
+                    // `oneValue`: that only works for inner lattices whose `Element` is a mutable
+                    // wrapper (e.g. `NewIntervalLattice.Element`). An inner lattice whose
+                    // `Element` is immutable (e.g. `StringPattern`, see design decision D8 in
+                    // `docs/docs/CPG/impl/string-analysis.md`) returns a *new* value from `lub`
+                    // instead of mutating anything, and discarding that return value here would
+                    // silently drop every join for an already-present key.
                     one[k]?.let { oneValue ->
                         // The outer forEachMaybeParallel already spawns CPU_CORES coroutines;
                         // tell the inner lub not to spawn more.
-                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
+                        one[k] = innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
                     }
                 }
             }
@@ -1389,6 +2053,24 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         override fun duplicate(): Element<S, T> {
             return Element(first.duplicate() as S, second.duplicate() as T)
         }
+
+        // A tuple is immutable itself, so it can be shared whenever both of its components can:
+        // sharing it means sharing them.
+        override val supportsSharing: Boolean
+            get() = first.supportsSharing && second.supportsSharing
+
+        // A freshly created tuple can still wrap components which are shared with somebody else, so
+        // we have to ask them as well. Otherwise, we would hand out a tuple as private although
+        // modifying its components is not allowed.
+        override var isShared: Boolean = false
+            get() = field || first.isShared || second.isShared
+            set(value) {
+                field = value
+                if (value) {
+                    first.isShared = true
+                    second.isShared = true
+                }
+            }
 
         override fun hashCode(): Int {
             return 31 * first.hashCode() + second.hashCode()
@@ -1509,6 +2191,26 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         override fun duplicate(): Element<R, S, T> {
             return Element(first.duplicate() as R, second.duplicate() as S, third.duplicate() as T)
         }
+
+        // A triple is immutable itself, so it can be shared whenever all of its components can:
+        // sharing it means sharing them.
+        override val supportsSharing: Boolean
+            get() = first.supportsSharing && second.supportsSharing && third.supportsSharing
+
+        // A freshly created triple can still wrap components which are shared with somebody else,
+        // so
+        // we have to ask them as well. Otherwise, we would hand out a triple as private although
+        // modifying its components is not allowed.
+        override var isShared: Boolean = false
+            get() = field || first.isShared || second.isShared || third.isShared
+            set(value) {
+                field = value
+                if (value) {
+                    first.isShared = true
+                    second.isShared = true
+                    third.isShared = true
+                }
+            }
 
         override fun hashCode(): Int {
             return 31 * (31 * first.hashCode() + second.hashCode()) + third.hashCode()
