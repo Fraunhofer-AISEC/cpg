@@ -50,7 +50,7 @@ internal class FunctionPointerTest : BaseTest() {
     ): TranslationResult {
         val topLevel = Path.of("src", "test", "resources", "functionPointers")
 
-        return analyze(language, topLevel, true, configModifier)
+        return analyze(language, topLevel, true, false, configModifier)
     }
 
     @Throws(Exception::class)
