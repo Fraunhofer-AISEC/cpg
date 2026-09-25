@@ -80,13 +80,28 @@ import kotlinx.coroutines.*
  * the declarations of a header which is included by two translation units - would be considered the
  * same key and would share one synthetic value node. [Name], in contrast, is a value type where two
  * equal names must map to the same entry.
+ *
+ * [Literal]s are the exception: they are keyed by their value instead of their identity. Two
+ * literals with the same value denote the same thing, so dereferencing either of them has to lead
+ * to the same synthetic node. Keying them by identity instead made every single `0` (e.g. every
+ * `return 0;` whose value ends up in a pointer) create a field address and unknown value of its
+ * own. Inside a loop, more and more of these literals flow into the state, one per iteration, so
+ * that the state kept growing by one element per round and the fixpoint iteration of, e.g.,
+ * mbedtls_ssl_read_record did not terminate.
  */
 private data class UnknownValueKey(val node: Node, val name: Name) {
-    override fun equals(other: Any?) =
-        other is UnknownValueKey && node === other.node && name == other.name
+    /** What identifies [node] in this key: the value of a [Literal], the identity of all else. */
+    private val nodeKey: Any =
+        if (node is Literal<*>) LiteralValueKey(node.value) else PointsToPass.IdKey(node)
 
-    override fun hashCode() = 31 * System.identityHashCode(node) + name.hashCode()
+    override fun equals(other: Any?) =
+        other is UnknownValueKey && nodeKey == other.nodeKey && name == other.name
+
+    override fun hashCode() = 31 * nodeKey.hashCode() + name.hashCode()
 }
+
+/** The value of a [Literal], as part of an [UnknownValueKey]. */
+private data class LiteralValueKey(val value: Any?)
 
 /**
  * Caches the synthetic [MemoryAddress]/[UnknownMemoryValue] nodes we create for a node whose value
