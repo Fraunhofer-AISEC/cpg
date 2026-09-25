@@ -1900,6 +1900,29 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val propertySet: EqualLinkedHashSet<Any>,
         val dst: IdentitySet<Node> = identitySetOf(),
     ) {
+        /**
+         * The collections which have already been merged into [lastWrites], by identity. Merging
+         * one of them again cannot add anything, so [mergeLastWrites] skips it without looking at a
+         * single element.
+         *
+         * This is what makes applying a large summary affordable: the same `prev` set of a summary
+         * entry is merged into the same map entry over and over (for mbedtls_ssl_read_record, 99%
+         * of about 11 million merges for a single call), and every one of these merges used to hash
+         * all of its elements again.
+         *
+         * Note that this is only sound as long as these collections are not modified after we have
+         * merged them. That holds for the `prev` sets of [handleCall], which are complete once
+         * [deduplicatePreprocessedFSEntries] is done, i.e. before the first merge.
+         */
+        private val mergedFrom = ConcurrentHashMap.newKeySet<IdKey<Any>>()
+
+        /** Adds [newLastWrites] to [lastWrites], unless we already did so before. */
+        fun mergeLastWrites(newLastWrites: Collection<NodeWithPropertiesKey>) {
+            if (mergedFrom.add(IdKey(newLastWrites))) {
+                lastWrites.addAll(newLastWrites)
+            }
+        }
+
         override fun equals(other: Any?): Boolean {
             return other is MapDstToSrcEntry &&
                 param === other.param &&
@@ -2679,7 +2702,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (stored !== created) {
                 // Somebody already inserted a matching entry; extend it instead of creating a
                 // duplicate we would otherwise never find again.
-                stored.lastWrites.addAll(newLastWrites)
+                stored.mergeLastWrites(newLastWrites)
             }
         }
 
