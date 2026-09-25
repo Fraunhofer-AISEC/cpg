@@ -3302,6 +3302,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 (passConfig<Configuration>()?.drawCurrentDerefDFG != false) &&
                     (currentNode.astParent as? PointerDereference)?.access != AccessValues.WRITE
             ) {
+                // The derefValues we already handled below, by identity
+                val processedDerefValues = IdentitySet<Node>()
                 values.forEach { value ->
                     // TODO: This probably can be optimized
                     /* If all we have here as a PMV value, we can skip it
@@ -3338,6 +3340,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             )
                             .forEach { entry ->
                                 val derefValue = entry.value
+                                // What we add for a derefValue only depends on the derefValue
+                                // itself, not on the value we reached it through. Different
+                                // values mostly share their derefValues, though (for a
+                                // `ssl->...` in mbedtls_ssl_read_record, 17,000 visits went to
+                                // only 174 distinct derefValues), so we handle each one once.
+                                if (!processedDerefValues.add(derefValue)) {
+                                    return@forEach
+                                }
                                 if (!doubleState.hasDeclarationStateValueEntry(derefValue)) {
                                     return@forEach
                                 }
