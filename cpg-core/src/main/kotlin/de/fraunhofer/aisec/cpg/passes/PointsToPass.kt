@@ -558,6 +558,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>,
         key: Node,
         newEntry: FSEntry,
+        // Whether newEntry.lastWrites is shared with other entries, so that a new entry needs a
+        // copy of its own which later merges can modify
+        copyLastWritesOnInsert: Boolean = false,
     ) {
         val index = fsEntryIndex.computeIfAbsent(key) { ConcurrentHashMap() }
         // computeIfAbsent runs the lambda at most once per key and atomically publishes its result,
@@ -565,8 +568,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // exactly
         // one of them wins and adds newEntry to functionSummary, and the others merge into it
         // below.
-        val stored = index.computeIfAbsent(newEntry) { it }
-        if (stored === newEntry) {
+        var inserted: FSEntry? = null
+        val stored =
+            index.computeIfAbsent(newEntry) {
+                (if (copyLastWritesOnInsert)
+                        it.copy(
+                            lastWrites =
+                                PowersetLattice.Element<NodeWithPropertiesKey>().apply {
+                                    addAll(it.lastWrites)
+                                }
+                        )
+                    else it)
+                    .also { entry -> inserted = entry }
+            }
+        if (stored === inserted) {
             functionSummary.computeIfAbsent(key) { ConcurrentHashMap.newKeySet() }.add(stored)
         } else {
             stored.lastWrites.addAll(newEntry.lastWrites)
@@ -1567,7 +1582,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // FSEntry for the same (depth, v) relationship instead of contributing to
                         // one entry's lastWrites, which is how a summary balloons to way more
                         // entries than there are actual relationships.
+                        //
+                        // Beyond depth 1, the lastWrites are those of the addresses, i.e. the same
+                        // for every value, so we collect them only once per depth instead of once
+                        // per value. For the `return ret;` of the big mbedtls handshake functions,
+                        // `ret` has hundreds of values, and collecting the same lastWrites for
+                        // every single one of them kept a single edge busy for minutes.
+                        val depthLastWrites =
+                            if (depth == 1) null
+                            else
+                                addresses.flatMapTo(PowersetLattice.Element()) { address ->
+                                    doubleState.getLastWrites(address)
+                                }
                         values.forEach { value ->
+                            // Let the timeout of the enclosing iterateEOG interrupt us here
+                            currentCoroutineContext().ensureActive()
                             // If the value is a newly created MemoryAddress, we only set the
                             // name so that we know later that we have to create a new
                             // MemoryAddress for each Call
@@ -1578,20 +1607,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 else value
                             // A thread-safe set: mergeFSEntry may fold this into an existing entry
                             // and .addAll() its contents concurrently with other revisits of this
-                            // same edge.
+                            // same edge. depthLastWrites is shared by all values, which is why
+                            // mergeFSEntry has to copy it if it becomes the lastWrites of a new
+                            // entry.
                             val lastWrite =
-                                if (depth == 1)
-                                    PowersetLattice.Element(
+                                depthLastWrites
+                                    ?: PowersetLattice.Element(
                                         NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
                                     )
-                                else
-                                    addresses.flatMapTo(PowersetLattice.Element()) { address ->
-                                        doubleState.getLastWrites(address)
-                                    }
                             mergeFSEntry(
                                 parentFD.functionSummary,
                                 currentNode,
                                 FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false)),
+                                copyLastWritesOnInsert = depthLastWrites != null,
                             )
                         }
                         // Try to deref the values. If we have nothing there, stop, otherwise,
