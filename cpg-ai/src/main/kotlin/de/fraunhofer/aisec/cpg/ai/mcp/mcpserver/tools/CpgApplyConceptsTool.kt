@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableOperations
@@ -105,7 +105,8 @@ fun Server.addCpgApplyConceptsTool() {
     this.addTool<CpgApplyConceptsPayload>(
         name = "cpg_apply_concepts",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgApplyConceptsPayload ->
+    ) { session: CpgSession, payload: CpgApplyConceptsPayload ->
+        val result = session.translationResult
         val applied = mutableListOf<String>()
 
         payload.assignments.forEach { assignment ->
