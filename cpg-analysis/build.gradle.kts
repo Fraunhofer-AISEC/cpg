@@ -43,5 +43,7 @@ dependencies {
     // reference the project here, the build system would fail any task since it will not find a
     // non-enabled project.
     findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
+    findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
+    findProject(":cpg-language-rust")?.also { integrationTestImplementation(it) }
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 }
