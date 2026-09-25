@@ -632,9 +632,38 @@ class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
         return super.equals(other)
     }
 
+    /**
+     * Like the inherited implementation, this is the sum of the elements' hashes - which keeps it
+     * independent of the iteration order and therefore consistent with [equals] - but each
+     * element's hash is spread first.
+     *
+     * The raw sum collides a lot in practice: these sets hold structurally similar properties whose
+     * hashes are numerically close to each other, so different sets routinely add up to the same
+     * number. Every such collision is paid for with a full element-by-element comparison of two
+     * sets in [equals], which is where the PointsToPass was observed to spend minutes inside a
+     * single call.
+     */
     override fun hashCode(): Int {
-        return super.hashCode()
+        var h = 0
+        for (element in this) {
+            h += spreadHash(element?.hashCode() ?: 0)
+        }
+        return h
     }
+}
+
+/**
+ * Spreads the bits of [hash], using the finalizer of MurmurHash3. Used where hashes are *summed up*
+ * to get an order-independent hash of a set.
+ */
+internal fun spreadHash(hash: Int): Int {
+    var h = hash
+    h = h xor (h ushr 16)
+    h *= -2048144789 // 0x85ebca6b
+    h = h xor (h ushr 13)
+    h *= -1028477387 // 0xc2b2ae35
+    h = h xor (h ushr 16)
+    return h
 }
 
 fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
