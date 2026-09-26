@@ -23,26 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.ai.clients
+package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 
-import de.fraunhofer.aisec.cpg.ai.ChatMessageJSON
-import io.modelcontextprotocol.kotlin.sdk.types.Tool
-
-/** Interface abstracting the underlying LLM provider (Gemini, OpenAI, Ollama, etc.). */
-interface LlmClient {
-    val modelName: String
-
-    /**
-     * Streaming prompt execution for the chat. Calls [onText] for normal content and [onReasoning]
-     * for thoughts/reasoning.
-     */
-    suspend fun sendPrompt(
-        userMessage: String,
-        systemPrompt: String,
-        conversationHistory: List<ChatMessageJSON> = emptyList(),
-        tools: List<Tool> = emptyList(),
-        toolCallHistory: List<List<ToolCallWithResult>>? = null,
-        onText: suspend (String) -> Unit,
-        onReasoning: suspend (String) -> Unit = {},
-    ): List<ToolCall>
-}
+/**
+ * Serializes every state-mutating MCP tool call - persisting to a shared concepts/schema file, or
+ * attaching concept/operation nodes to the shared CPG graph - across concurrently-running chat
+ * sessions/batches a host application may run in parallel. Read-only CPG query tools are unaffected
+ * and remain fully concurrent; only tools that read-modify-write a shared file, or mutate the
+ * shared in-memory graph, should take this lock, and only for the duration of that one operation.
+ */
+object GraphMutationLock

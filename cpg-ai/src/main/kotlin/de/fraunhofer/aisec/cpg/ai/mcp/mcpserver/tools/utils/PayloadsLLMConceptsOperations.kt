@@ -36,6 +36,17 @@ import kotlinx.serialization.Serializable
  */
 const val NODE_REFERENCE_TYPE = "NodeReference"
 
+/**
+ * [LLMPropertyDescription.type] and [LLMOperationDescription.properties] default rather than being
+ * hard-required: unlike [LLMPropertyDescription.description] (whose omission is silent, undetected
+ * data loss - see [LLMProperty.description]'s doc), omitting either of these two throws a
+ * `MissingFieldException` that aborts the whole `cpg_add_or_update_llm_concept` call (confirmed via
+ * `log_dedupe_persist_entries`/`log_consolidate_generic_concepts_tool`'s logs), abandoning an
+ * otherwise-fine schema registration over one recoverable field. A property with no declared type
+ * defaulting to `"String"` matches [GenericPropertyValue.of]'s own fallback for an unrecognized
+ * type name; an operation with no declared properties defaulting to an empty list is simply a
+ * legitimate operation that takes none.
+ */
 @Serializable
 data class LLMPropertyDescription(
     @Description("The name of the property. It should be short and precises, preferably one word.")
@@ -47,8 +58,8 @@ data class LLMPropertyDescription(
             "of another node in the graph (e.g. to relate this concept to a different node than the one it is " +
             "attached to). Any unrecognized type name is treated as text."
     )
-    val type: String,
-    @Description("A short description of the property.") val description: String?,
+    val type: String = "String",
+    @Description("A short description of the property.") val description: String,
     @Description(
         "If set, this property has a value that is intrinsic to the concept/operation definition itself " +
             "(e.g. a specific ID from a taxonomy) and must not vary between applications of this concept/operation. " +
@@ -70,7 +81,8 @@ data class LLMOperationDescription(
         "The description of the operation. It should explain what the operation does and provide guidance on when to apply it."
     )
     val description: String,
-    @Description("The parameters of the operation.") val properties: List<LLMPropertyDescription>,
+    @Description("The parameters of the operation.")
+    val properties: List<LLMPropertyDescription> = emptyList(),
 ) {
     constructor(
         operation: LLMOperation
@@ -115,7 +127,12 @@ data class LLMProperty(
             "the graph. It should match the type declared for this property in the concept/operation schema."
     )
     val type: String,
-    @Description("A short description of the property.") val description: String? = null,
+    @Description(
+        "A short description of the property. If this property corresponds to one of the " +
+            "tagged function's actual parameters, mention which one here (name and/or position " +
+            "in the signature)."
+    )
+    val description: String,
     @Description(
         "The value to set for the property (as string representation). The value must be parsable as the type " +
             "given in the `type` field, otherwise applying the concept/operation fails: use e.g. \"42\" for an " +
@@ -142,6 +159,12 @@ data class LLMOperation(
         "The properties to set for the operation. Each property should have a name and a value. The name should match the name of a parameter defined in the operation description, and the value should be the corresponding value for this specific application of the operation."
     )
     val properties: List<LLMProperty>,
+    @Description(
+        "Free-text notes about this operation's application - e.g. other functions that must be " +
+            "called before this one (such as an init/setKey call before encrypt), caveats, or " +
+            "anything else worth recording that doesn't fit the structured fields above."
+    )
+    val notes: String? = null,
 )
 
 @Serializable
@@ -160,6 +183,11 @@ data class LLMConcept(
     val properties: List<LLMProperty>,
     @Description("A list of operations to apply to this concept.")
     val operations: List<LLMOperation>,
+    @Description(
+        "Free-text notes about this concept's application - anything worth recording that " +
+            "doesn't fit the structured fields above."
+    )
+    val notes: String? = null,
 )
 
 @Serializable

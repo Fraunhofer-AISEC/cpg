@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionSignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -46,9 +46,10 @@ import org.junit.jupiter.api.BeforeEach
 
 /**
  * Covers the bulk-listing code-omission change: `cpg_list_functions`/`cpg_list_calls` are for
- * finding candidates by name/signature, not for reading every returned item's full body, so they
- * should omit [FunctionInfo.code]/[CallInfo.code] - `cpg_get_node` remains the way to fetch full
- * details (code included) for a specific node once picked.
+ * finding candidates by name/signature, not for reading every returned item's full body.
+ * `cpg_list_calls` omits [CallInfo.code]; `cpg_list_functions` returns [FunctionSignatureInfo],
+ * which has no code field at all. `cpg_get_node` remains the way to fetch full details (code
+ * included) for a specific node once picked.
  */
 class BulkListingCodeOmissionTest {
     @BeforeEach
@@ -69,8 +70,11 @@ class BulkListingCodeOmissionTest {
             assertTrue(result.content.isNotEmpty(), "Should have function declarations")
             result.content.forEach {
                 assertIs<TextContent>(it)
-                val info = Json.decodeFromString<FunctionInfo>(it.text)
-                assertNull(info.code, "cpg_list_functions should omit code for ${info.name}")
+                // FunctionSignatureInfo has no code field at all - decoding successfully into it is
+                // itself proof no code is embedded, not just that a nullable field happens to be
+                // null.
+                val info = Json.decodeFromString<FunctionSignatureInfo>(it.text)
+                assertTrue(info.signature.isNotBlank(), "Should have a non-blank signature")
             }
         }
 
@@ -109,7 +113,7 @@ class BulkListingCodeOmissionTest {
         ) { client ->
             val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
             val functionInfo =
-                Json.decodeFromString<FunctionInfo>(
+                Json.decodeFromString<FunctionSignatureInfo>(
                     (listResult.content.first() as TextContent).text
                 )
 

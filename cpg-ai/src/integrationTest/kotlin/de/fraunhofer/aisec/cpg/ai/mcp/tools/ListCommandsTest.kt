@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionSignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.RecordInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
@@ -72,17 +72,17 @@ class ListCommandsTest {
 
             assertNotNull(result, "Result should not be null")
             assertEquals(2, result.content.size, "Should return two function declarations")
-            val functionNames =
+            val signatures =
                 result.content.map {
                     assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).name
+                    Json.decodeFromString<FunctionSignatureInfo>(it.text).signature
                 }
             assertNotNull(
-                functionNames.singleOrNull { it == "print" },
+                signatures.singleOrNull { it.startsWith("print") },
                 "There is exactly one function declaration with name print",
             )
             assertNotNull(
-                functionNames.singleOrNull { it.endsWith("hello") },
+                signatures.singleOrNull { it.contains("hello") },
                 "There is exactly one function declaration with local name hello",
             )
         }
@@ -240,7 +240,7 @@ class ListCommandsTest {
             assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
 
             val functionInfo =
-                Json.decodeFromString<FunctionInfo>(
+                Json.decodeFromString<FunctionSignatureInfo>(
                     (listResult.content.first() as TextContent).text
                 )
 
