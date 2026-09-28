@@ -34,10 +34,14 @@ import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 /**
  * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
@@ -69,33 +73,58 @@ inline fun <reified T> Node.evaluateExtended(
     noinline sel: ((T) -> Boolean)? = null,
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): List<QueryTree<Boolean>> {
-    val nodes = this.allChildrenWithOverlays(sel)
+    //    val nodes = this.allChildrenWithOverlays(sel)
     return runBlocking {
-        // Split the task into chunks of $CPU_SIZE and run them in coroutines. Collect the results
-        // for each chunk, and when all coroutines are finished, flatMap them together to the final
-        // result
-        nodes
-            .splitInto(minPartSize = 1)
-            .map { chunk ->
-                async(Dispatchers.Default) {
-                    val local = mutableListOf<QueryTree<Boolean>>()
-                    for (n in chunk) {
-                        val res = mustSatisfy(n)
-                        res.stringRepresentation =
-                            "Starting at ${if (n is Node) n.compactToString() else n.toString()}: " +
-                                res.stringRepresentation
-                        if (n is Node) {
-                            res.node = n
-                        }
-                        res.checkForSuppression()
-                        res.addAssumptionDependence(this@evaluateExtended)
-                        local.add(res)
+        withTimeout(60.minutes) {
+            val timeoutJob = coroutineContext[Job] ?: error("Missing coroutine Job")
+
+            val cancellableSel: ((T) -> Boolean)? =
+                sel?.let { selector ->
+                    { value: T ->
+                        timeoutJob.ensureActive()
+                        val selected = selector(value)
+                        timeoutJob.ensureActive()
+                        selected
                     }
-                    local
                 }
-            }
-            .awaitAll()
-            .flatMap { it }
+
+            timeoutJob.ensureActive()
+
+            val nodes = this@evaluateExtended.allChildrenWithOverlays(cancellableSel)
+
+            timeoutJob.ensureActive()
+
+            // Split the task into chunks of $CPU_SIZE and run them in coroutines. Collect the
+            // results
+            // for each chunk, and when all coroutines are finished, flatMap them together to the
+            // final
+            // result
+            nodes
+                .splitInto(minPartSize = 1)
+                .map { chunk ->
+                    async(Dispatchers.Default) {
+                        val workerJob = coroutineContext[Job] ?: error("Missing worker Job")
+                        val local = mutableListOf<QueryTree<Boolean>>()
+                        for (n in chunk) {
+                            workerJob.ensureActive()
+                            val res = mustSatisfy(n)
+                            workerJob.ensureActive()
+                            res.stringRepresentation =
+                                "Starting at ${if (n is Node) n.compactToString() else n.toString()}: " +
+                                    res.stringRepresentation
+                            if (n is Node) {
+                                res.node = n
+                            }
+                            res.checkForSuppression()
+                            res.addAssumptionDependence(this@evaluateExtended)
+                            local.add(res)
+                        }
+                        local
+                    }
+                }
+                .awaitAll()
+                .flatten()
+        }
     }
 }
 
