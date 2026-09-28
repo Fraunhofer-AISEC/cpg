@@ -109,6 +109,75 @@ private data class LiteralValueKey(val value: Any?)
  * [PointsToPass.finalCleanup].
  */
 private val nodesCreatingUnknownValues = ConcurrentHashMap<UnknownValueKey, MemoryAddress>()
+
+/**
+ * Where a synthetic node from [syntheticNodeFor] comes from: the first node of its chain which is
+ * not synthetic, and how many synthetic nodes lie between that one and this one (including this
+ * one).
+ */
+private class SyntheticOrigin(val root: Node, val depth: Int, val isSummary: Boolean)
+
+/** The [SyntheticOrigin] of every node created by [syntheticNodeFor]. */
+private val syntheticOrigins = ConcurrentHashMap<PointsToPass.IdKey<Node>, SyntheticOrigin>()
+
+/** The key of [summaryNodes]: the root of a chain, the name, and whether this is a value. */
+private data class SummaryKey(val rootAndName: UnknownValueKey, val isValue: Boolean)
+
+/** The summary nodes created by [syntheticNodeFor] once a chain reached its maximum depth. */
+private val summaryNodes = ConcurrentHashMap<SummaryKey, MemoryAddress>()
+
+/**
+ * The number of synthetic nodes a chain may consist of before [syntheticNodeFor] summarizes the
+ * rest of it.
+ */
+private const val MAX_SYNTHETIC_CHAIN_DEPTH = 6
+
+/**
+ * Returns the synthetic [MemoryAddress] or [UnknownMemoryValue] for [name] relative to [base], i.e.
+ * the address of one of its fields or its unknown value, and creates it with [create] if there is
+ * none yet.
+ *
+ * Every such node can in turn be the [base] of another one, e.g. in a loop like `p = &p->next;`,
+ * which reaches a new field address in every iteration. Without a bound, the analysis of such a
+ * loop never reaches its fixpoint and only ends with its timeout. We therefore count how many
+ * synthetic nodes a chain consists of, and once it is longer than [MAX_SYNTHETIC_CHAIN_DEPTH], we
+ * return one summary node per root of the chain and [name] instead of a new node (k-limiting). As a
+ * summary node stands for many memory locations, writing to it must not replace its previous values
+ * (see [isSummaryNode]).
+ */
+private fun syntheticNodeFor(
+    base: Node,
+    name: Name,
+    isValue: Boolean,
+    create: () -> MemoryAddress,
+): MemoryAddress {
+    val baseOrigin = syntheticOrigins[PointsToPass.IdKey(base)]
+    val root = baseOrigin?.root ?: base
+    val depth = (baseOrigin?.depth ?: 0) + 1
+
+    if (depth <= MAX_SYNTHETIC_CHAIN_DEPTH) {
+        return nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(base, name)) {
+            create().also {
+                syntheticOrigins[PointsToPass.IdKey(it)] = SyntheticOrigin(root, depth, false)
+            }
+        }
+    }
+
+    return summaryNodes.computeIfAbsent(SummaryKey(UnknownValueKey(root, name), isValue)) {
+        create().also {
+            // Everything derived from a summary node is summarized as well
+            syntheticOrigins[PointsToPass.IdKey(it)] =
+                SyntheticOrigin(root, MAX_SYNTHETIC_CHAIN_DEPTH, true)
+        }
+    }
+}
+
+/**
+ * Whether [node] is a summary node of [syntheticNodeFor], which stands for many memory locations.
+ */
+private fun isSummaryNode(node: Node): Boolean =
+    syntheticOrigins[PointsToPass.IdKey(node)]?.isSummary == true
+
 /**
  * The number of [Function]s in the [TranslationResult] we are analyzing, i.e. the number of targets
  * this pass is going to be handed. Note that this counts declarations and definitions separately,
@@ -601,6 +670,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      */
     override fun finalCleanup() {
         nodesCreatingUnknownValues.clear()
+        syntheticOrigins.clear()
+        summaryNodes.clear()
         CallToMemAddrMap.clear()
         globalDerefs.clear()
         totalFunctionCount = 0
@@ -3952,7 +4023,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
+                    syntheticNodeFor(node, newName, isValue = true) {
                         UnknownMemoryValue(newName, true)
                     }
                 // TODO: Check if the boolean should be true sometimes
@@ -3988,9 +4059,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
-                        UnknownMemoryValue(newName)
-                    }
+                    syntheticNodeFor(node, newName, isValue = true) { UnknownMemoryValue(newName) }
                 val newPair = Pair(newEntry, false)
                 this.declarationsState.computeIfAbsent(node) {
                     TripleLattice.Element(
@@ -4164,9 +4233,7 @@ fun PointsToState.Element.getLastWrites(
                         val newName = Name(getNodeName(addr).localName + ".derefvalue")
                         ret.add(
                             NodeWithPropertiesKey(
-                                nodesCreatingUnknownValues.computeIfAbsent(
-                                    UnknownValueKey(addr, newName)
-                                ) {
+                                syntheticNodeFor(addr, newName, isValue = true) {
                                     UnknownMemoryValue(newName)
                                 },
                                 equalLinkedHashSetOf(),
@@ -4324,7 +4391,7 @@ fun PointsToState.Element.getValues(
                 val newName = Name(getNodeName(node).localName, base.name)
                 PowersetLattice.Element(
                     Pair(
-                        nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
+                        syntheticNodeFor(node, newName, isValue = true) {
                             UnknownMemoryValue(newName)
                         },
                         false,
@@ -4620,9 +4687,7 @@ fun PointsToState.Element.fetchFieldAddresses(
 
         if (!foundAnyFieldAddress) {
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(
-                    UnknownValueKey(addr, normalizedNodeName)
-                ) {
+                syntheticNodeFor(addr, normalizedNodeName, isValue = false) {
                     MemoryAddress(normalizedNodeName, isGlobal(addr))
                 }
 
@@ -4707,8 +4772,12 @@ suspend fun PointsToState.Element.updateValues(
             // null, AKA does not write to a field
             val fullSourcesExist = sources.any { it.third == null }
 
+            // A summary node stands for many memory locations, so a write to it only reaches one
+            // of them, and we must keep the previous values (weak update)
+            val isSummary = isSummaryNode(destAddr)
+
             // If we have any full writes, we eliminate the previous state
-            if (fullSourcesExist) {
+            if (fullSourcesExist && !isSummary) {
                 doubleState.declarationsState.put(
                     destAddr,
                     DeclarationStateEntryElement(
@@ -4724,7 +4793,8 @@ suspend fun PointsToState.Element.updateValues(
                 // Method.add()
                 // TODO: this should be fields, but for now we deal with the names
                 val writtenFields =
-                    sources.mapNotNullTo(HashSet()) { (it.third as? Field)?.name?.localName }
+                    if (isSummary) emptySet()
+                    else sources.mapNotNullTo(HashSet()) { (it.third as? Field)?.name?.localName }
                 doubleState.declarationsState.getForUpdate(destAddr)?.third?.removeIf {
                     it.properties.any { p ->
                         ((p as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
