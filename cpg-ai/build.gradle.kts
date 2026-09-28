@@ -106,6 +106,7 @@ dependencies {
     integrationTestImplementation(libs.mcp.testing)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
     integrationTestImplementation(project(":cpg-serialization"))
+    integrationTestImplementation(project(":cpg-concepts"))
     // We depend on the Python frontend for the integration tests, but the frontend is only
     // available if enabled.
     // If it's not available, the integration tests fail (which is ok). But if we would directly
