@@ -131,3 +131,35 @@ data class PassInfo(
     )
     val softDependencies: List<String>,
 )
+
+@Serializable
+@Description("The payload to filter and page through a listing of nodes.")
+data class CpgListPayload(
+    @Description(PATTERN_DESCRIPTION) val pattern: String? = null,
+    @Description(FILE_DESCRIPTION) val file: String? = null,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+@Serializable
+@Description("The payload to filter and page through a listing of functions.")
+data class CpgListFunctionsPayload(
+    @Description(PATTERN_DESCRIPTION) val pattern: String? = null,
+    @Description(FILE_DESCRIPTION) val file: String? = null,
+    @Description("Only include functions that call a function with this local name, e.g. 'memcpy'.")
+    val calls: String? = null,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+/** The default number of results returned by listing tools, see [CpgListPayload.limit]. */
+const val DEFAULT_LIST_LIMIT = 50
+
+private const val PATTERN_DESCRIPTION =
+    "Only include nodes whose name matches this regular expression (case-insensitive, partial match), e.g. 'parse|decode' or '^esp_wifi_'."
+private const val FILE_DESCRIPTION =
+    "Only include nodes located in a file whose path contains this string, e.g. 'main.c'."
+private const val LIMIT_DESCRIPTION =
+    "The maximum number of results to return. Defaults to $DEFAULT_LIST_LIMIT."
+private const val OFFSET_DESCRIPTION =
+    "The number of results to skip, used to page through large listings. Defaults to 0."

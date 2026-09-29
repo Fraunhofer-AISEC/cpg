@@ -44,6 +44,13 @@ import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.ClientOptions
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
 import io.modelcontextprotocol.kotlin.sdk.types.*
+import java.io.File
+import java.security.KeyStore
+import java.security.cert.CertificateException
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.*
@@ -295,11 +302,70 @@ class ChatService(
             return fromConfig(config)
         }
 
+        /**
+         * Returns a trust manager that accepts everything the JVM default trust store accepts and,
+         * additionally, the certificates in [pemFiles] (e.g., a self-signed server certificate or
+         * an internal CA). Files that do not exist are skipped with a warning.
+         */
+        private fun trustManagerWithExtraCerts(pemFiles: List<File>): X509TrustManager {
+            val default = trustManagerFor(null)
+
+            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null) }
+            val certificateFactory = CertificateFactory.getInstance("X.509")
+            pemFiles.forEach { pemFile ->
+                if (!pemFile.exists()) {
+                    log.warn("CA certificate file {} not found, ignoring it", pemFile)
+                    return@forEach
+                }
+                pemFile.inputStream().use { input ->
+                    certificateFactory.generateCertificates(input).forEachIndexed { i, cert ->
+                        keyStore.setCertificateEntry("${pemFile.path}-$i", cert)
+                    }
+                }
+            }
+            if (keyStore.size() == 0) return default
+            val extra = trustManagerFor(keyStore)
+
+            return object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) =
+                    default.checkClientTrusted(chain, authType)
+
+                override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {
+                    try {
+                        default.checkServerTrusted(chain, authType)
+                    } catch (_: CertificateException) {
+                        extra.checkServerTrusted(chain, authType)
+                    }
+                }
+
+                override fun getAcceptedIssuers(): Array<X509Certificate> =
+                    default.acceptedIssuers + extra.acceptedIssuers
+            }
+        }
+
+        private fun trustManagerFor(keyStore: KeyStore?): X509TrustManager =
+            TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+                .apply { init(keyStore) }
+                .trustManagers
+                .filterIsInstance<X509TrustManager>()
+                .first()
+
         private fun fromConfig(config: Config): ChatService {
             val mcpServerUrl = config.getString("mcp.serverUrl")
 
+            // All clients share one HTTP client, so it trusts the CA certificates of all clients
+            val clientsConfig = config.getConfig("llm.clients")
+            val caCertFiles =
+                clientsConfig.root().keys.mapNotNull { name ->
+                    val client = clientsConfig.getConfig(name)
+                    if (client.hasPath("caCertFile")) File(client.getString("caCertFile")) else null
+                }
+
             val httpClient =
                 HttpClient(CIO) {
+                    if (caCertFiles.isNotEmpty()) {
+                        engine { https { trustManager = trustManagerWithExtraCerts(caCertFiles) } }
+                    }
                     install(ContentNegotiation) {
                         json(
                             Json {

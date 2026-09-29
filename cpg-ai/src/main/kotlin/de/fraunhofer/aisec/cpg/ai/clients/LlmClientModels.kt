@@ -101,6 +101,8 @@ data class ClientConfig(
     val apiKey: String?,
     val provider: ClientProvider,
     val requiresApiKey: Boolean,
+    /** Whether responses are streamed, see [OpenAiClient]. */
+    val stream: Boolean = true,
 )
 
 @Serializable data class LlmProviderWithModels(val name: String, val models: List<String>)

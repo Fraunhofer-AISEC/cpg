@@ -45,33 +45,45 @@ import kotlinx.serialization.json.Json
 fun Server.listFunctions() {
     val toolDescription =
         """
-        This tool lists all functions, more precisely function declarations, which are held in the graph.
-        Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
-        the full node details (including its code) for a specific function once picked.
+        This tool lists function declarations held in the graph as compact summaries (name, signature,
+        callees, location), in pages of at most $DEFAULT_LIST_LIMIT results. Implicit functions (e.g.,
+        default constructors of structs) are omitted.
+        Narrow large listings down with pattern, file or calls instead of paging through everything,
+        and use cpg_get_node with an id to retrieve the full node details (including its code).
 
         Example prompts:
         - "Show me all functions in the analyzed code"
-        - "What functions are defined in this codebase?"
+        - "Which functions call memcpy?"
+        - "Which functions are defined in main.c?"
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content =
-                    result.functions.map {
-                        TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
-                    }
-            )
-        }
+    this.addTool<CpgListFunctionsPayload>(
+        name = "cpg_list_functions",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListFunctionsPayload ->
+        val nameRegex = payload.pattern?.toRegex(RegexOption.IGNORE_CASE)
+        result.functions
+            .filter { function ->
+                !function.isImplicit &&
+                    (nameRegex == null || nameRegex.containsMatchIn(function.name.toString())) &&
+                    (payload.file == null || function.isInFile(payload.file)) &&
+                    (payload.calls == null ||
+                        function.calls.any { it.name.localName == payload.calls })
+            }
+            .toPagedResult(payload.limit, payload.offset) {
+                Json.encodeToString(it.toInfo(includeCode = false))
+            }
     }
 }
 
 fun Server.listRecords() {
     val toolDescription =
         """
-        This tool lists all classes and structs, more precisely their declarations as compact summaries.
-        Use cpg_get_node with a id to retrieve the full node details.
+        This tool lists classes and structs, more precisely their declarations, as compact summaries,
+        in pages of at most $DEFAULT_LIST_LIMIT results. Narrow large listings down with pattern or file
+        instead of paging through everything, and use cpg_get_node with an id to retrieve the full node
+        details.
 
         Example prompts:
         - "Show me all classes in the code"
@@ -79,12 +91,12 @@ fun Server.listRecords() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_records", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content = result.records.map { TextContent(Json.encodeToString(it.toInfo())) }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_records", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        result.records
+            .filter { it.matches(payload) }
+            .toPagedResult(payload.limit, payload.offset) { Json.encodeToString(it.toInfo()) }
     }
 }
 
@@ -107,8 +119,10 @@ fun Server.listConceptsAndOperations() {
 fun Server.listCalls() {
     val toolDescription =
         """
-        This tool lists all function and method calls as compact summaries.
-        Use cpg_get_node with a id to retrieve the full node details.
+        This tool lists function and method calls as compact summaries, in pages of at most
+        $DEFAULT_LIST_LIMIT results. Narrow large listings down with pattern (matched against the name of
+        the called function) or file instead of paging through everything, and use cpg_get_node with an
+        id to retrieve the full node details.
 
         Example prompts:
         - "Show me all function calls in the code"
@@ -116,15 +130,14 @@ fun Server.listCalls() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content =
-                    result.calls.map {
-                        TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
-                    }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_calls", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        result.calls
+            .filter { it.matches(payload) }
+            .toPagedResult(payload.limit, payload.offset) {
+                Json.encodeToString(it.toInfo(includeCode = false))
+            }
     }
 }
 
@@ -218,4 +231,38 @@ fun Server.getNode() {
             CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
         }
     }
+}
+
+/** Returns whether this node is located in a file whose path contains [file]. */
+private fun Node.isInFile(file: String): Boolean =
+    location?.artifactLocation?.uri?.toString()?.contains(file) == true
+
+/** Returns whether this node matches the name and file filters of [payload]. */
+private fun Node.matches(payload: CpgListPayload): Boolean =
+    (payload.pattern == null ||
+        payload.pattern.toRegex(RegexOption.IGNORE_CASE).containsMatchIn(name.toString())) &&
+        (payload.file == null || isInFile(payload.file))
+
+/**
+ * Returns the page of this list described by [limit] and [offset], each element converted by
+ * [toText]. If there are more results than fit on the page, a final note tells the LLM how many
+ * results exist in total and how to retrieve the next page.
+ */
+private fun <T> List<T>.toPagedResult(
+    limit: Int?,
+    offset: Int?,
+    toText: (T) -> String,
+): CallToolResult {
+    val start = (offset ?: 0).coerceIn(0, size)
+    val end = (start + (limit ?: DEFAULT_LIST_LIMIT).coerceAtLeast(1)).coerceAtMost(size)
+    val content = subList(start, end).map { TextContent(toText(it)) }
+    if (size == 0 || (start == 0 && end == size)) {
+        return CallToolResult(content = content)
+    }
+
+    val note =
+        "Showing results ${start + 1}-$end of $size. " +
+            (if (end < size) "Use offset=$end to get the next page, or " else "") +
+            "narrow the listing down with the filter parameters."
+    return CallToolResult(content = content + TextContent(note))
 }

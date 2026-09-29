@@ -97,16 +97,8 @@ inline fun <reified T> Server.addTool(
         meta = meta,
     ) { request ->
         try {
-            val payload =
-                request.arguments?.toObject<T>()
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "Invalid or missing payload for cpg_list_calls_to tool."
-                                )
-                            )
-                    )
+            // Tools whose payload only has optional parameters may be called without arguments
+            val payload = (request.arguments ?: JsonObject(emptyMap())).toObject<T>()
             payload.runOnCpg(handler)
         } catch (e: Exception) {
             CallToolResult(
