@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
 import java.util.function.BiConsumer
@@ -471,7 +472,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleAlloca(instr: LLVMValueRef): Expression {
         val array = newArrayConstruction(rawNode = instr)
 
-        array.type = frontend.typeOf(instr)
+        // alloca returns a pointer to the allocated type. We use the instruction's explicit
+        // allocated type (rather than deriving it from the pointer's element type) since that
+        // also works with opaque pointers.
+        array.type = frontend.typeOf(LLVMGetAllocatedType(instr)).pointer()
 
         // LLVM is quite forthcoming here. in case the optional length parameter is omitted in the
         // source code, it will automatically be set to 1
@@ -1427,7 +1431,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // if it is still empty, we probably do not have a left side
         return if (lhs != "") {
-            val decl = newVariable(lhs, frontend.typeOf(valueRef), false, rawNode = valueRef)
+            // Prefer the type already computed for the right-hand side if we could not derive
+            // one from the instruction's own LLVM type. This matters for opaque pointers, where
+            // the instruction's own value type (e.g. for alloca or getelementptr results) is
+            // just an untyped "ptr" that carries no pointee information, whereas the individual
+            // instruction handlers already resolved the correct pointee type from explicit type
+            // operands (allocated type, GEP source element type, ...).
+            var type = frontend.typeOf(valueRef)
+            val rhsType = rhs.type
+            if (type is UnknownType && rhsType !is UnknownType) {
+                type = rhsType
+            }
+
+            val decl = newVariable(lhs, type, false, rawNode = valueRef)
             decl.initializer = rhs
 
             // add the declaration to the current scope

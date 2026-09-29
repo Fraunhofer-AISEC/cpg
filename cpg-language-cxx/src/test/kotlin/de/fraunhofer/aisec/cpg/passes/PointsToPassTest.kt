@@ -47,6 +47,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 
 class PointsToPassTest {
     @Test
@@ -5156,5 +5157,45 @@ class PointsToPassTest {
         // Actual test
         // The PMV should have no prevDFG
         assertTrue(dataDerefPMV.prevDFG.isEmpty())
+    }
+
+    /**
+     * A function whose analysis runs out of time still has to end up with a function summary. If it
+     * did not, then every single one of its call sites would analyze it again and run into the same
+     * timeout, which is far worse than the incomplete result we settle for.
+     *
+     * A budget of zero is the one value for which we know that both the fixpoint iteration and the
+     * phase which writes its result into the graph run out of it, so the summaries this asserts on
+     * are the fallbacks rather than real results.
+     */
+    @Test
+    fun testTimeoutStillYieldsFunctionSummaries() {
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.configurePass<PointsToPass>(
+                    PointsToPass.Configuration(addressLength = 64, timeout = Duration.ZERO)
+                )
+            }
+        assertNotNull(tu)
+
+        val functions = tu.functions.filter { it.body != null }
+        assertTrue(functions.isNotEmpty(), "The file has to contain functions to analyze")
+        functions.forEach { function ->
+            assertTrue(
+                function.functionSummary.isNotEmpty(),
+                "${function.name} has no function summary at all",
+            )
+            assertTrue(
+                function.functionSummary.keys.any {
+                    it in function.parameters || it in function.returns
+                },
+                "The function summary of ${function.name} is not one that we would recognize as " +
+                    "already computed, so we would analyze the function again",
+            )
+        }
     }
 }

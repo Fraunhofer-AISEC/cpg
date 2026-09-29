@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
@@ -72,10 +73,10 @@ class ArraySizeEvaluator : ValueEvaluator() {
  * This class implements the [Value] interface for Arrays, tracking the size of the collection. We
  * assume that there is no operation that changes an array's size apart from re-declaring it.
  */
-class ArrayValue : Value<LatticeInterval> {
+class ArrayValue : Value<NewIntervalLattice.Element, LatticeInterval> {
     override fun applyEffect(
-        lattice: TupleState<Any>,
-        state: TupleStateElement<Any>,
+        lattice: TupleState<Any, NewIntervalLattice.Element>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
         node: Node,
         edge: EvaluationOrder?,
         computeWithoutPush: Boolean,
