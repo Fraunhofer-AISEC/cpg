@@ -36,7 +36,7 @@ import kotlin.math.min
  * [paper](https://epubs.siam.org/doi/10.1137/0201010)) to find strongly connected components (SCCs)
  * in the Evaluation Order Graph (EOG) of a program. SCCs are subgraphs where every node is
  * reachable from every other node within the same subgraph (i.e., loops). In addition, we remove
- * the exit nodes of the SCC so that we can also detect nested loops. The pass labels the EOG edges
+ * the entry nodes of the SCC so that we can also detect nested loops. The pass labels the EOG edges
  * that are part of an SCC with the same identifier.
  *
  * Algorithm: [tarjan] runs the DFS with an explicit [WorkItem] stack instead of recursion, since
@@ -44,9 +44,10 @@ import kotlin.math.min
  * plus its not-yet-visited successors - pushed on descent and popped on return, updating lowlink
  * values the usual Tarjan way. When a popped frame's node turns out to be an SCC root,
  * [handleSccRoot] labels that SCC's edges with the current [WorkItem.level], then - to find loops
- * nested inside it - strips the SCC's exit node and re-decomposes the remaining elements one
- * `level` deeper, using a [DecompDriver] to drive that re-run. This repeats until no further nested
- * loop remains, leaving concentric loops labeled from outermost to innermost.
+ * nested inside it - strips all of the SCC's entry nodes at once (a loop can have more than one
+ * distinct entry point) and re-decomposes the remaining elements one `level` deeper, using a
+ * [DecompDriver] to drive that re-run. This repeats until no further nested loop remains, leaving
+ * concentric loops labeled from outermost to innermost.
  *
  * Each [WorkItem] carries both a [WorkItem.level] (the nesting depth reported on labeled edges) and
  * a [WorkItem.mapKey] (which [TarjanInfo] scratch space it reads/writes). These are *not* the same
@@ -282,9 +283,17 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             }
         }
 
-        // Find nested loops: strip the last loop-entry element (by source order, hoping it's the
-        // outermost entry) and re-decompose the remaining elements one level deeper - if that
-        // still contains a loop, it's a nested one.
+        // Find nested loops: strip *all* of this level's loop-entry elements at once and
+        // re-decompose the remaining elements one level deeper - if that still contains a loop,
+        // it's a nested one.
+        //
+        // Strips all entries at once, not just one: a loop can have more than one distinct entry
+        // point (e.g. a `goto` into the middle of a loop, or a switch/labeled break into a loop
+        // body). Peeling entries off one at a time - re-running the full decomposition after each
+        // one - misreads a single k-entry loop as k cascading "nested" levels: roughly O(k * n)
+        // work, and it fabricates spurious intermediate scc levels for a loop that was never
+        // actually nested. For the common single-entry case (loopEntryElements.size == 1), this is
+        // identical to the old one-at-a-time behavior.
         //
         // Bug fixed here: this used to look up/create the inner TarjanInfo via
         // tarjanInfoMap.computeIfAbsent(innerLevel), keyed by the plain depth number. Two
@@ -299,10 +308,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             val blackList = currentInfo.blackList.toMutableList()
             val innerLevel = level + 1
             val innerMapKey = nextScratchKey--
-            val eliminatedElement =
-                loopEntryElements.sortedBy { it.location?.region?.startLine }.last()
-            blackList.add(eliminatedElement)
-            sccElements.remove(eliminatedElement)
+            blackList.addAll(loopEntryElements)
+            sccElements.removeAll(loopEntryElements)
             tarjanInfoMap[innerMapKey] = TarjanInfo(blackList)
             workStack.addLast(DecompDriver(sccElements.iterator(), innerMapKey, innerLevel))
         }

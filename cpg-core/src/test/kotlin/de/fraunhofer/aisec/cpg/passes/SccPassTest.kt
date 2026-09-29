@@ -359,4 +359,56 @@ class SccPassTest {
         assertEquals(1, c.sccTo(a), "back-edge into entry `a`")
         assertEquals(1, a.sccTo(b), "back-edge into entry `b`")
     }
+
+    /**
+     * Demonstrates why [handleSccRoot]'s nested-decomposition step strips *all* current
+     * `loopEntryElements` at once instead of peeling off one per level: `x`, `y`, `z` are fully
+     * connected (each reaches the other two directly), entered from 3 distinct outside edges - one
+     * per node - so all three are entries. Unlike [testLoopWithTwoEntriesTerminates]'s plain ring,
+     * removing just one entry here still leaves the other two forming a genuine (redundant)
+     * 2-cycle, so a one-entry-at-a-time strategy keeps finding "another" loop and re-decomposing:
+     * it would relabel `x<->y`'s edges from level 1 to level 2 once `z` is peeled off, inventing a
+     * nesting level for a loop that was never actually nested - and would cost roughly 3x the work
+     * peeling off `z`, then `y` or `x`, before the last single node trivially terminates. Stripping
+     * all of `{x, y, z}` in one shot empties the SCC immediately, so nothing beyond level 1 is ever
+     * found - one decomposition attempt instead of three.
+     */
+    @Test
+    fun testFullyConnectedLoopWithThreeEntriesStaysAtOneLevel() {
+        val start = AnnotationMember()
+        val x = AnnotationMember()
+        val y = AnnotationMember()
+        val z = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(x)
+        start.nextEOG.add(y)
+        start.nextEOG.add(z)
+        x.nextEOG.add(y)
+        x.nextEOG.add(z)
+        y.nextEOG.add(x)
+        y.nextEOG.add(z)
+        z.nextEOG.add(x)
+        z.nextEOG.add(y)
+        z.nextEOG.add(end)
+
+        val thread = Thread { newPass().tarjan(start) }
+        thread.isDaemon = true
+        thread.start()
+        thread.join(5000)
+
+        assertFalse(thread.isAlive, "tarjan() did not terminate within 5s")
+
+        assertNull(start.sccTo(x))
+        assertNull(start.sccTo(y))
+        assertNull(start.sccTo(z))
+        assertNull(z.sccTo(end))
+        // The key assertion: every edge among x/y/z must stay at level 1. Before the fix, x<->y
+        // ended up overwritten to level 2 once z was peeled off as "the" entry to eliminate first.
+        assertEquals(1, x.sccTo(y), "must not be spuriously relabeled to a fake nested level")
+        assertEquals(1, y.sccTo(x), "must not be spuriously relabeled to a fake nested level")
+        assertEquals(1, x.sccTo(z))
+        assertEquals(1, z.sccTo(x))
+        assertEquals(1, y.sccTo(z))
+        assertEquals(1, z.sccTo(y))
+    }
 }
