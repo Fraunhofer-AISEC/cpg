@@ -6,6 +6,11 @@ llm {
 
     vLLM {
           baseUrl = "http://localhost:8000"
+          # Set to false if the server loses tool calls when streaming (default: true)
+          # stream = false
+          # PEM file with additional certificates to trust, e.g., a self-signed certificate or an
+          # internal CA. The shared HTTP client of all clients trusts these certificates.
+          # caCertFile = ${HOME}"/.codyze/server.pem"
         }
 
     mlx {
