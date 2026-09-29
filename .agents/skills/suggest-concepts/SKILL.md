@@ -50,13 +50,17 @@ Call `cpg_list_llm_concepts_operations` once, before anything else.
 
 ### 2. Explore the code comprehensively
 
-Before suggesting follow a multistep approach by calling other tools to explore the graph, so one listing is rarely enough:
-Combine several of:
-- `cpg_list_functions`, `cpg_list_records`, `cpg_list_calls`, `cpg_list_calls_to`, etc. for
-  overview.
-- `cpg_get_node` to inspect a specific node in detail (if needed).
+Explore the graph step by step, from a broad overview to specific nodes. Codebases can be large,
+so never try to list everything at once:
+- Start with `cpg_overview` to get oriented: what the code consists of, which external functions
+  it calls (e.g., cryptographic, network or file APIs) and where likely entry points are.
+- Narrow down with the filter parameters of the listing tools (e.g., the functions calling a
+  specific API, or the nodes in a specific file) instead of paging through complete listings.
+- Inspect the candidates in detail, e.g., with `cpg_get_node`, before tagging them.
 
-Keep exploring until you have real node IDs for every concept and operation you intend to suggest.
+Use whichever of the available tools fits the question, their descriptions tell you what each
+one does. Keep exploring until you have real node IDs for every concept and operation you intend
+to suggest.
 
 ### 3. Suggest via the tool
 
@@ -75,3 +79,8 @@ For each call provide:
 
 Once you have called the tool for every concept you want to suggest, your turn is done. The user
 reviews the suggestions and decides what to accept. Do not apply anything yourself.
+
+Never call `cpg_add_or_update_llm_concept` or `cpg_add_llm_concept_and_operations`: they persist
+concepts or apply them to the graph without the user's approval. Suggesting a new concept with
+`cpg_suggest_llm_concepts_and_operations` is enough, its definition is saved once the user accepts
+the suggestion.

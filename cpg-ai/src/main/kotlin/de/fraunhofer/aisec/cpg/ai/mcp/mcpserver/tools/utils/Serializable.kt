@@ -238,3 +238,30 @@ data class QueryTreeNode(
     val node: NodeJSON?,
     val children: List<QueryTreeNode> = emptyList(),
 )
+
+/** A compact, fixed-size overview of a [de.fraunhofer.aisec.cpg.TranslationResult]. */
+@Serializable
+data class CpgOverview(
+    val components: List<ComponentOverview>,
+    /** Functions with a body, i.e., functions defined in the analyzed code. */
+    val definedFunctions: Int,
+    /** Functions without a body, e.g., declarations of library functions. */
+    val declaredOnlyFunctions: Int,
+    val records: Int,
+    val calls: Int,
+    /** Files by the number of functions defined in them. */
+    val filesWithMostFunctions: List<NamedCount>,
+    /** Defined functions by the number of calls to them. */
+    val mostCalledFunctions: List<RankedFunction>,
+    /** Callees without a body (e.g., library functions) by the number of calls to them. */
+    val externalFunctionsCalled: List<NamedCount>,
+    /** Defined functions which are never called, by the number of calls they make. */
+    val entryPointCandidates: List<RankedFunction>,
+    val entryPointCandidatesTotal: Int,
+)
+
+@Serializable data class ComponentOverview(val name: String, val translationUnits: Int)
+
+@Serializable data class NamedCount(val name: String, val count: Int)
+
+@Serializable data class RankedFunction(val nodeId: String, val name: String, val count: Int)
