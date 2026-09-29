@@ -26,8 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.AnnotationMember
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Goto
+import de.fraunhofer.aisec.cpg.graph.expressions.Label
+import de.fraunhofer.aisec.cpg.graph.expressions.While
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -35,11 +38,20 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Hand-builds small EOGs (via [AnnotationMember] as a stand-in graph node - same choice as
- * [testBlacklistedNodeDoesNotAbortSuccessorScan] below, see its doc for why) and checks
- * [SccPass.tarjan]'s actual output: the `scc` level [SccPass] stamps onto
- * [EvaluationOrder][de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder] edges that are part
- * of a loop.
+ * Hand-builds small EOGs and checks [SccPass.tarjan]'s actual output: the `scc` level [SccPass]
+ * stamps onto [EvaluationOrder][de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder] edges
+ * that are part of a loop.
+ *
+ * Graphs are wired directly via `nextEOG.add(...)` rather than parsed from source, using whichever
+ * real node type ([Block], [While], [Goto], [Label]) best matches the shape under test - e.g. a
+ * loop head is a [While], a jump into the middle of a loop is a [Goto]/[Label] pair. Any of these
+ * works as a plain, distinct graph node here because none of them override `location` to a non-null
+ * computed value: [de.fraunhofer.aisec.cpg.graph.Node.equals] falls back to reference equality
+ * whenever `location == null` (see its doc), so two freshly-constructed instances are never
+ * mistaken for each other. That does *not* hold for
+ * [BasicBlock][de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock], whose `location` is a computed
+ * property that returns a non-null placeholder even when empty - two empty `BasicBlock`s would
+ * compare equal to each other, which is why none of the tests below use it directly.
  *
  * One non-obvious thing every loop-detection test below depends on: a cycle with no connection to
  * the outside world (no predecessor into it, no successor out of it) never gets labeled at
@@ -62,9 +74,9 @@ class SccPassTest {
      */
     @Test
     fun testStraightLineIsNotLabeled() {
-        val start = AnnotationMember()
-        val a = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val a = Block()
+        val end = Block()
         start.nextEOG.add(a)
         a.nextEOG.add(end)
 
@@ -80,10 +92,10 @@ class SccPassTest {
      */
     @Test
     fun testDiamondWithoutLoopIsNotLabeled() {
-        val start = AnnotationMember()
-        val a = AnnotationMember()
-        val b = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val a = Block()
+        val b = Block()
+        val end = Block()
         start.nextEOG.add(a)
         start.nextEOG.add(b)
         a.nextEOG.add(end)
@@ -100,9 +112,9 @@ class SccPassTest {
     /** A single node that loops back to itself is the smallest possible real SCC. */
     @Test
     fun testSelfLoopIsLabeled() {
-        val start = AnnotationMember()
-        val a = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val a = While()
+        val end = Block()
         start.nextEOG.add(a)
         a.nextEOG.add(a)
         a.nextEOG.add(end)
@@ -117,10 +129,10 @@ class SccPassTest {
     /** The canonical `while` loop shape: a head with a back-edge from the loop body. */
     @Test
     fun testSimpleLoopIsLabeled() {
-        val start = AnnotationMember()
-        val head = AnnotationMember()
-        val body = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val head = While()
+        val body = Block()
+        val end = Block()
         start.nextEOG.add(head)
         head.nextEOG.add(body)
         head.nextEOG.add(end)
@@ -137,11 +149,11 @@ class SccPassTest {
     /** Same as [testSimpleLoopIsLabeled], but with a 3-node loop body instead of 1 node. */
     @Test
     fun testLongerLoopIsLabeled() {
-        val start = AnnotationMember()
-        val head = AnnotationMember()
-        val b = AnnotationMember()
-        val c = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val head = While()
+        val b = Block()
+        val c = Block()
+        val end = Block()
         start.nextEOG.add(head)
         head.nextEOG.add(b)
         head.nextEOG.add(end)
@@ -163,13 +175,13 @@ class SccPassTest {
      */
     @Test
     fun testTwoDisjointLoopsAreNotMerged() {
-        val start = AnnotationMember()
-        val a = AnnotationMember()
-        val b = AnnotationMember()
-        val bridge = AnnotationMember()
-        val c = AnnotationMember()
-        val d = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val a = While()
+        val b = Block()
+        val bridge = Block()
+        val c = While()
+        val d = Block()
+        val end = Block()
         start.nextEOG.add(a)
         a.nextEOG.add(b)
         b.nextEOG.add(a)
@@ -193,12 +205,12 @@ class SccPassTest {
      */
     @Test
     fun testNestedLoopHasTwoLevels() {
-        val start = AnnotationMember()
-        val outer = AnnotationMember()
-        val inner = AnnotationMember()
-        val innerBody = AnnotationMember()
-        val outerBody = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val outer = While()
+        val inner = While()
+        val innerBody = Block()
+        val outerBody = Block()
+        val end = Block()
         start.nextEOG.add(outer)
         outer.nextEOG.add(inner)
         outer.nextEOG.add(end)
@@ -223,14 +235,14 @@ class SccPassTest {
      */
     @Test
     fun testTripleNestedLoopHasThreeLevels() {
-        val start = AnnotationMember()
-        val a = AnnotationMember()
-        val b = AnnotationMember()
-        val c = AnnotationMember()
-        val innerBody = AnnotationMember()
-        val middleBody = AnnotationMember()
-        val outerBody = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val a = While()
+        val b = While()
+        val c = While()
+        val innerBody = Block()
+        val middleBody = Block()
+        val outerBody = Block()
+        val end = Block()
         start.nextEOG.add(a)
         a.nextEOG.add(b)
         a.nextEOG.add(end)
@@ -255,36 +267,24 @@ class SccPassTest {
     }
 
     /**
-     * Regression test for a bug where [SccPass.tarjan] used `break` instead of `continue` when
-     * hitting a blacklisted node while iterating a node's `nextEOG` successors. `break` aborts the
-     * whole successor scan on the first blacklisted node, silently dropping any successors that
-     * come after it - instead of just skipping that one blacklisted successor and continuing to
-     * scan the others.
-     *
-     * The blacklist is normally only ever non-empty for a nested decomposition (populated by
-     * [handleSccRoot] itself when it re-decomposes an SCC one level deeper - see its doc), so we
-     * exercise the same code path directly here instead: pre-seed depth 1's [SccPass.TarjanInfo]
-     * with a blacklist before calling [SccPass.tarjan] (which always starts at depth 1), bypassing
-     * the need for a real nested loop to be parsed from source.
-     *
-     * We use [AnnotationMember] as a stand-in graph node rather than
-     * [BasicBlock][de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock]: `BasicBlock.location` is a
-     * computed property that returns a non-null placeholder even when the block is empty, which
-     * pushes [de.fraunhofer.aisec.cpg.graph.Node.equals] into structural comparison - two empty
-     * `BasicBlock`s then compare as equal to each other, breaking the distinct node identities this
-     * test depends on. Any plain [Node][de.fraunhofer.aisec.cpg.graph.Node] subclass with `location
-     * == null` correctly falls back to reference equality instead.
+     * Verifies that a blacklisted node encountered while scanning a node's `nextEOG` successors
+     * only skips that one successor - the scan continues to any successors after it, rather than
+     * aborting entirely. [SccPass.tarjan]'s blacklist is normally only ever non-empty for a nested
+     * decomposition (populated by [handleSccRoot] when it re-decomposes an SCC one level deeper -
+     * see its doc), so this exercises the same code path directly: pre-seed depth 1's
+     * [SccPass.TarjanInfo] with a blacklist before calling [SccPass.tarjan] (which always starts at
+     * depth 1), without needing a real nested loop to produce one.
      */
     @Test
     fun testBlacklistedNodeDoesNotAbortSuccessorScan() {
         val pass = newPass()
 
-        val bb = AnnotationMember()
-        val blacklisted = AnnotationMember()
-        val live = AnnotationMember()
+        val bb = Block()
+        val blacklisted = Block()
+        val live = Block()
 
-        // blacklisted comes first, live comes after it - this ordering is what the `break` bug
-        // depended on to drop `live` entirely.
+        // blacklisted comes before live in nextEOG, so a scan that stops at the first blacklisted
+        // successor would never reach live.
         bb.nextEOG.add(blacklisted)
         bb.nextEOG.add(live)
 
@@ -300,36 +300,24 @@ class SccPassTest {
     }
 
     /**
-     * Investigative regression test for a report (after `Iterative SCC Pass (#2938)`,
-     * `100564b77b7`) of [SccPass] hanging / repeatedly logging "Found more than one EOG Edge
-     * matching criteria" on a real-world function. Suspected shape: a loop with *more than one*
-     * distinct entry point (e.g. `goto` into the middle of a loop, or a labeled break/continue
-     * across nested loops) - `handleSccRoot`'s nested-decomposition step always blacklists exactly
-     * one [de.fraunhofer.aisec.cpg.passes.SccPass] `loopEntryElement` per level
-     * (`loopEntryElements.sortedBy { ... }.last()`), a heuristic that implicitly assumes a
-     * single-entry (reducible) loop.
+     * A loop with more than one distinct entry point: `a` is entered directly from `start`, while a
+     * `goto` (`d`) jumps directly into `b`, a label in the middle of the loop body. `SccPass` must
+     * treat both as loop entries (`loopEntryElements` = `{a, b}`) and still terminate and label the
+     * loop correctly - handled by [handleSccRoot] stripping all current entries at once rather than
+     * one per level (see its doc).
      *
-     * This builds the simplest such shape: a plain 3-node ring `A -> B -> C -> A` (no chords, so
-     * removing any one ring node leaves a plain path, never another cycle) entered from two
-     * distinct outside nodes at two distinct ring positions (`start -> A` directly, `start -> D ->
-     * B` through a detour), with a single exit `C -> end`. `loopEntryElements` for this SCC is
-     * therefore `{A, B}` - the multi-entry case - while the graph is deliberately kept free of any
-     * genuine nested sub-loop, so a hang or a spurious deeper `scc` level here would point
-     * specifically at the multi-entry heuristic, not at coincidental extra structure.
-     *
-     * Runs on a background thread with a timeout rather than calling `tarjan` directly: if the
-     * suspected mechanism is real, `tarjan` may never return, and a plain call would hang this test
-     * (and the whole suite) instead of failing it. A timeout is the only way to fail rather than
-     * hang.
+     * Runs on a background thread with a timeout rather than calling `tarjan` directly: a
+     * non-terminating case here would otherwise hang this test (and the whole suite) instead of
+     * failing it.
      */
     @Test
     fun testLoopWithTwoEntriesTerminates() {
-        val start = AnnotationMember()
-        val a = AnnotationMember()
-        val d = AnnotationMember()
-        val b = AnnotationMember()
-        val c = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val a = While()
+        val d = Goto()
+        val b = Label()
+        val c = Block()
+        val end = Block()
         start.nextEOG.add(a)
         start.nextEOG.add(d)
         d.nextEOG.add(b)
@@ -343,10 +331,7 @@ class SccPassTest {
         thread.start()
         thread.join(5000)
 
-        assertFalse(
-            thread.isAlive,
-            "tarjan() did not terminate within 5s - this reproduces the suspected multi-entry-loop hang",
-        )
+        assertFalse(thread.isAlive, "tarjan() did not terminate within 5s")
 
         // Boundary edges (outside the SCC, or the direct external-entry edges themselves) must
         // never be labeled.
@@ -361,25 +346,22 @@ class SccPassTest {
     }
 
     /**
-     * Demonstrates why [handleSccRoot]'s nested-decomposition step strips *all* current
-     * `loopEntryElements` at once instead of peeling off one per level: `x`, `y`, `z` are fully
-     * connected (each reaches the other two directly), entered from 3 distinct outside edges - one
-     * per node - so all three are entries. Unlike [testLoopWithTwoEntriesTerminates]'s plain ring,
-     * removing just one entry here still leaves the other two forming a genuine (redundant)
-     * 2-cycle, so a one-entry-at-a-time strategy keeps finding "another" loop and re-decomposing:
-     * it would relabel `x<->y`'s edges from level 1 to level 2 once `z` is peeled off, inventing a
-     * nesting level for a loop that was never actually nested - and would cost roughly 3x the work
-     * peeling off `z`, then `y` or `x`, before the last single node trivially terminates. Stripping
-     * all of `{x, y, z}` in one shot empties the SCC immediately, so nothing beyond level 1 is ever
-     * found - one decomposition attempt instead of three.
+     * A loop with three entries and redundant internal connectivity, resembling a computed-goto
+     * dispatch loop where every label can jump directly to either of the other two: `x`, `y`, `z`
+     * each reach the other two directly, and each is also reachable directly from `start`. Removing
+     * any *one* entry still leaves the other two connected in a cycle, so all three must be
+     * recognized as entries at once (`loopEntryElements` = `{x, y, z}`) - if [handleSccRoot]
+     * instead only stripped one entry per level, this shape would keep re-decomposing and relabel
+     * `x`/`y`/`z` edges at ever deeper, spurious levels instead of the single level this loop
+     * actually has.
      */
     @Test
     fun testFullyConnectedLoopWithThreeEntriesStaysAtOneLevel() {
-        val start = AnnotationMember()
-        val x = AnnotationMember()
-        val y = AnnotationMember()
-        val z = AnnotationMember()
-        val end = AnnotationMember()
+        val start = Block()
+        val x = Label()
+        val y = Label()
+        val z = Label()
+        val end = Block()
         start.nextEOG.add(x)
         start.nextEOG.add(y)
         start.nextEOG.add(z)
@@ -402,10 +384,9 @@ class SccPassTest {
         assertNull(start.sccTo(y))
         assertNull(start.sccTo(z))
         assertNull(z.sccTo(end))
-        // The key assertion: every edge among x/y/z must stay at level 1. Before the fix, x<->y
-        // ended up overwritten to level 2 once z was peeled off as "the" entry to eliminate first.
-        assertEquals(1, x.sccTo(y), "must not be spuriously relabeled to a fake nested level")
-        assertEquals(1, y.sccTo(x), "must not be spuriously relabeled to a fake nested level")
+        // The key assertion: every edge among x/y/z must stay at level 1, not be relabeled deeper.
+        assertEquals(1, x.sccTo(y))
+        assertEquals(1, y.sccTo(x))
         assertEquals(1, x.sccTo(z))
         assertEquals(1, z.sccTo(x))
         assertEquals(1, y.sccTo(z))

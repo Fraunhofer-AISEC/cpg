@@ -283,27 +283,23 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             }
         }
 
-        // Find nested loops: strip *all* of this level's loop-entry elements at once and
+        // Find nested loops: strip all of this level's loop-entry elements at once and
         // re-decompose the remaining elements one level deeper - if that still contains a loop,
         // it's a nested one.
         //
-        // Strips all entries at once, not just one: a loop can have more than one distinct entry
-        // point (e.g. a `goto` into the middle of a loop, or a switch/labeled break into a loop
-        // body). Peeling entries off one at a time - re-running the full decomposition after each
-        // one - misreads a single k-entry loop as k cascading "nested" levels: roughly O(k * n)
-        // work, and it fabricates spurious intermediate scc levels for a loop that was never
-        // actually nested. For the common single-entry case (loopEntryElements.size == 1), this is
-        // identical to the old one-at-a-time behavior.
+        // All entries are stripped together, not one at a time: a loop can have more than one
+        // distinct entry point (e.g. a `goto` into the middle of a loop, or a switch/labeled break
+        // into a loop body - see testFullyConnectedLoopWithThreeEntriesStaysAtOneLevel). Removing
+        // them one at a time and re-decomposing after each would cost O(k * n) for k entries, and
+        // could relabel edges at a deeper level than the loop actually has, since the remaining
+        // entries can still keep the same elements connected in a cycle. For a single-entry loop
+        // (loopEntryElements.size == 1), stripping "all" is the same as stripping the one.
         //
-        // Bug fixed here: this used to look up/create the inner TarjanInfo via
-        // tarjanInfoMap.computeIfAbsent(innerLevel), keyed by the plain depth number. Two
-        // *unrelated* SCCs decomposing at the same depth (e.g. two independent sibling loops,
-        // each with a single entry==exit node - an extremely common shape, not a rare corner
-        // case) would then collide: whichever one got here second inherited the first one's
-        // blackList/visited/stack instead of getting its own, silently re-labeling the first
-        // loop's edges at the second loop's depth. Each decomposition attempt now gets its own
-        // never-reused mapKey (see [nextScratchKey]) - level/depth is still level+1 for labeling,
-        // just no longer doubles as the TarjanInfo lookup key.
+        // Each decomposition attempt gets its own never-reused mapKey (see [nextScratchKey]) into
+        // tarjanInfoMap, kept separate from level/depth: two unrelated SCCs can legitimately
+        // decompose to the same depth (e.g. two independent sibling loops, each with a single
+        // entry==exit node), and sharing a TarjanInfo between them would let one's
+        // blackList/visited/stack silently corrupt the other's.
         if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
             val blackList = currentInfo.blackList.toMutableList()
             val innerLevel = level + 1
@@ -317,10 +313,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     // Note: no need to guard against processing the same basic block twice - EOGStarterPass
     // creates a fresh SccPass instance per starter node and calls accept() on it exactly once
-    // (see PassManager.consumeTarget), so tarjanInfoMap is never shared across multiple accept()
-    // calls in the first place. An earlier version of this method guarded on
-    // tarjanInfoMap[0].visited, but nothing ever populated that set, so the guard was always
-    // true and never did anything.
+    // (see the top-level consumeTarget() in Pass.kt), so tarjanInfoMap is never shared across
+    // multiple accept() calls in the first place.
     override fun accept(node: Node) {
         if (node.basicBlock.isEmpty()) return
         val bb = node.basicBlock.single() as BasicBlock
