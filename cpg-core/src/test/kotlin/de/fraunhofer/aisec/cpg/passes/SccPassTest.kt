@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.AnnotationMember
 import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -296,5 +297,66 @@ class SccPassTest {
             live in pass.tarjanInfoMap.getValue(level).visited,
             "live successor after a blacklisted one must still be visited",
         )
+    }
+
+    /**
+     * Investigative regression test for a report (after `Iterative SCC Pass (#2938)`,
+     * `100564b77b7`) of [SccPass] hanging / repeatedly logging "Found more than one EOG Edge
+     * matching criteria" on a real-world function. Suspected shape: a loop with *more than one*
+     * distinct entry point (e.g. `goto` into the middle of a loop, or a labeled break/continue
+     * across nested loops) - `handleSccRoot`'s nested-decomposition step always blacklists exactly
+     * one [de.fraunhofer.aisec.cpg.passes.SccPass] `loopEntryElement` per level
+     * (`loopEntryElements.sortedBy { ... }.last()`), a heuristic that implicitly assumes a
+     * single-entry (reducible) loop.
+     *
+     * This builds the simplest such shape: a plain 3-node ring `A -> B -> C -> A` (no chords, so
+     * removing any one ring node leaves a plain path, never another cycle) entered from two
+     * distinct outside nodes at two distinct ring positions (`start -> A` directly, `start -> D ->
+     * B` through a detour), with a single exit `C -> end`. `loopEntryElements` for this SCC is
+     * therefore `{A, B}` - the multi-entry case - while the graph is deliberately kept free of any
+     * genuine nested sub-loop, so a hang or a spurious deeper `scc` level here would point
+     * specifically at the multi-entry heuristic, not at coincidental extra structure.
+     *
+     * Runs on a background thread with a timeout rather than calling `tarjan` directly: if the
+     * suspected mechanism is real, `tarjan` may never return, and a plain call would hang this test
+     * (and the whole suite) instead of failing it. A timeout is the only way to fail rather than
+     * hang.
+     */
+    @Test
+    fun testLoopWithTwoEntriesTerminates() {
+        val start = AnnotationMember()
+        val a = AnnotationMember()
+        val d = AnnotationMember()
+        val b = AnnotationMember()
+        val c = AnnotationMember()
+        val end = AnnotationMember()
+        start.nextEOG.add(a)
+        start.nextEOG.add(d)
+        d.nextEOG.add(b)
+        a.nextEOG.add(b)
+        b.nextEOG.add(c)
+        c.nextEOG.add(a)
+        c.nextEOG.add(end)
+
+        val thread = Thread { newPass().tarjan(start) }
+        thread.isDaemon = true
+        thread.start()
+        thread.join(5000)
+
+        assertFalse(
+            thread.isAlive,
+            "tarjan() did not terminate within 5s - this reproduces the suspected multi-entry-loop hang",
+        )
+
+        // Boundary edges (outside the SCC, or the direct external-entry edges themselves) must
+        // never be labeled.
+        assertNull(start.sccTo(a))
+        assertNull(d.sccTo(b))
+        assertNull(c.sccTo(end))
+        // The ring's back-edge into each entry, from its in-SCC predecessor, must be labeled - and
+        // since removing either entry leaves a plain path (no real nested loop), nothing should
+        // ever be labeled at a deeper level than 1.
+        assertEquals(1, c.sccTo(a), "back-edge into entry `a`")
+        assertEquals(1, a.sccTo(b), "back-edge into entry `b`")
     }
 }
