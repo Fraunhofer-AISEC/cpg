@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgTranslate
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addRunPass
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
@@ -109,7 +109,7 @@ class RunPassTest {
                 )
             val text = (result.content.firstOrNull() as? TextContent)?.text
             assertNotNull(text)
-            val parsed = Json.decodeFromString<CpgAnalysisResult>(text)
+            val parsed = Json.decodeFromString<CpgAnalysisResults>(text)
             assertTrue(parsed.functions > 0)
         }
 

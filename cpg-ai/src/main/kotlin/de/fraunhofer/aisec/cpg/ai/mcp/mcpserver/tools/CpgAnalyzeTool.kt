@@ -54,7 +54,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
@@ -184,7 +184,7 @@ fun runCpgAnalyze(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
     cleanup: Boolean,
-): CpgAnalysisResult {
+): CpgAnalysisResults {
     val path =
         when {
             payload?.path != null -> {
@@ -250,7 +250,7 @@ fun runCpgAnalyze(
     val variables = result.variables
     val callExpressions = result.calls
 
-    return CpgAnalysisResult(
+    return CpgAnalysisResults(
         totalNodes = allNodes.size,
         functions = functions.size,
         variables = variables.size,

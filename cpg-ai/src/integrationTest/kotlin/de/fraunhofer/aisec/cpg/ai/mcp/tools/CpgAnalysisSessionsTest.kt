@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_PROJECT_NAME
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
@@ -83,7 +83,7 @@ class CpgAnalysisSessionsTest {
             assertNotNull(analysisText)
             assertEquals(
                 setOf("first", "second"),
-                Json.decodeFromString<CpgAnalysisResult>(analysisText).projectNames.toSet(),
+                Json.decodeFromString<CpgAnalysisResults>(analysisText).projectNames.toSet(),
             )
 
             val firstResult =
@@ -138,7 +138,7 @@ class CpgAnalysisSessionsTest {
             assertNotNull(analysisText)
             assertEquals(
                 listOf(DEFAULT_PROJECT_NAME),
-                Json.decodeFromString<CpgAnalysisResult>(analysisText).projectNames,
+                Json.decodeFromString<CpgAnalysisResults>(analysisText).projectNames,
             )
             assertNotNull(getSession())
 

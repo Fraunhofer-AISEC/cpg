@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
@@ -58,7 +58,7 @@ class CpgAnalyzeToolTest {
             assertIs<TextContent>(resultContent)
             assertNotNull(resultContent.text, "Result content should not be null")
 
-            val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultContent.text)
+            val analysisResult = Json.decodeFromString<CpgAnalysisResults>(resultContent.text)
             assertEquals(2, analysisResult.functions)
             assertEquals(1, analysisResult.callExpressions)
         }
