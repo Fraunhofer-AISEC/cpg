@@ -255,7 +255,7 @@ class ApplicationTest {
     }
 
     @Test
-    fun testGetTranslationUnitIds() = testApplication {
+    fun testGetNodes() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
 
@@ -263,14 +263,16 @@ class ApplicationTest {
         val open = assertNotNull(mockTu.calls["open"])
         val unknownId = "00000000-0000-0000-0000-000000000000"
         val response =
-            client.post("/api/nodes/translation-units") {
+            client.post("/api/nodes") {
                 contentType(ContentType.Application.Json)
                 setBody(listOf(open.id.toString(), unknownId))
             }
         assertEquals(HttpStatusCode.OK, response.status)
 
-        val tuIds = response.body<Map<String, String>>()
-        assertEquals(mapOf(open.id.toString() to mockTu.id.toString()), tuIds)
+        val node = response.body<List<NodeJSON>>().singleOrNull()
+        assertNotNull(node)
+        assertEquals(open.id, node.id)
+        assertEquals(mockTu.id, node.translationUnitId)
     }
 
     @Test

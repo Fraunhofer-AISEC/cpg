@@ -135,8 +135,12 @@
 
   let showCodePanel = $derived(selectedTranslationUnit !== null || suggestions.length > 0);
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
-  let tusWithSuggestions = $state<Set<string>>(new Set());
-
+  // The nodes referenced by the suggestions, by ID. They can be nested anywhere in a translation
+  // unit, so they are not necessarily part of astNodes
+  let suggestionNodes = $state.raw<Map<string, NodeJSON>>(new Map());
+  const tusWithSuggestions = $derived(
+    new Set([...suggestionNodes.values()].flatMap(n => (n.translationUnitId ? [n.translationUnitId] : [])))
+  );
 
   // The node IDs referenced by the suggestions. As a string, this only changes when the IDs change,
   // and not when a suggestion is accepted or rejected (which replaces the suggestion objects)
@@ -149,26 +153,26 @@
     )].sort().join(',')
   );
 
-  // When suggestions arrive, resolve which TUs contain the referenced nodes
+  // When suggestions arrive, load the referenced nodes to know their files and lines
   $effect(() => {
     const key = suggestionNodeIdsKey;
     if (!key || !analysisResult) {
-      tusWithSuggestions = new Set();
+      suggestionNodes = new Map();
       return;
     }
-    resolveTusForNodeIds(key);
+    loadSuggestionNodes(key);
   });
 
-  async function resolveTusForNodeIds(key: string) {
-    const tuIdsByNodeId: Record<string, string> = await fetch('/api/nodes/translation-units', {
+  async function loadSuggestionNodes(key: string) {
+    const nodes: NodeJSON[] = await fetch('/api/nodes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(key.split(','))
-    }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+    }).then(r => (r.ok ? r.json() : [])).catch(() => []);
 
     // Ignore the response if the suggestions changed in the meantime
     if (key !== suggestionNodeIdsKey) return;
-    tusWithSuggestions = new Set(Object.values(tuIdsByNodeId));
+    suggestionNodes = new Map(nodes.map(n => [n.id, n]));
   }
 
   // Auto-select the first translation unit with suggestions when resolved
@@ -346,6 +350,7 @@
         bind:nodePanelCollapsed={nodesPanelCollapsed}
         onClose={closeCodePanel}
         bind:suggestions
+        {suggestionNodes}
         onApplySuggestions={handleApplyAndReload}
       />
 

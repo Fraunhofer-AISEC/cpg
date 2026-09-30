@@ -59,8 +59,8 @@ import kotlinx.serialization.json.JsonObject
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
- * - POST `/api/nodes/translation-units`: Maps the given node IDs to the IDs of the translation
- *   units that contain them. Unknown node IDs are omitted.
+ * - POST `/api/nodes`: Retrieves the nodes with the given IDs (without DFG edges). Unknown node IDs
+ *   are omitted.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
@@ -176,11 +176,11 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             call.respond(nodes)
         }
 
-        // The endpoint to find the translation units that contain the given nodes
-        post("/nodes/translation-units") {
+        // The endpoint to get multiple nodes by IDs (batch fetch)
+        post("/nodes") {
             try {
                 val nodeIds = call.receive<List<String>>()
-                call.respond(service.getTranslationUnitIds(nodeIds))
+                call.respond(service.getNodes(nodeIds))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,

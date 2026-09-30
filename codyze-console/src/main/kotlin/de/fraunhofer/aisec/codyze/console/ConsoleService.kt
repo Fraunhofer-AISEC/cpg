@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
@@ -206,21 +205,15 @@ class ConsoleService {
     }
 
     /**
-     * Returns the ID of the translation unit that contains the node, for each of the given node
-     * IDs. IDs of nodes that do not exist (e.g., because an LLM made them up) or that are not part
-     * of a translation unit are omitted.
+     * Returns the nodes with the given IDs as [NodeJSON] (without DFG edges). IDs of nodes that do
+     * not exist (e.g., because an LLM made them up) are omitted.
      */
-    fun getTranslationUnitIds(nodeIds: Collection<String>): Map<String, String> {
+    fun getNodes(nodeIds: Collection<String>): List<NodeJSON> {
         val wanted = nodeIds.toSet()
         val result = analysisResult?.analysisResult?.translationResult
-        if (wanted.isEmpty() || result == null) return emptyMap()
+        if (wanted.isEmpty() || result == null) return emptyList()
 
-        return result.nodes
-            .filter { it.id.toString() in wanted }
-            .mapNotNull { node ->
-                node.translationUnit?.let { node.id.toString() to it.id.toString() }
-            }
-            .toMap()
+        return result.nodes.filter { it.id.toString() in wanted }.map { it.toJSON(noEdges = true) }
     }
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */

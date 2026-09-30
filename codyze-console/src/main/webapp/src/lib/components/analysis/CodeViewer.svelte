@@ -57,10 +57,12 @@
     nodePanelCollapsed?: boolean;
     onClose?: () => void;
     suggestions?: ConceptSuggestionItem[];
+    /** The nodes referenced by the suggestions, by ID, which may be nested anywhere in the unit */
+    suggestionNodes?: Map<string, NodeJSON>;
     onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => void;
   }
 
-  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, suggestions = $bindable([]), onApplySuggestions }: Props = $props();
+  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, suggestions = $bindable([]), suggestionNodes, onApplySuggestions }: Props = $props();
 
   let activeTab = $state('astNodes');
   let nodes = $derived(
@@ -105,9 +107,15 @@
     codeContainerElement.scrollTo({ top: Math.max(0, top), behavior });
   }
 
-  // Resolve a nodeId to its line range via astNodes or overlayNodes
+  // Resolve a nodeId to its line range via suggestionNodes, astNodes or overlayNodes
   function findNodeById(nodeId: string): NodeJSON | undefined {
-    return astNodes.find(n => n.id === nodeId) ?? overlayNodes.find(n => n.id === nodeId);
+    // A suggested node may be located in another file than the one that is shown
+    const suggestionNode = suggestionNodes?.get(nodeId);
+    return (
+      (suggestionNode?.translationUnitId === translationUnit.id ? suggestionNode : undefined) ??
+      astNodes.find(n => n.id === nodeId) ??
+      overlayNodes.find(n => n.id === nodeId)
+    );
   }
 
   function linesForNodeId(nodeId: string): number[] {
