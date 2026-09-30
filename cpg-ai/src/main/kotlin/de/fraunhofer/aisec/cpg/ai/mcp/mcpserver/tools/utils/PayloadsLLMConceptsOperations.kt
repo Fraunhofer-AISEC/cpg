@@ -40,8 +40,7 @@ const val NODE_REFERENCE_TYPE = "NodeReference"
  * [LLMPropertyDescription.type] and [LLMOperationDescription.properties] default rather than being
  * hard-required: unlike [LLMPropertyDescription.description] (whose omission is silent, undetected
  * data loss - see [LLMProperty.description]'s doc), omitting either of these two throws a
- * `MissingFieldException` that aborts the whole `cpg_add_or_update_llm_concept` call (confirmed via
- * `log_dedupe_persist_entries`/`log_consolidate_generic_concepts_tool`'s logs), abandoning an
+ * `MissingFieldException` that aborts the whole `cpg_add_or_update_llm_concept` call, abandoning an
  * otherwise-fine schema registration over one recoverable field. A property with no declared type
  * defaulting to `"String"` matches [GenericPropertyValue.of]'s own fallback for an unrecognized
  * type name; an operation with no declared properties defaulting to an empty list is simply a

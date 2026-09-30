@@ -169,8 +169,8 @@ class ChatService(
 
     /**
      * In-memory backing store for Koog `ChatMemory`, shared across [chat] calls on this
-     * [ChatService] instance. One [ChatService] per DUST batch, so this typically holds a single
-     * session; [evictSession] clears it when the batch finishes.
+     * [ChatService] instance. One [ChatService] per host-application batch/processing run, so this
+     * typically holds a single session; [evictSession] clears it when the batch finishes.
      */
     private val chatHistoryProvider = EvictingChatHistoryProvider()
 
@@ -368,13 +368,12 @@ class ChatService(
     /**
      * Tool names safe to execute concurrently with each other in [chatStrategy]'s `executeTool`
      * node - i.e. read-only CPG queries with no shared mutable state. Deliberately an explicit
-     * allowlist rather than "everything except a known mutating list": several mutating tools
-     * (`cpg_persist_semantic_nodes`, `cpg_skip_function`, `cpg_persist_analysis_summary` in DUST's
-     * `CpgPersistConceptsTool.kt`/ `CpgPersistAnalysisSummaryTool.kt`) do an unsynchronized
-     * read-modify-write on a shared YAML/markdown file, so two concurrent calls could race and
-     * silently drop a write. A new tool not added here simply stays sequential, which is always
-     * safe, just not maximally fast - the reverse (a new mutating tool accidentally inheriting
-     * parallelism) would not be.
+     * allowlist rather than "everything except a known mutating list": a host application may
+     * register its own mutating tools (e.g. persist/skip-style tools that do an unsynchronized
+     * read-modify-write on a shared YAML/markdown file), and two concurrent calls to such a tool
+     * could race and silently drop a write. A new tool not added here simply stays sequential,
+     * which is always safe, just not maximally fast - the reverse (a new mutating tool accidentally
+     * inheriting parallelism) would not be.
      */
     private val parallelSafeToolNames =
         setOf(

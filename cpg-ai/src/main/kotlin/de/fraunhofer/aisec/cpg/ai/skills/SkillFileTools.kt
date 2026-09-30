@@ -86,18 +86,18 @@ fun buildSkillFileToolRegistry(fs: FileSystemProvider.ReadOnly<Path>): ToolRegis
  * it), plus a short instruction on how to load a skill using the tools from
  * [buildSkillFileToolRegistry].
  *
- * Two things tuned here based on `log_skills_module`'s real-LLM test run (2026-09-08):
- * - Says "read" only, not "list its directory and read" - the model was doing both per activation,
- *   costing an extra tool round trip it doesn't need (the catalog already gives the exact file
- *   path). Cut per-activation cost roughly in half.
+ * Two things tuned here:
+ * - Says "read" only, not "list its directory and read" - the model tends to do both per
+ *   activation, costing an extra tool round trip it doesn't need (the catalog already gives the
+ *   exact file path).
  * - States the access restriction explicitly, since [ReadFileTool]/[ListDirectoryTool]'s own
  *   descriptions can't be changed (they're Koog's own non-`open` classes) and the rejection message
  *   a jailed path actually gets back - "File not found: ... (ensure the path is absolute)" - reads
  *   like the file doesn't exist rather than that it's out of bounds. Telling the model the boundary
- *   upfront is cheaper than letting it find out by trial and error: the same real run also had the
- *   model wander into listing `/home/cpg/dust`/`/home/cpg` and reading an unrelated `/tmp/...` path
- *   before giving up and proceeding correctly - both safely rejected by [jailedSkillsFileSystem],
- *   but wasted tokens/round trips getting there.
+ *   upfront is cheaper than letting it find out by trial and error: without it the model wanders
+ *   into listing `/home/cpg` and reading an unrelated `/tmp/...` path before giving up and
+ *   proceeding correctly - both safely rejected by [jailedSkillsFileSystem], but wasted
+ *   tokens/round trips getting there.
  */
 fun buildSkillCatalog(skills: List<Skill>): String? {
     if (skills.isEmpty()) return null

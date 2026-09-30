@@ -58,12 +58,12 @@ private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
  * rate-limit/timeout-ish keywords) - independent of, and unrelated to, the "don't retry failed
  * *tool* calls" policy in [SYSTEM_PROMPT], which is about the model's own tool-call behavior, not
  * transport/provider failures. Deliberately much tighter than [RetryConfig.PRODUCTION] (3 attempts,
- * up to 20s max delay each): a caller like DUST layers its own outer `--llm-call-timeout-seconds`
- * per call, so retry backoff here must stay a small addition to that budget, not something that can
- * itself balloon into multiples of it. With these settings, the two backoff waits between 3
- * attempts are at most ~1s and ~2s (before jitter) - each individual attempt is still bounded by
- * the client's own request/socket timeout exactly as before; only the gap *between* attempts is
- * new.
+ * up to 20s max delay each): a host application layers its own outer per-call timeout (e.g. an
+ * `--llm-call-timeout-seconds` flag), so retry backoff here must stay a small addition to that
+ * budget, not something that can itself balloon into multiples of it. With these settings, the two
+ * backoff waits between 3 attempts are at most ~1s and ~2s (before jitter) - each individual
+ * attempt is still bounded by the client's own request/socket timeout exactly as before; only the
+ * gap *between* attempts is new.
  */
 private val transientFailureRetryConfig =
     RetryConfig(maxAttempts = 3, initialDelay = 1.seconds, maxDelay = 5.seconds)
@@ -175,7 +175,8 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                             level = if (log.isDebugEnabled) LogLevel.ALL else LogLevel.INFO
                             // At LogLevel.ALL, Ktor logs the full request including headers - an
                             // unredacted Authorization header (a real API key, e.g. via
-                            // --api-key-env) would otherwise leak into DUST's debug logs verbatim.
+                            // --api-key-env) would otherwise leak into the host application's debug
+                            // logs verbatim.
                             sanitizeHeader { header ->
                                 header.equals(HttpHeaders.Authorization, ignoreCase = true)
                             }
@@ -187,7 +188,8 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 // only swapping in our logging-enabled Ktor client underneath.
                 // By default (requestTimeoutMillis == null) this leaves Koog's own
                 // ConnectionTimeoutConfig default (900s) in place. That default is *not* the
-                // same value as DUST's --llm-call-timeout-seconds (which guards against a
+                // same value as the host application's `--llm-call-timeout-seconds` (which guards
+                // against a
                 // connection kept technically alive with no real progress, e.g. periodic
                 // keep-alive bytes) - a caller that wants both to agree needs to set this
                 // explicitly.

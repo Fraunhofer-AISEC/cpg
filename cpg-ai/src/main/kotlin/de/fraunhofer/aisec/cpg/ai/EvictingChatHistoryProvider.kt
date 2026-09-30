@@ -35,8 +35,8 @@ import java.util.concurrent.ConcurrentHashMap
  * tool-result messages (which [ChatService.toChatMessageJsonOrNull] drops) survive across the
  * per-call agent rebuild - the root cause of the repeated `activate_skill` calls.
  *
- * One instance lives for the lifetime of a [ChatService] (one per DUST batch). Sessions are keyed
- * by the `sessionId` string the caller passes via [ChatRequestJSON]; [evict] is called by
+ * One instance lives for the lifetime of a [ChatService] (one per host-application batch). Sessions
+ * are keyed by the `sessionId` string the caller passes via [ChatRequestJSON]; [evict] is called by
  * [ChatService.evictSession] when the batch finishes (success or failure) so memory doesn't leak
  * across batches.
  */

@@ -64,9 +64,8 @@ import kotlinx.coroutines.test.runTest
  * Phase 0 spike test for the ChatMemory migration.
  *
  * Verifies that Koog's ChatMemory feature preserves tool-call/tool-result messages across
- * agent.run() call boundaries (the root cause of the 32-35x activate_skill bug), that the system
- * message is not duplicated, that history compression and windowSize work as expected, and that
- * evict() clears the session.
+ * agent.run() call boundaries, that the system message is not duplicated, that history compression
+ * and windowSize work as expected, and that evict() clears the session.
  *
  * This is a HARD GATE: assertions #1, #2, #4, #6 must pass before any migration code.
  */
@@ -226,7 +225,7 @@ class ChatMemorySpikeTest {
 
     /**
      * Assertion #1 (HARD GATE): Tool-call and tool-result messages survive across agent.run() call
-     * boundaries. This is the core bug - the old toChatMessageJsonOrNull() drops them.
+     * boundaries.
      *
      * Assertion #2 (HARD GATE): The system message is not duplicated across calls.
      */
@@ -289,7 +288,7 @@ class ChatMemorySpikeTest {
             }
         assertTrue(
             run2HasToolCall,
-            "Run 2's prompt must contain the tool-call from run 1 (loaded by ChatMemory) - this is the core bug fix",
+            "Run 2's prompt must contain the tool-call from run 1 (loaded by ChatMemory)",
         )
 
         val run2HasToolResult =

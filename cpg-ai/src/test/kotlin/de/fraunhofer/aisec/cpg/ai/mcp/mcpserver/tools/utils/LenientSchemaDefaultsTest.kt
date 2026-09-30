@@ -30,17 +30,16 @@ import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 
 /**
- * Regression tests for the two `MissingFieldException`s observed in `log_dedupe_persist_entries`/
- * `log_consolidate_generic_concepts_tool`: a `cpg_add_or_update_llm_concept` payload omitting
- * [LLMOperationDescription.properties] or [LLMPropertyDescription.type] used to abort the whole
- * schema-registration call instead of falling back to a sensible default.
+ * Regression tests for the two `MissingFieldException`s a `cpg_add_or_update_llm_concept` payload
+ * can trigger by omitting [LLMOperationDescription.properties] or [LLMPropertyDescription.type]:
+ * both used to abort the whole schema-registration call instead of falling back to a sensible
+ * default.
  */
 class LenientSchemaDefaultsTest {
 
     @Test
     fun operationMissingPropertiesDefaultsToEmptyList() {
-        // Reproduces the exact shape of the failing payload from the log: an operation object
-        // with no "properties" key at all.
+        // The failing shape: an operation object with no "properties" key at all.
         val json =
             """
             {

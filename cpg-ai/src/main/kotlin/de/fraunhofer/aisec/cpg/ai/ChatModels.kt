@@ -83,12 +83,12 @@ data class McpCapabilitiesJSON(
 )
 
 /**
- * A discovered skill's name/description, as exposed to callers outside `cpg-ai` (e.g. DUST's
- * `--skill` validation via [ChatService.getSkills]). Deliberately doesn't expose Koog's own
- * `ai.koog.skills.model.Skill` across the module boundary - that dependency is `implementation`,
- * not `api`, in `cpg-ai`'s `build.gradle.kts` on purpose (consistent with `koog-agents` itself), so
- * returning it directly fails to compile for any consumer (confirmed: DUST's `Main.kt` failed with
- * "Cannot access class 'ai.koog.skills.model.Skill'" before this indirection was added).
+ * A discovered skill's name/description, as exposed to callers outside `cpg-ai` (e.g. a host
+ * application's `--skill` validation via [ChatService.getSkills]). Deliberately doesn't expose
+ * Koog's own `ai.koog.skills.model.Skill` across the module boundary - that dependency is
+ * `implementation`, not `api`, in `cpg-ai`'s `build.gradle.kts` on purpose (consistent with
+ * `koog-agents` itself), so returning it directly fails to compile for any consumer ("Cannot access
+ * class 'ai.koog.skills.model.Skill'").
  */
 data class SkillInfo(val name: String, val description: String)
 
@@ -123,7 +123,8 @@ data class GenericChatParams(val temperature: Double? = null, val maxTokens: Int
  * `ai.koog.prompt.executor.clients.openai.OpenAIChatParams`, not exposed directly for the same
  * module-boundary reason as [GenericChatParams]. [reasoningEffort] is a plain `String` (rather than
  * Koog's `ReasoningEffort` enum) expected to be one of `"none"`/`"minimal"`/`"low"`/`"medium"`/
- * `"high"` - validation of that is the caller's responsibility (e.g. DUST's CLI parsing).
+ * `"high"` - validation of that is the caller's responsibility (e.g. the host application's CLI
+ * parsing).
  */
 data class OpenAiCompatibleChatParams(
     val reasoningEffort: String? = null,
