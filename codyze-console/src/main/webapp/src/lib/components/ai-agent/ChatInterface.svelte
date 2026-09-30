@@ -138,36 +138,37 @@
   let tusWithSuggestions = $state<Set<string>>(new Set());
 
 
-  // When suggestions arrive, resolve which TUs contain the referenced nodes
-  $effect(() => {
-    if (suggestions.length === 0 || !analysisResult) {
-      tusWithSuggestions = new Set();
-      return;
-    }
-
-    const nodeIds = new Set(
+  // The node IDs referenced by the suggestions. As a string, this only changes when the IDs change,
+  // and not when a suggestion is accepted or rejected (which replaces the suggestion objects)
+  const suggestionNodeIdsKey = $derived(
+    [...new Set(
       suggestions.flatMap(s => [
         s.suggestion.nodeId,
         ...s.operations.map(o => o.operation.nodeId)
       ])
-    );
+    )].sort().join(',')
+  );
 
-    resolveTusForNodeIds(nodeIds);
+  // When suggestions arrive, resolve which TUs contain the referenced nodes
+  $effect(() => {
+    const key = suggestionNodeIdsKey;
+    if (!key || !analysisResult) {
+      tusWithSuggestions = new Set();
+      return;
+    }
+    resolveTusForNodeIds(key);
   });
 
-  async function resolveTusForNodeIds(nodeIds: Set<string>) {
-    const result = new Set<string>();
-    for (const comp of analysisResult?.components ?? []) {
-      for (const tu of comp.translationUnits) {
-        const nodes: NodeJSON[] = await fetch(
-          `/api/component/${comp.name}/translation-unit/${tu.id}/ast-nodes`
-        ).then(r => r.json()).catch(() => []);
-        if (nodes.some(n => nodeIds.has(n.id))) {
-          result.add(tu.id);
-        }
-      }
-    }
-    tusWithSuggestions = result;
+  async function resolveTusForNodeIds(key: string) {
+    const tuIdsByNodeId: Record<string, string> = await fetch('/api/nodes/translation-units', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(key.split(','))
+    }).then(r => (r.ok ? r.json() : {})).catch(() => ({}));
+
+    // Ignore the response if the suggestions changed in the meantime
+    if (key !== suggestionNodeIdsKey) return;
+    tusWithSuggestions = new Set(Object.values(tuIdsByNodeId));
   }
 
   // Auto-select the first translation unit with suggestions when resolved

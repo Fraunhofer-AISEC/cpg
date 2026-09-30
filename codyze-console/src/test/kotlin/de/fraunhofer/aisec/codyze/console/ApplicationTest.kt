@@ -255,6 +255,25 @@ class ApplicationTest {
     }
 
     @Test
+    fun testGetTranslationUnitIds() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+
+        // A node nested in a function body, which is not part of the ast-nodes of its unit
+        val open = assertNotNull(mockTu.calls["open"])
+        val unknownId = "00000000-0000-0000-0000-000000000000"
+        val response =
+            client.post("/api/nodes/translation-units") {
+                contentType(ContentType.Application.Json)
+                setBody(listOf(open.id.toString(), unknownId))
+            }
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val tuIds = response.body<Map<String, String>>()
+        assertEquals(mapOf(open.id.toString() to mockTu.id.toString()), tuIds)
+    }
+
+    @Test
     fun testAddConcept() = testApplication {
         val open = assertNotNull(mockTu.calls["open"])
 
