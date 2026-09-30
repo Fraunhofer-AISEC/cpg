@@ -511,6 +511,21 @@ class StaleStubTestLanguageFrontend(
 
                 tu.addDeclaration(constructor)
             }
+            content.startsWith("namespacedefine:") -> {
+                // "namespacedefine:<ns>:<name>" declares a real, single-parameter function
+                // <name>(p) inside a NAMESPACE <ns> that is a child of the global scope -- NOT in
+                // the global scope itself like "define:". This makes <name> lexically unreachable
+                // from a pre-existing, same-named call whose inferred stub lives in the global
+                // scope (an unqualified lookup from the call walks up to global, never down into
+                // the sibling <ns> namespace), reproducing the cross-module reachability gap that
+                // addSource/cpg_add_code hits whenever the added code is parsed as its own module.
+                val (nsName, name) = content.removePrefix("namespacedefine:").split(":")
+                newNamespace(nsName, holder = tu, enterScope = true) { nsd ->
+                    newFunction(name, holder = nsd, enterScope = true) { function ->
+                        newParameter("p", holder = function)
+                    }
+                }
+            }
             content.startsWith("defineidentity:") -> {
                 // "defineidentity:<name>" declares a single, real, top-level function <name>(p)
                 // with an actual body ("return p"), unlike "define:" (whose declaration has NO
@@ -678,6 +693,71 @@ class IncrementalUpdateTest {
         // SymbolResolver.
         assertTrue(result.dirtyNodes[realFoo]?.contains(SymbolResolver::class) == true)
         assertTrue(result.dirtyNodes[main]?.contains(SymbolResolver::class) == true)
+    }
+
+    @Test
+    fun testAddSourceReconcilesInferredStubAcrossSiblingNamespace() {
+        // Regression test for the cross-module reachability gap introduced by the batched
+        // reconciliation in reconcileCalls: isReachableFrom mirrors SymbolResolver's lexical
+        // lookup, which walks *up* the call's scope chain only. A declaration added via addSource
+        // as its own module lives in a namespace that is a *sibling* of the call's module, so it
+        // is lexically unreachable -- even though the call's only existing resolution is an
+        // inferred stub (i.e. SymbolResolver itself couldn't resolve it either). Supplying the
+        // missing definition is the whole point of addSource/cpg_add_code, so the inferred stub
+        // must still be replaced.
+        //
+        // Here the call lives in the global scope ("call:foo" infers a stub in global) and the
+        // real definition is added inside a child namespace "ns" ("namespacedefine:ns:foo"),
+        // mirroring how a bare Python/Java snippet parsed by cpg_add_code lands in a sibling
+        // module namespace like "unknown-0".
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-sibling-namespace-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        val stub = fooCall.invokes.singleOrNull()
+        assertNotNull(stub, "Expected the unresolved call to 'foo' to create an inferred stub")
+        assertTrue(stub.isInferred)
+
+        // The real definition of 'foo' lives in a namespace that is a *sibling* of the call's
+        // scope, so it is NOT lexically reachable from the call.
+        val second = tempSource(topLevel, "foo.stale", "namespacedefine:ns:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realFoo = tu.allChildren<Function>().single()
+        assertEquals("foo", realFoo.name.localName)
+        assertFalse(realFoo.isInferred)
+        assertNotSame(stub, realFoo)
+
+        // Despite being lexically unreachable, the real definition must replace the inferred stub
+        // -- the call has nothing real to lose (its only target was the stub), and linking the
+        // user-supplied definition is the purpose of addSource.
+        assertEquals(listOf(realFoo), fooCall.invokes)
+        assertFalse(fooCall.prevDFG.contains(stub))
+        assertTrue(stub.calledBy.isEmpty())
+
+        // A later runDirtyPasses re-runs SymbolResolver on the caller. The real definition lives in
+        // a sibling namespace, so an unqualified lookup from the call would NOT find it on its own
+        // -- updateIncrementally therefore also registers it in the global scope, so the rerun
+        // resolves the call to it (rather than re-inferring a fresh stub and undoing the
+        // reconciliation above).
+        runDirtyPasses(result)
+        assertEquals(listOf(realFoo), fooCall.invokes)
     }
 
     @Test
@@ -895,7 +975,7 @@ class IncrementalUpdateTest {
         // been marked dirty for SymbolResolver, so a later runDirtyPasses actually revisits it.
         assertTrue(result.dirtyNodes[callerTu]?.contains(SymbolResolver::class) == true)
 
-        manager.runDirtyPasses(result)
+        runDirtyPasses(result)
         assertEquals(listOf(realFoo), fooCall.invokes)
     }
 

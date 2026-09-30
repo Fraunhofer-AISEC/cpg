@@ -677,6 +677,7 @@ fun CpgMcpServer.addAddCodeTool() {
                         frontend?.parse(payload.code)?.let { newTu ->
                             ctx.currentComponent?.addTranslationUnit(newTu)
                             updateIncrementally(result, newTu)
+                            runDirtyPasses(result)
 
                             return@addTool CallToolResult(
                                 content =

@@ -163,6 +163,35 @@ fun updateIncrementally(result: TranslationResult, tu: TranslationUnit) {
     // done exactly once per addSource/updateIncrementally call -- not once per new symbol -- rather
     // than one scope-lookup per new function like the previous, narrower implementation.
     val newSymbols = tu.collectNewNonLocalSymbols()
+    if (newSymbols.isNotEmpty()) {
+        // Make every new non-local declaration reachable via an *unqualified* lookup from any
+        // scope, by also registering it in the global scope. Code added via addSource (e.g. a
+        // bare cpg_add_code snippet) is parsed as its own module, so its top-level declarations
+        // land in a namespace that is a *sibling* of -- and thus lexically unreachable from --
+        // the module containing a pre-existing call/reference to the same name. An inferred
+        // stub for such a call lives in the global scope (where SymbolResolver infers it), so
+        // isReachableFrom's qualified lookup of the declaration's FQN still finds the new
+        // declaration and reconcileCalls links it -- but the call's own, UNQUALIFIED resolution
+        // (performed again when the caller is re-run via runDirtyPasses, since it is marked dirty
+        // for SymbolResolver) walks only up to global and would otherwise find nothing,
+        // re-inferring
+        // a fresh stub and undoing the reconciliation. Registering the declaration in the global
+        // scope makes that unqualified lookup find it too. Idempotent (identity-guarded) so
+        // declarations a frontend already placed in the global scope are left untouched.
+        val scopeManager = result.finalCtx.scopeManager
+        for (decl in newSymbols) {
+            // Only free functions and non-field variables benefit from global registration:
+            // methods, constructors and fields are resolved via their record
+            // (isReachableFrom's member branch), not via an unqualified lexical lookup, so
+            // registering them globally would only risk a same-named free call/reference
+            // elsewhere resolving to them by mistake.
+            val isFreeFunction = decl is Function && decl !is Method && decl !is Constructor
+            val isFreeVariable = decl is Variable && decl !is Field
+            if (isFreeFunction || isFreeVariable) {
+                scopeManager.registerInGlobalScope(decl)
+            }
+        }
+    }
     if (
         newSymbols.isNotEmpty() &&
             reconcileExistingUsagesWithNewSymbols(result, tu, newSymbols, registeredPasses)
@@ -865,6 +894,17 @@ private fun reconcileReferences(
  * those functions' docs for why that gap is intentionally left as-is rather than papered over with
  * a dirty-marking fallback.
  */
+private fun ScopeManager.registerInGlobalScope(declaration: Declaration) {
+    val global = globalScope
+    // Identity-guarded: a declaration already visible in the global scope (e.g. one a frontend
+    // added directly to the global scope, like StaleStubTestLanguage's "define:" form) must not be
+    // appended again -- Scope.addSymbol/mergeOrAppend only dedupes redeclarations for languages
+    // that declare HasRedeclarations, so a plain re-add would otherwise create a duplicate
+    // symbol-table entry.
+    if (global.symbols[declaration.symbol]?.any { it === declaration } == true) return
+    withScope(global) { addDeclaration(declaration) }
+}
+
 private fun markCallerDirtyForSymbolResolver(node: Node) {
     val enclosingFunction = node.firstParentOrNull<Function>()
     if (enclosingFunction != null) {

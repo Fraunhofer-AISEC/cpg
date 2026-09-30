@@ -160,7 +160,7 @@ class PartialPassExecutionTest {
 
         assertTrue(result.dirtyNodes[realFoo]?.contains(SymbolResolver::class) == true)
 
-        manager.runDirtyPasses(result)
+        runDirtyPasses(result)
 
         // The call now resolves against the real function, not the (now-detached) stub.
         assertEquals(listOf(realFoo), fooCall.invokes)
@@ -201,7 +201,7 @@ class PartialPassExecutionTest {
         val component = incrementalResult.components.single()
         val fooDefFile = tempSource(incrementalTopLevel, "foo.stale", "define:foo")
         incrementalManager.addSource(incrementalResult, component, fooDefFile)
-        incrementalManager.runDirtyPasses(incrementalResult)
+        runDirtyPasses(incrementalResult)
 
         val incrementalFooCall = incrementalResult.calls.single { it.name.localName == "foo" }
         val incrementalFoo = incrementalResult.functions.single { it.name.localName == "foo" }
@@ -284,7 +284,7 @@ class PartialPassExecutionTest {
         assertTrue(newFn.nextEOG.isEmpty())
         assertNull(newFn.firstBasicBlock)
 
-        manager.runDirtyPasses(result)
+        runDirtyPasses(result)
 
         // EOG: the function and its loop now have EOG edges.
         assertTrue(newFn.nextEOG.isNotEmpty())

@@ -73,7 +73,7 @@ private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.PartialPassEx
  * require moving that logic here and have cpg-ai call into it -- a reasonable follow-up, but out of
  * scope for this change.
  */
-fun TranslationManager.runDirtyPasses(result: TranslationResult) {
+fun runDirtyPasses(result: TranslationResult) {
     val ctx = result.finalCtx
     val maxExecutions = ctx.config.maxPassExecutions
     val executions = mutableMapOf<KClass<out Pass<out Node>>, Int>()

@@ -123,7 +123,7 @@ class PointsToPassReconciliationTest {
             )
         }
 
-        manager.runDirtyPasses(result)
+        runDirtyPasses(result)
 
         // ...replaced by fresh edges reflecting the real function's (real, non-dummy) summary.
         val freshEdges = contextSensitiveEdgesFor(fooCall)
@@ -182,7 +182,7 @@ class PointsToPassReconciliationTest {
         val realFoo = tu.declarations.filterIsInstance<Function>().single()
 
         assertEquals(listOf(realFoo), fooCall.invokes)
-        manager.runDirtyPasses(result)
+        runDirtyPasses(result)
 
         assertTrue(
             contextSensitiveEdgesFor(fooCall).isNotEmpty(),
@@ -231,7 +231,7 @@ class PointsToPassReconciliationTest {
         assertTrue(result.dirtyNodes[caller]?.contains(PointsToPass::class) == true)
         assertTrue(result.dirtyNodes[callee]?.contains(PointsToPass::class) == true)
 
-        manager.runDirtyPasses(result)
+        runDirtyPasses(result)
 
         // callee's own functionSummary must reflect its real, non-dummy identity body ("return
         // p") -- i.e. it must actually have been analyzed (not left as an empty/dummy stand-in)
@@ -300,7 +300,7 @@ class PointsToPassReconciliationTest {
         assertFalse(result.dirtyNodes[unrelatedCaller]?.contains(PointsToPass::class) == true)
         assertFalse(result.dirtyNodes[unrelatedCallee]?.contains(PointsToPass::class) == true)
 
-        manager.runDirtyPasses(result)
+        runDirtyPasses(result)
 
         // ...and their own functionSummary must never have been cleared as a side effect either.
         assertEquals(unrelatedCalleeSummaryBefore, unrelatedCallee.functionSummary.keys.toSet())
