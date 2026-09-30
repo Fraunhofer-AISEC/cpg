@@ -177,8 +177,19 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
         throw UnsupportedOperationException()
     }
 
+    /**
+     * The sum of the identity hashes of the elements, which is consistent with [equals]: it only
+     * looks at the elements (by reference) and not at the order in which they were added.
+     *
+     * Note that we must not use the [hashCode] of the backing [map] here: an [IdentityHashMap]
+     * hashes its *values* by identity, too, and our values are the (boxed) insertion counters. Two
+     * sets with the same elements would then almost never have the same hash code, which silently
+     * breaks every hash-based lookup that uses an [IdentitySet] as (part of) its key.
+     */
     override fun hashCode(): Int {
-        return map?.hashCode() ?: 0
+        var h = 0
+        map?.keys?.forEach { h += System.identityHashCode(it) }
+        return h
     }
 
     override val size: Int
