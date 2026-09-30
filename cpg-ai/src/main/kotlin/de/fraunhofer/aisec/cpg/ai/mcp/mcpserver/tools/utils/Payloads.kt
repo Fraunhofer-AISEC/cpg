@@ -79,7 +79,7 @@ data class CpgCallArgumentByNameOrIndexPayload(
 
 @Serializable
 data class CpgListPayload(
-    @Description("Maximum number of items to return. Defaults to 200 if not specified.")
+    @Description("Maximum number of items to return. Defaults to 20 if not specified.")
     val limit: Int? = null,
     @Description("Number of items to skip before returning results, for pagination. Defaults to 0.")
     val offset: Int? = null,
