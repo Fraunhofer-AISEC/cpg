@@ -5,7 +5,9 @@
   import { CollapsiblePanel } from '$lib/components/ui';
   import { NodeTable, NodeOverlays, FindingOverlay, ConceptChecklist } from '$lib/components/analysis';
   import { flattenNodes } from '$lib/flatten';
-  import Highlight, { LineNumbers } from 'svelte-highlight';
+  import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
+  import CodeLines from './CodeLines.svelte';
+  import Highlight from 'svelte-highlight';
   import python from 'svelte-highlight/languages/python';
   import java from 'svelte-highlight/languages/java';
   import cpp from 'svelte-highlight/languages/cpp';
@@ -97,11 +99,10 @@
     prevSuggestionCount = count;
   });
 
-  function scrollToLine(line: number) {
+  function scrollToLine(line: number, behavior: ScrollBehavior = 'smooth') {
     if (!codeContainerElement || typeof window === 'undefined') return;
-    const computedStyle = window.getComputedStyle(codeContainerElement);
-    const lh = parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
-    codeContainerElement.scrollTo({ top: Math.max(0, (line - 3) * lh), behavior: 'smooth' });
+    const top = (offsetTop + (line - 3) * lineHeight) * remInPx();
+    codeContainerElement.scrollTo({ top: Math.max(0, top), behavior });
   }
 
   // Resolve a nodeId to its line range via astNodes or overlayNodes
@@ -140,6 +141,25 @@
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
   const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
+  const maxColumns = $derived.by(() => {
+    let max = 0;
+    for (const line of codeLines) {
+      // Tabs are rendered with a width of 8 characters
+      const tabs = line.split('\t').length - 1;
+      max = Math.max(max, line.length + tabs * 7);
+    }
+    return max;
+  });
+
+  // Only the lines (and overlays) around the visible part of the file are rendered
+  const codeViewport = new ScrollViewport();
+  $effect(() => {
+    if (codeContainerElement) return codeViewport.track(codeContainerElement);
+  });
+  const visibleLines = $derived.by(() => {
+    const remPx = remInPx();
+    return codeViewport.range(lineHeight * remPx, totalLines, 40, offsetTop * remPx);
+  });
 
   // Scroll to focused suggestion node
   $effect(() => {
@@ -150,13 +170,9 @@
   });
 
   $effect(() => {
-    if (highlightLine && codeContainerElement && typeof window !== 'undefined') {
-      setTimeout(() => {
-        if (!codeContainerElement) return;
-        const computedStyle = window.getComputedStyle(codeContainerElement);
-        const lineHeight = parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
-        codeContainerElement.scrollTo({ top: Math.max(0, (highlightLine - 3) * lineHeight), behavior: 'auto' });
-      }, 300);
+    if (highlightLine && codeContainerElement) {
+      const line = highlightLine;
+      setTimeout(() => scrollToLine(line, 'auto'), 300);
     }
   });
 </script>
@@ -189,12 +205,16 @@
       <div class="relative inline-block min-w-full w-max align-top">
         <div class="font-mono">
           <Highlight language={getLanguage(translationUnit.name)} code={translationUnit.code} let:highlighted>
-            <LineNumbers
+            <CodeLines
               {highlighted}
+              start={visibleLines.start}
+              end={visibleLines.end}
               highlightedLines={allHighlightLines}
-              --line-number-color="gray"
-              --padding-right={0}
-              hideBorder
+              {maxColumns}
+              {lineHeight}
+              {charWidth}
+              {offsetTop}
+              {offsetLeft}
             />
           </Highlight>
         </div>
@@ -207,6 +227,8 @@
           <NodeOverlays
             {nodes}
             {codeLines}
+            startLine={visibleLines.start}
+            endLine={visibleLines.end}
             bind:highlightedNode
             {lineHeight}
             {charWidth}
@@ -225,21 +247,24 @@
       <div class="shrink-0 bg-white">
         <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
       </div>
-      <div class="flex-1 overflow-auto p-4">
-        {#if activeTab === 'suggestions'}
+      {#if activeTab === 'suggestions'}
+        <div class="flex-1 overflow-auto p-4">
           <ConceptChecklist
             bind:items={suggestions}
             {onApplySuggestions}
             onHighlightNode={(nodeId) => (activeSuggestionNodeId = nodeId)}
           />
-        {:else}
+        </div>
+      {:else}
+        <!-- NodeTable is virtualized and needs to be its own scroll container -->
+        <div class="min-h-0 flex-1 px-2">
           <NodeTable
             {nodes}
             bind:highlightedNode
             nodeClick={(node) => scrollToLine(node.startLine)}
           />
-        {/if}
-      </div>
+        </div>
+      {/if}
     </div>
   </CollapsiblePanel>
 </div>
