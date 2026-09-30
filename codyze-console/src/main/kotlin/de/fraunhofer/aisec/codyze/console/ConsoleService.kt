@@ -182,10 +182,13 @@ class ConsoleService {
 
     /**
      * Returns the translation unit with the given ID for the specified component as
-     * [TranslationUnitJSON].
+     * [TranslationUnitJSON], including its code.
      */
     fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
-        return getComponent(componentName)?.translationUnits?.find { it.id == Uuid.parse(id) }
+        return getComponent(componentName)
+            ?.translationUnits
+            ?.find { it.id == Uuid.parse(id) }
+            ?.let { it.copy(code = it.cpgTU?.code ?: "") }
     }
 
     /**

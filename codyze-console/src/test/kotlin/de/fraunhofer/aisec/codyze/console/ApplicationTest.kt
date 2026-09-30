@@ -59,6 +59,7 @@ val mockConfig =
 val mockTu =
     TranslationUnit().apply {
         name = Name("tu1")
+        code = "int main() { open(); }"
         var func =
             Function().apply {
                 name = Name("main")
@@ -163,6 +164,8 @@ class ApplicationTest {
         val component = result.components.firstOrNull()
         assertNotNull(component)
         assertEquals("mock", component.name)
+        // The code is only included when requesting a single translation unit
+        assertNull(component.translationUnits.single().code)
 
         val findings = result.findings
         assertEquals(1, findings.size)
@@ -221,6 +224,7 @@ class ApplicationTest {
 
         val translationUnit = response.body<TranslationUnitJSON>()
         assertEquals("tu1", translationUnit.name)
+        assertEquals(mockTu.code, translationUnit.code)
     }
 
     @Test

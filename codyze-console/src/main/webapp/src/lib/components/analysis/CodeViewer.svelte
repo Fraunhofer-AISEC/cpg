@@ -145,7 +145,8 @@
   const offsetTop = 1;
   const baseOffsetLeft = 2.4;
 
-  const codeLines = $derived(translationUnit.code.split('\n'));
+  const code = $derived(translationUnit.code ?? '');
+  const codeLines = $derived(code.split('\n'));
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
   const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
@@ -212,7 +213,7 @@
     <div class="relative flex-1 overflow-auto" style="transform: translateZ(0);" bind:this={codeContainerElement}>
       <div class="relative inline-block min-w-full w-max align-top">
         <div class="font-mono">
-          <Highlight language={getLanguage(translationUnit.name)} code={translationUnit.code} let:highlighted>
+          <Highlight language={getLanguage(translationUnit.name)} {code} let:highlighted>
             <CodeLines
               {highlighted}
               start={visibleLines.start}
