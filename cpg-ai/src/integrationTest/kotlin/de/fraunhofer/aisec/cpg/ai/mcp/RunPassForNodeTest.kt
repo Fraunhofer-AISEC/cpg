@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.nodeToPass
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runPassForNode
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -47,11 +48,12 @@ class RunPassForNodeTest {
     @Test
     fun runEOGPass() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
-            runPasses = false,
-            cleanup = true,
-        )
+        testServer()
+            .runCpgAnalyze(
+                CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+                runPasses = false,
+                cleanup = true,
+            )
         val globalAnalysisResult = globalAnalysisResult
         val ctx = ctx
         assertNotNull(globalAnalysisResult)
@@ -77,11 +79,12 @@ class RunPassForNodeTest {
     @Test
     fun runsPassOnNearestParent() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
-            runPasses = false,
-            cleanup = true,
-        )
+        testServer()
+            .runCpgAnalyze(
+                CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+                runPasses = false,
+                cleanup = true,
+            )
         val globalAnalysisResult = globalAnalysisResult
         val ctx = ctx
         assertNotNull(globalAnalysisResult)
@@ -107,11 +110,12 @@ class RunPassForNodeTest {
     @Test
     fun runsPassOnNearestChild() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
-            runPasses = false,
-            cleanup = true,
-        )
+        testServer()
+            .runCpgAnalyze(
+                CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+                runPasses = false,
+                cleanup = true,
+            )
         val globalAnalysisResult = globalAnalysisResult
         val ctx = ctx
         assertNotNull(globalAnalysisResult)
@@ -133,11 +137,12 @@ class RunPassForNodeTest {
     @Test
     fun runsPassOnCorrectNode() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
-            runPasses = false,
-            cleanup = true,
-        )
+        testServer()
+            .runCpgAnalyze(
+                CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+                runPasses = false,
+                cleanup = true,
+            )
         val globalAnalysisResult = globalAnalysisResult
         val ctx = ctx
         assertNotNull(globalAnalysisResult)
@@ -159,11 +164,12 @@ class RunPassForNodeTest {
     @Test
     fun returnsErrorWhenPassPrototypeCannotBeConstructed() {
         // Ensure analysis and context exist
-        runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
-            runPasses = false,
-            cleanup = true,
-        )
+        testServer()
+            .runCpgAnalyze(
+                CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+                runPasses = false,
+                cleanup = true,
+            )
         val globalAnalysisResult = globalAnalysisResult
         val ctx = ctx
         assertNotNull(globalAnalysisResult)

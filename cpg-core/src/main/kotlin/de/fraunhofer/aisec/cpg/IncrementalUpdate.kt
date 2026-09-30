@@ -99,10 +99,7 @@ private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.IncrementalUp
  * handled more conservatively, since only one resolution can exist at a time -- see
  * [reconcileReferences] for the exact cases handled (and the one deliberately left alone).
  */
-internal fun TranslationManager.updateIncrementally(
-    result: TranslationResult,
-    tu: TranslationUnit,
-) {
+fun updateIncrementally(result: TranslationResult, tu: TranslationUnit) {
     // Never changes within a single call, so compute it once and thread it through instead of
     // recomputing it per new function/call.
     val registeredPasses = result.finalCtx.config.registeredPasses.flatten()

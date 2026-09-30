@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.graph.assigns
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
@@ -55,7 +56,8 @@ class CpgGetLastWriteToolTest {
             """
                 .trimIndent()
 
-        runCpgAnalyze(CpgAnalyzePayload(source, "py"), runPasses = true, cleanup = true)
+        testServer()
+            .runCpgAnalyze(CpgAnalyzePayload(source, "py"), runPasses = true, cleanup = true)
         val analysisResult = globalAnalysisResult
         assertNotNull(analysisResult)
 
@@ -79,7 +81,8 @@ class CpgGetLastWriteToolTest {
     fun returnsEmptyListForALiteral() {
         val source = "def foo():\n    return 1"
 
-        runCpgAnalyze(CpgAnalyzePayload(source, "py"), runPasses = true, cleanup = true)
+        testServer()
+            .runCpgAnalyze(CpgAnalyzePayload(source, "py"), runPasses = true, cleanup = true)
         val analysisResult = globalAnalysisResult
         assertNotNull(analysisResult)
 
