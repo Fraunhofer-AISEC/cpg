@@ -151,8 +151,12 @@ mcp.serverUrl = "http://localhost:8081/mcp"
 - The model's context window is `contextLength` if set, else `max_model_len` reported by the server's
   `/v1/models` (vLLM), else a conservative 128k default. It drives history compression and
   oversized-result truncation, so set it explicitly for servers that do not report it.
-- Generation parameters (temperature, max tokens, reasoning effort, ...) are constructor arguments of
-  `ChatService`, not config-file keys.
+- Optional `llm.generation { temperature, maxTokens, reasoningEffort, frequencyPenalty,
+  presencePenalty, topP, stop }` sets the generation parameters of every call (see the example
+  config). `temperature` and `maxTokens` apply to every client; the rest only to OpenAI-compatible
+  ones. An invalid `reasoningEffort` fails at startup, naming the accepted values. Embedders can
+  also pass them as `ChatService` constructor arguments.
+- Optional per client: `requestTimeoutMillis` (request and socket timeout of LLM calls).
 
 ### Using it
 

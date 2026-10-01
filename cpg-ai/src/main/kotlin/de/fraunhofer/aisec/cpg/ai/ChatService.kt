@@ -1075,11 +1075,52 @@ class ChatService(
                     }
                 }
 
+            val (genericChatParams, openAiCompatibleChatParams) = config.toGenerationParams()
             return ChatService(
                 httpClient = httpClient,
                 llmProviderConfig = config.toLlmProviderConfig(httpClient),
                 mcpServerUrl = mcpServerUrl,
+                genericChatParams = genericChatParams,
+                openAiCompatibleChatParams = openAiCompatibleChatParams,
             )
         }
     }
+}
+
+/**
+ * Reads the optional `llm.generation` block: `temperature` and `maxTokens` apply to every client,
+ * while `reasoningEffort`, `frequencyPenalty`, `presencePenalty`, `topP` and `stop` only mean
+ * something to an OpenAI-compatible one (see [OpenAiCompatibleChatParams]) and are only passed on
+ * if at least one of them is set. A `reasoningEffort` that is not one of Koog's levels fails here,
+ * with the accepted values, rather than as an opaque enum error when the service is built.
+ */
+internal fun Config.toGenerationParams(): Pair<GenericChatParams, OpenAiCompatibleChatParams?> {
+    if (!hasPath("llm.generation")) return GenericChatParams() to null
+    val generation = getConfig("llm.generation")
+
+    fun double(key: String) = if (generation.hasPath(key)) generation.getDouble(key) else null
+
+    val generic =
+        GenericChatParams(
+            temperature = double("temperature"),
+            maxTokens =
+                if (generation.hasPath("maxTokens")) generation.getInt("maxTokens") else null,
+        )
+
+    val reasoningEffort =
+        if (generation.hasPath("reasoningEffort")) generation.getString("reasoningEffort") else null
+    val allowedEfforts = ReasoningEffort.entries.map { it.name.lowercase() }
+    require(reasoningEffort == null || reasoningEffort.lowercase() in allowedEfforts) {
+        "llm.generation.reasoningEffort must be one of $allowedEfforts, but was \"$reasoningEffort\""
+    }
+
+    val openAi =
+        OpenAiCompatibleChatParams(
+            reasoningEffort = reasoningEffort,
+            frequencyPenalty = double("frequencyPenalty"),
+            presencePenalty = double("presencePenalty"),
+            topP = double("topP"),
+            stop = if (generation.hasPath("stop")) generation.getStringList("stop") else null,
+        )
+    return generic to openAi.takeIf { it != OpenAiCompatibleChatParams() }
 }

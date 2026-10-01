@@ -106,6 +106,7 @@ private fun resolveContextLength(config: ClientConfig, liveDetected: Long?): Lon
 }
 
 class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
+
     /**
      * Resolves the [ClientProvider] name with the chosen model to a [ChatLlm] (a Koog prompt
      * executor bound to a specific model). Returns `null` if the provider is unknown, or if a
@@ -386,6 +387,10 @@ fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
                         ClientProvider.OPENAI_COMPATIBLE
                     },
                 requiresApiKey = requiresApiKey,
+                requestTimeoutMillis =
+                    if (client.hasPath("requestTimeoutMillis"))
+                        client.getLong("requestTimeoutMillis")
+                    else null,
                 contextLengthOverride =
                     if (client.hasPath("contextLength")) client.getLong("contextLength") else null,
             )
