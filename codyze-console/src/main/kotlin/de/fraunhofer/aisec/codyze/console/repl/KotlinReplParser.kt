@@ -50,8 +50,8 @@ class KotlinReplParser : Parser {
             if (scan.bracketDepth > 0) {
                 throw EOFError(-1, cursor, "Unclosed bracket")
             }
-            if (scan.unterminatedStringOrChar) {
-                throw EOFError(-1, cursor, "Unclosed string")
+            if (scan.incomplete) {
+                throw EOFError(-1, cursor, "Unclosed string, char, or comment")
             }
         }
         // For completion, we need '.' and other Kotlin punctuation to act as word
@@ -112,8 +112,11 @@ class KotlinReplParser : Parser {
             c == '*' ||
             c == '/'
 
-    /** Result of [scan]: bracket depth at end of input, and whether a string/char was left open. */
-    private data class ScanResult(val bracketDepth: Int, val unterminatedStringOrChar: Boolean)
+    /**
+     * Result of [scan]: bracket depth at end of input, and whether a string, char, or block comment
+     * was left open.
+     */
+    private data class ScanResult(val bracketDepth: Int, val incomplete: Boolean)
 
     /** Lexical states tracked by [scan]. */
     private enum class ScanMode {
@@ -214,7 +217,10 @@ class KotlinReplParser : Parser {
             }
         }
         val unterminated =
-            mode == ScanMode.STRING || mode == ScanMode.TRIPLE_STRING || mode == ScanMode.CHAR
+            mode == ScanMode.STRING ||
+                mode == ScanMode.TRIPLE_STRING ||
+                mode == ScanMode.CHAR ||
+                mode == ScanMode.BLOCK_COMMENT
         return ScanResult(depth, unterminated)
     }
 }
