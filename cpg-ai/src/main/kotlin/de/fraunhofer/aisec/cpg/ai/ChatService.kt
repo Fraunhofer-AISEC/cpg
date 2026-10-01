@@ -366,31 +366,6 @@ class ChatService(
             "needed."
 
     /**
-     * Tool names safe to execute concurrently with each other in [chatStrategy]'s `executeTool`
-     * node - i.e. read-only CPG queries with no shared mutable state. Deliberately an explicit
-     * allowlist rather than "everything except a known mutating list": a host application may
-     * register its own mutating tools (e.g. persist/skip-style tools that do an unsynchronized
-     * read-modify-write on a shared YAML/markdown file), and two concurrent calls to such a tool
-     * could race and silently drop a write. A new tool not added here simply stays sequential,
-     * which is always safe, just not maximally fast - the reverse (a new mutating tool accidentally
-     * inheriting parallelism) would not be.
-     */
-    private val parallelSafeToolNames =
-        setOf(
-            "cpg_dataflow",
-            "cpg_dfg_backward",
-            "cpg_list_functions",
-            "cpg_list_records",
-            "cpg_list_calls",
-            "cpg_list_calls_to",
-            "cpg_list_call_args",
-            "cpg_list_call_arg_by_name_or_index",
-            "cpg_get_functions_by_name",
-            "cpg_get_node",
-            "cpg_list_llm_concepts_operations",
-        )
-
-    /**
      * Follow-up message sent once [chatStrategy] believes a turn is finished, requesting a
      * [TaskStatus] via structured output (see `requestTaskStatus`/`finishWithTaskStatus` in
      * [chatStrategy]) - a more reliable completion signal for callers than inferring "done" from
@@ -1022,6 +997,34 @@ class ChatService(
 
     companion object {
         private val log = LoggerFactory.getLogger(ChatService::class.java)
+
+        /**
+         * Tool names safe to execute concurrently with each other in [chatStrategy]'s `executeTool`
+         * node - i.e. read-only CPG queries with no shared mutable state. Deliberately an explicit
+         * allowlist rather than "everything except a known mutating list": a host application may
+         * register its own mutating tools (e.g. persist/skip-style tools that do an unsynchronized
+         * read-modify-write on a shared YAML/markdown file), and two concurrent calls to such a
+         * tool could race and silently drop a write. A new tool not added here simply stays
+         * sequential, which is always safe, just not maximally fast - the reverse (a new mutating
+         * tool accidentally inheriting parallelism) would not be.
+         */
+        internal val parallelSafeToolNames =
+            setOf(
+                "cpg_dataflow",
+                "cpg_dfg_backward",
+                "cpg_list_functions",
+                "cpg_list_records",
+                "cpg_list_calls",
+                "cpg_list_calls_to",
+                "cpg_list_call_args",
+                "cpg_list_call_arg_by_name_or_index",
+                "cpg_get_functions_by_name",
+                "cpg_get_node",
+                "cpg_list_llm_concepts_operations",
+                "cpg_list_concepts_and_operations",
+                "cpg_get_last_write",
+                "cpg_suggest_llm_concepts_and_operations",
+            )
 
         /** Matches fenced code blocks, e.g. ` ```json ... ``` ` (see [extractFallbackToolCall]). */
         private val FENCED_CODE_BLOCK_REGEX = Regex("```(?:\\w+)?\\s*([\\s\\S]*?)```")
