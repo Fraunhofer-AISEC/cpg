@@ -442,12 +442,19 @@ class NodeLinkRenderer(
         val uri = loc.artifactLocation.uri ?: return ""
         val line = loc.region.startLine.takeIf { it > 0 } ?: return uri.toString()
         val column = loc.region.startColumn.takeIf { it > 0 } ?: 0
-        val path = uri.path ?: return uri.toString()
+        // uri.path is percent-decoded, so a source file whose location came from a crafted,
+        // attacker-controlled repository (e.g. a path containing an encoded %1B) could otherwise
+        // smuggle raw escape sequences - including a forged OSC 8 hyperlink target - into the
+        // terminal when this node is rendered. Strip control characters before using the path in
+        // either the visible text or the OSC 8 link target.
+        val path = (uri.path ?: return uri.toString()).filterNot { it.isTerminalControlChar() }
         val displayPath = path.substringAfterLast('/')
         val display = "$displayPath:$line"
         val target = linkScheme.urlFor(path, line, column) ?: return display
         return hyperlink(target, display)
     }
+
+    private fun Char.isTerminalControlChar(): Boolean = code in 0x00..0x1F || code == 0x7F
 
     private fun hyperlink(target: String, display: String): String {
         if (!color) return display
