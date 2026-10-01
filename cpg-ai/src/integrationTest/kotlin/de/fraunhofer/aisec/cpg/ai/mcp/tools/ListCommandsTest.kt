@@ -44,7 +44,9 @@ import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -85,6 +87,51 @@ class ListCommandsTest {
                 functionNames.singleOrNull { it.endsWith("hello") },
                 "There is exactly one function declaration with local name hello",
             )
+        }
+
+    @Test
+    fun listFunctionsFilterTest() =
+        withClient(registerTools = { listFunctions() }) { client ->
+            val byPattern =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("pattern" to "^pri"))
+            assertEquals(
+                listOf("print"),
+                byPattern.content.map {
+                    Json.decodeFromString<FunctionInfo>((it as TextContent).text).name
+                },
+            )
+
+            val byCallee =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("calls" to "print"))
+            assertEquals(
+                listOf("hello"),
+                byCallee.content.map {
+                    Json.decodeFromString<FunctionInfo>((it as TextContent).text)
+                        .name
+                        .substringAfterLast('.')
+                },
+            )
+        }
+
+    @Test
+    fun listFunctionsPagingTest() =
+        withClient(registerTools = { listFunctions() }) { client ->
+            val firstPage =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("limit" to 1))
+            assertEquals(2, firstPage.content.size, "Should return one function and a paging note")
+            val note = (firstPage.content.last() as TextContent).text
+            assertContains(note, "1-1 of 2")
+            assertContains(note, "offset=1")
+
+            val secondPage =
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("limit" to 1, "offset" to 1),
+                )
+            assertEquals(2, secondPage.content.size, "Should return one function and a paging note")
+            val lastNote = (secondPage.content.last() as TextContent).text
+            assertContains(lastNote, "2-2 of 2")
+            assertFalse(lastNote.contains("offset="), "There is no next page")
         }
 
     @Test

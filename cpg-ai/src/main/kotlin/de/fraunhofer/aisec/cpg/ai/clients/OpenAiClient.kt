@@ -34,12 +34,19 @@ import io.ktor.utils.io.*
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
-/** OpenAI-compatible API client (Ollama, vLLM, MLX, etc.) */
+/**
+ * OpenAI-compatible API client (Ollama, vLLM, MLX, etc.)
+ *
+ * If [stream] is false, the complete response is requested at once. This is a workaround for
+ * servers whose streaming tool call parsing is broken, e.g., some vLLM builds drop tool calls
+ * without arguments for GLM models when streaming.
+ */
 class OpenAiClient(
     private val httpClient: HttpClient,
     private val model: String,
     private val baseUrl: String,
     private val apiKey: String? = null,
+    private val stream: Boolean = true,
 ) : LlmClient {
     override val modelName: String = model
 
@@ -57,7 +64,7 @@ class OpenAiClient(
         val openAiTools = convertToolDefinitions(tools)
 
         val request =
-            OpenAiRequest(model = model, messages = messages, tools = openAiTools, stream = true)
+            OpenAiRequest(model = model, messages = messages, tools = openAiTools, stream = stream)
 
         val pendingToolCalls = mutableMapOf<Int, ToolCall>()
 
@@ -73,8 +80,21 @@ class OpenAiClient(
                     onText("LLM request failed: ${response.status.value}\n$errorBody")
                     return@execute
                 }
-                val channel = response.body<ByteReadChannel>()
-                handleStreamingResponse(channel, onText, onReasoning, pendingToolCalls)
+                if (stream) {
+                    val channel = response.body<ByteReadChannel>()
+                    handleStreamingResponse(channel, onText, onReasoning, pendingToolCalls)
+                } else {
+                    // The complete message has the same fields as a streamed delta
+                    val message =
+                        Json.parseToJsonElement(response.body<String>())
+                            .jsonObject["choices"]
+                            ?.jsonArray
+                            ?.firstOrNull()
+                            ?.jsonObject
+                            ?.get("message")
+                            ?.jsonObject
+                    message?.let { handleDelta(it, onText, onReasoning, pendingToolCalls) }
+                }
             }
 
         return pendingToolCalls.values.filter { it.name.isNotEmpty() }.toList()
@@ -230,34 +250,46 @@ class OpenAiClient(
                 chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("delta")?.jsonObject
 
             if (delta != null) {
-                val reasoningContent =
-                    delta["reasoning"]?.jsonPrimitive?.contentOrNull
-                        ?: delta["thoughts"]?.jsonPrimitive?.contentOrNull
-                        ?: delta["thinking"]?.jsonPrimitive?.contentOrNull
+                handleDelta(delta, onText, onReasoning, pendingToolCalls)
+            }
+        }
+    }
 
-                if (reasoningContent?.isNotEmpty() == true) {
-                    onReasoning(reasoningContent)
-                }
+    /**
+     * Handles a streamed `delta` or a complete `message` of a response: emits its reasoning and
+     * text and collects its (partial) tool calls into [pendingToolCalls].
+     */
+    private suspend fun handleDelta(
+        delta: JsonObject,
+        onText: suspend (String) -> Unit,
+        onReasoning: suspend (String) -> Unit,
+        pendingToolCalls: MutableMap<Int, ToolCall>,
+    ) {
+        val reasoningContent =
+            delta["reasoning"]?.jsonPrimitive?.contentOrNull
+                ?: delta["thoughts"]?.jsonPrimitive?.contentOrNull
+                ?: delta["thinking"]?.jsonPrimitive?.contentOrNull
 
-                delta["content"]?.jsonPrimitive?.contentOrNull?.let { content ->
-                    if (content.isNotEmpty()) {
-                        onText(content)
-                    }
-                }
+        if (reasoningContent?.isNotEmpty() == true) {
+            onReasoning(reasoningContent)
+        }
 
-                delta["tool_calls"]?.jsonArray?.forEach { toolElement ->
-                    val toolJson = toolElement.jsonObject
-                    val index = toolJson["index"]?.jsonPrimitive?.intOrNull ?: 0
-                    val entry = pendingToolCalls.getOrPut(index) { ToolCall() }
+        delta["content"]?.jsonPrimitive?.contentOrNull?.let { content ->
+            if (content.isNotEmpty()) {
+                onText(content)
+            }
+        }
 
-                    toolJson["id"]?.jsonPrimitive?.contentOrNull?.let { entry.id = it }
-                    toolJson["function"]?.jsonObject?.let { function ->
-                        function["name"]?.jsonPrimitive?.contentOrNull?.let { entry.name = it }
-                        function["arguments"]?.jsonPrimitive?.contentOrNull?.let {
-                            entry.arguments += it
-                        }
-                    }
-                }
+        // Complete (non-streamed) messages have no index, their tool calls are simply listed
+        delta["tool_calls"]?.jsonArray?.forEachIndexed { position, toolElement ->
+            val toolJson = toolElement.jsonObject
+            val index = toolJson["index"]?.jsonPrimitive?.intOrNull ?: position
+            val entry = pendingToolCalls.getOrPut(index) { ToolCall() }
+
+            toolJson["id"]?.jsonPrimitive?.contentOrNull?.let { entry.id = it }
+            toolJson["function"]?.jsonObject?.let { function ->
+                function["name"]?.jsonPrimitive?.contentOrNull?.let { entry.name = it }
+                function["arguments"]?.jsonPrimitive?.contentOrNull?.let { entry.arguments += it }
             }
         }
     }

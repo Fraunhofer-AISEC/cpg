@@ -25,21 +25,33 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.HashMapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
+import de.fraunhofer.aisec.cpg.helpers.functional.MIN_GLOBAL_STATE_PRUNE_SIZE
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.timeouts
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 
 class BasicLatticesRedesignTest {
@@ -560,5 +572,232 @@ class BasicLatticesRedesignTest {
             assertFalse(blaEmptyBla == emptyBlaFirst) // Wrong types
             assertFalse(emptyBlaFirst == blaEmptyBla) // Wrong types
         }
+    }
+
+    /**
+     * Builds a chain of [size] nodes connected by EOG edges and returns them. If [loopBackTo] is
+     * given, the last node additionally gets an edge back to the node at that index.
+     */
+    private fun eogChain(size: Int, loopBackTo: Int? = null): List<Literal<Int>> {
+        val nodes = (0 until size).map { Literal<Int>().apply { name = Name("n$it") } }
+        nodes.zipWithNext { current, next -> current.nextEOGEdges += next }
+        loopBackTo?.let { nodes.last().nextEOGEdges += nodes[it] }
+        return nodes
+    }
+
+    @Test
+    fun testIterateEOGPrunesOnlyDeadStates() {
+        // The chain has to be longer than MIN_GLOBAL_STATE_PRUNE_SIZE, otherwise we never even look
+        // for dead states.
+        val size = MIN_GLOBAL_STATE_PRUNE_SIZE * 2
+        val lattice = PowersetLattice<String>()
+
+        // Every edge adds the name of the node it points to, so the state at the end of the chain
+        // has to know about every node except the first one. If we ever dropped a state that is
+        // still live, we would lose elements here.
+        val transformation:
+            suspend (
+                Lattice<PowersetLattice.Element<String>>,
+                EvaluationOrder,
+                PowersetLattice.Element<String>,
+            ) -> PowersetLattice.Element<String> =
+            { _, edge, state ->
+                PowersetLattice.Element(state).apply { add(edge.end.name.localName) }
+            }
+
+        val chain = eogChain(size)
+        val (chainResult, chainTimeout) =
+            lattice.iterateEOG(chain.first().nextEOGEdges.toList(), lattice.bottom, transformation)
+        assertFalse(chainTimeout)
+        assertEquals(chain.drop(1).map { it.name.localName }.toSet(), chainResult.toSet())
+
+        // The same, but the tail of the chain loops back into its middle. The states of the edges
+        // inside the loop stay live for as long as the loop is being iterated, so this would fail
+        // if we pruned by "already processed" instead of by reachability.
+        val loop = eogChain(size, loopBackTo = size / 2)
+        val (loopResult, loopTimeout) =
+            lattice.iterateEOG(loop.first().nextEOGEdges.toList(), lattice.bottom, transformation)
+        assertFalse(loopTimeout)
+        assertEquals(loop.drop(1).map { it.name.localName }.toSet(), loopResult.toSet())
+    }
+
+    @Test
+    fun testIterateEOGRestoresTimeoutStack() {
+        val lattice = PowersetLattice<String>()
+
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+
+        val depthBefore = timeouts.size
+
+        // A regular run has to leave the stack of timeout budgets exactly as it found it.
+        lattice.iterateEOG(
+            start.nextEOGEdges.toList(),
+            lattice.bottom,
+            { _, _, state -> state },
+            timeout = 10.seconds,
+        )
+        assertEquals(depthBefore, timeouts.size)
+
+        // ... and so does a run whose transformation throws.
+        assertThrows<IllegalStateException> {
+            lattice.iterateEOG(
+                start.nextEOGEdges.toList(),
+                lattice.bottom,
+                { _, _, _ -> throw IllegalStateException("transformation failed") },
+                timeout = 10.seconds,
+            )
+        }
+        assertEquals(depthBefore, timeouts.size)
+    }
+
+    /**
+     * The transformation of a single edge is where an [Lattice.iterateEOG] run spends almost all of
+     * its time, so the timeout has to be able to cut a transformation short. It used to run outside
+     * the timeout, which meant that a single slow edge could keep the analysis busy for arbitrarily
+     * long - we saw a single edge run for twelve hours against a budget of thirty minutes.
+     */
+    @Test
+    @Timeout(60)
+    fun testIterateEOGTimesOutDuringASlowTransformation() {
+        val lattice = PowersetLattice<String>()
+
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+
+        val budget = 500.milliseconds
+        // Far more than the budget, so that a run which waits for the transformation to finish is
+        // clearly distinguishable from one which cancels it.
+        val transformationDuration = 30.seconds
+
+        var aborted = false
+        val elapsed = measureTime {
+            aborted =
+                lattice
+                    .iterateEOG(
+                        start.nextEOGEdges.toList(),
+                        lattice.bottom,
+                        { _, _, state ->
+                            delay(transformationDuration)
+                            state
+                        },
+                        timeout = budget,
+                    )
+                    .second
+        }
+
+        assertTrue(aborted, "The run has to report that it did not reach a fixpoint")
+        assertTrue(
+            elapsed < transformationDuration / 2,
+            "The timeout has to cancel the transformation instead of waiting for it, but the run took $elapsed",
+        )
+    }
+
+    @Test
+    fun testDuplicateSharesEntries() {
+        val original =
+            ConcurrentMapLattice.Element(
+                "a" to PowersetLattice.Element("bla"),
+                "b" to PowersetLattice.Element("foo"),
+            )
+
+        val copy = original.duplicate()
+
+        // The copy holds the very same entries as the original ...
+        assertEquals(original.keys, copy.keys)
+        for (key in original.keys) {
+            assertSame(original[key], copy[key])
+            assertTrue(assertNotNull(copy[key]).isShared)
+        }
+
+        // ... which is why neither side may modify them any more.
+        assertThrows<IllegalStateException> { assertNotNull(copy["a"]).add("blub") }
+        assertThrows<IllegalStateException> { assertNotNull(original["a"]).add("blub") }
+
+        // Asking for a private copy of one entry gives us a modifiable one and leaves the other
+        // owner - and the entries we did not ask for - alone.
+        val shared = assertNotNull(original["b"])
+        val private = assertNotNull(copy.getForUpdate("a"))
+        assertNotSame(original["a"], private)
+        assertFalse(private.isShared)
+        private.add("blub")
+
+        assertEquals(PowersetLattice.Element("bla", "blub"), copy["a"])
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
+        assertSame(shared, copy["b"])
+    }
+
+    /**
+     * A duplicate shares not only the entries but the map itself, so it must not cost anything per
+     * entry. Adding or removing a key on either side still has to leave the other one alone.
+     */
+    @Test
+    fun testDuplicateSharesTheMapItself() {
+        val original =
+            ConcurrentMapLattice.Element(
+                "a" to PowersetLattice.Element("bla"),
+                "b" to PowersetLattice.Element("foo"),
+            )
+
+        val copy = original.duplicate()
+
+        copy.put("c", PowersetLattice.Element("new in the copy"))
+        original.put("d", PowersetLattice.Element("new in the original"))
+        original.remove("a")
+
+        assertEquals(setOf("a", "b", "c"), copy.keys.toSet())
+        assertEquals(setOf("b", "d"), original.keys.toSet())
+    }
+
+    @Test
+    fun testLubSharesEntries() {
+        val lattice =
+            ConcurrentMapLattice<String, PowersetLattice.Element<String>>(PowersetLattice())
+        val one = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val two = ConcurrentMapLattice.Element("b" to PowersetLattice.Element("foo"))
+
+        // A key which only one of the two sides has carries its value over unchanged, so the
+        // result shares it instead of copying it.
+        val result = runBlocking { lattice.lub(one, two) }
+        assertSame(one["a"], result["a"])
+        assertSame(two["b"], result["b"])
+        assertThrows<IllegalStateException> { assertNotNull(result["a"]).add("blub") }
+
+        // The in-place variant may not modify the value it took from `two` either.
+        val inPlace = runBlocking { lattice.lub(one, two, allowModify = true) }
+        assertSame(one, inPlace)
+        assertSame(two["b"], one["b"])
+        assertThrows<IllegalStateException> { assertNotNull(one["b"]).add("blub") }
+    }
+
+    @Test
+    @Timeout(60)
+    fun testIterateEOGRespectsStateEntryBudget() {
+        val lattice = PowersetLattice<Int>()
+
+        // A cycle in the EOG, so the analysis only terminates once the state stops growing ...
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+        end.nextEOGEdges += start
+
+        // ... which it never does here: every visit adds an element which was not in the state
+        // before, so without a budget this run would go on forever.
+        var counter = 0
+
+        val (result, aborted) =
+            lattice.iterateEOG(
+                start.nextEOGEdges.toList(),
+                lattice.bottom,
+                { _, _, state -> PowersetLattice.Element(state).also { it += counter++ } },
+                maxStateEntries = 100,
+            )
+
+        // We get the results computed so far, together with the information that they are not a
+        // fixpoint.
+        assertTrue(aborted)
+        assertTrue(result.isNotEmpty())
     }
 }

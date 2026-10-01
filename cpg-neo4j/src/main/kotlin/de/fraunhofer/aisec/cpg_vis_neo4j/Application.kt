@@ -41,6 +41,7 @@ import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.minutes
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -53,6 +54,8 @@ private const val DEBUG_PARSER = true
 
 private const val DEFAULT_SAVE_DEPTH = -1
 private const val DEFAULT_MAX_COMPLEXITY = -1
+private const val DEFAULT_POINTS_TO_TIMEOUT_MINUTES = -1
+private const val DEFAULT_POINTS_TO_MAX_STATE_ENTRIES = -1L
 
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
@@ -163,6 +166,43 @@ class Application : Callable<Int> {
             ],
     )
     private var maxComplexity: Int = DEFAULT_MAX_COMPLEXITY
+
+    @CommandLine.Option(
+        names = ["--points-to-timeout"],
+        description =
+            [
+                "Performance optimisation: " +
+                    "The number of minutes after which the PointsToPass stops analyzing a single function " +
+                    "and continues with the next one. Note that a function can take up to twice as long, " +
+                    "because its fixpoint iteration and the work after it are bounded separately. " +
+                    "\$DEFAULT_POINTS_TO_TIMEOUT_MINUTES (default) means the pass' own default is used."
+            ],
+    )
+    private var pointsToTimeoutMinutes: Int = DEFAULT_POINTS_TO_TIMEOUT_MINUTES
+
+    @CommandLine.Option(
+        names = ["--points-to-max-state-entries"],
+        description =
+            [
+                "Performance optimisation: " +
+                    "The number of state entries after which the PointsToPass stops analyzing a single " +
+                    "function and continues with the next one. One entry costs roughly 500 bytes, so " +
+                    "20000000 corresponds to about 10 GB. " +
+                    "\$DEFAULT_POINTS_TO_MAX_STATE_ENTRIES (default) means no limit is used."
+            ],
+    )
+    private var pointsToMaxStateEntries: Long = DEFAULT_POINTS_TO_MAX_STATE_ENTRIES
+
+    @CommandLine.Option(
+        names = ["--max-complexity-points-to"],
+        description =
+            [
+                "Performance optimisation: " +
+                    "Limit the PointsToPass to functions with a complexity less than what is specified here. " +
+                    "\$DEFAULT_MAX_COMPLEXITY (default) means no limit is used."
+            ],
+    )
+    private var maxComplexityPointsTo: Int = DEFAULT_MAX_COMPLEXITY
 
     @CommandLine.Option(
         names = ["--load-includes"],
@@ -397,6 +437,33 @@ class Application : Callable<Int> {
                 if (maxComplexity != -1) {
                     builder.configurePass<ControlFlowSensitiveDFGPass>(
                         ControlFlowSensitiveDFGPass.Configuration(maxComplexity = maxComplexity)
+                    )
+                }
+
+                // Without any of these, a single pathological function can keep the whole analysis
+                // busy for hours (the pass' own default timeout is 60 minutes *per function*),
+                // which is why they are configurable from here at all.
+                if (
+                    pointsToTimeoutMinutes != DEFAULT_POINTS_TO_TIMEOUT_MINUTES ||
+                        pointsToMaxStateEntries != DEFAULT_POINTS_TO_MAX_STATE_ENTRIES ||
+                        maxComplexityPointsTo != DEFAULT_MAX_COMPLEXITY
+                ) {
+                    val defaults = PointsToPass.Configuration()
+                    builder.configurePass<PointsToPass>(
+                        PointsToPass.Configuration(
+                            maxComplexity =
+                                if (maxComplexityPointsTo != DEFAULT_MAX_COMPLEXITY)
+                                    maxComplexityPointsTo
+                                else defaults.maxComplexity,
+                            timeout =
+                                if (pointsToTimeoutMinutes != DEFAULT_POINTS_TO_TIMEOUT_MINUTES)
+                                    pointsToTimeoutMinutes.minutes
+                                else defaults.timeout,
+                            maxStateEntries =
+                                if (pointsToMaxStateEntries != DEFAULT_POINTS_TO_MAX_STATE_ENTRIES)
+                                    pointsToMaxStateEntries
+                                else defaults.maxStateEntries,
+                        )
                     )
                 }
 
