@@ -155,14 +155,17 @@ fun Server.getAllArgs() {
     this.addTool<CpgIdPayload>(name = "cpg_list_call_args", description = toolDescription) {
         result: TranslationResult,
         payload: CpgIdPayload ->
-        CallToolResult(
-            content =
-                result.calls
-                    .single { it.id.toString() == payload.id }
-                    .arguments
-                    .map { TextContent(it.toJson()) }
-        )
+        listCallArgs(result, payload)
     }
+}
+
+internal fun listCallArgs(result: TranslationResult, payload: CpgIdPayload): CallToolResult {
+    val call =
+        result.calls.firstOrNull { it.id.toString() == payload.id }
+            ?: return CallToolResult(
+                content = listOf(TextContent("No call found with id ${payload.id}."))
+            )
+    return CallToolResult(content = call.arguments.map { TextContent(it.toJson()) })
 }
 
 fun Server.getArgByIndexOrName() {
@@ -177,21 +180,27 @@ fun Server.getArgByIndexOrName() {
         name = "cpg_list_call_arg_by_name_or_index",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgCallArgumentByNameOrIndexPayload ->
-        CallToolResult(
-            content =
-                listOf(
-                    TextContent(
-                        result.calls
-                            .single { it.id.toString() == payload.nodeId }
-                            .argumentByNameOrPosition(
-                                name = payload.argumentName,
-                                position = payload.index,
-                            )
-                            ?.toJson() ?: "No argument found with the given name or index."
-                    )
-                )
-        )
+        listCallArgByNameOrIndex(result, payload)
     }
+}
+
+internal fun listCallArgByNameOrIndex(
+    result: TranslationResult,
+    payload: CpgCallArgumentByNameOrIndexPayload,
+): CallToolResult {
+    val call =
+        result.calls.firstOrNull { it.id.toString() == payload.nodeId }
+            ?: return CallToolResult(
+                content = listOf(TextContent("No call found with id ${payload.nodeId}."))
+            )
+    val argument =
+        call.argumentByNameOrPosition(name = payload.argumentName, position = payload.index)
+    return CallToolResult(
+        content =
+            listOf(
+                TextContent(argument?.toJson() ?: "No argument found with the given name or index.")
+            )
+    )
 }
 
 fun Server.getNode() {
