@@ -32,12 +32,14 @@ This produces `cpg-ai/build/install/cpg-mcp/bin/cpg-mcp` (the start script sets 
 | Streamable HTTP | `cpg-mcp --http 8080` | `http://localhost:8080/mcp` |
 | SSE | `cpg-mcp --sse 8080` | `http://localhost:8080` (usable with the MCP inspector) |
 
-`--http` and `--sse` are mutually exclusive. `--host <ip>` sets the bind address.
+`--http` and `--sse` are mutually exclusive. `--host <ip>` sets the bind address, which is
+`127.0.0.1` (this machine only) unless you say otherwise.
 
-> **Security:** the server binds to `0.0.0.0` by default and has **no authentication**. Any client
-> that can reach it can make it read any file the process can read (`cpg_analyze` takes a `path`,
-> `cpg_get_node` returns code). Use `--host 127.0.0.1`, or put it behind something that
-> authenticates, unless you are on a trusted network.
+> **Security:** the server has **no authentication**, and any client that can reach it can make it
+> read any file the process can read (`cpg_analyze` takes a `path`, `cpg_get_node` returns code) and
+> change the analysis. That is why it only listens on loopback by default. Bind another address,
+> e.g. `--host 0.0.0.0` for use from a container or another machine, only on a network you trust or
+> behind something that authenticates; a warning is logged when you do.
 
 ### Connecting an MCP client
 
