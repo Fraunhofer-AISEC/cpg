@@ -94,6 +94,16 @@ class ReplLoop(
                 .build()
         installDotCompleteWidget(reader)
 
+        // Badge is iTerm2-proprietary (no Kitty/Ghostty equivalent), so only touch it once we know
+        // we're actually talking to iTerm2/WezTerm.
+        val supportsBadge = TerminalImageSupport.detect() == ImageProtocol.ITERM2
+        fun setBadge(text: String) {
+            if (!supportsBadge) return
+            terminal.writer().print(ItermBadge.set(text))
+            terminal.writer().flush()
+        }
+        setBadge("codyze")
+
         printReadyLine(terminal.writer())
         terminal.writer().flush()
 
@@ -119,16 +129,22 @@ class ReplLoop(
             }
 
             sessionLines.add(line!!)
-            when (val res = replService.eval(line)) {
-                is ReplEvalResult.Value -> terminal.writer().println(res.rendered)
+            setBadge("codyze ⏳")
+            val result = replService.eval(line)
+            setBadge("codyze")
+            when (result) {
+                is ReplEvalResult.Value -> terminal.writer().println(result.rendered)
                 is ReplEvalResult.UnitResult -> Unit
                 // DiagnosticFormatter already prefixes with "error:" / "warning:" + color,
                 // so we just print its output verbatim.
-                is ReplEvalResult.CompileError -> terminal.writer().println(res.message)
-                is ReplEvalResult.RuntimeError -> terminal.writer().println(res.message)
+                is ReplEvalResult.CompileError -> terminal.writer().println(result.message)
+                is ReplEvalResult.RuntimeError -> terminal.writer().println(result.message)
             }
             terminal.writer().flush()
         }
+        // Badge is a property of the terminal session, not this process — clear it so it doesn't
+        // linger in the shell prompt after the REPL exits.
+        setBadge("")
         terminal.close()
     }
 
@@ -406,7 +422,7 @@ class ReplLoop(
         }
 
         val result = openDFG(node, replService.theme)
-        out.println(result)
+        if (result.isNotEmpty()) out.println(result)
     }
 
     private fun printImports(out: java.io.PrintWriter) {

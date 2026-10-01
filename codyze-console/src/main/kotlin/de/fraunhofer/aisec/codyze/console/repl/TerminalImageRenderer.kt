@@ -60,6 +60,25 @@ object TerminalImageSupport {
     }
 }
 
+/**
+ * Sets iTerm2's session badge — a persistent watermark drawn in the corner of the terminal pane,
+ * independent of scrollback/prompt — via the `SetBadgeFormat` OSC 1337 subcommand (the same family
+ * used for inline images). Used by [ReplLoop] to show the REPL's live idle/evaluating state,
+ * similar in spirit to how iTerm2's own Claude Code integration drives its Session Status tool, but
+ * using only the plain escape-sequence protocol rather than iTerm2's Python API — no setup required
+ * beyond detecting [ImageProtocol.ITERM2].
+ *
+ * Only call this once [TerminalImageSupport.detect] has returned [ImageProtocol.ITERM2] — it's an
+ * iTerm2-proprietary sequence, and unlike inline images there's no Kitty/Ghostty equivalent to fall
+ * back to.
+ */
+object ItermBadge {
+    fun set(text: String): String {
+        val base64 = Base64.getEncoder().encodeToString(text.toByteArray(Charsets.UTF_8))
+        return "\u001B]1337;SetBadgeFormat=$base64\u0007"
+    }
+}
+
 /** Outcome of [MermaidCli.renderToPng]. */
 sealed class MermaidRenderResult {
     data class Success(val file: File) : MermaidRenderResult()

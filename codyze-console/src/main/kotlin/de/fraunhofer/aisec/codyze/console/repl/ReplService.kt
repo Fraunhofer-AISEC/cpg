@@ -217,7 +217,7 @@ fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node, theme: Theme = Theme.DARK)
                 print(TerminalImageEncoder.encode(result.file, protocol))
                 System.out.flush()
                 result.file.delete()
-                return "Rendered DFG inline via mermaid-cli."
+                return ""
             }
             is MermaidRenderResult.Failure -> renderFailureReason = result.reason
         }
