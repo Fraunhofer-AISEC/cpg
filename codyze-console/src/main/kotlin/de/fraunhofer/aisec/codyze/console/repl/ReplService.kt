@@ -210,13 +210,16 @@ fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node, theme: Theme = Theme.DARK)
     val mermaid = mermaidWithWrapper.removeSurrounding("```mermaid\n", "\n```")
 
     val protocol = TerminalImageSupport.detect()
+    var renderFailureReason: String? = null
     if (protocol != null && MermaidCli.isAvailable) {
-        val png = MermaidCli.renderToPng(mermaid, theme)
-        if (png != null) {
-            print(TerminalImageEncoder.encode(png, protocol))
-            System.out.flush()
-            png.delete()
-            return "Rendered DFG inline via mermaid-cli."
+        when (val result = MermaidCli.renderToPng(mermaid, theme)) {
+            is MermaidRenderResult.Success -> {
+                print(TerminalImageEncoder.encode(result.file, protocol))
+                System.out.flush()
+                result.file.delete()
+                return "Rendered DFG inline via mermaid-cli."
+            }
+            is MermaidRenderResult.Failure -> renderFailureReason = result.reason
         }
     }
 
@@ -227,9 +230,15 @@ fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node, theme: Theme = Theme.DARK)
         )
     file.writeText(mermaid)
 
-    return if (FlowExporter.openInOs(file)) {
-        "Opened DFG: ${file.name}"
-    } else {
-        "Wrote DFG to ${file.absolutePath}, but could not launch a viewer automatically."
+    // `.mermaid` has no OS-registered handler anywhere, so only attempt to open it when VS Code
+    // is actually detected (vscode://file always works); otherwise a generic "open" just produces
+    // a confusing "no application knows how to open this file" error for no benefit.
+    val openedExternally = FlowExporter.openInOs(file, allowGenericOpen = false)
+    val prefix = renderFailureReason?.let { "mermaid-cli failed to render inline ($it); " } ?: ""
+    return when {
+        openedExternally -> "${prefix}Opened DFG: ${file.name}"
+        else ->
+            "${prefix}Wrote DFG to ${file.absolutePath} — open it with a mermaid-aware viewer " +
+                "(VS Code + the Mermaid extension, or paste it into https://mermaid.live)."
     }
 }

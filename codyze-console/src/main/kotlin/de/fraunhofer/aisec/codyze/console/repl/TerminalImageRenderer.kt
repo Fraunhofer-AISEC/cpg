@@ -60,12 +60,20 @@ object TerminalImageSupport {
     }
 }
 
+/** Outcome of [MermaidCli.renderToPng]. */
+sealed class MermaidRenderResult {
+    data class Success(val file: File) : MermaidRenderResult()
+
+    /** [reason] is mmdc's own diagnostic output (or an exception message) — shown to the user. */
+    data class Failure(val reason: String) : MermaidRenderResult()
+}
+
 /**
  * Best-effort wrapper around the `mmdc` (mermaid-cli) binary. Rendering Mermaid diagrams requires a
  * real DOM/layout engine (dagre, etc.) — there's no pure-JVM equivalent — so we shell out to the
- * user's own install rather than bundling Puppeteer/Chromium with Codyze. Everything here is
- * best-effort: a missing binary, a sandboxing failure, or a timeout all just mean "no inline
- * image", never a hard error.
+ * user's own install rather than bundling Puppeteer/Chromium with Codyze. A missing binary, a
+ * sandboxing failure, or a timeout all surface as [MermaidRenderResult.Failure] with a reason —
+ * never a hard error — but callers get told *why*, rather than silently falling back.
  */
 object MermaidCli {
 
@@ -86,10 +94,9 @@ object MermaidCli {
 
     /**
      * Renders [mermaidSource] to a PNG via `mmdc`, using a transparent background so the image
-     * blends with the terminal's own background regardless of [theme]. Returns `null` on any
-     * failure — missing binary, non-zero exit, or timeout.
+     * blends with the terminal's own background regardless of [theme].
      */
-    fun renderToPng(mermaidSource: String, theme: Theme): File? =
+    fun renderToPng(mermaidSource: String, theme: Theme): MermaidRenderResult =
         runCatching {
                 val input =
                     File.createTempFile("codyze-dfg-", ".mmd").apply {
@@ -110,20 +117,45 @@ object MermaidCli {
                             "-t",
                             mermaidTheme,
                         )
-                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                         .redirectErrorStream(true)
                         .start()
+                // Drain stdout+stderr concurrently with waitFor() so a chatty `mmdc` (Puppeteer
+                // debug output, etc.) can't fill the pipe buffer and deadlock the process.
+                val outputText = StringBuilder()
+                val drainThread =
+                    Thread {
+                            process.inputStream.bufferedReader().forEachLine {
+                                outputText.appendLine(it)
+                            }
+                        }
+                        .apply {
+                            isDaemon = true
+                            start()
+                        }
+
                 val finished = process.waitFor(RENDER_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 if (!finished) {
                     process.destroyForcibly()
-                    return@runCatching null
+                    return@runCatching MermaidRenderResult.Failure(
+                        "mmdc timed out after ${RENDER_TIMEOUT_SECONDS}s"
+                    )
                 }
+                drainThread.join(2_000)
+
                 if (process.exitValue() != 0 || !output.exists() || output.length() == 0L) {
-                    return@runCatching null
+                    val reason =
+                        outputText
+                            .lineSequence()
+                            .lastOrNull { it.isNotBlank() }
+                            ?.trim()
+                            ?.ifEmpty { null } ?: "mmdc exited with code ${process.exitValue()}"
+                    return@runCatching MermaidRenderResult.Failure(reason)
                 }
-                output
+                MermaidRenderResult.Success(output)
             }
-            .getOrNull()
+            .getOrElse { e ->
+                MermaidRenderResult.Failure(e.message ?: e::class.simpleName ?: "unknown error")
+            }
 }
 
 /** Encodes a PNG [file] as an inline-image escape sequence for the given [protocol]. */

@@ -77,12 +77,22 @@ object FlowExporter {
     /**
      * Opens [file]. When VS Code is detected (same heuristic as the OSC 8 hyperlinks — see
      * [LinkScheme.detect]) we route through the `vscode://file/<path>` URL so the file lands inside
-     * VS Code regardless of what the user's OS-level handler for `.sarif` is. Otherwise we fall
-     * back to the OS default opener (`open` on macOS, `xdg-open` on Linux, `cmd /c start` on
-     * Windows). Returns `true` if the launcher process started successfully, `false` otherwise —
-     * callers should report the failure rather than silently claiming success.
+     * VS Code regardless of what the user's OS-level handler for the file's extension is.
+     *
+     * Otherwise, when [allowGenericOpen] is true (the default), falls back to the OS default opener
+     * (`open` on macOS, `xdg-open` on Linux, `cmd /c start` on Windows). Set it to `false` for file
+     * types with no realistic OS-registered handler (e.g. `.mermaid`) — attempting a generic open
+     * there doesn't silently fail, it surfaces a confusing native "no application can open this
+     * file" error to the user for no benefit, so skip it and let the caller report the path
+     * instead.
+     *
+     * Returns `true` if a launcher process was started successfully, `false` otherwise (including
+     * when VS Code wasn't detected and [allowGenericOpen] is `false`) — callers should report the
+     * failure/no-op rather than silently claiming success.
      */
-    fun openInOs(file: File): Boolean {
+    fun openInOs(file: File, allowGenericOpen: Boolean = true): Boolean {
+        val scheme = LinkScheme.detect()
+        if (scheme != LinkScheme.VSCODE && !allowGenericOpen) return false
         val osOpen =
             when {
                 System.getProperty("os.name").lowercase().contains("mac") -> "open"
@@ -90,7 +100,7 @@ object FlowExporter {
                 else -> "xdg-open"
             }
         val target =
-            when (LinkScheme.detect()) {
+            when (scheme) {
                 LinkScheme.VSCODE -> "vscode://file${file.absolutePath}"
                 else -> file.absolutePath
             }
