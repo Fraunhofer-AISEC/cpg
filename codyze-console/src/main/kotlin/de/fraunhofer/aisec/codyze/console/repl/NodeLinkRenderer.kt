@@ -168,12 +168,13 @@ class NodeLinkRenderer(
             .append((tree.operator as? Enum<*>)?.name ?: tree.operator.toString())
             .append(']')
             .append(reset())
-        // Show stringRepresentation only when it isn't the auto-generated noise that
-        // embeds a full Node toString — those substrings (`[name=…]`, `[location=…]`) hide
-        // any useful info under a wall of class internals. User-written strings like
-        // "overflow risk" / "ok" pass through and add real context.
-        val repr = tree.stringRepresentation.trim()
-        if (repr.isNotEmpty() && !repr.contains("[name=") && !repr.contains("[location=")) {
+        // Condense stringRepresentation so auto-generated text that embeds a full Node
+        // toString() (e.g. `Reference[name=p,location=…]`) collapses to `Reference 'p'`
+        // instead of either a wall of class internals or being dropped outright — see
+        // condenseRepr(). User-written strings like "overflow risk" / "ok" pass through
+        // unchanged and add real context.
+        val repr = condenseRepr(tree.stringRepresentation)
+        if (repr.isNotEmpty()) {
             out.append(' ').append(repr.take(120))
         }
         tree.node?.let { node ->

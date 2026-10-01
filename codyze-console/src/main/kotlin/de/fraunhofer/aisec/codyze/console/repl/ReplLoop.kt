@@ -49,10 +49,19 @@ import org.jline.terminal.TerminalBuilder
 class ReplLoop(
     private val consoleService: ConsoleService,
     private val replService: ReplService = ReplService(consoleService),
+    initialRequest: AnalyzeRequestJSON? = null,
 ) {
     private val historyFile: Path =
         Path.of(System.getProperty("user.home"), ".codyze", "repl_history")
     private val sessionLines = mutableListOf<String>()
+
+    /**
+     * The [AnalyzeRequestJSON] used for the most recent (successful) analysis — either the initial
+     * one passed in from [de.fraunhofer.aisec.codyze.console.repl.ReplCommand], or the result of a
+     * prior `:reload`. Used so an argument-less `:reload` preserves `includeDir`/`topLevel` instead
+     * of silently dropping them.
+     */
+    private var lastRequest: AnalyzeRequestJSON? = initialRequest
 
     fun run() {
         Files.createDirectories(historyFile.parent)
@@ -83,6 +92,7 @@ class ReplLoop(
                 // disable that entirely so REPL input is taken verbatim.
                 .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                 .build()
+        installDotCompleteWidget(reader)
 
         printReadyLine(terminal.writer())
         terminal.writer().flush()
@@ -284,19 +294,29 @@ class ReplLoop(
         // Use previous source dir if none provided
         val finalSourceDir =
             sourceDir
+                ?: lastRequest?.sourceDir
                 ?: consoleService.lastProject?.config?.sourceLocations?.firstOrNull()?.absolutePath
                 ?: run {
                     out.println("No previous analysis to reload — pass a path: :reload <dir>")
                     return
                 }
 
+        // Preserve includeDir/topLevel from the previous analysis — :reload only lets the user
+        // override the source dir and --concepts, not those two.
+        val request =
+            AnalyzeRequestJSON(
+                sourceDir = finalSourceDir,
+                includeDir = lastRequest?.includeDir,
+                topLevel = lastRequest?.topLevel,
+                conceptsFile = conceptsFile ?: lastRequest?.conceptsFile,
+            )
+
         out.println("Analyzing $finalSourceDir …")
         out.flush()
-        runBlocking {
-            consoleService.analyze(
-                AnalyzeRequestJSON(sourceDir = finalSourceDir, conceptsFile = conceptsFile)
-            )
-        }
+        runBlocking { consoleService.analyze(request) }
+        lastRequest = request
+        // The new analysis invalidates any Node/QueryTree captured from the previous one.
+        replService.clearLastValue()
         out.println("Analysis complete.")
     }
 
@@ -320,7 +340,11 @@ class ReplLoop(
                     out.println(res.message)
                     return
                 }
-                else -> Unit
+                is ReplEvalResult.UnitResult -> {
+                    out.println("Expression produced no value; nothing to export.")
+                    return
+                }
+                is ReplEvalResult.Value -> Unit
             }
         }
         val value = replService.lastValue
@@ -339,7 +363,9 @@ class ReplLoop(
             return
         }
         out.println("${DIM}Wrote SARIF flow to ${file.absolutePath} — opening …${RESET}")
-        FlowExporter.openInOs(file)
+        if (!FlowExporter.openInOs(file)) {
+            out.println("Could not launch a viewer automatically; open the file manually.")
+        }
     }
 
     /**
@@ -359,7 +385,11 @@ class ReplLoop(
                         out.println(res.message)
                         return
                     }
-                    else -> replService.lastValue
+                    is ReplEvalResult.UnitResult -> {
+                        out.println("Expression produced no value; nothing to visualize.")
+                        return
+                    }
+                    is ReplEvalResult.Value -> replService.lastValue
                 }
             } else {
                 replService.lastValue

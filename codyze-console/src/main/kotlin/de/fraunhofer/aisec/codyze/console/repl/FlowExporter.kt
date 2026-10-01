@@ -79,9 +79,10 @@ object FlowExporter {
      * [LinkScheme.detect]) we route through the `vscode://file/<path>` URL so the file lands inside
      * VS Code regardless of what the user's OS-level handler for `.sarif` is. Otherwise we fall
      * back to the OS default opener (`open` on macOS, `xdg-open` on Linux, `cmd /c start` on
-     * Windows). Best-effort — failure is silent.
+     * Windows). Returns `true` if the launcher process started successfully, `false` otherwise —
+     * callers should report the failure rather than silently claiming success.
      */
-    fun openInOs(file: File) {
+    fun openInOs(file: File): Boolean {
         val osOpen =
             when {
                 System.getProperty("os.name").lowercase().contains("mac") -> "open"
@@ -100,7 +101,7 @@ object FlowExporter {
                 // Windows fallback — `start` needs an empty title arg first.
                 arrayOf("cmd", "/c", "start", "", target)
             }
-        runCatching { ProcessBuilder(*cmd).inheritIO().start() }
+        return runCatching { ProcessBuilder(*cmd).inheritIO().start() }.isSuccess
     }
 
     /**

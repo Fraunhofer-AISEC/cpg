@@ -38,13 +38,11 @@ import kotlinx.coroutines.runBlocking
  * `codyze repl` — start an interactive Kotlin REPL with semantic completion against the analyzed
  * CPG.
  *
- * Two ways to load a project:
- * * positional `<source-dir>` (with optional `--include`, `--top-level`, `--concepts`) for an
- *   ad-hoc analysis;
- * * `--project <dir>` to load a saved Codyze project directory (with a `codyze.yaml` or similar).
+ * Takes an optional positional `<source-dir>` (with optional `--include`, `--top-level`,
+ * `--concepts`) for an ad-hoc analysis.
  *
- * If neither is given, the REPL starts empty and the user can `:reload <path>` to analyze on
- * demand.
+ * If no source directory is given, the REPL starts empty and the user can `:reload <path>` to
+ * analyze on demand.
  */
 class ReplCommand : CliktCommand(name = "repl") {
 
@@ -67,15 +65,17 @@ class ReplCommand : CliktCommand(name = "repl") {
         System.out.flush()
 
         val consoleService = ConsoleService()
-        if (sourceDir != null) {
-            val request =
+        val initialRequest =
+            sourceDir?.let {
                 AnalyzeRequestJSON(
-                    sourceDir = sourceDir!!,
+                    sourceDir = it,
                     includeDir = includeDir?.toString(),
                     topLevel = topLevel?.toString(),
                     conceptsFile = conceptsFile?.toString(),
                 )
-            runBlocking { consoleService.analyze(request) }
+            }
+        if (initialRequest != null) {
+            runBlocking { consoleService.analyze(initialRequest) }
         }
 
         val replService = ReplService(consoleService)
@@ -89,9 +89,13 @@ class ReplCommand : CliktCommand(name = "repl") {
                 replService.eval("0")
             } catch (_: Throwable) {
                 // pre-warm is best-effort; failures shouldn't block REPL startup
+            } finally {
+                // The warm-up snippet is a value-producing expression, so it would otherwise set
+                // lastValue to 0 before the user has run anything.
+                replService.clearLastValue()
             }
         }
-        ReplLoop(consoleService, replService).run()
+        ReplLoop(consoleService, replService, initialRequest).run()
     }
 }
 

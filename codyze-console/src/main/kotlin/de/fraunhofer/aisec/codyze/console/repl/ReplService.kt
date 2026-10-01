@@ -109,6 +109,11 @@ class ReplService(private val consoleService: ConsoleService) {
     var lastValue: Any? = null
         private set
 
+    /** Clears [lastValue] without affecting compiler/evaluator state — used after pre-warming. */
+    fun clearLastValue() {
+        lastValue = null
+    }
+
     val translationResult: TranslationResult?
         get() = consoleService.getTranslationResult()?.analysisResult?.translationResult
 
@@ -130,6 +135,12 @@ class ReplService(private val consoleService: ConsoleService) {
 
     /** Compiles + evaluates one line of REPL input and returns a rendered result. */
     fun eval(line: String): ReplEvalResult {
+        if (translationResult == null) {
+            return ReplEvalResult.RuntimeError(
+                "No analysis result available. Run analysis first or use :reload."
+            )
+        }
+
         val sourceName = "Line_${lineCounter.incrementAndGet()}.cpg.query.kts"
         val source: SourceCode = line.toScriptSource(sourceName)
 
@@ -185,7 +196,7 @@ class ReplService(private val consoleService: ConsoleService) {
             .ifEmpty { "Unknown error" }
 }
 
-/** Opens the DFG of a node as a mermaid graph in VS Code. */
+/** Opens the DFG of a node as a mermaid graph in VS Code (or the OS default opener otherwise). */
 fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node): String {
     val mermaidWithWrapper = node.printDFG()
     // Remove the markdown code fence wrapper
@@ -197,7 +208,9 @@ fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node): String {
         )
     file.writeText(mermaid)
 
-    val target = "vscode://file${file.absolutePath}"
-    runCatching { ProcessBuilder("open", target).inheritIO().start() }
-    return "Opened DFG in VS Code: ${file.name}"
+    return if (FlowExporter.openInOs(file)) {
+        "Opened DFG: ${file.name}"
+    } else {
+        "Wrote DFG to ${file.absolutePath}, but could not launch a viewer automatically."
+    }
 }

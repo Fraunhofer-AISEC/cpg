@@ -46,11 +46,11 @@ class KotlinReplParser : Parser {
 
     override fun parse(line: String, cursor: Int, context: Parser.ParseContext): ParsedLine {
         if (context == Parser.ParseContext.ACCEPT_LINE) {
-            val balance = bracketBalance(line)
-            if (balance > 0) {
+            val scan = scan(line)
+            if (scan.bracketDepth > 0) {
                 throw EOFError(-1, cursor, "Unclosed bracket")
             }
-            if (insideOpenString(line)) {
+            if (scan.unterminatedStringOrChar) {
                 throw EOFError(-1, cursor, "Unclosed string")
             }
         }
@@ -112,87 +112,109 @@ class KotlinReplParser : Parser {
             c == '*' ||
             c == '/'
 
-    /**
-     * Returns the bracket depth at end of input. Comments and string literals are skipped so `"{"`,
-     * `/* { */` and `// {` don't push the depth up.
-     */
-    private fun bracketBalance(s: String): Int {
-        var depth = 0
-        var i = 0
-        while (i < s.length) {
-            when (val c = s[i]) {
-                '/' ->
-                    when {
-                        i + 1 < s.length && s[i + 1] == '/' -> {
-                            i = s.indexOf('\n', i).let { if (it < 0) s.length else it }
-                            continue
-                        }
-                        i + 1 < s.length && s[i + 1] == '*' -> {
-                            val end = s.indexOf("*/", i + 2)
-                            i = if (end < 0) s.length else end + 2
-                            continue
-                        }
-                    }
-                '"' -> {
-                    if (i + 2 < s.length && s[i + 1] == '"' && s[i + 2] == '"') {
-                        val end = s.indexOf("\"\"\"", i + 3)
-                        i = if (end < 0) s.length else end + 3
-                        continue
-                    }
-                    val end = findStringEnd(s, i + 1)
-                    i = if (end < 0) s.length else end + 1
-                    continue
-                }
-                '\'' -> {
-                    val end = findStringEnd(s, i + 1)
-                    i = if (end < 0) s.length else end + 1
-                    continue
-                }
-                '(',
-                '[',
-                '{' -> depth++
-                ')',
-                ']',
-                '}' -> depth--
-                else -> Unit
-            }
-            i++
-        }
-        return depth
+    /** Result of [scan]: bracket depth at end of input, and whether a string/char was left open. */
+    private data class ScanResult(val bracketDepth: Int, val unterminatedStringOrChar: Boolean)
+
+    /** Lexical states tracked by [scan]. */
+    private enum class ScanMode {
+        NORMAL,
+        LINE_COMMENT,
+        BLOCK_COMMENT,
+        STRING,
+        TRIPLE_STRING,
+        CHAR,
     }
 
-    private fun insideOpenString(s: String): Boolean {
-        // Quick heuristic: count unescaped " chars. Odd → unterminated.
+    /**
+     * Single lexical pass over [s] that tracks comments, raw/triple-quoted strings, regular
+     * strings, and character literals so that none of them are mistaken for bracket or quote
+     * syntax. Unlike scanning brackets and quotes independently, this guarantees both checks agree
+     * on what's actually inside a string/comment — e.g. `'"'` (a char literal containing a double
+     * quote) or `val x = 1 // "` (a comment containing a quote) no longer confuse the other scan.
+     */
+    private fun scan(s: String): ScanResult {
+        var depth = 0
+        var mode = ScanMode.NORMAL
         var i = 0
-        var open = false
         while (i < s.length) {
             val c = s[i]
-            if (c == '"') {
-                if (i + 2 < s.length && s[i + 1] == '"' && s[i + 2] == '"') {
-                    val end = s.indexOf("\"\"\"", i + 3)
-                    if (end < 0) return true
-                    i = end + 3
-                    continue
+            when (mode) {
+                ScanMode.NORMAL ->
+                    when {
+                        c == '/' && i + 1 < s.length && s[i + 1] == '/' -> {
+                            mode = ScanMode.LINE_COMMENT
+                            i += 2
+                        }
+                        c == '/' && i + 1 < s.length && s[i + 1] == '*' -> {
+                            mode = ScanMode.BLOCK_COMMENT
+                            i += 2
+                        }
+                        c == '"' && s.startsWith("\"\"\"", i) -> {
+                            mode = ScanMode.TRIPLE_STRING
+                            i += 3
+                        }
+                        c == '"' -> {
+                            mode = ScanMode.STRING
+                            i++
+                        }
+                        c == '\'' -> {
+                            mode = ScanMode.CHAR
+                            i++
+                        }
+                        c == '(' || c == '[' || c == '{' -> {
+                            depth++
+                            i++
+                        }
+                        c == ')' || c == ']' || c == '}' -> {
+                            depth--
+                            i++
+                        }
+                        else -> i++
+                    }
+                ScanMode.LINE_COMMENT -> {
+                    val nl = s.indexOf('\n', i)
+                    i = if (nl < 0) s.length else nl + 1
+                    mode = ScanMode.NORMAL
                 }
-                open = !open
-            } else if (c == '\\' && open) {
-                i++ // skip escaped char
+                ScanMode.BLOCK_COMMENT -> {
+                    val end = s.indexOf("*/", i)
+                    if (end < 0) {
+                        i = s.length
+                    } else {
+                        i = end + 2
+                        mode = ScanMode.NORMAL
+                    }
+                }
+                ScanMode.STRING ->
+                    when (c) {
+                        '\\' -> i += 2
+                        '"' -> {
+                            mode = ScanMode.NORMAL
+                            i++
+                        }
+                        else -> i++
+                    }
+                ScanMode.TRIPLE_STRING -> {
+                    if (s.startsWith("\"\"\"", i)) {
+                        mode = ScanMode.NORMAL
+                        i += 3
+                    } else {
+                        i++
+                    }
+                }
+                ScanMode.CHAR ->
+                    when (c) {
+                        '\\' -> i += 2
+                        '\'' -> {
+                            mode = ScanMode.NORMAL
+                            i++
+                        }
+                        else -> i++
+                    }
             }
-            i++
         }
-        return open
-    }
-
-    private fun findStringEnd(s: String, from: Int): Int {
-        var i = from
-        while (i < s.length) {
-            when (s[i]) {
-                '\\' -> i++ // skip escaped char
-                '"',
-                '\'' -> return i
-            }
-            i++
-        }
-        return -1
+        val unterminated =
+            mode == ScanMode.STRING || mode == ScanMode.TRIPLE_STRING || mode == ScanMode.CHAR
+        return ScanResult(depth, unterminated)
     }
 }
