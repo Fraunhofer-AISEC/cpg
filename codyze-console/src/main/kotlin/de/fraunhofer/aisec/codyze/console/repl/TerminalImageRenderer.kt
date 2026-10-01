@@ -79,6 +79,17 @@ object ItermBadge {
     }
 }
 
+/**
+ * Sets the terminal's window/tab title via the `OSC 2` escape sequence — the same universal,
+ * decades-old mechanism (supported by virtually every terminal emulator, not just iTerm2/Kitty)
+ * that shells and tools like Claude Code's own CLI already use to show the current task in the tab
+ * bar. Unlike [ItermBadge] (which needs a non-empty Badge template configured in the iTerm2 profile
+ * to render at all) this has no prerequisite — it just works.
+ */
+object TerminalTitle {
+    fun set(text: String): String = "\u001B]2;$text\u0007"
+}
+
 /** Outcome of [MermaidCli.renderToPng]. */
 sealed class MermaidRenderResult {
     data class Success(val file: File) : MermaidRenderResult()

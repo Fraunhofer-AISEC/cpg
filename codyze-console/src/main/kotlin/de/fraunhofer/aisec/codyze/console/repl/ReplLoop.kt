@@ -94,15 +94,19 @@ class ReplLoop(
                 .build()
         installDotCompleteWidget(reader)
 
-        // Badge is iTerm2-proprietary (no Kitty/Ghostty equivalent), so only touch it once we know
-        // we're actually talking to iTerm2/WezTerm.
+        // The tab title (OSC 2) is a universal, decades-old mechanism nearly every terminal
+        // supports — set unconditionally. The iTerm2 badge needs a non-empty Badge template
+        // configured in the user's profile to actually render, so it's a bonus on top, not relied
+        // on alone.
         val supportsBadge = TerminalImageSupport.detect() == ImageProtocol.ITERM2
-        fun setBadge(text: String) {
-            if (!supportsBadge) return
-            terminal.writer().print(ItermBadge.set(text))
+        val isRealTerminal = terminal.type != org.jline.terminal.Terminal.TYPE_DUMB
+        fun setStatus(text: String) {
+            if (!isRealTerminal) return
+            terminal.writer().print(TerminalTitle.set(text))
+            if (supportsBadge) terminal.writer().print(ItermBadge.set(text))
             terminal.writer().flush()
         }
-        setBadge("codyze")
+        setStatus("codyze")
 
         printReadyLine(terminal.writer())
         terminal.writer().flush()
@@ -129,9 +133,9 @@ class ReplLoop(
             }
 
             sessionLines.add(line!!)
-            setBadge("codyze ⏳")
+            setStatus("codyze ⏳")
             val result = replService.eval(line)
-            setBadge("codyze")
+            setStatus("codyze")
             when (result) {
                 is ReplEvalResult.Value -> terminal.writer().println(result.rendered)
                 is ReplEvalResult.UnitResult -> Unit
@@ -142,9 +146,14 @@ class ReplLoop(
             }
             terminal.writer().flush()
         }
-        // Badge is a property of the terminal session, not this process — clear it so it doesn't
-        // linger in the shell prompt after the REPL exits.
-        setBadge("")
+        // The badge is a property of the terminal session, not this process — clear it so it
+        // doesn't linger after the REPL exits. The title is left alone: shells with their own
+        // title-setting prompt hooks (as this one evidently has) overwrite it on the next prompt
+        // anyway, so forcing it blank here would just flash an empty tab title first.
+        if (isRealTerminal && supportsBadge) {
+            terminal.writer().print(ItermBadge.set(""))
+            terminal.writer().flush()
+        }
         terminal.close()
     }
 
