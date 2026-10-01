@@ -34,9 +34,12 @@ semantic (TAB) completion - against an already-analyzed `TranslationResult`. It'
 poke at the CPG query API without writing a whole script file.
 
 ```bash
-./gradlew :codyze:run --args="repl <source-dir>"
+# codyze-console is an optional module (see Getting Started above) - pass the flags directly if
+# you haven't already set them in gradle.properties:
+./gradlew -PenableCodyzeConsole=true -PenableAIModule=true :codyze:run --args="repl <source-dir>"
 
-# or, once built:
+# or, build once and run the installed binary directly (faster startup, a real TTY for JLine):
+./gradlew -PenableCodyzeConsole=true -PenableAIModule=true :codyze:installDist
 ./codyze/build/install/codyze/bin/codyze repl <source-dir>
 ```
 
