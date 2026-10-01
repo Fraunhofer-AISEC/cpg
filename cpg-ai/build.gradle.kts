@@ -95,6 +95,7 @@ dependencies {
     // Test dependencies
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation(libs.koog.agents.features.memory)
+    testImplementation(testFixtures(project(":cpg-core")))
     // We depend on the C/C++ frontend for testing project analysis with a compilation database,
     // but the frontend is only available if enabled. The corresponding tests are skipped if it is
     // not available.
