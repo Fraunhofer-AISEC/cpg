@@ -305,7 +305,14 @@ context(_: ContextProvider)
 fun TranslationUnit.toJSON(): TranslationUnitJSON {
     val localName =
         component?.topLevel()?.let {
-            this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)
+            // uri.toPath() requires an absolute URI with a scheme (e.g. "file:///...") and throws
+            // IllegalArgumentException("Missing scheme") otherwise - some frontends (e.g. the INI
+            // frontend) populate a relative, scheme-less URI. Fall back to the unqualified name
+            // below rather than crashing the whole analysis over a display-name nicety.
+            runCatching {
+                    this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)
+                }
+                .getOrNull()
         }
 
     return TranslationUnitJSON(
