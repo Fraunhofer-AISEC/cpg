@@ -61,12 +61,16 @@ object TerminalImageSupport {
 }
 
 /**
- * Sets the terminal's window/tab title via the `OSC 2` escape sequence — a universal, decades-old
- * mechanism supported by virtually every terminal emulator (not just iTerm2/Kitty), with no profile
- * configuration prerequisite. Used by [ReplLoop] to show the REPL's live idle/evaluating state.
+ * Sets the terminal's window title and icon/tab name via the `OSC 0` escape sequence — a universal,
+ * decades-old mechanism supported by virtually every terminal emulator (not just iTerm2/Kitty),
+ * with no profile configuration prerequisite. Used by [ReplLoop] to show the REPL's live
+ * idle/evaluating state.
+ *
+ * `OSC 2` alone only sets the *window* title, not the tab label — terminals treat "icon name" (set
+ * by `OSC 1`, or together with the window title by `OSC 0`) as what's shown on the tab itself.
  */
 object TerminalTitle {
-    fun set(text: String): String = "\u001B]2;$text\u0007"
+    fun set(text: String): String = "\u001B]0;$text\u0007"
 }
 
 /**
