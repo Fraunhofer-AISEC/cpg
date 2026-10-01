@@ -31,7 +31,13 @@ plugins {
     id("cpg.frontend-dependency-conventions")
 }
 
-application { mainClass.set("de.fraunhofer.aisec.codyze.ApplicationKt") }
+application {
+    mainClass.set("de.fraunhofer.aisec.codyze.ApplicationKt")
+    // Suppress a JVM warning from a transitive dep: JNA emits a restricted-method
+    // warning when loading native libs, which is out of our control. Pin the flag
+    // here so the generated start scripts (codyze, codyze.bat) inherit it.
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
+}
 
 mavenPublishing {
     pom {
