@@ -40,6 +40,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -117,5 +120,28 @@ class ConceptsSchemaFileTest {
 
         assertEquals("ConceptA", loadPersistedConceptsAndOperations(a).single().name)
         assertEquals("ConceptB", loadPersistedConceptsAndOperations(b).single().name)
+    }
+
+    @Test
+    fun readersNeverSeeAnEmptyOrPartialSchemaFileWhileItIsRewritten(@TempDir dir: Path) {
+        val file = dir.resolve("concepts.yaml").toFile()
+        persistConceptSchemas(listOf(schema("Seed")), file)
+        val stop = AtomicBoolean(false)
+        val bad = AtomicInteger()
+        val reader = thread {
+            while (!stop.get()) {
+                try {
+                    if (loadPersistedConceptsAndOperations(file).isEmpty()) bad.incrementAndGet()
+                } catch (_: Exception) {
+                    bad.incrementAndGet()
+                }
+            }
+        }
+
+        repeat(300) { persistConceptSchemas(listOf(schema("Concept$it")), file) }
+        stop.set(true)
+        reader.join()
+
+        assertEquals(0, bad.get(), "a reader saw an empty or unparsable concepts file")
     }
 }

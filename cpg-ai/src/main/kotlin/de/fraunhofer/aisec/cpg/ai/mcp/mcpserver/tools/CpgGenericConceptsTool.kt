@@ -43,6 +43,8 @@ import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.json.Json
 
@@ -494,11 +496,23 @@ internal fun persistConceptSchemas(
                     updated + schema
                 }
         }
-        mapper.writeValue(file, updated)
+        writeAtomically(file) { mapper.writeValue(it, updated) }
         // Update the cache directly instead of relying on the new last-modified timestamp, since
         // filesystem mtime resolution (often 1 second) could otherwise make a write within the
         // same tick invisible to loadPersistedConceptsAndOperations()'s staleness check.
         persistedSchemasCaches[file.cacheKey()] =
             PersistedSchemasCache(file.lastModified(), updated)
     }
+}
+
+/**
+ * Writes [file] by filling a sibling temp file and renaming it over [file]. Writing in place would
+ * truncate [file] first, leaving a window where [loadPersistedConceptsAndOperations], which takes
+ * no lock, sees an empty or half-written file - an empty read makes
+ * `cpg_list_llm_concepts_operations` report that no concept exists.
+ */
+private fun writeAtomically(file: File, write: (File) -> Unit) {
+    val temp = file.resolveSibling("${file.name}.tmp")
+    write(temp)
+    Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE)
 }
