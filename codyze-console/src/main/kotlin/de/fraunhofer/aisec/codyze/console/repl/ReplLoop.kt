@@ -256,7 +256,8 @@ class ReplLoop(
             |  :save <file>         write all evaluated lines to <file> as a .cpg.query.kts script
             |  :flow [<expr>]       export the last (or freshly evaluated) QueryTree as SARIF
             |                       and open it (VS Code SARIF Viewer renders the path)
-            |  :dfg [<expr>]       open the DFG of a Node as mermaid in VS Code
+            |  :dfg [<expr>]       show the DFG of a Node as mermaid — inline if the terminal
+            |                       supports it and mermaid-cli is installed, else in VS Code
             |
             |Bindings:
             |  result               the current TranslationResult (always available)
@@ -369,7 +370,8 @@ class ReplLoop(
     }
 
     /**
-     * `:dfg [<expression>]` — opens the DFG of a node as a mermaid graph in VS Code.
+     * `:dfg [<expression>]` — shows the DFG of a node as a mermaid graph. See [openDFG] for how it
+     * picks between rendering inline and opening externally.
      *
      * No argument: uses `replService.lastValue`. With argument: evaluates the expression first.
      */
@@ -403,7 +405,7 @@ class ReplLoop(
             return
         }
 
-        val result = openDFG(node)
+        val result = openDFG(node, replService.theme)
         out.println(result)
     }
 

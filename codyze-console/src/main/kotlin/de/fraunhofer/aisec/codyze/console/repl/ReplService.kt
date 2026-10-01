@@ -196,11 +196,30 @@ class ReplService(private val consoleService: ConsoleService) {
             .ifEmpty { "Unknown error" }
 }
 
-/** Opens the DFG of a node as a mermaid graph in VS Code (or the OS default opener otherwise). */
-fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node): String {
+/**
+ * Opens the DFG of a node as a mermaid graph.
+ *
+ * If the host terminal speaks an inline-image protocol (iTerm2, Kitty, Ghostty, WezTerm — see
+ * [TerminalImageSupport]) and `mmdc` (mermaid-cli) is installed, renders the graph to a PNG and
+ * prints it directly into the terminal. Otherwise falls back to writing a `.mermaid` file and
+ * opening it externally (VS Code, or the OS default handler).
+ */
+fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node, theme: Theme = Theme.DARK): String {
     val mermaidWithWrapper = node.printDFG()
     // Remove the markdown code fence wrapper
     val mermaid = mermaidWithWrapper.removeSurrounding("```mermaid\n", "\n```")
+
+    val protocol = TerminalImageSupport.detect()
+    if (protocol != null && MermaidCli.isAvailable) {
+        val png = MermaidCli.renderToPng(mermaid, theme)
+        if (png != null) {
+            print(TerminalImageEncoder.encode(png, protocol))
+            System.out.flush()
+            png.delete()
+            return "Rendered DFG inline via mermaid-cli."
+        }
+    }
+
     val file =
         File(
             System.getProperty("java.io.tmpdir"),
