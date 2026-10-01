@@ -366,7 +366,18 @@ class ReplLoop(
         out.println("Analyzing $finalSourceDir …")
         out.print(TerminalTitle.set("codyze [Analyzing ${File(finalSourceDir).name}]"))
         out.flush()
-        val elapsedMs = measureTimeMillis { runBlocking { consoleService.analyze(request) } }
+        val elapsedMs =
+            try {
+                measureTimeMillis { runBlocking { consoleService.analyze(request) } }
+            } catch (e: Exception) {
+                // :reload takes interactive user input (a path, --concepts file) that can easily
+                // be wrong - report the failure and keep the existing session/result usable
+                // instead of taking down the whole REPL over a typo.
+                out.println("Reload failed: ${e.message ?: e::class.simpleName}")
+                out.print(TerminalTitle.set(statusTitle(busy = false)))
+                out.flush()
+                return
+            }
         lastRequest = request
         // The new analysis invalidates any Node/QueryTree captured from the previous one - and,
         // since the Kotlin REPL evaluator chains each snippet's classloader to its predecessors,
