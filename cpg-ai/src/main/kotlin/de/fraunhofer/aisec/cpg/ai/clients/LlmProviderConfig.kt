@@ -48,6 +48,7 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.seconds
 import org.slf4j.LoggerFactory
 
@@ -106,6 +107,13 @@ private fun resolveContextLength(config: ClientConfig, liveDetected: Long?): Lon
 }
 
 class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
+    /**
+     * Context lengths already reported by a server, per client and model: [clientFor] runs on every
+     * chat call, but a model's window does not change, so asking again would only add a request to
+     * each call. Only successful lookups are kept, so a server that was briefly unreachable is
+     * asked again next time.
+     */
+    private val detectedContextLengths = ConcurrentHashMap<Pair<String, String>, Long>()
 
     /**
      * Resolves the [ClientProvider] name with the chosen model to a [ChatLlm] (a Koog prompt
@@ -284,6 +292,10 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     suspend fun contextLengthFor(clientName: String, model: String): Long? {
         val config = clients.firstOrNull { it.name == clientName } ?: return null
         if (config.provider != ClientProvider.OPENAI_COMPATIBLE) return null
+        val key = clientName to model
+        detectedContextLengths[key]?.let {
+            return it
+        }
         return try {
             val response =
                 httpClient.get("${config.baseUrl}/v1/models") {
@@ -291,7 +303,12 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                     config.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
                 }
             if (!response.status.isSuccess()) return null
-            response.body<OpenAiModelsResponse>().data.firstOrNull { it.id == model }?.maxModelLen
+            response
+                .body<OpenAiModelsResponse>()
+                .data
+                .firstOrNull { it.id == model }
+                ?.maxModelLen
+                ?.also { detectedContextLengths[key] = it }
         } catch (e: Exception) {
             log.debug("Could not fetch context length for {}/{}: {}", clientName, model, e.message)
             null
