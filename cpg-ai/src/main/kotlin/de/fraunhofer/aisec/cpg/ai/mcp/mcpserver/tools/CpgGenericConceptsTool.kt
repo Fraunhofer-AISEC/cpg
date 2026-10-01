@@ -46,6 +46,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 private const val fileName = "concepts.yaml"
@@ -55,22 +56,43 @@ private const val fileName = "concepts.yaml"
  * initially to get an overview of the available concepts and operations.
  */
 fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
-    val jsonMapper = ObjectMapper().registerKotlinModule()
-    fun LLMConceptDescription.toJson(): String = jsonMapper.writeValueAsString(this)
     val toolDescription =
         """
         This tool lists all currently known concepts and operations. It should be queried initially to get an overview of the available concepts and operations.
-        
+        Results are capped at $DEFAULT_LIST_LIMIT concepts by default; use the limit/offset parameters to paginate through more.
+
         Example prompts:
         - "What concepts and operations are available?"
         - "List all known concepts and operations"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_llm_concepts_operations", description = toolDescription) { _ ->
-        CallToolResult(
-            content = loadPersistedConceptsAndOperations(file).map { TextContent(it.toJson()) }
-        )
+    this.addTool(
+        name = "cpg_list_llm_concepts_operations",
+        description = toolDescription,
+        inputSchema = CpgListPayload::class.toSchema(),
+    ) { request ->
+        val payload =
+            try {
+                request.arguments.toPayload<CpgListPayload>()
+            } catch (e: SerializationException) {
+                return@addTool CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Invalid arguments for cpg_list_llm_concepts_operations: ${e.message}"
+                            )
+                        )
+                )
+            }
+        CallToolResult(content = listConcepts(file, payload))
     }
+}
+
+/** One JSON entry per persisted concept schema in [file], paginated according to [payload]. */
+internal fun listConcepts(file: File, payload: CpgListPayload): List<TextContent> {
+    val jsonMapper = ObjectMapper().registerKotlinModule()
+    val texts = loadPersistedConceptsAndOperations(file).map { jsonMapper.writeValueAsString(it) }
+    return paginatedTextContent(texts, payload)
 }
 
 /**

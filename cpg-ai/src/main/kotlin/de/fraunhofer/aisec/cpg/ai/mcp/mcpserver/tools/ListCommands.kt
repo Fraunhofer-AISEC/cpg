@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.graph.*
@@ -128,6 +128,7 @@ fun Server.listCallsTo() {
         This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
         Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
         the full node details (including its code) for a specific call once picked.
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
         - "Show me all calls to the function 'encrypt'"
@@ -135,16 +136,23 @@ fun Server.listCallsTo() {
         """
             .trimIndent()
 
-    this.addTool<CpgNamePayload>(name = "cpg_list_calls_to", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgNamePayload ->
-        CallToolResult(
-            content =
-                result.calls(payload.name).map {
-                    TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
-                }
-        )
+    this.addTool<CpgListCallsToPayload>(
+        name = "cpg_list_calls_to",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListCallsToPayload ->
+        listCallsTo(result, payload)
     }
+}
+
+internal fun listCallsTo(
+    result: TranslationResult,
+    payload: CpgListCallsToPayload,
+): CallToolResult {
+    val texts =
+        result.calls(payload.name).map { Json.encodeToString(it.toInfo(includeCode = false)) }
+    return CallToolResult(
+        content = paginatedTextContent(texts, CpgListPayload(payload.limit, payload.offset))
+    )
 }
 
 fun Server.getAllArgs() {

@@ -62,7 +62,8 @@ For OpenWebUI, see [OpenWebUI.md](src/main/kotlin/de/fraunhofer/aisec/cpg/ai/mcp
    analyzed graph.
 2. **Explore.** `cpg_list_functions`, `cpg_list_records`, `cpg_list_calls` and
    `cpg_list_concepts_and_operations` return compact summaries, 20 per page by default - use
-   `limit`/`offset` for more. `cpg_get_functions_by_name` is cheaper than listing when you already
+   `limit`/`offset` for more (as do `cpg_list_calls_to`, `cpg_dfg_backward` and
+   `cpg_list_llm_concepts_operations`). `cpg_get_functions_by_name` is cheaper than listing when you already
    know the names. `cpg_get_node` returns the full details (including code) of one node id.
 3. **Tag.** Attach concepts ("what something *is*") and operations ("what something *does*") to
    nodes, see [Concepts and operations](#concepts-and-operations).
@@ -88,7 +89,7 @@ tool changes shared server state (see [Concurrency](#concurrency)).
 | `cpg_list_functions` | Minimal `nodeId` + signature index of all functions. Paginated. | - |
 | `cpg_list_records` | Classes/structs as compact summaries. Paginated. | - |
 | `cpg_list_calls` | All calls as compact summaries. Paginated. | - |
-| `cpg_list_calls_to` | Calls to the function/method with the given `name`. Not paginated. | - |
+| `cpg_list_calls_to` | Calls to the function/method with the given `name`. Paginated. | - |
 | `cpg_list_call_args` | Arguments of the call with the given `id`. | - |
 | `cpg_list_call_arg_by_name_or_index` | One argument of a call, by `argumentName` or `index`. | - |
 | `cpg_get_node` | Complete information (including code) for one node `id`. | - |
@@ -96,12 +97,12 @@ tool changes shared server state (see [Concurrency](#concurrency)).
 | `cpg_list_concepts_and_operations` | Concepts/operations already applied in the graph. Paginated. | - |
 | `cpg_list_available_concepts` / `cpg_list_available_operations` | The built-in concept/operation catalog (FQNs). | - |
 | `cpg_apply_concepts` | Apply built-in concepts/operations (by FQN) to nodes. | graph |
-| `cpg_list_llm_concepts_operations` | The persisted, LLM-defined concept schemas (`concepts.yaml`). | - |
+| `cpg_list_llm_concepts_operations` | The persisted, LLM-defined concept schemas (`concepts.yaml`). Paginated. | - |
 | `cpg_add_or_update_llm_concept` | Declare/replace an LLM-defined concept schema (matched by name). | `concepts.yaml` |
 | `cpg_suggest_llm_concepts_and_operations` | Validate a concept proposal's node ids without applying it. | - |
 | `cpg_add_llm_concept_and_operations` | Apply LLM-defined concepts and their operations to nodes; also records their schemas. | graph, `concepts.yaml` |
 | `cpg_dataflow` | Forward, intra-procedural, may-flow query between two applied concepts (`from`, `to`). | - |
-| `cpg_dfg_backward` | All backward DFG paths from a node. | - |
+| `cpg_dfg_backward` | The nodes on all backward DFG paths from a node, as one JSON array. Paginated. | - |
 | `cpg_get_last_write` | One-hop reaching writes of a node. | - |
 
 Prompt: `suggest_concepts` (optional argument `description` to focus the analysis) guides a model

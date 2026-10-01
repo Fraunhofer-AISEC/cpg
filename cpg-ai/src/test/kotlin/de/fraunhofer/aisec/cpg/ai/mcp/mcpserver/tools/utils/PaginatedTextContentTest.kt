@@ -80,4 +80,20 @@ class PaginatedTextContentTest {
         assertEquals("a", result.first().text, "limit clamped up to 1, offset up to 0")
         assertTrue(result.last().text.contains("offset=1"))
     }
+
+    @Test
+    fun genericPaginateDefaultsToTheFirstPageAndSaysWhereToContinue() {
+        val page = paginate((1..30).toList(), limit = null, offset = null)
+
+        assertEquals((1..20).toList(), page.items)
+        assertTrue(page.summary.orEmpty().contains("offset=20"), page.summary)
+    }
+
+    @Test
+    fun genericPaginateHasNoSummaryOnTheLastPage() {
+        val page = paginate((1..30).toList(), limit = 20, offset = 20)
+
+        assertEquals((21..30).toList(), page.items)
+        assertEquals(null, page.summary)
+    }
 }

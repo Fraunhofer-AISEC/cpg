@@ -243,31 +243,38 @@ fun Call.toInfo(includeCode: Boolean = true) = CallInfo(this, includeCode)
 /** The default maximum number of items returned by paginated list tools. */
 const val DEFAULT_LIST_LIMIT = 20
 
+/** One page of [items], and - if it does not reach the end - a note on how to fetch the next. */
+class Page<T>(val items: List<T>, val summary: String?)
+
 /**
- * Paginates [texts] according to the `limit`/`offset` in [payload] and wraps each item of the
- * resulting page in a [TextContent]. If the page does not reach the end of [texts], an additional
- * summary [TextContent] is appended, noting how many items were shown and which offset to use next
- * to see more - so a caller relying only on the tool's textual result (not a separate total-count
- * field) still knows there's more to fetch.
+ * Takes the page of [items] selected by [limit]/[offset] (defaulting to [DEFAULT_LIST_LIMIT] items
+ * from the start, clamped to at least one item and a non-negative offset). If the page does not
+ * reach the end, [Page.summary] says how many items were shown and which offset to use next, so a
+ * caller that only sees the tool's textual result still knows there is more to fetch.
+ */
+fun <T> paginate(items: List<T>, limit: Int?, offset: Int?): Page<T> {
+    val start = (offset ?: 0).coerceAtLeast(0)
+    val size = (limit ?: DEFAULT_LIST_LIMIT).coerceAtLeast(1)
+
+    val page = items.drop(start).take(size)
+    val end = start + page.size
+    val summary =
+        if (end < items.size) {
+            "Showing ${page.size} of ${items.size} items (offset=$start, limit=$size). " +
+                "To see more, call this tool again with offset=$end."
+        } else {
+            null
+        }
+    return Page(page, summary)
+}
+
+/**
+ * Paginates [texts] according to the `limit`/`offset` in [payload] (see [paginate]) and wraps each
+ * item of the resulting page in a [TextContent], followed by the summary entry if there is more.
  */
 fun paginatedTextContent(texts: List<String>, payload: CpgListPayload): List<TextContent> {
-    val offset = (payload.offset ?: 0).coerceAtLeast(0)
-    val limit = (payload.limit ?: DEFAULT_LIST_LIMIT).coerceAtLeast(1)
-
-    val page = texts.drop(offset).take(limit)
-    val content = page.map { TextContent(it) }.toMutableList()
-
-    val end = offset + page.size
-    if (end < texts.size) {
-        content.add(
-            TextContent(
-                "Showing ${page.size} of ${texts.size} items (offset=$offset, limit=$limit). " +
-                    "To see more, call this tool again with offset=$end."
-            )
-        )
-    }
-
-    return content
+    val page = paginate(texts, payload.limit, payload.offset)
+    return page.items.map { TextContent(it) } + listOfNotNull(page.summary?.let { TextContent(it) })
 }
 
 /** Returns all available concrete (non-abstract) concept classes. */

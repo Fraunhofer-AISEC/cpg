@@ -45,10 +45,6 @@ data class CpgAnalyzePayload(
 )
 
 @Serializable
-@Description("The payload to identify a node by its name.")
-data class CpgNamePayload(@Description("The local name of the node to consider.") val name: String)
-
-@Serializable
 @Description("The payload to identify a node by its id.")
 data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
 
@@ -75,6 +71,29 @@ data class CpgCallArgumentByNameOrIndexPayload(
         "The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here."
     )
     val index: Int? = null,
+)
+
+/** Shared parameter descriptions of the paginated tools' `limit`/`offset`. */
+private const val LIMIT_DESCRIPTION =
+    "Maximum number of items to return. Defaults to 20 if not specified."
+private const val OFFSET_DESCRIPTION =
+    "Number of items to skip before returning results, for pagination. Defaults to 0."
+
+@Serializable
+@Description("The payload to list the calls to a function, paginated.")
+data class CpgListCallsToPayload(
+    @Description("The local name of the function or method whose calls should be listed.")
+    val name: String,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+@Serializable
+@Description("The payload to trace a node's data back to its sources, paginated.")
+data class CpgDfgBackwardPayload(
+    @Description("The id of the node to start from.") val id: String,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
 )
 
 @Serializable
