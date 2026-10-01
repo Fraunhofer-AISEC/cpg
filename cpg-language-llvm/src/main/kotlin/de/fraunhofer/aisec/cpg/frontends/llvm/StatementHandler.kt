@@ -512,6 +512,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val input = frontend.getOperandValueAtIndex(instr, 0)
         val ref = newPointerDereference(input.name, rawNode = instr)
         ref.input = input
+        // A load reads a value of an explicitly specified type out of a pointer. Under opaque
+        // pointers, the pointer operand's type no longer carries the pointee type (it is just an
+        // untyped "ptr"), so type propagation from the input does not yield the loaded type. We
+        // therefore seed the dereference with the load's explicit result type. This is a no-op for
+        // typed pointers, where the propagated type already matches.
+        ref.type = frontend.typeOf(instr)
 
         return declarationOrNot(ref, instr)
     }
