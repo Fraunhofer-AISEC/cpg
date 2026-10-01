@@ -143,12 +143,19 @@ object MermaidCli {
                 drainThread.join(2_000)
 
                 if (process.exitValue() != 0 || !output.exists() || output.length() == 0L) {
+                    // mmdc (Node/Puppeteer) prints the actual error message first, then a
+                    // "    at ..." stack trace below it — so skip stack frames and the generic
+                    // "Generating ... chart" preamble to find the line that actually explains
+                    // what went wrong, rather than grabbing the last (deepest/least useful) frame.
                     val reason =
                         outputText
                             .lineSequence()
-                            .lastOrNull { it.isNotBlank() }
-                            ?.trim()
-                            ?.ifEmpty { null } ?: "mmdc exited with code ${process.exitValue()}"
+                            .map { it.trim() }
+                            .firstOrNull {
+                                it.isNotBlank() &&
+                                    !it.startsWith("at ") &&
+                                    !it.startsWith("Generating ")
+                            } ?: "mmdc exited with code ${process.exitValue()}"
                     return@runCatching MermaidRenderResult.Failure(reason)
                 }
                 MermaidRenderResult.Success(output)
