@@ -67,7 +67,12 @@ import kotlinx.serialization.json.putJsonObject
  * handler function receives the deserialized input of type [T] and the current [TranslationResult],
  * and must return a [CallToolResult] with the output content. The [description] of the tool is
  * automatically extended with parameter information from the schema, so do NOT add this information
- * to the description yourself
+ * to the description yourself.
+ *
+ * The handler runs under [CpgLock]: shared by default, so read-only tools stay concurrent. Pass
+ * `mutating = true` if it changes the graph (or does a read-modify-write on a file shared with
+ * other tools); it then runs exclusively. Forgetting it on a mutating tool is the one way to get
+ * this wrong, since the default is the cheap one.
  */
 inline fun <reified T> Server.addTool(
     name: String,
@@ -76,6 +81,7 @@ inline fun <reified T> Server.addTool(
     outputSchema: ToolSchema? = null,
     toolAnnotations: ToolAnnotations? = null,
     meta: JsonObject? = null,
+    mutating: Boolean = false,
     noinline handler: (TranslationResult, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
@@ -107,7 +113,7 @@ inline fun <reified T> Server.addTool(
                                 )
                             )
                     )
-            payload.runOnCpg(handler)
+            payload.runOnCpg(handler, mutating)
         } catch (e: Exception) {
             CallToolResult(
                 content =
@@ -290,21 +296,29 @@ fun getAvailableOperations(): List<Class<out Operation>> {
 inline fun <reified T> JsonObject.toObject() =
     lenientJson.decodeFromString<T>(Json.encodeToString(this))
 
+/**
+ * Runs [query] on the current analysis result under [CpgLock] - shared, or exclusive if [mutating].
+ * The result is looked up inside the lock, so a concurrent re-analysis cannot swap the graph out
+ * from under the query.
+ */
 inline fun <reified T> T.runOnCpg(
-    query: BiFunction<TranslationResult, T, CallToolResult>
+    query: BiFunction<TranslationResult, T, CallToolResult>,
+    mutating: Boolean = false,
 ): CallToolResult {
     return try {
-        val result =
-            globalAnalysisResult
-                ?: return CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "No analysis result available. Please analyze your code first using cpg_analyze."
+        CpgLock.withAccess(mutating) {
+            val result =
+                globalAnalysisResult
+                    ?: return@withAccess CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "No analysis result available. Please analyze your code first using cpg_analyze."
+                                )
                             )
-                        )
-                )
-        query.apply(result, this)
+                    )
+            query.apply(result, this)
+        }
     } catch (e: Exception) {
         CallToolResult(
             content =

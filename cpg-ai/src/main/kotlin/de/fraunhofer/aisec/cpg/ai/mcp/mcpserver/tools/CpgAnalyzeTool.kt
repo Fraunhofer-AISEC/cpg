@@ -56,6 +56,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgLock
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
@@ -115,9 +116,15 @@ import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 
-var globalAnalysisResult: TranslationResult? = null
+/**
+ * The graph every tool operates on. Tools read it under [CpgLock], and [runCpgAnalyze] replaces it
+ * under the write lock, so concurrent MCP calls never see it change mid-query. An embedding host
+ * that assigns it directly is not covered by that: do it before starting the server, or inside
+ * `CpgLock.write { }`.
+ */
+@Volatile var globalAnalysisResult: TranslationResult? = null
 
-var ctx: TranslationContext? = null
+@Volatile var ctx: TranslationContext? = null
 
 val toolDescription =
     """
@@ -167,6 +174,15 @@ fun Server.addCpgAnalyzeTool() {
  * [cleanup] is true, we clean up the [TypeManager] memory after analysis.
  */
 fun runCpgAnalyze(
+    payload: CpgAnalyzePayload?,
+    runPasses: Boolean,
+    cleanup: Boolean,
+): CpgAnalysisResult = CpgLock.write { analyzeAndStore(payload, runPasses, cleanup) }
+
+// Holds the write lock for the whole analysis, not just the swap of the result: the previous
+// graph's frontends are cleaned up first (its memory is needed for the new one on large projects),
+// which leaves nothing useful for a reader to see in the meantime.
+private fun analyzeAndStore(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
     cleanup: Boolean,
@@ -418,6 +434,7 @@ val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
  */
 fun Server.addRunPass() {
     this.addTool<CpgRunPassPayload>(
+        mutating = true,
         name = "cpg_run_pass",
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""

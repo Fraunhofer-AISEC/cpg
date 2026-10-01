@@ -105,6 +105,7 @@ fun Server.addCpgApplyConceptsTool() {
     this.addTool<CpgApplyConceptsPayload>(
         name = "cpg_apply_concepts",
         description = toolDescription,
+        mutating = true,
     ) { result: TranslationResult, payload: CpgApplyConceptsPayload ->
         val applied = mutableListOf<String>()
 

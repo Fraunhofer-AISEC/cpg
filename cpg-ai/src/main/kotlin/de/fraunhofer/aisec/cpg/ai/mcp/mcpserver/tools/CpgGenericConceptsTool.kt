@@ -162,6 +162,7 @@ fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
     this.addTool<LLMConceptList>(
         name = "cpg_add_llm_concept_and_operations",
         description = toolDescription,
+        mutating = true,
     ) { result: TranslationResult, payload: LLMConceptList ->
         val response = applyLLMConcepts(result, payload, file)
         CallToolResult(content = listOf(TextContent(Json.encodeToString(response))))
@@ -171,7 +172,8 @@ fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
 /**
  * Applies every concept in [payload] (and its operations) to [result], resolving property schemas
  * (fixed values, description backfill) from [file] and persisting the applied concepts' schemas
- * back to it.
+ * back to it. Attaches nodes to the shared graph, so callers must hold [CpgLock.write] - the tool
+ * registration does.
  */
 internal fun applyLLMConcepts(
     result: TranslationResult,
@@ -182,135 +184,126 @@ internal fun applyLLMConcepts(
     val failed = mutableListOf<FailedConcept>()
     val schemasToPersist = mutableListOf<LLMConceptDescription>()
 
-    // Serializes concept/operation node attachment (and the concepts-schema file write
-    // below) against every other state-mutating tool call - see GraphMutationLock's doc for
-    // why a host application running concurrent sessions/batches needs this even though a
-    // single call here only ever touches its own nodeIds.
-    synchronized(GraphMutationLock) {
-        val persistedSchemas = loadPersistedConceptsAndOperations(file)
+    val persistedSchemas = loadPersistedConceptsAndOperations(file)
 
-        payload.concepts.forEach { concept ->
-            val cpgConceptNode = result.nodes.find { it.id.toString() == concept.nodeId }
-            if (cpgConceptNode == null) {
-                failed.add(
-                    FailedConcept(
-                        concept = concept,
+    payload.concepts.forEach { concept ->
+        val cpgConceptNode = result.nodes.find { it.id.toString() == concept.nodeId }
+        if (cpgConceptNode == null) {
+            failed.add(
+                FailedConcept(
+                    concept = concept,
+                    reason =
+                        "Underlying CPG node ${concept.nodeId} not found for concept \"${concept.name}\".",
+                )
+            )
+            return@forEach
+        }
+
+        val conceptSchema = persistedSchemas.find { it.name == concept.name }
+        val (conceptProperties, conceptPropertyFailures) =
+            resolveProperties(
+                applyFixedValues(concept.properties, conceptSchema?.properties.orEmpty()),
+                result,
+            )
+        if (conceptPropertyFailures.isNotEmpty()) {
+            failed.add(
+                FailedConcept(
+                    concept = concept,
+                    reason = conceptPropertyFailures.joinToString(separator = "; "),
+                )
+            )
+            return@forEach
+        }
+
+        val conceptNode =
+            GenericLLMConcept(
+                    underlyingNode = cpgConceptNode,
+                    conceptName = concept.name,
+                    description = concept.description,
+                    properties = conceptProperties,
+                    notes = concept.notes,
+                )
+                .apply {
+                    this.codeAndLocationFrom(cpgConceptNode)
+                    this.name =
+                        Name(
+                            "${GenericLLMConcept::class.simpleName}[$conceptName]",
+                            cpgConceptNode.name,
+                        )
+                    // Participate in the dataflow graph, like any other concept/operation
+                    // attached via the non-generic (fixed-catalog) concept builders.
+                    this.setDFG()
+                    NodeBuilder.log(this)
+                }
+
+        val appliedOps = mutableListOf<AppliedOperation>()
+        val failedOps = mutableListOf<FailedOperation>()
+        concept.operations.forEach { operation ->
+            val cpgOperationNode = result.nodes.find { it.id.toString() == operation.nodeId }
+            if (cpgOperationNode == null) {
+                failedOps.add(
+                    FailedOperation(
+                        operation = operation,
                         reason =
-                            "Underlying CPG node ${concept.nodeId} not found for concept \"${concept.name}\".",
+                            "Underlying CPG node ${operation.nodeId} not found for operation \"${operation.name}\".",
                     )
                 )
                 return@forEach
             }
 
-            val conceptSchema = persistedSchemas.find { it.name == concept.name }
-            val (conceptProperties, conceptPropertyFailures) =
+            val operationSchema = conceptSchema?.operations?.find { it.name == operation.name }
+            val (operationProperties, operationPropertyFailures) =
                 resolveProperties(
-                    applyFixedValues(concept.properties, conceptSchema?.properties.orEmpty()),
+                    applyFixedValues(operation.properties, operationSchema?.properties.orEmpty()),
                     result,
                 )
-            if (conceptPropertyFailures.isNotEmpty()) {
-                failed.add(
-                    FailedConcept(
-                        concept = concept,
-                        reason = conceptPropertyFailures.joinToString(separator = "; "),
+            if (operationPropertyFailures.isNotEmpty()) {
+                failedOps.add(
+                    FailedOperation(
+                        operation = operation,
+                        reason = operationPropertyFailures.joinToString(separator = "; "),
                     )
                 )
                 return@forEach
             }
 
-            val conceptNode =
-                GenericLLMConcept(
-                        underlyingNode = cpgConceptNode,
-                        conceptName = concept.name,
-                        description = concept.description,
-                        properties = conceptProperties,
-                        notes = concept.notes,
+            val opNode =
+                GenericLLMOperation(
+                        underlyingNode = cpgOperationNode,
+                        operationName = operation.name,
+                        description = operation.description,
+                        genericLLMConcept = conceptNode,
+                        properties = operationProperties,
+                        notes = operation.notes,
                     )
                     .apply {
-                        this.codeAndLocationFrom(cpgConceptNode)
+                        this.codeAndLocationFrom(cpgOperationNode)
                         this.name =
                             Name(
-                                "${GenericLLMConcept::class.simpleName}[$conceptName]",
-                                cpgConceptNode.name,
+                                "${GenericLLMOperation::class.simpleName}[$operationName]",
+                                cpgOperationNode.name,
                             )
-                        // Participate in the dataflow graph, like any other concept/operation
-                        // attached via the non-generic (fixed-catalog) concept builders.
                         this.setDFG()
                         NodeBuilder.log(this)
                     }
-
-            val appliedOps = mutableListOf<AppliedOperation>()
-            val failedOps = mutableListOf<FailedOperation>()
-            concept.operations.forEach { operation ->
-                val cpgOperationNode = result.nodes.find { it.id.toString() == operation.nodeId }
-                if (cpgOperationNode == null) {
-                    failedOps.add(
-                        FailedOperation(
-                            operation = operation,
-                            reason =
-                                "Underlying CPG node ${operation.nodeId} not found for operation \"${operation.name}\".",
-                        )
-                    )
-                    return@forEach
-                }
-
-                val operationSchema = conceptSchema?.operations?.find { it.name == operation.name }
-                val (operationProperties, operationPropertyFailures) =
-                    resolveProperties(
-                        applyFixedValues(
-                            operation.properties,
-                            operationSchema?.properties.orEmpty(),
-                        ),
-                        result,
-                    )
-                if (operationPropertyFailures.isNotEmpty()) {
-                    failedOps.add(
-                        FailedOperation(
-                            operation = operation,
-                            reason = operationPropertyFailures.joinToString(separator = "; "),
-                        )
-                    )
-                    return@forEach
-                }
-
-                val opNode =
-                    GenericLLMOperation(
-                            underlyingNode = cpgOperationNode,
-                            operationName = operation.name,
-                            description = operation.description,
-                            genericLLMConcept = conceptNode,
-                            properties = operationProperties,
-                            notes = operation.notes,
-                        )
-                        .apply {
-                            this.codeAndLocationFrom(cpgOperationNode)
-                            this.name =
-                                Name(
-                                    "${GenericLLMOperation::class.simpleName}[$operationName]",
-                                    cpgOperationNode.name,
-                                )
-                            this.setDFG()
-                            NodeBuilder.log(this)
-                        }
-                appliedOps.add(
-                    AppliedOperation(operation = operation, overlayNodeId = opNode.id.toString())
-                )
-            }
-
-            applied.add(
-                AppliedConcept(
-                    concept = concept,
-                    overlayNodeId = conceptNode.id.toString(),
-                    appliedOperations = appliedOps,
-                    failedOperations = failedOps,
-                )
+            appliedOps.add(
+                AppliedOperation(operation = operation, overlayNodeId = opNode.id.toString())
             )
-            schemasToPersist.add(mergeFixedValues(conceptSchema, LLMConceptDescription(concept)))
         }
 
-        if (schemasToPersist.isNotEmpty()) {
-            persistConceptSchemas(schemasToPersist, file)
-        }
+        applied.add(
+            AppliedConcept(
+                concept = concept,
+                overlayNodeId = conceptNode.id.toString(),
+                appliedOperations = appliedOps,
+                failedOperations = failedOps,
+            )
+        )
+        schemasToPersist.add(mergeFixedValues(conceptSchema, LLMConceptDescription(concept)))
+    }
+
+    if (schemasToPersist.isNotEmpty()) {
+        persistConceptSchemas(schemasToPersist, file)
     }
 
     return AddConceptsResult(applied = applied, failed = failed)
@@ -475,17 +468,22 @@ internal fun loadPersistedConceptsAndOperations(
 }
 
 /**
+ * Serializes [persistConceptSchemas]'s read-modify-write of the concepts file. Deliberately not
+ * [CpgLock]: `cpg_add_or_update_llm_concept` only touches this file, never the graph, and should
+ * not block graph readers (or be blocked by them). Never held while taking [CpgLock], so the two
+ * cannot deadlock.
+ */
+private val conceptsFileLock = Any()
+
+/**
  * Merge the given concept schemas into the persisted YAML store. Concepts are matched by name; an
  * existing entry is replaced, otherwise appended.
  */
-private fun persistConceptSchemas(
+internal fun persistConceptSchemas(
     schemas: List<LLMConceptDescription>,
     file: File = File(fileName),
 ) {
-    // Reentrant: callers already holding GraphMutationLock (e.g. addLLMConceptAndOperations)
-    // re-acquire their own monitor here at no cost, and a standalone caller (addOrUpdateConcept)
-    // gets this read-modify-write's protection too.
-    synchronized(GraphMutationLock) {
+    synchronized(conceptsFileLock) {
         val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         var updated = loadPersistedConceptsAndOperations(file)
         schemas.forEach { schema ->

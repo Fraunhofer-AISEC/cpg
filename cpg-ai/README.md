@@ -236,19 +236,33 @@ fun Server.myTool() =
 ```
 
 Rules for tools: the handler is not `suspend`, and the description of the payload's parameters is
-appended to the tool description automatically, so do not repeat it. Any tool that mutates the graph
-or a shared file must hold `synchronized(GraphMutationLock)` for the duration of that change.
-Embedders that run `cpg_run_pass` must also set `ctx` (the `TranslationContext`) next to
-`globalAnalysisResult`.
+appended to the tool description automatically, so do not repeat it. Pass `mutating = true` to
+`addTool` if the handler changes the graph or does a read-modify-write on a file shared with other
+tools (see [Concurrency](#concurrency)); forgetting it is the one way to get this wrong, because
+the default is the cheap, shared one. Embedders that run `cpg_run_pass` must also set `ctx` (the
+`TranslationContext`) next to `globalAnalysisResult`.
 
 ## Concurrency
 
 The server holds **one CPG per process** in `globalAnalysisResult`; every tool operates on it. Keep
 that in mind before sharing a server between independent users or runs.
 
-`GraphMutationLock` serializes the state-mutating tools that take it. Read-only tools do not take
-any lock, so they stay fully concurrent. See the *Writes* column above for which tools change state;
-call mutating tools one at a time unless you have checked that they hold the lock.
+The graph is not thread-safe, so tool calls go through `CpgLock`, a read/write lock:
+
+- Tools registered through `addTool` run under the **read** lock by default, so any number of
+  queries run in parallel.
+- Tools registered with `mutating = true` run under the **write** lock, alone: `cpg_apply_concepts`,
+  `cpg_run_pass` and `cpg_add_llm_concept_and_operations`. `cpg_analyze` and `cpg_translate` take it
+  for the whole analysis, since they replace the graph. These are the tools marked *graph* in the
+  *Writes* column above. While one runs, every other call waits.
+- `cpg_add_or_update_llm_concept` only writes `concepts.yaml` (atomically, behind its own small lock)
+  and does not wait for graph readers.
+
+Both sides are reentrant, and a write holder may read. A tool that already holds the read lock cannot
+take the write lock (it would deadlock), so `CpgLock.write` throws instead - register such a tool with
+`mutating = true`. Code that touches the graph outside an MCP call, e.g. a host assigning
+`globalAnalysisResult` while the server is running, can use `CpgLock.read { }` / `CpgLock.write { }`
+itself.
 
 ## Development
 
