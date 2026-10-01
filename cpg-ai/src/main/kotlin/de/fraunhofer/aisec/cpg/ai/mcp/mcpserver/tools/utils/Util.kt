@@ -50,6 +50,7 @@ import kotlin.reflect.KTypeParameter
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.memberProperties
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
@@ -104,15 +105,13 @@ inline fun <reified T> Server.addTool(
     ) { request ->
         try {
             val payload =
-                request.arguments?.toObject<T>()
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "Invalid or missing payload for cpg_list_calls_to tool."
-                                )
-                            )
+                try {
+                    request.arguments.toPayload<T>()
+                } catch (e: SerializationException) {
+                    return@addTool CallToolResult(
+                        content = listOf(TextContent("Invalid arguments for $name: ${e.message}"))
                     )
+                }
             payload.runOnCpg(mutating, handler)
         } catch (e: Exception) {
             CallToolResult(
@@ -295,6 +294,13 @@ fun getAvailableOperations(): List<Class<out Operation>> {
 
 inline fun <reified T> JsonObject.toObject() =
     lenientJson.decodeFromString<T>(Json.encodeToString(this))
+
+/**
+ * Decodes the arguments of a tool call into [T]. A call without any `arguments` is treated like
+ * `{}`: a payload whose fields are all optional falls back to its defaults, and one with required
+ * fields fails with a [SerializationException] that names the missing field.
+ */
+inline fun <reified T> JsonObject?.toPayload(): T = (this ?: JsonObject(emptyMap())).toObject<T>()
 
 /**
  * Runs [query] on the current analysis result under [CpgLock] - shared, or exclusive if [mutating].
