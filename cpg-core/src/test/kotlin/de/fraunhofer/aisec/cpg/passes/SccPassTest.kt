@@ -289,7 +289,7 @@ class SccPassTest {
         bb.nextEOG.add(live)
 
         val level = 1 // tarjan() always starts at depth 1
-        pass.tarjanInfoMap[level] = SccPass.TarjanInfo(listOf(blacklisted))
+        pass.tarjanInfoMap[level] = SccPass.TarjanInfo(setOf(blacklisted))
 
         pass.tarjan(bb)
 
