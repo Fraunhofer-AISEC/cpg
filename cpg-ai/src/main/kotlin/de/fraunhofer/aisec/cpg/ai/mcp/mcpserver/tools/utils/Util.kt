@@ -113,7 +113,7 @@ inline fun <reified T> Server.addTool(
                                 )
                             )
                     )
-            payload.runOnCpg(handler, mutating)
+            payload.runOnCpg(mutating, handler)
         } catch (e: Exception) {
             CallToolResult(
                 content =
@@ -302,8 +302,8 @@ inline fun <reified T> JsonObject.toObject() =
  * from under the query.
  */
 inline fun <reified T> T.runOnCpg(
-    query: BiFunction<TranslationResult, T, CallToolResult>,
     mutating: Boolean = false,
+    query: BiFunction<TranslationResult, T, CallToolResult>,
 ): CallToolResult {
     return try {
         CpgLock.withAccess(mutating) {

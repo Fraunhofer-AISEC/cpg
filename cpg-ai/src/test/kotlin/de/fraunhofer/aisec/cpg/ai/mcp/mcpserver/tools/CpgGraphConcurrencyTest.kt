@@ -37,7 +37,6 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.BiFunction
 import kotlin.concurrent.thread
 import kotlin.io.path.writeText
 import kotlin.test.AfterTest
@@ -106,13 +105,10 @@ class CpgGraphConcurrencyTest {
                             )
                         val outcome =
                             "write"
-                                .runOnCpg(
-                                    BiFunction<TranslationResult, String, CallToolResult> { r, _ ->
-                                        applyLLMConcepts(r, payload, schemaFile)
-                                        CallToolResult(content = emptyList())
-                                    },
-                                    mutating = true,
-                                )
+                                .runOnCpg(mutating = true) { r: TranslationResult, _ ->
+                                    applyLLMConcepts(r, payload, schemaFile)
+                                    CallToolResult(content = emptyList())
+                                }
                         if (isError(outcome)) failures.incrementAndGet()
                         else writes.incrementAndGet()
                         i++
@@ -125,17 +121,15 @@ class CpgGraphConcurrencyTest {
                     while (!stop.get()) {
                         val outcome =
                             "read"
-                                .runOnCpg(
-                                    BiFunction<TranslationResult, String, CallToolResult> { _, _ ->
-                                        hot.forEach { f ->
-                                            f.overlays.forEach { it.name }
-                                            f.nextDFG.forEach { it.name }
-                                            f.prevDFG.forEach { it.name }
-                                            f.overlayEdges.toList()
-                                        }
-                                        CallToolResult(content = emptyList())
+                                .runOnCpg { _: TranslationResult, _ ->
+                                    hot.forEach { f ->
+                                        f.overlays.forEach { it.name }
+                                        f.nextDFG.forEach { it.name }
+                                        f.prevDFG.forEach { it.name }
+                                        f.overlayEdges.toList()
                                     }
-                                )
+                                    CallToolResult(content = emptyList())
+                                }
                         if (isError(outcome)) failures.incrementAndGet()
                         else reads.incrementAndGet()
                     }
@@ -156,11 +150,9 @@ class CpgGraphConcurrencyTest {
 
         val outcome =
             "x"
-                .runOnCpg(
-                    BiFunction<TranslationResult, String, CallToolResult> { _, _ ->
-                        error("the query must not run without an analysis result")
-                    }
-                )
+                .runOnCpg { _: TranslationResult, _ ->
+                    error("the query must not run without an analysis result")
+                }
 
         assertTrue(
             (outcome.content.single() as TextContent)
