@@ -144,7 +144,14 @@ object MermaidCli {
                         .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                         .redirectErrorStream(true)
                         .start()
-                process.waitFor(5, TimeUnit.SECONDS) && process.exitValue() == 0
+                if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                    // A hung `mmdc` would otherwise keep running for the REPL's whole lifetime
+                    // even though we've already given up on it and cached availability as false.
+                    process.destroyForcibly()
+                    false
+                } else {
+                    process.exitValue() == 0
+                }
             }
             .getOrDefault(false)
     }
