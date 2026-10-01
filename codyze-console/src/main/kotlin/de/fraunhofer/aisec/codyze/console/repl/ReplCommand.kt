@@ -32,6 +32,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import de.fraunhofer.aisec.codyze.console.AnalyzeRequestJSON
 import de.fraunhofer.aisec.codyze.console.ConsoleService
+import java.io.File
 import kotlin.system.measureTimeMillis
 import kotlinx.coroutines.runBlocking
 
@@ -76,6 +77,8 @@ class ReplCommand : CliktCommand(name = "repl") {
                 )
             }
         if (initialRequest != null) {
+            print(TerminalTitle.set("codyze [Analyzing ${File(initialRequest.sourceDir).name}]"))
+            System.out.flush()
             val elapsedMs = measureTimeMillis {
                 runBlocking { consoleService.analyze(initialRequest) }
             }

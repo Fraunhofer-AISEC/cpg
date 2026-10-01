@@ -64,6 +64,12 @@ class ReplLoop(
      */
     private var lastRequest: AnalyzeRequestJSON? = initialRequest
 
+    /** Title/Tab-Status text reflecting the currently loaded source dir and busy state. */
+    private fun statusTitle(busy: Boolean): String {
+        val dirName = lastRequest?.sourceDir?.let { File(it).name } ?: "repl"
+        return if (busy) "codyze [$dirName] ⏳" else "codyze [$dirName]"
+    }
+
     fun run() {
         Files.createDirectories(historyFile.parent)
         val terminal = TerminalBuilder.builder().system(true).build()
@@ -102,7 +108,7 @@ class ReplLoop(
         val isRealTerminal = terminal.type != org.jline.terminal.Terminal.TYPE_DUMB
         fun setStatus(busy: Boolean) {
             if (!isRealTerminal) return
-            val title = if (busy) "codyze ⏳" else "codyze"
+            val title = statusTitle(busy)
             val color = if (busy) "#ffa500" else "#32cd32"
             terminal.writer().print(TerminalTitle.set(title))
             terminal.writer().print(TabStatus.set(status = title, indicatorColor = color))
@@ -358,12 +364,14 @@ class ReplLoop(
             )
 
         out.println("Analyzing $finalSourceDir …")
+        out.print(TerminalTitle.set("codyze [Analyzing ${File(finalSourceDir).name}]"))
         out.flush()
         val elapsedMs = measureTimeMillis { runBlocking { consoleService.analyze(request) } }
         lastRequest = request
         // The new analysis invalidates any Node/QueryTree captured from the previous one.
         replService.clearLastValue()
         out.println("Analysis complete.")
+        out.print(TerminalTitle.set(statusTitle(busy = false)))
         if (elapsedMs > NOTIFY_THRESHOLD_MS) {
             out.print(TerminalNotification.show("Codyze: analysis of $finalSourceDir complete"))
         }
