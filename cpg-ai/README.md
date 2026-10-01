@@ -239,8 +239,10 @@ Rules for tools: the handler is not `suspend`, and the description of the payloa
 appended to the tool description automatically, so do not repeat it. Pass `mutating = true` to
 `addTool` if the handler changes the graph or does a read-modify-write on a file shared with other
 tools (see [Concurrency](#concurrency)); forgetting it is the one way to get this wrong, because
-the default is the cheap, shared one. Embedders that run `cpg_run_pass` must also set `ctx` (the
-`TranslationContext`) next to `globalAnalysisResult`.
+the default is the cheap, shared one. A host only needs to set `globalAnalysisResult`:
+`cpg_run_pass` runs passes with the context of that result itself. Its bookkeeping of which pass ran
+on which node (`nodeToPass`) is cleared when `cpg_analyze`/`cpg_translate` replace the graph; a host
+that swaps `globalAnalysisResult` on its own should call `nodeToPass.clear()` too.
 
 ## Concurrency
 
