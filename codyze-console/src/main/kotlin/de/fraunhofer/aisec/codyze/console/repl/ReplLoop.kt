@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.codyze.console.ConsoleService
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.system.measureTimeMillis
 import kotlinx.coroutines.runBlocking
 import org.jline.reader.EndOfFileException
 import org.jline.reader.LineReader
@@ -95,19 +96,25 @@ class ReplLoop(
         installDotCompleteWidget(reader)
 
         // The tab title (OSC 2) is a universal, decades-old mechanism nearly every terminal
-        // supports — set unconditionally (guarded only by not being a dumb/non-TTY terminal).
+        // supports. The colored Tab Status dot (OSC 21337) is iTerm2 3.7+-specific but has no
+        // profile-configuration prerequisite, unlike the Badge. Both are set unconditionally,
+        // guarded only by not being a dumb/non-TTY terminal.
         val isRealTerminal = terminal.type != org.jline.terminal.Terminal.TYPE_DUMB
-        fun setStatus(text: String) {
+        fun setStatus(busy: Boolean) {
             if (!isRealTerminal) return
-            terminal.writer().print(TerminalTitle.set(text))
+            val title = if (busy) "codyze ⏳" else "codyze"
+            val color = if (busy) "#ffa500" else "#32cd32"
+            terminal.writer().print(TerminalTitle.set(title))
+            terminal.writer().print(TabStatus.set(status = title, indicatorColor = color))
             terminal.writer().flush()
         }
-        setStatus("codyze")
+        setStatus(busy = false)
 
         printReadyLine(terminal.writer())
         terminal.writer().flush()
 
         while (true) {
+            if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.promptStart())
             val line =
                 try {
                     reader.readLine(prompt())
@@ -123,15 +130,27 @@ class ReplLoop(
             if (trimmed.isEmpty()) continue
 
             if (trimmed.startsWith(":")) {
-                if (!handleMeta(trimmed, terminal.writer())) break
+                if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandStart())
+                val keepGoing = handleMeta(trimmed, terminal.writer())
+                if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandEnd(0))
                 terminal.writer().flush()
+                if (!keepGoing) break
                 continue
             }
 
             sessionLines.add(line!!)
-            setStatus("codyze ⏳")
+            if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandStart())
+            setStatus(busy = true)
             val result = replService.eval(line)
-            setStatus("codyze")
+            setStatus(busy = false)
+            val exitCode =
+                when (result) {
+                    is ReplEvalResult.Value,
+                    is ReplEvalResult.UnitResult -> 0
+                    is ReplEvalResult.CompileError,
+                    is ReplEvalResult.RuntimeError -> 1
+                }
+            if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandEnd(exitCode))
             when (result) {
                 is ReplEvalResult.Value -> terminal.writer().println(result.rendered)
                 is ReplEvalResult.UnitResult -> Unit
@@ -144,7 +163,12 @@ class ReplLoop(
         }
         // Title is left alone on exit: shells with their own title-setting prompt hooks (as this
         // one evidently has) overwrite it on the next prompt anyway, so forcing it blank here
-        // would just flash an empty tab title first.
+        // would just flash an empty tab title first. The Tab Status dot has no such shell-side
+        // reset, so clear it explicitly.
+        if (isRealTerminal) {
+            terminal.writer().print(TabStatus.set(status = "", indicatorColor = ""))
+            terminal.writer().flush()
+        }
         terminal.close()
     }
 
@@ -212,6 +236,11 @@ class ReplLoop(
                 "${DIM}Type :help once you're at the prompt. TAB completes; '.' pops a menu.${RESET}"
             )
         }
+
+        /**
+         * Analyses faster than this don't get a desktop notification — not worth the interruption.
+         */
+        const val NOTIFY_THRESHOLD_MS = 3_000L
 
         private const val DOT_COMPLETE = "codyze-dot-complete"
         private const val ESC = "\u001B"
@@ -330,11 +359,15 @@ class ReplLoop(
 
         out.println("Analyzing $finalSourceDir …")
         out.flush()
-        runBlocking { consoleService.analyze(request) }
+        val elapsedMs = measureTimeMillis { runBlocking { consoleService.analyze(request) } }
         lastRequest = request
         // The new analysis invalidates any Node/QueryTree captured from the previous one.
         replService.clearLastValue()
         out.println("Analysis complete.")
+        if (elapsedMs > NOTIFY_THRESHOLD_MS) {
+            out.print(TerminalNotification.show("Codyze: analysis of $finalSourceDir complete"))
+        }
+        out.flush()
     }
 
     /**

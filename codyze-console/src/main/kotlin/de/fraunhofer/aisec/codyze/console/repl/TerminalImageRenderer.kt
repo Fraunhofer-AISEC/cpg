@@ -69,6 +69,50 @@ object TerminalTitle {
     fun set(text: String): String = "\u001B]2;$text\u0007"
 }
 
+/**
+ * Sets iTerm2's Tab Status (3.7+) — a colored dot and subtitle shown directly on the tab — via the
+ * public `OSC 21337` escape sequence. No Python API or profile Trigger configuration needed; a
+ * third-party open-source project (`claude-code-iterm2-tab-status`) uses this exact same public
+ * sequence to replicate iTerm2's own Claude Code status dot for other CLI tools.
+ *
+ * Any parameter left `null` is left unchanged by iTerm2; pass an empty string to clear a field.
+ * [indicatorColor] is in `#RRGGBB` form.
+ */
+object TabStatus {
+    fun set(status: String? = null, indicatorColor: String? = null): String {
+        val fields = buildList {
+            status?.let { add("status=$it") }
+            indicatorColor?.let { add("indicator=$it") }
+        }
+        return "\u001B]21337;${fields.joinToString(";")}\u0007"
+    }
+}
+
+/**
+ * Sends a desktop notification via `OSC 9` (supported by iTerm2 and several other terminals). Used
+ * by [ReplLoop]/[ReplCommand] for analyses slow enough that the user might have tabbed away.
+ */
+object TerminalNotification {
+    fun show(message: String): String = "\u001B]9;$message\u0007"
+}
+
+/**
+ * Shell-integration marks (`OSC 133`), the same protocol real shells use (and iTerm2, VS Code,
+ * WezTerm, etc. understand) to support jump-to-previous-prompt navigation and marking failed
+ * commands in the scrollbar. Wiring these into the REPL's read-eval loop gives it that same native
+ * navigation, as if each evaluated line were an ordinary shell command.
+ */
+object ShellIntegrationMarks {
+    /** Marks the start of a prompt — call right before rendering/reading the next prompt. */
+    fun promptStart(): String = "\u001B]133;A\u0007"
+
+    /** Marks the start of a command's execution/output — call right before evaluating input. */
+    fun commandStart(): String = "\u001B]133;C\u0007"
+
+    /** Marks the end of a command, with its exit status — call right after evaluation completes. */
+    fun commandEnd(exitCode: Int): String = "\u001B]133;D;$exitCode\u0007"
+}
+
 /** Outcome of [MermaidCli.renderToPng]. */
 sealed class MermaidRenderResult {
     data class Success(val file: File) : MermaidRenderResult()
