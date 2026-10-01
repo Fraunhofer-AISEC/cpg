@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai.mcp
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
@@ -76,8 +77,7 @@ class Application : CliktCommand(name = "cpg-mcp") {
         val http = httpPort
         val sse = ssePort
         if (http != null && sse != null) {
-            log.error("Please specify only one option, either --sse or --http.")
-            return
+            throw UsageError("Please specify only one option, either --sse or --http.")
         }
         val bindHost = host ?: DEFAULT_MCP_HOST
         if ((http != null || sse != null) && !InetAddress.getByName(bindHost).isLoopbackAddress) {
