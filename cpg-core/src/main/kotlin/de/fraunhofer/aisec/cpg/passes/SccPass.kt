@@ -112,8 +112,12 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * comparison (including a `location` recomputed from scratch on every call). [IdentityStack],
      * [identitySetOf] and [IdentityHashMap] keep every one of these O(1) regardless of how
      * expensive `equals()` or `hashCode()` happen to be for the node type involved.
+     *
+     * [scope] is `null` for a top-level run (the DFS may go anywhere). For a nested decomposition
+     * it holds exactly the SCC elements being re-decomposed: the DFS never leaves it, since a loop
+     * nested inside an SCC can only consist of that SCC's own elements.
      */
-    data class TarjanInfo(val blackList: Set<Node>) {
+    data class TarjanInfo(val blackList: Set<Node>, val scope: Set<Node>? = null) {
         var blockCounter = 0
         internal var stack = IdentityStack()
         var visited = identitySetOf<Node>()
@@ -189,6 +193,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         // To detect inner loops, we put some nodes on a blacklist and see if we
                         // can still find a loop
                         if (next in info.blackList) {
+                            continue
+                        }
+                        // A nested decomposition must not follow edges out of its SCC (e.g. a
+                        // loop's exit edge): it would rediscover every loop reachable from there
+                        // as a spurious nested loop one level deeper, each of which re-decomposes
+                        // again - exponential in the number of loops downstream.
+                        if (info.scope != null && next !in info.scope) {
                             continue
                         }
                         if (next !in info.visited) {
@@ -361,7 +372,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             val innerMapKey = nextScratchKey--
             blackList.addAll(loopEntryElements)
             sccElements.removeAll(loopEntryElements)
-            tarjanInfoMap[innerMapKey] = TarjanInfo(blackList)
+            tarjanInfoMap[innerMapKey] = TarjanInfo(blackList, scope = sccElements)
             workStack.addLast(DecompDriver(sccElements.iterator(), innerMapKey, innerLevel))
         }
     }

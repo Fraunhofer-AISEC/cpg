@@ -392,4 +392,39 @@ class SccPassTest {
         assertEquals(1, y.sccTo(z))
         assertEquals(1, z.sccTo(y))
     }
+
+    /**
+     * A chain of sequential do-while-shaped loops (`b -> c -> b`, where the exit `c` is *not* the
+     * entry `b`). Stripping a loop's entry `b` for the nested decomposition leaves `c`, whose exit
+     * edge leads out of the loop into the next one. The nested decomposition must stay inside its
+     * own SCC: if it followed that exit edge, it would rediscover every later loop as a spurious
+     * "nested" loop one level deeper - and since each of those re-decomposes again, the work grows
+     * exponentially with the number of loops in the chain.
+     */
+    @Test
+    fun testSequentialLoopsWithExitAfterEntryStayLinear() {
+        val loops = 40
+        val start = Block()
+        val end = Block()
+        val heads = List(loops) { Label() }
+        val tails = List(loops) { Block() }
+        start.nextEOG.add(heads.first())
+        for (i in 0 until loops) {
+            heads[i].nextEOG.add(tails[i])
+            tails[i].nextEOG.add(heads[i])
+            tails[i].nextEOG.add(heads.getOrNull(i + 1) ?: end)
+        }
+
+        val thread = Thread { newPass().tarjan(start) }
+        thread.isDaemon = true
+        thread.start()
+        thread.join(5000)
+
+        assertFalse(thread.isAlive, "tarjan() did not terminate within 5s")
+
+        for (i in 0 until loops) {
+            assertEquals(1, tails[i].sccTo(heads[i]), "loop $i's back-edge")
+            assertNull(tails[i].sccTo(heads.getOrNull(i + 1) ?: end), "bridge out of loop $i")
+        }
+    }
 }
