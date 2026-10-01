@@ -77,11 +77,16 @@ class ReplService(private val consoleService: ConsoleService) {
     private val compilationConfig: ScriptCompilationConfiguration =
         createJvmCompilationConfigurationFromTemplate<CpgQueryScript>()
 
-    /** Long-lived REPL compiler — both compiles snippets and serves completion. */
-    val compiler: KJvmReplCompilerWithIdeServices = KJvmReplCompilerWithIdeServices(hostConfig)
+    /**
+     * Long-lived REPL compiler — both compiles snippets and serves completion. `var`, not `val`:
+     * [resetSession] replaces it after a `:reload` so declarations from before the reload can't be
+     * referenced against a [TranslationResult] that no longer exists.
+     */
+    var compiler: KJvmReplCompilerWithIdeServices = KJvmReplCompilerWithIdeServices(hostConfig)
+        private set
 
     /** REPL-aware evaluator that links each snippet's ClassLoader to its predecessors. */
-    private val replEvaluator: BasicJvmReplEvaluator =
+    private var replEvaluator: BasicJvmReplEvaluator =
         BasicJvmReplEvaluator(BasicJvmScriptEvaluator())
 
     private val lineCounter = AtomicInteger(0)
@@ -111,6 +116,20 @@ class ReplService(private val consoleService: ConsoleService) {
 
     /** Clears [lastValue] without affecting compiler/evaluator state — used after pre-warming. */
     fun clearLastValue() {
+        lastValue = null
+    }
+
+    /**
+     * Discards the compiler/evaluator chain and resets [lastValue] and the line counter. Call this
+     * after a successful `:reload` — otherwise previously-declared REPL variables/functions (e.g.
+     * `val n = result.functions.first()`) remain resolvable and keep returning objects bound to the
+     * [TranslationResult] that was just replaced, even though [clearLastValue] alone suggests a
+     * clean slate.
+     */
+    fun resetSession() {
+        compiler = KJvmReplCompilerWithIdeServices(hostConfig)
+        replEvaluator = BasicJvmReplEvaluator(BasicJvmScriptEvaluator())
+        lineCounter.set(0)
         lastValue = null
     }
 

@@ -368,8 +368,11 @@ class ReplLoop(
         out.flush()
         val elapsedMs = measureTimeMillis { runBlocking { consoleService.analyze(request) } }
         lastRequest = request
-        // The new analysis invalidates any Node/QueryTree captured from the previous one.
-        replService.clearLastValue()
+        // The new analysis invalidates any Node/QueryTree captured from the previous one - and,
+        // since the Kotlin REPL evaluator chains each snippet's classloader to its predecessors,
+        // previously-declared variables/functions would otherwise keep resolving against it too.
+        // resetSession() discards the whole compiler/evaluator chain, not just lastValue.
+        replService.resetSession()
         out.println("Analysis complete.")
         out.print(TerminalTitle.set(statusTitle(busy = false)))
         if (elapsedMs > NOTIFY_THRESHOLD_MS) {
