@@ -61,30 +61,9 @@ object TerminalImageSupport {
 }
 
 /**
- * Sets iTerm2's session badge — a persistent watermark drawn in the corner of the terminal pane,
- * independent of scrollback/prompt — via the `SetBadgeFormat` OSC 1337 subcommand (the same family
- * used for inline images). Used by [ReplLoop] to show the REPL's live idle/evaluating state,
- * similar in spirit to how iTerm2's own Claude Code integration drives its Session Status tool, but
- * using only the plain escape-sequence protocol rather than iTerm2's Python API — no setup required
- * beyond detecting [ImageProtocol.ITERM2].
- *
- * Only call this once [TerminalImageSupport.detect] has returned [ImageProtocol.ITERM2] — it's an
- * iTerm2-proprietary sequence, and unlike inline images there's no Kitty/Ghostty equivalent to fall
- * back to.
- */
-object ItermBadge {
-    fun set(text: String): String {
-        val base64 = Base64.getEncoder().encodeToString(text.toByteArray(Charsets.UTF_8))
-        return "\u001B]1337;SetBadgeFormat=$base64\u0007"
-    }
-}
-
-/**
- * Sets the terminal's window/tab title via the `OSC 2` escape sequence — the same universal,
- * decades-old mechanism (supported by virtually every terminal emulator, not just iTerm2/Kitty)
- * that shells and tools like Claude Code's own CLI already use to show the current task in the tab
- * bar. Unlike [ItermBadge] (which needs a non-empty Badge template configured in the iTerm2 profile
- * to render at all) this has no prerequisite — it just works.
+ * Sets the terminal's window/tab title via the `OSC 2` escape sequence — a universal, decades-old
+ * mechanism supported by virtually every terminal emulator (not just iTerm2/Kitty), with no profile
+ * configuration prerequisite. Used by [ReplLoop] to show the REPL's live idle/evaluating state.
  */
 object TerminalTitle {
     fun set(text: String): String = "\u001B]2;$text\u0007"

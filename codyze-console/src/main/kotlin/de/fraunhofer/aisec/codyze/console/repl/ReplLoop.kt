@@ -95,15 +95,11 @@ class ReplLoop(
         installDotCompleteWidget(reader)
 
         // The tab title (OSC 2) is a universal, decades-old mechanism nearly every terminal
-        // supports — set unconditionally. The iTerm2 badge needs a non-empty Badge template
-        // configured in the user's profile to actually render, so it's a bonus on top, not relied
-        // on alone.
-        val supportsBadge = TerminalImageSupport.detect() == ImageProtocol.ITERM2
+        // supports — set unconditionally (guarded only by not being a dumb/non-TTY terminal).
         val isRealTerminal = terminal.type != org.jline.terminal.Terminal.TYPE_DUMB
         fun setStatus(text: String) {
             if (!isRealTerminal) return
             terminal.writer().print(TerminalTitle.set(text))
-            if (supportsBadge) terminal.writer().print(ItermBadge.set(text))
             terminal.writer().flush()
         }
         setStatus("codyze")
@@ -146,14 +142,9 @@ class ReplLoop(
             }
             terminal.writer().flush()
         }
-        // The badge is a property of the terminal session, not this process — clear it so it
-        // doesn't linger after the REPL exits. The title is left alone: shells with their own
-        // title-setting prompt hooks (as this one evidently has) overwrite it on the next prompt
-        // anyway, so forcing it blank here would just flash an empty tab title first.
-        if (isRealTerminal && supportsBadge) {
-            terminal.writer().print(ItermBadge.set(""))
-            terminal.writer().flush()
-        }
+        // Title is left alone on exit: shells with their own title-setting prompt hooks (as this
+        // one evidently has) overwrite it on the next prompt anyway, so forcing it blank here
+        // would just flash an empty tab title first.
         terminal.close()
     }
 
