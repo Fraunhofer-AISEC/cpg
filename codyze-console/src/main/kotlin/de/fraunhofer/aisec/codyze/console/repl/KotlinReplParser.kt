@@ -138,6 +138,9 @@ class KotlinReplParser : Parser {
     private fun scan(s: String): ScanResult {
         var depth = 0
         var mode = ScanMode.NORMAL
+        // Kotlin block comments nest (unlike C/Java), so a single indexOf("*/") isn't enough -
+        // track how many levels deep we are and only leave BLOCK_COMMENT at depth 0.
+        var blockCommentDepth = 0
         var i = 0
         while (i < s.length) {
             val c = s[i]
@@ -150,6 +153,7 @@ class KotlinReplParser : Parser {
                         }
                         c == '/' && i + 1 < s.length && s[i + 1] == '*' -> {
                             mode = ScanMode.BLOCK_COMMENT
+                            blockCommentDepth = 1
                             i += 2
                         }
                         c == '"' && s.startsWith("\"\"\"", i) -> {
@@ -180,12 +184,17 @@ class KotlinReplParser : Parser {
                     mode = ScanMode.NORMAL
                 }
                 ScanMode.BLOCK_COMMENT -> {
-                    val end = s.indexOf("*/", i)
-                    if (end < 0) {
-                        i = s.length
-                    } else {
-                        i = end + 2
-                        mode = ScanMode.NORMAL
+                    when {
+                        s.startsWith("/*", i) -> {
+                            blockCommentDepth++
+                            i += 2
+                        }
+                        s.startsWith("*/", i) -> {
+                            blockCommentDepth--
+                            i += 2
+                            if (blockCommentDepth == 0) mode = ScanMode.NORMAL
+                        }
+                        else -> i++
                     }
                 }
                 ScanMode.STRING ->
