@@ -37,6 +37,47 @@ import kotlin.math.min
 private fun <T> identitySetOf(): MutableSet<T> = Collections.newSetFromMap(IdentityHashMap())
 
 /**
+ * A LIFO stack of [Node]s with O(1) identity-based [contains] - an ordered list (for push/pop/
+ * [top]) plus an identity set (for membership) behind one interface, so the two can never be
+ * updated out of sync with each other the way two separate fields could be. Only ever pops a suffix
+ * (either just [top], or every element down to a given one via [popThrough]), never an arbitrary
+ * middle element, so the backing list never needs index bookkeeping beyond that.
+ */
+internal class IdentityStack {
+    private val elements = mutableListOf<Node>()
+    private val present = identitySetOf<Node>()
+
+    fun push(node: Node) {
+        elements.add(node)
+        present.add(node)
+    }
+
+    operator fun contains(node: Node) = node in present
+
+    fun top(): Node = elements.last()
+
+    /** Removes just [top] - the trivial (not actually part of an SCC) case. */
+    fun popTop() {
+        present.remove(elements.removeAt(elements.lastIndex))
+    }
+
+    /**
+     * Pops every element from the top down to and including [node] (which must currently be on the
+     * stack), returning them as an identity set - the elements of the SCC just found.
+     */
+    fun popThrough(node: Node): MutableSet<Node> {
+        val index = elements.indexOfLast { it === node }
+        val popped = identitySetOf<Node>()
+        for (i in elements.lastIndex downTo index) {
+            popped.add(elements[i])
+            present.remove(elements[i])
+        }
+        elements.subList(index, elements.size).clear()
+        return popped
+    }
+}
+
+/**
  * This pass implements Tarjan's algorithm (the original
  * [paper](https://epubs.siam.org/doi/10.1137/0201010)) to find strongly connected components (SCCs)
  * in the Evaluation Order Graph (EOG) of a program. SCCs are subgraphs where every node is
@@ -68,17 +109,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * `stack`/`blackList`/`visited`/`blockIDs`/`lowLinkValues` all key or test membership by [Node]
      * *identity* - never by [Node.equals], which for
      * [BasicBlock][de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock] is a full structural
-     * comparison (including a `location` recomputed from scratch on every call). [identitySetOf]
-     * and [IdentityHashMap] keep every one of these O(1) regardless of how expensive `equals()` or
-     * `hashCode()` happen to be for the node type involved. [stack] is the one exception that stays
-     * an ordinary [MutableList]: its order is load-bearing (LIFO push/pop, `last()` as "top of
-     * stack"), so [stackSet] mirrors its contents purely for O(1) `in` checks, kept in sync at
-     * every push/pop site.
+     * comparison (including a `location` recomputed from scratch on every call). [IdentityStack],
+     * [identitySetOf] and [IdentityHashMap] keep every one of these O(1) regardless of how
+     * expensive `equals()` or `hashCode()` happen to be for the node type involved.
      */
     data class TarjanInfo(val blackList: Set<Node>) {
         var blockCounter = 0
-        var stack = mutableListOf<Node>()
-        var stackSet = identitySetOf<Node>()
+        internal var stack = IdentityStack()
         var visited = identitySetOf<Node>()
         var blockIDs: MutableMap<Node, Int> = IdentityHashMap()
         var lowLinkValues: MutableMap<Node, Int> = IdentityHashMap()
@@ -127,10 +164,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         info.lowLinkValues[node] = info.blockCounter
         info.blockCounter++
         info.visited.add(node)
-        // Pushed at the end, not the front: appending is O(1) amortized, whereas add(0, ...)
-        // would shift every existing element on every single push.
-        info.stack.add(node)
-        info.stackSet.add(node)
+        info.stack.push(node)
     }
 
     /**
@@ -162,7 +196,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                             workStack.addLast(
                                 DfsFrame(next, item.mapKey, item.level, next.nextEOG.iterator())
                             )
-                        } else if (next in info.stackSet) {
+                        } else if (next in info.stack) {
                             // If the node we came from is on the stack, we min its lowLinkValue
                             // with the one of item.node
                             info.lowLinkValues[item.node] =
@@ -184,9 +218,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         // handleSccRoot just ran for v, since that always removes v from the
                         // stack.
                         val parent = workStack.lastOrNull()
-                        if (
-                            parent is DfsFrame && parent.mapKey == item.mapKey && v in info.stackSet
-                        ) {
+                        if (parent is DfsFrame && parent.mapKey == item.mapKey && v in info.stack) {
                             info.lowLinkValues[parent.node] =
                                 min(
                                     info.lowLinkValues.getValue(parent.node),
@@ -232,28 +264,22 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // A trivial SCC (isolated node, or a single node with a self-loop) needs no labeling.
         // Identity (===), not equals(): "is this the exact node we're looking for", never "an
         // equal-looking one" - also sidesteps BasicBlock's expensive structural equals().
-        if (currentInfo.stack.last() === bb && bb.nextEOG.none { it === bb }) {
-            currentInfo.stack.removeAt(currentInfo.stack.lastIndex)
-            currentInfo.stackSet.remove(bb)
+        if (currentInfo.stack.top() === bb && bb.nextEOG.none { it === bb }) {
+            currentInfo.stack.popTop()
             return
         }
 
         log.trace("Found a SCC (Level $level): ")
-        // Not necessarily all nodes on the stack - only the suffix pushed after bb (now the
-        // topmost element still below them). Collect that suffix, then pop it in a single range
-        // clear instead of one remove() per element.
-        val bbIndex = currentInfo.stack.indexOfLast { it === bb }
-        val sccElements = identitySetOf<Node>()
-        for (i in currentInfo.stack.lastIndex downTo bbIndex) {
-            val element = currentInfo.stack[i]
-            currentInfo.lowLinkValues[element] = currentInfo.blockIDs.getValue(bb)
+        // Not necessarily all nodes on the stack - only the ones pushed after bb (now the
+        // topmost element still below them).
+        val sccElements = currentInfo.stack.popThrough(bb)
+        val bbLowLink = currentInfo.blockIDs.getValue(bb)
+        sccElements.forEach { element ->
+            currentInfo.lowLinkValues[element] = bbLowLink
             if (log.isTraceEnabled) {
-                log.trace("{} ({}); ", element.location, currentInfo.lowLinkValues[element])
+                log.trace("{} ({}); ", element.location, bbLowLink)
             }
-            sccElements.add(element)
-            currentInfo.stackSet.remove(element)
         }
-        currentInfo.stack.subList(bbIndex, currentInfo.stack.size).clear()
         log.trace("Done with stack clone iteration.")
 
         // Mark the SCC's incoming edge with an scc-flag, to tell it apart from a mergePoint
