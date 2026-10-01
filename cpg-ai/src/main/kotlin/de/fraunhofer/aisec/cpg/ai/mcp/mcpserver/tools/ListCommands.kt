@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgCallArgumentByNam
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -222,7 +223,7 @@ fun Server.getNode() {
     this.addTool<CpgIdPayload>(name = "cpg_get_node", description = toolDescription) {
         result: TranslationResult,
         payload: CpgIdPayload ->
-        val node = result.nodes.find { it.id.toString() == payload.id }
+        val node = result.findNodeById(payload.id)
         if (node != null) {
             CallToolResult(content = listOf(TextContent(node.toJson())))
         } else {

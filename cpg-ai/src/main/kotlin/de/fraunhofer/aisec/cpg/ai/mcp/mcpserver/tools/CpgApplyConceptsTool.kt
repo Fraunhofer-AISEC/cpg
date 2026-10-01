@@ -28,12 +28,12 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
-import de.fraunhofer.aisec.cpg.graph.nodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -111,7 +111,7 @@ fun Server.addCpgApplyConceptsTool() {
 
         payload.assignments.forEach { assignment ->
             try {
-                val node = result.nodes.find { it.id.toString() == assignment.nodeId }
+                val node = result.findNodeById(assignment.nodeId)
                 if (node == null) {
                     applied.add("Node ${assignment.nodeId} not found")
                     return@forEach
@@ -139,7 +139,7 @@ fun Server.addCpgApplyConceptsTool() {
                             return@forEach
                         }
 
-                        val conceptNode = result.nodes.find { it.id.toString() == conceptNodeId }
+                        val conceptNode = result.findNodeById(conceptNodeId)
                         val concept =
                             conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
                         if (concept == null) {

@@ -58,8 +58,10 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgLock
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeIndex
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -247,6 +249,7 @@ private fun analyzeAndStore(
     analyzedContext?.executedFrontends?.forEach { frontend -> frontend.cleanup() }
     analyzedContext = null
     nodeToPass.clear()
+    NodeIndex.invalidate()
 
     val result = project.analyze()
     analyzedContext = result.ctx
@@ -470,14 +473,23 @@ internal fun loadPassClass(name: String): KClass<out Pass<*>>? =
  * using the [TranslationContext] of [result] itself. Mutates the graph, so callers must hold
  * [CpgLock.write] - the tool registration does.
  */
-internal fun runPass(result: TranslationResult, payload: CpgRunPassPayload): CallToolResult {
+internal fun runPass(result: TranslationResult, payload: CpgRunPassPayload): CallToolResult =
+    try {
+        runPassOnNodes(result, payload)
+    } finally {
+        // A pass can add AST nodes (e.g. inferred declarations), so lookups by id must see them,
+        // also when it failed half way.
+        NodeIndex.invalidate()
+    }
+
+private fun runPassOnNodes(result: TranslationResult, payload: CpgRunPassPayload): CallToolResult {
     val passClass =
         loadPassClass(payload.passName)
             ?: return CallToolResult(
                 content = listOf(TextContent("Could not find the pass ${payload.passName}."))
             )
 
-    val nodes = result.nodes.filter { it.id.toString() == payload.nodeId }
+    val nodes = listOfNotNull(result.findNodeById(payload.nodeId))
 
     if (nodes.isEmpty())
         return CallToolResult(

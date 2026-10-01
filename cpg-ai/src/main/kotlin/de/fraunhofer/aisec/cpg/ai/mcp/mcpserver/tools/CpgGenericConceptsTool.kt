@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
-import de.fraunhofer.aisec.cpg.graph.nodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -145,7 +144,7 @@ fun Server.suggestLLMConceptsAndOperations() {
         name = "cpg_suggest_llm_concepts_and_operations",
         description = toolDescription,
     ) { result: TranslationResult, payload: LLMConcept ->
-        val conceptNode = result.nodes.find { it.id.toString() == payload.nodeId }
+        val conceptNode = result.findNodeById(payload.nodeId)
         if (conceptNode == null) {
             return@addTool CallToolResult(
                 content =
@@ -156,7 +155,7 @@ fun Server.suggestLLMConceptsAndOperations() {
         }
 
         payload.operations.forEach { operation ->
-            val opNode = result.nodes.find { it.id.toString() == operation.nodeId }
+            val opNode = result.findNodeById(operation.nodeId)
             if (opNode == null) {
                 return@addTool CallToolResult(
                     content =
@@ -211,7 +210,7 @@ internal fun applyLLMConcepts(
     val persistedSchemas = loadPersistedConceptsAndOperations(file)
 
     payload.concepts.forEach { concept ->
-        val cpgConceptNode = result.nodes.find { it.id.toString() == concept.nodeId }
+        val cpgConceptNode = result.findNodeById(concept.nodeId)
         if (cpgConceptNode == null) {
             failed.add(
                 FailedConcept(
@@ -263,7 +262,7 @@ internal fun applyLLMConcepts(
         val appliedOps = mutableListOf<AppliedOperation>()
         val failedOps = mutableListOf<FailedOperation>()
         concept.operations.forEach { operation ->
-            val cpgOperationNode = result.nodes.find { it.id.toString() == operation.nodeId }
+            val cpgOperationNode = result.findNodeById(operation.nodeId)
             if (cpgOperationNode == null) {
                 failedOps.add(
                     FailedOperation(
@@ -394,7 +393,7 @@ private fun resolveProperties(
         properties.associate { property ->
             val value =
                 if (property.type.equals(NODE_REFERENCE_TYPE, ignoreCase = true)) {
-                    val referencedNode = result.nodes.find { it.id.toString() == property.value }
+                    val referencedNode = result.findNodeById(property.value)
                     if (referencedNode == null) {
                         failures.add(
                             "Property \"${property.name}\" declares type $NODE_REFERENCE_TYPE but node ${property.value} was not found or ambiguous."

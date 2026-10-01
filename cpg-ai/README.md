@@ -251,6 +251,13 @@ the default is the cheap, shared one. A host only needs to set `globalAnalysisRe
 on which node (`nodeToPass`) is cleared when `cpg_analyze`/`cpg_translate` replace the graph; a host
 that swaps `globalAnalysisResult` on its own should call `nodeToPass.clear()` too.
 
+Tools find nodes by id through `result.findNodeById(id)`, which uses an index of the graph's AST
+nodes built on first use (a plain search walks the whole AST per lookup: about a second on a
+190,000-node graph). The index is dropped when `cpg_run_pass` or a re-analysis may have changed the
+AST; a host that adds or removes AST nodes itself, e.g. by running passes directly on the served
+graph, must call `NodeIndex.invalidate()` afterwards. Attaching overlays does not change the AST and
+needs nothing.
+
 ## Concurrency
 
 The server holds **one CPG per process** in `globalAnalysisResult`; every tool operates on it. Keep

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgBackwardPayloa
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.paginate
 import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -66,9 +67,8 @@ internal fun dfgBackward(
     result: TranslationResult,
     payload: CpgDfgBackwardPayload,
 ): CallToolResult {
-    val startId = Uuid.parse(payload.id)
     val startNode =
-        result.nodes.find { it.id == startId }
+        result.findNodeById(Uuid.parse(payload.id).toString())
             ?: return CallToolResult(
                 content = listOf(TextContent("No node found with ID ${payload.id}"))
             )
