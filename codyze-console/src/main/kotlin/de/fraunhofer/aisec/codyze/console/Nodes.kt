@@ -100,13 +100,19 @@ data class ComponentJSON(
     val topLevel: String?,
 )
 
-/** JSON data class for a [TranslationUnit]. */
+/**
+ * JSON data class for a [TranslationUnit].
+ *
+ * The [code] is only included when a single translation unit is requested (see
+ * [ConsoleService.getTranslationUnit]), since it can be large and listings of translation units
+ * (e.g., in [AnalysisResultJSON]) only need the metadata.
+ */
 @Serializable
 data class TranslationUnitJSON(
     val name: String,
     @Serializable(with = UuidSerializer::class) val id: Uuid,
     val path: String,
-    val code: String,
+    val code: String? = null,
     @Transient val cpgTU: TranslationUnit? = null,
 )
 
@@ -312,7 +318,6 @@ fun TranslationUnit.toJSON(): TranslationUnitJSON {
         id = this.id,
         name = localName?.toString() ?: this.name.toString(),
         path = this.location?.artifactLocation?.uri.toString(),
-        code = this.code ?: "",
         cpgTU = this,
     )
 }
