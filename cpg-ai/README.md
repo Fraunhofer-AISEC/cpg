@@ -201,6 +201,10 @@ Other useful methods: `getSkills()`, `getPrompt(name, arguments)`, `callTool(nam
 - **History compression:** once the prompt exceeds 100 messages, or about a third of the context
   window, older turns are compressed into extracted facts (`defaultHistoryCompressionConcepts`; pass
   your own for a different task vocabulary) while the last 30 messages stay verbatim.
+- **Failed tool calls:** the system prompt lets the model correct an argument that the error names
+  (missing field, malformed id) and call again, at most twice and never with identical arguments;
+  for any other failure, or if the retries fail, it moves on. The iteration limit above is the hard
+  stop if it ignores this.
 - **Oversized results:** as a last resort, a single tool result larger than half the context window is
   truncated, with a warning in the log. Pagination on the list tools usually keeps results well below
   that.

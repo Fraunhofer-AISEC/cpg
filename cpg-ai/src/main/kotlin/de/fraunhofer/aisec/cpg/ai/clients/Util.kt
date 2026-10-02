@@ -44,7 +44,11 @@ const val SYSTEM_PROMPT =
         "Start with tools that give an overview, then choose more specific ones to get more details (if needed). " +
         "Do not stop at summaries. Inspect the actual code before drawing conclusions. " +
         "If a previous tool result already answers the question, respond without calling tools again. " +
-        "If a tool call fails, do not retry it, instead continue with the information you already have. " +
+        "If a tool call fails, read the error message. If it names an argument you got wrong (a missing " +
+        "or invalid field, a malformed id), correct that argument and call the tool again, at most twice " +
+        "for the same call, and never with identical arguments. If it still fails, or the error is not " +
+        "about your arguments (for example a node that does not exist), do not repeat the call: continue " +
+        "with the information you already have. " +
         "Explain your findings clearly. " +
         "Always prefer calling tools through your normal function-calling mechanism. Only if that " +
         "is not available to you, write the call as a fenced JSON code block instead, in this " +

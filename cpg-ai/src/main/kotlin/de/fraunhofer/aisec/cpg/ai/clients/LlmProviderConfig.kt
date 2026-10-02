@@ -56,8 +56,8 @@ private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
 
 /**
  * Retries only well-known transient failures ([RetryConfig.DEFAULT_PATTERNS]: 429/5xx,
- * rate-limit/timeout-ish keywords) - independent of, and unrelated to, the "don't retry failed
- * *tool* calls" policy in [SYSTEM_PROMPT], which is about the model's own tool-call behavior, not
+ * rate-limit/timeout-ish keywords) - independent of, and unrelated to, the bounded retry of failed
+ * *tool* calls described in [SYSTEM_PROMPT], which is about the model's own tool-call behavior, not
  * transport/provider failures. Deliberately much tighter than [RetryConfig.PRODUCTION] (3 attempts,
  * up to 20s max delay each): a host application layers its own outer per-call timeout (e.g. an
  * `--llm-call-timeout-seconds` flag), so retry backoff here must stay a small addition to that
