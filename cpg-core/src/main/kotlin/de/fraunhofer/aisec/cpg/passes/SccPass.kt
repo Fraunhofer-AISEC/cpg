@@ -96,14 +96,14 @@ internal class IdentityStack {
  * a [WorkItem.mapKey] (which [TarjanInfo] scratch space it reads/writes). These are *not* the same
  * value: two unrelated SCCs can legitimately decompose to the same depth (e.g. two independent
  * sibling loops, each one level "deep") without being related at all, and giving them the same
- * scratch space would corrupt each other's blacklist/visited state - see [nextScratchKey].
+ * scratch space would corrupt each other's visited/stack state - see [nextScratchKey].
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(BasicBlockCollectorPass::class, softDependency = true)
 @Description("Pass that finds strongly connected components in the EOG using Tarjan's algorithm.")
 class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
-     * `stack`/`blackList`/`visited`/`blockIDs`/`lowLinkValues` all key or test membership by [Node]
+     * `stack`/`visited`/`blockIDs`/`lowLinkValues` all key or test membership by [Node]
      * *identity* - never by [Node.equals], which for
      * [BasicBlock][de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock] is a full structural
      * comparison (including a `location` recomputed from scratch on every call). [IdentityStack],
@@ -111,10 +111,11 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * expensive `equals()` or `hashCode()` happen to be for the node type involved.
      *
      * [scope] is `null` for a top-level run (the DFS may go anywhere). For a nested decomposition
-     * it holds exactly the SCC elements being re-decomposed: the DFS never leaves it, since a loop
-     * nested inside an SCC can only consist of that SCC's own elements.
+     * it holds the enclosing SCC's elements minus the stripped loop entry: the DFS never leaves it,
+     * since a loop nested inside an SCC can only consist of that SCC's own elements, and without
+     * the entry, any cycle still found within the scope is a nested loop.
      */
-    data class TarjanInfo(val blackList: Set<Node>, val scope: Set<Node>? = null) {
+    data class TarjanInfo(val scope: Set<Node>? = null) {
         var blockCounter = 0
         internal var stack = IdentityStack()
         var visited = identitySetOf<Node>()
@@ -177,25 +178,22 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     fun tarjan(bb: Node) {
         val level = 1
         val workStack = ArrayDeque<WorkItem>()
-        val startInfo = tarjanInfoMap.computeIfAbsent(level) { TarjanInfo(emptySet()) }
+        val startInfo = tarjanInfoMap.computeIfAbsent(level) { TarjanInfo() }
         initNode(bb, startInfo)
         workStack.addLast(DfsFrame(bb, level, level, bb.nextEOG.iterator()))
 
         while (workStack.isNotEmpty()) {
             when (val item = workStack.last()) {
                 is DfsFrame -> {
-                    val info = tarjanInfoMap.computeIfAbsent(item.mapKey) { TarjanInfo(emptySet()) }
+                    val info = tarjanInfoMap.computeIfAbsent(item.mapKey) { TarjanInfo() }
                     if (item.iterator.hasNext()) {
                         val next = item.iterator.next()
-                        // To detect inner loops, we put some nodes on a blacklist and see if we
-                        // can still find a loop
-                        if (next in info.blackList) {
-                            continue
-                        }
-                        // A nested decomposition must not follow edges out of its SCC (e.g. a
-                        // loop's exit edge): it would rediscover every loop reachable from there
-                        // as a spurious nested loop one level deeper, each of which re-decomposes
-                        // again - exponential in the number of loops downstream.
+                        // A nested decomposition must not follow edges out of its scope: not into
+                        // the stripped loop entry (or it would just find the same loop again), and
+                        // not out of the SCC (e.g. a loop's exit edge), or it would rediscover
+                        // every loop reachable from there as a spurious nested loop one level
+                        // deeper, each of which re-decomposes again - exponential in the number of
+                        // loops downstream.
                         if (info.scope != null && next !in info.scope) {
                             continue
                         }
@@ -357,17 +355,14 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // tarjanInfoMap, kept separate from level/depth: two unrelated SCCs can legitimately
         // decompose to the same depth (e.g. two independent sibling loops, each with a single
         // entry==exit node), and sharing a TarjanInfo between them would let one's
-        // blackList/visited/stack silently corrupt the other's.
+        // visited/stack silently corrupt the other's.
         if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
-            val blackList = identitySetOf<Node>()
-            blackList.addAll(currentInfo.blackList)
             val innerLevel = level + 1
             val innerMapKey = nextScratchKey--
             val eliminatedElement =
                 loopEntryElements.sortedBy { it.location?.region?.startLine }.last()
-            blackList.add(eliminatedElement)
             sccElements.remove(eliminatedElement)
-            tarjanInfoMap[innerMapKey] = TarjanInfo(blackList, scope = sccElements)
+            tarjanInfoMap[innerMapKey] = TarjanInfo(scope = sccElements)
             workStack.addLast(
                 DecompDriver(
                     sccOrder.filter { it in sccElements }.iterator(),

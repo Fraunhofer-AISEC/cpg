@@ -35,7 +35,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Hand-builds small EOGs and checks [SccPass.tarjan]'s actual output: the `scc` level [SccPass]
@@ -267,36 +266,34 @@ class SccPassTest {
     }
 
     /**
-     * Verifies that a blacklisted node encountered while scanning a node's `nextEOG` successors
-     * only skips that one successor - the scan continues to any successors after it, rather than
-     * aborting entirely. [SccPass.tarjan]'s blacklist is normally only ever non-empty for a nested
-     * decomposition (populated by [handleSccRoot] when it re-decomposes an SCC one level deeper -
-     * see its doc), so this exercises the same code path directly: pre-seed depth 1's
-     * [SccPass.TarjanInfo] with a blacklist before calling [SccPass.tarjan] (which always starts at
-     * depth 1), without needing a real nested loop to produce one.
+     * A nested decomposition skips successors outside its scope, but must only skip that one
+     * successor, not abort the scan of the remaining ones. `c` is the inner loop's body and ends in
+     * a branch: a labeled `continue outer` (to `outer`, outside the inner decomposition's scope)
+     * listed *before* the inner loop's own back-edge (to `inner`). If the scan stopped at `outer`,
+     * the inner loop would never be found as nested, and `c -> inner` would keep its level 1.
      */
     @Test
-    fun testBlacklistedNodeDoesNotAbortSuccessorScan() {
-        val pass = newPass()
+    fun testOutOfScopeSuccessorDoesNotAbortSuccessorScan() {
+        val start = Block()
+        val outer = While()
+        val inner = While()
+        val c = Block()
+        val outerBody = Block()
+        val end = Block()
+        start.nextEOG.add(outer)
+        outer.nextEOG.add(inner)
+        outer.nextEOG.add(end)
+        inner.nextEOG.add(c)
+        inner.nextEOG.add(outerBody)
+        c.nextEOG.add(outer)
+        c.nextEOG.add(inner)
+        outerBody.nextEOG.add(outer)
 
-        val bb = Block()
-        val blacklisted = Block()
-        val live = Block()
+        newPass().tarjan(start)
 
-        // blacklisted comes before live in nextEOG, so a scan that stops at the first blacklisted
-        // successor would never reach live.
-        bb.nextEOG.add(blacklisted)
-        bb.nextEOG.add(live)
-
-        val level = 1 // tarjan() always starts at depth 1
-        pass.tarjanInfoMap[level] = SccPass.TarjanInfo(setOf(blacklisted))
-
-        pass.tarjan(bb)
-
-        assertTrue(
-            live in pass.tarjanInfoMap.getValue(level).visited,
-            "live successor after a blacklisted one must still be visited",
-        )
+        assertEquals(1, outerBody.sccTo(outer), "outer loop's back-edge")
+        assertEquals(1, c.sccTo(outer), "the `continue outer` edge belongs to the outer loop")
+        assertEquals(2, c.sccTo(inner), "inner loop's back-edge, found despite `c -> outer`")
     }
 
     /**
