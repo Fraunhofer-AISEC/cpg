@@ -58,6 +58,7 @@ import kotlinx.coroutines.runBlocking
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(BasicBlockCollectorPass::class)
+@DependsOn(SccPass::class)
 @Description(
     "Adds CDG edges to the graph. These represent control dependence graph and thus show if executing code depends on a condition of a control-flow controlling statement."
 )
@@ -127,6 +128,17 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         log.trace("Retrieved network of BBs for {}", startNode.name)
 
+        // branchingNodeConditionals is a map organized as follows:
+        //   BranchingNode -> Set of BasicBlocks where, if we visited all of these, the
+        //      branchingNode does not dominate us anymore (we are after the merge point).
+        // We compute this from the static basic-block graph (rather than from the fixpoint
+        // result, as we used to) so that transfer() can use it already while the fixpoint is
+        // running, not just once at the very end.
+        val allBasicBlocks = collectAllBasicBlocks(firstBasicBlock)
+        val nodeToBBMap = allBasicBlocks.flatMap { it.nodes.map { node -> node to it } }.toMap()
+        val branchingNodeConditionals =
+            getBranchingNodeConditions(startNode, allBasicBlocks, nodeToBBMap)
+
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
 
@@ -152,7 +164,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 prevEOGState.iterateEOG(
                     firstBasicBlock.nextEOGEdges,
                     startState,
-                    ::transfer,
+                    { lattice, edge, edgeState ->
+                        transfer(lattice, edge, edgeState, branchingNodeConditionals)
+                    },
                     timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
                 )
             if (timeout)
@@ -178,13 +192,6 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             }
             return
         }
-
-        // branchingNodeConditionals is a map organized as follows:
-        //   BranchingNode -> Set of BasicBlocks where, if we visited all of these, the
-        //      branchingNode does not dominate us anymore (we are after the merge point).
-        val nodeToBBMap = finalState.keys.flatMap { it.nodes.map { node -> node to it } }.toMap()
-        val branchingNodeConditionals =
-            getBranchingNodeConditions(startNode, finalState.keys, nodeToBBMap)
 
         // final state is a map organized as follows:
         //   BasicBlock -> Map<Node, Set<BasicBlock>> with
@@ -279,6 +286,23 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         log.info("Done creating CDG for function ${startNode.name}. Complexity: $c")
     }
 
+    /**
+     * Collects every [BasicBlock] reachable from [firstBasicBlock] via BB-level EOG edges. This
+     * only depends on the static basic-block graph built by [BasicBlockCollectorPass], not on the
+     * [transfer] fixpoint, so it can be computed up front and used by [transfer] itself while the
+     * fixpoint is still running.
+     */
+    private fun collectAllBasicBlocks(firstBasicBlock: BasicBlock): Set<BasicBlock> {
+        val visited = identitySetOf<BasicBlock>()
+        val worklist = mutableListOf(firstBasicBlock)
+        while (worklist.isNotEmpty()) {
+            val bb = worklist.removeFirst()
+            if (!visited.add(bb)) continue
+            bb.nextEOGEdges.forEach { edge -> (edge.end as? BasicBlock)?.let { worklist.add(it) } }
+        }
+        return visited
+    }
+
     /*
      * For a branching node, we identify which path(s) have to be found to be in a "merging point".
      * There are two options:
@@ -332,11 +356,23 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  * - For all other starting nodes, we copy the state of the start node to the end node.
  *
  * Returns the updated state and true because we always expect an update of the state.
+ *
+ * [branchingNodeConditionals] is the same "branching node -> merge points" map used by [accept] to
+ * resolve dominators once a branching node's merge point is reached. It is also consulted here:
+ * `lub` (used to merge states at any join point, including a loop's back-edge) only ever grows a
+ * map, it never removes entries. Without pruning, a dominator entry that already fully reconverged
+ * earlier within one loop iteration would survive, via the back-edge, into the next iteration and
+ * contaminate basic blocks that have nothing to do with it (see
+ * `ComplexPdgTest.continueBreakGuards` for the regression this fixes). So whenever [currentEdge] is
+ * part of a loop (i.e. labeled by [SccPass] with a non-null [EvaluationOrder.scc]), we
+ * resolve/prune already-reconverged entries from this edge's contribution before it is merged into
+ * the accumulated state.
  */
 suspend fun transfer(
     lattice: Lattice<PrevEOGStateElement>,
     currentEdge: EvaluationOrder,
     currentState: PrevEOGStateElement,
+    branchingNodeConditionals: Map<Node, Collection<BasicBlock>>,
 ): PrevEOGStateElement {
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
@@ -355,29 +391,43 @@ suspend fun transfer(
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
     val branchingNode = currentStart.branchingNode
-    if (branchingNode != null) {
-        // We start in a branching node and end in one of the branches, so we have the
-        // following state:
-        // for the branching node "start", we have a path through "end".
-        val prevPathLattice =
-            newState[currentStart]
-                ?.filter { (k, _) -> k != branchingNode }
-                ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
+    val contribution =
+        if (branchingNode != null) {
+            // We start in a branching node and end in one of the branches, so we have the
+            // following state:
+            // for the branching node "start", we have a path through "end".
+            val prevPathLattice =
+                newState[currentStart]
+                    ?.filter { (k, _) -> k != branchingNode }
+                    ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
 
-        val map = PrevEOGLatticeElement(branchingNode to PowersetLattice.Element(currentEnd))
-        val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
-        newState = lattice.push(newState, currentEnd, newPath, true)
-    } else {
-        // We did not start in a branching node, so for the next node, we have the same path
-        // (last branching + first end node) as for the start node of this edge.
-        // If there is no state for the start node (most likely, this is the case for the
-        // first edge in a function), we generate a new state where we start in "start" end
-        // have "end" as the first node in the "branch".
-        val state =
+            val map = PrevEOGLatticeElement(branchingNode to PowersetLattice.Element(currentEnd))
+            lattice.innerLattice.lub(map, prevPathLattice, true)
+        } else {
+            // We did not start in a branching node, so for the next node, we have the same path
+            // (last branching + first end node) as for the start node of this edge.
+            // If there is no state for the start node (most likely, this is the case for the
+            // first edge in a function), we generate a new state where we start in "start" end
+            // have "end" as the first node in the "branch".
             newState[currentStart]?.let { PrevEOGLatticeElement(it) }
                 ?: PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
-        newState = lattice.push(newState, currentEnd, state, true)
-    }
+        }
+
+    // Crossing a loop-carrying edge: resolve/prune entries the same way accept() does at the very
+    // end, so a stale entry can't be carried around the back-edge into the next iteration.
+    val prunedContribution =
+        if (currentEdge.scc != null) {
+            PrevEOGLatticeElement(
+                contribution.filter { (dom, reachingBBs) ->
+                    dom != currentEnd.branchingNode &&
+                        branchingNodeConditionals[dom]?.let { reachingBBs.containsAll(it) } != true
+                }
+            )
+        } else {
+            contribution
+        }
+
+    newState = lattice.push(newState, currentEnd, prunedContribution, true)
     return newState
 }
 
