@@ -88,10 +88,9 @@ internal class IdentityStack {
  * plus its not-yet-visited successors - pushed on descent and popped on return, updating lowlink
  * values the usual Tarjan way. When a popped frame's node turns out to be an SCC root,
  * [handleSccRoot] labels that SCC's edges with the current [WorkItem.level], then - to find loops
- * nested inside it - strips all of the SCC's entry nodes at once (a loop can have more than one
- * distinct entry point) and re-decomposes the remaining elements one `level` deeper, using a
- * [DecompDriver] to drive that re-run. This repeats until no further nested loop remains, leaving
- * concentric loops labeled from outermost to innermost.
+ * nested inside it - strips one of the SCC's entry nodes and re-decomposes the remaining elements
+ * one `level` deeper, using a [DecompDriver] to drive that re-run. This repeats until no further
+ * nested loop remains, leaving concentric loops labeled from outermost to innermost.
  *
  * Each [WorkItem] carries both a [WorkItem.level] (the nesting depth reported on labeled edges) and
  * a [WorkItem.mapKey] (which [TarjanInfo] scratch space it reads/writes). These are *not* the same
@@ -350,17 +349,9 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             }
         }
 
-        // Find nested loops: strip all of this level's loop-entry elements at once and
-        // re-decompose the remaining elements one level deeper - if that still contains a loop,
-        // it's a nested one.
-        //
-        // All entries are stripped together, not one at a time: a loop can have more than one
-        // distinct entry point (e.g. a `goto` into the middle of a loop, or a switch/labeled break
-        // into a loop body - see testFullyConnectedLoopWithThreeEntriesStaysAtOneLevel). Removing
-        // them one at a time and re-decomposing after each would cost O(k * n) for k entries, and
-        // could relabel edges at a deeper level than the loop actually has, since the remaining
-        // entries can still keep the same elements connected in a cycle. For a single-entry loop
-        // (loopEntryElements.size == 1), stripping "all" is the same as stripping the one.
+        // Find nested loops: strip the last loop-entry element (by source order, hoping it's the
+        // outermost entry) and re-decompose the remaining elements one level deeper - if that
+        // still contains a loop, it's a nested one.
         //
         // Each decomposition attempt gets its own never-reused mapKey (see [nextScratchKey]) into
         // tarjanInfoMap, kept separate from level/depth: two unrelated SCCs can legitimately
@@ -372,8 +363,10 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             blackList.addAll(currentInfo.blackList)
             val innerLevel = level + 1
             val innerMapKey = nextScratchKey--
-            blackList.addAll(loopEntryElements)
-            sccElements.removeAll(loopEntryElements)
+            val eliminatedElement =
+                loopEntryElements.sortedBy { it.location?.region?.startLine }.last()
+            blackList.add(eliminatedElement)
+            sccElements.remove(eliminatedElement)
             tarjanInfoMap[innerMapKey] = TarjanInfo(blackList, scope = sccElements)
             workStack.addLast(
                 DecompDriver(

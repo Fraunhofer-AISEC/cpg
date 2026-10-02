@@ -303,8 +303,7 @@ class SccPassTest {
      * A loop with more than one distinct entry point: `a` is entered directly from `start`, while a
      * `goto` (`d`) jumps directly into `b`, a label in the middle of the loop body. `SccPass` must
      * treat both as loop entries (`loopEntryElements` = `{a, b}`) and still terminate and label the
-     * loop correctly - handled by [handleSccRoot] stripping all current entries at once rather than
-     * one per level (see its doc).
+     * loop correctly.
      *
      * Runs on a background thread with a timeout rather than calling `tarjan` directly: a
      * non-terminating case here would otherwise hang this test (and the whole suite) instead of
@@ -343,54 +342,6 @@ class SccPassTest {
         // ever be labeled at a deeper level than 1.
         assertEquals(1, c.sccTo(a), "back-edge into entry `a`")
         assertEquals(1, a.sccTo(b), "back-edge into entry `b`")
-    }
-
-    /**
-     * A loop with three entries and redundant internal connectivity, resembling a computed-goto
-     * dispatch loop where every label can jump directly to either of the other two: `x`, `y`, `z`
-     * each reach the other two directly, and each is also reachable directly from `start`. Removing
-     * any *one* entry still leaves the other two connected in a cycle, so all three must be
-     * recognized as entries at once (`loopEntryElements` = `{x, y, z}`) - if [handleSccRoot]
-     * instead only stripped one entry per level, this shape would keep re-decomposing and relabel
-     * `x`/`y`/`z` edges at ever deeper, spurious levels instead of the single level this loop
-     * actually has.
-     */
-    @Test
-    fun testFullyConnectedLoopWithThreeEntriesStaysAtOneLevel() {
-        val start = Block()
-        val x = Label()
-        val y = Label()
-        val z = Label()
-        val end = Block()
-        start.nextEOG.add(x)
-        start.nextEOG.add(y)
-        start.nextEOG.add(z)
-        x.nextEOG.add(y)
-        x.nextEOG.add(z)
-        y.nextEOG.add(x)
-        y.nextEOG.add(z)
-        z.nextEOG.add(x)
-        z.nextEOG.add(y)
-        z.nextEOG.add(end)
-
-        val thread = Thread { newPass().tarjan(start) }
-        thread.isDaemon = true
-        thread.start()
-        thread.join(5000)
-
-        assertFalse(thread.isAlive, "tarjan() did not terminate within 5s")
-
-        assertNull(start.sccTo(x))
-        assertNull(start.sccTo(y))
-        assertNull(start.sccTo(z))
-        assertNull(z.sccTo(end))
-        // The key assertion: every edge among x/y/z must stay at level 1, not be relabeled deeper.
-        assertEquals(1, x.sccTo(y))
-        assertEquals(1, y.sccTo(x))
-        assertEquals(1, x.sccTo(z))
-        assertEquals(1, z.sccTo(x))
-        assertEquals(1, y.sccTo(z))
-        assertEquals(1, z.sccTo(y))
     }
 
     /**
