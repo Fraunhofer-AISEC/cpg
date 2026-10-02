@@ -6,22 +6,36 @@
   import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
+  import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
   import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON, ConceptSuggestionItem, Model } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
   let selectedComponentName = $state<string | null>(null);
-  let overlayNodes = $state<NodeJSON[]>([]);
-  let astNodes = $state<NodeJSON[]>([]);
+  // The selected unit including its code, which is not part of the units in analysisResult
+  let openedUnit = $state.raw<TranslationUnitJSON | null>(null);
+  // These can contain tens of thousands of nodes and are only ever replaced as a whole, so they do
+  // not need to be deeply reactive
+  let overlayNodes = $state.raw<NodeJSON[]>([]);
+  let astNodes = $state.raw<NodeJSON[]>([]);
   let fileTreeCollapsed = $state(false);
   let nodesPanelCollapsed = $state(false);
+
+  async function loadUnit(componentName: string, tuId: string) {
+    const unit: TranslationUnitJSON | null = await fetch(
+      `/api/component/${componentName}/translation-unit/${tuId}`
+    ).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    // Ignore the response if another unit was selected in the meantime
+    if (selectedTranslationUnit?.id === tuId) openedUnit = unit;
+  }
 
   async function loadNodes(componentName: string, tuId: string) {
     const [overlay, ast] = await Promise.all([
       fetch(`/api/component/${componentName}/translation-unit/${tuId}/overlay-nodes`).then(r => r.json()).catch(() => []),
       fetch(`/api/component/${componentName}/translation-unit/${tuId}/ast-nodes`).then(r => r.json()).catch(() => []),
     ]);
+    if (selectedTranslationUnit?.id !== tuId) return;
     overlayNodes = overlay;
     astNodes = ast;
   }
@@ -54,7 +68,10 @@
     selectedTranslationUnit = tu;
     const comp = findComponentForTu(tu.id);
     selectedComponentName = comp?.name ?? null;
-    if (comp) loadNodes(comp.name, tu.id);
+    if (comp) {
+      loadUnit(comp.name, tu.id);
+      loadNodes(comp.name, tu.id);
+    }
   }
 
   function handleFileSelect(unit: TranslationUnitJSON) {
@@ -63,6 +80,7 @@
     const comp = findComponentForTu(unit.id);
     selectedComponentName = comp?.name ?? null;
     if (comp) {
+      loadUnit(comp.name, unit.id);
       loadNodes(comp.name, unit.id);
     } else {
       overlayNodes = [];
@@ -74,6 +92,7 @@
     selectedNode = null;
     selectedTranslationUnit = null;
     selectedComponentName = null;
+    openedUnit = null;
     overlayNodes = [];
     astNodes = [];
   }
@@ -135,39 +154,44 @@
 
   let showCodePanel = $derived(selectedTranslationUnit !== null || suggestions.length > 0);
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
-  let tusWithSuggestions = $state<Set<string>>(new Set());
+  // The nodes referenced by the suggestions, by ID. They can be nested anywhere in a translation
+  // unit, so they are not necessarily part of astNodes
+  let suggestionNodes = $state.raw<Map<string, NodeJSON>>(new Map());
+  const tusWithSuggestions = $derived(
+    new Set([...suggestionNodes.values()].flatMap(n => (n.translationUnitId ? [n.translationUnitId] : [])))
+  );
 
-
-  // When suggestions arrive, resolve which TUs contain the referenced nodes
-  $effect(() => {
-    if (suggestions.length === 0 || !analysisResult) {
-      tusWithSuggestions = new Set();
-      return;
-    }
-
-    const nodeIds = new Set(
+  // The node IDs referenced by the suggestions. As a string, this only changes when the IDs change,
+  // and not when a suggestion is accepted or rejected (which replaces the suggestion objects)
+  const suggestionNodeIdsKey = $derived(
+    [...new Set(
       suggestions.flatMap(s => [
         s.suggestion.nodeId,
         ...s.operations.map(o => o.operation.nodeId)
       ])
-    );
+    )].sort().join(',')
+  );
 
-    resolveTusForNodeIds(nodeIds);
+  // When suggestions arrive, load the referenced nodes to know their files and lines
+  $effect(() => {
+    const key = suggestionNodeIdsKey;
+    if (!key || !analysisResult) {
+      suggestionNodes = new Map();
+      return;
+    }
+    loadSuggestionNodes(key);
   });
 
-  async function resolveTusForNodeIds(nodeIds: Set<string>) {
-    const result = new Set<string>();
-    for (const comp of analysisResult?.components ?? []) {
-      for (const tu of comp.translationUnits) {
-        const nodes: NodeJSON[] = await fetch(
-          `/api/component/${comp.name}/translation-unit/${tu.id}/ast-nodes`
-        ).then(r => r.json()).catch(() => []);
-        if (nodes.some(n => nodeIds.has(n.id))) {
-          result.add(tu.id);
-        }
-      }
-    }
-    tusWithSuggestions = result;
+  async function loadSuggestionNodes(key: string) {
+    const nodes: NodeJSON[] = await fetch('/api/nodes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(key.split(','))
+    }).then(r => (r.ok ? r.json() : [])).catch(() => []);
+
+    // Ignore the response if the suggestions changed in the meantime
+    if (key !== suggestionNodeIdsKey) return;
+    suggestionNodes = new Map(nodes.map(n => [n.id, n]));
   }
 
   // Auto-select the first translation unit with suggestions when resolved
@@ -337,16 +361,23 @@
         />
       {/if}
 
-      <CodeViewer
-        translationUnit={selectedTranslationUnit}
-        astNodes={astNodes}
-        overlayNodes={overlayNodes}
-        highlightLine={selectedNode?.startLine ?? undefined}
-        bind:nodePanelCollapsed={nodesPanelCollapsed}
-        onClose={closeCodePanel}
-        bind:suggestions
-        onApplySuggestions={handleApplyAndReload}
-      />
+      {#if openedUnit?.id === selectedTranslationUnit.id}
+        <CodeViewer
+          translationUnit={openedUnit}
+          astNodes={astNodes}
+          overlayNodes={overlayNodes}
+          highlightLine={selectedNode?.startLine ?? undefined}
+          bind:nodePanelCollapsed={nodesPanelCollapsed}
+          onClose={closeCodePanel}
+          bind:suggestions
+          {suggestionNodes}
+          onApplySuggestions={handleApplyAndReload}
+        />
+      {:else}
+        <div class="flex flex-1 items-center justify-center">
+          <LoadingSpinner message="Loading {selectedTranslationUnit.name}..." />
+        </div>
+      {/if}
 
     </div>
   {/if}

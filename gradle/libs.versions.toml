@@ -45,7 +45,7 @@ classgraph = { module = "io.github.classgraph:classgraph", version = "4.8.179"}
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.28.1"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.22.1"}
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.22.1"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.34.100"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.35.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "77.1"}
 # io.joern re-publishes Eclipse CDT's core plugin as a normal Maven Central artifact (with a
