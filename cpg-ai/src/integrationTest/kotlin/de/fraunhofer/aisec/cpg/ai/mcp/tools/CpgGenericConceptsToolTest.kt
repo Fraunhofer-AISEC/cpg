@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMOperation
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMProperty
+import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.literals
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -60,7 +61,7 @@ class CpgGenericConceptsToolTest {
                     "class Foo:\n    secretKey = '0000'\ndef hello():\n    print('Hello World')",
                 extension = "py",
             )
-        runCpgAnalyze(payload, runPasses = true, cleanup = true)
+        testServer().runCpgAnalyze(payload, runPasses = true, cleanup = true)
         assertNotNull(globalAnalysisResult, "Result should be set after analyze")
     }
 

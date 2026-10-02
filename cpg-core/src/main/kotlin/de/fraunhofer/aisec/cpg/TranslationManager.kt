@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -41,6 +42,7 @@ import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -96,6 +98,7 @@ private constructor(
         val outerBench =
             Benchmark(TranslationManager::class.java, "Translation into full graph", false, result)
 
+        var succeeded = false
         try {
             // Parse Java/C/CPP files
             val bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
@@ -114,6 +117,7 @@ private constructor(
             bench.addMeasurement()
 
             executePassesSequentially(ctx, result, executedFrontends, callbacks)
+            succeeded = true
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
         } finally {
@@ -122,6 +126,11 @@ private constructor(
                 log.debug("Cleaning up {} Frontends", executedFrontends.size)
 
                 executedFrontends.forEach { it.cleanup() }
+            } else if (succeeded) {
+                // Frontends (and thus the shared ctx/ScopeManager) were kept alive, so this
+                // result remains usable by addSource afterwards. Only mark it live if analysis
+                // actually completed -- a partially-failed run must not look safely reusable.
+                result.isLive = true
             }
         }
 
@@ -535,6 +544,236 @@ private constructor(
         return frontend
     }
 
+    /**
+     * Incrementally adds [file] to [component] of an already completed [result], without re-running
+     * the full translation. This is intended for cases where new source code is discovered after
+     * [analyze] has already produced a graph, e.g. a dynamically loaded file.
+     *
+     * Only the frontend/parsing step is performed here: the returned [TranslationUnit] is parsed
+     * with a fresh, single-use [LanguageFrontend] (see [LanguageFrontend] docs on why frontends
+     * must not be reused), added to [component], and its declarations are merged into the shared
+     * [TranslationContext.scopeManager] of [result]. No [de.fraunhofer.aisec.cpg.passes.Pass] is
+     * executed as part of this call; that is the responsibility of a later, dirty-marking-aware
+     * re-run of the pass pipeline.
+     *
+     * What this call does do, via [updateIncrementally]: every new function-like declaration is
+     * marked dirty for [de.fraunhofer.aisec.cpg.passes.SymbolResolver], and if it matches (by
+     * symbol) a pre-existing inferred stub, every stale call site that still invokes that stub has
+     * its stale `invokes`/DFG edges removed (and its enclosing function marked dirty), so that a
+     * later partial pass re-run has a correct starting point instead of phantom edges alongside the
+     * new declaration.
+     *
+     * This function is not thread-safe: it mutates the shared [TranslationContext.scopeManager] of
+     * [result] directly (unlike parallel frontend parsing, which gives every thread its own
+     * [ScopeManager] and merges afterwards). Do not call this concurrently for the same [result],
+     * or concurrently with a pass run on it.
+     *
+     * @param result a [TranslationResult] previously returned by [analyze], where [analyze] was
+     *   called on a [config] with [TranslationConfiguration.disableCleanup] set to `true`. This is
+     *   required because otherwise the frontends (and, depending on the frontend, other state
+     *   needed for further parsing) are torn down right after [analyze] returns.
+     * @param component the [Component] that [file] belongs to. Must already be part of [result].
+     * @throws IllegalStateException if [result] was not produced by a [TranslationManager] with
+     *   [TranslationConfiguration.disableCleanup] set.
+     * @throws IllegalArgumentException if [component] is not part of [result].
+     * @throws TranslationException if no frontend could be found for [file], or parsing fails and
+     *   [TranslationConfiguration.failOnError] is `true`.
+     */
+    @Throws(TranslationException::class)
+    fun addSource(result: TranslationResult, component: Component, file: File): TranslationUnit? {
+        checkLive(result)
+        requireComponent(result, component)
+
+        val ctx = result.finalCtx
+        // Mirrors parseSequentially, which also points the shared ctx at the component that is
+        // currently being parsed before invoking the frontend.
+        ctx.currentComponent = component
+
+        return try {
+            val frontend =
+                getFrontend(file, ctx, ctx)
+                    ?: throw TranslationException("Found no parser frontend for ${file.name}")
+
+            // Note: we deliberately do NOT call frontend.cleanup() here (unlike runFrontends'
+            // handling of frontends created for the initial analyze() call). Some frontends'
+            // cleanup() clears JVM-wide static state (e.g. JavaLanguageFrontend.cleanup() calling
+            // the static JavaParserFacade.clearInstances()), which would affect other still-alive
+            // frontend instances in the same JVM. The frontend created above is single-use and
+            // about to go out of scope anyway, so we just let it be garbage collected.
+            val tu =
+                if (frontend is SupportsNewParse) {
+                    val path = file.toPath().absolute()
+                    val content = path.readText()
+                    val linesOfCode = content.linesOfCode
+                    val tu = frontend.parse(content, path)
+                    synchronized(result.stats) { result.stats.totalLinesOfCode += linesOfCode }
+                    tu
+                } else {
+                    frontend.parse(file)
+                }
+            component.addTranslationUnit(tu)
+            updateIncrementally(result, tu)
+            tu
+        } catch (ex: TranslationException) {
+            log.error("An error occurred during parsing of ${file.name}: ${ex.message}")
+            if (config.failOnError) {
+                throw ex
+            }
+            null
+        }
+    }
+
+    /**
+     * Incrementally adds [content] (located at [path]) to [component] of an already completed
+     * [result]. This is the [SupportsNewParse] counterpart of [addSource] for callers that have
+     * in-memory source code rather than a [File] on disk, e.g. a dynamically generated snippet.
+     *
+     * [path] is required (unlike [SupportsNewParse.parse]'s optional path) because it is the only
+     * way we have to determine which registered [de.fraunhofer.aisec.cpg.frontends.Language] (and
+     * therefore which frontend) is responsible for [content].
+     *
+     * See [addSource] for the remaining semantics (liveness requirement, no passes executed,
+     * thread-safety, etc).
+     *
+     * @throws IllegalStateException if [result] was not produced by a [TranslationManager] with
+     *   [TranslationConfiguration.disableCleanup] set.
+     * @throws IllegalArgumentException if [component] is not part of [result].
+     * @throws TranslationException if no frontend could be found for [path], the frontend does not
+     *   support [SupportsNewParse], or parsing fails and [TranslationConfiguration.failOnError] is
+     *   `true`.
+     */
+    @Throws(TranslationException::class)
+    fun addSource(
+        result: TranslationResult,
+        component: Component,
+        content: String,
+        path: Path,
+    ): TranslationUnit? {
+        checkLive(result)
+        requireComponent(result, component)
+
+        val ctx = result.finalCtx
+        ctx.currentComponent = component
+        val file = path.toFile()
+
+        return try {
+            val frontend =
+                getFrontend(file, ctx, ctx)
+                    ?: throw TranslationException("Found no parser frontend for $path")
+            if (frontend !is SupportsNewParse) {
+                throw TranslationException(
+                    "Frontend ${frontend.javaClass.simpleName} does not support parsing in-memory content"
+                )
+            }
+
+            // See addSource(File) for why we deliberately don't call frontend.cleanup() here.
+            val tu = frontend.parse(content, path)
+            synchronized(result.stats) { result.stats.totalLinesOfCode += content.linesOfCode }
+            component.addTranslationUnit(tu)
+            updateIncrementally(result, tu)
+            tu
+        } catch (ex: TranslationException) {
+            log.error("An error occurred during parsing of $path: ${ex.message}")
+            if (config.failOnError) {
+                throw ex
+            }
+            null
+        }
+    }
+
+    /**
+     * Incrementally adds [content] to [component] of an already completed [result], using
+     * [language] directly to determine the frontend. This is the [Language]-based counterpart of
+     * [addSource] for callers that already know the target [Language] and have no (real or
+     * synthetic) file [Path] to derive it from, e.g. content associated with a language by other
+     * means than a file extension.
+     *
+     * See [addSource] for the remaining semantics (liveness requirement, no passes executed,
+     * thread-safety, etc).
+     *
+     * @throws IllegalStateException if [result] was not produced by a [TranslationManager] with
+     *   [TranslationConfiguration.disableCleanup] set.
+     * @throws IllegalArgumentException if [component] is not part of [result], or if [language] is
+     *   not one of the [de.fraunhofer.aisec.cpg.TranslationContext.availableLanguages] of
+     *   [result]'s [TranslationContext].
+     * @throws TranslationException if no frontend could be instantiated for [language], the
+     *   frontend does not support [SupportsNewParse], or parsing fails and
+     *   [TranslationConfiguration.failOnError] is `true`.
+     */
+    @Throws(TranslationException::class)
+    fun addSource(
+        result: TranslationResult,
+        component: Component,
+        content: String,
+        language: Language<*>,
+    ): TranslationUnit? {
+        checkLive(result)
+        requireComponent(result, component)
+
+        val ctx = result.finalCtx
+        // Language is itself a graph Node, so an arbitrary caller-constructed instance would
+        // become a duplicate node distinct from the one already used everywhere else in the
+        // graph; require the canonical instance registered on this ctx (see
+        // TranslationContext.availableLanguage). Note: Language.equals compares only by class, so
+        // an identity check is required here -- a separately constructed instance of the same
+        // Language class would otherwise incorrectly pass an "in" (equals-based) check.
+        require(ctx.availableLanguages.any { it === language }) {
+            "language must be one of result.finalCtx.availableLanguages, e.g. obtained via " +
+                "ctx.availableLanguage<T>(), not a separately constructed instance"
+        }
+        ctx.currentComponent = component
+
+        return try {
+            val frontend =
+                newFrontendOrNull(language, ctx)
+                    ?: throw TranslationException(
+                        "Found no parser frontend for language ${language.name}"
+                    )
+            if (frontend !is SupportsNewParse) {
+                throw TranslationException(
+                    "Frontend ${frontend.javaClass.simpleName} does not support parsing in-memory content"
+                )
+            }
+
+            // See addSource(File) for why we deliberately don't call frontend.cleanup() here.
+            val tu = frontend.parse(content, path = null)
+            synchronized(result.stats) { result.stats.totalLinesOfCode += content.linesOfCode }
+            component.addTranslationUnit(tu)
+            updateIncrementally(result, tu)
+            tu
+        } catch (ex: TranslationException) {
+            log.error(
+                "An error occurred during parsing of content for ${language.name}: ${ex.message}"
+            )
+            if (config.failOnError) {
+                throw ex
+            }
+            null
+        }
+    }
+
+    /**
+     * Ensures that [result] was produced by an [analyze] run with
+     * [TranslationConfiguration.disableCleanup] enabled, which keeps its frontends (and thus the
+     * shared [TranslationContext.scopeManager]) alive, which [addSource] relies on.
+     *
+     * Note: this deliberately checks [TranslationResult.isLive] rather than `this.config`, since
+     * [result] may not have been produced by this particular [TranslationManager] instance.
+     */
+    private fun checkLive(result: TranslationResult) {
+        check(result.isLive) {
+            "addSource requires a TranslationResult produced by analyze() with disableCleanup() " +
+                "enabled so that frontend/scope manager state survives after analyze() returns."
+        }
+    }
+
+    /** Ensures that [component] is actually part of [result], as [addSource] requires. */
+    private fun requireComponent(result: TranslationResult, component: Component) {
+        require(component in result.components) {
+            "component must already be part of result.components"
+        }
+    }
+
     private fun getFrontend(
         file: File,
         ctx: TranslationContext,
@@ -547,27 +786,36 @@ private constructor(
         // globalCtx parameter
         val language = with(globalCtx) { file.language }
 
-        return if (language != null) {
-            try {
-                // Return a new language frontend
-                language.newFrontend(ctx)
-            } catch (e: Exception) {
-                when (e) {
-                    is InstantiationException,
-                    is IllegalAccessException,
-                    is InvocationTargetException,
-                    is NoSuchMethodException -> {
-                        log.error(
-                            "Could not instantiate language frontend {}",
-                            language.frontend.simpleName,
-                            e,
-                        )
-                        null
-                    }
-                    else -> throw e
+        return language?.let { newFrontendOrNull(it, ctx) }
+    }
+
+    /**
+     * Constructs a new frontend for [language] via [Language.newFrontend], returning `null` (and
+     * logging) instead of throwing if the frontend could not be instantiated, e.g. because it has
+     * no accessible no-arg-equivalent constructor. Other exceptions propagate.
+     */
+    private fun newFrontendOrNull(
+        language: Language<*>,
+        ctx: TranslationContext,
+    ): LanguageFrontend<*, *>? {
+        return try {
+            language.newFrontend(ctx)
+        } catch (e: Exception) {
+            when (e) {
+                is InstantiationException,
+                is IllegalAccessException,
+                is InvocationTargetException,
+                is NoSuchMethodException -> {
+                    log.error(
+                        "Could not instantiate language frontend {}",
+                        language.frontend.simpleName,
+                        e,
+                    )
+                    null
                 }
+                else -> throw e
             }
-        } else null
+        }
     }
 
     /**

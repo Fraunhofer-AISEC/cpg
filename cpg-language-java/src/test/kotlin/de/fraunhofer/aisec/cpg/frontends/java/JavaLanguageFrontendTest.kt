@@ -700,8 +700,12 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
                 it.registerLanguage<JavaLanguage>()
             }
-        val tu =
-            findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
+        // Now that JavaLanguageFrontend implements SupportsNewParse, TranslationManager parses
+        // this file via parse(content, path) with an absolutized path, and newTranslationUnit
+        // relativizes that against the configured topLevel (fix-328/) -- so the TU's name is just
+        // "Cat.java", not the original (possibly relative) File.toString(). Matching by file name
+        // works either way, since findByUniqueName matches on trailing name parts.
+        val tu = findByUniqueName(result.components.flatMap { it.translationUnits }, file1.name)
 
         with(result) {
             val namespace = tu.declarations<Namespace>(0)

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -49,6 +50,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.lang.reflect.Field
 import java.lang.reflect.Method as ReflectMethod
+import java.nio.charset.Charset
 import java.nio.file.Path
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
@@ -86,7 +88,7 @@ import org.slf4j.LoggerFactory
 @RegisterExtraPass(CXXExtraPass::class)
 @RegisterExtraPass(CXXMemoryAllocationPass::class)
 open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
-    LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
+    LanguageFrontend<IASTNode, IASTTypeId>(ctx, language), SupportsNewParse {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -205,7 +207,39 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnit {
-        val content = FileContent.createForExternalFileLocation(file.absolutePath)
+        // CDT's own file-reading APIs (e.g. the FileContent.createForExternalFileLocation we used
+        // to call here) decode using the JVM's platform-default charset
+        // (InternalParserUtil.SYSTEM_DEFAULT_ENCODING, i.e. System.getProperty("file.encoding")),
+        // not UTF-8. We need to match that here, otherwise non-ASCII source files get silently
+        // corrupted (and AST offsets shifted) on any JVM where the platform default isn't UTF-8.
+        return parse(file.readText(charset = Charset.defaultCharset()), file.toPath())
+    }
+
+    /**
+     * Parses [content] into a [TranslationUnit], using [path] (if given) to determine the C/C++
+     * dialect (by file extension, mirroring [parse]'s file-based dialect selection) and as the
+     * virtual file name/location handed to CDT, e.g. for relative `#include` resolution and
+     * diagnostics. If [path] is null, we fall back to [language] (the [Language] this frontend was
+     * constructed for) to pick the dialect, since CDT always needs *some* file name to select a
+     * dialect but we have none to derive it from; we use a synthetic file name (`<unknown>.cpp` or
+     * `<unknown>.c`) in that case purely as CDT's virtual location.
+     *
+     * Note on include resolution: `#include`s are still resolved via [includeFileContentProvider]
+     * against the component's configured `includePaths` exactly as before, so this works unchanged
+     * for headers that are reachable from those paths. However, [path] here is only used as a
+     * *virtual* location (via [FileContent.create]) and does not need to, and in the `addSource`
+     * case does not, exist on disk. This means CDT cannot resolve `#include`s that are expressed
+     * *relative to the parsed file's own directory* (as opposed to relative to a configured include
+     * path or the component's top level), since there is no real file at [path] whose directory CDT
+     * could search. Content with no relative includes, or with includes resolvable via the
+     * configured include paths, works fine.
+     */
+    @Throws(TranslationException::class)
+    override fun parse(content: String, path: Path?): TranslationUnit {
+        val fileName =
+            path?.toString() ?: if (language is CPPLanguage) "<unknown>.cpp" else "<unknown>.c"
+        val displayName = path?.fileName?.toString() ?: fileName
+        val fileContent = FileContent.create(fileName, content.toCharArray())
 
         // include paths
         val includePaths = mutableSetOf<String>()
@@ -221,7 +255,21 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
         includePaths.addAll(config.includePaths.map { it.toAbsolutePath().toString() })
 
-        config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
+        // The compilation database keys its entries by file, which only makes sense if we have a
+        // real, on-disk path to look up. For a synthetic/virtual path (e.g. from addSource), this
+        // is skipped, matching the fact that such a file could not have been part of the original
+        // compilation database anyway. Path.toFile() also throws UnsupportedOperationException for
+        // a Path not backed by the default filesystem provider (e.g. some virtual/in-memory
+        // filesystems); we treat that the same way, as "no compilation database entry available".
+        val realFile =
+            try {
+                path?.toFile()
+            } catch (e: UnsupportedOperationException) {
+                null
+            }
+        realFile?.let { f ->
+            config.compilationDatabase?.getIncludePaths(f)?.let { includePaths.addAll(it) }
+        }
         if (config.useUnityBuild) {
             // For a unity build, we cannot access the individual symbols per file, but rather only
             // for the whole component
@@ -230,9 +278,9 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                     ctx.currentComponent?.name?.localName ?: ""
                 ) ?: mutableMapOf()
             )
-        } else {
+        } else if (realFile != null) {
             config.compilationDatabase
-                ?.getSymbols(ctx.currentComponent?.name?.localName ?: "", file)
+                ?.getSymbols(ctx.currentComponent?.name?.localName ?: "", realFile)
                 ?.let { symbols.putAll(it) }
         }
 
@@ -240,20 +288,32 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
-            var bench = Benchmark(this.javaClass, "Parsing sourcefile ${file.name}")
+            var bench = Benchmark(this.javaClass, "Parsing sourcefile $displayName")
 
-            // Set parser language, based on file extension
+            // Set parser dialect. If we have a (real or virtual) path, we base this on its
+            // extension, mirroring the historical file-based behavior. Otherwise (no path, e.g.
+            // the content+language addSource overload), we fall back to the Language this
+            // frontend was constructed for -- deriving it from a synthetic ".cpp" extension would
+            // silently force the C++ dialect even for a frontend explicitly configured for C.
             this.dialect =
-                if (file.extension == "c") {
-                    GCCLanguage.getDefault()
-                } else {
+                if (path != null) {
+                    val extension = path.fileName?.toString()?.substringAfterLast('.', "") ?: ""
+                    if (extension == "c") {
+                        GCCLanguage.getDefault()
+                    } else {
+                        GPPLanguage.getDefault()
+                        GPPLanguage()
+                    }
+                } else if (language is CPPLanguage) {
                     GPPLanguage.getDefault()
                     GPPLanguage()
+                } else {
+                    GCCLanguage.getDefault()
                 }
 
             val translationUnit =
                 this.dialect?.getASTTranslationUnit(
-                    content,
+                    fileContent,
                     scannerInfo,
                     includeFileContentProvider,
                     null,
@@ -262,12 +322,12 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                 ) as ASTTranslationUnit
             val length = translationUnit.length
             LOGGER.info(
-                "Parsed {} bytes in ${file.name} corresponding roughly to {} LoC",
+                "Parsed {} bytes in $displayName corresponding roughly to {} LoC",
                 length,
                 length / 50,
             )
             bench.stop()
-            bench = Benchmark(this.javaClass, "Transforming ${file.name} to CPG")
+            bench = Benchmark(this.javaClass, "Transforming $displayName to CPG")
             if (config.debugParser) {
                 explore(translationUnit, 0)
             }

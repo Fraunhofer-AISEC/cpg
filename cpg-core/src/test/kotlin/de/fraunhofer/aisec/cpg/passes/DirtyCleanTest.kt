@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 @DependsOn(LoopingPass2::class)
@@ -87,5 +88,34 @@ class DirtyCleanTest {
         assertNotNull(result)
         assertEquals(2, LoopingPass1.counter)
         assertEquals(2, LoopingPass2.counter)
+    }
+
+    /**
+     * Regression test: two independent call sites marking the same node dirty for the same pass in
+     * a row (e.g. [de.fraunhofer.aisec.cpg.updateIncrementally] directly marking a new function
+     * dirty, plus its stale-stub cleanup separately marking the same function dirty as a call's
+     * caller) must not insert duplicate entries -- otherwise a single [TranslationResult.markClean]
+     * call only removes one of the duplicates and the node stays dirty forever.
+     */
+    @Test
+    fun testMarkDirtyDedupsSamePassForSameNode() {
+        val result =
+            with(
+                TestLanguageFrontend(
+                    ctx = TranslationContext(config = TranslationConfiguration.builder().build())
+                )
+            ) {
+                translationResult {
+                    val component = components.single()
+                    markDirty(component, LoopingPass1::class)
+                    markDirty(component, LoopingPass1::class)
+                }
+            }
+
+        val component = result.components.single()
+        assertEquals(1, result.dirtyNodes[component]?.count { it == LoopingPass1::class })
+
+        result.markClean(component, LoopingPass1::class)
+        assertFalse(result.dirtyNodes[component].orEmpty().contains(LoopingPass1::class))
     }
 }

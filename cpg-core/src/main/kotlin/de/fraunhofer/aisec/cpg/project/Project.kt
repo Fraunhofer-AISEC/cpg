@@ -127,6 +127,7 @@ internal constructor(
                 "de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage",
                 "de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage",
                 "de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage",
+                "de.fraunhofer.aisec.cpg.frontends.rust.RustLanguage",
             )
 
         /**
