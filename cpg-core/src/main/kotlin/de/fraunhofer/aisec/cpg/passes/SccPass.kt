@@ -63,16 +63,14 @@ internal class IdentityStack {
 
     /**
      * Pops every element from the top down to and including [node] (which must currently be on the
-     * stack), returning them as an identity set - the elements of the SCC just found.
+     * stack), returning them in pop order (top first, [node] last) - the elements of the SCC just
+     * found.
      */
-    fun popThrough(node: Node): MutableSet<Node> {
-        val index = elements.indexOfLast { it === node }
-        val popped = identitySetOf<Node>()
-        for (i in elements.lastIndex downTo index) {
-            popped.add(elements[i])
-            present.remove(elements[i])
-        }
-        elements.subList(index, elements.size).clear()
+    fun popThrough(node: Node): List<Node> {
+        val suffix = elements.subList(elements.indexOfLast { it === node }, elements.size)
+        val popped = suffix.asReversed().toList()
+        popped.forEach { present.remove(it) }
+        suffix.clear()
         return popped
     }
 }
@@ -283,9 +281,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         log.trace("Found a SCC (Level $level): ")
         // Not necessarily all nodes on the stack - only the ones pushed after bb (now the
         // topmost element still below them).
-        val sccElements = currentInfo.stack.popThrough(bb)
+        // sccOrder (deterministic, stack order) is used wherever iteration order matters, e.g.
+        // which
+        // loop entry is stripped below; sccElements (identity set) only for O(1) membership tests.
+        val sccOrder = currentInfo.stack.popThrough(bb)
+        val sccElements = identitySetOf<Node>().apply { addAll(sccOrder) }
         val bbLowLink = currentInfo.blockIDs.getValue(bb)
-        sccElements.forEach { element ->
+        sccOrder.forEach { element ->
             currentInfo.lowLinkValues[element] = bbLowLink
             if (log.isTraceEnabled) {
                 log.trace("{} ({}); ", element.location, bbLowLink)
@@ -295,7 +297,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Mark the SCC's incoming edge with an scc-flag, to tell it apart from a mergePoint
         // (which also has 2 incoming EOG edges).
-        val loopEntryElements = sccElements.filter { it.prevEOG.any { it !in sccElements } }
+        val loopEntryElements = sccOrder.filter { it.prevEOG.any { it !in sccElements } }
         loopEntryElements.forEach { loopEntryElement ->
             loopEntryElement.prevEOGEdges
                 .filter { edge -> edge.start in sccElements }
@@ -312,7 +314,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Mark the SCC's outgoing (exit) edges the same way.
         val loopExitElements =
-            sccElements.filter { it.nextEOG.any { nextEOG -> nextEOG !in sccElements } }
+            sccOrder.filter { it.nextEOG.any { nextEOG -> nextEOG !in sccElements } }
         loopExitElements.forEach { loopExitElement ->
             loopExitElement.nextEOGEdges
                 .filter { edge -> edge.end in sccElements }
@@ -329,7 +331,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // A block with 2 outgoing edges that both stay inside the SCC needs labeling too, so it
         // takes priority over the nextBranchEdgesList during EOG iteration (a single such edge
         // would already land in the higher-priority currentBBEdgesList without this).
-        sccElements.forEach { sccElement ->
+        sccOrder.forEach { sccElement ->
             val nextSCCEdges =
                 sccElement.nextEOGEdges.filter { nextEOGEdge -> nextEOGEdge.end in sccElements }
             if (nextSCCEdges.size > 1) {
@@ -373,7 +375,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             blackList.addAll(loopEntryElements)
             sccElements.removeAll(loopEntryElements)
             tarjanInfoMap[innerMapKey] = TarjanInfo(blackList, scope = sccElements)
-            workStack.addLast(DecompDriver(sccElements.iterator(), innerMapKey, innerLevel))
+            workStack.addLast(
+                DecompDriver(
+                    sccOrder.filter { it in sccElements }.iterator(),
+                    innerMapKey,
+                    innerLevel,
+                )
+            )
         }
     }
 
