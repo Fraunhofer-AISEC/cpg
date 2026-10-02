@@ -60,4 +60,19 @@ object ConsoleCommandHelper {
             null
         }
     }
+
+    /** Returns the `repl` subcommand, or `null` if codyze-console is not enabled. */
+    fun replCommand(): CliktCommand? {
+        if (!isEnabled) {
+            return null
+        }
+
+        return try {
+            val commandKt = Class.forName("de.fraunhofer.aisec.codyze.console.repl.ReplCommandKt")
+            commandKt.getMethod("getCommand").invoke(null) as? CliktCommand
+        } catch (e: Exception) {
+            log.error("Failed to load codyze-console repl command: {}", e.message, e)
+            null
+        }
+    }
 }

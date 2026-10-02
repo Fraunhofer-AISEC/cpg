@@ -71,6 +71,7 @@ class CpgQueryScriptCompilationConfiguration :
             "de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
             "de.fraunhofer.aisec.cpg.graph.types.*",
             "de.fraunhofer.aisec.cpg.query.*",
+            "de.fraunhofer.aisec.codyze.console.repl.openDFG",
         )
         jvm {
             val cp = classpathFromClassloader(CpgQueryScript::class.java.classLoader)

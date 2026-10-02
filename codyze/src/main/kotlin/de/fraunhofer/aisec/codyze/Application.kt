@@ -38,6 +38,7 @@ fun main(args: Array<String>) {
         .subcommands(
             listOfNotNull(
                 ConsoleCommandHelper.consoleCommand(),
+                ConsoleCommandHelper.replCommand(),
                 de.fraunhofer.aisec.codyze.compliance.Command,
             )
         )
