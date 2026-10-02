@@ -220,12 +220,14 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         log.trace("Found a SCC (Level $level): ")
-        // Not necessarily all nodes on the stack - only the ones pushed after bb (now the
-        // topmost element still below them).
+        // The SCC is bb and everything pushed after it, i.e. the stack from the top down to bb.
         // sccOrder (deterministic, stack order) is used wherever iteration order matters, e.g.
-        // which
-        // loop entry is stripped below; sccElements (identity set) only for O(1) membership tests.
-        val sccOrder = currentInfo.stack.popThrough(bb)
+        // which loop entry is stripped below; sccElements (identity set) only for membership tests.
+        val sccOrder = mutableListOf<Node>()
+        do {
+            val popped = currentInfo.stack.popTop()
+            sccOrder += popped
+        } while (popped !== bb)
         val sccElements = sccOrder.toIdentitySet()
         val bbLowLink = currentInfo.blockIDs.getValue(bb)
         sccOrder.forEach { element ->

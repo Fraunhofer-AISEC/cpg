@@ -25,45 +25,33 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import java.util.IdentityHashMap
+
 /**
- * A LIFO stack with O(1) [contains] by reference identity (see [IdentitySet] for why that matters
- * for [de.fraunhofer.aisec.cpg.graph.Node]s): an ordered list for push/pop/[top] plus an
- * [IdentitySet] for membership, kept in sync behind one interface.
+ * A LIFO stack whose [contains] is a hash lookup by reference identity instead of a linear scan
+ * (see [IdentitySet] for why identity matters for [de.fraunhofer.aisec.cpg.graph.Node]s).
  *
- * Each element may be on the stack at most once (as in Tarjan's SCC algorithm, its main user);
- * pushing an element that is already on the stack is not supported. Only a suffix is ever popped
- * (just [top], or everything down to a given element via [popThrough]).
+ * An element may be pushed more than once; [contains] stays true until every copy has been popped.
+ * [push], [popTop] and [contains] are amortized expected O(1).
  */
 class IdentityStack<T> {
     private val elements = mutableListOf<T>()
-    private val present = IdentitySet<T>()
+    /** How many copies of each element are currently on the stack; absent means zero. */
+    private val counts = IdentityHashMap<T, Int>()
 
     fun push(element: T) {
         elements.add(element)
-        present.add(element)
+        counts.merge(element, 1, Int::plus)
     }
 
-    operator fun contains(element: T) = element in present
+    operator fun contains(element: T) = counts.containsKey(element)
 
     fun top(): T = elements.last()
 
     fun popTop(): T {
         val top = elements.removeAt(elements.lastIndex)
-        present.remove(top)
+        // Returning null from the remapping function removes the entry once the count hits zero.
+        counts.computeIfPresent(top) { _, count -> (count - 1).takeIf { it > 0 } }
         return top
-    }
-
-    /**
-     * Pops every element from the top down to and including [element] (which must currently be on
-     * the stack), returning them in pop order ([top] first, [element] last).
-     */
-    fun popThrough(element: T): List<T> {
-        val index = elements.indexOfLast { it === element }
-        require(index >= 0) { "element is not on the stack" }
-        val suffix = elements.subList(index, elements.size)
-        val popped = suffix.asReversed().toList()
-        popped.forEach { present.remove(it) }
-        suffix.clear()
-        return popped
     }
 }

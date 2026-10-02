@@ -56,24 +56,23 @@ class IdentityStackTest {
     }
 
     @Test
-    fun testPopThroughReturnsSuffixInPopOrder() {
+    fun testDuplicateStaysPresentUntilEveryCopyIsPopped() {
         val stack = IdentityStack<Item>()
-        val items = List(4) { Item(it) }
-        items.forEach { stack.push(it) }
+        val a = Item(1)
+        val b = Item(2)
+        stack.push(a)
+        stack.push(b)
+        stack.push(a)
 
-        val popped = stack.popThrough(items[1])
-
-        assertEquals(listOf(items[3], items[2], items[1]), popped)
-        assertTrue(popped.all { it !in stack })
-        assertTrue(items[0] in stack)
-        assertSame(items[0], stack.top())
+        assertSame(a, stack.popTop())
+        assertTrue(a in stack, "the lower copy of a is still on the stack")
+        assertSame(b, stack.popTop())
+        assertSame(a, stack.popTop())
+        assertFalse(a in stack)
     }
 
     @Test
-    fun testPopThroughRejectsElementNotOnStack() {
-        val stack = IdentityStack<Item>()
-        stack.push(Item(1))
-
-        assertFailsWith<IllegalArgumentException> { stack.popThrough(Item(1)) }
+    fun testPopTopOnEmptyStackFails() {
+        assertFailsWith<IndexOutOfBoundsException> { IdentityStack<Item>().popTop() }
     }
 }
