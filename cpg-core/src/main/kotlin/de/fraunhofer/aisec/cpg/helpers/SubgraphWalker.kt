@@ -57,6 +57,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerReference
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
@@ -619,6 +621,24 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
                 } else {
                     false
                 }
+            is PointerDereference -> {
+                if (parent.input == old) {
+                    parent.input = new
+                    parent.input.access = parent.access
+                    true
+                } else {
+                    false
+                }
+            }
+            is PointerReference -> {
+                if (parent.input == old) {
+                    parent.input = new
+                    parent.input.access = parent.access
+                    true
+                } else {
+                    false
+                }
+            }
             is While -> {
                 parent.condition = new
                 true
