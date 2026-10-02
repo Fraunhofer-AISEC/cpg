@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgTranslate
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addRunPass
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
@@ -111,42 +110,6 @@ class RunPassTest {
             assertNotNull(text)
             val parsed = Json.decodeFromString<CpgAnalysisResult>(text)
             assertTrue(parsed.functions > 0)
-        }
-
-    @Test
-    fun testNoCtx() =
-        withClient(
-            registerTools = {
-                addCpgTranslate()
-                addListPasses()
-                addRunPass()
-            }
-        ) { client ->
-            // Run translation to populate the CPG properly
-            client.callTool(name = "cpg_translate", arguments = payload)
-
-            val globalAnalysisResult = globalAnalysisResult
-            assertNotNull(globalAnalysisResult)
-
-            // Find the call expression node to run a pass on
-            val printCall = globalAnalysisResult.calls["print"]
-            assertNotNull(printCall)
-            val nodeId = printCall.id.toString()
-            assertNotNull(nodeId)
-
-            // Execute a simple pass that should affect EOG/DFG, e.g., TypeResolver (safe) or EOG
-            val request =
-                mapOf(
-                    "passName" to "de.fraunhofer.aisec.cpg.passes.TypeResolver",
-                    "nodeId" to nodeId,
-                )
-            // Set context to null to simulate missing context. We now expect an error message but
-            // no crash
-            ctx = null
-            val result = client.callTool(name = "cpg_run_pass", arguments = request)
-            val content = (result.content.firstOrNull() as? TextContent)?.text
-            assertNotNull(content)
-            assertTrue(content.contains("Cannot run run_pass without translation context."))
         }
 
     @Test

@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -45,9 +45,11 @@ import kotlinx.serialization.json.Json
 fun Server.listFunctions() {
     val toolDescription =
         """
-        This tool lists all functions, more precisely function declarations, which are held in the graph.
-        Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
-        the full node details (including its code) for a specific function once picked.
+        This tool lists all functions, more precisely function declarations, which are held in the
+        graph, as a minimal nodeId + signature index (no parameters/callees/file-line/code detail).
+        Use cpg_get_node with a id to retrieve the full node details (including its code) for a
+        specific function once picked.
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
         - "Show me all functions in the analyzed code"
@@ -55,15 +57,11 @@ fun Server.listFunctions() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content =
-                    result.functions.map {
-                        TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
-                    }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_functions", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        val texts = result.functions.map { Json.encodeToString(it.toSignatureInfo()) }
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 
@@ -72,6 +70,7 @@ fun Server.listRecords() {
         """
         This tool lists all classes and structs, more precisely their declarations as compact summaries.
         Use cpg_get_node with a id to retrieve the full node details.
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
         - "Show me all classes in the code"
@@ -79,28 +78,27 @@ fun Server.listRecords() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_records", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content = result.records.map { TextContent(Json.encodeToString(it.toInfo())) }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_records", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        val texts = result.records.map { Json.encodeToString(it.toInfo()) }
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 
 fun Server.listConceptsAndOperations() {
     val toolDescription =
-        "This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph."
+        "This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph. " +
+            "Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more."
 
-    this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { request
-        ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            val concepts =
-                result.allChildrenWithOverlays<Concept>().map { TextContent(it.toJson()) }
-            val operations =
-                result.allChildrenWithOverlays<Operation>().map { TextContent(it.toJson()) }
-            CallToolResult(content = concepts + operations)
-        }
+    this.addTool<CpgListPayload>(
+        name = "cpg_list_concepts_and_operations",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListPayload ->
+        val concepts = result.allChildrenWithOverlays<Concept>().map { it.toJson() }
+        val operations = result.allChildrenWithOverlays<Operation>().map { it.toJson() }
+        val texts = concepts + operations
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 
@@ -109,6 +107,7 @@ fun Server.listCalls() {
         """
         This tool lists all function and method calls as compact summaries.
         Use cpg_get_node with a id to retrieve the full node details.
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
         - "Show me all function calls in the code"
@@ -116,15 +115,11 @@ fun Server.listCalls() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content =
-                    result.calls.map {
-                        TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
-                    }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_calls", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        val texts = result.calls.map { Json.encodeToString(it.toInfo(includeCode = false)) }
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 
@@ -134,6 +129,7 @@ fun Server.listCallsTo() {
         This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
         Results omit source code to keep this listing compact - use cpg_get_node with a id to retrieve
         the full node details (including its code) for a specific call once picked.
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
         - "Show me all calls to the function 'encrypt'"
@@ -141,16 +137,23 @@ fun Server.listCallsTo() {
         """
             .trimIndent()
 
-    this.addTool<CpgNamePayload>(name = "cpg_list_calls_to", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgNamePayload ->
-        CallToolResult(
-            content =
-                result.calls(payload.name).map {
-                    TextContent(Json.encodeToString(it.toInfo(includeCode = false)))
-                }
-        )
+    this.addTool<CpgListCallsToPayload>(
+        name = "cpg_list_calls_to",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListCallsToPayload ->
+        listCallsTo(result, payload)
     }
+}
+
+internal fun listCallsTo(
+    result: TranslationResult,
+    payload: CpgListCallsToPayload,
+): CallToolResult {
+    val texts =
+        result.calls(payload.name).map { Json.encodeToString(it.toInfo(includeCode = false)) }
+    return CallToolResult(
+        content = paginatedTextContent(texts, CpgListPayload(payload.limit, payload.offset))
+    )
 }
 
 fun Server.getAllArgs() {
@@ -161,14 +164,17 @@ fun Server.getAllArgs() {
     this.addTool<CpgIdPayload>(name = "cpg_list_call_args", description = toolDescription) {
         result: TranslationResult,
         payload: CpgIdPayload ->
-        CallToolResult(
-            content =
-                result.calls
-                    .single { it.id.toString() == payload.id }
-                    .arguments
-                    .map { TextContent(it.toJson()) }
-        )
+        listCallArgs(result, payload)
     }
+}
+
+internal fun listCallArgs(result: TranslationResult, payload: CpgIdPayload): CallToolResult {
+    val call =
+        result.calls.firstOrNull { it.id.toString() == payload.id }
+            ?: return CallToolResult(
+                content = listOf(TextContent("No call found with id ${payload.id}."))
+            )
+    return CallToolResult(content = call.arguments.map { TextContent(it.toJson()) })
 }
 
 fun Server.getArgByIndexOrName() {
@@ -183,21 +189,27 @@ fun Server.getArgByIndexOrName() {
         name = "cpg_list_call_arg_by_name_or_index",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgCallArgumentByNameOrIndexPayload ->
-        CallToolResult(
-            content =
-                listOf(
-                    TextContent(
-                        result.calls
-                            .single { it.id.toString() == payload.nodeId }
-                            .argumentByNameOrPosition(
-                                name = payload.argumentName,
-                                position = payload.index,
-                            )
-                            ?.toJson() ?: "No argument found with the given name or index."
-                    )
-                )
-        )
+        listCallArgByNameOrIndex(result, payload)
     }
+}
+
+internal fun listCallArgByNameOrIndex(
+    result: TranslationResult,
+    payload: CpgCallArgumentByNameOrIndexPayload,
+): CallToolResult {
+    val call =
+        result.calls.firstOrNull { it.id.toString() == payload.nodeId }
+            ?: return CallToolResult(
+                content = listOf(TextContent("No call found with id ${payload.nodeId}."))
+            )
+    val argument =
+        call.argumentByNameOrPosition(name = payload.argumentName, position = payload.index)
+    return CallToolResult(
+        content =
+            listOf(
+                TextContent(argument?.toJson() ?: "No argument found with the given name or index.")
+            )
+    )
 }
 
 fun Server.getNode() {
@@ -211,7 +223,7 @@ fun Server.getNode() {
     this.addTool<CpgIdPayload>(name = "cpg_get_node", description = toolDescription) {
         result: TranslationResult,
         payload: CpgIdPayload ->
-        val node = result.nodes.find { it.id.toString() == payload.id }
+        val node = result.findNodeById(payload.id)
         if (node != null) {
             CallToolResult(content = listOf(TextContent(node.toJson())))
         } else {

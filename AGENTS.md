@@ -99,25 +99,26 @@ codyze-console is a full-stack web application with a Ktor backend and a Svelte 
 | `ConsoleService.kt` | Core business logic: CPG analysis, QueryTree caching, concept management |
 | `Nodes.kt` | JSON serialization models and CPG node-to-JSON conversion |
 
-The AI chat/tool-calling implementation itself (`ChatService`, LLM clients, skills) lives in the `cpg-ai` module, not in `codyze-console`:
+The AI chat/tool-calling implementation itself (`ChatService`, LLM provider config, skills) lives in the `cpg-ai` module, not in `codyze-console`:
 
 | File / Package (in `cpg-ai`) | Responsibility |
 |---|---|
-| `ai/ChatService.kt` | Loads LLM config from HOCON, runs the agentic tool-calling loop, MCP client connection |
-| `ai/ChatModels.kt` | Data classes for chat/MCP request and response JSON |
-| `ai/clients/LlmClient.kt` | Provider-agnostic LLM interface (`sendPrompt` -> `List<ToolCall>`) |
-| `ai/clients/OpenAiClient.kt` | OpenAI-compatible client (also works with Ollama, vLLM, MLX) |
-| `ai/clients/GeminiClient.kt` | Google Gemini API client |
-| `ai/skills/SkillLoader.kt` | Discovers and parses skill definitions |
+| `ai/ChatService.kt` | Loads LLM config, runs the agentic tool-calling loop (built on Koog's `AIAgent`/`ChatMemory`), MCP client connection |
+| `ai/ChatModels.kt` | Data classes for chat/MCP request and response JSON (module-boundary DTOs; avoids leaking Koog types to consumers) |
+| `ai/EvictingChatHistoryProvider.kt` | `ChatHistoryProvider` backing `ChatMemory` with per-session eviction (one session per host-application batch) |
+| `ai/clients/LlmProviderConfig.kt` | Resolves a provider `ClientConfig` (OpenAI-compatible or Gemini) into a Koog `PromptExecutor` + `LLModel` (retries, logging, timeout) |
+| `ai/clients/LlmClientModels.kt` | Provider-agnostic config DTOs (`ChatLlm`, `ClientProvider`, `ClientConfig`) |
+| `ai/clients/Util.kt` | Shared client utilities (e.g. the `SYSTEM_PROMPT`) |
+| `ai/skills/SkillFileTools.kt` | Discovers skills (via Koog's `discoverSkills`) and builds the skill catalog; jail-locks file access to the skills directory |
 | `ai/mcp/` | The MCP server itself (see below) |
 
 #### AI Agent Data Flow
 
 1. Frontend sends chat messages via `POST /api/chat` (SSE stream)
-2. `ChatService` forwards to the LLM with MCP tool definitions
+2. `ChatService` builds a Koog `AIAgent` (strategy = tool-calling loop with `ChatMemory` history) and forwards to the LLM with MCP tool definitions
 3. If the LLM returns tool calls, `ChatService` executes them against the local MCP server via `mcp.callTool()`
 4. Tool results are streamed to the frontend and fed back to the LLM
-5. Loop repeats (max 50 iterations) until the LLM produces a text response
+5. Loop repeats (up to `maxAgentIterations`, default 100) until the LLM produces a text response
 
 #### MCP Integration
 

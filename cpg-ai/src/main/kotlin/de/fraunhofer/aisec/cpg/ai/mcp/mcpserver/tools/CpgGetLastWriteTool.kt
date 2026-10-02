@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.reachingWrites
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -65,9 +65,8 @@ private fun Granularity.toTag(): String =
  * [addGetLastWriteTool], so it's testable without going through the MCP [Server] transport.
  */
 fun getLastWrite(result: TranslationResult, payload: CpgIdPayload): CallToolResult {
-    val startId = Uuid.parse(payload.id)
     val startNode =
-        result.nodes.find { it.id == startId }
+        result.findNodeById(Uuid.parse(payload.id).toString())
             ?: return CallToolResult(
                 content = listOf(TextContent("No node found with ID ${payload.id}"))
             )

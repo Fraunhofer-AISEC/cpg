@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.nodeToPass
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
@@ -53,7 +52,7 @@ class RunPassForNodeTest {
             cleanup = true,
         )
         val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
+        val ctx = globalAnalysisResult?.ctx
         assertNotNull(globalAnalysisResult)
         assertNotNull(ctx)
 
@@ -83,7 +82,7 @@ class RunPassForNodeTest {
             cleanup = true,
         )
         val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
+        val ctx = globalAnalysisResult?.ctx
         assertNotNull(globalAnalysisResult)
         assertNotNull(ctx)
 
@@ -113,7 +112,7 @@ class RunPassForNodeTest {
             cleanup = true,
         )
         val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
+        val ctx = globalAnalysisResult?.ctx
         assertNotNull(globalAnalysisResult)
         assertNotNull(ctx)
 
@@ -139,7 +138,7 @@ class RunPassForNodeTest {
             cleanup = true,
         )
         val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
+        val ctx = globalAnalysisResult?.ctx
         assertNotNull(globalAnalysisResult)
         assertNotNull(ctx)
 
@@ -165,7 +164,7 @@ class RunPassForNodeTest {
             cleanup = true,
         )
         val globalAnalysisResult = globalAnalysisResult
-        val ctx = ctx
+        val ctx = globalAnalysisResult?.ctx
         assertNotNull(globalAnalysisResult)
         assertNotNull(ctx)
 

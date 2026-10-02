@@ -23,26 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.ai.clients
+package de.fraunhofer.aisec.cpg.ai.mcp
 
-import de.fraunhofer.aisec.cpg.ai.ChatMessageJSON
-import io.modelcontextprotocol.kotlin.sdk.types.Tool
+import com.github.ajalt.clikt.core.UsageError
+import com.github.ajalt.clikt.core.parse
+import kotlin.test.Test
+import kotlin.test.assertFailsWith
 
-/** Interface abstracting the underlying LLM provider (Gemini, OpenAI, Ollama, etc.). */
-interface LlmClient {
-    val modelName: String
+class ApplicationArgsTest {
 
-    /**
-     * Streaming prompt execution for the chat. Calls [onText] for normal content and [onReasoning]
-     * for thoughts/reasoning.
-     */
-    suspend fun sendPrompt(
-        userMessage: String,
-        systemPrompt: String,
-        conversationHistory: List<ChatMessageJSON> = emptyList(),
-        tools: List<Tool> = emptyList(),
-        toolCallHistory: List<List<ToolCallWithResult>>? = null,
-        onText: suspend (String) -> Unit,
-        onReasoning: suspend (String) -> Unit = {},
-    ): List<ToolCall>
+    @Test
+    fun httpAndSseTogetherAreAUsageError() {
+        assertFailsWith<UsageError> {
+            Application().parse(listOf("--http", "8080", "--sse", "8081"))
+        }
+    }
 }

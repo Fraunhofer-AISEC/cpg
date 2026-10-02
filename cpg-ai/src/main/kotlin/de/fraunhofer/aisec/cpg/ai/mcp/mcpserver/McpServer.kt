@@ -41,6 +41,7 @@ fun configureServer(
         this.addCpgApplyConceptsTool()
         this.addCpgDataflowTool()
         this.listFunctions()
+        this.getFunctionsByName()
         this.listRecords()
         this.listCalls()
         this.listCallsTo()
@@ -76,7 +77,7 @@ fun configureServer(
     return Server(info, options).configure()
 }
 
-/** Default configureServer constructor call to use via reflection (e.g. from codyze-console). */
+/** [configureServer] with its default tools, as a plain function (e.g. for codyze-console). */
 fun configureDefaultServer(): Server = configureServer()
 
 const val cpgDescription =

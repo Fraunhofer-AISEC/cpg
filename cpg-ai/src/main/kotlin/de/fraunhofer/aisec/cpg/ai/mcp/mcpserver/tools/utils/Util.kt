@@ -50,6 +50,7 @@ import kotlin.reflect.KTypeParameter
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.memberProperties
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
@@ -67,7 +68,12 @@ import kotlinx.serialization.json.putJsonObject
  * handler function receives the deserialized input of type [T] and the current [TranslationResult],
  * and must return a [CallToolResult] with the output content. The [description] of the tool is
  * automatically extended with parameter information from the schema, so do NOT add this information
- * to the description yourself
+ * to the description yourself.
+ *
+ * The handler runs under [CpgLock]: shared by default, so read-only tools stay concurrent. Pass
+ * `mutating = true` if it changes the graph (or does a read-modify-write on a file shared with
+ * other tools); it then runs exclusively. Forgetting it on a mutating tool is the one way to get
+ * this wrong, since the default is the cheap one.
  */
 inline fun <reified T> Server.addTool(
     name: String,
@@ -76,6 +82,7 @@ inline fun <reified T> Server.addTool(
     outputSchema: ToolSchema? = null,
     toolAnnotations: ToolAnnotations? = null,
     meta: JsonObject? = null,
+    mutating: Boolean = false,
     noinline handler: (TranslationResult, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
@@ -98,16 +105,14 @@ inline fun <reified T> Server.addTool(
     ) { request ->
         try {
             val payload =
-                request.arguments?.toObject<T>()
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "Invalid or missing payload for cpg_list_calls_to tool."
-                                )
-                            )
+                try {
+                    request.arguments.toPayload<T>()
+                } catch (e: SerializationException) {
+                    return@addTool CallToolResult(
+                        content = listOf(TextContent("Invalid arguments for $name: ${e.message}"))
                     )
-            payload.runOnCpg(handler)
+                }
+            payload.runOnCpg(mutating, handler)
         } catch (e: Exception) {
             CallToolResult(
                 content =
@@ -213,18 +218,64 @@ fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
 /**
  * Converts to a [FunctionInfo], omitting the (often large - can be an entire function body)
- * [FunctionInfo.code] field when [includeCode] is false. Bulk-listing tools (e.g.
- * `cpg_list_functions`) should pass `false`: they're for finding candidates by name/signature, and
- * embedding every returned function's full body multiplies context size for code the model will
- * mostly never read - `cpg_get_node` fetches the full details (code included) for a specific one
- * once picked.
+ * [FunctionInfo.code] field when [includeCode] is false. Used for a single targeted lookup (e.g.
+ * `cpg_get_functions_by_name`) where the caller already knows which function(s) it wants and the
+ * full parameter/callee/file-line detail is worth the size - for bulk listing, see
+ * [Function.toSignatureInfo] instead.
  */
 fun Function.toInfo(includeCode: Boolean = true) = FunctionInfo(this, includeCode)
+
+/**
+ * Converts to a minimal [FunctionSignatureInfo] (just enough to find a candidate by name/signature
+ * and disambiguate same-named overloads, without [FunctionInfo]'s full
+ * parameters/callees/file-line/ code detail). Used by bulk-listing tools (e.g.
+ * `cpg_list_functions`): embedding every returned function's full detail multiplies context size
+ * for data the model will mostly never read - `cpg_get_node` fetches the full details (code
+ * included) for a specific one once picked.
+ */
+fun Function.toSignatureInfo() = FunctionSignatureInfo(this)
 
 fun Record.toInfo() = RecordInfo(this)
 
 /** See [Function.toInfo] - the same reasoning applies to [Call]/[CallInfo.code]. */
 fun Call.toInfo(includeCode: Boolean = true) = CallInfo(this, includeCode)
+
+/** The default maximum number of items returned by paginated list tools. */
+const val DEFAULT_LIST_LIMIT = 20
+
+/** One page of [items], and - if it does not reach the end - a note on how to fetch the next. */
+class Page<T>(val items: List<T>, val summary: String?)
+
+/**
+ * Takes the page of [items] selected by [limit]/[offset] (defaulting to [DEFAULT_LIST_LIMIT] items
+ * from the start, clamped to at least one item and a non-negative offset). If the page does not
+ * reach the end, [Page.summary] says how many items were shown and which offset to use next, so a
+ * caller that only sees the tool's textual result still knows there is more to fetch.
+ */
+fun <T> paginate(items: List<T>, limit: Int?, offset: Int?): Page<T> {
+    val start = (offset ?: 0).coerceAtLeast(0)
+    val size = (limit ?: DEFAULT_LIST_LIMIT).coerceAtLeast(1)
+
+    val page = items.drop(start).take(size)
+    val end = start + page.size
+    val summary =
+        if (end < items.size) {
+            "Showing ${page.size} of ${items.size} items (offset=$start, limit=$size). " +
+                "To see more, call this tool again with offset=$end."
+        } else {
+            null
+        }
+    return Page(page, summary)
+}
+
+/**
+ * Paginates [texts] according to the `limit`/`offset` in [payload] (see [paginate]) and wraps each
+ * item of the resulting page in a [TextContent], followed by the summary entry if there is more.
+ */
+fun paginatedTextContent(texts: List<String>, payload: CpgListPayload): List<TextContent> {
+    val page = paginate(texts, payload.limit, payload.offset)
+    return page.items.map { TextContent(it) } + listOfNotNull(page.summary?.let { TextContent(it) })
+}
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {
@@ -251,21 +302,36 @@ fun getAvailableOperations(): List<Class<out Operation>> {
 inline fun <reified T> JsonObject.toObject() =
     lenientJson.decodeFromString<T>(Json.encodeToString(this))
 
+/**
+ * Decodes the arguments of a tool call into [T]. A call without any `arguments` is treated like
+ * `{}`: a payload whose fields are all optional falls back to its defaults, and one with required
+ * fields fails with a [SerializationException] that names the missing field.
+ */
+inline fun <reified T> JsonObject?.toPayload(): T = (this ?: JsonObject(emptyMap())).toObject<T>()
+
+/**
+ * Runs [query] on the current analysis result under [CpgLock] - shared, or exclusive if [mutating].
+ * The result is looked up inside the lock, so a concurrent re-analysis cannot swap the graph out
+ * from under the query.
+ */
 inline fun <reified T> T.runOnCpg(
-    query: BiFunction<TranslationResult, T, CallToolResult>
+    mutating: Boolean = false,
+    query: BiFunction<TranslationResult, T, CallToolResult>,
 ): CallToolResult {
     return try {
-        val result =
-            globalAnalysisResult
-                ?: return CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "No analysis result available. Please analyze your code first using cpg_analyze."
+        CpgLock.withAccess(mutating) {
+            val result =
+                globalAnalysisResult
+                    ?: return@withAccess CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "No analysis result available. Please analyze your code first using cpg_analyze."
+                                )
                             )
-                        )
-                )
-        query.apply(result, this)
+                    )
+            query.apply(result, this)
+        }
     } catch (e: Exception) {
         CallToolResult(
             content =
