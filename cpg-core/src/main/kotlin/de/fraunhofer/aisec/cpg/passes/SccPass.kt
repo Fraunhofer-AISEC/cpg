@@ -48,9 +48,10 @@ import kotlin.math.min
  * plus its not-yet-visited successors - pushed on descent and popped on return, updating lowlink
  * values the usual Tarjan way. When a popped frame's node turns out to be an SCC root,
  * [handleSccRoot] labels that SCC's edges with the current [WorkItem.level], then - to find loops
- * nested inside it - strips one of the SCC's entry nodes and re-decomposes the remaining elements
- * one `level` deeper, using a [DecompDriver] to drive that re-run. This repeats until no further
- * nested loop remains, leaving concentric loops labeled from outermost to innermost.
+ * nested inside it - strips all of the SCC's entry nodes at once (a loop can have more than one
+ * distinct entry point) and re-decomposes the remaining elements one `level` deeper, using a
+ * [DecompDriver] to drive that re-run. This repeats until no further nested loop remains, leaving
+ * concentric loops labeled from outermost to innermost.
  *
  * Each [WorkItem] carries the [TarjanInfo] of the run it belongs to and a [WorkItem.level] (the
  * nesting depth reported on labeled edges). Every decomposition gets its own [TarjanInfo], even
@@ -70,9 +71,9 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * `equals()` or `hashCode()` happen to be for the node type involved.
      *
      * [scope] is `null` for a top-level run (the DFS may go anywhere). For a nested decomposition
-     * it holds the enclosing SCC's elements minus the stripped loop entry: the DFS never leaves it,
-     * since a loop nested inside an SCC can only consist of that SCC's own elements, and without
-     * the entry, any cycle still found within the scope is a nested loop.
+     * it holds the enclosing SCC's elements minus its loop entries: the DFS never leaves it, since
+     * a loop nested inside an SCC can only consist of that SCC's own elements, and without the
+     * entries, any cycle still found within the scope is a nested loop.
      */
     private class TarjanInfo(val scope: Set<Node>? = null) {
         var blockCounter = 0
@@ -139,7 +140,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     if (item.iterator.hasNext()) {
                         val next = item.iterator.next()
                         // A nested decomposition must not follow edges out of its scope: not into
-                        // the stripped loop entry (or it would just find the same loop again), and
+                        // the stripped loop entries (or it would just find the same loop again),
+                        // and
                         // not out of the SCC (e.g. a loop's exit edge), or it would rediscover
                         // every loop reachable from there as a spurious nested loop one level
                         // deeper, each of which re-decomposes again - exponential in the number of
@@ -293,14 +295,21 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             }
         }
 
-        // Find nested loops: strip the last loop-entry element (by source order, hoping it's the
-        // outermost entry) and re-decompose the remaining elements one level deeper - if that
-        // still contains a loop, it's a nested one.
+        // Find nested loops: strip all of this level's loop-entry elements at once and
+        // re-decompose the remaining elements one level deeper - if that still contains a loop,
+        // it's a nested one.
+        //
+        // All entries are stripped together, not one at a time: a loop can have more than one
+        // distinct entry point (e.g. a `goto` into the middle of a loop, or a switch/labeled break
+        // into a loop body), and then none of them is "the" header. Treating every entry as a
+        // header is the standard loop-nesting definition for such irreducible loops (Steensgaard,
+        // "Sequentializing Program Dependence Graphs for Irreducible Programs", 1993). Picking
+        // just one, by source order, can leave the others keeping the same elements connected in a
+        // cycle, which then gets relabeled at a deeper level than the loop actually has. For a
+        // single-entry loop, stripping "all" is the same as stripping the one.
         if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
             val innerLevel = level + 1
-            val eliminatedElement =
-                loopEntryElements.sortedBy { it.location?.region?.startLine }.last()
-            sccElements.remove(eliminatedElement)
+            sccElements.removeAll(loopEntryElements)
             workStack.addLast(
                 DecompDriver(
                     sccOrder.filter { it in sccElements }.iterator(),
