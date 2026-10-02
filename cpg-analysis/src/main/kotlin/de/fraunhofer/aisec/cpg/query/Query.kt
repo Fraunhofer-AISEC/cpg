@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -77,7 +76,7 @@ inline fun <reified T> Node.evaluateExtended(
 ): List<QueryTree<Boolean>> {
     return runBlocking {
         try {
-            withTimeout(60.minutes) {
+            withTimeout(24.hours) {
                 val timeoutJob = coroutineContext[Job] ?: error("Missing coroutine Job")
 
                 val cancellableSel: ((T) -> Boolean)? =
