@@ -280,6 +280,68 @@ class ApplicationTest {
     }
 
     @Test
+    fun testGetNodesEmpty() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response =
+            client.post("/api/nodes") {
+                contentType(ContentType.Application.Json)
+                setBody(emptyList<String>())
+            }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(emptyList(), response.body<List<NodeJSON>>())
+    }
+
+    @Test
+    fun testGetNodesInvalidRequest() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response =
+            client.post("/api/nodes") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"not": "a list"}""")
+            }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun testGetNodesWithoutAnalysisResult() {
+        assertEquals(emptyList(), ConsoleService().getNodes(listOf(mockTu.id.toString())))
+    }
+
+    @Test
+    fun testGetTranslationUnitUnknownComponent() {
+        assertNull(mockService.getTranslationUnit("unknown", mockTu.id.toString()))
+    }
+
+    @Test
+    fun testGetTranslationUnitWithoutCode() {
+        val tu = TranslationUnit().apply { name = Name("no-code") }
+        val service =
+            ConsoleService.fromAnalysisResult(
+                AnalysisResult(
+                    translationResult =
+                        TranslationResult(
+                                translationManager =
+                                    TranslationManager.builder().config(mockConfig).build(),
+                                finalCtx = TranslationContext(config = mockConfig),
+                            )
+                            .apply {
+                                components +=
+                                    Component().apply {
+                                        name = Name("mock")
+                                        translationUnits += tu
+                                    }
+                            },
+                    project = AnalysisProject(name = "mock", projectDir = null, config = mockConfig),
+                )
+            )
+
+        val translationUnit = assertNotNull(service.getTranslationUnit("mock", tu.id.toString()))
+        assertEquals("", translationUnit.code)
+    }
+
+    @Test
     fun testAddConcept() = testApplication {
         val open = assertNotNull(mockTu.calls["open"])
 
