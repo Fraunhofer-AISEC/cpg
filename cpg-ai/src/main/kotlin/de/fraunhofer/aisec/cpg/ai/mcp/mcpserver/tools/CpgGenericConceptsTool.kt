@@ -119,7 +119,8 @@ fun Server.suggestLLMConceptsAndOperations() {
     this.addTool<LLMConcept>(
         name = "cpg_suggest_llm_concepts_and_operations",
         description = toolDescription,
-    ) { result: TranslationResult, payload: LLMConcept ->
+    ) { session: CpgSession, payload: LLMConcept ->
+        val result = session.translationResult
         val conceptNode = result.nodes.find { it.id.toString() == payload.nodeId }
         if (conceptNode == null) {
             return@addTool CallToolResult(
@@ -161,7 +162,8 @@ fun Server.addLLMConceptAndOperations() {
     this.addTool<LLMConceptList>(
         name = "cpg_add_llm_concept_and_operations",
         description = toolDescription,
-    ) { result: TranslationResult, payload: LLMConceptList ->
+    ) { session: CpgSession, payload: LLMConceptList ->
+        val result = session.translationResult
         val applied = mutableListOf<AppliedConcept>()
         val failed = mutableListOf<FailedConcept>()
         val schemasToPersist = mutableListOf<LLMConceptDescription>()
