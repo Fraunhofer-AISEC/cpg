@@ -28,52 +28,12 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.IdentityStack
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import java.util.Collections
 import java.util.IdentityHashMap
 import kotlin.math.min
-
-/** A [MutableSet] that tests membership by reference identity rather than [Any.equals]. */
-private fun <T> identitySetOf(): MutableSet<T> = Collections.newSetFromMap(IdentityHashMap())
-
-/**
- * A LIFO stack of [Node]s with O(1) identity-based [contains] - an ordered list (for push/pop/
- * [top]) plus an identity set (for membership) behind one interface, so the two can never be
- * updated out of sync with each other the way two separate fields could be. Only ever pops a suffix
- * (either just [top], or every element down to a given one via [popThrough]), never an arbitrary
- * middle element, so the backing list never needs index bookkeeping beyond that.
- */
-internal class IdentityStack {
-    private val elements = mutableListOf<Node>()
-    private val present = identitySetOf<Node>()
-
-    fun push(node: Node) {
-        elements.add(node)
-        present.add(node)
-    }
-
-    operator fun contains(node: Node) = node in present
-
-    fun top(): Node = elements.last()
-
-    /** Removes just [top] - the trivial (not actually part of an SCC) case. */
-    fun popTop() {
-        present.remove(elements.removeAt(elements.lastIndex))
-    }
-
-    /**
-     * Pops every element from the top down to and including [node] (which must currently be on the
-     * stack), returning them in pop order (top first, [node] last) - the elements of the SCC just
-     * found.
-     */
-    fun popThrough(node: Node): List<Node> {
-        val suffix = elements.subList(elements.indexOfLast { it === node }, elements.size)
-        val popped = suffix.asReversed().toList()
-        popped.forEach { present.remove(it) }
-        suffix.clear()
-        return popped
-    }
-}
 
 /**
  * This pass implements Tarjan's algorithm (the original
@@ -106,8 +66,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * *identity* - never by [Node.equals], which for
      * [BasicBlock][de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock] is a full structural
      * comparison (including a `location` recomputed from scratch on every call). [IdentityStack],
-     * [identitySetOf] and [IdentityHashMap] keep every one of these O(1) regardless of how
-     * expensive `equals()` or `hashCode()` happen to be for the node type involved.
+     * [IdentitySet] and [IdentityHashMap] keep every one of these O(1) regardless of how expensive
+     * `equals()` or `hashCode()` happen to be for the node type involved.
      *
      * [scope] is `null` for a top-level run (the DFS may go anywhere). For a nested decomposition
      * it holds the enclosing SCC's elements minus the stripped loop entry: the DFS never leaves it,
@@ -116,8 +76,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      */
     private class TarjanInfo(val scope: Set<Node>? = null) {
         var blockCounter = 0
-        internal var stack = IdentityStack()
-        var visited = identitySetOf<Node>()
+        var stack = IdentityStack<Node>()
+        var visited = IdentitySet<Node>()
         var blockIDs: MutableMap<Node, Int> = IdentityHashMap()
         var lowLinkValues: MutableMap<Node, Int> = IdentityHashMap()
     }
@@ -266,7 +226,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // which
         // loop entry is stripped below; sccElements (identity set) only for O(1) membership tests.
         val sccOrder = currentInfo.stack.popThrough(bb)
-        val sccElements = identitySetOf<Node>().apply { addAll(sccOrder) }
+        val sccElements = sccOrder.toIdentitySet()
         val bbLowLink = currentInfo.blockIDs.getValue(bb)
         sccOrder.forEach { element ->
             currentInfo.lowLinkValues[element] = bbLowLink
