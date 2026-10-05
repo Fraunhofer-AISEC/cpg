@@ -85,6 +85,7 @@ pnpm run build
 - PRs that change the graph or analysis interfaces need a changelog section in the PR description (format in `CONTRIBUTING.md`).
 - Never commit stray local files (scratch tests, patches, archives, build outputs).
 - **Never push directly to `main`.** All changes go through a feature branch and a pull request.
+- Name branches `<initials>/<short-description>`, using the developer's lowercase initials, e.g. `cb/eog-symbol-resolver`, `mk/go-scopes`. Derive the initials from `git config user.name` and ask if unsure.
 - **Never reply on GitHub on behalf of a human.** Do not post comments, reviews, or answers to issues, PRs, or discussions. Communication on GitHub is done by humans. Draft a reply locally if asked, and let the user post it.
 
 ## codyze-console Architecture
