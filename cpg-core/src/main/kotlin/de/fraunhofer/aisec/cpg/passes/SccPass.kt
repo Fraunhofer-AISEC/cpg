@@ -28,7 +28,11 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.IdentityStack
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.IdentityHashMap
 import kotlin.math.min
 
 /**
@@ -36,7 +40,7 @@ import kotlin.math.min
  * [paper](https://epubs.siam.org/doi/10.1137/0201010)) to find strongly connected components (SCCs)
  * in the Evaluation Order Graph (EOG) of a program. SCCs are subgraphs where every node is
  * reachable from every other node within the same subgraph (i.e., loops). In addition, we remove
- * the exit nodes of the SCC so that we can also detect nested loops. The pass labels the EOG edges
+ * the entry nodes of the SCC so that we can also detect nested loops. The pass labels the EOG edges
  * that are part of an SCC with the same identifier.
  *
  * Algorithm: [tarjan] runs the DFS with an explicit [WorkItem] stack instead of recursion, since
@@ -44,52 +48,56 @@ import kotlin.math.min
  * plus its not-yet-visited successors - pushed on descent and popped on return, updating lowlink
  * values the usual Tarjan way. When a popped frame's node turns out to be an SCC root,
  * [handleSccRoot] labels that SCC's edges with the current [WorkItem.level], then - to find loops
- * nested inside it - strips the SCC's exit node and re-decomposes the remaining elements one
- * `level` deeper, using a [DecompDriver] to drive that re-run. This repeats until no further nested
- * loop remains, leaving concentric loops labeled from outermost to innermost.
+ * nested inside it - strips one of the SCC's entry nodes and re-decomposes the remaining elements
+ * one `level` deeper, using a [DecompDriver] to drive that re-run. This repeats until no further
+ * nested loop remains, leaving concentric loops labeled from outermost to innermost.
  *
- * Each [WorkItem] carries both a [WorkItem.level] (the nesting depth reported on labeled edges) and
- * a [WorkItem.mapKey] (which [TarjanInfo] scratch space it reads/writes). These are *not* the same
- * value: two unrelated SCCs can legitimately decompose to the same depth (e.g. two independent
- * sibling loops, each one level "deep") without being related at all, and giving them the same
- * scratch space would corrupt each other's blacklist/visited state - see [nextScratchKey].
+ * Each [WorkItem] carries the [TarjanInfo] of the run it belongs to and a [WorkItem.level] (the
+ * nesting depth reported on labeled edges). Every decomposition gets its own [TarjanInfo], even
+ * when two unrelated SCCs decompose to the same depth (e.g. two independent sibling loops, each one
+ * level "deep"): sharing it would let one's visited/stack state corrupt the other's.
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(BasicBlockCollectorPass::class, softDependency = true)
 @Description("Pass that finds strongly connected components in the EOG using Tarjan's algorithm.")
 class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
-    data class TarjanInfo(val blackList: List<Node>) {
+    /**
+     * `stack`/`visited`/`blockIDs`/`lowLinkValues` all key or test membership by [Node]
+     * *identity* - never by [Node.equals], which for
+     * [BasicBlock][de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock] is a full structural
+     * comparison (including a `location` recomputed from scratch on every call). [IdentityStack],
+     * [IdentitySet] and [IdentityHashMap] keep every one of these O(1) regardless of how expensive
+     * `equals()` or `hashCode()` happen to be for the node type involved.
+     *
+     * [scope] is `null` for a top-level run (the DFS may go anywhere). For a nested decomposition
+     * it holds the enclosing SCC's elements minus the stripped loop entry: the DFS never leaves it,
+     * since a loop nested inside an SCC can only consist of that SCC's own elements, and without
+     * the entry, any cycle still found within the scope is a nested loop.
+     */
+    private class TarjanInfo(val scope: Set<Node>? = null) {
         var blockCounter = 0
-        var stack = mutableListOf<Node>()
-        var visited = mutableSetOf<Node>()
-        var blockIDs = mutableMapOf<Node, Int>()
-        var lowLinkValues = mutableMapOf<Node, Int>()
+        var stack = IdentityStack<Node>()
+        var visited = IdentitySet<Node>()
+        var blockIDs: MutableMap<Node, Int> = IdentityHashMap()
+        var lowLinkValues: MutableMap<Node, Int> = IdentityHashMap()
     }
 
-    val tarjanInfoMap = mutableMapOf<Int, TarjanInfo>()
-
     /**
-     * Generates a fresh, never-reused key into [tarjanInfoMap] for each nested-decomposition
-     * attempt (see [handleSccRoot]). Deliberately disjoint from the positive `level`/depth values
-     * (always < 0) so it can never collide with a real depth, and disjoint from every other
-     * decomposition's key so two unrelated decompositions that happen to land at the same *depth*
-     * (e.g. two independent sibling loops, each one level deep) never share [TarjanInfo].
-     */
-    private var nextScratchKey = -1
-
-    /**
-     * One item on [tarjan]'s explicit work-stack: [mapKey] identifies which [TarjanInfo] in
-     * [tarjanInfoMap] this item's DFS run reads/writes (see [nextScratchKey] - *not* necessarily
-     * the same as [level]), while [level] is purely the nesting depth reported on
+     * One item on [tarjan]'s explicit work-stack: [info] is the state of the (top-level or nested)
+     * run this item belongs to, [level] the nesting depth reported on
      * [EvaluationOrder.scc][de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder.scc].
      */
-    private sealed class WorkItem(val mapKey: Int, val level: Int)
+    private sealed class WorkItem(val info: TarjanInfo, val level: Int)
 
     /**
      * One DFS call frame for [node]: pulls its not-yet-visited successors lazily from [iterator].
      */
-    private class DfsFrame(val node: Node, mapKey: Int, level: Int, val iterator: Iterator<Node>) :
-        WorkItem(mapKey, level)
+    private class DfsFrame(
+        val node: Node,
+        info: TarjanInfo,
+        level: Int,
+        val iterator: Iterator<Node>,
+    ) : WorkItem(info, level)
 
     /**
      * Drives the nested-loop re-decomposition over `sccElements`, pushing a [DfsFrame] only for an
@@ -97,8 +105,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * visit others in the same decomposition, so pushing frames for all of them up front would use
      * a stale visited-snapshot.
      */
-    private class DecompDriver(val iterator: Iterator<Node>, mapKey: Int, level: Int) :
-        WorkItem(mapKey, level)
+    private class DecompDriver(val iterator: Iterator<Node>, info: TarjanInfo, level: Int) :
+        WorkItem(info, level)
 
     override fun cleanup() {
         // Nothing to clean up
@@ -109,7 +117,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         info.lowLinkValues[node] = info.blockCounter
         info.blockCounter++
         info.visited.add(node)
-        info.stack.add(0, node)
+        info.stack.push(node)
     }
 
     /**
@@ -119,28 +127,30 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * calling [tarjan] again.
      */
     fun tarjan(bb: Node) {
-        val level = 1
         val workStack = ArrayDeque<WorkItem>()
-        val startInfo = tarjanInfoMap.computeIfAbsent(level) { TarjanInfo(emptyList()) }
+        val startInfo = TarjanInfo()
         initNode(bb, startInfo)
-        workStack.addLast(DfsFrame(bb, level, level, bb.nextEOG.iterator()))
+        workStack.addLast(DfsFrame(bb, startInfo, 1, bb.nextEOG.iterator()))
 
         while (workStack.isNotEmpty()) {
             when (val item = workStack.last()) {
                 is DfsFrame -> {
-                    val info =
-                        tarjanInfoMap.computeIfAbsent(item.mapKey) { TarjanInfo(emptyList()) }
+                    val info = item.info
                     if (item.iterator.hasNext()) {
                         val next = item.iterator.next()
-                        // To detect inner loops, we put some nodes on a blacklist and see if we
-                        // can still find a loop
-                        if (next in info.blackList) {
+                        // A nested decomposition must not follow edges out of its scope: not into
+                        // the stripped loop entry (or it would just find the same loop again), and
+                        // not out of the SCC (e.g. a loop's exit edge), or it would rediscover
+                        // every loop reachable from there as a spurious nested loop one level
+                        // deeper, each of which re-decomposes again - exponential in the number of
+                        // loops downstream.
+                        if (info.scope != null && next !in info.scope) {
                             continue
                         }
                         if (next !in info.visited) {
                             initNode(next, info)
                             workStack.addLast(
-                                DfsFrame(next, item.mapKey, item.level, next.nextEOG.iterator())
+                                DfsFrame(next, info, item.level, next.nextEOG.iterator())
                             )
                         } else if (next in info.stack) {
                             // If the node we came from is on the stack, we min its lowLinkValue
@@ -158,13 +168,12 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                             handleSccRoot(v, info, item.level, workStack)
                         }
                         // Propagate v's lowLinkValue up to the parent frame, but only within the
-                        // same decomposition run (same mapKey, i.e. same TarjanInfo - level alone
-                        // is not a reliable enough identity check, since two unrelated
-                        // decompositions can legitimately share the same depth). No-op if
+                        // same run (same TarjanInfo - level alone is not enough, since two
+                        // unrelated decompositions can share the same depth). No-op if
                         // handleSccRoot just ran for v, since that always removes v from the
                         // stack.
                         val parent = workStack.lastOrNull()
-                        if (parent is DfsFrame && parent.mapKey == item.mapKey && v in info.stack) {
+                        if (parent is DfsFrame && parent.info === info && v in info.stack) {
                             info.lowLinkValues[parent.node] =
                                 min(
                                     info.lowLinkValues.getValue(parent.node),
@@ -174,18 +183,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     }
                 }
                 is DecompDriver -> {
-                    val innerInfo = tarjanInfoMap.getValue(item.mapKey)
+                    val innerInfo = item.info
                     if (item.iterator.hasNext()) {
                         val element = item.iterator.next()
                         if (element !in innerInfo.visited) {
                             initNode(element, innerInfo)
                             workStack.addLast(
-                                DfsFrame(
-                                    element,
-                                    item.mapKey,
-                                    item.level,
-                                    element.nextEOG.iterator(),
-                                )
+                                DfsFrame(element, innerInfo, item.level, element.nextEOG.iterator())
                             )
                         }
                     } else {
@@ -208,28 +212,35 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         workStack: ArrayDeque<WorkItem>,
     ) {
         // A trivial SCC (isolated node, or a single node with a self-loop) needs no labeling.
-        if (currentInfo.stack.first() == bb && bb.nextEOG.none { it == bb }) {
-            currentInfo.stack.remove(bb)
+        // Identity (===), not equals(): "is this the exact node we're looking for", never "an
+        // equal-looking one" - also sidesteps BasicBlock's expensive structural equals().
+        if (currentInfo.stack.top() === bb && bb.nextEOG.none { it === bb }) {
+            currentInfo.stack.popTop()
             return
         }
 
         log.trace("Found a SCC (Level $level): ")
-        // Not necessarily all nodes on the stack - pop only down to bb. Clone since we can't
-        // iterate the stack while removing from it.
-        val stackClone = currentInfo.stack.toList()
-        val sccElements = mutableListOf<Node>()
-        for (it in stackClone) {
-            currentInfo.lowLinkValues[it] = currentInfo.blockIDs[bb]!!
-            log.trace("{} ({}); ", it.location, currentInfo.lowLinkValues[it])
-            currentInfo.stack.remove(it)
-            sccElements.add(it)
-            if (it == bb) break
+        // The SCC is bb and everything pushed after it, i.e. the stack from the top down to bb.
+        // sccOrder (deterministic, stack order) is used wherever iteration order matters, e.g.
+        // which loop entry is stripped below; sccElements (identity set) only for membership tests.
+        val sccOrder = mutableListOf<Node>()
+        do {
+            val popped = currentInfo.stack.popTop()
+            sccOrder += popped
+        } while (popped !== bb)
+        val sccElements = sccOrder.toIdentitySet()
+        val bbLowLink = currentInfo.blockIDs.getValue(bb)
+        sccOrder.forEach { element ->
+            currentInfo.lowLinkValues[element] = bbLowLink
+            if (log.isTraceEnabled) {
+                log.trace("{} ({}); ", element.location, bbLowLink)
+            }
         }
         log.trace("Done with stack clone iteration.")
 
         // Mark the SCC's incoming edge with an scc-flag, to tell it apart from a mergePoint
         // (which also has 2 incoming EOG edges).
-        val loopEntryElements = sccElements.filter { it.prevEOG.any { it !in sccElements } }
+        val loopEntryElements = sccOrder.filter { it.prevEOG.any { it !in sccElements } }
         loopEntryElements.forEach { loopEntryElement ->
             loopEntryElement.prevEOGEdges
                 .filter { edge -> edge.start in sccElements }
@@ -246,7 +257,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Mark the SCC's outgoing (exit) edges the same way.
         val loopExitElements =
-            sccElements.filter { it.nextEOG.any { nextEOG -> nextEOG !in sccElements } }
+            sccOrder.filter { it.nextEOG.any { nextEOG -> nextEOG !in sccElements } }
         loopExitElements.forEach { loopExitElement ->
             loopExitElement.nextEOGEdges
                 .filter { edge -> edge.end in sccElements }
@@ -263,7 +274,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // A block with 2 outgoing edges that both stay inside the SCC needs labeling too, so it
         // takes priority over the nextBranchEdgesList during EOG iteration (a single such edge
         // would already land in the higher-priority currentBBEdgesList without this).
-        sccElements.forEach { sccElement ->
+        sccOrder.forEach { sccElement ->
             val nextSCCEdges =
                 sccElement.nextEOGEdges.filter { nextEOGEdge -> nextEOGEdge.end in sccElements }
             if (nextSCCEdges.size > 1) {
@@ -272,7 +283,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     // There should be exactly one matching BasicBlock-level edge to label too.
                     val bbNextEdges =
                         (nextSCCEdge.start as? BasicBlock)?.endNode?.nextEOGEdges?.filter {
-                            it.end.basicBlock.single() == nextSCCEdge.end
+                            it.end.basicBlock.single() === nextSCCEdge.end
                         }
                     if ((bbNextEdges?.size ?: 0) > 1) {
                         log.error("Found more than one EOG Edge matching criteria")
@@ -285,35 +296,24 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // Find nested loops: strip the last loop-entry element (by source order, hoping it's the
         // outermost entry) and re-decompose the remaining elements one level deeper - if that
         // still contains a loop, it's a nested one.
-        //
-        // Bug fixed here: this used to look up/create the inner TarjanInfo via
-        // tarjanInfoMap.computeIfAbsent(innerLevel), keyed by the plain depth number. Two
-        // *unrelated* SCCs decomposing at the same depth (e.g. two independent sibling loops,
-        // each with a single entry==exit node - an extremely common shape, not a rare corner
-        // case) would then collide: whichever one got here second inherited the first one's
-        // blackList/visited/stack instead of getting its own, silently re-labeling the first
-        // loop's edges at the second loop's depth. Each decomposition attempt now gets its own
-        // never-reused mapKey (see [nextScratchKey]) - level/depth is still level+1 for labeling,
-        // just no longer doubles as the TarjanInfo lookup key.
         if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
-            val blackList = currentInfo.blackList.toMutableList()
             val innerLevel = level + 1
-            val innerMapKey = nextScratchKey--
             val eliminatedElement =
                 loopEntryElements.sortedBy { it.location?.region?.startLine }.last()
-            blackList.add(eliminatedElement)
             sccElements.remove(eliminatedElement)
-            tarjanInfoMap[innerMapKey] = TarjanInfo(blackList)
-            workStack.addLast(DecompDriver(sccElements.iterator(), innerMapKey, innerLevel))
+            workStack.addLast(
+                DecompDriver(
+                    sccOrder.filter { it in sccElements }.iterator(),
+                    TarjanInfo(scope = sccElements),
+                    innerLevel,
+                )
+            )
         }
     }
 
     // Note: no need to guard against processing the same basic block twice - EOGStarterPass
     // creates a fresh SccPass instance per starter node and calls accept() on it exactly once
-    // (see PassManager.consumeTarget), so tarjanInfoMap is never shared across multiple accept()
-    // calls in the first place. An earlier version of this method guarded on
-    // tarjanInfoMap[0].visited, but nothing ever populated that set, so the guard was always
-    // true and never did anything.
+    // (see the top-level consumeTarget() in Pass.kt).
     override fun accept(node: Node) {
         if (node.basicBlock.isEmpty()) return
         val bb = node.basicBlock.single() as BasicBlock
