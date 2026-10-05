@@ -84,6 +84,8 @@ pnpm run build
 - Include tests with changes whenever possible.
 - PRs that change the graph or analysis interfaces need a changelog section in the PR description (format in `CONTRIBUTING.md`).
 - Never commit stray local files (scratch tests, patches, archives, build outputs).
+- **Never push directly to `main`.** All changes go through a feature branch and a pull request.
+- **Never reply on GitHub on behalf of a human.** Do not post comments, reviews, or answers to issues, PRs, or discussions. Communication on GitHub is done by humans. Draft a reply locally if asked, and let the user post it.
 
 ## codyze-console Architecture
 
