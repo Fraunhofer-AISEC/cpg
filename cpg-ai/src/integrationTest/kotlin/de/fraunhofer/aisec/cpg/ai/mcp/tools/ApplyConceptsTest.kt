@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.literals
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -48,7 +49,7 @@ class ApplyConceptsTest {
                     "class Foo:\n    secretKey = '0000'\ndef hello():\n    print('Hello World')",
                 extension = "py",
             )
-        val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
+        val analysisResult = testServer().runCpgAnalyze(payload, runPasses = true, cleanup = true)
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)

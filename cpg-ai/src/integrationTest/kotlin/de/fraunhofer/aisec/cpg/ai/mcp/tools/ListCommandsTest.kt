@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.RecordInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -62,7 +63,7 @@ class ListCommandsTest {
                     "class Foo:\n    secretKey = '0000'\ndef hello():\n    print('Hello World')",
                 extension = "py",
             )
-        runCpgAnalyze(payload, runPasses = true, cleanup = true)
+        testServer().runCpgAnalyze(payload, runPasses = true, cleanup = true)
     }
 
     @Test

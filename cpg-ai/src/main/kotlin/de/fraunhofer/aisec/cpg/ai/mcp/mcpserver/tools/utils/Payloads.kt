@@ -76,6 +76,15 @@ data class CpgRunPassPayload(
 )
 
 @Serializable
+data class CpgAddCodePayload(
+    @Description("The code to add to the existing project.") val code: String,
+    @Description(
+        "The file language of the programming language to use. Example options: [c, cpp, java, py, java, go, ini, ll, rb, rs, js, jsx, ts, tsx, class, jimple, jar, apk]."
+    )
+    val languageFileEnding: String,
+)
+
+@Serializable
 data class KeyValuePair<K, V>(
     @Description("The key of the key-value pair") val key: K,
     @Description("The value of the key-value pair") val value: V,

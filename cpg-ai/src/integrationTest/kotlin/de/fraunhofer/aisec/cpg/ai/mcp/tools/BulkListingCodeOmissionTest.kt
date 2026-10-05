@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -59,7 +60,7 @@ class BulkListingCodeOmissionTest {
                     "void hello() { printf(\"Hello World\"); }\nint main() { hello(); return 0; }",
                 extension = "c",
             )
-        runCpgAnalyze(payload, runPasses = true, cleanup = true)
+        testServer().runCpgAnalyze(payload, runPasses = true, cleanup = true)
     }
 
     @Test
