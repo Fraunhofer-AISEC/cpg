@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NoArguments
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addToolWithoutCpg
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableOperations
@@ -51,7 +53,10 @@ fun Server.listAvailableConcepts() {
         - "Show me all available concepts"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_available_concepts", description = toolDescription) { _ ->
+    this.addToolWithoutCpg<NoArguments>(
+        name = "cpg_list_available_concepts",
+        description = toolDescription,
+    ) { _ ->
         CallToolResult(content = availableConcepts.map { TextContent(it.name) })
     }
 }
@@ -68,7 +73,10 @@ fun Server.listAvailableOperations() {
         - "Show me all available operations"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_available_operations", description = toolDescription) { _ ->
+    this.addToolWithoutCpg<NoArguments>(
+        name = "cpg_list_available_operations",
+        description = toolDescription,
+    ) { _ ->
         CallToolResult(content = availableOperations.map { TextContent(it.name) })
     }
 }
