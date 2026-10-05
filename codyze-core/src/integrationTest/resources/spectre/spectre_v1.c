@@ -32,6 +32,14 @@ void victim_function_fenced(size_t x) {
   }
 }
 
+// Same gadget, but the bounds check reads the index through an alias.
+void victim_function_alias(size_t x) {
+  size_t *p = &x;
+  if (*p < array1_size) {
+    temp &= array2[array1[x] * 512];
+  }
+}
+
 // Not a gadget: bounds-checked load, but no secret-dependent second access.
 uint8_t safe_function(size_t x) {
   if (x < array1_size) {

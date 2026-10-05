@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.rust.RustLanguage
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -40,11 +41,15 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.followPrevCDGUntilHitNodes
-import de.fraunhofer.aisec.cpg.graph.refs
+import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.and
@@ -63,12 +68,19 @@ private val comparisons = setOf("<", "<=", ">", ">=")
 /** The sample code uses `_mm_lfence` as a speculation barrier in all languages. */
 private val barriers = setOf("_mm_lfence", "__builtin_ia32_lfence", "__speculation_barrier")
 
+/**
+ * The memory addresses accessed by the expressions in this node, as computed by the [PointsToPass].
+ * In contrast to comparing declarations, this also matches accesses via pointers or fields.
+ */
+val AstNode.accessedAddresses: Set<MemoryAddress>
+    get() = nodes.filterIsInstance<Expression>().flatMapTo(identitySetOf()) { it.memoryAddresses }
+
 /** The bounds checks (e.g. `x < size`) on the index of this subscription it depends on. */
 val Subscription.boundsChecks: Set<Node>
     get() = followPrevCDGUntilHitNodes {
         it is BinaryOperator &&
             it.operatorCode in comparisons &&
-            it.refs.any { ref -> ref.refersTo in subscriptExpression.refs.map { it.refersTo } }
+            it.accessedAddresses.any { address -> address in subscriptExpression.accessedAddresses }
     }
 
 /** Whether this node is used as the index of an array access. */
@@ -112,7 +124,11 @@ fun TranslationResult.noSpectreV1(): QueryTree<Boolean> =
  * vulnerable functions, one mitigated by a speculation barrier and one without a second load.
  */
 class SpectreV1Test {
-    private fun assertGadgets(file: String, language: (TranslationConfiguration.Builder) -> Unit) {
+    private fun assertGadgets(
+        file: String,
+        additional: Set<String> = setOf(),
+        language: (TranslationConfiguration.Builder) -> Unit,
+    ) {
         val topLevel = File("src/integrationTest/resources/spectre")
         val result =
             analyze(listOf(topLevel.resolve(file)), topLevel.toPath(), true) {
@@ -128,17 +144,21 @@ class SpectreV1Test {
                 .filter { it.value == false }
                 .mapNotNull { it.node?.firstParentOrNull<Function>()?.name?.localName }
                 .toSet()
-        assertEquals(setOf("victim_function", "victim_function_split"), vulnerable)
+        assertEquals(setOf("victim_function", "victim_function_split") + additional, vulnerable)
     }
 
     @Test
     fun testC() {
-        assertGadgets("spectre_v1.c") { it.registerLanguage<CLanguage>() }
+        assertGadgets("spectre_v1.c", setOf("victim_function_alias")) {
+            it.registerLanguage<CLanguage>()
+        }
     }
 
     @Test
     fun testCPP() {
-        assertGadgets("spectre_v1.cpp") { it.registerLanguage<CPPLanguage>() }
+        assertGadgets("spectre_v1.cpp", setOf("victim_function_alias")) {
+            it.registerLanguage<CPPLanguage>()
+        }
     }
 
     @Test

@@ -30,6 +30,13 @@ public:
     }
   }
 
+  void victim_function_alias(size_t x) {
+    size_t *p = &x;
+    if (*p < array1_size) {
+      temp &= array2[array1[x] * 512];
+    }
+  }
+
   uint8_t safe_function(size_t x) {
     if (x < array1_size) {
       return array1[x];
