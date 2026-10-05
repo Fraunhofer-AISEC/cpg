@@ -43,6 +43,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerReference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.followPrevCDGUntilHitNodes
@@ -70,7 +72,9 @@ private val barriers = setOf("_mm_lfence", "__builtin_ia32_lfence", "__speculati
 
 /**
  * The memory addresses accessed by the expressions in this node, as computed by the [PointsToPass].
- * In contrast to comparing declarations, this also matches accesses via pointers or fields.
+ * For plain variables, this is the same as comparing their declarations. In addition, it matches
+ * accesses through pointer aliases (e.g. `*p` with `p = &x`), if the frontend models them as
+ * [PointerReference] and [PointerDereference] (currently C/C++).
  */
 val AstNode.accessedAddresses: Set<MemoryAddress>
     get() = nodes.filterIsInstance<Expression>().flatMapTo(identitySetOf()) { it.memoryAddresses }
