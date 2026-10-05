@@ -74,14 +74,14 @@ fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
             try {
                 request.arguments.toPayload<CpgListPayload>()
             } catch (e: SerializationException) {
-                return@addTool CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "Invalid arguments for cpg_list_llm_concepts_operations: ${e.message}"
-                            )
-                        )
-                )
+                val message =
+                    describeInvalidArguments(
+                        "cpg_list_llm_concepts_operations",
+                        CpgListPayload.serializer().descriptor,
+                        request.arguments,
+                        e,
+                    )
+                return@addTool CallToolResult(content = listOf(TextContent(message)))
             }
         CallToolResult(content = listConcepts(file, payload))
     }
@@ -112,16 +112,25 @@ fun Server.addOrUpdateConcept(file: File = File(fileName)) {
         """
             .trimIndent()
 
+    val name = "cpg_add_or_update_llm_concept"
     this.addTool(
-        name = "cpg_add_or_update_llm_concept",
+        name = name,
         description = toolDescription,
         inputSchema = LLMConceptDescription::class.toSchema(),
     ) { request ->
         val payload =
-            request.arguments?.toObject<LLMConceptDescription>()
-                ?: return@addTool CallToolResult(
-                    content = listOf(TextContent("Invalid input for adding/updating concept."))
-                )
+            try {
+                request.arguments.toPayload<LLMConceptDescription>()
+            } catch (e: SerializationException) {
+                val message =
+                    describeInvalidArguments(
+                        name,
+                        LLMConceptDescription.serializer().descriptor,
+                        request.arguments,
+                        e,
+                    )
+                return@addTool CallToolResult(content = listOf(TextContent(message)))
+            }
         persistConceptSchemas(listOf(payload), file)
         CallToolResult(
             content = listOf(TextContent("Saved concept '${payload.name}' to ${file.path}."))

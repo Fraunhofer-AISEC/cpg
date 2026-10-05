@@ -61,6 +61,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import kotlinx.serialization.serializer
 
 /**
  * Registers a [io.modelcontextprotocol.kotlin.sdk.types.Tool] to the MCP [Server]. The tool's input
@@ -108,9 +109,14 @@ inline fun <reified T> Server.addTool(
                 try {
                     request.arguments.toPayload<T>()
                 } catch (e: SerializationException) {
-                    return@addTool CallToolResult(
-                        content = listOf(TextContent("Invalid arguments for $name: ${e.message}"))
-                    )
+                    val message =
+                        describeInvalidArguments(
+                            name,
+                            serializer<T>().descriptor,
+                            request.arguments,
+                            e,
+                        )
+                    return@addTool CallToolResult(content = listOf(TextContent(message)))
                 }
             payload.runOnCpg(mutating, handler)
         } catch (e: Exception) {
