@@ -40,14 +40,10 @@ jobs:
             echo "::error::A main theorem depends on sorry or native_decide"
             exit 1
           fi
-      - name: Debug toolchain layout
-        run: |
-          P="$(cd cpg-verified && lean --print-prefix)"
-          ls "$P" "$P/lib" "$P/lib/lean" | head -100
-          find "$P/lib" -maxdepth 2 -name "libc*" | head -20
-          cat cpg-verified/.lake/build/bin/cpg-translate.rsp
       - name: Build native library
-        run: cpg-verified/native/build.sh
+        run: |
+          cpg-verified/native/build.sh
+          ldd cpg-verified/.lake/build/native/libcpgverified.so
       - uses: actions/setup-java@v5
         with:
           distribution: "corretto"
