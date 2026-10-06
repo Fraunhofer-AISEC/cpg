@@ -12,6 +12,8 @@
     dashed?: boolean;
     /** The node of the step, if the markers are not identified by their index alone */
     nodeId?: string;
+    /** Shown instead of the number, e.g. for a marker that is no step */
+    label?: string;
   }
 </script>
 
@@ -74,13 +76,13 @@
         : 'bg-slate-700 text-white'} {marker.current ? 'ring-2 ring-blue-500' : ''}"
       style:top="{offsetTop + (entry.line - 0.5) * lineHeight}rem"
       style:left="{left}rem"
-      title={entry.steps.map((s) => `${s.index + 1}. ${s.title}`).join('\n')}
+      title={entry.steps.map((s) => `${s.label ?? s.index + 1}. ${s.title}`).join('\n')}
       onclick={(e) => {
         e.stopPropagation();
         onSelect(marker);
       }}
     >
-      {marker.index + 1}{#if entry.steps.length > 1}<sup class="ml-px">+</sup>{/if}
+      {marker.label ?? marker.index + 1}{#if entry.steps.length > 1}<sup class="ml-px">+</sup>{/if}
     </button>
   {/each}
 </div>

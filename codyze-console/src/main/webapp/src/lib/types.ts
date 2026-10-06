@@ -88,6 +88,20 @@ export interface NodeRefJSON {
   label?: string;
 }
 
+/** Why evidence of the agent may not be reliable, the most severe first. */
+export type TrustIssueKind = 'UNRESOLVED_CALL' | 'ANALYSIS_WARNING' | 'EXTERNAL_CODE';
+
+/** A place where the analysis is uncertain that some evidence of the agent relies on. */
+export interface TrustIssueJSON {
+  kind: TrustIssueKind;
+  /** The uncertain node, e.g. the unresolved call */
+  location: NodeRefJSON;
+  /** What the evidence relies on, phrased to follow "relies on" */
+  reason: string;
+  /** The IDs of the evidence nodes that rely on [location] */
+  evidence: string[];
+}
+
 /** Key figures of a function, shown next to it in the code viewer. */
 export interface FunctionAnnotationJSON {
   function: NodeRefJSON;
@@ -322,12 +336,7 @@ export interface ConstructorInfo {
 
 // QueryTree status determination and styling
 export type QueryTreeStatus =
-  | 'FULFILLED'
-  | 'NOT_FULFILLED'
-  | 'REJECTED'
-  | 'UNDECIDED'
-  | 'NOT_YET_EVALUATED'
-  | 'NON_BOOLEAN';
+  'FULFILLED' | 'NOT_FULFILLED' | 'REJECTED' | 'UNDECIDED' | 'NOT_YET_EVALUATED' | 'NON_BOOLEAN';
 
 export interface QueryTreeStatusConfig {
   bgColor: string;

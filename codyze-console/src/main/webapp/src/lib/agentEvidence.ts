@@ -1,4 +1,4 @@
-import type { NodeJSON, NodeRefJSON } from '$lib/types';
+import type { NodeJSON, NodeRefJSON, TrustIssueJSON } from '$lib/types';
 
 /**
  * The evidence of the agent's answers: the nodes returned by its tool calls and the nodes it cites
@@ -79,4 +79,35 @@ export async function resolveNodes(ids: string[]): Promise<Map<string, NodeRefJS
 export function citationLabel(ref: NodeRefJSON): string {
   const name = ref.name || (ref.code.length <= 24 ? ref.code : `${ref.code.slice(0, 23)}…`);
   return ref.startLine >= 1 ? `${name} · ${ref.fileName ?? ''}:${ref.startLine}` : name;
+}
+
+// The trust issues of each set of evidence, by its sorted IDs
+const trustCache = new Map<string, Promise<TrustIssueJSON[]>>();
+
+/**
+ * The places where the analysis is uncertain that the given evidence relies on, e.g. unresolved
+ * calls in the functions of the nodes. Cached by the set of IDs.
+ */
+export function checkTrust(ids: string[]): Promise<TrustIssueJSON[]> {
+  const key = [...new Set(ids)].sort().join(',');
+  if (!key) return Promise.resolve([]);
+  let issues = trustCache.get(key);
+  if (!issues) {
+    issues = fetch('/api/trust', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(key.split(','))
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(r.statusText);
+        return r.json();
+      })
+      .catch(() => {
+        // Ask again next time instead of keeping the failure
+        trustCache.delete(key);
+        return [];
+      });
+    trustCache.set(key, issues);
+  }
+  return issues;
 }
