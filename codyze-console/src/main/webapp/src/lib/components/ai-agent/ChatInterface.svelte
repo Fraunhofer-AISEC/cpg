@@ -26,6 +26,9 @@
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
+  import { PdgPanel } from '$lib/stores/pdgPanel.svelte';
+  import { clearPdgCache, getPdgCounts, type PdgCounts } from '$lib/pdg';
+  import PdgPanelView from '$lib/components/analysis/pdg/PdgPanel.svelte';
   import { getConceptCounts } from '$lib/annotations';
   import type {
     NodeJSON,
@@ -400,6 +403,27 @@
         run: () => layers.toggle(layer.id)
       })),
       {
+        id: 'pdg-backward',
+        category: 'Graph',
+        label: `PDG: What affects this?${pdgPreview(pdgCounts?.backward)}`,
+        disabledReason: noSelection ?? pdgDisabledReason(pdgCounts?.backward),
+        run: () => details && pdg.show(details.node.id, 'BACKWARD')
+      },
+      {
+        id: 'pdg-forward',
+        category: 'Graph',
+        label: `PDG: What does this affect?${pdgPreview(pdgCounts?.forward)}`,
+        disabledReason: noSelection ?? pdgDisabledReason(pdgCounts?.forward),
+        run: () => details && pdg.show(details.node.id, 'FORWARD')
+      },
+      {
+        id: 'pdg-close',
+        category: 'Graph',
+        label: 'Close the dependence graph',
+        disabledReason: pdg.open ? undefined : 'No graph is shown',
+        run: () => pdg.close()
+      },
+      {
         id: 'path-next',
         category: 'Path',
         label: 'Next step of the dataflow path',
@@ -509,7 +533,80 @@
     // The applied concepts change the details of the nodes they are attached to, the annotations
     // and the counts in the file tree
     clearNodeDetailsCache();
+    clearPdgCache();
     focus.invalidate();
+  }
+
+  // The dependence graph of a statement, shown next to the code
+  const pdg = new PdgPanel();
+  const pdgWidthKey = 'codyze-agent-pdg-width';
+  let pdgWidth = $state(loadPdgWidth());
+
+  function loadPdgWidth(): number {
+    try {
+      const stored = Number(localStorage.getItem(pdgWidthKey));
+      if (stored >= 360) return stored;
+    } catch {
+      // Storage is not available, e.g. during SSR or in a private window
+    }
+    return 540;
+  }
+
+  function startPdgResize(event: PointerEvent) {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = pdgWidth;
+    const move = (e: PointerEvent) => {
+      const max = Math.max(400, window.innerWidth * 0.6);
+      pdgWidth = Math.round(Math.min(max, Math.max(360, startWidth + startX - e.clientX)));
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      document.body.style.removeProperty('cursor');
+      try {
+        localStorage.setItem(pdgWidthKey, String(pdgWidth));
+      } catch {
+        // Not remembering the width is fine
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    document.body.style.cursor = 'col-resize';
+  }
+
+  // How many statements are in the slices of the inspected node, to preview them in the commands
+  let pdgCounts = $state.raw<PdgCounts | null>(null);
+  $effect(() => {
+    const id = focus.details?.node.id;
+    void focus.revision;
+    const hops = pdg.hops;
+    pdgCounts = null;
+    if (!id) return;
+    getPdgCounts(id, hops)
+      .then((counts) => {
+        if (id === focus.details?.node.id) pdgCounts = counts;
+      })
+      .catch(() => {});
+  });
+
+  function pdgPreview(count: number | undefined): string {
+    return count === undefined
+      ? ''
+      : count > 0
+        ? ` · ${count} ${count === 1 ? 'node' : 'nodes'}`
+        : '';
+  }
+
+  function pdgDisabledReason(count: number | undefined): string | undefined {
+    return count === 0 ? 'None in this function' : undefined;
+  }
+
+  function askAboutPdgNode(node: NodeRefJSON) {
+    showAgent();
+    onMessageChange(
+      `How does ${describeNode(node)} depend on the rest of its function? Look at its data and control dependences: what affects it, and what does it affect?`
+    );
   }
 
   // The number of concepts per file of the selected component, shown in the file tree
@@ -1386,6 +1483,26 @@
           {askDisabledReason}
           {askRequest}
         >
+          {#snippet layerActions()}
+            {@const details = focus.details}
+            <button
+              type="button"
+              class="rounded-md border px-2.5 py-px text-[11px] disabled:text-gray-300 {pdg.open
+                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                : 'border-gray-200 text-gray-500 hover:text-gray-800'}"
+              aria-pressed={pdg.open}
+              disabled={!pdg.open && !details}
+              title={pdg.open
+                ? 'Close the dependence graph (Esc)'
+                : details
+                  ? 'Show what affects the selected node in the program dependence graph'
+                  : 'Select a node first'}
+              onclick={() =>
+                pdg.open ? pdg.close() : details && pdg.show(details.node.id, 'BACKWARD')}
+            >
+              PDG
+            </button>
+          {/snippet}
           {#snippet headerStart()}
             {@render historyButtons()}
             {@render breadcrumb()}
@@ -1402,6 +1519,19 @@
       {/if}
     </div>
   </div>
+
+  <!-- The dependence graph, which narrows the code -->
+  {#if pdg.open && openedUnit}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="w-1 shrink-0 cursor-col-resize border-l border-gray-200 hover:bg-blue-200"
+      onpointerdown={startPdgResize}
+      title="Drag to resize"
+    ></div>
+    <div class="min-h-0 shrink-0" style:width="{pdgWidth}px">
+      <PdgPanelView panel={pdg} onInspect={selectRef} onAsk={askAboutPdgNode} />
+    </div>
+  {/if}
 
   <!-- Context column: inspector and agent -->
   {#if contextCollapsed}
