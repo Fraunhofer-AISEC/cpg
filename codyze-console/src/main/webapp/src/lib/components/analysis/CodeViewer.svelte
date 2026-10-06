@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack, type Snippet } from 'svelte';
-  import type { TranslationUnitJSON, NodeJSON } from '$lib/types';
+  import type { TranslationUnitJSON, NodeJSON, CodeSelection } from '$lib/types';
   import { TabNavigation } from '$lib/components/navigation';
   import { CollapsiblePanel } from '$lib/components/ui';
   import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
@@ -8,6 +8,8 @@
   import CodeAnnotations from './CodeAnnotations.svelte';
   import OverviewRuler, { type RulerMark } from './OverviewRuler.svelte';
   import HoverCard from './HoverCard.svelte';
+  import AskPopup from './AskPopup.svelte';
+  import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
   import { getAnnotations } from '$lib/annotations';
@@ -109,6 +111,15 @@
      * one between the line numbers and the code for the dataflow arcs of the inspected node
      */
     lanes?: boolean;
+    /**
+     * Enables asking about code: a small input appears next to selected text (and with Ctrl/Cmd+K),
+     * which calls this with the question and the selection
+     */
+    onAsk?: (question: string, selection: CodeSelection) => void;
+    /** Why asking is not possible right now, e.g. while the agent is busy */
+    askDisabledReason?: string | null;
+    /** Incremented to open the input for the selection (or else the inspected node) */
+    askRequest?: number;
   }
 
   let {
@@ -132,7 +143,10 @@
     onInspect,
     scrollPositions,
     annotations = $bindable(null),
-    lanes = false
+    lanes = false,
+    onAsk,
+    askDisabledReason = null,
+    askRequest = 0
   }: Props = $props();
 
   // The focus and the placement of the inspector never change for a viewer
@@ -182,6 +196,8 @@
 
   function rememberScrollPosition() {
     hideHover();
+    // The input stays while it is used, as the code is not scrolled by typing
+    if (!askFocused) ask = null;
     if (codeContainerElement)
       scrollPositions?.set(translationUnit.id, codeContainerElement.scrollTop);
   }
@@ -224,6 +240,200 @@
     if (line < 1 || line > totalLines || column < 0) return null;
     return { line, column };
   }
+
+  // Asking about code: the selection of the user (or the inspected node) with the place of the
+  // input. The position is relative to the code area
+  type CodeRange = Omit<CodeSelection, 'node'>;
+  let ask = $state.raw<{
+    selection: CodeRange;
+    x: number;
+    y: number;
+    above: boolean;
+    /** Incremented to focus the input, which is not focused when it appears next to a selection */
+    focus: number;
+  } | null>(null);
+  let askFocused = $state(false);
+  $effect(() => {
+    if (!ask) askFocused = false;
+  });
+  // Whether the mouse was pressed in the code, to open the input once a selection is made
+  let codeMouseDown = false;
+  const askWidth = 352;
+
+  // The 1-based line and column of a position in the DOM selection, if it is in a rendered line
+  function positionOf(container: Node, offset: number): { line: number; column: number } | null {
+    const element = container instanceof Element ? container : container.parentElement;
+    const lineElement = element?.closest<HTMLElement>('[data-line]');
+    const codeElement = lineElement?.querySelector<HTMLElement>('[data-code]');
+    if (!lineElement || !codeElement) return null;
+    const range = document.createRange();
+    range.setStart(codeElement, 0);
+    try {
+      range.setEnd(container, offset);
+    } catch {
+      return null;
+    }
+    return { line: Number(lineElement.dataset.line), column: range.toString().length + 1 };
+  }
+
+  // The text of a range of the code, with an exclusive end column
+  function textOf(r: Omit<CodeRange, 'text' | 'unitId' | 'fileName'>): string {
+    const lines = codeLines.slice(r.startLine - 1, r.endLine);
+    if (lines.length === 0) return '';
+    lines[lines.length - 1] = lines[lines.length - 1].slice(0, r.endColumn - 1);
+    lines[0] = lines[0].slice(r.startColumn - 1);
+    return lines.join('\n');
+  }
+
+  function rangeOfNode(node: NodeRefJSON): CodeRange | null {
+    if (node.translationUnitId !== translationUnit.id || node.startLine < 1) return null;
+    const range = {
+      startLine: node.startLine,
+      startColumn: node.startColumn,
+      endLine: Math.max(node.endLine, node.startLine),
+      endColumn: node.endColumn
+    };
+    return {
+      unitId: translationUnit.id,
+      fileName: translationUnit.name,
+      text: textOf(range),
+      ...range
+    };
+  }
+
+  // Where to show the input: below the end of the selection, or above it near the bottom
+  function placeAsk(rect: DOMRect): { x: number; y: number; above: boolean } | null {
+    if (!codeAreaElement) return null;
+    const area = codeAreaElement.getBoundingClientRect();
+    const x = Math.max(8, Math.min(rect.left - area.left, area.width - askWidth - 8));
+    const above = rect.bottom - area.top + 80 > area.height;
+    return {
+      x,
+      y: above ? rect.top - area.top - 6 : rect.bottom - area.top + 6,
+      above
+    };
+  }
+
+  // The text selected in the code, if there is one
+  function readSelection(): { selection: CodeRange; rect: DOMRect } | null {
+    const selected = window.getSelection();
+    if (!selected || selected.isCollapsed || selected.rangeCount === 0) return null;
+    const range = selected.getRangeAt(0);
+    if (!codeContainerElement?.contains(range.commonAncestorContainer)) return null;
+    const text = selected.toString();
+    if (!text.trim()) return null;
+    const start = positionOf(range.startContainer, range.startOffset);
+    let end = positionOf(range.endContainer, range.endOffset);
+    if (!start || !end) return null;
+    // A selection that ends at the start of a line (e.g. by a triple click) ends with the line before
+    if (end.column === 1 && end.line > start.line) {
+      end = { line: end.line - 1, column: (codeLines[end.line - 2]?.length ?? 0) + 1 };
+    }
+    const rects = range.getClientRects();
+    return {
+      selection: {
+        unitId: translationUnit.id,
+        fileName: translationUnit.name,
+        text,
+        startLine: start.line,
+        startColumn: start.column,
+        endLine: end.line,
+        endColumn: end.column
+      },
+      rect: rects.length > 0 ? rects[rects.length - 1] : range.getBoundingClientRect()
+    };
+  }
+
+  // Shows the input for the selected text and focuses it. Without a selection, it asks about the
+  // inspected node
+  function openAsk() {
+    if (!onAsk) return;
+    const current = readSelection();
+    if (current) {
+      const place = placeAsk(current.rect);
+      if (place) ask = { selection: current.selection, ...place, focus: 1 };
+    } else if (ask) {
+      ask = { ...ask, focus: ask.focus + 1 };
+    } else {
+      const range = inspected ? rangeOfNode(inspected.node) : null;
+      const area = codeAreaElement?.getBoundingClientRect();
+      if (range && area) {
+        ask = {
+          selection: range,
+          x: Math.max(8, area.width / 2 - askWidth / 2),
+          y: 8,
+          above: false,
+          focus: 1
+        };
+      }
+    }
+  }
+
+  function askLabel(range: CodeRange): string {
+    const lines =
+      range.startLine === range.endLine
+        ? `${range.startLine}`
+        : `${range.startLine}–${range.endLine}`;
+    return `${range.fileName}:${lines}`;
+  }
+
+  async function submitAsk(question: string) {
+    const current = ask?.selection;
+    if (!current || !onAsk) return;
+    ask = null;
+    // The innermost node containing the whole selection, which the agent can look at
+    const component = componentName;
+    const node = component
+      ? await getNodeDetailsAt(component, current.unitId, current.startLine, current.startColumn, {
+          line: current.endLine,
+          column: current.endColumn
+        })
+          .then((details) => details?.node ?? null)
+          .catch(() => null)
+      : null;
+    onAsk(question, { ...current, node });
+  }
+
+  // Once the mouse is released after selecting text, the input is shown next to it
+  function handleWindowMouseUp() {
+    if (!codeMouseDown) return;
+    codeMouseDown = false;
+    // The selection is final after the event
+    setTimeout(() => {
+      const current = onAsk ? readSelection() : null;
+      const place = current ? placeAsk(current.rect) : null;
+      if (current && place) ask = { selection: current.selection, ...place, focus: 0 };
+    }, 0);
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent) {
+    if (!onAsk) return;
+    if (event.key === 'Escape' && ask && !askFocused) {
+      ask = null;
+    } else if (
+      hasModifier(event) &&
+      !event.altKey &&
+      !event.shiftKey &&
+      event.key.toLowerCase() === 'k' &&
+      (!isTyping(event) || askFocused)
+    ) {
+      event.preventDefault();
+      if (!askFocused) openAsk();
+    }
+  }
+
+  // The input belongs to the file, and can be requested from outside (e.g. the command palette)
+  $effect(() => {
+    void translationUnit.id;
+    ask = null;
+  });
+  let handledAskRequest = 0;
+  $effect(() => {
+    const request = askRequest;
+    if (request === handledAskRequest) return;
+    handledAskRequest = request;
+    untrack(openAsk);
+  });
 
   function handleCodeClick(event: MouseEvent) {
     hideHover();
@@ -716,6 +926,10 @@
         <div
           class="relative inline-block w-max min-w-full align-top"
           class:cursor-pointer={!!componentName}
+          onmousedown={() => {
+            codeMouseDown = true;
+            ask = null;
+          }}
           onclick={handleCodeClick}
           onmousemove={handleCodeMouseMove}
           onmouseleave={hideHover}
@@ -844,6 +1058,20 @@
         </div>
       </div>
 
+      {#if ask && onAsk}
+        <AskPopup
+          label={askLabel(ask.selection)}
+          disabledReason={askDisabledReason}
+          x={ask.x}
+          y={ask.y}
+          above={ask.above}
+          focusRequest={ask.focus}
+          onSubmit={submitAsk}
+          onClose={() => (ask = null)}
+          onFocusChange={(focused) => (askFocused = focused)}
+        />
+      {/if}
+
       {#if hover}
         <div
           class="pointer-events-none absolute z-40"
@@ -931,3 +1159,9 @@
     conceptGroups={conceptGroups || []}
   />
 {/if}
+
+<svelte:window
+  onmouseup={handleWindowMouseUp}
+  onmousedown={() => (ask = null)}
+  onkeydown={handleWindowKeydown}
+/>

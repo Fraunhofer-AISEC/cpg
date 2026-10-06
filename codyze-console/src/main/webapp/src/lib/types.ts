@@ -88,6 +88,22 @@ export interface NodeRefJSON {
   label?: string;
 }
 
+/** A range of code selected by the user, e.g. to ask the agent about it. */
+export interface CodeSelection {
+  unitId: string;
+  /** The name of the file */
+  fileName: string;
+  text: string;
+  startLine: number;
+  /** 1-based, like the columns of the nodes */
+  startColumn: number;
+  endLine: number;
+  /** 1-based and exclusive */
+  endColumn: number;
+  /** The innermost node containing the whole selection, if there is one */
+  node: NodeRefJSON | null;
+}
+
 /** Why evidence of the agent may not be reliable, the most severe first. */
 export type TrustIssueKind = 'UNRESOLVED_CALL' | 'ANALYSIS_WARNING' | 'EXTERNAL_CODE';
 
