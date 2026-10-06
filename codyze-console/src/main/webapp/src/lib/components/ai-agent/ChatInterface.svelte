@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
@@ -8,7 +9,7 @@
   import { CodeViewer, FileTree } from '$lib/components/analysis';
   import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON, ConceptSuggestionItem, Model } from '$lib/types';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON, ConceptSuggestionItem, Model, NodeDetailsJSON, NodeRefJSON } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
@@ -74,6 +75,30 @@
     }
   }
 
+  // Opens the file of a node selected in the inspector and inspects the node there
+  function handleNavigateToNode(ref: NodeRefJSON) {
+    handleNodeClick({
+      ...ref,
+      code: ref.code,
+      astChildren: [],
+      prevDFG: [],
+      nextDFG: []
+    });
+  }
+
+  // Questions about the inspected node, which are put into the input so they can be adjusted
+  const nodeQuestions: { label: string; question: (where: string) => string }[] = [
+    { label: 'Explain', question: (where) => `Explain what ${where} does and why it matters for security.` },
+    { label: 'Where does the value come from?', question: (where) => `Where does the value of ${where} come from? Follow the dataflow backwards to its origins (e.g. user input, files, network, constants).` },
+    { label: 'Reachable from outside?', question: (where) => `Can ${where} be reached from an entry point of the program? Show the call path.` }
+  ];
+
+  function askAboutNode(details: NodeDetailsJSON, question: (where: string) => string) {
+    const n = details.node;
+    const where = `the ${n.type} \`${n.code || n.name}\` (node ID ${n.id}, ${n.fileName}:${n.startLine})`;
+    onMessageChange(question(where));
+  }
+
   function handleFileSelect(unit: TranslationUnitJSON) {
     selectedTranslationUnit = unit;
     selectedNode = null;
@@ -88,13 +113,9 @@
     }
   }
 
-  function closeCodePanel() {
-    selectedNode = null;
-    selectedTranslationUnit = null;
-    selectedComponentName = null;
-    openedUnit = null;
-    overlayNodes = [];
-    astNodes = [];
+  function handleComponentSelect(name: string) {
+    const unit = analysisResult?.components.find((c) => c.name === name)?.translationUnits[0];
+    if (unit) handleFileSelect(unit);
   }
 
   function findComponentForTu(tuId: string): ComponentJSON | null {
@@ -152,7 +173,29 @@
     }
   }
 
-  let showCodePanel = $derived(selectedTranslationUnit !== null || suggestions.length > 0);
+  let chatCollapsed = $state(false);
+
+  // The code is the main view, so a file is open from the start
+  $effect(() => {
+    if (selectedTranslationUnit || !analysisResult) return;
+    const first = analysisResult.components
+      .flatMap((c) => c.translationUnits)
+      .sort((a, b) => a.path.localeCompare(b.path))[0];
+    if (first) handleFileSelect(first);
+  });
+
+  // Questions to start with, as long as the chat is empty
+  const starterQuestions = [
+    'What does this project do, and where are its entry points?',
+    'Which functions handle external input (network, files, arguments)?',
+    'Where is cryptography used, and how?',
+    'Which memory operations could be dangerous (memcpy, strcpy, …)?'
+  ];
+
+  function ask(question: string) {
+    onMessageChange(question);
+    onSendMessage();
+  }
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
   // The nodes referenced by the suggestions, by ID. They can be nested anywhere in a translation
   // unit, so they are not necessarily part of astNodes
@@ -194,9 +237,13 @@
     suggestionNodes = new Map(nodes.map(n => [n.id, n]));
   }
 
-  // Auto-select the first translation unit with suggestions when resolved
+  // Show the first translation unit with suggestions when they arrive, unless the open one has some
   $effect(() => {
-    if (tusWithSuggestions.size > 0 && !selectedTranslationUnit && analysisResult) {
+    if (tusWithSuggestions.size === 0 || !analysisResult) return;
+    // Only react to new suggestions, not to the user opening another file
+    const current = untrack(() => selectedTranslationUnit);
+    if (current && tusWithSuggestions.has(current.id)) return;
+    {
       for (const comp of analysisResult.components) {
         const tu = comp.translationUnits.find(tu => tusWithSuggestions.has(tu.id));
         if (tu) {
@@ -207,7 +254,8 @@
     }
   });
 
-  let messagesContainer: HTMLDivElement;
+  // The messages are only rendered while the agent panel is open
+  let messagesContainer = $state<HTMLDivElement>();
   let shouldAutoScroll = $state(true);
 
   function isNearBottom(): boolean {
@@ -248,23 +296,127 @@
   }
 </script>
 
-<div class="flex h-full bg-gray-50">
-  <!-- Chat Container -->
-  <div class="flex flex-col min-w-0 min-h-0 transition-[width] duration-300 {showCodePanel ? 'w-[45%]' : 'w-full'}">
-    <!-- Messages Container -->
-    <div class="flex-1 overflow-y-auto" style="transform: translateZ(0);" bind:this={messagesContainer} onscroll={handleScroll}>
-      <div class="mx-auto max-w-6xl">
+<div class="flex h-full min-h-0 gap-2 bg-gray-50 p-2">
+  <!-- Files -->
+  {#if selectedComponent}
+    <div class="flex min-h-0 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <FileTree
+        component={selectedComponent}
+        allComponents={analysisResult?.components}
+        currentUnitId={selectedTranslationUnit?.id}
+        onFileSelect={handleFileSelect}
+        onComponentSelect={handleComponentSelect}
+        bind:collapsed={fileTreeCollapsed}
+        conceptSuggestions={tusWithSuggestions}
+      />
+    </div>
+  {/if}
+
+  <!-- Code with inspector: the main view -->
+  <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
+    {#if !analysisResult}
+      <div class="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-gray-500">
+        <p>No project has been analysed yet.</p>
+        <a href="/new-analysis" class="text-blue-600 hover:underline">Start a new analysis</a>
+      </div>
+    {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
+      <CodeViewer
+        translationUnit={openedUnit}
+        astNodes={astNodes}
+        overlayNodes={overlayNodes}
+        highlightLine={selectedNode?.startLine ?? undefined}
+        bind:nodePanelCollapsed={nodesPanelCollapsed}
+        bind:suggestions
+        {suggestionNodes}
+        onApplySuggestions={handleApplyAndReload}
+        componentName={selectedComponentName ?? undefined}
+        selectedNodeId={selectedNode?.id}
+        onNavigateToNode={handleNavigateToNode}
+        panelPosition="bottom"
+      >
+        {#snippet nodeActions(details)}
+          {#each nodeQuestions as q (q.label)}
+            <button
+              type="button"
+              class="rounded border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+              disabled={isLoading || !selectedModel}
+              title="Put this question into the agent's input"
+              onclick={() => {
+                chatCollapsed = false;
+                askAboutNode(details, q.question);
+              }}
+            >
+              {q.label}
+            </button>
+          {/each}
+        {/snippet}
+      </CodeViewer>
+    {:else if selectedTranslationUnit}
+      <div class="flex flex-1 items-center justify-center">
+        <LoadingSpinner message="Loading {selectedTranslationUnit.name}..." />
+      </div>
+    {/if}
+  </div>
+
+  <!-- Agent -->
+  {#if chatCollapsed}
+    <button
+      type="button"
+      onclick={() => (chatCollapsed = false)}
+      class="group flex w-8 shrink-0 flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white pt-4 text-gray-400 hover:bg-purple-50 hover:text-purple-600"
+      aria-label="Show agent"
+    >
+      <span class="text-[10px] font-semibold tracking-widest uppercase" style="writing-mode: vertical-rl;">Agent</span>
+      {#if isLoading}
+        <span class="h-2 w-2 animate-pulse rounded-full bg-purple-500" title="The agent is working"></span>
+      {/if}
+    </button>
+  {:else}
+    <div class="flex min-h-0 w-[26rem] shrink-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-3 py-2">
+        <span class="text-[11px] font-semibold tracking-widest text-gray-500 uppercase">Agent</span>
+        <button
+          type="button"
+          class="rounded px-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          onclick={() => (chatCollapsed = true)}
+          aria-label="Hide agent"
+        >
+          »
+        </button>
+      </div>
+
+      <!-- Messages -->
+      <div class="min-h-0 flex-1 overflow-y-auto" style="transform: translateZ(0);" bind:this={messagesContainer} onscroll={handleScroll}>
+        {#if messages.length === 0 && !isLoading}
+          <div class="p-4">
+            <p class="text-sm text-gray-600">
+              Ask about the code, or click into it and use the questions in the inspector. The agent
+              uses the code property graph to answer.
+            </p>
+            <div class="mt-3 space-y-2">
+              {#each starterQuestions as question (question)}
+                <button
+                  type="button"
+                  class="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-xs text-gray-700 hover:border-purple-300 hover:bg-purple-50 disabled:opacity-50"
+                  disabled={!selectedModel}
+                  onclick={() => ask(question)}
+                >
+                  {question}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
         {#each messages as message}
           {#if message.role === 'user'}
-            <div class="flex justify-end px-6 py-3">
-              <div class="max-w-[65%]">
-                <div class="rounded-2xl bg-blue-600 px-5 py-3 text-white">
-                  <div class="whitespace-pre-wrap text-[15px] leading-relaxed">{message.content}</div>
-                </div>
+            <div class="flex justify-end px-3 py-2">
+              <div class="max-w-[85%] rounded-2xl bg-blue-600 px-3 py-2 text-white">
+                <div class="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
               </div>
             </div>
           {:else}
-            <div class="{message.contentType === 'tool-result' ? 'px-6 py-1' : 'px-6 py-6'}">
+            <div class="{message.contentType === 'tool-result' ? 'px-3 py-1' : 'px-3 py-3'}">
               {#if message.reasoning}
                 <div class="mb-2 inline-block">
                   <button
@@ -277,13 +429,10 @@
                     >
                       <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
-                    <svg class="h-3 w-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-                    </svg>
                     <span>Thought process</span>
                   </button>
                   {#if expandedReasoning.has(message.id)}
-                    <div class="mt-1.5 ml-4 max-w-xl border-l-2 border-gray-200 pl-3">
+                    <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
                       <p class="whitespace-pre-wrap text-xs italic leading-relaxed text-gray-400">{message.reasoning}</p>
                     </div>
                   {/if}
@@ -295,7 +444,7 @@
                   onItemClick={handleNodeClick}
                 />
               {:else if message.content}
-                <div class="prose prose-sm max-w-4xl text-gray-800">
+                <div class="prose prose-sm max-w-none text-gray-800">
                   <MarkdownRenderer content={message.content} />
                 </div>
               {/if}
@@ -304,33 +453,29 @@
         {/each}
 
         {#if isLoading || displayContent}
-          <div class="px-6 py-6">
+          <div class="px-3 py-3">
             {#if displayContent}
-              <div class="prose prose-sm max-w-4xl text-gray-800">
+              <div class="prose prose-sm max-w-none text-gray-800">
                 <MarkdownRenderer content={displayContent} />
               </div>
             {:else}
-              <div class="flex items-center gap-2">
-                <div class="flex gap-1">
-                  <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"></div>
-                  <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"></div>
-                  <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"></div>
-                </div>
+              <div class="flex gap-1">
+                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"></div>
+                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"></div>
+                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"></div>
               </div>
             {/if}
           </div>
         {/if}
       </div>
-    </div>
 
-    <!-- Input Area -->
-    <div class="shrink-0 px-4 pb-3 pt-3">
-      <div class="mx-auto max-w-6xl">
+      <!-- Input -->
+      <div class="shrink-0 border-t border-gray-100 px-3 pt-2 pb-2">
         <MessageInput
           value={currentMessage}
           onSend={onSendMessage}
           onValueChange={onMessageChange}
-          placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me about your codebase...'}
+          placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask about the code...'}
           disabled={isLoading || !selectedModel}
           prompts={agentSession.mcpCapabilities?.prompts}
           onPromptSelect={onPromptSelect}
@@ -344,41 +489,6 @@
           />
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Code Panel: FileTree + CodeViewer -->
-  {#if showCodePanel && selectedTranslationUnit}
-    <div class="flex flex-1 min-w-0 min-h-0 overflow-hidden rounded-xl shadow-lg mx-2 my-2 border border-gray-200 bg-white">
-
-      {#if selectedComponent}
-        <FileTree
-          component={selectedComponent}
-          currentUnitId={selectedTranslationUnit.id}
-          onFileSelect={handleFileSelect}
-          bind:collapsed={fileTreeCollapsed}
-          conceptSuggestions={tusWithSuggestions}
-        />
-      {/if}
-
-      {#if openedUnit?.id === selectedTranslationUnit.id}
-        <CodeViewer
-          translationUnit={openedUnit}
-          astNodes={astNodes}
-          overlayNodes={overlayNodes}
-          highlightLine={selectedNode?.startLine ?? undefined}
-          bind:nodePanelCollapsed={nodesPanelCollapsed}
-          onClose={closeCodePanel}
-          bind:suggestions
-          {suggestionNodes}
-          onApplySuggestions={handleApplyAndReload}
-        />
-      {:else}
-        <div class="flex flex-1 items-center justify-center">
-          <LoadingSpinner message="Loading {selectedTranslationUnit.name}..." />
-        </div>
-      {/if}
-
     </div>
   {/if}
 </div>

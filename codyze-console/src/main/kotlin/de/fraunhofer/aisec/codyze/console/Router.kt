@@ -61,6 +61,12 @@ import kotlinx.serialization.json.JsonObject
  *   overlay nodes for a translation unit.
  * - POST `/api/nodes`: Retrieves the nodes with the given IDs (without DFG edges). Unknown node IDs
  *   are omitted.
+ * - GET `/api/component/{component_name}/translation-unit/{id}/annotations`: Retrieves the
+ *   annotations shown in the code viewer (function key figures, call status, concepts).
+ * - GET `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=`: Retrieves
+ *   the details of the innermost node at the given position.
+ * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
+ *   analysis warnings).
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
@@ -176,6 +182,45 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             call.respond(nodes)
         }
 
+        // The endpoint to get the annotations shown in the code viewer for a translation unit
+        get("/component/{component_name}/translation-unit/{id}/annotations") {
+            val componentName =
+                call.parameters["component_name"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+            val annotations = service.getAnnotations(componentName, id)
+            if (annotations != null) {
+                call.respond(annotations)
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf("error" to "Translation unit not found"),
+                )
+            }
+        }
+
+        // The endpoint to get the details of the innermost node at a position in a translation unit
+        get("/component/{component_name}/translation-unit/{id}/node-at") {
+            val componentName =
+                call.parameters["component_name"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val line =
+                call.parameters["line"]?.toIntOrNull()
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val column =
+                call.parameters["column"]?.toIntOrNull()
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+            val details = service.getNodeDetailsAt(componentName, id, line, column)
+            if (details != null) {
+                call.respond(details)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "No node at this position"))
+            }
+        }
+
         // The endpoint to get multiple nodes by IDs (batch fetch)
         post("/nodes") {
             try {
@@ -186,6 +231,17 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                     HttpStatusCode.BadRequest,
                     mapOf("error" to "Invalid request format: ${e.message}"),
                 )
+            }
+        }
+
+        // The endpoint to get the details of a single node (calls, dataflows, overlays, warnings)
+        get("/node/{id}") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val details = service.getNodeDetails(id)
+            if (details != null) {
+                call.respond(details)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
             }
         }
 
