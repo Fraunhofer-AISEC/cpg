@@ -1233,7 +1233,6 @@
       {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
         <CodeViewer
           translationUnit={openedUnit}
-          highlightLine={selectedNode?.startLine ?? undefined}
           componentName={selectedComponentName ?? undefined}
           selectedNodeId={selectedNode?.id}
           onNavigateToNode={handleNavigateToNode}

@@ -211,7 +211,7 @@
   // Inspect the initially selected node, and again whenever a deep link selects another one
   $effect(() => {
     const id = selectedNodeId;
-    if (componentName && id) inspect(() => getNodeDetails(id));
+    if (componentName && id) inspect(() => getNodeDetails(id), true);
   });
 
   // The position in the code under the mouse: a 1-based line and a CPG column (1 is the first
@@ -441,6 +441,13 @@
     return marks;
   });
 
+  // The lines of the inspected node, if it is in this file
+  const selectedLines = $derived.by(() => {
+    const node = inspected?.node;
+    if (!node || node.translationUnitId !== translationUnit.id || node.startLine < 1) return null;
+    return { first: node.startLine, last: Math.max(node.endLine, node.startLine) };
+  });
+
   // Box around the inspected node, if it is in this file
   const selectionBox = $derived.by(() => {
     const node = inspected?.node;
@@ -452,6 +459,7 @@
           .slice(node.startLine - 1, node.endLine)
           .reduce((max, line) => Math.max(max, line.length), 0) * charWidth;
     return {
+      singleLine,
       top: (node.startLine - 1) * lineHeight + offsetTop,
       left: (singleLine ? node.startColumn * charWidth : 0) + offsetLeft,
       width: Math.max(width, 0.5),
@@ -723,6 +731,7 @@
                 {offsetTop}
                 {offsetLeft}
                 gutterPadding={0.75 + arcLaneWidth}
+                selection={selectedLines}
               />
             </Highlight>
           </div>
@@ -802,9 +811,11 @@
             />
           {/if}
 
-          {#if selectionBox}
+          <!-- The selected node: a tint without a frame behind it, if it fits on one line. Larger nodes
+          are only shown by their tinted lines (see CodeLines), so they do not cover the code -->
+          {#if selectionBox?.singleLine}
             <div
-              class="pointer-events-none absolute z-20 rounded-sm border-2 border-blue-600 bg-blue-500/10"
+              class="pointer-events-none absolute z-20 rounded bg-blue-600/[0.13]"
               style:top="{selectionBox.top}rem"
               style:left="{selectionBox.left}rem"
               style:width="{selectionBox.width}rem"
