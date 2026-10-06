@@ -20,7 +20,7 @@ const maxPathSteps = 50;
 /** A node of the evidence trail of the agent, see [CodeFocus.thread]. */
 export interface ThreadNode {
   ref: NodeRefJSON;
-  /** The number of the step of the agent: a tool call, or the answer after the last tool call */
+  /** The number of the tool call of the agent that returned the node (one after the last for claimed nodes) */
   step: number;
   /** Whether the node is only cited in the answer, but was not returned by a tool */
   claimed: boolean;
