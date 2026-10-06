@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -105,6 +107,9 @@ class ConsoleService {
 
                     translation {
                         it.loadIncludes(true)
+                        // The program dependence graph, shown as a slice of the code in the UI
+                        it.registerPass<ControlDependenceGraphPass>()
+                        it.registerPass<ProgramDependenceGraphPass>()
                         it.registerPass<PythonStdLibConfigurationPass>()
                         it.registerPass<LoadPersistedConcepts>()
 
