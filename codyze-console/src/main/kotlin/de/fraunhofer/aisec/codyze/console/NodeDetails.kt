@@ -185,12 +185,26 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
  * Returns the innermost node of this translation unit whose region contains the given position, so
  * that clicking anywhere in the code selects the most specific node. Among nodes with the same
  * region, explicit nodes are preferred over implicit ones and deeper nodes over their parents.
+ *
+ * If an end position is given, the node has to contain the whole range from the position to the
+ * end (whose column is exclusive), e.g. the call that contains a selected text.
  */
-fun TranslationUnit.nodeAt(line: Int, column: Int): Node? {
+fun TranslationUnit.nodeAt(
+    line: Int,
+    column: Int,
+    endLine: Int? = null,
+    endColumn: Int? = null,
+): Node? {
     return nodes
         .withIndex()
         .filter { (_, node) ->
-            node !is TranslationUnit && node.location?.region?.contains(line, column) == true
+            val region = node.location?.region
+            node !is TranslationUnit &&
+                region != null &&
+                region.contains(line, column) &&
+                (endLine == null ||
+                    endColumn == null ||
+                    region.contains(endLine, maxOf(endColumn - 1, 1)))
         }
         .minWithOrNull(
             compareBy<IndexedValue<Node>> { (_, node) -> node.location?.region?.span() }

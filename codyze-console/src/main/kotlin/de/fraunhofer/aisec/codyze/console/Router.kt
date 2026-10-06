@@ -65,8 +65,10 @@ import kotlinx.serialization.json.JsonObject
  *   annotations shown in the code viewer (function key figures, call status, concepts).
  * - GET `/api/component/{component_name}/concept-counts`: Retrieves the number of concepts and
  *   operations in each translation unit of a component, by the ID of the unit.
- * - GET `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=`: Retrieves
- *   the details of the innermost node at the given position.
+ * - GET
+ *   `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=[&endLine=&endColumn=]`:
+ *   Retrieves the details of the innermost node at the given position, or, with an end position, of
+ *   the innermost node containing the whole range.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
  *   analysis warnings).
  * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
@@ -231,7 +233,15 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                 call.parameters["column"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val details = service.getNodeDetailsAt(componentName, id, line, column)
+            val details =
+                service.getNodeDetailsAt(
+                    componentName,
+                    id,
+                    line,
+                    column,
+                    call.parameters["endLine"]?.toIntOrNull(),
+                    call.parameters["endColumn"]?.toIntOrNull(),
+                )
             if (details != null) {
                 call.respond(details)
             } else {
