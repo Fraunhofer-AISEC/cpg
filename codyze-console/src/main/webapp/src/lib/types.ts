@@ -41,7 +41,8 @@ export interface TranslationUnitJSON {
   id: string;
   name: string;
   path: string;
-  code: string;
+  /** Only set when a single translation unit is fetched, not in listings (e.g., `/api/result`) */
+  code?: string;
   findings: FindingsJSON[];
 }
 

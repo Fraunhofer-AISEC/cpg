@@ -15,8 +15,8 @@ importers:
         specifier: ^16.3.0
         version: 16.4.2
       monaco-editor:
-        specifier: ^0.56.0
-        version: 0.56.0
+        specifier: ^0.57.0
+        version: 0.57.0
     devDependencies:
       '@eslint/compat':
         specifier: ^1.4.1
@@ -80,7 +80,7 @@ importers:
         version: 4.7.1(picomatch@4.0.4)(svelte@5.57.0(@typescript-eslint/types@8.67.0))(typescript@5.9.3)
       svelte-highlight:
         specifier: ^7.9.0
-        version: 7.21.1
+        version: 7.22.0
       tailwindcss:
         specifier: ^4.1.18
         version: 4.3.2
@@ -831,8 +831,8 @@ packages:
   devalue@5.9.0:
     resolution: {integrity: sha512-RWrqdArjvPbsATEhOPUo6Wndc/iWnkWKlhIrdlF3zMMYo/c3CVtoaVAyLtWxz5h8nSlkHzxnzV2uLydPXmtF+A==}
 
-  dompurify@3.4.8:
-    resolution: {integrity: sha512-yb1cEmaOum7wFvOCSQxyfgVlv5D47Rc30iZWoMpbDIWTnJ6grDDQyu2KFJzB2k7u0pMuJcQ1zphH//fFnw2tjQ==}
+  dompurify@3.4.15:
+    resolution: {integrity: sha512-EUBjM+B+lkDE41iE82DDSCfkoPGfXx8IxFxPMjNzm/Uk4xDet77rTN9wqlxlVg71kK7XGuUMv6wUxJUwwv+Xyw==}
 
   enhanced-resolve@5.21.6:
     resolution: {integrity: sha512-aNnGCvbJ/RIyWo1IuhNdVjnNF+EjH9wpzpNHt+ci/m9He9LJvUN8wrCcXjp9cWsGNAuvSpVFTx/vraAFQ8qGjQ==}
@@ -1155,8 +1155,8 @@ packages:
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
 
-  monaco-editor@0.56.0:
-    resolution: {integrity: sha512-sXboRm3BeBeLm938eaiyLMe0OxzfXIlZvbv4ir/jVgQy1zDhWjgmny0WoN45fuDKhCCQsYMbBJrv/A6jd8aCUg==}
+  monaco-editor@0.57.0:
+    resolution: {integrity: sha512-5BkI9KGoqrNvBGUe15/QlZq3OooZ8WLg1AxTpaqHRCP3HNpzPPZKE2EDz8M7c+VRmCeUw1Brp4cx/PWm3kI/5A==}
 
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
@@ -1393,8 +1393,8 @@ packages:
       svelte:
         optional: true
 
-  svelte-highlight@7.21.1:
-    resolution: {integrity: sha512-K/JtpO0uxIBfB4XM1BZvvmMajQJbtjblQznPKMCx9hvRmAN4Qf7R4uD+0bBPyoIV4jdGgjldLCCMvS5/A1uq5g==}
+  svelte-highlight@7.22.0:
+    resolution: {integrity: sha512-ZXg1Y6TQb2b2Xc2aWMsKXKSNhWG4mUNvt4U6W4g2BlWin9qZntotAu/HTdqOv4qjl5uY04ReFahr9wC7ExgY2Q==}
 
   svelte@5.57.0:
     resolution: {integrity: sha512-NdbDn7fl4be1ViUG0oq/lvG6OZy3oENolV2ONjiqqsfVoeAfzaQAKUcEX3MrQod/Bebv1PgwET9rfXhgn9s4Kg==}
@@ -2085,7 +2085,7 @@ snapshots:
 
   devalue@5.9.0: {}
 
-  dompurify@3.4.8:
+  dompurify@3.4.15:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -2393,9 +2393,9 @@ snapshots:
     dependencies:
       brace-expansion: 1.1.12
 
-  monaco-editor@0.56.0:
+  monaco-editor@0.57.0:
     dependencies:
-      dompurify: 3.4.8
+      dompurify: 3.4.15
       marked: 14.0.0
 
   mri@1.2.0: {}
@@ -2581,7 +2581,7 @@ snapshots:
     optionalDependencies:
       svelte: 5.57.0(@typescript-eslint/types@8.67.0)
 
-  svelte-highlight@7.21.1: {}
+  svelte-highlight@7.22.0: {}
 
   svelte@5.57.0(@typescript-eslint/types@8.67.0):
     dependencies:
