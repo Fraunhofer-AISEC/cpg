@@ -1,5 +1,5 @@
 /** A layer of information that is drawn on top of the code and can be toggled. */
-export type Layer = 'concepts' | 'external' | 'uncertain';
+export type Layer = 'concepts' | 'external' | 'uncertain' | 'dataflow';
 
 export interface LayerInfo {
   id: Layer;
@@ -38,13 +38,27 @@ export const layerInfos: LayerInfo[] = [
     description: 'Calls whose target the analysis could not determine, underlined in red',
     color: 'rgb(220, 38, 38)',
     activeClass: 'border-red-300 bg-red-50 text-red-700'
+  },
+  {
+    id: 'dataflow',
+    icon: '→',
+    label: 'Dataflow',
+    description:
+      'The direct dataflows of the selection, as arcs next to the line numbers: arrows point to where the value goes',
+    color: 'rgb(71, 85, 105)',
+    activeClass: 'border-slate-300 bg-slate-100 text-slate-700'
   }
 ];
 
 const storageKey = 'codyze-code-layers';
 
 function load(): Record<Layer, boolean> {
-  const visible: Record<Layer, boolean> = { concepts: true, external: true, uncertain: true };
+  const visible: Record<Layer, boolean> = {
+    concepts: true,
+    external: true,
+    uncertain: true,
+    dataflow: true
+  };
   try {
     const stored = JSON.parse(localStorage.getItem(storageKey) ?? '{}');
     for (const info of layerInfos) {

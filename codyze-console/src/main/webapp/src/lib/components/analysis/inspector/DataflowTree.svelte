@@ -9,11 +9,21 @@
     /** Backward ("where does it come from") or forward ("where does it go to") */
     direction: 'from' | 'to';
     onSelect: (ref: NodeRefJSON) => void;
-    /** IDs of the nodes on the path to this level, to detect cycles */
-    ancestors?: string[];
+    /**
+     * Called before selecting a node, with the chain of nodes from the root of the tree to it, so
+     * the hops can be followed as a path
+     */
+    onFollow?: (chain: NodeRefJSON[], direction: 'from' | 'to') => void;
+    /** The nodes on the path to this level, starting with the root, e.g. to detect cycles */
+    ancestors?: NodeRefJSON[];
   }
 
-  let { refs, direction, onSelect, ancestors = [] }: Props = $props();
+  let { refs, direction, onSelect, onFollow, ancestors = [] }: Props = $props();
+
+  function select(ref: NodeRefJSON) {
+    if (ancestors.length > 0) onFollow?.([...ancestors, ref], direction);
+    onSelect(ref);
+  }
 
   // The children of expanded items, by node ID
   let expanded = $state<Record<string, NodeRefJSON[] | 'loading'>>({});
@@ -36,13 +46,16 @@
 {:else}
   <ul>
     {#each refs as ref (ref.id + (ref.label ?? ''))}
-      {@const isCycle = ancestors.includes(ref.id)}
+      {@const isCycle = ancestors.some((a) => a.id === ref.id)}
       {@const children = expanded[ref.id]}
       <li>
-        <NodeRefItem {ref} {onSelect}>
+        <NodeRefItem {ref} onSelect={select}>
           {#snippet leading()}
             {#if isCycle}
-              <span class="mt-1 w-5 shrink-0 text-center text-xs text-gray-400" title="Already on this path (cycle)">↻</span>
+              <span
+                class="mt-1 w-5 shrink-0 text-center text-xs text-gray-400"
+                title="Already on this path (cycle)">↻</span
+              >
             {:else}
               <button
                 type="button"
@@ -59,7 +72,13 @@
           <p class="py-1 pl-8 text-[11px] text-gray-400">Loading…</p>
         {:else if children}
           <div class="ml-2.5 border-l border-gray-200 pl-1">
-            <DataflowTree refs={children} {direction} {onSelect} ancestors={[...ancestors, ref.id]} />
+            <DataflowTree
+              refs={children}
+              {direction}
+              {onSelect}
+              {onFollow}
+              ancestors={[...ancestors, ref]}
+            />
           </div>
         {/if}
       </li>

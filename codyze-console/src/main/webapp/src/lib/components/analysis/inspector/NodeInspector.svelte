@@ -10,6 +10,8 @@
     loading?: boolean;
     error?: string | null;
     onSelect: (ref: NodeRefJSON) => void;
+    /** Called when a node is selected in a dataflow tree, with the chain of hops to it */
+    onFollow?: (chain: NodeRefJSON[], direction: 'from' | 'to') => void;
     /** Additional actions for the inspected node, e.g. adding a concept */
     actions?: Snippet;
     /** A section to expand and scroll into view, e.g. after clicking the code lens of a function */
@@ -21,6 +23,7 @@
     loading = false,
     error = null,
     onSelect,
+    onFollow,
     actions,
     revealSection = null
   }: Props = $props();
@@ -185,7 +188,8 @@
             refs={details.dataflowFrom}
             direction="from"
             {onSelect}
-            ancestors={[details.node.id]}
+            {onFollow}
+            ancestors={[details.node]}
           />
         {/key}
       </div>
@@ -203,7 +207,8 @@
             refs={details.dataflowTo}
             direction="to"
             {onSelect}
-            ancestors={[details.node.id]}
+            {onFollow}
+            ancestors={[details.node]}
           />
         {/key}
       </div>
