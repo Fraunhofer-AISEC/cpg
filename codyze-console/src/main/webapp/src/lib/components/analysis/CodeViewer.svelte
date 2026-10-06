@@ -66,6 +66,8 @@
     finding?: string;
     findingKind?: string;
     headerActions?: Snippet;
+    /** Replaces the file name at the start of the header, e.g. with a breadcrumb */
+    headerStart?: Snippet;
     nodePanelCollapsed?: boolean;
     onClose?: () => void;
     /** The component of the unit; enables selecting nodes by clicking into the code */
@@ -101,6 +103,7 @@
     finding,
     findingKind,
     headerActions,
+    headerStart,
     nodePanelCollapsed = $bindable(false),
     onClose,
     componentName,
@@ -385,7 +388,11 @@
       class="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2"
     >
       <div class="flex min-w-0 items-center gap-3">
-        <div class="shrink-0 font-mono text-xs text-gray-500">{translationUnit.name}</div>
+        {#if headerStart}
+          {@render headerStart()}
+        {:else}
+          <div class="shrink-0 font-mono text-xs text-gray-500">{translationUnit.name}</div>
+        {/if}
         {#if fileSummary}
           <span class="shrink-0 text-[11px] text-gray-400">{fileSummary.functions} functions</span>
         {/if}
