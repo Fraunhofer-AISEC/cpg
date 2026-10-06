@@ -16,9 +16,11 @@
     onInspect: (node: NodeRefJSON) => void;
     /** Asks the agent about the node of a statement */
     onAsk: (node: NodeRefJSON) => void;
+    /** Called when a statement is clicked in the graph, to show it in the code */
+    onSelectNode?: (node: PdgNode) => void;
   }
 
-  let { panel, onInspect, onAsk }: Props = $props();
+  let { panel, onInspect, onAsk, onSelectNode }: Props = $props();
 
   const slice = $derived(panel.slice);
   const root = $derived(panel.root);
@@ -163,7 +165,7 @@
   </header>
 
   <div class="relative min-h-0 flex-1">
-    <PdgGraph {panel} />
+    <PdgGraph {panel} {onSelectNode} />
   </div>
 
   <!-- The selected statement -->

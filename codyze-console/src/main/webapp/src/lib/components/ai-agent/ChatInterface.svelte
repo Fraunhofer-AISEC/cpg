@@ -27,8 +27,11 @@
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { PdgPanel } from '$lib/stores/pdgPanel.svelte';
-  import { clearPdgCache, getPdgCounts, type PdgCounts } from '$lib/pdg';
+  import { clearPdgCache, getPdgCounts, type PdgCounts, type PdgNode } from '$lib/pdg';
   import PdgPanelView from '$lib/components/analysis/pdg/PdgPanel.svelte';
+  import CodeContextMenu, {
+    type ContextMenuItem
+  } from '$lib/components/analysis/CodeContextMenu.svelte';
   import { getConceptCounts } from '$lib/annotations';
   import type {
     NodeJSON,
@@ -265,13 +268,15 @@
   );
 
   function handleKeydown(event: KeyboardEvent) {
-    if (isTyping(event)) return;
+    // The palette is also opened from an input, e.g. the question to the agent. It is a shortcut
+    // with a modifier, so it does not get in the way of typing
     if (hasModifier(event) && !event.altKey && event.key.toLowerCase() === 'p') {
       // Replaces printing the page, like in editors
       event.preventDefault();
       paletteQuery = event.shiftKey ? '>' : '';
       return;
     }
+    if (isTyping(event)) return;
     if (event.altKey && !hasModifier(event) && event.key === 'ArrowLeft') {
       event.preventDefault();
       goBack();
@@ -575,6 +580,21 @@
     document.body.style.cursor = 'col-resize';
   }
 
+  // The graph needs room, so the file tree makes way for it while it is shown
+  let sidebarHiddenByGraph = false;
+  $effect(() => {
+    const open = pdg.open;
+    untrack(() => {
+      if (open && sidebarOpen) {
+        sidebarOpen = false;
+        sidebarHiddenByGraph = true;
+      } else if (!open && sidebarHiddenByGraph) {
+        sidebarOpen = true;
+        sidebarHiddenByGraph = false;
+      }
+    });
+  });
+
   // How many statements are in the slices of the inspected node, to preview them in the commands
   let pdgCounts = $state.raw<PdgCounts | null>(null);
   $effect(() => {
@@ -601,6 +621,144 @@
   function pdgDisabledReason(count: number | undefined): string | undefined {
     return count === 0 ? 'None in this function' : undefined;
   }
+
+  // The statement of the slice a node belongs to: the statement itself, or the innermost one that
+  // contains the start of the node
+  function sliceNodeFor(node: NodeRefJSON): PdgNode | null {
+    const nodes = pdg.slice?.nodes ?? [];
+    const exact = nodes.find((n) => n.id === node.id);
+    if (exact || node.startLine < 1) return exact ?? null;
+    return (
+      nodes
+        .filter(
+          (n) =>
+            n.kind !== 'STUB' &&
+            n.node.translationUnitId === node.translationUnitId &&
+            n.startLine <= node.startLine &&
+            node.startLine <= n.endLine
+        )
+        .sort((a, b) => a.endLine - a.startLine - (b.endLine - b.startLine))[0] ?? null
+    );
+  }
+
+  // The graph follows what is inspected: inside the slice it selects the statement, outside of it
+  // the slice is re-rooted at the node, unless the graph is pinned
+  $effect(() => {
+    const details = focus.details;
+    untrack(() => {
+      if (!pdg.open || !details) return;
+      const hit = sliceNodeFor(details.node);
+      if (hit) {
+        if (pdg.selectedId !== hit.id) pdg.select(hit.id);
+        return;
+      }
+      // Functions and nodes outside of functions have no slice of their own
+      const fn = details.enclosingFunction;
+      if (pdg.pinned || !fn || fn.id === details.node.id) return;
+      pdg.show(details.node.id, pdg.direction, pdg.hops);
+    });
+  });
+
+  // Clicking a statement in the graph inspects it, which shows it in the code
+  function selectPdgNode(node: PdgNode) {
+    if (node.kind === 'STUB') return;
+    if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
+    focus.inspect(() => getNodeDetails(node.id), true);
+  }
+
+  // The statements of the slice in the open file, shown as tinted lines in the code
+  const pdgSlice = $derived.by(() => {
+    const slice = pdg.open ? pdg.slice : null;
+    const unit = openedUnit;
+    if (!slice || !unit) return undefined;
+    return {
+      ranges: slice.nodes
+        .filter(
+          (n) => n.kind !== 'STUB' && n.node.translationUnitId === unit.id && n.startLine >= 1
+        )
+        .map((n) => ({
+          id: n.id,
+          first: n.startLine,
+          last: n.endLine,
+          label: `Dependence graph: ${n.code}`
+        })),
+      selectedId: pdg.selectedId,
+      hoveredId: pdg.hoveredId,
+      onHover: (id: string | null) => (pdg.hoveredId = id)
+    };
+  });
+
+  // The menu of a right click in the code, with the size of the slices for its entries
+  let codeMenu = $state.raw<{
+    details: NodeDetailsJSON;
+    x: number;
+    y: number;
+    counts: PdgCounts | null;
+  } | null>(null);
+
+  function openCodeMenu(target: { details: NodeDetailsJSON; x: number; y: number }) {
+    codeMenu = { ...target, counts: null };
+    getPdgCounts(target.details.node.id, pdg.hops)
+      .then((counts) => {
+        if (codeMenu?.details === target.details) codeMenu = { ...codeMenu, counts };
+      })
+      .catch(() => {});
+  }
+
+  // Shows a list of the inspector for a node, e.g. its callers
+  function showSectionOf(details: NodeDetailsJSON, section: InspectorSection) {
+    showInspector();
+    focus.inspect(() => Promise.resolve(details), true, section);
+  }
+
+  const codeMenuItems = $derived.by((): ContextMenuItem[] => {
+    if (!codeMenu) return [];
+    const { details, counts } = codeMenu;
+    const size = (count: number | undefined) =>
+      count === undefined
+        ? undefined
+        : count > 0
+          ? `${count} ${count === 1 ? 'node' : 'nodes'}`
+          : undefined;
+    const none = (count: number | undefined) => (count === 0 ? 'none in this function' : undefined);
+    const hasCallees = details.callTargets.length > 0 || details.callees.length > 0;
+    return [
+      {
+        label: 'PDG: What affects this?',
+        hint: size(counts?.backward),
+        disabledReason: none(counts?.backward),
+        run: () => pdg.show(details.node.id, 'BACKWARD')
+      },
+      {
+        label: 'PDG: What does this affect?',
+        hint: size(counts?.forward),
+        disabledReason: none(counts?.forward),
+        run: () => pdg.show(details.node.id, 'FORWARD')
+      },
+      {
+        label: 'Show callers',
+        separator: true,
+        hint: details.callers.length > 0 ? `${details.callers.length}` : undefined,
+        disabledReason: details.callers.length > 0 ? undefined : 'none',
+        run: () => showSectionOf(details, 'callers')
+      },
+      {
+        label: 'Show callees',
+        hint: hasCallees ? `${details.callTargets.length + details.callees.length}` : undefined,
+        disabledReason: hasCallees ? undefined : 'none',
+        run: () =>
+          showSectionOf(details, details.callTargets.length > 0 ? 'callTargets' : 'callees')
+      },
+      {
+        label: 'Ask agent about this…',
+        separator: true,
+        run: () => {
+          showAgent();
+          askAboutNode(details, nodeQuestions[0].question);
+        }
+      }
+    ];
+  });
 
   function askAboutPdgNode(node: NodeRefJSON) {
     showAgent();
@@ -1387,7 +1545,7 @@
   {/if}
 
   <!-- Code: the main view -->
-  <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+  <div class="flex min-h-0 min-w-[20rem] flex-1 flex-col">
     {#if tabs.tabs.length > 0}
       <!-- Editor tabs -->
       <div
@@ -1482,6 +1640,8 @@
           onAsk={askAboutSelection}
           {askDisabledReason}
           {askRequest}
+          slice={pdgSlice}
+          onCodeContextMenu={openCodeMenu}
         >
           {#snippet layerActions()}
             {@const details = focus.details}
@@ -1528,8 +1688,13 @@
       onpointerdown={startPdgResize}
       title="Drag to resize"
     ></div>
-    <div class="min-h-0 shrink-0" style:width="{pdgWidth}px">
-      <PdgPanelView panel={pdg} onInspect={selectRef} onAsk={askAboutPdgNode} />
+    <div class="min-h-0 min-w-[18.75rem]" style:flex="0 1 {pdgWidth}px">
+      <PdgPanelView
+        panel={pdg}
+        onInspect={selectRef}
+        onAsk={askAboutPdgNode}
+        onSelectNode={selectPdgNode}
+      />
     </div>
   {/if}
 
@@ -1846,3 +2011,13 @@
     </div>
   {/if}
 </div>
+
+{#if codeMenu}
+  <CodeContextMenu
+    x={codeMenu.x}
+    y={codeMenu.y}
+    items={codeMenuItems}
+    title="{codeMenu.details.node.type} {codeMenu.details.node.code}"
+    onClose={() => (codeMenu = null)}
+  />
+{/if}
