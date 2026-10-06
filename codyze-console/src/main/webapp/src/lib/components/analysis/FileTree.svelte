@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { tick, untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { goto } from '$app/navigation';
   import type { ComponentJSON, TranslationUnitJSON } from '$lib/types';
   import { CollapsiblePanel } from '$lib/components/ui';
+  import { relativePath } from '$lib/utils/paths';
 
   interface TreeNode {
     /** The displayed name; for compacted folders a chain like `src/main/kotlin` */
@@ -37,6 +39,11 @@
     conceptCounts?: Map<string, number>;
     /** Renders the tree without its own collapsible panel, filling the parent (e.g. a sidebar) */
     embedded?: boolean;
+    /**
+     * A file to reveal: its folders are expanded and it is scrolled into view. The request number
+     * changes with every request, so the same file can be revealed again
+     */
+    revealUnit?: { unitId: string; request: number } | null;
   }
 
   let {
@@ -51,23 +58,13 @@
     width = 'w-56',
     conceptSuggestions = new Set(),
     conceptCounts,
-    embedded = false
+    embedded = false,
+    revealUnit = null
   }: Props = $props();
 
   // Pixels per level of indentation, and the left padding of the first level
   const indent = 12;
   const padding = 6;
-
-  function relativePath(unit: TranslationUnitJSON): string {
-    let path = unit.path;
-    if (path.startsWith('file:')) path = path.slice(5);
-    const topLevel = component.topLevel;
-    if (topLevel && path.startsWith(topLevel)) {
-      path = path.slice(topLevel.length);
-      if (path.startsWith('/')) path = path.slice(1);
-    }
-    return path || unit.name || 'root';
-  }
 
   function sortNodes(nodes: TreeNode[]) {
     // Folders first, then alphabetically, like in most editors
@@ -96,7 +93,7 @@
   function buildFileTree(units: TranslationUnitJSON[]): TreeNode[] {
     const root: TreeNode[] = [];
     for (const unit of units) {
-      const parts = relativePath(unit)
+      const parts = relativePath(unit, component.topLevel)
         .split('/')
         .filter((p) => p.length > 0);
       let level = root;
@@ -208,6 +205,28 @@
     return expanded ? 0 : (folderConceptCounts[node.path] ?? 0);
   }
 
+  let navElement = $state<HTMLElement>();
+
+  // Expands the folders containing the file to reveal and scrolls it into view
+  $effect(() => {
+    const target = revealUnit;
+    if (target) untrack(() => reveal(target.unitId));
+  });
+
+  function reveal(unitId: string) {
+    const expand = (node: TreeNode): boolean => {
+      if (node.type === 'file') return node.unit?.id === unitId;
+      const contains = node.children.some(expand);
+      if (contains) collapsedFolders.delete(node.path);
+      return contains;
+    };
+    if (!fileTree.some(expand)) return;
+    filter = '';
+    tick().then(() => {
+      navElement?.querySelector(`[data-unit-id="${unitId}"]`)?.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
   function selectComponent(name: string) {
     if (name === component.name) return;
     if (onComponentSelect) {
@@ -303,7 +322,7 @@
       />
     </div>
 
-    <nav class="min-h-0 flex-1 overflow-y-auto py-1 text-gray-700">
+    <nav class="min-h-0 flex-1 overflow-y-auto py-1 text-gray-700" bind:this={navElement}>
       {#each rows as row (row.node.path + ':' + row.node.type)}
         {@const selected = row.node.type === 'file' && currentUnitId === row.node.unit?.id}
         {#if row.node.type === 'folder'}
@@ -320,6 +339,7 @@
           <!-- eslint-disable svelte/no-navigation-without-resolve -->
           <a
             href={fileHref(row.node.unit)}
+            data-unit-id={row.node.unit.id}
             class="{rowClass} {selected ? 'bg-gray-200/70 text-gray-900' : 'hover:bg-gray-100'}"
             aria-current={selected ? 'page' : undefined}
           >
@@ -330,6 +350,7 @@
           <button
             type="button"
             class="{rowClass} {selected ? 'bg-gray-200/70 text-gray-900' : 'hover:bg-gray-100'}"
+            data-unit-id={row.node.unit?.id}
             onclick={() => row.node.unit && onFileSelect?.(row.node.unit)}
             aria-current={selected ? 'page' : undefined}
           >
