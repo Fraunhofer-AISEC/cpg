@@ -31,10 +31,12 @@ import com.sun.jna.Pointer
 import com.sun.jna.ptr.LongByReference
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Calls the verified translation in-process through the native library built by
- * `cpg-verified/native/build.sh`.
+ * Calls the verified translation of `cpg-verified` in-process, through the native library built by
+ * `cpg-verified/native/build.sh`. The Lean runtime can only be initialized once per process, so all
+ * callers must use the same library file.
  */
 object LeanTranslator {
 
@@ -53,17 +55,10 @@ object LeanTranslator {
         fun cpg_verified_free(buffer: Pointer)
     }
 
-    /** The location of the native library, which can be overridden with `cpg.verified.library`. */
-    val libraryFile: File by lazy {
-        System.getProperty("cpg.verified.library")?.let(::File)
-            ?: listOf("dylib", "so")
-                .map { File("../cpg-verified/.lake/build/native/libcpgverified.$it") }
-                .firstOrNull { it.exists() }
-            ?: File("../cpg-verified/.lake/build/native/libcpgverified.so")
-    }
+    private var loaded: Pair<File, CpgVerifiedLibrary>? = null
 
-    val isAvailable: Boolean
-        get() = libraryFile.exists()
+    /** The number of requests translated so far, e.g., to check that the translation is used. */
+    val translatedRequests = AtomicLong()
 
     /**
      * The thread that initialized the Lean runtime; every other thread needs to register itself.
@@ -72,20 +67,35 @@ object LeanTranslator {
 
     private val threadRegistered = ThreadLocal.withInitial { false }
 
-    private val library: CpgVerifiedLibrary by lazy {
-        val library = Native.load(libraryFile.absolutePath, CpgVerifiedLibrary::class.java)
+    @Synchronized
+    private fun load(file: File): CpgVerifiedLibrary {
+        val canonical = file.canonicalFile
+        loaded?.let { (loadedFile, library) ->
+            check(loadedFile == canonical) {
+                "The verified translation is already loaded from $loadedFile, cannot load $canonical"
+            }
+            return library
+        }
+
+        val library = Native.load(canonical.path, CpgVerifiedLibrary::class.java)
         check(library.cpg_verified_init() == 0) { "Could not initialize the Lean runtime" }
         initThread = Thread.currentThread()
-        library
+        loaded = canonical to library
+        return library
     }
 
-    /** Translates all [requests] and returns one result per request. */
-    fun translate(requests: List<Sexp>): List<Sexp> {
-        val library = library
+    /**
+     * Translates all [requests] (see `CpgVerified/Wire/Codec.lean`) with the native library in
+     * [libraryFile] and returns one result per request.
+     */
+    fun translate(libraryFile: File, requests: List<Sexp>): List<Sexp> {
+        val library = load(libraryFile)
         if (Thread.currentThread() != initThread && !threadRegistered.get()) {
             library.cpg_verified_init_thread()
             threadRegistered.set(true)
         }
+
+        translatedRequests.addAndGet(requests.size.toLong())
 
         val input = ByteArrayOutputStream()
         requests.forEach { it.encodeTo(input) }

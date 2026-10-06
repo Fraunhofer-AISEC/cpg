@@ -28,8 +28,17 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.graph.FrontendProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import java.io.File
 
-abstract class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>()
+abstract class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>() {
+    /**
+     * The native library of the verified translation (see `cpg-verified`). If set, expressions in
+     * the verified subset are translated by it instead of the [ExpressionHandler]. Defaults to the
+     * value of the system property `cpg.go.verifiedLibrary`.
+     */
+    open val verifiedTranslationLibrary: File? =
+        System.getProperty("cpg.go.verifiedLibrary")?.let(::File)
+}
 
 class NoDependenciesGoFrontendConfiguration : GoFrontendConfiguration() {
     /**

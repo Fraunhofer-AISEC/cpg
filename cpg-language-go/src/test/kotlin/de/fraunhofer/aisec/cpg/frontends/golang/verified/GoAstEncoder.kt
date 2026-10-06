@@ -174,38 +174,12 @@ class GoAstEncoder(private val file: Ast.File) {
         requests +=
             Request(
                 expr,
-                sexpOf(
-                    atom("expr"),
-                    sexpOf(listOfNotNull(nameScope?.let(::atom))),
-                    sexpOf(packages.map(::atom)),
-                    sexpOf(listOfNotNull(iota?.let(::atom))),
-                    sexpOf(scopes.flatten().distinct().map(::atom)),
-                    encode(expr),
-                ),
+                translationRequest(expr, nameScope, packages, iota, scopes.flatten().distinct()),
             )
-    }
-
-    private fun encode(expr: Ast.Expr): Sexp {
-        val span = arrayOf(atom(expr.pos), atom(expr.end))
-        return when (expr) {
-            is Ast.BasicLit ->
-                sexpOf(atom("lit"), *span, atom(expr.kind.name.lowercase()), atom(expr.value))
-            is Ast.Ident -> sexpOf(atom("ident"), *span, atom(expr.name))
-            is Ast.BinaryExpr ->
-                sexpOf(atom("binary"), *span, atom(expr.opString), encode(expr.x), encode(expr.y))
-            is Ast.UnaryExpr -> sexpOf(atom("unary"), *span, atom(expr.opString), encode(expr.x))
-            is Ast.ParenExpr -> sexpOf(atom("paren"), *span, encode(expr.x))
-            is Ast.CallExpr ->
-                sexpOf(atom("call"), *span, encode(expr.`fun`), sexpOf(expr.args.map(::encode)))
-            else -> sexpOf(atom("unsupported"), *span, atom(expr.goType))
-        }
     }
 
     companion object {
         /** The value of `token.DEFINE`, i.e., `:=`. */
         const val DEFINE_TOKEN = 47
-
-        /** The predeclared identifiers that the translation treats specially. */
-        val PREDECLARED = setOf("true", "false", "nil", "iota", "new", "make")
     }
 }
