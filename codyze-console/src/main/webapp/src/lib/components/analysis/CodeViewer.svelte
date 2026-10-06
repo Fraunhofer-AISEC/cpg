@@ -6,6 +6,7 @@
   import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
   import NodeInspector from './inspector/NodeInspector.svelte';
   import CodeAnnotations from './CodeAnnotations.svelte';
+  import OverviewRuler, { type RulerMark } from './OverviewRuler.svelte';
   import { getAnnotations } from '$lib/annotations';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
@@ -231,6 +232,37 @@
     }
   }
 
+  // The marks of the visible layers in the overview ruler, one lane per layer
+  const rulerMarks = $derived.by((): RulerMark[] => {
+    if (!annotations) return [];
+    const color = (layer: Layer) => layerInfos.find((l) => l.id === layer)!.color;
+    const marks: RulerMark[] = [];
+    if (layers.visible.concepts) {
+      for (const c of annotations.concepts) {
+        const kind = c.isOperation ? 'Operation' : 'Concept';
+        marks.push({ line: c.line, lane: 0, color: color('concepts'), label: `${kind} ${c.type}` });
+      }
+    }
+    for (const call of annotations.calls) {
+      if (call.status === 'EXTERNAL' && layers.visible.external) {
+        marks.push({
+          line: call.startLine,
+          lane: 1,
+          color: color('external'),
+          label: `external call ${call.name}()`
+        });
+      } else if (call.status === 'UNRESOLVED' && layers.visible.uncertain) {
+        marks.push({
+          line: call.startLine,
+          lane: 2,
+          color: color('uncertain'),
+          label: `unresolved call ${call.name}()`
+        });
+      }
+    }
+    return marks;
+  });
+
   // Box around the inspected node, if it is in this file
   const selectionBox = $derived.by(() => {
     const node = inspected?.node;
@@ -317,6 +349,17 @@
   $effect(() => {
     if (codeContainerElement) return codeViewport.track(codeContainerElement);
   });
+  // The lines that are actually visible (1-based, inclusive), for the overview ruler
+  const viewportLines = $derived.by(() => {
+    const rem = remInPx();
+    const first = (codeViewport.scrollTop / rem - offsetTop) / lineHeight;
+    const last = ((codeViewport.scrollTop + codeViewport.height) / rem - offsetTop) / lineHeight;
+    return {
+      first: Math.max(1, Math.floor(first) + 1),
+      last: Math.min(totalLines, Math.ceil(last))
+    };
+  });
+
   const visibleLines = $derived.by(() => {
     const remPx = remInPx();
     return codeViewport.range(lineHeight * remPx, totalLines, 40, offsetTop * remPx);
@@ -389,85 +432,100 @@
       </div>
     </div>
 
-    <div
-      class="relative flex-1 overflow-auto"
-      style="transform: translateZ(0);"
-      bind:this={codeContainerElement}
-    >
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="flex min-h-0 flex-1">
       <div
-        class="relative inline-block w-max min-w-full align-top"
-        class:cursor-pointer={!!componentName}
-        onclick={handleCodeClick}
+        class="relative min-w-0 flex-1 overflow-auto"
+        style="transform: translateZ(0);"
+        bind:this={codeContainerElement}
       >
-        <div class="font-mono">
-          <Highlight language={getLanguage(translationUnit.name)} {code} let:highlighted>
-            <CodeLines
-              {highlighted}
-              start={visibleLines.start}
-              end={visibleLines.end}
-              highlightedLines={allHighlightLines}
-              {maxColumns}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div
+          class="relative inline-block w-max min-w-full align-top"
+          class:cursor-pointer={!!componentName}
+          onclick={handleCodeClick}
+        >
+          <div class="font-mono">
+            <Highlight language={getLanguage(translationUnit.name)} {code} let:highlighted>
+              <CodeLines
+                {highlighted}
+                start={visibleLines.start}
+                end={visibleLines.end}
+                highlightedLines={allHighlightLines}
+                {maxColumns}
+                {lineHeight}
+                {charWidth}
+                {offsetTop}
+                {offsetLeft}
+              />
+            </Highlight>
+          </div>
+
+          {#if finding && highlightLine}
+            <FindingOverlay
+              {finding}
+              kind={findingKind}
+              line={highlightLine}
+              {lineHeight}
+              {offsetTop}
+            />
+          {/if}
+
+          {#if annotations}
+            <CodeAnnotations
+              {annotations}
+              layers={layers.visible}
+              {codeLines}
+              startLine={visibleLines.start}
+              endLine={visibleLines.end}
               {lineHeight}
               {charWidth}
               {offsetTop}
               {offsetLeft}
+              onInspect={(id) => inspect(() => getNodeDetails(id), true)}
             />
-          </Highlight>
+          {/if}
+
+          {#if selectionBox}
+            <div
+              class="pointer-events-none absolute z-20 rounded-sm border-2 border-blue-600 bg-blue-500/10"
+              style:top="{selectionBox.top}rem"
+              style:left="{selectionBox.left}rem"
+              style:width="{selectionBox.width}rem"
+              style:height="{selectionBox.height}rem"
+            ></div>
+          {/if}
+
+          <!-- The node boxes belong to the node lists in the panel -->
+          {#if hasPanel && (activeTab === 'astNodes' || activeTab === 'overlayNodes')}
+            <NodeOverlays
+              {nodes}
+              {codeLines}
+              startLine={visibleLines.start}
+              endLine={visibleLines.end}
+              bind:highlightedNode
+              {lineHeight}
+              {charWidth}
+              {offsetTop}
+              {offsetLeft}
+              conceptGroups={conceptGroups || []}
+              addConceptOnClick={!componentName}
+            />
+          {/if}
         </div>
-
-        {#if finding && highlightLine}
-          <FindingOverlay
-            {finding}
-            kind={findingKind}
-            line={highlightLine}
-            {lineHeight}
-            {offsetTop}
-          />
-        {/if}
-
-        {#if annotations}
-          <CodeAnnotations
-            {annotations}
-            layers={layers.visible}
-            {codeLines}
-            startLine={visibleLines.start}
-            endLine={visibleLines.end}
-            {lineHeight}
-            {charWidth}
-            {offsetTop}
-            {offsetLeft}
-            onInspect={(id) => inspect(() => getNodeDetails(id), true)}
-          />
-        {/if}
-
-        {#if selectionBox}
-          <div
-            class="pointer-events-none absolute z-20 rounded-sm border-2 border-blue-600 bg-blue-500/10"
-            style:top="{selectionBox.top}rem"
-            style:left="{selectionBox.left}rem"
-            style:width="{selectionBox.width}rem"
-            style:height="{selectionBox.height}rem"
-          ></div>
-        {/if}
-
-        <!-- The node boxes belong to the node lists in the panel -->
-        {#if hasPanel && (activeTab === 'astNodes' || activeTab === 'overlayNodes')}
-          <NodeOverlays
-            {nodes}
-            {codeLines}
-            startLine={visibleLines.start}
-            endLine={visibleLines.end}
-            bind:highlightedNode
-            {lineHeight}
-            {charWidth}
-            {offsetTop}
-            {offsetLeft}
-            conceptGroups={conceptGroups || []}
-            addConceptOnClick={!componentName}
-          />
-        {/if}
       </div>
+
+      {#if annotations}
+        <OverviewRuler
+          marks={rulerMarks}
+          {totalLines}
+          lanes={3}
+          viewport={viewportLines}
+          selectionLine={inspected?.node.translationUnitId === translationUnit.id
+            ? inspected.node.startLine
+            : undefined}
+          onScrollTo={(line) => scrollToLine(line)}
+        />
+      {/if}
     </div>
   </div>
 
