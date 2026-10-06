@@ -14,7 +14,7 @@ slf4j = "2.0.16"
 clikt = "5.1.0"
 kaml = "0.104.0"
 sarif4k = "0.8.0"
-ktor = "3.5.0"
+ktor = "3.6.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
 
@@ -28,7 +28,7 @@ kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", versi
 kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-json" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.2"}
-kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version = "0.4.0"}
+kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version = "0.5.2"}
 
 reflections = { module = "org.reflections:reflections", version = "0.10.2"}
 
@@ -38,7 +38,7 @@ log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "lo
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j"}
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j"}
 
-apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.20.0"}
+apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.21.0"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
 classgraph = { module = "io.github.classgraph:classgraph", version = "4.8.179"}
 
