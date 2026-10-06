@@ -6,7 +6,8 @@
   import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
   import NodeInspector from './inspector/NodeInspector.svelte';
   import CodeAnnotations from './CodeAnnotations.svelte';
-  import { type Lens, lenses, getAnnotations } from '$lib/annotations';
+  import { getAnnotations } from '$lib/annotations';
+  import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
   import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
@@ -179,7 +180,6 @@
 
   // Annotations of the file (function key figures, call status, concepts), loaded per unit
   let annotations = $state.raw<FileAnnotationsJSON | null>(null);
-  let lens = $state<Lens>('callers');
 
   async function loadAnnotations(component: string, unitId: string) {
     const result = await getAnnotations(component, unitId);
@@ -211,6 +211,25 @@
       concepts: annotations.concepts.length
     };
   });
+
+  // The number of elements of each layer in this file, and a tooltip for its toggle
+  function layerSummary(layer: Layer): { count: number; title: string } {
+    const info = layerInfos.find((l) => l.id === layer)!;
+    if (!fileSummary) return { count: 0, title: info.description };
+    switch (layer) {
+      case 'concepts':
+        return { count: fileSummary.concepts, title: info.description };
+      case 'external':
+        return {
+          count: fileSummary.external,
+          title:
+            info.description +
+            (fileSummary.topExternal.length ? ` (${fileSummary.topExternal.join(', ')})` : '')
+        };
+      case 'uncertain':
+        return { count: fileSummary.unresolved, title: info.description };
+    }
+  }
 
   // Box around the inspected node, if it is in this file
   const selectionBox = $derived.by(() => {
@@ -320,47 +339,31 @@
       <div class="flex min-w-0 items-center gap-3">
         <div class="shrink-0 font-mono text-xs text-gray-500">{translationUnit.name}</div>
         {#if fileSummary}
-          <div class="flex min-w-0 items-center gap-2 truncate text-[11px] text-gray-500">
-            <span>{fileSummary.functions} functions</span>
-            {#if fileSummary.external > 0}
-              <span
-                class="text-orange-600"
-                title="Calls to functions that are not part of the analysed code"
-                >· {fileSummary.external} external calls ({fileSummary.topExternal.join(
-                  ', '
-                )})</span
-              >
-            {/if}
-            {#if fileSummary.unresolved > 0}
-              <span
-                class="text-red-600"
-                title="Calls whose target the analysis could not determine"
-              >
-                · ⚠ {fileSummary.unresolved} unresolved
-              </span>
-            {/if}
-            {#if fileSummary.concepts > 0}
-              <span class="text-purple-600">· {fileSummary.concepts} concepts</span>
-            {/if}
-          </div>
+          <span class="shrink-0 text-[11px] text-gray-400">{fileSummary.functions} functions</span>
         {/if}
       </div>
       <div class="flex shrink-0 items-center gap-2">
         {#if annotations}
-          <label
-            class="flex items-center gap-1 text-[11px] text-gray-500"
-            title="Color the functions by"
-          >
-            Lens
-            <select
-              bind:value={lens}
-              class="rounded border border-gray-300 bg-white py-0.5 pr-6 pl-1.5 text-[11px] text-gray-700"
-            >
-              {#each lenses as option (option.id)}
-                <option value={option.id}>{option.label}</option>
-              {/each}
-            </select>
-          </label>
+          <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
+          <div class="flex items-center gap-1" role="group" aria-label="Layers">
+            {#each layerInfos as layer (layer.id)}
+              {@const summary = layerSummary(layer.id)}
+              <button
+                type="button"
+                class="flex items-center gap-1 rounded-full border px-2 py-px text-[11px] {layers
+                  .visible[layer.id]
+                  ? layer.activeClass
+                  : 'border-gray-200 text-gray-400 hover:text-gray-600'}"
+                aria-pressed={layers.visible[layer.id]}
+                title="{summary.title}. Click to {layers.visible[layer.id] ? 'hide' : 'show'}."
+                onclick={() => layers.toggle(layer.id)}
+              >
+                <span>{layer.icon}</span>
+                {layer.label}
+                <span class="tabular-nums opacity-70">{summary.count}</span>
+              </button>
+            {/each}
+          </div>
         {/if}
         {#if headerActions}
           {@render headerActions()}
@@ -426,7 +429,7 @@
         {#if annotations}
           <CodeAnnotations
             {annotations}
-            {lens}
+            layers={layers.visible}
             {codeLines}
             startLine={visibleLines.start}
             endLine={visibleLines.end}
