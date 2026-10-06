@@ -11,6 +11,7 @@
   import { agentSession } from '$lib/stores/agentSession.svelte';
   import { CodeFocus, type CodeLocation } from '$lib/stores/codeFocus.svelte';
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
+  import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { getConceptCounts } from '$lib/annotations';
   import type {
@@ -35,14 +36,61 @@
   // The inspected node, shared with the code viewer
   const focus = new CodeFocus();
 
+  // The files opened in tabs, with their code and scroll positions, so switching between tabs is
+  // instant and keeps the place in each file. Both are only kept while the tab is open
+  const tabs = new EditorTabs();
+  // They are caches that are never rendered, so they are not reactive on purpose
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const unitCode = new Map<string, TranslationUnitJSON>();
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const scrollPositions = new Map<string, number>();
+
   async function loadUnit(componentName: string, tuId: string) {
     const unit: TranslationUnitJSON | null = await fetch(
       `/api/component/${componentName}/translation-unit/${tuId}`
     )
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
+    if (unit && tabs.tabs.some((t) => t.id === tuId)) unitCode.set(tuId, unit);
     // Ignore the response if another unit was selected in the meantime
     if (selectedTranslationUnit?.id === tuId) openedUnit = unit;
+  }
+
+  // Shows a file in its tab, opening the tab and loading the code if needed
+  function showUnit(unit: TranslationUnitJSON) {
+    for (const closed of tabs.open(unit)) forgetUnit(closed.id);
+    selectedTranslationUnit = unit;
+    const comp = findComponentForTu(unit.id);
+    selectedComponentName = comp?.name ?? null;
+    const cached = unitCode.get(unit.id);
+    if (cached) openedUnit = cached;
+    else if (comp) loadUnit(comp.name, unit.id);
+  }
+
+  function forgetUnit(unitId: string) {
+    unitCode.delete(unitId);
+    scrollPositions.delete(unitId);
+  }
+
+  function closeTab(unitId: string) {
+    const next = tabs.close(unitId);
+    forgetUnit(unitId);
+    if (unitId !== selectedTranslationUnit?.id) return;
+    if (next) {
+      handleFileSelect(next);
+    } else {
+      selectedTranslationUnit = null;
+      selectedNode = null;
+      openedUnit = null;
+    }
+  }
+
+  // The name shown in a tab, with the folder if another tab has a file with the same name
+  function tabLabel(unit: TranslationUnitJSON): { name: string; folder?: string } {
+    const duplicate = tabs.tabs.some((t) => t.id !== unit.id && t.name === unit.name);
+    if (!duplicate) return { name: unit.name };
+    const parts = unit.path.split('/');
+    return { name: unit.name, folder: parts[parts.length - 2] };
   }
 
   function findTranslationUnit(node: NodeJSON): TranslationUnitJSON | null {
@@ -72,10 +120,7 @@
     const tu = findTranslationUnit(node);
     if (!tu) return;
     selectedNode = node;
-    selectedTranslationUnit = tu;
-    const comp = findComponentForTu(tu.id);
-    selectedComponentName = comp?.name ?? null;
-    if (comp) loadUnit(comp.name, tu.id);
+    showUnit(tu);
   }
 
   // Opens the file of a node selected in the inspector and inspects the node there
@@ -128,11 +173,8 @@
 
   function handleFileSelect(unit: TranslationUnitJSON, record = true) {
     if (record) focus.record({ unitId: unit.id, label: unit.name });
-    selectedTranslationUnit = unit;
     selectedNode = null;
-    const comp = findComponentForTu(unit.id);
-    selectedComponentName = comp?.name ?? null;
-    if (comp) loadUnit(comp.name, unit.id);
+    showUnit(unit);
   }
 
   function findUnitById(unitId: string): TranslationUnitJSON | null {
@@ -182,11 +224,6 @@
     );
   }
 
-  const selectedComponent: ComponentJSON | null = $derived.by(() => {
-    if (!selectedTranslationUnit || !analysisResult) return null;
-    return findComponentForTu(selectedTranslationUnit.id);
-  });
-
   interface Props {
     messages: ChatMessage[];
     currentMessage: string;
@@ -225,6 +262,11 @@
     onModelSelect,
     onPromptSelect
   }: Props = $props();
+
+  // The component of the open file, or of the last open file if all tabs were closed
+  const selectedComponent: ComponentJSON | null = $derived(
+    analysisResult?.components.find((c) => c.name === selectedComponentName) ?? null
+  );
 
   async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
     await onApplySuggestions?.(accepted);
@@ -384,9 +426,11 @@
     onSendMessage(contextNode ? describeNode(contextNode) : undefined);
   }
 
-  // The code is the main view, so a file is open from the start
+  // The code is the main view, so a file is open from the start (but not after closing all tabs)
+  let openedInitially = false;
   $effect(() => {
-    if (selectedTranslationUnit || !analysisResult) return;
+    if (openedInitially || selectedTranslationUnit || !analysisResult) return;
+    openedInitially = true;
     const first = analysisResult.components
       .flatMap((c) => c.translationUnits)
       .sort((a, b) => a.path.localeCompare(b.path))[0];
@@ -635,34 +679,93 @@
   {/if}
 
   <!-- Code: the main view -->
-  <div class="flex min-h-0 min-w-0 flex-1">
-    {#if !analysisResult}
-      <div class="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-gray-500">
-        <p>No project has been analysed yet.</p>
-        <a href="/new-analysis" class="text-blue-600 hover:underline">Start a new analysis</a>
-      </div>
-    {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
-      <CodeViewer
-        translationUnit={openedUnit}
-        highlightLine={selectedNode?.startLine ?? undefined}
-        componentName={selectedComponentName ?? undefined}
-        selectedNodeId={selectedNode?.id}
-        onNavigateToNode={handleNavigateToNode}
-        {focus}
-        bind:annotations={fileAnnotations}
-        externalInspector
-        onInspect={showInspector}
+  <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+    {#if tabs.tabs.length > 0}
+      <!-- Editor tabs -->
+      <div
+        class="flex h-8 shrink-0 items-stretch overflow-x-auto border-b border-gray-200 bg-gray-50"
+        role="tablist"
+        aria-label="Open files"
       >
-        {#snippet headerStart()}
-          {@render historyButtons()}
-          <div class="min-w-0 truncate font-mono text-xs text-gray-500">{openedUnit?.name}</div>
-        {/snippet}
-      </CodeViewer>
-    {:else if selectedTranslationUnit}
-      <div class="flex flex-1 items-center justify-center">
-        <LoadingSpinner message="Loading {selectedTranslationUnit.name}..." />
+        {#each tabs.tabs as unit (unit.id)}
+          {@const active = unit.id === selectedTranslationUnit?.id}
+          {@const label = tabLabel(unit)}
+          <div
+            class="group relative flex max-w-56 shrink-0 items-center border-r border-gray-200 {active
+              ? 'bg-white text-gray-900'
+              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}"
+            title={unit.path}
+          >
+            {#if active}
+              <span class="absolute top-0 right-0 left-0 h-0.5 bg-blue-500"></span>
+            {/if}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={active}
+              class="flex min-w-0 items-center gap-1.5 py-1 pr-1 pl-3 font-mono text-xs"
+              onclick={() => !active && handleFileSelect(unit)}
+              onauxclick={(e) => {
+                if (e.button === 1) {
+                  e.preventDefault();
+                  closeTab(unit.id);
+                }
+              }}
+            >
+              <span class="truncate">{label.name}</span>
+              {#if label.folder}
+                <span class="shrink-0 font-sans text-[10px] text-gray-400">{label.folder}</span>
+              {/if}
+            </button>
+            <button
+              type="button"
+              class="mr-1 rounded px-1 text-xs leading-4 text-gray-400 hover:bg-gray-200 hover:text-gray-800 {active
+                ? ''
+                : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}"
+              onclick={() => closeTab(unit.id)}
+              aria-label="Close {unit.name}"
+              title="Close (middle-click on the tab)"
+            >
+              ×
+            </button>
+          </div>
+        {/each}
       </div>
     {/if}
+    <div class="flex min-h-0 flex-1">
+      {#if !analysisResult}
+        <div class="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-gray-500">
+          <p>No project has been analysed yet.</p>
+          <a href="/new-analysis" class="text-blue-600 hover:underline">Start a new analysis</a>
+        </div>
+      {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
+        <CodeViewer
+          translationUnit={openedUnit}
+          highlightLine={selectedNode?.startLine ?? undefined}
+          componentName={selectedComponentName ?? undefined}
+          selectedNodeId={selectedNode?.id}
+          onNavigateToNode={handleNavigateToNode}
+          {focus}
+          bind:annotations={fileAnnotations}
+          {scrollPositions}
+          externalInspector
+          onInspect={showInspector}
+        >
+          {#snippet headerStart()}
+            {@render historyButtons()}
+            <div class="min-w-0 truncate font-mono text-xs text-gray-500">{openedUnit?.name}</div>
+          {/snippet}
+        </CodeViewer>
+      {:else if selectedTranslationUnit}
+        <div class="flex flex-1 items-center justify-center">
+          <LoadingSpinner message="Loading {selectedTranslationUnit.name}..." />
+        </div>
+      {:else}
+        <div class="flex flex-1 items-center justify-center text-xs text-gray-400">
+          No file is open. Open one in the file tree.
+        </div>
+      {/if}
+    </div>
   </div>
 
   <!-- Context column: inspector and agent -->
