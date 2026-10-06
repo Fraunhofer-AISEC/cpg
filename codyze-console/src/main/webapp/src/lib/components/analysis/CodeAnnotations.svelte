@@ -24,6 +24,8 @@
     offsetLeft: number;
     /** Inspects a node, revealing a section of the inspector if given */
     onInspect: (nodeId: string, section?: InspectorSection) => void;
+    /** Draws the annotations faintly, e.g. while a path is shown */
+    dimmed?: boolean;
   }
 
   let {
@@ -36,7 +38,8 @@
     charWidth,
     offsetTop,
     offsetLeft,
-    onInspect
+    onInspect,
+    dimmed = false
   }: Props = $props();
 
   // 1-based lines; visible if they overlap the rendered lines
@@ -108,7 +111,10 @@
   );
 </script>
 
-<div class="pointer-events-none absolute top-0 left-0 h-full w-full">
+<div
+  class="pointer-events-none absolute top-0 left-0 h-full w-full transition-opacity"
+  class:opacity-35={dimmed}
+>
   <!-- Key figures at the end of the first line of each function, each part clickable -->
   {#each functions as fn (fn.function.id)}
     {#if isVisible(fn.function.startLine, fn.function.startLine)}

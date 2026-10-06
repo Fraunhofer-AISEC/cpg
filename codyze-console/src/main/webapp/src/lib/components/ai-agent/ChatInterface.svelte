@@ -6,6 +6,7 @@
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, ConceptChecklist, FileTree } from '$lib/components/analysis';
   import Outline from '$lib/components/analysis/Outline.svelte';
+  import StepBar from '$lib/components/analysis/StepBar.svelte';
   import NodeInspector from '$lib/components/analysis/inspector/NodeInspector.svelte';
   import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
@@ -205,6 +206,28 @@
   const goBack = () => goTo(focus.back());
   const goForward = () => goTo(focus.forward());
 
+  // Goes to a step of the dataflow path, opening its file if needed
+  function goToStep(index: number) {
+    const ref = focus.path[index];
+    if (ref) selectRef(ref);
+  }
+
+  function stepPath(delta: number) {
+    const ref = focus.pathStep(delta);
+    if (ref) selectRef(ref);
+  }
+
+  // The steps of the path in the bar above the code
+  const pathSteps = $derived(
+    focus.path.map((ref) => {
+      const code = ref.code.length <= 28 ? ref.code : '';
+      return {
+        label: code || ref.name || ref.code,
+        title: `${ref.type} ${ref.code} · ${ref.startLine >= 1 ? `${ref.fileName}:${ref.startLine}` : 'no location'}`
+      };
+    })
+  );
+
   function handleKeydown(event: KeyboardEvent) {
     if (isTyping(event)) return;
     if (hasModifier(event) && !event.altKey && event.key.toLowerCase() === 'p') {
@@ -335,6 +358,27 @@
         label: `${layers.visible[layer.id] ? 'Hide' : 'Show'} ${layer.icon} ${layer.label}`,
         run: () => layers.toggle(layer.id)
       })),
+      {
+        id: 'path-next',
+        category: 'Path',
+        label: 'Next step of the dataflow path',
+        disabledReason: focus.pathStep(1) ? undefined : 'There is no next step',
+        run: () => stepPath(1)
+      },
+      {
+        id: 'path-previous',
+        category: 'Path',
+        label: 'Previous step of the dataflow path',
+        disabledReason: focus.pathStep(-1) ? undefined : 'There is no previous step',
+        run: () => stepPath(-1)
+      },
+      {
+        id: 'path-clear',
+        category: 'Path',
+        label: 'Close the dataflow path',
+        disabledReason: focus.path.length > 0 ? undefined : 'No path is shown',
+        run: () => focus.clearPath()
+      },
       {
         id: 'callers',
         category: 'Selection',
@@ -960,6 +1004,15 @@
         {/each}
       </div>
     {/if}
+    {#if focus.path.length >= 2}
+      <StepBar
+        title="Path"
+        steps={pathSteps}
+        index={focus.pathIndex}
+        onSelect={goToStep}
+        onClose={() => focus.clearPath()}
+      />
+    {/if}
     <div class="flex min-h-0 flex-1">
       {#if !analysisResult}
         <div class="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-gray-500">
@@ -977,6 +1030,7 @@
           bind:annotations={fileAnnotations}
           {scrollPositions}
           externalInspector
+          lanes
           onInspect={showInspector}
         >
           {#snippet headerStart()}
@@ -1071,6 +1125,7 @@
             loading={focus.loading}
             error={focus.error}
             revealSection={focus.revealSection}
+            onFollow={(chain, direction) => focus.follow(chain, direction)}
             onSelect={selectRef}
           >
             {#snippet actions()}

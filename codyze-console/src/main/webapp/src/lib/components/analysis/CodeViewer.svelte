@@ -8,6 +8,8 @@
   import CodeAnnotations from './CodeAnnotations.svelte';
   import OverviewRuler, { type RulerMark } from './OverviewRuler.svelte';
   import HoverCard from './HoverCard.svelte';
+  import DataflowArcs from './DataflowArcs.svelte';
+  import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
   import { getAnnotations } from '$lib/annotations';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
@@ -15,7 +17,11 @@
   import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
   import type { FlattenedNode } from '$lib/flatten';
   import { getNodeDetails, getNodeDetailsAt, clearNodeDetailsCache } from '$lib/nodeDetails';
-  import { CodeFocus, type InspectorSection } from '$lib/stores/codeFocus.svelte';
+  import {
+    CodeFocus,
+    type FlowDirection,
+    type InspectorSection
+  } from '$lib/stores/codeFocus.svelte';
   import { flattenNodes } from '$lib/flatten';
   import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
   import CodeLines from './CodeLines.svelte';
@@ -98,6 +104,11 @@
     scrollPositions?: Map<string, number>;
     /** The annotations of the file, loaded by the viewer; bind it to use them outside */
     annotations?: FileAnnotationsJSON | null;
+    /**
+     * Adds lanes to the gutter: one for the numbered steps of the path (see [CodeFocus.path]) and
+     * one between the line numbers and the code for the dataflow arcs of the inspected node
+     */
+    lanes?: boolean;
   }
 
   let {
@@ -120,7 +131,8 @@
     externalInspector = false,
     onInspect,
     scrollPositions,
-    annotations = $bindable(null)
+    annotations = $bindable(null),
+    lanes = false
   }: Props = $props();
 
   // The focus and the placement of the inspector never change for a viewer
@@ -337,18 +349,57 @@
         };
       case 'uncertain':
         return { count: fileSummary.unresolved, title: info.description };
+      case 'dataflow': {
+        const count = inspected ? inspected.dataflowFrom.length + inspected.dataflowTo.length : 0;
+        return {
+          count,
+          title: inspected ? info.description : `${info.description} (nothing is selected)`
+        };
+      }
     }
   }
 
-  // The marks of the visible layers in the overview ruler, one lane per layer
+  // The dataflow layer needs the lanes in the gutter
+  const shownLayers = $derived(layerInfos.filter((l) => lanes || l.id !== 'dataflow'));
+
+  // The marks of the visible layers in the overview ruler, one lane per layer. The steps of the
+  // path and the dataflows of the inspected node share the last lane, with the steps on top
   const rulerMarks = $derived.by((): RulerMark[] => {
     if (!annotations) return [];
     const color = (layer: Layer) => layerInfos.find((l) => l.id === layer)!.color;
     const marks: RulerMark[] = [];
+    if (lanes) {
+      for (const step of pathMarkers) {
+        marks.push({ line: step.line, lane: 3, color: 'rgb(15, 23, 42)', label: step.title });
+      }
+      if (layers.visible.dataflow && inspected?.node.translationUnitId === translationUnit.id) {
+        const dataflows = [
+          ...inspected.dataflowFrom.map((ref) => ({ ref, label: 'comes from' })),
+          ...inspected.dataflowTo.map((ref) => ({ ref, label: 'goes to' }))
+        ];
+        for (const { ref, label } of dataflows) {
+          if (ref.translationUnitId !== translationUnit.id || ref.startLine < 1) continue;
+          marks.push({
+            line: ref.startLine,
+            lane: 3,
+            color: color('dataflow'),
+            label: `${label} ${ref.code || ref.name}`
+          });
+        }
+      }
+    }
+    // While a path is shown, the other layers step back
+    const faded = pathActive;
     if (layers.visible.concepts) {
       for (const c of annotations.concepts) {
         const kind = c.isOperation ? 'Operation' : 'Concept';
-        marks.push({ line: c.line, lane: 0, color: color('concepts'), label: `${kind} ${c.type}` });
+        marks.push({
+          line: c.line,
+          lane: 0,
+          color: color('concepts'),
+          label: `${kind} ${c.type}`,
+          faded
+        });
       }
     }
     for (const call of annotations.calls) {
@@ -357,14 +408,16 @@
           line: call.startLine,
           lane: 1,
           color: color('external'),
-          label: `external call ${call.name}()`
+          label: `external call ${call.name}()`,
+          faded
         });
       } else if (call.status === 'UNRESOLVED' && layers.visible.uncertain) {
         marks.push({
           line: call.startLine,
           lane: 2,
           color: color('uncertain'),
-          label: `unresolved call ${call.name}()`
+          label: `unresolved call ${call.name}()`,
+          faded
         });
       }
     }
@@ -441,7 +494,17 @@
   const codeLines = $derived(code.split('\n'));
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
-  const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
+  // The lanes of the gutter: the step markers before the line numbers, the arcs after them
+  // svelte-ignore state_referenced_locally
+  const markerLaneWidth = lanes ? 1.2 : 0;
+  // svelte-ignore state_referenced_locally
+  const arcLaneWidth = lanes ? 2.4 : 0;
+  const offsetLeft = $derived(
+    baseOffsetLeft + markerLaneWidth + lineNumberWidth * charWidth + arcLaneWidth
+  );
+  // The arc lane ends shortly before the first character of a line (see CodeLines)
+  const arcLaneRight = $derived(offsetLeft + charWidth - 0.35);
+  const arcLaneLeft = $derived(arcLaneRight - arcLaneWidth + 0.2);
   const maxColumns = $derived.by(() => {
     let max = 0;
     for (const line of codeLines) {
@@ -473,6 +536,50 @@
     return codeViewport.range(lineHeight * remPx, totalLines, 40, offsetTop * remPx);
   });
 
+  // The visible part of the code in rem, e.g. to clip the arcs at its edges
+  const viewTop = $derived(codeViewport.scrollTop / remInPx());
+  const viewBottom = $derived((codeViewport.scrollTop + codeViewport.height) / remInPx());
+
+  // Rendered width of a line in characters, with tabs being 8 characters wide
+  function lineColumns(line: number): number {
+    const text = codeLines[line - 1] ?? '';
+    return text.length + (text.split('\t').length - 1) * 7;
+  }
+
+  // Where the free space at the end of a line starts, after the code lens of a function if there
+  // is one (its width is estimated, since it is set in a proportional font)
+  function endOfLine(line: number): number {
+    const end = offsetLeft + charWidth * (lineColumns(line) + 3);
+    const fn = annotations?.functions.find((f) => f.function.startLine === line);
+    if (!fn) return end;
+    const lens = `${fn.callers} callers · calls ${fn.callees} · ${fn.externalCalls} external · ${fn.unresolvedCalls} unresolved`;
+    return end + charWidth + lens.length * 0.42;
+  }
+
+  // Follows a dataflow of the inspected node to [ref], extending the path, and inspects it
+  function followDataflow(ref: NodeRefJSON, direction: FlowDirection) {
+    if (inspected) focus.follow([inspected.node, ref], direction);
+    selectRef(ref);
+  }
+
+  // The steps of the path in this file, and whether a path is shown at all
+  const pathActive = $derived(lanes && focus.path.length >= 2);
+  const pathMarkers = $derived.by((): StepMarker[] => {
+    if (!pathActive) return [];
+    return focus.path.flatMap((ref, index) =>
+      ref.translationUnitId === translationUnit.id && ref.startLine >= 1
+        ? [
+            {
+              index,
+              line: ref.startLine,
+              title: `${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
+              current: index === focus.pathIndex
+            }
+          ]
+        : []
+    );
+  });
+
   $effect(() => {
     if (highlightLine && codeContainerElement) {
       const line = highlightLine;
@@ -501,7 +608,7 @@
         {#if annotations}
           <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
           <div class="flex items-center gap-1" role="group" aria-label="Layers">
-            {#each layerInfos as layer (layer.id)}
+            {#each shownLayers as layer (layer.id)}
               {@const summary = layerSummary(layer.id)}
               <button
                 type="button"
@@ -571,6 +678,7 @@
                 {charWidth}
                 {offsetTop}
                 {offsetLeft}
+                gutterPadding={0.75 + arcLaneWidth}
               />
             </Highlight>
           </div>
@@ -587,6 +695,7 @@
 
           {#if annotations}
             <CodeAnnotations
+              dimmed={pathActive}
               {annotations}
               layers={layers.visible}
               {codeLines}
@@ -597,6 +706,39 @@
               {offsetTop}
               {offsetLeft}
               onInspect={(id, section) => inspect(() => getNodeDetails(id), true, section)}
+            />
+          {/if}
+
+          {#if lanes && layers.visible.dataflow && inspected}
+            <DataflowArcs
+              details={inspected}
+              unitId={translationUnit.id}
+              {codeLines}
+              startLine={visibleLines.start}
+              endLine={visibleLines.end}
+              {viewTop}
+              {viewBottom}
+              {lineHeight}
+              {charWidth}
+              {offsetTop}
+              {offsetLeft}
+              laneLeft={arcLaneLeft}
+              laneRight={arcLaneRight}
+              {endOfLine}
+              onFollow={followDataflow}
+              onScrollTo={(line) => scrollToLine(line)}
+            />
+          {/if}
+
+          {#if pathMarkers.length > 0}
+            <StepMarkers
+              markers={pathMarkers}
+              startLine={visibleLines.start}
+              endLine={visibleLines.end}
+              {lineHeight}
+              {offsetTop}
+              left={baseOffsetLeft - 0.3}
+              onSelect={(index) => selectRef(focus.path[index])}
             />
           {/if}
 
@@ -644,7 +786,7 @@
         <OverviewRuler
           marks={rulerMarks}
           {totalLines}
-          lanes={3}
+          lanes={lanes ? 4 : 3}
           viewport={viewportLines}
           selectionLine={inspected?.node.translationUnitId === translationUnit.id
             ? inspected.node.startLine
