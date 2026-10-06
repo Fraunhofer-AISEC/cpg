@@ -290,6 +290,22 @@ class ConsoleService {
         )
     }
 
+    /**
+     * Returns the slice of the program dependence graph around the node with the given ID (see
+     * [pdgSlice]), or `null` if there is no such node.
+     */
+    fun getPdgSlice(nodeId: String, direction: PdgDirection, hops: Int): PdgSliceJSON? {
+        return findNode(nodeId)?.let { pdgSlice(it, direction, hops) }
+    }
+
+    /**
+     * Returns how many statements are in the slice of the program dependence graph around the node
+     * with the given ID in each direction, or `null` if there is no such node.
+     */
+    fun getPdgCounts(nodeId: String, hops: Int): PdgCountsJSON? {
+        return findNode(nodeId)?.let { pdgCounts(it, hops) }
+    }
+
     /** Returns the node (or overlay) with the given ID, using an index built on first use. */
     private fun findNode(nodeId: String): Node? {
         val id = runCatching { Uuid.parse(nodeId) }.getOrNull() ?: return null

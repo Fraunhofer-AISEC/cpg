@@ -186,8 +186,8 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
  * that clicking anywhere in the code selects the most specific node. Among nodes with the same
  * region, explicit nodes are preferred over implicit ones and deeper nodes over their parents.
  *
- * If an end position is given, the node has to contain the whole range from the position to the
- * end (whose column is exclusive), e.g. the call that contains a selected text.
+ * If an end position is given, the node has to contain the whole range from the position to the end
+ * (whose column is exclusive), e.g. the call that contains a selected text.
  */
 fun TranslationUnit.nodeAt(
     line: Int,

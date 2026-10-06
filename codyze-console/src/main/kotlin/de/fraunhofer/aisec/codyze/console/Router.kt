@@ -71,6 +71,9 @@ import kotlinx.serialization.json.JsonObject
  *   the innermost node containing the whole range.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
  *   analysis warnings).
+ * - GET `/api/node/{id}/pdg?direction=backward|forward&hops=1..3`: Retrieves the slice of the
+ *   program dependence graph around the statement of the node, limited to its function.
+ * - GET `/api/node/{id}/pdg-counts?hops=1..3`: Retrieves the size of the slice in each direction.
  * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
  *   calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
@@ -285,6 +288,37 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                     )
                 }
             call.respond(service.getTrustIssues(nodeIds))
+        }
+
+        // The endpoint to get the slice of the program dependence graph around a node
+        get("/node/{id}/pdg") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val direction =
+                when (call.parameters["direction"]?.lowercase()) {
+                    null,
+                    "backward" -> PdgDirection.BACKWARD
+                    "forward" -> PdgDirection.FORWARD
+                    else -> return@get call.respond(HttpStatusCode.BadRequest)
+                }
+            val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
+            val slice = service.getPdgSlice(id, direction, hops)
+            if (slice != null) {
+                call.respond(slice)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
+            }
+        }
+
+        // The endpoint to get the size of the slices of the program dependence graph of a node
+        get("/node/{id}/pdg-counts") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
+            val counts = service.getPdgCounts(id, hops)
+            if (counts != null) {
+                call.respond(counts)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
+            }
         }
 
         // The endpoint to add a concept node to the current analysis result
