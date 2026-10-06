@@ -2,6 +2,9 @@
   import { CodeViewer } from '$lib/components/analysis';
   import { Button } from '$lib/components/ui';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  import { nodeHref } from '$lib/nodeDetails';
+  import type { NodeRefJSON } from '$lib/types';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -9,6 +12,12 @@
   const line = $derived($page.url.searchParams.get('line'));
   const finding = $derived($page.url.searchParams.get('finding'));
   const kind = $derived($page.url.searchParams.get('kind'));
+  const selectedNode = $derived($page.url.searchParams.get('node'));
+
+  function navigateToNode(ref: NodeRefJSON) {
+    const href = nodeHref(ref, $page.params.componentName ?? '');
+    if (href) goto(href);
+  }
 
   async function exportConcepts() {
     const res = await fetch('/api/export-concepts');
@@ -37,6 +46,9 @@
   highlightLine={line ? parseInt(line) : undefined}
   finding={finding ?? undefined}
   findingKind={kind ?? undefined}
+  componentName={$page.params.componentName}
+  selectedNodeId={selectedNode ?? undefined}
+  onNavigateToNode={navigateToNode}
 >
   {#snippet headerActions()}
     <Button variant="primary" size="sm" onclick={exportConcepts}>Export Concepts</Button>

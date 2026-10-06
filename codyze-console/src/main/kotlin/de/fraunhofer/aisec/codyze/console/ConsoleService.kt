@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -80,6 +81,9 @@ class ConsoleService {
 
     // Cache for parent relationships to support tree expansion
     private var queryTreeParentMap: Map<String, String> = emptyMap()
+
+    // Lookup of nodes (including overlays) by ID, built lazily on the first node request
+    private var nodeIndex: Map<Uuid, Node>? = null
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -139,6 +143,7 @@ class ConsoleService {
 
         val json = result.toJSON()
         this@ConsoleService.analysisResult = json
+        nodeIndex = null
         return json
     }
 
@@ -217,6 +222,56 @@ class ConsoleService {
         if (wanted.isEmpty() || result == null) return emptyList()
 
         return result.nodes.filter { it.id.toString() in wanted }.map { it.toJSON(noEdges = true) }
+    }
+
+    /**
+     * Returns the annotations of a translation unit (key figures of its functions, the status of
+     * its calls and its concepts), or `null` if there is no such unit.
+     */
+    fun getAnnotations(componentName: String, id: String): FileAnnotationsJSON? {
+        return getComponent(componentName)
+            ?.translationUnits
+            ?.find { it.id == Uuid.parse(id) }
+            ?.cpgTU
+            ?.toAnnotationsJSON()
+    }
+
+    /**
+     * Returns the details of the innermost node at the given position of a translation unit, or
+     * `null` if there is no node at this position.
+     */
+    fun getNodeDetailsAt(
+        componentName: String,
+        id: String,
+        line: Int,
+        column: Int,
+    ): NodeDetailsJSON? {
+        return getComponent(componentName)
+            ?.translationUnits
+            ?.find { it.id == Uuid.parse(id) }
+            ?.cpgTU
+            ?.nodeAt(line, column)
+            ?.toDetailsJSON()
+    }
+
+    /**
+     * Returns the details of the node with the given ID (calls, direct dataflows, overlays and
+     * analysis warnings), or `null` if there is no such node.
+     */
+    fun getNodeDetails(nodeId: String): NodeDetailsJSON? {
+        val id = runCatching { Uuid.parse(nodeId) }.getOrNull() ?: return null
+        val index =
+            nodeIndex
+                ?: analysisResult
+                    ?.analysisResult
+                    ?.translationResult
+                    ?.nodes
+                    ?.flatMap { listOf(it) + it.overlays }
+                    ?.associateBy { it.id }
+                    ?.also { nodeIndex = it }
+                ?: return null
+
+        return index[id]?.toDetailsJSON()
     }
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */
@@ -351,6 +406,7 @@ class ConsoleService {
                     connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
                 )
                 .also { newConceptNodes += it }
+        nodeIndex = nodeIndex?.plus(concept.id to concept)
 
         // Build the new persisted concept entry and store it, so we can export it later
         newPersistedConcepts += request.buildPersistedConcept(concept)

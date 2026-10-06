@@ -19,6 +19,8 @@
     offsetTop: number;
     offsetLeft: number;
     conceptGroups: ConceptGroup[];
+    /** Whether clicking a node opens the dialog to add a concept to it */
+    addConceptOnClick?: boolean;
   }
 
   let {
@@ -31,7 +33,8 @@
     charWidth,
     offsetTop,
     offsetLeft,
-    conceptGroups
+    conceptGroups,
+    addConceptOnClick = true
   }: Props = $props();
 
   // Node lines are 1-based, startLine and endLine are 0-based
@@ -43,7 +46,7 @@
   let clickedNode = $state<FlattenedNode | null>(null);
 
   function handleClick(node: FlattenedNode) {
-    console.log('Clicked node:', node);
+    if (!addConceptOnClick) return;
     showDialog = true;
     clickedNode = node;
   }

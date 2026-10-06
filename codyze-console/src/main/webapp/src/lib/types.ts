@@ -70,6 +70,76 @@ export interface EdgeJSON {
   end: string;
 }
 
+/** A compact reference to a node, used to list and navigate to related nodes. */
+export interface NodeRefJSON {
+  id: string;
+  type: string;
+  name: string;
+  code: string;
+  fileName?: string;
+  startLine: number;
+  startColumn: number;
+  endLine: number;
+  endColumn: number;
+  translationUnitId?: string;
+  componentName?: string;
+  isInferred: boolean;
+  /** How the node relates to the inspected node, e.g. the granularity of a dataflow */
+  label?: string;
+}
+
+/** Key figures of a function, shown next to it in the code viewer. */
+export interface FunctionAnnotationJSON {
+  function: NodeRefJSON;
+  callers: number;
+  callees: number;
+  externalCalls: number;
+  unresolvedCalls: number;
+}
+
+/** A call, located at its callee, and how well the analysis knows its target. */
+export interface CallAnnotationJSON {
+  id: string;
+  name: string;
+  status: 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
+  startLine: number;
+  startColumn: number;
+  endLine: number;
+  endColumn: number;
+}
+
+/** A concept or operation in the code; the category is e.g. `crypto` or `file`. */
+export interface ConceptAnnotationJSON {
+  id: string;
+  type: string;
+  category: string;
+  isOperation: boolean;
+  line: number;
+}
+
+/** Everything the code viewer shows about a file without interaction, see `.../annotations`. */
+export interface FileAnnotationsJSON {
+  functions: FunctionAnnotationJSON[];
+  calls: CallAnnotationJSON[];
+  concepts: ConceptAnnotationJSON[];
+}
+
+/** Everything the backend knows about a single node, see `GET /api/node/{id}`. */
+export interface NodeDetailsJSON {
+  node: NodeRefJSON;
+  typeName?: string;
+  value?: string;
+  isImplicit: boolean;
+  enclosingFunction?: NodeRefJSON;
+  overlays: NodeRefJSON[];
+  callTargets: NodeRefJSON[];
+  callers: NodeRefJSON[];
+  callees: NodeRefJSON[];
+  dataflowFrom: NodeRefJSON[];
+  dataflowTo: NodeRefJSON[];
+  warnings: string[];
+}
+
 // MCP capabilities
 export interface McpToolInfo {
   name: string;

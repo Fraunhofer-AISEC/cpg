@@ -20,6 +20,8 @@
     onFileSelect?: (unit: TranslationUnitJSON) => void;
     fileHref?: (unit: TranslationUnitJSON) => string;
     componentHref?: (componentName: string) => string;
+    /** Called when another component is selected; used instead of links if given */
+    onComponentSelect?: (componentName: string) => void;
     collapsed?: boolean;
     width?: string;
     conceptSuggestions?: Set<string>;
@@ -32,6 +34,7 @@
     onFileSelect,
     fileHref,
     componentHref,
+    onComponentSelect,
     collapsed = $bindable(false),
     width = 'w-56',
     conceptSuggestions = new Set()
@@ -109,8 +112,11 @@
     {#each nodes as node}
       <li>
         {#if node.type === 'component'}
-          <a
-            href={componentHref ? componentHref(node.componentName!) : '#'}
+          <svelte:element
+            this={onComponentSelect ? 'button' : 'a'}
+            role={onComponentSelect ? 'button' : 'link'}
+            href={onComponentSelect ? undefined : componentHref ? componentHref(node.componentName!) : '#'}
+            onclick={() => onComponentSelect?.(node.componentName!)}
             class="flex w-full items-center rounded-md px-2 py-1 text-left text-sm font-semibold {node.isCurrent ? 'border border-indigo-200 bg-indigo-100 text-indigo-800' : 'text-indigo-700 hover:bg-indigo-50'}"
             style="padding-left: {depth * 12 + 8}px"
           >
@@ -121,7 +127,7 @@
             {#if node.isCurrent}
               <span class="ml-auto rounded-full bg-indigo-200 px-2 py-0.5 text-xs text-indigo-600">Current</span>
             {/if}
-          </a>
+          </svelte:element>
           {#if node.isCurrent && node.children.length > 0}
             <div class="mt-1 ml-4 border-l border-indigo-200 pl-2">
               {@render TreeNodeSnippet(node.children, depth + 1)}
