@@ -116,6 +116,8 @@
      * which calls this with the question and the selection
      */
     onAsk?: (question: string, selection: CodeSelection) => void;
+    /** Buttons at the end of the row of the layers, e.g. to open a panel next to the code */
+    layerActions?: Snippet;
     /** Why asking is not possible right now, e.g. while the agent is busy */
     askDisabledReason?: string | null;
     /** Incremented to open the input for the selection (or else the inspected node) */
@@ -145,6 +147,7 @@
     annotations = $bindable(null),
     lanes = false,
     onAsk,
+    layerActions,
     askDisabledReason = null,
     askRequest = 0
   }: Props = $props();
@@ -409,6 +412,8 @@
   function handleWindowKeydown(event: KeyboardEvent) {
     if (!onAsk) return;
     if (event.key === 'Escape' && ask && !askFocused) {
+      // Other things that close with Escape (e.g. a panel) leave it to the input then
+      event.preventDefault();
       ask = null;
     } else if (
       hasModifier(event) &&
@@ -911,6 +916,10 @@
               <span class="tabular-nums opacity-70">{summary.count}</span>
             </button>
           {/each}
+          {#if layerActions}
+            <span class="flex-1"></span>
+            {@render layerActions()}
+          {/if}
         </div>
       {/if}
     </div>
