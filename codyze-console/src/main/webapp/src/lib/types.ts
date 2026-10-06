@@ -212,6 +212,8 @@ export interface ChatMessage {
   contentType?: 'text' | 'tool-result';
   toolResult?: ToolResult;
   reasoning?: string;
+  /** For user messages: the selected code the question refers to, which is sent along with it */
+  context?: string;
   timestamp: Date;
 }
 
