@@ -17,6 +17,15 @@ const maxHistory = 100;
 // The number of steps kept in a path
 const maxPathSteps = 50;
 
+/** A node of the evidence trail of the agent, see [CodeFocus.thread]. */
+export interface ThreadNode {
+  ref: NodeRefJSON;
+  /** The number of the step of the agent: a tool call, or the answer after the last tool call */
+  step: number;
+  /** Whether the node is only cited in the answer, but was not returned by a tool */
+  claimed: boolean;
+}
+
 /** The direction in which a dataflow is followed: backwards to its origins, or forwards. */
 export type FlowDirection = 'from' | 'to';
 
@@ -59,6 +68,12 @@ export class CodeFocus {
   path = $state.raw<NodeRefJSON[]>([]);
   /** The index of the inspected node in [path], or -1 if it is not on the path */
   pathIndex = $state(-1);
+
+  /**
+   * The evidence of the agent's active thread (one question and its steps): the nodes returned by
+   * its tool calls and the nodes only cited in its answer, shown as numbered markers in the code
+   */
+  thread = $state.raw<ThreadNode[]>([]);
 
   private request = 0;
 

@@ -16,7 +16,8 @@
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
-  import { extractCitations, resolveNodes } from '$lib/agentEvidence';
+  import { extractCitations, extractNodeIds, resolveNodes } from '$lib/agentEvidence';
+  import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { getConceptCounts } from '$lib/annotations';
@@ -555,6 +556,66 @@
     return blocks;
   });
 
+  // The evidence of each block: the node IDs returned by each step, and the IDs that are only
+  // cited in the answer
+  const blockEvidence = $derived(
+    timeline.map((block) => {
+      const steps = block.entries.flatMap((e) =>
+        e.step ? [{ step: e.step, ids: extractNodeIds(e.message.toolResult?.content) }] : []
+      );
+      const returned = new Set(steps.flatMap((s) => s.ids));
+      const cited = block.entries.flatMap((e) =>
+        e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+      );
+      return { steps, claimed: [...new Set(cited)].filter((id) => !returned.has(id)) };
+    })
+  );
+
+  // The nodes of the evidence, resolved to their locations. IDs that are no nodes are missing
+  let evidenceRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  const evidenceKey = $derived(
+    [...new Set(blockEvidence.flatMap((e) => [...e.steps.flatMap((s) => s.ids), ...e.claimed]))]
+      .sort()
+      .join(',')
+  );
+
+  $effect(() => {
+    const key = evidenceKey;
+    if (!key) return;
+    resolveNodes(key.split(',')).then((refs) => {
+      if (key === evidenceKey) evidenceRefs = refs;
+    });
+  });
+
+  // The block whose evidence is shown in the code: the one the user chose, or else the latest one
+  // with evidence
+  let chosenBlock = $state<number | null>(null);
+  const activeBlock = $derived(
+    chosenBlock !== null && chosenBlock < timeline.length
+      ? chosenBlock
+      : blockEvidence.findLastIndex((e) => e.steps.some((s) => s.ids.length) || e.claimed.length)
+  );
+
+  function stepNodes(ids: string[]): NodeRefJSON[] {
+    return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
+  }
+
+  // The evidence of the active block, shown as numbered markers in the code
+  $effect(() => {
+    const evidence = blockEvidence[activeBlock];
+    const nodes: ThreadNode[] = [];
+    if (evidence) {
+      for (const { step, ids } of evidence.steps) {
+        for (const ref of stepNodes(ids)) nodes.push({ ref, step, claimed: false });
+      }
+      const answerStep = evidence.steps.length + 1;
+      for (const ref of stepNodes(evidence.claimed)) {
+        nodes.push({ ref, step: answerStep, claimed: true });
+      }
+    }
+    focus.thread = nodes;
+  });
+
   // The concept suggestions are attached to the last tool result that suggested a concept
   const suggestionAnchorIndex = $derived(
     suggestions.length > 0
@@ -699,6 +760,8 @@
 
   function send() {
     showAgent();
+    // The new question becomes the active thread
+    chosenBlock = null;
     onSendMessage(contextNode ? describeNode(contextNode) : undefined);
   }
 
@@ -1256,13 +1319,42 @@
 
           {#each timeline as block, b (b)}
             {@const isLast = b === timeline.length - 1}
-            <section class="mx-2 my-2 rounded-md border border-gray-200 bg-white">
+            {@const isActive = b === activeBlock}
+            {@const evidence = blockEvidence[b]}
+            {@const hasEvidence =
+              evidence.steps.some((s) => s.ids.length) || evidence.claimed.length > 0}
+            <section
+              class="mx-2 my-2 rounded-md border bg-white {isActive && hasEvidence
+                ? 'border-slate-400'
+                : 'border-gray-200'}"
+            >
               {#if block.question}
                 <!-- The question, with the code it refers to -->
                 <header class="border-b border-gray-100 px-3 py-2">
-                  <p class="text-sm leading-snug font-medium whitespace-pre-wrap text-gray-900">
-                    {block.question.content}
-                  </p>
+                  <div class="flex items-start gap-2">
+                    <p
+                      class="min-w-0 flex-1 text-sm leading-snug font-medium whitespace-pre-wrap text-gray-900"
+                    >
+                      {block.question.content}
+                    </p>
+                    {#if hasEvidence}
+                      <!-- Only one thread is shown in the code at a time -->
+                      <button
+                        type="button"
+                        class="mt-0.5 shrink-0 rounded px-1 text-[11px] {isActive
+                          ? 'text-slate-800'
+                          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}"
+                        aria-pressed={isActive}
+                        disabled={isActive}
+                        title={isActive
+                          ? 'The evidence of this question is shown in the code'
+                          : 'Show the evidence of this question in the code'}
+                        onclick={() => (chosenBlock = b)}
+                      >
+                        {isActive ? '● in code' : '○ show in code'}
+                      </button>
+                    {/if}
+                  </div>
                   {#if block.question.context}
                     <p
                       class="mt-1 truncate font-mono text-[10px] text-gray-500"
@@ -1292,6 +1384,23 @@
                           onItemClick={handleNodeClick}
                         />
                       </div>
+                      {#if stepNodes(evidence.steps.find((s) => s.step === entry.step)?.ids ?? []).length > 0}
+                        {@const nodes = stepNodes(
+                          evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
+                        )}
+                        <button
+                          type="button"
+                          class="mt-1.5 shrink-0 rounded px-1 text-[11px] text-gray-400 tabular-nums hover:bg-gray-100 hover:text-gray-700"
+                          title="Go to the first of the nodes this step returned"
+                          onclick={() => {
+                            chosenBlock = b;
+                            selectRef(nodes[0]);
+                          }}
+                        >
+                          {nodes.length}
+                          {nodes.length === 1 ? 'node' : 'nodes'} →
+                        </button>
+                      {/if}
                     </div>
                     {#if entry.index === suggestionAnchorIndex}
                       <!-- The pending concept suggestions of the agent, to accept or reject -->
