@@ -2,6 +2,8 @@ import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
 
 // Node details do not change during a session (except for added concepts), so requests are shared
 const cache = new Map<string, Promise<NodeDetailsJSON | null>>();
+// The same for the lookups by position, e.g. while hovering over the code
+const positionCache = new Map<string, Promise<NodeDetailsJSON | null>>();
 
 async function fetchDetails(url: string): Promise<NodeDetailsJSON | null> {
   const res = await fetch(url);
@@ -22,22 +24,31 @@ export function getNodeDetails(nodeId: string): Promise<NodeDetailsJSON | null> 
 }
 
 /** Returns the details of the innermost node at a (1-based) line and column of a translation unit. */
-export async function getNodeDetailsAt(
+export function getNodeDetailsAt(
   componentName: string,
   unitId: string,
   line: number,
   column: number
 ): Promise<NodeDetailsJSON | null> {
-  const details = await fetchDetails(
-    `/api/component/${encodeURIComponent(componentName)}/translation-unit/${unitId}/node-at?line=${line}&column=${column}`
-  );
-  if (details) cache.set(details.node.id, Promise.resolve(details));
-  return details;
+  const key = `${componentName}/${unitId}/${line}/${column}`;
+  let request = positionCache.get(key);
+  if (!request) {
+    request = fetchDetails(
+      `/api/component/${encodeURIComponent(componentName)}/translation-unit/${unitId}/node-at?line=${line}&column=${column}`
+    ).then((details) => {
+      if (details) cache.set(details.node.id, Promise.resolve(details));
+      return details;
+    });
+    request.catch(() => positionCache.delete(key));
+    positionCache.set(key, request);
+  }
+  return request;
 }
 
 /** Drops all cached details, e.g. after concepts have been added. */
 export function clearNodeDetailsCache() {
   cache.clear();
+  positionCache.clear();
 }
 
 /** The URL of the code viewer showing (and selecting) the referenced node. */
