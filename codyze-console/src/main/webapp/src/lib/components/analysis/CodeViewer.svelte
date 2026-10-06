@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { untrack, type Snippet } from 'svelte';
   import type { TranslationUnitJSON, NodeJSON, ConceptSuggestionItem } from '$lib/types';
   import { TabNavigation } from '$lib/components/navigation';
   import { CollapsiblePanel } from '$lib/components/ui';
@@ -12,6 +12,7 @@
   import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
   import type { FlattenedNode } from '$lib/flatten';
   import { getNodeDetails, getNodeDetailsAt, clearNodeDetailsCache } from '$lib/nodeDetails';
+  import { CodeFocus } from '$lib/stores/codeFocus.svelte';
   import { flattenNodes } from '$lib/flatten';
   import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
   import CodeLines from './CodeLines.svelte';
@@ -78,13 +79,29 @@
     nodeActions?: Snippet<[NodeDetailsJSON]>;
     /** Where the panel with the inspector and the node lists is shown */
     panelPosition?: 'right' | 'bottom';
+    /**
+     * The inspected node. Pass it to share the inspected node with the parent, e.g. to show the
+     * inspector outside of the viewer
+     */
+    focus?: CodeFocus;
+    /**
+     * Whether the inspector is shown by the parent (using [focus]) instead of in the panel, which
+     * then only contains the node lists
+     */
+    externalInspector?: boolean;
+    /** Called when the user inspects a node in the viewer, e.g. by clicking into the code */
+    onInspect?: () => void;
   }
 
-  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, suggestions = $bindable([]), suggestionNodes, onApplySuggestions, componentName, selectedNodeId, onNavigateToNode, nodeActions, panelPosition = 'right' }: Props = $props();
+  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, suggestions = $bindable([]), suggestionNodes, onApplySuggestions, componentName, selectedNodeId, onNavigateToNode, nodeActions, panelPosition = 'right', focus: sharedFocus, externalInspector = false, onInspect }: Props = $props();
 
-  // The inspector is only available with a component, which never changes for a viewer
+  // The focus and the placement of the inspector never change for a viewer
   // svelte-ignore state_referenced_locally
-  let activeTab = $state(componentName ? 'inspector' : 'astNodes');
+  const focus = sharedFocus ?? new CodeFocus();
+  // svelte-ignore state_referenced_locally
+  const inspectorInPanel = !!componentName && !externalInspector;
+
+  let activeTab = $state(inspectorInPanel ? 'inspector' : 'astNodes');
   let nodes = $derived(
     flattenNodes(
       activeTab === 'overlayNodes' ? overlayNodes : astNodes,
@@ -96,7 +113,7 @@
   let codeContainerElement = $state<HTMLDivElement>();
 
   const tabs = $derived([
-    ...(componentName ? [{ id: 'inspector', label: 'Inspector' }] : []),
+    ...(inspectorInPanel ? [{ id: 'inspector', label: 'Inspector' }] : []),
     { id: 'astNodes', label: 'AST Nodes', count: astNodes?.length || 0 },
     { id: 'overlayNodes', label: 'Overlay Nodes', count: overlayNodes?.length || 0 },
     ...(suggestions.length > 0
@@ -118,37 +135,31 @@
     const count = suggestions.length;
     if (prevSuggestionCount === 0 && count > 0) {
       activeTab = 'suggestions';
+      nodePanelCollapsed = false;
     }
     prevSuggestionCount = count;
   });
 
   // The node shown in the inspector
-  let inspected = $state<NodeDetailsJSON | null>(null);
-  let inspectorLoading = $state(false);
-  let inspectorError = $state<string | null>(null);
-  let inspectRequest = 0;
+  const inspected = $derived(focus.details);
 
-  async function inspect(load: () => Promise<NodeDetailsJSON | null>, scroll = false) {
-    const request = ++inspectRequest;
-    inspectorLoading = true;
-    inspectorError = null;
-    activeTab = 'inspector';
-    nodePanelCollapsed = false;
-    try {
-      const details = await load();
-      if (request !== inspectRequest) return;
-      if (details) {
-        inspected = details;
-        if (scroll && details.node.translationUnitId === translationUnit.id) {
-          scrollToLine(details.node.startLine);
-        }
-      }
-    } catch (e) {
-      if (request === inspectRequest) inspectorError = e instanceof Error ? e.message : String(e);
-    } finally {
-      if (request === inspectRequest) inspectorLoading = false;
+  function inspect(load: () => Promise<NodeDetailsJSON | null>, reveal = false) {
+    if (inspectorInPanel) {
+      activeTab = 'inspector';
+      nodePanelCollapsed = false;
     }
+    onInspect?.();
+    focus.inspect(load, reveal);
   }
+
+  // Scroll to the inspected node when it is to be revealed, e.g. after selecting it in the inspector
+  $effect(() => {
+    if (focus.revealCount === 0) return;
+    const node = untrack(() => focus.details?.node);
+    if (node && node.translationUnitId === untrack(() => translationUnit.id)) {
+      scrollToLine(node.startLine);
+    }
+  });
 
   function selectRef(ref: NodeRefJSON) {
     if (ref.translationUnitId && ref.translationUnitId !== translationUnit.id && onNavigateToNode) {
@@ -457,7 +468,8 @@
           ></div>
         {/if}
 
-        {#if activeTab === 'astNodes' || activeTab === 'overlayNodes'}
+        <!-- The node boxes belong to the node lists, so they are hidden with them in the bottom panel -->
+        {#if (activeTab === 'astNodes' || activeTab === 'overlayNodes') && !(panelPosition === 'bottom' && nodePanelCollapsed)}
           <NodeOverlays
             {nodes}
             {codeLines}
@@ -482,8 +494,8 @@
       <div class="min-h-0 flex-1 overflow-y-auto">
         <NodeInspector
           details={inspected}
-          loading={inspectorLoading}
-          error={inspectorError}
+          loading={focus.loading}
+          error={focus.error}
           onSelect={selectRef}
         >
           {#snippet actions()}

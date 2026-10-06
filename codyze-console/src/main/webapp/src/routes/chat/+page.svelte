@@ -2,7 +2,6 @@
   import type { PageProps } from './$types';
   import type { ChatMessage, LLMMessage, ConceptSuggestionItem, LLMConcept, Model } from '$lib/types';
   import { ChatInterface, McpCapabilitiesModal, SkillsModal, NotConfigured } from '$lib/components/ai-agent';
-  import { PageHeader } from '$lib/components/navigation';
   import { llmAgent, type StreamingCallbacks } from '$lib/services/llmAgent';
   import { agentSession } from '$lib/stores/agentSession.svelte';
 
@@ -282,13 +281,14 @@
     }
   }
 
-  async function sendMessage() {
+  async function sendMessage(context?: string) {
     if (!currentMessage.trim() || !selectedModel) return;
 
     chatMessages = [...chatMessages, {
       id: Date.now().toString(),
       role: 'user' as const,
       content: currentMessage,
+      context,
       timestamp: new Date()
     }];
     currentMessage = '';
@@ -301,7 +301,9 @@
         role: msg.role as 'user' | 'assistant',
         content: msg.contentType === 'tool-result' && msg.toolResult
           ? `[Tool: ${msg.toolResult.toolName}]\n${typeof msg.toolResult.content === 'string' ? msg.toolResult.content : JSON.stringify(msg.toolResult.content)}`
-          : msg.content
+          : msg.context
+            ? `${msg.content}\n\n(This refers to the code selected by the user: ${msg.context})`
+            : msg.content
       }));
 
       await llmAgent.chat(
@@ -323,12 +325,8 @@
   }
 </script>
 
-<PageHeader
-  title="CodAIze Agent"
-  subtitle="Understand your code better through AI-powered analysis."
-/>
-
-<div class="-mx-6 -mb-6 flex flex-col" style="height: calc(100vh - 120px);">
+<!-- The agent page is an editor-like workspace that uses the whole height of the window -->
+<div class="-m-6 flex h-screen min-h-0 flex-col">
   {#if agentSession.mcpCapabilities === null}
     <NotConfigured />
   {:else}
