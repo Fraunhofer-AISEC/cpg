@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick, type Snippet } from 'svelte';
-  import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
+  import type { CallFilter, InspectorSection } from '$lib/stores/codeFocus.svelte';
   import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
   import NodeRefItem from './NodeRefItem.svelte';
   import DataflowTree from './DataflowTree.svelte';
@@ -16,6 +16,12 @@
     actions?: Snippet;
     /** A section to expand and scroll into view, e.g. after clicking the code lens of a function */
     revealSection?: { section: InspectorSection; request: number } | null;
+    /** The calls of a function to list instead of all of them, e.g. the unresolved ones */
+    callFilter?: CallFilter | null;
+    /** The status of the calls by their node ID, to apply [callFilter] */
+    callStatus?: Map<string, string>;
+    /** Called to list all calls again */
+    onClearCallFilter?: () => void;
   }
 
   let {
@@ -25,7 +31,10 @@
     onSelect,
     onFollow,
     actions,
-    revealSection = null
+    revealSection = null,
+    callFilter = null,
+    callStatus,
+    onClearCallFilter
   }: Props = $props();
 
   // The elements of the sections that can be revealed
@@ -41,6 +50,15 @@
       element.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
   });
+
+  // The calls in the body of a function, reduced to the filtered ones. Without the status of the
+  // calls everything is listed
+  const filteredCallees = $derived(
+    details && callFilter && callStatus
+      ? details.callees.filter((ref) => callStatus.get(ref.id) === callFilter)
+      : (details?.callees ?? [])
+  );
+  const filtered = $derived(!!callFilter && !!callStatus);
 
   const calls = $derived(
     details
@@ -59,8 +77,12 @@
           },
           {
             id: 'callees' as const,
-            title: 'Calls in body',
-            refs: details.callees,
+            title: !filtered
+              ? 'Calls in body'
+              : callFilter === 'EXTERNAL'
+                ? 'External calls in body'
+                : 'Unresolved calls in body',
+            refs: filteredCallees,
             hint: 'Calls made by this function'
           }
         ].filter((group) => group.refs.length > 0)
@@ -166,6 +188,15 @@
         >
           {group.title} ({group.refs.length})
         </summary>
+        {#if group.id === 'callees' && filtered}
+          <button
+            type="button"
+            class="mt-0.5 text-[11px] text-gray-500 underline hover:text-gray-800"
+            onclick={() => onClearCallFilter?.()}
+          >
+            Show all {details.callees.length} calls
+          </button>
+        {/if}
         <div class="mt-1 max-h-64 overflow-y-auto">
           {#each group.refs as ref (ref.id)}
             <NodeRefItem {ref} {onSelect} />

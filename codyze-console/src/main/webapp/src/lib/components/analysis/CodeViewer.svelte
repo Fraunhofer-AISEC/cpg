@@ -22,7 +22,8 @@
   import {
     CodeFocus,
     type FlowDirection,
-    type InspectorSection
+    type InspectorSection,
+    type CallFilter
   } from '$lib/stores/codeFocus.svelte';
   import { flattenNodes } from '$lib/flatten';
   import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
@@ -193,14 +194,15 @@
   function inspect(
     load: () => Promise<NodeDetailsJSON | null>,
     reveal = false,
-    section?: InspectorSection
+    section?: InspectorSection,
+    filter?: CallFilter
   ) {
     if (inspectorInPanel) {
       activeTab = 'inspector';
       nodePanelCollapsed = false;
     }
     onInspect?.();
-    focus.inspect(load, reveal, section);
+    focus.inspect(load, reveal, section, true, filter);
   }
 
   // When another file is shown in the same viewer (e.g. by switching tabs), go back to where it was
@@ -1037,7 +1039,8 @@
               {charWidth}
               {offsetTop}
               {offsetLeft}
-              onInspect={(id, section) => inspect(() => getNodeDetails(id), true, section)}
+              onInspect={(id, section, filter) =>
+                inspect(() => getNodeDetails(id), true, section, filter)}
             />
           {/if}
 

@@ -1052,6 +1052,11 @@
   // The annotations of the open file, loaded by the code viewer and shown in the outline
   let fileAnnotations = $state.raw<FileAnnotationsJSON | null>(null);
 
+  // The status of the calls of the open file by their node ID
+  const callStatus = $derived(
+    fileAnnotations ? new Map(fileAnnotations.calls.map((c) => [c.id, c.status])) : undefined
+  );
+
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
   // its tab stays open and the inspector tab is only marked
   function showInspector() {
@@ -1773,6 +1778,9 @@
             loading={focus.loading}
             error={focus.error}
             revealSection={focus.revealSection}
+            callFilter={focus.callFilter}
+            {callStatus}
+            onClearCallFilter={() => (focus.callFilter = null)}
             onFollow={(chain, direction) => focus.follow(chain, direction)}
             onSelect={selectRef}
           >
