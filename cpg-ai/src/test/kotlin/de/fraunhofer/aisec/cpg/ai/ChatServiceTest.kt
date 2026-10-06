@@ -162,20 +162,35 @@ class ChatServiceTest {
         val service = createChatService()
         val output = "a small tool result"
 
-        val result = service.truncateForLlm(output, "some_tool")
+        val result = service.truncateForLlm(output, "some_tool", contextLength = 128_000L)
 
         assertEquals(output, result)
     }
 
     @Test
+    fun truncateForLlmUsesTheContextWindowOfTheRequestsModelTest() {
+        // One service, two requests on models with different windows: the budget follows the
+        // model, it is not fixed by whichever request came first.
+        val service = createChatService()
+        val output = "word ".repeat(20_000)
+
+        val onLargeModel = service.truncateForLlm(output, "some_tool", contextLength = 262_144L)
+        val onSmallModel = service.truncateForLlm(output, "some_tool", contextLength = 8_192L)
+        val onLargeAgain = service.truncateForLlm(output, "some_tool", contextLength = 262_144L)
+
+        assertEquals(output, onLargeModel)
+        assertTrue(onSmallModel.length < output.length, "Small window should truncate")
+        assertEquals(output, onLargeAgain)
+    }
+
+    @Test
     fun truncateForLlmCapsOversizedResultTest() {
         val service = createChatService()
-        // Comfortably over the single-result budget (half of the 128_000-token placeholder
-        // context length used before resolveHistoryCompressionTokenLimit ever runs) regardless of
+        // Comfortably over the single-result budget (half of a 128_000-token window) regardless of
         // the tokenizer's exact per-word ratio.
         val output = "word ".repeat(200_000)
 
-        val result = service.truncateForLlm(output, "some_tool")
+        val result = service.truncateForLlm(output, "some_tool", contextLength = 128_000L)
 
         assertTrue(result.length < output.length, "Oversized result should have been shortened")
         assertTrue(

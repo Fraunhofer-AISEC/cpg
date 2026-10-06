@@ -40,6 +40,7 @@ import ai.koog.agents.mcp.metadata.McpServerInfo
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.openai.OpenAIChatParams
 import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
+import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.MessagePart
 import ai.koog.prompt.params.LLMParams
@@ -252,30 +253,26 @@ class ChatService(
      * per [chat] call, a single oversized tool result (or many moderate ones accumulating over
      * iterations) can otherwise grow the prompt past the LLM provider's context window and cause a
      * 400 error. This alone is a weak proxy for actual size though - see
-     * [historyCompressionTokenLimit]/[historyCompressionTokenFraction], which catch the case this
-     * misses (few messages, but individually huge).
+     * [contextLengthOf]/[historyCompressionTokenFraction], which catch the case this misses (few
+     * messages, but individually huge).
      */
     private val historyCompressionThreshold = 100
 
     /**
-     * The model's real context window, in tokens, used by [chatStrategy]'s token-based compression
-     * trigger below. Set once per instance by [resolveHistoryCompressionTokenLimit] from the same
-     * already-resolved value as the [ChatLlm]'s `model.contextLength` (see
-     * [LlmProviderConfig.clientFor]/[LlmProviderConfig.resolveContextLength]) - both consumers
-     * share one resolution (override → live-detected → generic default) instead of maintaining
-     * their own separate fallback. This initial value is only a placeholder until the first [chat]
-     * call resolves it for real - matches [LlmProviderConfig]'s own generic fallback constant.
+     * The context window, in tokens, of the model a request runs on: the budget of [chatStrategy]'s
+     * token-based compression trigger and of [truncateForLlm]. Read per request from the model the
+     * agent is running with, since every [ChatRequestJSON] picks its own client and model and one
+     * service may serve models with different windows (also concurrently).
+     * [LlmProviderConfig.clientFor] always sets it (override, live-detected or generic default);
+     * the fallback here only covers [LLModel.contextLength] being nullable in Koog's type.
      */
-    private var historyCompressionTokenLimit = 128_000L
-
-    /** Whether [resolveHistoryCompressionTokenLimit] has already run once for this instance. */
-    private var resolvedHistoryCompressionTokenLimit = false
+    private fun contextLengthOf(model: LLModel): Long = model.contextLength ?: 128_000L
 
     /**
-     * Once [tokenizer]'s estimated token count for the running prompt exceeds this fraction of
-     * [historyCompressionTokenLimit], [chatStrategy] compresses the history - independently of
-     * [historyCompressionThreshold], so a handful of huge tool results trigger compression just as
-     * reliably as many moderate ones.
+     * Once [tokenizer]'s estimated token count for the running prompt exceeds this fraction of the
+     * model's context window ([contextLengthOf]), [chatStrategy] compresses the history -
+     * independently of [historyCompressionThreshold], so a handful of huge tool results trigger
+     * compression just as reliably as many moderate ones.
      */
     private val historyCompressionTokenFraction = 0.33
 
@@ -296,7 +293,7 @@ class ChatService(
     private val tokenizer: PromptTokenizer = CachingTokenizer(rawTokenizer)
 
     /**
-     * Maximum fraction of [historyCompressionTokenLimit] a single tool result may occupy in the
+     * Maximum fraction of the model's context window a single tool result may occupy in the
      * LLM-facing history before [truncateForLlm] caps it - deliberately much larger than
      * [historyCompressionTokenFraction] (which reacts to *cumulative* history size):
      * [compressHistory] can only ever shrink *older* turns to make room, never the *one new* tool
@@ -310,14 +307,15 @@ class ChatService(
     /**
      * Caps [output] (a [ReceivedToolResult.output], identified by [toolName] only for the warning
      * message) if it alone would already occupy more than [singleResultTokenFraction] of
-     * [historyCompressionTokenLimit] - see that field's doc for why this, not [chatStrategy]'s
-     * history compression, is the only mechanism that can address this case. Logs a warning
-     * whenever it actually truncates, since this should be rare and is worth an operator's
-     * attention. Takes/returns a plain [String] rather than a [ReceivedToolResult] so this stays
-     * directly testable without constructing Koog's internal result type.
+     * [contextLength], the window of the model the request runs on - see
+     * [singleResultTokenFraction]'s doc for why this, not [chatStrategy]'s history compression, is
+     * the only mechanism that can address this case. Logs a warning whenever it actually truncates,
+     * since this should be rare and is worth an operator's attention. Takes/returns a plain
+     * [String] rather than a [ReceivedToolResult] so this stays directly testable without
+     * constructing Koog's internal result type.
      */
-    internal fun truncateForLlm(output: String, toolName: String): String {
-        val budget = (historyCompressionTokenLimit * singleResultTokenFraction).toInt()
+    internal fun truncateForLlm(output: String, toolName: String, contextLength: Long): String {
+        val budget = (contextLength * singleResultTokenFraction).toInt()
         val tokenCount = rawTokenizer.countTokens(output)
         if (tokenCount <= budget) return output
 
@@ -329,23 +327,10 @@ class ChatService(
             tokenCount,
             budget,
             (singleResultTokenFraction * 100).toInt(),
-            historyCompressionTokenLimit,
+            contextLength,
         )
         return output.take(charBudget) +
             "\n... [truncated: this tool result alone was too large for the model's context window]"
-    }
-
-    /**
-     * Sets [historyCompressionTokenLimit] to [contextLength] - the same value
-     * [LlmProviderConfig.clientFor] already resolved (override → live-detected → generic default)
-     * for the [ChatLlm]'s `model.contextLength` - once per [ChatService] instance. A no-op on
-     * subsequent calls, so later [chat] calls in the same instance don't keep re-applying it.
-     */
-    private fun resolveHistoryCompressionTokenLimit(contextLength: Long) {
-        if (resolvedHistoryCompressionTokenLimit) return
-        resolvedHistoryCompressionTokenLimit = true
-        historyCompressionTokenLimit = contextLength
-        log.info("Using context length {} for history-compression budget", contextLength)
     }
 
     /**
@@ -483,8 +468,8 @@ class ChatService(
      *   [toMessageResponse], so every downstream edge below is unchanged from the non-streaming
      *   version.
      * - a history-compression node that fires once the prompt exceeds [historyCompressionThreshold]
-     *   messages, or [tokenizer]'s estimate exceeds [historyCompressionTokenFraction] of
-     *   [historyCompressionTokenLimit] (see class docs above), so long tool-calling loops don't
+     *   messages, or [tokenizer]'s estimate exceeds [historyCompressionTokenFraction] of the
+     *   request model's context window (see [contextLengthOf]), so long tool-calling loops don't
      *   blow the LLM's context window either - whichever of the two fires first.
      *
      * Built once and reused across [chat] calls, since the graph itself carries no per-request
@@ -504,12 +489,15 @@ class ChatService(
             // see parallelSafeToolNames doc for why this can't just be "parallel = true".
             val executeTool by
                 node<ToolCalls, ReceivedToolResults>("executeToolsPartiallyParallel") { toolCalls ->
+                    val contextLength = llm.readSession { contextLengthOf(model) }
                     val (parallelSafe, sequential) =
                         toolCalls.toolCalls.partition { it.tool in parallelSafeToolNames }
                     ReceivedToolResults(
                         (environment.executeTools(parallelSafe) +
                                 sequential.map { environment.executeTool(it) })
-                            .map { it.copy(output = truncateForLlm(it.output, it.tool)) }
+                            .map {
+                                it.copy(output = truncateForLlm(it.output, it.tool, contextLength))
+                            }
                     )
                 }
             val sendToolResultStream by nodeLLMSendToolResultsStreaming()
@@ -669,7 +657,7 @@ class ChatService(
                         llm.readSession {
                             prompt.messages.size > historyCompressionThreshold ||
                                 tokenizer.tokenCountFor(prompt) >
-                                    historyCompressionTokenLimit * historyCompressionTokenFraction
+                                    contextLengthOf(model) * historyCompressionTokenFraction
                         }
                     }
             )
@@ -682,7 +670,7 @@ class ChatService(
                         llm.readSession {
                             prompt.messages.size <= historyCompressionThreshold &&
                                 tokenizer.tokenCountFor(prompt) <=
-                                    historyCompressionTokenLimit * historyCompressionTokenFraction
+                                    contextLengthOf(model) * historyCompressionTokenFraction
                         }
                     }
             )
@@ -772,11 +760,11 @@ class ChatService(
                     send(Events.text("Unknown or unavailable LLM client"))
                     return@channelFlow
                 }
-        // clientFor already resolved contextLength (override → live-detected → generic default);
-        // the `?:` here is only defensive - LlmProviderConfig.resolveContextLength always returns
-        // non-null, this just guards against LLModel.contextLength being nullable by Koog's own
-        // type.
-        resolveHistoryCompressionTokenLimit(chatLlm.model.contextLength ?: 128_000L)
+        log.debug(
+            "Using context length {} of {} for this request's compression budget",
+            contextLengthOf(chatLlm.model),
+            chatLlm.model.id,
+        )
 
         try {
             // When ChatMemory is active (sessionId != null), the initial prompt carries only the
