@@ -6,3 +6,5 @@ import CpgVerified.Go.Literal
 import CpgVerified.Go.Semantics
 import CpgVerified.Go.Translate
 import CpgVerified.Go.Correctness
+import CpgVerified.Wire.Sexp
+import CpgVerified.Wire.Codec
