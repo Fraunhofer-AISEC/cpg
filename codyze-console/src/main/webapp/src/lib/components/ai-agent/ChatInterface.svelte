@@ -10,6 +10,7 @@
   import { agentSession } from '$lib/stores/agentSession.svelte';
   import { CodeFocus } from '$lib/stores/codeFocus.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
+  import { getConceptCounts } from '$lib/annotations';
   import type {
     NodeJSON,
     AnalysisResultJSON,
@@ -188,9 +189,24 @@
 
   async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
     await onApplySuggestions?.(accepted);
-    // The applied concepts change the details of the nodes they are attached to
+    // The applied concepts change the details of the nodes they are attached to, the annotations
+    // and the counts in the file tree
     clearNodeDetailsCache();
+    focus.invalidate();
   }
+
+  // The number of concepts per file of the selected component, shown in the file tree
+  let conceptCounts = $state.raw<Map<string, number>>(new Map());
+
+  async function loadConceptCounts(component: string) {
+    const counts = await getConceptCounts(component);
+    if (component === selectedComponentName) conceptCounts = counts;
+  }
+
+  $effect(() => {
+    void focus.revision;
+    if (selectedComponentName) loadConceptCounts(selectedComponentName);
+  });
 
   // Selects and reveals a node referenced by a concept suggestion, opening its file if needed. The
   // agent tab stays open, since the suggestions are shown there
@@ -201,7 +217,7 @@
       const tu = findTranslationUnit(node);
       if (tu) handleFileSelect(tu);
     }
-    if (contextTab !== 'inspector' || contextCollapsed) inspectorUnseen = true;
+    if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
     focus.inspect(() => getNodeDetails(nodeId), true);
   }
 
@@ -218,27 +234,34 @@
   let contextCollapsed = $state(false);
   // Whether the inspector shows a node that has not been seen because the agent tab stayed open
   let inspectorUnseen = $state(false);
+  // The same while the column is collapsed. This is only shown on the collapsed strip and does not
+  // mark the inspector tab after the column was opened again
+  let collapsedUnseen = $state(false);
   let sidebarOpen = $state(true);
 
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
   // its tab stays open and the inspector tab is only marked
   function showInspector() {
     if (isLoading && contextTab === 'agent') {
-      inspectorUnseen = true;
+      markInspectorUnseen();
       return;
     }
-    contextTab = 'inspector';
-    contextCollapsed = false;
+    openTab('inspector');
+  }
+
+  function markInspectorUnseen() {
+    if (contextCollapsed) collapsedUnseen = true;
+    else inspectorUnseen = true;
   }
 
   function showAgent() {
-    contextTab = 'agent';
-    contextCollapsed = false;
+    openTab('agent');
   }
 
   function openTab(tab: ContextTab) {
     contextTab = tab;
     contextCollapsed = false;
+    collapsedUnseen = false;
   }
 
   $effect(() => {
@@ -491,6 +514,7 @@
         onFileSelect={handleFileSelect}
         onComponentSelect={handleComponentSelect}
         conceptSuggestions={tusWithSuggestions}
+        {conceptCounts}
         embedded
       />
     </div>
@@ -539,7 +563,7 @@
           >
           {#if tab.id === 'agent' && isLoading}
             {@render workingDot()}
-          {:else if tab.id === 'inspector' && inspectorUnseen}
+          {:else if tab.id === 'inspector' && (collapsedUnseen || inspectorUnseen)}
             {@render unseenDot()}
           {/if}
         </button>
