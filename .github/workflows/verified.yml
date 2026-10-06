@@ -58,4 +58,4 @@ jobs:
               cpg-language-go/build/test-results/test/TEST-*VerifiedTranslationTest.xml \
               | grep -E "requests,|not found:|MISMATCH|TOTAL" || true
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
