@@ -1,5 +1,8 @@
 import type { NodeDetailsJSON } from '$lib/types';
 
+/** A section of the inspector that can be revealed, e.g. from the code lens of a function. */
+export type InspectorSection = 'callers' | 'callees' | 'callTargets';
+
 /**
  * The node that is inspected in a code view. It is shared between the code viewer (which draws the
  * selection and scrolls to it) and wherever the inspector is shown, e.g. a column next to the code.
@@ -19,6 +22,12 @@ export class CodeFocus {
    * reload what they derived from it (annotations, counts)
    */
   revision = $state(0);
+  /**
+   * The section of the inspector to expand and scroll into view, set when a node is inspected with
+   * a section. The request number changes with every such inspection, so the same section can be
+   * revealed again
+   */
+  revealSection = $state<{ section: InspectorSection; request: number } | null>(null);
 
   private request = 0;
 
@@ -26,7 +35,11 @@ export class CodeFocus {
    * Inspects the node returned by [load]. Only the result of the latest call is kept, so that slow
    * responses do not replace newer ones.
    */
-  async inspect(load: () => Promise<NodeDetailsJSON | null>, reveal = false) {
+  async inspect(
+    load: () => Promise<NodeDetailsJSON | null>,
+    reveal = false,
+    section?: InspectorSection
+  ) {
     const request = ++this.request;
     this.loading = true;
     this.error = null;
@@ -36,6 +49,7 @@ export class CodeFocus {
       if (details) {
         this.details = details;
         if (reveal) this.revealCount++;
+        this.revealSection = section ? { section, request } : null;
       }
     } catch (e) {
       if (request === this.request) this.error = e instanceof Error ? e.message : String(e);

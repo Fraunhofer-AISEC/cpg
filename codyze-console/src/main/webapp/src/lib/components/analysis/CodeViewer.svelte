@@ -14,7 +14,7 @@
   import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
   import type { FlattenedNode } from '$lib/flatten';
   import { getNodeDetails, getNodeDetailsAt, clearNodeDetailsCache } from '$lib/nodeDetails';
-  import { CodeFocus } from '$lib/stores/codeFocus.svelte';
+  import { CodeFocus, type InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { flattenNodes } from '$lib/flatten';
   import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
   import CodeLines from './CodeLines.svelte';
@@ -137,13 +137,17 @@
   // The node shown in the inspector
   const inspected = $derived(focus.details);
 
-  function inspect(load: () => Promise<NodeDetailsJSON | null>, reveal = false) {
+  function inspect(
+    load: () => Promise<NodeDetailsJSON | null>,
+    reveal = false,
+    section?: InspectorSection
+  ) {
     if (inspectorInPanel) {
       activeTab = 'inspector';
       nodePanelCollapsed = false;
     }
     onInspect?.();
-    focus.inspect(load, reveal);
+    focus.inspect(load, reveal, section);
   }
 
   // Scroll to the inspected node when it is to be revealed, e.g. after selecting it in the inspector
@@ -483,7 +487,7 @@
               {charWidth}
               {offsetTop}
               {offsetLeft}
-              onInspect={(id) => inspect(() => getNodeDetails(id), true)}
+              onInspect={(id, section) => inspect(() => getNodeDetails(id), true, section)}
             />
           {/if}
 
@@ -539,6 +543,7 @@
           details={inspected}
           loading={focus.loading}
           error={focus.error}
+          revealSection={focus.revealSection}
           onSelect={selectRef}
         >
           {#snippet actions()}

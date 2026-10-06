@@ -2,6 +2,7 @@
   import type { FileAnnotationsJSON } from '$lib/types';
   import { conceptIcon } from '$lib/annotations';
   import type { Layer } from '$lib/stores/layers.svelte';
+  import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
 
   /**
    * Draws the annotations of a file on top of the code: the key figures of each function at the end
@@ -21,7 +22,8 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
-    onInspect: (nodeId: string) => void;
+    /** Inspects a node, revealing a section of the inspector if given */
+    onInspect: (nodeId: string, section?: InspectorSection) => void;
   }
 
   let {
@@ -49,11 +51,39 @@
     return text.length + (text.split('\t').length - 1) * 7;
   }
 
-  function summary(fn: (typeof functions)[number]): string {
-    const parts = [`${fn.callers} callers`, `calls ${fn.callees}`];
-    if (fn.externalCalls > 0) parts.push(`${fn.externalCalls} external`);
-    if (fn.unresolvedCalls > 0) parts.push(`⚠ ${fn.unresolvedCalls} unresolved`);
-    return parts.join(' · ');
+  // The parts of the code lens of a function, each revealing its section of the inspector
+  function lensParts(fn: (typeof functions)[number]) {
+    const parts: { label: string; count: number; section: InspectorSection; title: string }[] = [
+      {
+        label: `${fn.callers} callers`,
+        count: fn.callers,
+        section: 'callers',
+        title: `Show the callers of ${fn.function.name}`
+      },
+      {
+        label: `calls ${fn.callees}`,
+        count: fn.callees,
+        section: 'callees',
+        title: `Show the calls in ${fn.function.name}`
+      }
+    ];
+    if (fn.externalCalls > 0) {
+      parts.push({
+        label: `${fn.externalCalls} external`,
+        count: fn.externalCalls,
+        section: 'callees',
+        title: `Show the calls in ${fn.function.name}, ${fn.externalCalls} of them to external code`
+      });
+    }
+    if (fn.unresolvedCalls > 0) {
+      parts.push({
+        label: `⚠ ${fn.unresolvedCalls} unresolved`,
+        count: fn.unresolvedCalls,
+        section: 'callees',
+        title: `Show the calls in ${fn.function.name}, ${fn.unresolvedCalls} of them unresolved`
+      });
+    }
+    return parts;
   }
 
   const conceptsByLine = $derived.by(() => {
@@ -79,23 +109,34 @@
 </script>
 
 <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-  <!-- Key figures at the end of the first line of each function -->
+  <!-- Key figures at the end of the first line of each function, each part clickable -->
   {#each functions as fn (fn.function.id)}
     {#if isVisible(fn.function.startLine, fn.function.startLine)}
-      <button
-        type="button"
-        class="pointer-events-auto absolute z-[22] cursor-pointer font-sans text-[11px] whitespace-nowrap text-gray-400 italic hover:text-blue-600 hover:underline"
+      <span
+        class="absolute z-[22] font-sans text-[11px] whitespace-nowrap text-gray-400 italic"
         style:top="{top(fn.function.startLine)}rem"
         style:line-height="{lineHeight}rem"
         style:left="{offsetLeft + charWidth * (lineColumns(fn.function.startLine) + 4)}rem"
-        onclick={(e) => {
-          e.stopPropagation();
-          onInspect(fn.function.id);
-        }}
-        title="Inspect {fn.function.name}"
       >
-        {summary(fn)}
-      </button>
+        {#each lensParts(fn) as part, i (part.label)}
+          {#if i > 0}<span class="px-0.5">·</span>{/if}
+          {#if part.count > 0}
+            <button
+              type="button"
+              class="pointer-events-auto cursor-pointer italic hover:text-blue-600 hover:underline"
+              title={part.title}
+              onclick={(e) => {
+                e.stopPropagation();
+                onInspect(fn.function.id, part.section);
+              }}
+            >
+              {part.label}
+            </button>
+          {:else}
+            <span>{part.label}</span>
+          {/if}
+        {/each}
+      </span>
     {/if}
   {/each}
 
