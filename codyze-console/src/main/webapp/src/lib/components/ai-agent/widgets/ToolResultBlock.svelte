@@ -21,6 +21,12 @@
       const name = extractSkillName(content);
       if (name) return name;
     }
+    if (
+      toolName === 'cpg_suggest_llm_concepts_and_operations' &&
+      typeof content?.name === 'string'
+    ) {
+      return `suggests ${content.name}`;
+    }
     const items = getItemsArray(content);
     if (items.length > 0) {
       return `${items.length} result${items.length !== 1 ? 's' : ''}`;

@@ -41,8 +41,6 @@
     return agentSession.mcpCapabilities?.tools.some((t) => t.name === toolName) ?? false;
   }
 
-  let suggestions = $state<ConceptSuggestionItem[]>([]);
-
   function isConceptSuggestion(toolName: string | undefined, content: any): content is LLMConcept {
     return (
       toolName === SUGGEST_LLM_CONCEPTS_TOOL &&
@@ -111,10 +109,11 @@
   // Load persisted state from sessionStorage
   function loadPersistedState() {
     if (typeof window === 'undefined') {
-      return { messages: [], selectedClient: null, selectedModel: null };
+      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
     }
     const stored = sessionStorage.getItem('codyze-agent-state');
-    if (!stored) return { messages: [], selectedClient: null, selectedModel: null };
+    if (!stored)
+      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
     try {
       const parsed = JSON.parse(stored);
       const messages = parsed.messages.map((msg: any) => ({
@@ -123,17 +122,21 @@
       }));
       return {
         messages,
+        suggestions: parsed.suggestions ?? [],
         selectedClient: parsed.selectedClient ?? null,
         selectedModel: parsed.selectedModel ?? null
       };
     } catch {
-      return { messages: [], selectedClient: null, selectedModel: null };
+      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
     }
   }
 
   const persisted = loadPersistedState();
 
   let chatMessages = $state<ChatMessage[]>(persisted.messages);
+  // The concept suggestions of the agent that have not been applied yet. They are shown in the
+  // timeline at the last tool result that suggested a concept
+  let suggestions = $state<ConceptSuggestionItem[]>(persisted.suggestions);
   let currentMessage = $state('');
   let isLoading = $state(false);
   let streamingContent = $state('');
@@ -170,6 +173,7 @@
         'codyze-agent-state',
         JSON.stringify({
           messages: chatMessages,
+          suggestions,
           selectedClient,
           selectedModel: selectedModelName
         })
@@ -209,19 +213,18 @@
           } else if (event.type === 'tool_result') {
             if (isConceptSuggestion(event.toolName, event.content)) {
               addSuggestion(event.content);
-            } else {
-              chatMessages = [
-                ...chatMessages,
-                {
-                  id: Date.now().toString(),
-                  role: 'assistant' as const,
-                  content: '',
-                  contentType: 'tool-result',
-                  toolResult: { toolName: event.toolName, content: event.content },
-                  timestamp: new Date()
-                }
-              ];
             }
+            chatMessages = [
+              ...chatMessages,
+              {
+                id: Date.now().toString(),
+                role: 'assistant' as const,
+                content: '',
+                contentType: 'tool-result',
+                toolResult: { toolName: event.toolName, content: event.content },
+                timestamp: new Date()
+              }
+            ];
           }
         } catch {
           streamingContent += chunk;
