@@ -55,14 +55,19 @@ by double click is a shortcut, the button at the border does the same -->
   ondblclick={() => pdg.more > 0 && card.onExpand(pdg.id)}
 >
   <Handle type="target" position={Position.Top} class="pdg-handle" />
-  <div class="flex h-4 items-center gap-1 text-[10.5px] leading-none text-gray-500">
+  <div
+    class="flex h-4 items-center gap-1 text-[10.5px] leading-none text-gray-500 group-[.pdg-far]/flow:h-full group-[.pdg-far]/flow:justify-center group-[.pdg-far]/flow:gap-2"
+  >
     {#if stub}
+      <span class="hidden text-4xl text-gray-500 group-[.pdg-far]/flow:inline"
+        >{pdg.external ? '↗' : '↪'}</span
+      >
       <span class="truncate group-[.pdg-far]/flow:hidden"
         >{pdg.external ? 'outside the analysed code' : `${locationOf(pdg)} · other file`}</span
       >
     {:else}
       <span
-        class="font-medium tabular-nums group-[.pdg-far]/flow:text-sm group-[.pdg-far]/flow:text-gray-700"
+        class="font-medium tabular-nums group-[.pdg-far]/flow:text-4xl group-[.pdg-far]/flow:font-semibold group-[.pdg-far]/flow:text-gray-700"
         >L{pdg.startLine}</span
       >
       {#if branch}
@@ -73,14 +78,16 @@ by double click is a shortcut, the button at the border does the same -->
       {/if}
     {/if}
     {#each badges as badge (badge.word)}
-      <span class="rounded px-1 text-[10px] {badge.cls}" title={badge.word}
+      <span
+        class="rounded px-1 text-[10px] group-[.pdg-far]/flow:text-3xl {badge.cls}"
+        title={badge.word}
         >{badge.icon}<span class="group-[.pdg-far]/flow:hidden"
           >{badges.length === 1 ? ` ${badge.word}` : ''}</span
         ></span
       >
     {/each}
   </div>
-  <div class="mt-1 truncate font-mono text-[10.5px] text-gray-900 group-[.pdg-far]/flow:invisible">
+  <div class="mt-1 truncate font-mono text-[10.5px] text-gray-900 group-[.pdg-far]/flow:hidden">
     {pdg.code}
   </div>
   {#if pdg.more > 0}
