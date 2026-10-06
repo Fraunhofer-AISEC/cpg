@@ -991,8 +991,14 @@ class ChatService(
         return parseToolResultContent(contentTexts)
     }
 
+    /**
+     * Closes the [httpClient] and [llmProviderConfig] this service was given (and with it every
+     * executor built for its chats). A host that shares one [LlmProviderConfig] between several
+     * services closes it through the last of them.
+     */
     fun close() {
         httpClient.close()
+        llmProviderConfig.close()
     }
 
     companion object {

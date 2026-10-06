@@ -106,7 +106,27 @@ private fun resolveContextLength(config: ClientConfig, liveDetected: Long?): Lon
     return liveDetected ?: DEFAULT_CONTEXT_LENGTH
 }
 
-class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
+/** A [ChatLlm] built by [LlmProviderConfig], together with the HTTP clients it created for it. */
+private class OwnedChatLlm(val chatLlm: ChatLlm, val httpClients: List<HttpClient>) :
+    AutoCloseable {
+    override fun close() {
+        chatLlm.executor.close()
+        // The executor may not close a base client it was handed; HttpClient.close() is idempotent.
+        httpClients.forEach { it.close() }
+    }
+}
+
+/**
+ * Resolves configured LLM providers to Koog executors. Owns every executor it creates: one per
+ * client and model, reused by all chat calls, and closed by [close].
+ */
+class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) :
+    AutoCloseable {
+    /** Executors already built, per client and model (see [clientFor]). */
+    private val chatLlms = ConcurrentHashMap<Pair<String, String>, OwnedChatLlm>()
+
+    @Volatile private var closed = false
+
     /**
      * Context lengths already reported by a server, per client and model: [clientFor] runs on every
      * chat call, but a model's window does not change, so asking again would only add a request to
@@ -125,6 +145,34 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
      * [contextLengthFor] if the server reports one, otherwise [DEFAULT_CONTEXT_LENGTH].
      */
     suspend fun clientFor(clientName: String, model: String): ChatLlm? {
+        check(!closed) { "LlmProviderConfig is closed" }
+        val key = clientName to model
+        chatLlms[key]?.let {
+            return it.chatLlm
+        }
+        // Built outside any lock (it may query the server for the context length); if a
+        // concurrent call built one for the same key first, ours is closed and theirs is used.
+        val created = createChatLlm(clientName, model) ?: return null
+        val winner = chatLlms.putIfAbsent(key, created)
+        if (winner != null) {
+            created.close()
+            return winner.chatLlm
+        }
+        if (closed) {
+            // close() ran while we were building: it may not have seen this entry.
+            chatLlms.remove(key)?.close()
+            error("LlmProviderConfig is closed")
+        }
+        return created.chatLlm
+    }
+
+    /** Closes every executor built by [clientFor], and the HTTP clients created for them. */
+    override fun close() {
+        closed = true
+        chatLlms.keys.toList().forEach { key -> chatLlms.remove(key)?.close() }
+    }
+
+    private suspend fun createChatLlm(clientName: String, model: String): OwnedChatLlm? {
         val config = clients.firstOrNull { it.name == clientName } ?: return null
         val contextLength = resolveContextLength(config, contextLengthFor(clientName, model))
 
@@ -134,31 +182,36 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 // Gemini has no real "local/custom endpoint" use case (unlike the OpenAI-compatible
                 // providers below), so we intentionally don't try to route config.baseUrl through
                 // here; it is still used for model discovery in fetchGeminiModels.
-                ChatLlm(
-                    executor =
-                        MultiLLMPromptExecutor(
-                            LLMProvider.Google to
-                                RetryingLLMClient(
-                                    GoogleLLMClient(apiKey),
-                                    transientFailureRetryConfig,
-                                )
-                        ),
-                    model =
-                        LLModel(
-                            provider = LLMProvider.Google,
-                            id = model,
-                            capabilities =
-                                listOf(
-                                    LLMCapability.Temperature,
-                                    LLMCapability.Tools,
-                                    // GoogleLLMClient.execute() requires this capability too (same
-                                    // requireCapability(LLMCapability.Completion) check as
-                                    // OpenAILLMClient below); without it every Gemini model fails
-                                    // with "Model <id> does not support completion".
-                                    LLMCapability.Completion,
-                                ),
-                            contextLength = contextLength,
-                        ),
+                OwnedChatLlm(
+                    ChatLlm(
+                        executor =
+                            MultiLLMPromptExecutor(
+                                LLMProvider.Google to
+                                    RetryingLLMClient(
+                                        GoogleLLMClient(apiKey),
+                                        transientFailureRetryConfig,
+                                    )
+                            ),
+                        model =
+                            LLModel(
+                                provider = LLMProvider.Google,
+                                id = model,
+                                capabilities =
+                                    listOf(
+                                        LLMCapability.Temperature,
+                                        LLMCapability.Tools,
+                                        // GoogleLLMClient.execute() requires this capability too
+                                        // (same
+                                        // requireCapability(LLMCapability.Completion) check as
+                                        // OpenAILLMClient below); without it every Gemini model
+                                        // fails
+                                        // with "Model <id> does not support completion".
+                                        LLMCapability.Completion,
+                                    ),
+                                contextLength = contextLength,
+                            ),
+                    ),
+                    httpClients = emptyList(),
                 )
             }
 
@@ -217,47 +270,57 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                         httpClientFactory =
                             KtorKoogHttpClient.Factory(baseClient = loggingKtorClient),
                     )
-                ChatLlm(
-                    executor =
-                        MultiLLMPromptExecutor(
-                            LLMProvider.OpenAI to
-                                RetryingLLMClient(client, transientFailureRetryConfig)
-                        ),
-                    model =
-                        LLModel(
-                            provider = LLMProvider.OpenAI,
-                            id = model,
-                            capabilities =
-                                listOf(
-                                    LLMCapability.Temperature,
-                                    LLMCapability.Tools,
-                                    // AbstractOpenAILLMClient.execute() requires this base
-                                    // capability before it will run a completion at all; without
-                                    // it every model fails with "Model <id> does not support
-                                    // completion".
-                                    LLMCapability.Completion,
-                                    // OpenAILLMClient.determineParams() separately requires the
-                                    // model to declare one of the two OpenAI endpoint capabilities
-                                    // to know which request shape to send; without it, every
-                                    // custom/local model (ollama, vLLM, mlx, ...) fails with
-                                    // "Cannot determine proper LLM params". These servers all speak
-                                    // the legacy /v1/chat/completions shape (matching
-                                    // OpenAIClientSettings' default chatCompletionsPath), not the
-                                    // newer /v1/responses API.
-                                    LLMCapability.OpenAIEndpoint.Completions,
-                                    // Without any LLMCapability.Schema.JSON.*, requestLLMStructured
-                                    // can't use native response_format: json_schema and instead
-                                    // falls back to emulating structured output via a synthetic
-                                    // schema-tool forced through tool_choice - which some
-                                    // OpenAI-compatible servers (e.g. vLLM) reject outright with a
-                                    // "When using tool_choice, tools must be set" 400. Basic
-                                    // (rather than Standard, which assumes polymorphism/defs
-                                    // support many local/vLLM-served models lack) matches Koog's
-                                    // own precedent for local/Qwen-class models.
-                                    LLMCapability.Schema.JSON.Basic,
-                                ),
-                            contextLength = contextLength,
-                        ),
+                OwnedChatLlm(
+                    ChatLlm(
+                        executor =
+                            MultiLLMPromptExecutor(
+                                LLMProvider.OpenAI to
+                                    RetryingLLMClient(client, transientFailureRetryConfig)
+                            ),
+                        model =
+                            LLModel(
+                                provider = LLMProvider.OpenAI,
+                                id = model,
+                                capabilities =
+                                    listOf(
+                                        LLMCapability.Temperature,
+                                        LLMCapability.Tools,
+                                        // AbstractOpenAILLMClient.execute() requires this base
+                                        // capability before it will run a completion at all;
+                                        // without
+                                        // it every model fails with "Model <id> does not support
+                                        // completion".
+                                        LLMCapability.Completion,
+                                        // OpenAILLMClient.determineParams() separately requires the
+                                        // model to declare one of the two OpenAI endpoint
+                                        // capabilities
+                                        // to know which request shape to send; without it, every
+                                        // custom/local model (ollama, vLLM, mlx, ...) fails with
+                                        // "Cannot determine proper LLM params". These servers all
+                                        // speak
+                                        // the legacy /v1/chat/completions shape (matching
+                                        // OpenAIClientSettings' default chatCompletionsPath), not
+                                        // the
+                                        // newer /v1/responses API.
+                                        LLMCapability.OpenAIEndpoint.Completions,
+                                        // Without any LLMCapability.Schema.JSON.*,
+                                        // requestLLMStructured
+                                        // can't use native response_format: json_schema and instead
+                                        // falls back to emulating structured output via a synthetic
+                                        // schema-tool forced through tool_choice - which some
+                                        // OpenAI-compatible servers (e.g. vLLM) reject outright
+                                        // with a
+                                        // "When using tool_choice, tools must be set" 400. Basic
+                                        // (rather than Standard, which assumes polymorphism/defs
+                                        // support many local/vLLM-served models lack) matches
+                                        // Koog's
+                                        // own precedent for local/Qwen-class models.
+                                        LLMCapability.Schema.JSON.Basic,
+                                    ),
+                                contextLength = contextLength,
+                            ),
+                    ),
+                    httpClients = listOf(loggingKtorClient),
                 )
             }
         }
