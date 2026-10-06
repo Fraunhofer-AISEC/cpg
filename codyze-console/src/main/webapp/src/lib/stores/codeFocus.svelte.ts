@@ -3,6 +3,9 @@ import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
 /** A section of the inspector that can be revealed, e.g. from the code lens of a function. */
 export type InspectorSection = 'callers' | 'callees' | 'callTargets';
 
+/** Which of the calls in a function to list: only those to external code or unresolved ones. */
+export type CallFilter = 'EXTERNAL' | 'UNRESOLVED';
+
 /** A place in the code that was visited: a file, or a node in it. */
 export interface CodeLocation {
   unitId: string;
@@ -54,6 +57,8 @@ export class CodeFocus {
    * revealed again
    */
   revealSection = $state<{ section: InspectorSection; request: number } | null>(null);
+  /** The calls of the inspected function that are listed, or null for all of them */
+  callFilter = $state<CallFilter | null>(null);
 
   /** The visited locations, oldest first, for going back and forward like in an editor */
   history = $state.raw<CodeLocation[]>([]);
@@ -120,7 +125,8 @@ export class CodeFocus {
     load: () => Promise<NodeDetailsJSON | null>,
     reveal = false,
     section?: InspectorSection,
-    record = true
+    record = true,
+    filter?: CallFilter
   ) {
     const request = ++this.request;
     this.loading = true;
@@ -132,6 +138,7 @@ export class CodeFocus {
         this.details = details;
         if (reveal) this.revealCount++;
         this.revealSection = section ? { section, request } : null;
+        this.callFilter = filter ?? null;
         const node = details.node;
         this.pathIndex = this.path.findIndex((step) => step.id === node.id);
         if (record && node.translationUnitId) {
