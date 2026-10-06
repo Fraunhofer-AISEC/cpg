@@ -356,11 +356,20 @@
           title: inspected ? info.description : `${info.description} (nothing is selected)`
         };
       }
+      case 'agent':
+        return {
+          count: new Set(agentMarkers.map((m) => m.nodeId)).size,
+          title: focus.thread.length
+            ? info.description
+            : `${info.description} (the agent has not returned any nodes yet)`
+        };
     }
   }
 
-  // The dataflow layer needs the lanes in the gutter
-  const shownLayers = $derived(layerInfos.filter((l) => lanes || l.id !== 'dataflow'));
+  // The dataflow and agent layers need the lanes in the gutter
+  const shownLayers = $derived(
+    layerInfos.filter((l) => lanes || (l.id !== 'dataflow' && l.id !== 'agent'))
+  );
 
   // The marks of the visible layers in the overview ruler, one lane per layer. The steps of the
   // path and the dataflows of the inspected node share the last lane, with the steps on top
@@ -369,6 +378,14 @@
     const color = (layer: Layer) => layerInfos.find((l) => l.id === layer)!.color;
     const marks: RulerMark[] = [];
     if (lanes) {
+      for (const step of agentMarkers) {
+        marks.push({
+          line: step.line,
+          lane: 4,
+          color: color('agent'),
+          label: `${step.index + 1}. ${step.title}`
+        });
+      }
       for (const step of pathMarkers) {
         marks.push({ line: step.line, lane: 3, color: 'rgb(15, 23, 42)', label: step.title });
       }
@@ -388,8 +405,8 @@
         }
       }
     }
-    // While a path is shown, the other layers step back
-    const faded = pathActive;
+    // While a path or the agent's thread is shown, the other layers step back
+    const faded = pathActive || threadActive;
     if (layers.visible.concepts) {
       for (const c of annotations.concepts) {
         const kind = c.isOperation ? 'Operation' : 'Concept';
@@ -494,13 +511,16 @@
   const codeLines = $derived(code.split('\n'));
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
-  // The lanes of the gutter: the step markers before the line numbers, the arcs after them
+  // The lanes of the gutter: the markers of the agent's steps and of the path before the line
+  // numbers, the arcs after them
+  // svelte-ignore state_referenced_locally
+  const agentLaneWidth = lanes ? 1.2 : 0;
   // svelte-ignore state_referenced_locally
   const markerLaneWidth = lanes ? 1.2 : 0;
   // svelte-ignore state_referenced_locally
   const arcLaneWidth = lanes ? 2.4 : 0;
   const offsetLeft = $derived(
-    baseOffsetLeft + markerLaneWidth + lineNumberWidth * charWidth + arcLaneWidth
+    baseOffsetLeft + agentLaneWidth + markerLaneWidth + lineNumberWidth * charWidth + arcLaneWidth
   );
   // The arc lane ends shortly before the first character of a line (see CodeLines)
   const arcLaneRight = $derived(offsetLeft + charWidth - 0.35);
@@ -574,6 +594,26 @@
               line: ref.startLine,
               title: `${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
               current: index === focus.pathIndex
+            }
+          ]
+        : []
+    );
+  });
+
+  // The evidence of the agent's active thread in this file, and whether it is shown at all
+  const threadActive = $derived(lanes && layers.visible.agent && focus.thread.length > 0);
+  const agentMarkers = $derived.by((): StepMarker[] => {
+    if (!threadActive) return [];
+    return focus.thread.flatMap(({ ref, step, claimed }) =>
+      ref.translationUnitId === translationUnit.id && ref.startLine >= 1
+        ? [
+            {
+              index: step - 1,
+              line: ref.startLine,
+              title: `${claimed ? 'only cited in the answer: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
+              current: ref.id === inspected?.node.id,
+              dashed: claimed,
+              nodeId: ref.id
             }
           ]
         : []
@@ -699,7 +739,7 @@
 
           {#if annotations}
             <CodeAnnotations
-              dimmed={pathActive}
+              dimmed={pathActive || threadActive}
               {annotations}
               layers={layers.visible}
               {codeLines}
@@ -741,8 +781,24 @@
               endLine={visibleLines.end}
               {lineHeight}
               {offsetTop}
+              left={baseOffsetLeft - 0.3 + agentLaneWidth}
+              onSelect={(marker) => selectRef(focus.path[marker.index])}
+            />
+          {/if}
+
+          {#if agentMarkers.length > 0}
+            <StepMarkers
+              markers={agentMarkers}
+              startLine={visibleLines.start}
+              endLine={visibleLines.end}
+              {lineHeight}
+              {offsetTop}
               left={baseOffsetLeft - 0.3}
-              onSelect={(index) => selectRef(focus.path[index])}
+              shape="square"
+              onSelect={(marker) => {
+                const node = focus.thread.find((n) => n.ref.id === marker.nodeId);
+                if (node) selectRef(node.ref);
+              }}
             />
           {/if}
 
@@ -790,7 +846,7 @@
         <OverviewRuler
           marks={rulerMarks}
           {totalLines}
-          lanes={lanes ? 4 : 3}
+          lanes={lanes ? 5 : 3}
           viewport={viewportLines}
           selectionLine={inspected?.node.translationUnitId === translationUnit.id
             ? inspected.node.startLine

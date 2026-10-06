@@ -10,6 +10,8 @@
     current?: boolean;
     /** Drawn dashed, e.g. for steps that are only claimed and not backed by evidence */
     dashed?: boolean;
+    /** The node of the step, if the markers are not identified by their index alone */
+    nodeId?: string;
   }
 </script>
 
@@ -29,10 +31,21 @@
     offsetTop: number;
     /** The left edge of the lane in rem */
     left: number;
-    onSelect: (index: number) => void;
+    /** Round badges (e.g. for a dataflow path) or square ones (e.g. for the agent's steps) */
+    shape?: 'round' | 'square';
+    onSelect: (marker: StepMarker) => void;
   }
 
-  let { markers, startLine, endLine, lineHeight, offsetTop, left, onSelect }: Props = $props();
+  let {
+    markers,
+    startLine,
+    endLine,
+    lineHeight,
+    offsetTop,
+    left,
+    shape = 'round',
+    onSelect
+  }: Props = $props();
 
   const byLine = $derived.by(() => {
     const lines: Record<number, StepMarker[]> = {};
@@ -53,7 +66,10 @@
     {@const marker = entry.shown}
     <button
       type="button"
-      class="pointer-events-auto absolute z-[27] flex h-4 min-w-4 -translate-y-1/2 items-center justify-center rounded-full px-0.5 font-sans text-[10px] leading-none font-semibold tabular-nums {marker.dashed
+      class="pointer-events-auto absolute z-[27] flex h-4 min-w-4 -translate-y-1/2 items-center justify-center {shape ===
+      'round'
+        ? 'rounded-full'
+        : 'rounded-sm'} px-0.5 font-sans text-[10px] leading-none font-semibold tabular-nums {marker.dashed
         ? 'border border-dashed border-slate-500 bg-white text-slate-700'
         : 'bg-slate-700 text-white'} {marker.current ? 'ring-2 ring-blue-500' : ''}"
       style:top="{offsetTop + (entry.line - 0.5) * lineHeight}rem"
@@ -61,7 +77,7 @@
       title={entry.steps.map((s) => `${s.index + 1}. ${s.title}`).join('\n')}
       onclick={(e) => {
         e.stopPropagation();
-        onSelect(marker.index);
+        onSelect(marker);
       }}
     >
       {marker.index + 1}{#if entry.steps.length > 1}<sup class="ml-px">+</sup>{/if}
