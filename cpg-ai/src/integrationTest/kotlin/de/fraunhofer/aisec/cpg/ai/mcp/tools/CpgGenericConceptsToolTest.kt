@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMOperation
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMProperty
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.literals
@@ -52,6 +53,8 @@ class CpgGenericConceptsToolTest {
 
     @BeforeEach
     fun setUp() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
         if (conceptsFile.exists()) conceptsFile.delete()
 
         val payload =

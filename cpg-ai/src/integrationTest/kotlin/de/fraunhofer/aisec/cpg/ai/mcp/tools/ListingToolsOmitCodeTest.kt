@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -44,15 +45,11 @@ import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 
-/**
- * Covers the bulk-listing code-omission change: `cpg_list_functions`/`cpg_list_calls` are for
- * finding candidates by name/signature, not for reading every returned item's full body, so they
- * should omit [FunctionInfo.code]/[CallInfo.code] - `cpg_get_node` remains the way to fetch full
- * details (code included) for a specific node once picked.
- */
-class BulkListingCodeOmissionTest {
+class ListingToolsOmitCodeTest {
     @BeforeEach
-    fun setAnalysisResult() {
+    fun analyzeSnippet() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
         val payload =
             CpgAnalyzePayload(
                 content =
@@ -63,7 +60,7 @@ class BulkListingCodeOmissionTest {
     }
 
     @Test
-    fun listFunctionsOmitsCode() =
+    fun listFunctionsReturnsFunctionsWithoutCode() =
         withClient(registerTools = { listFunctions() }) { client ->
             val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
             assertTrue(result.content.isNotEmpty(), "Should have function declarations")
@@ -75,7 +72,7 @@ class BulkListingCodeOmissionTest {
         }
 
     @Test
-    fun listCallsOmitsCode() =
+    fun listCallsReturnsCallsWithoutCode() =
         withClient(registerTools = { listCalls() }) { client ->
             val result = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertTrue(result.content.isNotEmpty(), "Should have call expressions")
@@ -87,7 +84,7 @@ class BulkListingCodeOmissionTest {
         }
 
     @Test
-    fun listCallsToOmitsCode() =
+    fun listCallsToReturnsCallsWithoutCode() =
         withClient(registerTools = { listCallsTo() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls_to", arguments = mapOf("name" to "hello"))
@@ -100,7 +97,7 @@ class BulkListingCodeOmissionTest {
         }
 
     @Test
-    fun getNodeStillReturnsCode() =
+    fun getNodeReturnsTheCodeOfAListedFunction() =
         withClient(
             registerTools = {
                 listFunctions()

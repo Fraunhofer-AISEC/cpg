@@ -27,13 +27,17 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_PROJECT_NAME
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
+import io.modelcontextprotocol.kotlin.sdk.client.Client
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import java.nio.file.Path
+import kotlin.io.path.createDirectory
+import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -43,13 +47,51 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.io.TempDir
 
 class CpgAnalysisSessionsTest {
 
     @BeforeEach
-    fun resetSessions() {
+    fun clearSessions() {
+        // The sessions are global, so drop the ones previous tests left behind
         analysisSessions.clear()
     }
+
+    @TempDir lateinit var tempDir: Path
+
+    /** Creates a project directory [name] containing a single Python file with [code]. */
+    private fun project(name: String, code: String): Path {
+        val dir = tempDir.resolve(name).createDirectory()
+        dir.resolve("main.py").writeText(code)
+        return dir
+    }
+
+    /** Analyzes [dir] via `cpg_analyze` and returns the name the project is identified by. */
+    private suspend fun Client.analyze(dir: Path): String {
+        val analysis = callTool(name = "cpg_analyze", arguments = mapOf("path" to dir.toString()))
+        val text = (analysis.content.firstOrNull() as? TextContent)?.text
+        assertNotNull(text)
+        return Json.decodeFromString<CpgAnalysisResult>(text).projectName
+    }
+
+    private fun CallToolResult.functionNames() =
+        content.map {
+            assertIs<TextContent>(it)
+            Json.decodeFromString<FunctionInfo>(it.text).name
+        }
+
+    private fun CallToolResult.text(): String {
+        val text = (content.firstOrNull() as? TextContent)?.text
+        assertNotNull(text)
+        return text
+    }
+
+    @Test
+    fun identifiesAnAnalyzedProjectByItsDirectoryName() =
+        withClient(registerTools = { addCpgAnalyzeTool() }) { client ->
+            assertEquals("first", client.analyze(project("first", "def foo():\n    print('X')")))
+            assertNotNull(getSession("first"))
+        }
 
     @Test
     fun routesToolCallsToTheNamedProject() =
@@ -59,152 +101,80 @@ class CpgAnalysisSessionsTest {
                 listFunctions()
             }
         ) { client ->
-            client.callTool(
-                name = "cpg_analyze",
-                arguments =
-                    mapOf(
-                        "projectName" to "first",
-                        "content" to "def foo():\n    print('X')",
-                        "extension" to "py",
-                    ),
-            )
-            val analysis =
-                client.callTool(
-                    name = "cpg_analyze",
-                    arguments =
-                        mapOf(
-                            "projectName" to "second",
-                            "content" to "def bar():\n    print('X')",
-                            "extension" to "py",
-                        ),
-                )
+            val first = client.analyze(project("first", "def foo():\n    print('X')"))
+            val second = client.analyze(project("second", "def bar():\n    print('X')"))
 
-            val analysisText = (analysis.content.firstOrNull() as? TextContent)?.text
-            assertNotNull(analysisText)
-            assertEquals(
-                setOf("first", "second"),
-                Json.decodeFromString<CpgAnalysisResults>(analysisText).projectNames.toSet(),
-            )
-
-            val firstResult =
-                client.callTool(
-                    name = "cpg_list_functions",
-                    arguments = mapOf("projectName" to "first"),
-                )
             val firstNames =
-                firstResult.content.map {
-                    assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).name
-                }
-            assertTrue(
-                firstNames.any { it.endsWith("foo") },
-                "expected foo in 'first', got $firstNames",
-            )
-            assertFalse(firstNames.any { it.endsWith("bar") }, "expected no bar in 'first'")
+                client
+                    .callTool(
+                        name = "cpg_list_functions",
+                        arguments = mapOf("projectName" to first),
+                    )
+                    .functionNames()
+            assertTrue(firstNames.any { it.endsWith("foo") }, "expected foo in '$first'")
+            assertFalse(firstNames.any { it.endsWith("bar") }, "expected no bar in '$first'")
 
-            val secondResult =
-                client.callTool(
-                    name = "cpg_list_functions",
-                    arguments = mapOf("projectName" to "second"),
-                )
             val secondNames =
-                secondResult.content.map {
-                    assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).name
-                }
-            assertTrue(
-                secondNames.any { it.endsWith("bar") },
-                "expected bar in 'second', got $secondNames",
-            )
-            assertFalse(secondNames.any { it.endsWith("foo") }, "expected no foo in 'second'")
+                client
+                    .callTool(
+                        name = "cpg_list_functions",
+                        arguments = mapOf("projectName" to second),
+                    )
+                    .functionNames()
+            assertTrue(secondNames.any { it.endsWith("bar") }, "expected bar in '$second'")
+            assertFalse(secondNames.any { it.endsWith("foo") }, "expected no foo in '$second'")
         }
 
     @Test
-    fun routesToolCallsWithoutAProjectNameToTheDefaultProject() =
+    fun routesToolCallsWithoutAProjectNameToTheOnlyProject() =
         withClient(
             registerTools = {
                 addCpgAnalyzeTool()
                 listFunctions()
             }
         ) { client ->
-            val analysis =
-                client.callTool(
-                    name = "cpg_analyze",
-                    arguments =
-                        mapOf("content" to "def foo():\n    print('X')", "extension" to "py"),
-                )
+            client.analyze(project("first", "def foo():\n    print('X')"))
 
-            val analysisText = (analysis.content.firstOrNull() as? TextContent)?.text
-            assertNotNull(analysisText)
-            assertEquals(
-                listOf(DEFAULT_PROJECT_NAME),
-                Json.decodeFromString<CpgAnalysisResults>(analysisText).projectNames,
-            )
-            assertNotNull(getSession())
-
-            val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
-            val functionNames =
-                result.content.map {
-                    assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).name
-                }
-            assertTrue(
-                functionNames.any { it.endsWith("foo") },
-                "expected foo in the unnamed result, got $functionNames",
-            )
+            val names =
+                client.callTool(name = "cpg_list_functions", arguments = emptyMap()).functionNames()
+            assertTrue(names.any { it.endsWith("foo") }, "expected foo, got $names")
         }
 
     @Test
-    fun reportsTheAnalyzedProjectsForAnUnknownProjectName() =
+    fun reportsTheAvailableProjectsForAnUnknownProjectName() =
         withClient(
             registerTools = {
                 addCpgAnalyzeTool()
                 listFunctions()
             }
         ) { client ->
-            client.callTool(
-                name = "cpg_analyze",
-                arguments =
-                    mapOf(
-                        "projectName" to "first",
-                        "content" to "def foo():\n    print('X')",
-                        "extension" to "py",
-                    ),
-            )
+            client.analyze(project("first", "def foo():\n    print('X')"))
 
-            val result =
-                client.callTool(
-                    name = "cpg_list_functions",
-                    arguments = mapOf("projectName" to "typo"),
-                )
-            val text = (result.content.firstOrNull() as? TextContent)?.text
-            assertNotNull(text)
-            assertContains(text, "No analysis result available for 'typo'.")
-            assertContains(text, "Analyzed projects: 'first'.")
+            val text =
+                client
+                    .callTool(
+                        name = "cpg_list_functions",
+                        arguments = mapOf("projectName" to "typo"),
+                    )
+                    .text()
+            assertContains(text, "Unknown project 'typo'.")
+            assertContains(text, "Available projects: 'first'.")
         }
 
     @Test
-    fun doesNotFallBackToANamedProjectWhenTheProjectNameIsOmitted() =
+    fun requiresAProjectNameWhenSeveralProjectsAreAnalyzed() =
         withClient(
             registerTools = {
                 addCpgAnalyzeTool()
                 listFunctions()
             }
         ) { client ->
-            client.callTool(
-                name = "cpg_analyze",
-                arguments =
-                    mapOf(
-                        "projectName" to "first",
-                        "content" to "def foo():\n    print('X')",
-                        "extension" to "py",
-                    ),
-            )
+            client.analyze(project("first", "def foo():\n    print('X')"))
+            client.analyze(project("second", "def bar():\n    print('X')"))
 
-            val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
-            val text = (result.content.firstOrNull() as? TextContent)?.text
-            assertNotNull(text)
-            assertContains(text, "No analysis result available.")
-            assertContains(text, "Analyzed projects: 'first'.")
+            val text = client.callTool(name = "cpg_list_functions", arguments = emptyMap()).text()
+            assertContains(text, "Several projects are analyzed, so 'projectName' is required.")
+            assertContains(text, "'first'")
+            assertContains(text, "'second'")
         }
 }

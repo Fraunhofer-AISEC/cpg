@@ -116,22 +116,23 @@ fun Server.suggestLLMConceptsAndOperations() {
         """
             .trimIndent()
 
-    this.addTool<LLMConcept>(
+    this.addTool<LLMConceptSuggestion>(
         name = "cpg_suggest_llm_concepts_and_operations",
         description = toolDescription,
-    ) { session: CpgSession, payload: LLMConcept ->
+    ) { session: CpgSession, payload: LLMConceptSuggestion ->
+        val concept = payload.concept
         val result = session.translationResult
-        val conceptNode = result.nodes.find { it.id.toString() == payload.nodeId }
+        val conceptNode = result.nodes.find { it.id.toString() == concept.nodeId }
         if (conceptNode == null) {
             return@addTool CallToolResult(
                 content =
                     listOf(
-                        TextContent("Node ${payload.nodeId} not found for concept ${payload.name}.")
+                        TextContent("Node ${concept.nodeId} not found for concept ${concept.name}.")
                     )
             )
         }
 
-        payload.operations.forEach { operation ->
+        concept.operations.forEach { operation ->
             val opNode = result.nodes.find { it.id.toString() == operation.nodeId }
             if (opNode == null) {
                 return@addTool CallToolResult(
@@ -145,7 +146,8 @@ fun Server.suggestLLMConceptsAndOperations() {
             }
         }
 
-        CallToolResult(content = listOf(TextContent(Json.encodeToString(payload))))
+        // Return the bare concept, which is what the console renders as a suggestion
+        CallToolResult(content = listOf(TextContent(Json.encodeToString(concept))))
     }
 }
 

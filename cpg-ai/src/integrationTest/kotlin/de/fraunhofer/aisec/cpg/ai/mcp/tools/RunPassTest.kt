@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgTranslate
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addRunPass
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
@@ -41,8 +41,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.BeforeEach
 
 class RunPassTest {
+
+    @BeforeEach
+    fun clearSessions() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
+    }
+
     private val payload =
         mapOf("content" to "def hello(x: int):\n    y = x\n    print(y)", "extension" to "py")
 
@@ -109,7 +117,7 @@ class RunPassTest {
                 )
             val text = (result.content.firstOrNull() as? TextContent)?.text
             assertNotNull(text)
-            val parsed = Json.decodeFromString<CpgAnalysisResults>(text)
+            val parsed = Json.decodeFromString<CpgAnalysisResult>(text)
             assertTrue(parsed.functions > 0)
         }
 
@@ -146,7 +154,7 @@ class RunPassTest {
             val result = client.callTool(name = "cpg_run_pass", arguments = request)
             val content = (result.content.firstOrNull() as? TextContent)?.text
             assertNotNull(content)
-            assertTrue(content.contains("No analysis result available."))
+            assertTrue(content.contains("No project has been analyzed yet."))
         }
 
     @Test

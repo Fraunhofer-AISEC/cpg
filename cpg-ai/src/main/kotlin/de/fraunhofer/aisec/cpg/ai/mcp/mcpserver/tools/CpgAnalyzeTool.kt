@@ -54,15 +54,14 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_PROJECT_NAME
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -119,20 +118,6 @@ import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 
-/**
- * The [TranslationResult] of the session stored under [DEFAULT_PROJECT_NAME], i.e. the one that
- * tool calls without a `projectName` operate on.
- *
- * This is the entry point for consumers outside this module (e.g. codyze-console) that run their
- * own analysis instead of going through [runCpgAnalyze]: assigning a result here registers it as a
- * [CpgSession], so that from then on every tool call is resolved through [analysisSessions] alone.
- */
-var globalAnalysisResult: TranslationResult?
-    get() = getSession()?.translationResult
-    set(value) {
-        value?.let { analysisSessions[DEFAULT_PROJECT_NAME] = CpgSession(it, it.ctx) }
-    }
-
 val toolDescription =
     """
         Analyze source code using CPG (Code Property Graph).
@@ -146,6 +131,10 @@ val toolDescription =
         project directory on the local filesystem (using 'path'). For project directories,
         the project structure is detected automatically, e.g., components based on Go
         modules or a C/C++ compilation database (compile_commands.json).
+
+        The result contains the 'projectName' the project is identified by, i.e. the name of the
+        given file or directory. Several projects can be kept side by side; pass this name as
+        'projectName' to the other tools to choose which one they operate on.
 
         Example usage:
         - "Analyze this code: print('hello')"
@@ -184,7 +173,7 @@ fun runCpgAnalyze(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
     cleanup: Boolean,
-): CpgAnalysisResults {
+): CpgAnalysisResult {
     val path =
         when {
             payload?.path != null -> {
@@ -234,7 +223,8 @@ fun runCpgAnalyze(
         }
     project.config.disableCleanup = !cleanup
 
-    val projectName = payload.projectName ?: DEFAULT_PROJECT_NAME
+    // The project is identified by the last segment of the analyzed path (see ProjectBuilder.name)
+    val projectName = project.name
 
     // If this project has been analyzed before, its session is replaced below, so clean up the
     // frontends it still holds on to.
@@ -243,14 +233,15 @@ fun runCpgAnalyze(
     }
 
     val result = project.analyze()
-    analysisSessions[projectName] = CpgSession(result, result.ctx)
+    registerSession(projectName, result)
 
     val allNodes = result.nodes
     val functions = result.functions
     val variables = result.variables
     val callExpressions = result.calls
 
-    return CpgAnalysisResults(
+    return CpgAnalysisResult(
+        projectName = projectName,
         totalNodes = allNodes.size,
         functions = functions.size,
         variables = variables.size,
@@ -260,7 +251,6 @@ fun runCpgAnalyze(
             project.detectionResults.flatMap { result ->
                 result.notes.map { "${result.detector}: $it" }
             },
-        projectNames = analysisSessions.keys.toList(),
     )
 }
 
@@ -287,6 +277,10 @@ fun Server.addCpgTranslate() {
         project directory on the local filesystem (using 'path'). For project directories,
         the project structure is detected automatically, e.g., components based on Go
         modules or a C/C++ compilation database (compile_commands.json).
+
+        The result contains the 'projectName' the project is identified by, i.e. the name of the
+        given file or directory. Several projects can be kept side by side; pass this name as
+        'projectName' to the other tools to choose which one they operate on.
 
         Example usage:
         - "Analyze this code: print('hello')"

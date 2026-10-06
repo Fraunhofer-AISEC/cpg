@@ -55,12 +55,13 @@ class CpgGetLastWriteToolTest {
             """
                 .trimIndent()
 
-        runCpgAnalyze(
-            CpgAnalyzePayload(content = source, extension = "py"),
-            runPasses = true,
-            cleanup = true,
-        )
-        val session = getSession()
+        val analysis =
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = source, extension = "py"),
+                runPasses = true,
+                cleanup = true,
+            )
+        val session = getSession(analysis.projectName)
         assertNotNull(session)
 
         val foo = session.translationResult.functions["foo"]
@@ -83,12 +84,13 @@ class CpgGetLastWriteToolTest {
     fun returnsEmptyListForALiteral() {
         val source = "def foo():\n    return 1"
 
-        runCpgAnalyze(
-            CpgAnalyzePayload(content = source, extension = "py"),
-            runPasses = true,
-            cleanup = true,
-        )
-        val session = getSession()
+        val analysis =
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = source, extension = "py"),
+                runPasses = true,
+                cleanup = true,
+            )
+        val session = getSession(analysis.projectName)
         assertNotNull(session)
 
         val foo = session.translationResult.functions["foo"]

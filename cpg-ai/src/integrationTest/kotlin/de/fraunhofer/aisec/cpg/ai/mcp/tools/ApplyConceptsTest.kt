@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.literals
@@ -42,6 +43,8 @@ import org.junit.jupiter.api.BeforeEach
 class ApplyConceptsTest {
     @BeforeEach
     fun setAnalysisResult() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
         val payload =
             CpgAnalyzePayload(
                 content =

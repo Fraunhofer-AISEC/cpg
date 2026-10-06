@@ -45,12 +45,13 @@ class RunPassForNodeTest {
     @Test
     fun runEOGPass() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
-            runPasses = false,
-            cleanup = true,
-        )
-        val session = getSession()
+        val analysis =
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
+                runPasses = false,
+                cleanup = true,
+            )
+        val session = getSession(analysis.projectName)
         assertNotNull(session)
 
         // Pick any node (i.e., the function declaration "hello")
@@ -73,12 +74,13 @@ class RunPassForNodeTest {
     @Test
     fun runsPassOnNearestParent() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
-            runPasses = false,
-            cleanup = true,
-        )
-        val session = getSession()
+        val analysis =
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
+                runPasses = false,
+                cleanup = true,
+            )
+        val session = getSession(analysis.projectName)
         assertNotNull(session)
 
         // Pick any node (i.e., the function declaration "hello")
@@ -101,12 +103,13 @@ class RunPassForNodeTest {
     @Test
     fun runsPassOnNearestChild() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
-            runPasses = false,
-            cleanup = true,
-        )
-        val session = getSession()
+        val analysis =
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
+                runPasses = false,
+                cleanup = true,
+            )
+        val session = getSession(analysis.projectName)
         assertNotNull(session)
 
         // Use a concrete TU-related pass on the parent
@@ -125,12 +128,13 @@ class RunPassForNodeTest {
     @Test
     fun runsPassOnCorrectNode() {
         // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
-            runPasses = false,
-            cleanup = true,
-        )
-        val session = getSession()
+        val analysis =
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
+                runPasses = false,
+                cleanup = true,
+            )
+        val session = getSession(analysis.projectName)
         assertNotNull(session)
 
         // Use a concrete TU-related pass on the parent
@@ -149,12 +153,13 @@ class RunPassForNodeTest {
     @Test
     fun returnsErrorWhenPassPrototypeCannotBeConstructed() {
         // Ensure analysis and context exist
-        runCpgAnalyze(
-            CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
-            runPasses = false,
-            cleanup = true,
-        )
-        val session = getSession()
+        val analysis =
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = "def hello():\n    print('X')", extension = "py"),
+                runPasses = false,
+                cleanup = true,
+            )
+        val session = getSession(analysis.projectName)
         assertNotNull(session)
 
         val someNode: Node = session.translationResult.nodes.first()

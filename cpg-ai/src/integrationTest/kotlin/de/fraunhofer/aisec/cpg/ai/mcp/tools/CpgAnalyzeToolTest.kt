@@ -27,8 +27,9 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResults
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -37,8 +38,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.BeforeEach
 
 class CpgAnalyzeToolTest {
+
+    @BeforeEach
+    fun clearSessions() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
+    }
+
     @Test
     fun cpgAnalyzeToolIntegrationTest() =
         withClient(registerTools = { addCpgAnalyzeTool() }) { client ->
@@ -58,7 +67,7 @@ class CpgAnalyzeToolTest {
             assertIs<TextContent>(resultContent)
             assertNotNull(resultContent.text, "Result content should not be null")
 
-            val analysisResult = Json.decodeFromString<CpgAnalysisResults>(resultContent.text)
+            val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultContent.text)
             assertEquals(2, analysisResult.functions)
             assertEquals(1, analysisResult.callExpressions)
         }

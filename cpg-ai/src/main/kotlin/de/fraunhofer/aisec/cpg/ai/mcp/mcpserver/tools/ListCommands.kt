@@ -54,7 +54,7 @@ fun Server.listFunctions() {
         """
             .trimIndent()
 
-    this.addTool<Unit>(name = "cpg_list_functions", description = toolDescription) {
+    this.addTool<CpgProjectPayload>(name = "cpg_list_functions", description = toolDescription) {
         session: CpgSession,
         _ ->
         CallToolResult(
@@ -78,7 +78,7 @@ fun Server.listRecords() {
         """
             .trimIndent()
 
-    this.addTool<Unit>(name = "cpg_list_records", description = toolDescription) {
+    this.addTool<CpgProjectPayload>(name = "cpg_list_records", description = toolDescription) {
         session: CpgSession,
         _ ->
         CallToolResult(
@@ -94,9 +94,10 @@ fun Server.listConceptsAndOperations() {
     val toolDescription =
         "This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph."
 
-    this.addTool<Unit>(name = "cpg_list_concepts_and_operations", description = toolDescription) {
-        session: CpgSession,
-        _ ->
+    this.addTool<CpgProjectPayload>(
+        name = "cpg_list_concepts_and_operations",
+        description = toolDescription,
+    ) { session: CpgSession, _ ->
         val concepts =
             session.translationResult.allChildrenWithOverlays<Concept>().map {
                 TextContent(it.toJson())
@@ -121,7 +122,7 @@ fun Server.listCalls() {
         """
             .trimIndent()
 
-    this.addTool<Unit>(name = "cpg_list_calls", description = toolDescription) {
+    this.addTool<CpgProjectPayload>(name = "cpg_list_calls", description = toolDescription) {
         session: CpgSession,
         _ ->
         CallToolResult(

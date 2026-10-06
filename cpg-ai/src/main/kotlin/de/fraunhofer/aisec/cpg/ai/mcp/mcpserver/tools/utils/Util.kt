@@ -57,7 +57,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -68,10 +67,11 @@ import kotlinx.serialization.json.putJsonObject
  * Registers a [Tool] to the MCP [Server]. The tool's input schema is automatically generated from
  * the reified type parameter [T] using reflection. The handler function receives the [CpgSession]
  * and the deserialized input of type [T] (see [runOnSession]), and must return a [CallToolResult]
- * with the output content. The [description] of the tool is automatically extended with parameter
- * information from the schema, so do NOT add this information to the description yourself
+ * with the output content. The session is the one of the project named by the payload's
+ * [HasProjectNamePayload.projectName]. The [description] of the tool is automatically extended with
+ * parameter information from the schema, so do NOT add this information to the description yourself
  */
-inline fun <reified T> Server.addTool(
+inline fun <reified T : HasProjectNamePayload> Server.addTool(
     name: String,
     description: String,
     title: String? = null,
@@ -80,18 +80,7 @@ inline fun <reified T> Server.addTool(
     meta: JsonObject? = null,
     noinline handler: (CpgSession, T) -> CallToolResult,
 ) {
-    val baseSchema = T::class.toSchema()
-    val properties = buildJsonObject {
-        baseSchema.properties?.forEach { (k, v) -> put(k, v) }
-        putJsonObject("projectName") {
-            put("type", "string")
-            put(
-                "description",
-                "The name identifying which analyzed project this tool should operate on. If omitted, the tool operates on the project analyzed as 'default'.",
-            )
-        }
-    }
-    val inputSchema = ToolSchema(properties = properties, required = baseSchema.required)
+    val inputSchema = T::class.toSchema()
     val parameters =
         inputSchema.properties
             ?.map { (k, v) ->
@@ -118,10 +107,7 @@ inline fun <reified T> Server.addTool(
                     content = listOf(TextContent("Invalid or missing payload for $name tool."))
                 )
             }
-        val projectName = args["projectName"]?.jsonPrimitive?.contentOrNull
-        ToolCall(projectName, payload).runOnSession { session, call ->
-            handler(session, call.payload)
-        }
+        payload.runOnSession(handler)
     }
 }
 
@@ -264,6 +250,9 @@ inline fun <reified T> JsonObject.toObject() =
  * - LOW_AVAILABLE: The CPG has been analyzed and low-level information is available.
  * - MEDIUM_AVAILABLE: The CPG has been analyzed and medium-level information is available.
  * - HIGH_AVAILABLE: The CPG has been analyzed and high-level information is available.
+ *
+ * Note: There is no existing logic for the analysis status. Depending on the different use cases or
+ * requirements there is an appropriate solution to be implemented.
  */
 enum class CpgSessionStatus {
     ANALYSIS,
@@ -273,6 +262,11 @@ enum class CpgSessionStatus {
     HIGH_AVAILABLE,
 }
 
+/**
+ * Everything the MCP tools need to operate on one analyzed project: its [translationResult], the
+ * [translationContext] to run further passes with, and which passes [nodeToPass] already ran on
+ * which nodes. Sessions are kept in [analysisSessions].
+ */
 open class CpgSession(
     val translationResult: TranslationResult,
     val translationContext: TranslationContext,
@@ -280,45 +274,44 @@ open class CpgSession(
     var status: CpgSessionStatus = CpgSessionStatus.ANALYSIS,
 )
 
-const val DEFAULT_PROJECT_NAME = "default"
-
 /**
  * Holds one [CpgSession] per analyzed project, keyed by the project name it was analyzed under.
- * This is the single place a session lives in: everything that has a [TranslationResult] to offer
- * turns it into a [CpgSession] here first (under [DEFAULT_PROJECT_NAME] if it has no name for it),
- * so that resolving a tool call never has to look anywhere else.
- *
  * Resolve a session through [getSession] rather than indexing into this map, so that a missing
- * `projectName` consistently means [DEFAULT_PROJECT_NAME].
+ * `projectName` is handled consistently.
  */
 val analysisSessions = ConcurrentHashMap<String, CpgSession>()
 
 /**
  * Implemented by a tool call payload that carries the name of the analyzed project the call should
- * operate on. This is the extension point for code outside this module: declare a payload class
- * with a `projectName` and hand it to [runOnSession] to have the matching [CpgSession] resolved,
- * without going through [addTool]'s schema injection.
+ * operate on. Every payload registered via [addTool] implements it, and code outside this module
+ * can extend it (e.g. with further context of its own) and hand such a payload to [runOnSession] to
+ * have the matching [CpgSession] resolved.
  */
 interface HasProjectNamePayload {
     val projectName: String?
 }
 
 /**
- * Adapts a payload of arbitrary type [T], one that does not implement [HasProjectNamePayload]
- * itself
+ * Registers [result] as the [CpgSession] of the project [projectName], replacing any session
+ * previously registered under that name. This is the entry point for consumers that run their own
+ * analysis (e.g. codyze-console) instead of going through `cpg_analyze`.
  */
-class ToolCall<T>(override val projectName: String?, val payload: T) : HasProjectNamePayload
+fun registerSession(projectName: String, result: TranslationResult) {
+    analysisSessions[projectName] = CpgSession(result, result.ctx)
+}
 
 /**
- * Returns the [CpgSession] analyzed under [projectName], or the one under [DEFAULT_PROJECT_NAME] if
- * no name was given.
+ * Returns the [CpgSession] analyzed under [projectName]. If no name is given, the only analyzed
+ * session is returned, or `null` if there is none or more than one.
  */
 fun getSession(projectName: String? = null): CpgSession? =
-    analysisSessions[projectName ?: DEFAULT_PROJECT_NAME]
+    if (projectName != null) analysisSessions[projectName]
+    else analysisSessions.values.singleOrNull()
 
 /**
- * Runs [query] on the CPG this payload addresses, i.e. on the [CpgSession] analyzed under
- * [HasProjectNamePayload.projectName].
+ * Runs [query] on the CPG this payload addresses, i.e. on the [CpgSession] resolved for
+ * [HasProjectNamePayload.projectName] (see [getSession]). If there is no such session, or [query]
+ * throws, an error result is returned instead.
  */
 fun <T : HasProjectNamePayload> T.runOnSession(
     query: (CpgSession, T) -> CallToolResult
@@ -326,21 +319,16 @@ fun <T : HasProjectNamePayload> T.runOnSession(
     return try {
         val session = getSession(projectName)
         if (session == null) {
-            val analyzed = analysisSessions.keys
-            val available =
-                if (analyzed.isEmpty()) ""
-                else " Analyzed projects: ${analyzed.joinToString { "'$it'" }}."
-            return CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            if (projectName != null)
-                                "No analysis result available for '$projectName'.$available Please analyze it first using cpg_analyze."
-                            else
-                                "No analysis result available.$available Please analyze your code first using cpg_analyze, or pass one of the projects above as 'projectName'."
-                        )
-                    )
-            )
+            val available = "Available projects: ${analysisSessions.keys.joinToString { "'$it'" }}."
+            val message =
+                when {
+                    analysisSessions.isEmpty() ->
+                        "No project has been analyzed yet. Please analyze one first using cpg_analyze."
+                    projectName != null -> "Unknown project '$projectName'. $available"
+                    else ->
+                        "Several projects are analyzed, so 'projectName' is required. $available"
+                }
+            return CallToolResult(content = listOf(TextContent(message)))
         }
         query(session, this)
     } catch (e: Exception) {
