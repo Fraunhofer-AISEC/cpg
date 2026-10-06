@@ -31,8 +31,9 @@ parentheses and calls. Every other expression kind is translated into a `Problem
 
 * `Go.translate_correct`: **semantic preservation**. Evaluating the CPG produced for a Go
   expression yields exactly the value (or failure) that the Go semantics gives the expression,
-  provided that variables and functions agree up to name resolution (`EnvAgree`) and the
-  predeclared identifiers `true`, `false`, `nil`, `iota`, `new` and `make` are not shadowed.
+  provided that variables and functions agree up to name resolution (`EnvAgree`) and that the
+  context correctly states which of the predeclared identifiers `true`, `false`, `nil`, `iota`,
+  `new` and `make` are shadowed by a declaration.
 * `Go.translate_loc`: every translated node carries the location of its source node.
 * Totality and termination of the translation (enforced by Lean for every definition).
 
@@ -60,6 +61,24 @@ Writing the specification revealed the following bugs in the Go frontend (all fi
 * The Go parser, and the (de)serialization between it, Lean and the Kotlin node classes.
 * The modelling choices: integers are mathematical integers (no overflow), and the semantics of
   the CPG are given by `Cpg/Semantics.lean`.
+
+## Running on Go files
+
+`lake build` also produces `cpg-translate`, which reads translation requests from standard input and
+writes the translated CPG expressions to standard output. Both use canonical S-expressions
+(`CpgVerified/Wire`).
+
+`VerifiedTranslationTest` in `cpg-language-go` uses it to compare the verified translation with the
+Go frontend: it parses every Go file in the frontend's test resources, sends each value expression
+together with its context (name scope, imported packages, `iota`, shadowed predeclared identifiers)
+to `cpg-translate`, and compares the result with the CPG nodes that the Go frontend produces at the
+same location (without passes). Sub-expressions outside the verified subset are skipped. The test is
+skipped if `cpg-translate` has not been built.
+
+```bash
+cd cpg-verified && lake build && cd ..
+./gradlew :cpg-language-go:test --tests "*VerifiedTranslationTest*"
+```
 
 ## Building
 

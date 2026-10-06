@@ -32,11 +32,13 @@ structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
   vars : ∀ name, cenv.vars (resolveName ctx name) = genv.vars name
   /-- A call of `resolveName ctx name` calls the Go function `name`. -/
   funcs : ∀ name, cenv.funcs (resolveName ctx name) = genv.funcs name
-  /-- The predeclared constants are not shadowed. -/
-  constsUnshadowed : ∀ name ∈ ["true", "false", "nil", "iota"],
+  /-- Predeclared constants that the context does not mark as shadowed are not declared. -/
+  constsUnshadowed : ∀ name ∈ ["true", "false", "nil", "iota"], name ∉ ctx.shadowed →
     genv.vars name = none ∧ genv.funcs name = none
-  /-- The built-in allocation functions are not shadowed. -/
-  allocUnshadowed : genv.funcs "new" = none ∧ genv.funcs "make" = none
+  /-- Built-in allocation functions that the context does not mark as shadowed are not declared. -/
+  allocUnshadowed : ∀ name ∈ ["new", "make"], name ∉ ctx.shadowed → genv.funcs name = none
+  /-- A shadowed predeclared identifier refers to its declaration, never to the predeclared value. -/
+  shadowedDeclared : ∀ name ∈ ctx.shadowed, genv.vars name = none → predeclared ctx.iota name = none
 
 /-- Every strict Go binary operator means the same as the CPG operator code it is mapped to. -/
 theorem evalBinaryOp_token (op : BinaryOp) (hand : op ≠ .land) (hor : op ≠ .lor) (a b : Value) :
@@ -76,51 +78,39 @@ theorem translateIdent_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     (translateIdent ctx span name).eval semantics cenv
       = (Expr.ident span name).eval ctx.iota genv := by
   unfold translateIdent
+  by_cases hs : name ∈ ctx.shadowed
+  · simp only [hs, ite_true, Cpg.Expr.eval, Expr.eval, h.vars]
+    cases hv : genv.vars name
+    · simp [h.shadowedDeclared name hs hv]
+    · rfl
+  simp only [hs, ite_false]
   split
-  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "true" (by simp)).1, predeclared]
-  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "false" (by simp)).1, predeclared]
-  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "nil" (by simp)).1, predeclared]
+  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "true" (by simp) hs).1, predeclared]
+  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "false" (by simp) hs).1, predeclared]
+  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "nil" (by simp) hs).1, predeclared]
   · split <;>
-      simp_all [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "iota" (by simp)).1, predeclared]
+      simp_all [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "iota" (by simp) hs).1, predeclared]
   · rename_i h1 h2 h3 h4
     have hp := predeclared_other ctx.iota name (by simp_all)
     simp only [Cpg.Expr.eval, Expr.eval, h.vars, hp]
     split <;> simp_all
 
-/-- Calling a translated callee behaves like calling the Go callee. -/
-theorem call_callee_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
-    (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (fn : Expr) (args : List Cpg.Expr)
-    (vs : Option (List Value)) (hargs : Cpg.Expr.evalList semantics cenv args = vs)
-    (halloc : isAllocation fn = false) :
-    (Cpg.Expr.call span (translate ctx fn) args).eval semantics cenv
-      = (match fn.unparen with
-        | .ident _ name => do
-          let f ← genv.funcs name
-          f (← vs)
-        | _ => none) := by
-  rw [← translate_unparen]
-  unfold isAllocation at halloc
-  generalize hu : fn.unparen = u at halloc ⊢
-  cases u with
-  | ident s name =>
-    simp only [translate]
-    unfold translateIdent
-    split
-    · simp [Cpg.Expr.eval, (h.constsUnshadowed "true" (by simp)).2]
-    · simp [Cpg.Expr.eval, (h.constsUnshadowed "false" (by simp)).2]
-    · simp [Cpg.Expr.eval, (h.constsUnshadowed "nil" (by simp)).2]
-    · split <;> simp [Cpg.Expr.eval, (h.constsUnshadowed "iota" (by simp)).2]
-    · simp only [Cpg.Expr.eval, h.funcs, hargs]
-  | paren s x => exact absurd hu (unparen_not_paren s x fn)
-  | basicLit s k v =>
-    simp only [translate]
-    split <;> simp [Cpg.Expr.eval]
-  | binary => simp [translate, Cpg.Expr.eval]
-  | unary => simp [translate, Cpg.Expr.eval]
-  | call s fn' args' =>
-    simp only [translate]
-    split <;> simp [Cpg.Expr.eval]
-  | unsupported => simp [translate, Cpg.Expr.eval]
+/-- Calling a translated identifier calls the same function as in Go. -/
+theorem call_ident_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span s : Cpg.Span) (name : String) (args : List Cpg.Expr)
+    (vs : Option (List Value)) (hargs : Cpg.Expr.evalList semantics cenv args = vs) :
+    (Cpg.Expr.call span (translateIdent ctx s name) args).eval semantics cenv
+      = (do let f ← genv.funcs name; f (← vs)) := by
+  unfold translateIdent
+  by_cases hs : name ∈ ctx.shadowed
+  · simp only [hs, ite_true, Cpg.Expr.eval, h.funcs, hargs]
+  simp only [hs, ite_false]
+  split
+  · simp [Cpg.Expr.eval, (h.constsUnshadowed "true" (by simp) hs).2]
+  · simp [Cpg.Expr.eval, (h.constsUnshadowed "false" (by simp) hs).2]
+  · simp [Cpg.Expr.eval, (h.constsUnshadowed "nil" (by simp) hs).2]
+  · split <;> simp [Cpg.Expr.eval, (h.constsUnshadowed "iota" (by simp) hs).2]
+  · simp only [Cpg.Expr.eval, h.funcs, hargs]
 
 mutual
 
@@ -162,19 +152,23 @@ theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     exact translate_correct ctx genv cenv h x
   | .call span fn args => by
     have ihargs := translateList_correct ctx genv cenv h args
-    simp only [translate, Expr.eval]
-    split
-    · rename_i halloc
-      unfold isAllocation at halloc
-      simp only [Cpg.Expr.eval]
-      split at halloc
-      · rename_i s name hu
-        rw [hu]
-        have : name = "new" ∨ name = "make" := by simpa using halloc
-        rcases this with rfl | rfl <;> simp [h.allocUnshadowed]
-      · contradiction
-    · rename_i halloc
-      exact call_callee_correct ctx genv cenv h span fn _ _ ihargs (by simpa using halloc)
+    simp only [translate, Expr.eval, calleeName?]
+    rw [← translate_unparen ctx fn]
+    generalize hfn : fn.unparen = u
+    cases u with
+    | ident s name =>
+      simp only
+      split
+      · rename_i halloc
+        simp only [Bool.and_eq_true, Bool.not_eq_true'] at halloc
+        obtain ⟨hname, hs⟩ := halloc
+        have hs' : name ∉ ctx.shadowed := by simpa using hs
+        have hf := h.allocUnshadowed name (by simpa using hname) hs'
+        simp [Cpg.Expr.eval, hf]
+      · simp only [translate]
+        exact call_ident_correct ctx genv cenv h span s name _ _ ihargs
+    | paren s x => exact absurd hfn (unparen_not_paren s x fn)
+    | _ => simp [Cpg.Expr.eval]
   | .unsupported span goType => by simp [translate, Cpg.Expr.eval, Expr.eval]
 
 /-- Semantic preservation for lists of expressions. -/
@@ -194,12 +188,16 @@ theorem translate_loc (ctx : Ctx) : ∀ e : Expr, (translate ctx e).loc = e.unpa
   | .basicLit .. => by simp only [translate]; split <;> rfl
   | .ident span name => by
     simp only [translate, translateIdent]
+    split
+    · rfl
     split <;> try rfl
     split <;> rfl
   | .binary .. | .unary .. | .unsupported .. => rfl
   | .paren _ x => by simpa [translate, Expr.unparen] using translate_loc ctx x
   | .call .. => by
     simp only [translate]
-    split <;> rfl
+    split
+    · split <;> rfl
+    · rfl
 
 end Go

@@ -1,5 +1,6 @@
 # Builds the Lean project in cpg-verified, which checks all proofs, runs its tests and makes sure
-# that the main theorems only depend on Lean's standard axioms.
+# that the main theorems only depend on Lean's standard axioms. Afterward, the verified translation is
+# run on the Go frontend's test files and compared with the output of the Go frontend.
 name: verified
 
 on:
@@ -9,11 +10,13 @@ on:
       - main
     paths:
       - "cpg-verified/**"
+      - "cpg-language-go/**"
       - ".github/workflows/verified.yml"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "cpg-verified/**"
+      - "cpg-language-go/**"
       - ".github/workflows/verified.yml"
 
 permissions:
@@ -37,3 +40,22 @@ jobs:
             echo "::error::A main theorem depends on sorry or native_decide"
             exit 1
           fi
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "corretto"
+          java-version: "21"
+      - name: Compare with the Go frontend
+        run: |
+          # Only the Go frontend is needed
+          echo "enableGoFrontend=true" > gradle.properties
+          ./gradlew :cpg-language-go:test --tests "*VerifiedTranslationTest*" --console=plain
+      - name: Report comparison
+        if: always()
+        run: |
+          {
+            echo '```'
+            sed -n '/<system-out>/,/<\/system-out>/p' \
+              cpg-language-go/build/test-results/test/TEST-*VerifiedTranslationTest.xml \
+              | grep -E "requests,|not found:|MISMATCH|TOTAL" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

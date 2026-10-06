@@ -79,6 +79,12 @@ def tests : List (String × Bool) := [
   ("true is a named literal",
     translate ctx (ident (sp 0 4) "true")
       == .literal (sp 0 4) (.bool true) (.primitive "bool") (some "true")),
+  ("shadowed true is a reference",
+    translate { ctx with shadowed := ["true"] } (ident (sp 0 4) "true")
+      == .reference (sp 0 4) "main.true"),
+  ("shadowed make is a regular call",
+    translate { ctx with shadowed := ["make"] } (.call (sp 0 7) (ident (sp 0 4) "make") [])
+      == .call (sp 0 7) (.reference (sp 0 4) "make") []),
   ("iota inside a constant declaration",
     translate constCtx (ident (sp 0 4) "iota")
       == .literal (sp 0 4) (.int 2) (.primitive "int") (some "iota")),
