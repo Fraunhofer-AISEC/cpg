@@ -3,7 +3,12 @@
   import type { TranslationUnitJSON, NodeJSON, ConceptSuggestionItem } from '$lib/types';
   import { TabNavigation } from '$lib/components/navigation';
   import { CollapsiblePanel } from '$lib/components/ui';
-  import { NodeTable, NodeOverlays, FindingOverlay, ConceptChecklist } from '$lib/components/analysis';
+  import {
+    NodeTable,
+    NodeOverlays,
+    FindingOverlay,
+    ConceptChecklist
+  } from '$lib/components/analysis';
   import NodeInspector from './inspector/NodeInspector.svelte';
   import CodeAnnotations from './CodeAnnotations.svelte';
   import { type Lens, lenses, getAnnotations } from '$lib/annotations';
@@ -46,7 +51,7 @@
     '.tsx': typescript,
     '.go': go,
     '.rs': rust,
-    '.rb': ruby,
+    '.rb': ruby
   };
 
   function getLanguage(fileName: string) {
@@ -93,7 +98,29 @@
     onInspect?: () => void;
   }
 
-  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, suggestions = $bindable([]), suggestionNodes, onApplySuggestions, componentName, selectedNodeId, onNavigateToNode, nodeActions, panelPosition = 'right', focus: sharedFocus, externalInspector = false, onInspect }: Props = $props();
+  let {
+    translationUnit,
+    astNodes,
+    overlayNodes,
+    conceptGroups,
+    highlightLine,
+    finding,
+    findingKind,
+    headerActions,
+    nodePanelCollapsed = $bindable(false),
+    onClose,
+    suggestions = $bindable([]),
+    suggestionNodes,
+    onApplySuggestions,
+    componentName,
+    selectedNodeId,
+    onNavigateToNode,
+    nodeActions,
+    panelPosition = 'right',
+    focus: sharedFocus,
+    externalInspector = false,
+    onInspect
+  }: Props = $props();
 
   // The focus and the placement of the inspector never change for a viewer
   // svelte-ignore state_referenced_locally
@@ -103,11 +130,7 @@
 
   let activeTab = $state(inspectorInPanel ? 'inspector' : 'astNodes');
   let nodes = $derived(
-    flattenNodes(
-      activeTab === 'overlayNodes' ? overlayNodes : astNodes,
-      '',
-      translationUnit.id
-    )
+    flattenNodes(activeTab === 'overlayNodes' ? overlayNodes : astNodes, '', translationUnit.id)
   );
   let highlightedNode = $state<NodeJSON | null>(null);
   let codeContainerElement = $state<HTMLDivElement>();
@@ -124,7 +147,7 @@
   let activeSuggestionNodeId = $state<string | null>(null);
 
   $effect(() => {
-    if (!tabs.some(t => t.id === activeTab)) {
+    if (!tabs.some((t) => t.id === activeTab)) {
       activeTab = tabs[0]?.id ?? 'astNodes';
     }
   });
@@ -285,8 +308,8 @@
     const suggestionNode = suggestionNodes?.get(nodeId);
     return (
       (suggestionNode?.translationUnitId === translationUnit.id ? suggestionNode : undefined) ??
-      astNodes.find(n => n.id === nodeId) ??
-      overlayNodes.find(n => n.id === nodeId)
+      astNodes.find((n) => n.id === nodeId) ??
+      overlayNodes.find((n) => n.id === nodeId)
     );
   }
 
@@ -358,10 +381,15 @@
   });
 </script>
 
-<div class="flex h-full w-full overflow-hidden rounded-[inherit]" class:flex-col={panelPosition === 'bottom'}>
+<div
+  class="flex h-full w-full overflow-hidden rounded-[inherit]"
+  class:flex-col={panelPosition === 'bottom'}
+>
   <!-- Code display -->
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-    <div class="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
+    <div
+      class="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2"
+    >
       <div class="flex min-w-0 items-center gap-3">
         <div class="shrink-0 font-mono text-xs text-gray-500">{translationUnit.name}</div>
         {#if fileSummary}
@@ -371,10 +399,16 @@
               <span
                 class="text-orange-600"
                 title="Calls to functions that are not part of the analysed code"
-              >· {fileSummary.external} external calls ({fileSummary.topExternal.join(', ')})</span>
+                >· {fileSummary.external} external calls ({fileSummary.topExternal.join(
+                  ', '
+                )})</span
+              >
             {/if}
             {#if fileSummary.unresolved > 0}
-              <span class="text-red-600" title="Calls whose target the analysis could not determine">
+              <span
+                class="text-red-600"
+                title="Calls whose target the analysis could not determine"
+              >
                 · ⚠ {fileSummary.unresolved} unresolved
               </span>
             {/if}
@@ -386,7 +420,10 @@
       </div>
       <div class="flex shrink-0 items-center gap-2">
         {#if annotations}
-          <label class="flex items-center gap-1 text-[11px] text-gray-500" title="Color the functions by">
+          <label
+            class="flex items-center gap-1 text-[11px] text-gray-500"
+            title="Color the functions by"
+          >
             Lens
             <select
               bind:value={lens}
@@ -404,11 +441,17 @@
         {#if onClose}
           <button
             onclick={onClose}
-            class="flex items-center justify-center w-8 h-8 rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
+            class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
             type="button"
             aria-label="Close panel"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <svg
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -416,10 +459,14 @@
       </div>
     </div>
 
-    <div class="relative flex-1 overflow-auto" style="transform: translateZ(0);" bind:this={codeContainerElement}>
+    <div
+      class="relative flex-1 overflow-auto"
+      style="transform: translateZ(0);"
+      bind:this={codeContainerElement}
+    >
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <div
-        class="relative inline-block min-w-full w-max align-top"
+        class="relative inline-block w-max min-w-full align-top"
         class:cursor-pointer={!!componentName}
         onclick={handleCodeClick}
       >
@@ -440,7 +487,13 @@
         </div>
 
         {#if finding && highlightLine}
-          <FindingOverlay {finding} kind={findingKind} line={highlightLine} {lineHeight} {offsetTop} />
+          <FindingOverlay
+            {finding}
+            kind={findingKind}
+            line={highlightLine}
+            {lineHeight}
+            {offsetTop}
+          />
         {/if}
 
         {#if annotations}
@@ -529,7 +582,9 @@
           {nodes}
           bind:highlightedNode
           nodeClick={(node) =>
-            componentName ? inspect(() => getNodeDetails(node.id), true) : scrollToLine(node.startLine)}
+            componentName
+              ? inspect(() => getNodeDetails(node.id), true)
+              : scrollToLine(node.startLine)}
         />
       </div>
     {/if}
@@ -577,5 +632,9 @@
 </div>
 
 {#if showConceptDialog && conceptTarget}
-  <AddConceptDialog bind:showDialog={showConceptDialog} node={conceptTarget} conceptGroups={conceptGroups || []} />
+  <AddConceptDialog
+    bind:showDialog={showConceptDialog}
+    node={conceptTarget}
+    conceptGroups={conceptGroups || []}
+  />
 {/if}
