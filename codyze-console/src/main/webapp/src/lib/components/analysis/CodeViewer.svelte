@@ -591,64 +591,68 @@
 <div class="flex h-full w-full overflow-hidden rounded-[inherit]">
   <!-- Code display -->
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-    <div
-      class="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2"
-    >
-      <div class="flex min-w-0 items-center gap-3">
-        {#if headerStart}
-          {@render headerStart()}
-        {:else}
-          <div class="shrink-0 font-mono text-xs text-gray-500">{translationUnit.name}</div>
-        {/if}
-        {#if fileSummary}
-          <span class="shrink-0 text-[11px] text-gray-400">{fileSummary.functions} functions</span>
-        {/if}
-      </div>
-      <div class="flex shrink-0 items-center gap-2">
-        {#if annotations}
-          <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
-          <div class="flex items-center gap-1" role="group" aria-label="Layers">
-            {#each shownLayers as layer (layer.id)}
-              {@const summary = layerSummary(layer.id)}
+    <!-- Header: where the file is, and below it the layer toggles -->
+    <div class="shrink-0 border-b border-gray-200 bg-white px-4 py-1.5">
+      <div class="flex min-h-6 items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-3">
+          {#if headerStart}
+            {@render headerStart()}
+          {:else}
+            <div class="shrink-0 font-mono text-xs text-gray-500">{translationUnit.name}</div>
+          {/if}
+          {#if fileSummary}
+            <span class="shrink-0 text-[11px] text-gray-400">{fileSummary.functions} functions</span
+            >
+          {/if}
+        </div>
+        {#if headerActions || onClose}
+          <div class="flex shrink-0 items-center gap-2">
+            {#if headerActions}
+              {@render headerActions()}
+            {/if}
+            {#if onClose}
               <button
+                onclick={onClose}
+                class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
                 type="button"
-                class="flex items-center gap-1 rounded-full border px-2 py-px text-[11px] {layers
-                  .visible[layer.id]
-                  ? layer.activeClass
-                  : 'border-gray-200 text-gray-400 hover:text-gray-600'}"
-                aria-pressed={layers.visible[layer.id]}
-                title="{summary.title}. Click to {layers.visible[layer.id] ? 'hide' : 'show'}."
-                onclick={() => layers.toggle(layer.id)}
+                aria-label="Close panel"
               >
-                <span>{layer.icon}</span>
-                {layer.label}
-                <span class="tabular-nums opacity-70">{summary.count}</span>
+                <svg
+                  class="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  stroke-width="2"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            {/each}
+            {/if}
           </div>
         {/if}
-        {#if headerActions}
-          {@render headerActions()}
-        {/if}
-        {#if onClose}
-          <button
-            onclick={onClose}
-            class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
-            type="button"
-            aria-label="Close panel"
-          >
-            <svg
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              stroke-width="2"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        {/if}
       </div>
+      {#if annotations}
+        <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
+        <div class="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label="Layers">
+          {#each shownLayers as layer (layer.id)}
+            {@const summary = layerSummary(layer.id)}
+            <button
+              type="button"
+              class="flex items-center gap-1 rounded-full border px-2 py-px text-[11px] {layers
+                .visible[layer.id]
+                ? layer.activeClass
+                : 'border-gray-200 text-gray-400 hover:text-gray-600'}"
+              aria-pressed={layers.visible[layer.id]}
+              title="{summary.title}. Click to {layers.visible[layer.id] ? 'hide' : 'show'}."
+              onclick={() => layers.toggle(layer.id)}
+            >
+              <span>{layer.icon}</span>
+              {layer.label}
+              <span class="tabular-nums opacity-70">{summary.count}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
 
     <div class="relative flex min-h-0 flex-1" bind:this={codeAreaElement}>
