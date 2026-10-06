@@ -150,13 +150,15 @@ mcp.serverUrl = "http://localhost:8081/mcp"
 - API keys are never stored in the file: `apiKeyEnv` names the environment variable to read.
 - The model's context window is `contextLength` if set, else `max_model_len` reported by the server's
   `/v1/models` (vLLM), else a conservative 128k default. It drives history compression and
-  oversized-result truncation, so set it explicitly for servers that do not report it.
+  oversized-result truncation - per request, for the model that request uses - so set it
+  explicitly for servers that do not report it.
 - Optional `llm.generation { temperature, maxTokens, reasoningEffort, frequencyPenalty,
   presencePenalty, topP, stop }` sets the generation parameters of every call (see the example
   config). `temperature` and `maxTokens` apply to every client; the rest only to OpenAI-compatible
   ones. An invalid `reasoningEffort` fails at startup, naming the accepted values. Embedders can
   also pass them as `ChatService` constructor arguments.
-- Optional per client: `requestTimeoutMillis` (request and socket timeout of LLM calls).
+- Optional per OpenAI-compatible client: `requestTimeoutMillis` (request and socket timeout of LLM
+  calls; not used for `gemini`).
 
 ### Using it
 
@@ -176,6 +178,10 @@ chat.chat(
 chat.evictSession("batch-1")         // free the session's history when you are done
 chat.close()
 ```
+
+`close()` closes the `HttpClient` and `LlmProviderConfig` the service was created with, including
+the executors the config built: one per client and model, shared by all chats. A host that shares
+one `LlmProviderConfig` between several services closes it through the last of them.
 
 `chat()` returns a `Flow<String>` of JSON events, each with a `type`:
 
@@ -221,8 +227,8 @@ prompt. The model "activates" a skill by reading its `SKILL.md` with `__read_fil
 (`__list_directory__` is also available).
 
 Those two file tools are the **only** file access the model gets, and they are jailed to
-`.agents/skills/`: any other path - including `../` escapes - is rejected. The agent can otherwise
-only reason through the CPG.
+`.agents/skills/`: any other path - including `../` escapes and symlinks that point outside it - is
+rejected. The agent can otherwise only reason through the CPG.
 
 ## Extending and embedding
 
@@ -289,8 +295,11 @@ The graph is not thread-safe, so tool calls go through `CpgLock`, a read/write l
   `cpg_run_pass` and `cpg_add_llm_concept_and_operations`. `cpg_analyze` and `cpg_translate` take it
   for the whole analysis, since they replace the graph. These are the tools marked *graph* in the
   *Writes* column above. While one runs, every other call waits.
-- `cpg_add_or_update_llm_concept` only writes `concepts.yaml` (atomically, behind its own small lock)
-  and does not wait for graph readers.
+- Tools registered with `addToolWithoutCpg` run without `CpgLock` and never wait for graph readers:
+  `cpg_list_passes`, `cpg_list_available_concepts`, `cpg_list_available_operations` and
+  `cpg_list_llm_concepts_operations` do not touch the graph, and `cpg_add_or_update_llm_concept`
+  only writes `concepts.yaml` (atomically, behind its own small lock). `cpg_analyze` and
+  `cpg_translate` are registered this way too, but take the write lock themselves.
 
 Both sides are reentrant, and a write holder may read. A tool that already holds the read lock cannot
 take the write lock (it would deadlock), so `CpgLock.write` throws instead - register such a tool with

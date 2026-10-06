@@ -127,7 +127,7 @@ codyze-console acts as both **MCP server host** and **MCP client**, entirely thr
 - `ChatService` connects to it as a client using `StreamableHttpClientTransport`
 - After analysis, the global `TranslationResult` is injected into the MCP server (`globalAnalysisResult` in `cpg.ai.mcp.mcpserver.tools`) so tools can access the CPG
 
-`cpg-ai` is optional at the `settings.gradle.kts` level (`enableAIModule` in `gradle.properties`, like the language frontends), but codyze-console requires it to compile - if the module is disabled, building codyze-console fails with a clear error rather than degrading gracefully.
+`cpg-ai` is optional at the `settings.gradle.kts` level (`enableAIModule` in `gradle.properties`, like the language frontends), but codyze-console requires it to compile, so enabling codyze-console (`enableCodyzeConsole=true`) turns `cpg-ai` on automatically, even over an explicit `enableAIModule=false`.
 
 ### Frontend (`codyze-console/src/main/webapp/src/`)
 
