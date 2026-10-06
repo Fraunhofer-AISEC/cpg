@@ -626,6 +626,15 @@
     return steps;
   });
 
+  // The files with evidence of the active thread, marked in the file tree
+  const threadUnits = $derived(
+    new Set(
+      layers.visible.agent
+        ? focus.thread.flatMap((n) => (n.ref.translationUnitId ? [n.ref.translationUnitId] : []))
+        : []
+    )
+  );
+
   // The step of the inspected node, if it belongs to the active thread
   const threadStepIndex = $derived(
     threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
@@ -1123,6 +1132,7 @@
           onComponentSelect={handleComponentSelect}
           conceptSuggestions={tusWithSuggestions}
           {conceptCounts}
+          agentUnits={threadUnits}
           revealUnit={treeReveal}
           embedded
         />
