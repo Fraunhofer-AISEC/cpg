@@ -82,9 +82,20 @@ packages, `iota`, shadowed predeclared identifiers) to the library, and compares
 the CPG nodes that the Go frontend produces at the same location (without passes). Sub-expressions
 outside the verified subset are skipped. The test is skipped if the library has not been built.
 
+The Go frontend can use the verified translation instead of its `ExpressionHandler`: if
+`GoFrontendConfiguration.verifiedTranslationLibrary` points to the native library (by default, the
+system property `cpg.go.verifiedLibrary`), every expression in the verified subset is sent to Lean
+together with the frontend's current context, and the CPG nodes are created from the result with the
+regular node builders (`VerifiedExpressions.kt`). Sub-expressions outside the subset are handed back
+to the `ExpressionHandler`. `VerifiedFrontendTest` checks that the frontend produces the same
+expressions with and without it on all Go test files.
+
 ```bash
 cpg-verified/native/build.sh
-./gradlew :cpg-language-go:test --tests "*VerifiedTranslationTest*"
+./gradlew :cpg-language-go:test --tests "*.verified.*"
+
+# all Go frontend tests, with the verified translation
+./gradlew :cpg-language-go:test -Dcpg.go.verifiedLibrary=$PWD/cpg-verified/.lake/build/native/libcpgverified.dylib
 ```
 
 ## Building

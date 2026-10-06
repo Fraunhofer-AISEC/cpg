@@ -1,6 +1,7 @@
 # Builds the Lean project in cpg-verified, which checks all proofs, runs its tests and makes sure
 # that the main theorems only depend on Lean's standard axioms. Afterward, the verified translation is
-# run on the Go frontend's test files and compared with the output of the Go frontend.
+# compared with the Go frontend on the frontend's test files, and the frontend's tests are run with
+# the verified translation enabled.
 name: verified
 
 on:
@@ -52,7 +53,11 @@ jobs:
         run: |
           # Only the Go frontend is needed
           echo "enableGoFrontend=true" > gradle.properties
-          ./gradlew :cpg-language-go:test --tests "*VerifiedTranslationTest*" --console=plain
+          ./gradlew :cpg-language-go:test --tests "*.verified.*" --console=plain
+      - name: Run the Go frontend tests with the verified translation
+        run: |
+          ./gradlew :cpg-language-go:test --rerun-tasks --console=plain \
+            -Dcpg.go.verifiedLibrary="$PWD/cpg-verified/.lake/build/native/libcpgverified.so"
       - name: Report comparison
         if: always()
         run: |

@@ -50,6 +50,10 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     GoHandler<Expression, GoStandardLibrary.Ast.Expr>(::ProblemExpression, frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Expr): Expression {
+        handleVerified(node)?.let {
+            return it
+        }
+
         return when (node) {
             is GoStandardLibrary.Ast.BasicLit -> handleBasicLit(node)
             is GoStandardLibrary.Ast.BinaryExpr -> handleBinaryExpr(node)
@@ -343,9 +347,20 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
      * Checks whether the predeclared identifier [name] is shadowed by a declaration that is visible
      * in the current scope.
      */
-    private fun isShadowed(name: String): Boolean {
+    internal fun isShadowed(name: String): Boolean {
         return frontend.scopeManager.lookupSymbolByName(parseName(name), language).isNotEmpty()
     }
+
+    /** The names under which imported packages are visible in the current file. */
+    internal val visiblePackages: List<String>
+        get() {
+            val file = frontend.currentFile ?: return listOf()
+            return visiblePackagesCache.getOrPut(file) {
+                file.imports.map { it.name?.name ?: it.importName }
+            }
+        }
+
+    private val visiblePackagesCache = mutableMapOf<GoStandardLibrary.Ast.File, List<String>>()
 
     private fun isPackageName(name: CharSequence): Boolean {
         for (imp in frontend.currentFile?.imports ?: listOf()) {

@@ -55,6 +55,15 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
  */
 class VerifiedTranslationTest {
 
+    companion object {
+        /** The native library built by `cpg-verified/native/build.sh`. */
+        val libraryFile: File =
+            listOf("dylib", "so")
+                .map { File("../cpg-verified/.lake/build/native/libcpgverified.$it") }
+                .firstOrNull { it.exists() }
+                ?: File("../cpg-verified/.lake/build/native/libcpgverified.so")
+    }
+
     /** Statistics about the comparison of one file. */
     private class Stats {
         var requests = 0
@@ -68,10 +77,7 @@ class VerifiedTranslationTest {
 
     @Test
     fun testGoFiles() {
-        assumeTrue(
-            LeanTranslator.isAvailable,
-            "native library not found at ${LeanTranslator.libraryFile}",
-        )
+        assumeTrue(libraryFile.exists(), "native library not found at $libraryFile")
 
         val topLevel = Path.of("src", "test", "resources", "golang")
         val files =
@@ -122,7 +128,7 @@ class VerifiedTranslationTest {
 
     @Test
     fun testConcurrentTranslation() {
-        assumeTrue(LeanTranslator.isAvailable, "native library not found")
+        assumeTrue(libraryFile.exists(), "native library not found")
 
         // x + 1 at package level of package main
         val request =
@@ -141,7 +147,7 @@ class VerifiedTranslationTest {
                     sexpOf(atom("lit"), atom(4), atom(5), atom("int"), atom("1")),
                 ),
             )
-        val expected = LeanTranslator.translate(listOf(request)).single()
+        val expected = LeanTranslator.translate(libraryFile, listOf(request)).single()
         assertEquals(
             "(binary 0 5 + (reference 0 1 main.x) (literal 4 5 (int 1) (primitive int) ()))",
             expected.toString(),
@@ -153,7 +159,9 @@ class VerifiedTranslationTest {
             val results =
                 (1..64)
                     .map {
-                        pool.submit<List<Sexp>> { LeanTranslator.translate(List(100) { request }) }
+                        pool.submit<List<Sexp>> {
+                            LeanTranslator.translate(libraryFile, List(100) { request })
+                        }
                     }
                     .flatMap { it.get() }
             assertEquals(6400, results.size)
@@ -179,7 +187,7 @@ class VerifiedTranslationTest {
         val requests = GoAstEncoder(raw).encode().requests
         stats.requests = requests.size
 
-        val results = LeanTranslator.translate(requests.map { it.record })
+        val results = LeanTranslator.translate(libraryFile, requests.map { it.record })
         check(results.size == requests.size) {
             "expected ${requests.size} results, got ${results.size}"
         }
