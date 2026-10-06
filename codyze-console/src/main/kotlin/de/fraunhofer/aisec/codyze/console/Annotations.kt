@@ -137,21 +137,21 @@ fun TranslationUnit.conceptAnnotations(
     ownNodes: List<Node> = this.ownNodes
 ): List<ConceptAnnotationJSON> =
     ownNodes.flatMap { node ->
-            node.overlays.mapNotNull { overlay ->
-                val line = node.location?.region?.startLine ?: return@mapNotNull null
-                if (overlay !is Concept && overlay !is Operation) return@mapNotNull null
-                ConceptAnnotationJSON(
-                    id = overlay.id.toString(),
-                    type = overlay.javaClass.simpleName,
-                    category =
-                        overlay.javaClass.packageName
-                            .substringAfter("concepts.", "")
-                            .substringBefore('.')
-                            .ifEmpty { "other" },
-                    isOperation = overlay is Operation,
-                    line = line,
-                )
-            }
+        node.overlays.mapNotNull { overlay ->
+            val line = node.location?.region?.startLine ?: return@mapNotNull null
+            if (overlay !is Concept && overlay !is Operation) return@mapNotNull null
+            ConceptAnnotationJSON(
+                id = overlay.id.toString(),
+                type = overlay.javaClass.simpleName,
+                category =
+                    overlay.javaClass.packageName
+                        .substringAfter("concepts.", "")
+                        .substringBefore('.')
+                        .ifEmpty { "other" },
+                isOperation = overlay is Operation,
+                line = line,
+            )
+        }
     }
 
 val Call.status: CallStatus
