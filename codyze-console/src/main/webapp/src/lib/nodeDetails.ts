@@ -23,18 +23,24 @@ export function getNodeDetails(nodeId: string): Promise<NodeDetailsJSON | null> 
   return request;
 }
 
-/** Returns the details of the innermost node at a (1-based) line and column of a translation unit. */
+/**
+ * Returns the details of the innermost node at a (1-based) line and column of a translation unit.
+ * With an end position (whose column is exclusive), it is the innermost node containing the whole
+ * range, e.g. a selection.
+ */
 export function getNodeDetailsAt(
   componentName: string,
   unitId: string,
   line: number,
-  column: number
+  column: number,
+  end?: { line: number; column: number }
 ): Promise<NodeDetailsJSON | null> {
-  const key = `${componentName}/${unitId}/${line}/${column}`;
+  const endQuery = end ? `&endLine=${end.line}&endColumn=${end.column}` : '';
+  const key = `${componentName}/${unitId}/${line}/${column}${endQuery}`;
   let request = positionCache.get(key);
   if (!request) {
     request = fetchDetails(
-      `/api/component/${encodeURIComponent(componentName)}/translation-unit/${unitId}/node-at?line=${line}&column=${column}`
+      `/api/component/${encodeURIComponent(componentName)}/translation-unit/${unitId}/node-at?line=${line}&column=${column}${endQuery}`
     ).then((details) => {
       if (details) cache.set(details.node.id, Promise.resolve(details));
       return details;

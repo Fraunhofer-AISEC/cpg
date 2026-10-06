@@ -93,6 +93,7 @@
     {@const selected = isSelected(start + i + 1)}
     <div
       class="absolute right-0 left-0 flex whitespace-pre"
+      data-line={start + i + 1}
       style:top="{offsetTop + (start + i) * lineHeight}rem"
       style:height="{lineHeight}rem"
       style:line-height="{lineHeight}rem"
@@ -107,7 +108,7 @@
       >
         {start + i + 1}
       </span>
-      <span>{@html line}</span>
+      <span data-code>{@html line}</span>
     </div>
   {/each}
 </div>
