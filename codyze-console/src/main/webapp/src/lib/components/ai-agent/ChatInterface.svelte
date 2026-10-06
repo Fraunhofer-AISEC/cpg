@@ -1040,12 +1040,23 @@
     openedUnit ? relativePath(openedUnit, selectedComponent?.topLevel).split('/') : []
   );
 
-  // The function containing the inspected node in the open file, or the node if it is a function
+  // The first visible line of the open file
+  let topLine = $state(1);
+
+  // The function containing the inspected node in the open file, or the node if it is a function.
+  // Without a selection in the file, it is the function at the top of what is visible
   const breadcrumbFunction = $derived.by((): NodeRefJSON | null => {
     const details = focus.details;
-    if (!details || details.node.translationUnitId !== openedUnit?.id) return null;
+    if (details && details.node.translationUnitId === openedUnit?.id) {
+      return (
+        details.enclosingFunction ?? (details.node.type.includes('Function') ? details.node : null)
+      );
+    }
+    const containing = (fileAnnotations?.functions ?? [])
+      .map((f) => f.function)
+      .filter((f) => f.startLine <= topLine && topLine <= f.endLine);
     return (
-      details.enclosingFunction ?? (details.node.type.includes('Function') ? details.node : null)
+      containing.sort((a, b) => a.endLine - a.startLine - (b.endLine - b.startLine))[0] ?? null
     );
   });
 
@@ -1638,6 +1649,7 @@
           onNavigateToNode={handleNavigateToNode}
           {focus}
           bind:annotations={fileAnnotations}
+          bind:topLine
           {scrollPositions}
           externalInspector
           lanes

@@ -107,6 +107,8 @@
     scrollPositions?: Map<string, number>;
     /** The annotations of the file, loaded by the viewer; bind it to use them outside */
     annotations?: FileAnnotationsJSON | null;
+    /** The first visible line (1-based); bind it to know where in the file the user is */
+    topLine?: number;
     /**
      * Adds lanes to the gutter: one for the numbered steps of the path (see [CodeFocus.path]) and
      * one between the line numbers and the code for the dataflow arcs of the inspected node
@@ -158,6 +160,7 @@
     onInspect,
     scrollPositions,
     annotations = $bindable(null),
+    topLine = $bindable(1),
     lanes = false,
     onAsk,
     slice,
@@ -519,7 +522,8 @@
       const position = positionAt(event);
       slice.onHover((position && sliceRangeAt(position.line)?.id) || null);
     }
-    if (!componentName || event.buttons !== 0) return hideHover();
+    // Hover cards are a feature of the agent page, the unit page keeps its own panel
+    if (!componentName || !externalInspector || event.buttons !== 0) return hideHover();
     const position = positionAt(event);
     // Only over the code itself, not over whitespace or after the end of a line
     const char = position ? codeLines[position.line - 1]?.[position.column - 1] : undefined;
@@ -820,6 +824,10 @@
       first: Math.max(1, Math.floor(first) + 1),
       last: Math.min(totalLines, Math.ceil(last))
     };
+  });
+
+  $effect(() => {
+    topLine = viewportLines.first;
   });
 
   const visibleLines = $derived.by(() => {
