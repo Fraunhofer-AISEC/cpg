@@ -1,0 +1,39 @@
+# Builds the Lean project in cpg-verified, which checks all proofs, runs its tests and makes sure
+# that the main theorems only depend on Lean's standard axioms.
+name: verified
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "cpg-verified/**"
+      - ".github/workflows/verified.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "cpg-verified/**"
+      - ".github/workflows/verified.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lean:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: cpg-verified
+          use-mathlib-cache: false
+      - name: Check axioms
+        working-directory: cpg-verified
+        run: |
+          lake env lean Axioms.lean | tee axioms.txt
+          if grep -E "sorryAx|ofReduceBool" axioms.txt; then
+            echo "::error::A main theorem depends on sorry or native_decide"
+            exit 1
+          fi
