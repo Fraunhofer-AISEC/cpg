@@ -14,3 +14,9 @@ export function isTyping(event: KeyboardEvent): boolean {
 export function hasModifier(event: KeyboardEvent): boolean {
   return event.metaKey || event.ctrlKey;
 }
+
+/** The name of the platform modifier for shortcut hints, `⌘` on macOS and `Ctrl+` elsewhere. */
+export function modifierLabel(): string {
+  if (typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)) return '⌘';
+  return 'Ctrl+';
+}
