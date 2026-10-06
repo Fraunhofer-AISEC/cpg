@@ -1,12 +1,36 @@
 <script lang="ts">
   import { marked } from 'marked';
   import type { Tokens } from 'marked';
+  import type { NodeRefJSON } from '$lib/types';
+  import { citationLabel, citationPattern } from '$lib/agentEvidence';
 
   interface Props {
     content: string;
+    /** The cited nodes by ID, to label the citations `[[node:<id>]]` in the content */
+    citations?: Map<string, NodeRefJSON>;
+    /** Called when a citation is clicked; without it, citations are shown as plain text */
+    onCite?: (nodeId: string) => void;
   }
 
-  let { content }: Props = $props();
+  let { content, citations, onCite }: Props = $props();
+
+  const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+  // Replaces the citations of nodes with chips, which are labeled once the nodes are resolved
+  function renderCitations(text: string): string {
+    if (!onCite) return text;
+    return text.replace(citationPattern, (_, id: string) => {
+      const ref = citations?.get(id.toLowerCase());
+      const label = ref ? citationLabel(ref) : `node …${id.slice(-6)}`;
+      const title = ref ? `${ref.type} ${ref.code}` : 'Cited node';
+      return `<button type="button" class="node-cite" data-node-id="${id.toLowerCase()}" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
+    });
+  }
+
+  function handleClick(event: MouseEvent) {
+    const cite = (event.target as HTMLElement).closest<HTMLElement>('[data-node-id]');
+    if (cite?.dataset.nodeId) onCite?.(cite.dataset.nodeId);
+  }
 
   const renderer = new marked.Renderer();
   renderer.code = function ({ text, lang }: Tokens.Code): string {
@@ -20,10 +44,11 @@
     renderer
   });
 
-  let html = $derived(marked.parse(content) as string);
+  let html = $derived(marked.parse(renderCitations(content)) as string);
 </script>
 
-<div class="prose prose-sm prose-gray max-w-none">
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="prose prose-sm prose-gray max-w-none" onclick={handleClick}>
   {@html html}
 </div>
 
@@ -140,5 +165,27 @@
 
   :global(.prose em) {
     font-style: italic;
+  }
+
+  /* A cited node, see renderCitations */
+  :global(.prose .node-cite) {
+    display: inline-block;
+    margin: 0 0.125rem;
+    padding: 0 0.375rem;
+    border: 1px solid rgb(209, 213, 219);
+    border-radius: 0.25rem;
+    background-color: rgb(249, 250, 251);
+    color: rgb(55, 65, 81);
+    font-family: 'Noto Sans Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    vertical-align: baseline;
+    cursor: pointer;
+  }
+
+  :global(.prose .node-cite:hover) {
+    border-color: rgb(37, 99, 235);
+    color: rgb(29, 78, 216);
   }
 </style>

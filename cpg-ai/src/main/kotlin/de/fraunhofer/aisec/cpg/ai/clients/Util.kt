@@ -42,7 +42,12 @@ const val SYSTEM_PROMPT =
         "Do not stop at summaries. Inspect the actual code before drawing conclusions. " +
         "If a previous tool result already answers the question, respond without calling tools again. " +
         "If a tool call fails, do not retry it, instead continue with the information you already have. " +
-        "Explain your findings clearly."
+        "Explain your findings clearly. " +
+        "Cite the nodes your answer relies on: right after mentioning a piece of code, add " +
+        "[[node:<nodeId>]] with the nodeId (or id) of that node from a tool result, e.g. " +
+        "\"the key flows into encrypt() [[node:3f2a...]]\". The user interface shows each citation " +
+        "as a link to the code. Only cite IDs that appear in tool results and never invent them. " +
+        "Every statement about specific code should carry a citation."
 
 suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String) -> Unit) {
     while (!channel.isClosedForRead) {

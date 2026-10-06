@@ -16,6 +16,7 @@
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
+  import { extractCitations, resolveNodes } from '$lib/agentEvidence';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { getConceptCounts } from '$lib/annotations';
@@ -495,6 +496,35 @@
     }
     if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
     focus.inspect(() => getNodeDetails(nodeId), true);
+  }
+
+  // The nodes cited in the answers of the agent, resolved to their locations to label and open them
+  let citedRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  const citedKey = $derived(
+    [
+      ...new Set([
+        ...messages.flatMap((m) =>
+          m.role === 'assistant' && m.contentType !== 'tool-result'
+            ? extractCitations(m.content)
+            : []
+        ),
+        ...extractCitations(streamingContent)
+      ])
+    ].join(',')
+  );
+
+  $effect(() => {
+    const key = citedKey;
+    if (!key) return;
+    resolveNodes(key.split(',')).then((refs) => {
+      if (key === citedKey) citedRefs = refs;
+    });
+  });
+
+  // Inspects a node cited by the agent and shows it in the code
+  async function openCitation(nodeId: string) {
+    const ref = citedRefs.get(nodeId) ?? (await getNodeDetails(nodeId).catch(() => null))?.node;
+    if (ref) selectRef(ref);
   }
 
   // The concept suggestions are attached to the last tool result that suggested a concept
@@ -1223,8 +1253,21 @@
                   {/if}
                 {:else if message.content}
                   <div class="prose prose-sm max-w-none text-gray-800">
-                    <MarkdownRenderer content={message.content} />
+                    <MarkdownRenderer
+                      content={message.content}
+                      citations={citedRefs}
+                      onCite={openCitation}
+                    />
                   </div>
+                  {#if message.contentType === 'text' && extractCitations(message.content).length === 0}
+                    <!-- Answers are only verifiable through the nodes they rely on -->
+                    <p
+                      class="mt-1 text-[11px] text-gray-400"
+                      title="The answer cites no nodes of the code, so it is not backed by evidence from the analysis"
+                    >
+                      ○ Unsupported: no nodes cited
+                    </p>
+                  {/if}
                 {/if}
               </div>
             {/if}
@@ -1234,7 +1277,11 @@
             <div class="px-3 py-3">
               {#if displayContent}
                 <div class="prose prose-sm max-w-none text-gray-800">
-                  <MarkdownRenderer content={displayContent} />
+                  <MarkdownRenderer
+                    content={displayContent}
+                    citations={citedRefs}
+                    onCite={openCitation}
+                  />
                 </div>
               {:else}
                 <div class="flex gap-1">
