@@ -3,13 +3,24 @@
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
-  import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
-  import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
+  import NodeInspector from '$lib/components/analysis/inspector/NodeInspector.svelte';
   import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON, ConceptSuggestionItem, Model, NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+  import { CodeFocus } from '$lib/stores/codeFocus.svelte';
+  import { getNodeDetails } from '$lib/nodeDetails';
+  import type {
+    NodeJSON,
+    AnalysisResultJSON,
+    TranslationUnitJSON,
+    ChatMessage,
+    ComponentJSON,
+    ConceptSuggestionItem,
+    Model,
+    NodeDetailsJSON,
+    NodeRefJSON
+  } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
@@ -20,21 +31,30 @@
   // not need to be deeply reactive
   let overlayNodes = $state.raw<NodeJSON[]>([]);
   let astNodes = $state.raw<NodeJSON[]>([]);
-  let fileTreeCollapsed = $state(false);
-  let nodesPanelCollapsed = $state(false);
+  // The tables below the code are only shown on demand, the inspector is next to the code
+  let nodesPanelCollapsed = $state(true);
+
+  // The inspected node, shared with the code viewer
+  const focus = new CodeFocus();
 
   async function loadUnit(componentName: string, tuId: string) {
     const unit: TranslationUnitJSON | null = await fetch(
       `/api/component/${componentName}/translation-unit/${tuId}`
-    ).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
     // Ignore the response if another unit was selected in the meantime
     if (selectedTranslationUnit?.id === tuId) openedUnit = unit;
   }
 
   async function loadNodes(componentName: string, tuId: string) {
     const [overlay, ast] = await Promise.all([
-      fetch(`/api/component/${componentName}/translation-unit/${tuId}/overlay-nodes`).then(r => r.json()).catch(() => []),
-      fetch(`/api/component/${componentName}/translation-unit/${tuId}/ast-nodes`).then(r => r.json()).catch(() => []),
+      fetch(`/api/component/${componentName}/translation-unit/${tuId}/overlay-nodes`)
+        .then((r) => r.json())
+        .catch(() => []),
+      fetch(`/api/component/${componentName}/translation-unit/${tuId}/ast-nodes`)
+        .then((r) => r.json())
+        .catch(() => [])
     ]);
     if (selectedTranslationUnit?.id !== tuId) return;
     overlayNodes = overlay;
@@ -56,7 +76,9 @@
       }
     }
     if ((node as any).componentName) {
-      const component = analysisResult.components.find((c) => c.name === (node as any).componentName);
+      const component = analysisResult.components.find(
+        (c) => c.name === (node as any).componentName
+      );
       if (component?.translationUnits.length) return component.translationUnits[0];
     }
     return null;
@@ -88,15 +110,39 @@
 
   // Questions about the inspected node, which are put into the input so they can be adjusted
   const nodeQuestions: { label: string; question: (where: string) => string }[] = [
-    { label: 'Explain', question: (where) => `Explain what ${where} does and why it matters for security.` },
-    { label: 'Where does the value come from?', question: (where) => `Where does the value of ${where} come from? Follow the dataflow backwards to its origins (e.g. user input, files, network, constants).` },
-    { label: 'Reachable from outside?', question: (where) => `Can ${where} be reached from an entry point of the program? Show the call path.` }
+    {
+      label: 'Explain',
+      question: (where) => `Explain what ${where} does and why it matters for security.`
+    },
+    {
+      label: 'Where does the value come from?',
+      question: (where) =>
+        `Where does the value of ${where} come from? Follow the dataflow backwards to its origins (e.g. user input, files, network, constants).`
+    },
+    {
+      label: 'Reachable from outside?',
+      question: (where) =>
+        `Can ${where} be reached from an entry point of the program? Show the call path.`
+    }
   ];
 
+  // How a node is referred to in questions to the agent
+  function describeNode(n: NodeRefJSON): string {
+    return `the ${n.type} \`${n.code || n.name}\` (node ID ${n.id}, ${n.fileName}:${n.startLine})`;
+  }
+
   function askAboutNode(details: NodeDetailsJSON, question: (where: string) => string) {
-    const n = details.node;
-    const where = `the ${n.type} \`${n.code || n.name}\` (node ID ${n.id}, ${n.fileName}:${n.startLine})`;
-    onMessageChange(question(where));
+    onMessageChange(question(describeNode(details.node)));
+  }
+
+  // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
+  function selectRef(ref: NodeRefJSON) {
+    if (ref.translationUnitId && ref.translationUnitId !== selectedTranslationUnit?.id) {
+      handleNavigateToNode(ref);
+    } else {
+      showInspector();
+      focus.inspect(() => getNodeDetails(ref.id), true);
+    }
   }
 
   function handleFileSelect(unit: TranslationUnitJSON) {
@@ -120,9 +166,9 @@
 
   function findComponentForTu(tuId: string): ComponentJSON | null {
     if (!analysisResult) return null;
-    return analysisResult.components.find((c) =>
-      c.translationUnits.some((tu) => tu.id === tuId)
-    ) ?? null;
+    return (
+      analysisResult.components.find((c) => c.translationUnits.some((tu) => tu.id === tuId)) ?? null
+    );
   }
 
   const selectedComponent: ComponentJSON | null = $derived.by(() => {
@@ -141,7 +187,8 @@
     analysisResult?: AnalysisResultJSON | null;
     suggestions?: ConceptSuggestionItem[];
     onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => Promise<void> | void;
-    onSendMessage: () => void;
+    /** Sends the current message, with a description of the selected node as context, if any */
+    onSendMessage: (context?: string) => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
     onModelSelect?: (model: Model) => void;
@@ -163,7 +210,7 @@
     onReset,
     onMessageChange,
     onModelSelect,
-    onPromptSelect,
+    onPromptSelect
   }: Props = $props();
 
   async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
@@ -173,7 +220,86 @@
     }
   }
 
-  let chatCollapsed = $state(false);
+  // The context column next to the code, with the inspector and the agent
+  type ContextTab = 'inspector' | 'agent';
+  let contextTab = $state<ContextTab>('agent');
+  let contextCollapsed = $state(false);
+  // Whether the inspector shows a node that has not been seen because the agent tab stayed open
+  let inspectorUnseen = $state(false);
+  let sidebarOpen = $state(true);
+
+  // Switches to the inspector after the user inspected a node, unless the agent is working: then
+  // its tab stays open and the inspector tab is only marked
+  function showInspector() {
+    if (isLoading && contextTab === 'agent') {
+      inspectorUnseen = true;
+      return;
+    }
+    contextTab = 'inspector';
+    contextCollapsed = false;
+  }
+
+  function showAgent() {
+    contextTab = 'agent';
+    contextCollapsed = false;
+  }
+
+  function openTab(tab: ContextTab) {
+    contextTab = tab;
+    contextCollapsed = false;
+  }
+
+  $effect(() => {
+    if (contextTab === 'inspector' && !contextCollapsed) inspectorUnseen = false;
+  });
+
+  // The width of the context column in px, resizable and remembered
+  const contextWidthKey = 'codyze-agent-context-width';
+  let contextWidth = $state(loadContextWidth());
+
+  function loadContextWidth(): number {
+    try {
+      const stored = Number(localStorage.getItem(contextWidthKey));
+      if (stored >= 280) return stored;
+    } catch {
+      // Storage is not available, e.g. during SSR or in a private window
+    }
+    return 360;
+  }
+
+  function startResize(event: PointerEvent) {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = contextWidth;
+    const move = (e: PointerEvent) => {
+      const max = Math.max(320, window.innerWidth * 0.6);
+      contextWidth = Math.round(Math.min(max, Math.max(280, startWidth + startX - e.clientX)));
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      document.body.style.removeProperty('cursor');
+      try {
+        localStorage.setItem(contextWidthKey, String(contextWidth));
+      } catch {
+        // Not remembering the width is fine
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    document.body.style.cursor = 'col-resize';
+  }
+
+  // The selected node is attached to questions as context, unless the user removed it
+  let dismissedContextId = $state<string | null>(null);
+  const contextNode = $derived(
+    focus.details && focus.details.node.id !== dismissedContextId ? focus.details.node : null
+  );
+
+  function send() {
+    showAgent();
+    onSendMessage(contextNode ? describeNode(contextNode) : undefined);
+  }
 
   // The code is the main view, so a file is open from the start
   $effect(() => {
@@ -194,25 +320,33 @@
 
   function ask(question: string) {
     onMessageChange(question);
-    onSendMessage();
+    send();
   }
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
   // The nodes referenced by the suggestions, by ID. They can be nested anywhere in a translation
   // unit, so they are not necessarily part of astNodes
   let suggestionNodes = $state.raw<Map<string, NodeJSON>>(new Map());
   const tusWithSuggestions = $derived(
-    new Set([...suggestionNodes.values()].flatMap(n => (n.translationUnitId ? [n.translationUnitId] : [])))
+    new Set(
+      [...suggestionNodes.values()].flatMap((n) =>
+        n.translationUnitId ? [n.translationUnitId] : []
+      )
+    )
   );
 
   // The node IDs referenced by the suggestions. As a string, this only changes when the IDs change,
   // and not when a suggestion is accepted or rejected (which replaces the suggestion objects)
   const suggestionNodeIdsKey = $derived(
-    [...new Set(
-      suggestions.flatMap(s => [
-        s.suggestion.nodeId,
-        ...s.operations.map(o => o.operation.nodeId)
-      ])
-    )].sort().join(',')
+    [
+      ...new Set(
+        suggestions.flatMap((s) => [
+          s.suggestion.nodeId,
+          ...s.operations.map((o) => o.operation.nodeId)
+        ])
+      )
+    ]
+      .sort()
+      .join(',')
   );
 
   // When suggestions arrive, load the referenced nodes to know their files and lines
@@ -230,11 +364,13 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(key.split(','))
-    }).then(r => (r.ok ? r.json() : [])).catch(() => []);
+    })
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => []);
 
     // Ignore the response if the suggestions changed in the meantime
     if (key !== suggestionNodeIdsKey) return;
-    suggestionNodes = new Map(nodes.map(n => [n.id, n]));
+    suggestionNodes = new Map(nodes.map((n) => [n.id, n]));
   }
 
   // Show the first translation unit with suggestions when they arrive, unless the open one has some
@@ -245,7 +381,7 @@
     if (current && tusWithSuggestions.has(current.id)) return;
     {
       for (const comp of analysisResult.components) {
-        const tu = comp.translationUnits.find(tu => tusWithSuggestions.has(tu.id));
+        const tu = comp.translationUnits.find((tu) => tusWithSuggestions.has(tu.id));
         if (tu) {
           handleFileSelect(tu);
           return;
@@ -283,6 +419,8 @@
     }
   });
 
+  const fileName = (path?: string) => path?.split('/').pop() ?? '';
+
   let expandedReasoning = $state<Set<string>>(new Set());
 
   function toggleReasoning(id: string) {
@@ -296,24 +434,78 @@
   }
 </script>
 
-<div class="flex h-full min-h-0 gap-2 bg-gray-50 p-2">
-  <!-- Files -->
-  {#if selectedComponent}
-    <div class="flex min-h-0 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white">
+<!-- Questions about the inspected node, which put the question into the agent's input -->
+{#snippet nodeActions(details: NodeDetailsJSON)}
+  {#each nodeQuestions as q (q.label)}
+    <button
+      type="button"
+      class="rounded border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+      disabled={isLoading || !selectedModel}
+      title="Put this question into the agent's input"
+      onclick={() => {
+        showAgent();
+        askAboutNode(details, q.question);
+      }}
+    >
+      {q.label}
+    </button>
+  {/each}
+{/snippet}
+
+{#snippet workingDot()}
+  <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" title="The agent is working"
+  ></span>
+{/snippet}
+
+{#snippet unseenDot()}
+  <span class="h-1.5 w-1.5 rounded-full bg-blue-500" title="A new node was inspected"></span>
+{/snippet}
+
+<div class="flex h-full min-h-0 bg-white">
+  <!-- Activity bar: switches the view of the sidebar -->
+  <div
+    class="flex w-10 shrink-0 flex-col items-center gap-1 border-r border-gray-200 bg-gray-50 py-1.5"
+  >
+    <button
+      type="button"
+      class="relative flex h-8 w-8 items-center justify-center rounded {sidebarOpen
+        ? 'text-gray-900'
+        : 'text-gray-400 hover:text-gray-700'}"
+      onclick={() => (sidebarOpen = !sidebarOpen)}
+      aria-label={sidebarOpen ? 'Hide files' : 'Show files'}
+      aria-pressed={sidebarOpen}
+      title="Files"
+    >
+      {#if sidebarOpen}
+        <span class="absolute top-1 bottom-1 -left-1 w-0.5 bg-gray-900"></span>
+      {/if}
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
+        />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Sidebar -->
+  {#if sidebarOpen && selectedComponent}
+    <div class="flex min-h-0 w-60 shrink-0 flex-col border-r border-gray-200">
       <FileTree
         component={selectedComponent}
         allComponents={analysisResult?.components}
         currentUnitId={selectedTranslationUnit?.id}
         onFileSelect={handleFileSelect}
         onComponentSelect={handleComponentSelect}
-        bind:collapsed={fileTreeCollapsed}
         conceptSuggestions={tusWithSuggestions}
+        embedded
       />
     </div>
   {/if}
 
-  <!-- Code with inspector: the main view -->
-  <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
+  <!-- Code: the main view -->
+  <div class="flex min-h-0 min-w-0 flex-1">
     {#if !analysisResult}
       <div class="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-gray-500">
         <p>No project has been analysed yet.</p>
@@ -322,8 +514,8 @@
     {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
       <CodeViewer
         translationUnit={openedUnit}
-        astNodes={astNodes}
-        overlayNodes={overlayNodes}
+        {astNodes}
+        {overlayNodes}
         highlightLine={selectedNode?.startLine ?? undefined}
         bind:nodePanelCollapsed={nodesPanelCollapsed}
         bind:suggestions
@@ -333,24 +525,10 @@
         selectedNodeId={selectedNode?.id}
         onNavigateToNode={handleNavigateToNode}
         panelPosition="bottom"
-      >
-        {#snippet nodeActions(details)}
-          {#each nodeQuestions as q (q.label)}
-            <button
-              type="button"
-              class="rounded border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] text-purple-700 hover:bg-purple-100 disabled:opacity-50"
-              disabled={isLoading || !selectedModel}
-              title="Put this question into the agent's input"
-              onclick={() => {
-                chatCollapsed = false;
-                askAboutNode(details, q.question);
-              }}
-            >
-              {q.label}
-            </button>
-          {/each}
-        {/snippet}
-      </CodeViewer>
+        {focus}
+        externalInspector
+        onInspect={showInspector}
+      />
     {:else if selectedTranslationUnit}
       <div class="flex flex-1 items-center justify-center">
         <LoadingSpinner message="Loading {selectedTranslationUnit.name}..." />
@@ -358,144 +536,243 @@
     {/if}
   </div>
 
-  <!-- Agent -->
-  {#if chatCollapsed}
-    <button
-      type="button"
-      onclick={() => (chatCollapsed = false)}
-      class="group flex w-8 shrink-0 flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white pt-4 text-gray-400 hover:bg-purple-50 hover:text-purple-600"
-      aria-label="Show agent"
+  <!-- Context column: inspector and agent -->
+  {#if contextCollapsed}
+    <div
+      class="flex w-9 shrink-0 flex-col items-center gap-3 border-l border-gray-200 bg-gray-50 pt-3"
     >
-      <span class="text-[10px] font-semibold tracking-widest uppercase" style="writing-mode: vertical-rl;">Agent</span>
-      {#if isLoading}
-        <span class="h-2 w-2 animate-pulse rounded-full bg-purple-500" title="The agent is working"></span>
-      {/if}
-    </button>
-  {:else}
-    <div class="flex min-h-0 w-[26rem] shrink-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
-      <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-3 py-2">
-        <span class="text-[11px] font-semibold tracking-widest text-gray-500 uppercase">Agent</span>
+      {#each [{ id: 'inspector', label: 'Inspector' }, { id: 'agent', label: 'Agent' }] as tab (tab.id)}
         <button
           type="button"
-          class="rounded px-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-          onclick={() => (chatCollapsed = true)}
-          aria-label="Hide agent"
+          class="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-900"
+          onclick={() => openTab(tab.id as ContextTab)}
+          aria-label="Show {tab.label}"
+        >
+          <span
+            class="text-[10px] font-semibold tracking-widest uppercase"
+            style="writing-mode: vertical-rl;">{tab.label}</span
+          >
+          {#if tab.id === 'agent' && isLoading}
+            {@render workingDot()}
+          {:else if tab.id === 'inspector' && inspectorUnseen}
+            {@render unseenDot()}
+          {/if}
+        </button>
+      {/each}
+    </div>
+  {:else}
+    <!-- Resize handle -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="w-1 shrink-0 cursor-col-resize border-l border-gray-200 hover:bg-blue-200"
+      onpointerdown={startResize}
+      title="Drag to resize"
+    ></div>
+    <div class="flex min-h-0 shrink-0 flex-col" style:width="{contextWidth}px">
+      <!-- Tabs -->
+      <div class="flex h-9 shrink-0 items-stretch border-b border-gray-200 px-1" role="tablist">
+        {#each [{ id: 'inspector', label: 'Inspector' }, { id: 'agent', label: 'Agent' }] as tab (tab.id)}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={contextTab === tab.id}
+            class="relative flex items-center gap-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase {contextTab ===
+            tab.id
+              ? 'text-gray-900'
+              : 'text-gray-400 hover:text-gray-700'}"
+            onclick={() => openTab(tab.id as ContextTab)}
+          >
+            {tab.label}
+            {#if tab.id === 'agent' && isLoading}
+              {@render workingDot()}
+            {:else if tab.id === 'inspector' && inspectorUnseen}
+              {@render unseenDot()}
+            {/if}
+            {#if contextTab === tab.id}
+              <span class="absolute right-2 -bottom-px left-2 h-0.5 bg-gray-900"></span>
+            {/if}
+          </button>
+        {/each}
+        <button
+          type="button"
+          class="ml-auto self-center rounded px-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          onclick={() => (contextCollapsed = true)}
+          aria-label="Hide panel"
+          title="Hide panel"
         >
           »
         </button>
       </div>
 
-      <!-- Messages -->
-      <div class="min-h-0 flex-1 overflow-y-auto" style="transform: translateZ(0);" bind:this={messagesContainer} onscroll={handleScroll}>
-        {#if messages.length === 0 && !isLoading}
-          <div class="p-4">
-            <p class="text-sm text-gray-600">
-              Ask about the code, or click into it and use the questions in the inspector. The agent
-              uses the code property graph to answer.
-            </p>
-            <div class="mt-3 space-y-2">
-              {#each starterQuestions as question (question)}
-                <button
-                  type="button"
-                  class="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-xs text-gray-700 hover:border-purple-300 hover:bg-purple-50 disabled:opacity-50"
-                  disabled={!selectedModel}
-                  onclick={() => ask(question)}
-                >
-                  {question}
-                </button>
-              {/each}
-            </div>
-          </div>
-        {/if}
-
-        {#each messages as message}
-          {#if message.role === 'user'}
-            <div class="flex justify-end px-3 py-2">
-              <div class="max-w-[85%] rounded-2xl bg-blue-600 px-3 py-2 text-white">
-                <div class="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+      {#if contextTab === 'inspector'}
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <NodeInspector
+            details={focus.details}
+            loading={focus.loading}
+            error={focus.error}
+            onSelect={selectRef}
+          >
+            {#snippet actions()}
+              {#if focus.details}
+                {@render nodeActions(focus.details)}
+              {/if}
+            {/snippet}
+          </NodeInspector>
+        </div>
+      {:else}
+        <!-- Messages -->
+        <div
+          class="min-h-0 flex-1 overflow-y-auto"
+          style="transform: translateZ(0);"
+          bind:this={messagesContainer}
+          onscroll={handleScroll}
+        >
+          {#if messages.length === 0 && !isLoading}
+            <div class="p-4">
+              <p class="text-sm text-gray-600">
+                Ask about the code, or click into it and use the questions in the inspector. The
+                agent uses the code property graph to answer.
+              </p>
+              <div class="mt-3 space-y-2">
+                {#each starterQuestions as question (question)}
+                  <button
+                    type="button"
+                    class="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-xs text-gray-700 hover:border-purple-300 hover:bg-purple-50 disabled:opacity-50"
+                    disabled={!selectedModel}
+                    onclick={() => ask(question)}
+                  >
+                    {question}
+                  </button>
+                {/each}
               </div>
             </div>
-          {:else}
-            <div class="{message.contentType === 'tool-result' ? 'px-3 py-1' : 'px-3 py-3'}">
-              {#if message.reasoning}
-                <div class="mb-2 inline-block">
-                  <button
-                    class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
-                    onclick={() => toggleReasoning(message.id)}
+          {/if}
+
+          {#each messages as message, i (i)}
+            {#if message.role === 'user'}
+              <div class="flex flex-col items-end gap-1 px-3 py-2">
+                {#if message.context}
+                  <span
+                    class="max-w-[85%] truncate rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500"
+                    title={message.context}>📎 {message.context}</span
                   >
-                    <svg
-                      class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(message.id) ? 'rotate-90' : ''}"
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                    <span>Thought process</span>
-                  </button>
-                  {#if expandedReasoning.has(message.id)}
-                    <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
-                      <p class="whitespace-pre-wrap text-xs italic leading-relaxed text-gray-400">{message.reasoning}</p>
-                    </div>
-                  {/if}
+                {/if}
+                <div class="max-w-[85%] rounded-2xl bg-blue-600 px-3 py-2 text-white">
+                  <div class="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
                 </div>
-              {/if}
-              {#if message.contentType === 'tool-result' && message.toolResult}
-                <ToolResultBlock
-                  toolResult={message.toolResult}
-                  onItemClick={handleNodeClick}
-                />
-              {:else if message.content}
+              </div>
+            {:else}
+              <div class={message.contentType === 'tool-result' ? 'px-3 py-1' : 'px-3 py-3'}>
+                {#if message.reasoning}
+                  <div class="mb-2 inline-block">
+                    <button
+                      class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
+                      onclick={() => toggleReasoning(message.id)}
+                    >
+                      <svg
+                        class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(
+                          message.id
+                        )
+                          ? 'rotate-90'
+                          : ''}"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>Thought process</span>
+                    </button>
+                    {#if expandedReasoning.has(message.id)}
+                      <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
+                        <p class="text-xs leading-relaxed whitespace-pre-wrap text-gray-400 italic">
+                          {message.reasoning}
+                        </p>
+                      </div>
+                    {/if}
+                  </div>
+                {/if}
+                {#if message.contentType === 'tool-result' && message.toolResult}
+                  <ToolResultBlock toolResult={message.toolResult} onItemClick={handleNodeClick} />
+                {:else if message.content}
+                  <div class="prose prose-sm max-w-none text-gray-800">
+                    <MarkdownRenderer content={message.content} />
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+
+          {#if isLoading || displayContent}
+            <div class="px-3 py-3">
+              {#if displayContent}
                 <div class="prose prose-sm max-w-none text-gray-800">
-                  <MarkdownRenderer content={message.content} />
+                  <MarkdownRenderer content={displayContent} />
+                </div>
+              {:else}
+                <div class="flex gap-1">
+                  <div
+                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"
+                  ></div>
+                  <div
+                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"
+                  ></div>
+                  <div
+                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"
+                  ></div>
                 </div>
               {/if}
             </div>
           {/if}
-        {/each}
-
-        {#if isLoading || displayContent}
-          <div class="px-3 py-3">
-            {#if displayContent}
-              <div class="prose prose-sm max-w-none text-gray-800">
-                <MarkdownRenderer content={displayContent} />
-              </div>
-            {:else}
-              <div class="flex gap-1">
-                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"></div>
-                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"></div>
-                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"></div>
-              </div>
-            {/if}
-          </div>
-        {/if}
-      </div>
-
-      <!-- Input -->
-      <div class="shrink-0 border-t border-gray-100 px-3 pt-2 pb-2">
-        <MessageInput
-          value={currentMessage}
-          onSend={onSendMessage}
-          onValueChange={onMessageChange}
-          placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask about the code...'}
-          disabled={isLoading || !selectedModel}
-          prompts={agentSession.mcpCapabilities?.prompts}
-          onPromptSelect={onPromptSelect}
-          onNewChat={onReset}
-        />
-        <div class="mt-1.5">
-          <SessionBar
-            {models}
-            {selectedModel}
-            {onModelSelect}
-          />
         </div>
-      </div>
+
+        <!-- Input -->
+        <div class="shrink-0 border-t border-gray-200 px-3 pt-2 pb-2">
+          {#if contextNode}
+            <!-- The selected node, which is sent along with the question -->
+            <div class="mb-1.5 flex">
+              <span
+                class="flex max-w-full min-w-0 items-center gap-1 rounded border border-gray-200 bg-gray-50 py-0.5 pr-0.5 pl-1.5 text-[11px] text-gray-600"
+                title="Sent as context: {describeNode(contextNode)}"
+              >
+                <span class="min-w-0 truncate"
+                  >📎 <span class="font-mono">{contextNode.name || contextNode.code}</span
+                  >{#if contextNode.fileName}
+                    · {fileName(contextNode.fileName)}:{contextNode.startLine}{/if}</span
+                >
+                <button
+                  type="button"
+                  class="shrink-0 rounded px-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+                  onclick={() => (dismissedContextId = contextNode.id)}
+                  aria-label="Do not send the selected node as context"
+                  title="Remove"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+          {/if}
+          <MessageInput
+            value={currentMessage}
+            onSend={send}
+            onValueChange={onMessageChange}
+            placeholder={!selectedModel
+              ? 'No LLM provider configured — check application.conf'
+              : 'Ask about the code...'}
+            disabled={isLoading || !selectedModel}
+            prompts={agentSession.mcpCapabilities?.prompts}
+            onPromptSelect={(name, args) => {
+              showAgent();
+              onPromptSelect?.(name, args);
+            }}
+            onNewChat={onReset}
+          />
+          <div class="mt-1.5">
+            <SessionBar {models} {selectedModel} {onModelSelect} />
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
-
-<style>
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-</style>
