@@ -186,7 +186,9 @@
     if (unitId === translationUnit.id) annotations = result;
   }
 
+  // Reloaded when the analysis result changed, e.g. after concepts were added
   $effect(() => {
+    void focus.revision;
     annotations = null;
     if (componentName) loadAnnotations(componentName, translationUnit.id);
   });
@@ -257,7 +259,7 @@
       clearNodeDetailsCache();
       const id = inspected.node.id;
       inspect(() => getNodeDetails(id));
-      if (componentName) loadAnnotations(componentName, translationUnit.id);
+      focus.invalidate();
     }
     conceptDialogWasOpen = showConceptDialog;
   });

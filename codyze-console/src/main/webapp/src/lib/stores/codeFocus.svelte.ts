@@ -14,6 +14,11 @@ export class CodeFocus {
    * in the inspector (but not after clicking on it in the code)
    */
   revealCount = $state(0);
+  /**
+   * Incremented whenever the analysis result changed, e.g. after concepts were added, so that views
+   * reload what they derived from it (annotations, counts)
+   */
+  revision = $state(0);
 
   private request = 0;
 
@@ -37,6 +42,11 @@ export class CodeFocus {
     } finally {
       if (request === this.request) this.loading = false;
     }
+  }
+
+  /** Marks the analysis result as changed, see [revision]. */
+  invalidate() {
+    this.revision++;
   }
 
   clear() {

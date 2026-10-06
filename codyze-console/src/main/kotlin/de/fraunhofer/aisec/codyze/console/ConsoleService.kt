@@ -237,6 +237,16 @@ class ConsoleService {
     }
 
     /**
+     * Returns the number of concepts and operations in each translation unit of a component, by
+     * the ID of the unit, or `null` if there is no such component.
+     */
+    fun getConceptCounts(componentName: String): Map<String, Int>? {
+        return getComponent(componentName)?.translationUnits?.associate {
+            it.id.toString() to (it.cpgTU?.conceptAnnotations()?.size ?: 0)
+        }
+    }
+
+    /**
      * Returns the details of the innermost node at the given position of a translation unit, or
      * `null` if there is no node at this position.
      */

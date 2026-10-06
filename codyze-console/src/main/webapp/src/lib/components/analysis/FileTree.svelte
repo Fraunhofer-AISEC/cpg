@@ -33,6 +33,8 @@
     width?: string;
     /** The units with concept suggestions, marked with a dot */
     conceptSuggestions?: Set<string>;
+    /** The number of concepts and operations per unit ID, shown right-aligned */
+    conceptCounts?: Map<string, number>;
     /** Renders the tree without its own collapsible panel, filling the parent (e.g. a sidebar) */
     embedded?: boolean;
   }
@@ -48,6 +50,7 @@
     collapsed = $bindable(false),
     width = 'w-56',
     conceptSuggestions = new Set(),
+    conceptCounts,
     embedded = false
   }: Props = $props();
 
@@ -183,6 +186,28 @@
       : foldersWithSuggestions.has(node.path);
   }
 
+  // The number of concepts per folder path, summed over all files in it
+  const folderConceptCounts = $derived.by(() => {
+    const counts: Record<string, number> = {};
+    if (!conceptCounts) return counts;
+    const visit = (node: TreeNode): number => {
+      if (node.type === 'file') return node.unit ? (conceptCounts.get(node.unit.id) ?? 0) : 0;
+      let sum = 0;
+      for (const child of node.children) sum += visit(child);
+      counts[node.path] = sum;
+      return sum;
+    };
+    fileTree.forEach(visit);
+    return counts;
+  });
+
+  // Files always show their count; expanded folders do not, since their files show it
+  function conceptCount(node: TreeNode): number {
+    if (node.type === 'file') return node.unit ? (conceptCounts?.get(node.unit.id) ?? 0) : 0;
+    const expanded = filterText || !collapsedFolders.has(node.path);
+    return expanded ? 0 : (folderConceptCounts[node.path] ?? 0);
+  }
+
   function selectComponent(name: string) {
     if (name === component.name) return;
     if (onComponentSelect) {
@@ -230,6 +255,15 @@
   </span>
   <span class="min-w-0 flex-1 truncate" title={row.node.path}>{row.node.name}</span>
   <!-- Decorations, right-aligned -->
+  {#if conceptCount(row.node) > 0}
+    {@const count = conceptCount(row.node)}
+    <span
+      class="shrink-0 font-mono text-[10px] text-purple-600/80 tabular-nums"
+      title="{count} concepts and operations"
+    >
+      ◆ {count}
+    </span>
+  {/if}
   {#if hasSuggestions(row.node)}
     <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" title="Has concept suggestions"
     ></span>

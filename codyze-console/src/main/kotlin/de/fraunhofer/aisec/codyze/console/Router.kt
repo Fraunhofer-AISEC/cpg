@@ -63,6 +63,8 @@ import kotlinx.serialization.json.JsonObject
  *   are omitted.
  * - GET `/api/component/{component_name}/translation-unit/{id}/annotations`: Retrieves the
  *   annotations shown in the code viewer (function key figures, call status, concepts).
+ * - GET `/api/component/{component_name}/concept-counts`: Retrieves the number of concepts and
+ *   operations in each translation unit of a component, by the ID of the unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=`: Retrieves
  *   the details of the innermost node at the given position.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
@@ -197,6 +199,20 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                     HttpStatusCode.NotFound,
                     mapOf("error" to "Translation unit not found"),
                 )
+            }
+        }
+
+        // The endpoint to get the number of concepts in each translation unit of a component
+        get("/component/{component_name}/concept-counts") {
+            val componentName =
+                call.parameters["component_name"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+            val counts = service.getConceptCounts(componentName)
+            if (counts != null) {
+                call.respond(counts)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Component not found"))
             }
         }
 
