@@ -9,7 +9,8 @@
   import NodeInspector from '$lib/components/analysis/inspector/NodeInspector.svelte';
   import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
-  import { CodeFocus } from '$lib/stores/codeFocus.svelte';
+  import { CodeFocus, type CodeLocation } from '$lib/stores/codeFocus.svelte';
+  import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { getConceptCounts } from '$lib/annotations';
   import type {
@@ -125,12 +126,48 @@
     }
   }
 
-  function handleFileSelect(unit: TranslationUnitJSON) {
+  function handleFileSelect(unit: TranslationUnitJSON, record = true) {
+    if (record) focus.record({ unitId: unit.id, label: unit.name });
     selectedTranslationUnit = unit;
     selectedNode = null;
     const comp = findComponentForTu(unit.id);
     selectedComponentName = comp?.name ?? null;
     if (comp) loadUnit(comp.name, unit.id);
+  }
+
+  function findUnitById(unitId: string): TranslationUnitJSON | null {
+    for (const component of analysisResult?.components ?? []) {
+      const unit = component.translationUnits.find((tu) => tu.id === unitId);
+      if (unit) return unit;
+    }
+    return null;
+  }
+
+  // Shows a location of the history, without recording it again
+  function goTo(location: CodeLocation | null) {
+    if (!location) return;
+    const unit = findUnitById(location.unitId);
+    if (!unit) return;
+    if (unit.id !== selectedTranslationUnit?.id) handleFileSelect(unit, false);
+    const nodeId = location.nodeId;
+    if (nodeId) {
+      showInspector();
+      focus.inspect(() => getNodeDetails(nodeId), true, undefined, false);
+    }
+  }
+
+  const goBack = () => goTo(focus.back());
+  const goForward = () => goTo(focus.forward());
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (isTyping(event)) return;
+    if (event.altKey && !hasModifier(event) && event.key === 'ArrowLeft') {
+      event.preventDefault();
+      goBack();
+    } else if (event.altKey && !hasModifier(event) && event.key === 'ArrowRight') {
+      event.preventDefault();
+      goForward();
+    }
   }
 
   function handleComponentSelect(name: string) {
@@ -507,6 +544,36 @@
   <span class="h-1.5 w-1.5 rounded-full bg-blue-500" title="A new node was inspected"></span>
 {/snippet}
 
+<!-- Back and forward through the visited locations, like in an editor -->
+{#snippet historyButtons()}
+  {@const back = focus.history[focus.historyIndex - 1]}
+  {@const forward = focus.history[focus.historyIndex + 1]}
+  <div class="flex shrink-0 items-center">
+    <button
+      type="button"
+      class="rounded px-1 text-sm leading-5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent"
+      disabled={!focus.canGoBack}
+      onclick={goBack}
+      aria-label="Go back"
+      title={back ? `Go back to ${back.label} (Alt+←)` : 'Go back (Alt+←)'}
+    >
+      ◀
+    </button>
+    <button
+      type="button"
+      class="rounded px-1 text-sm leading-5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent"
+      disabled={!focus.canGoForward}
+      onclick={goForward}
+      aria-label="Go forward"
+      title={forward ? `Go forward to ${forward.label} (Alt+→)` : 'Go forward (Alt+→)'}
+    >
+      ▶
+    </button>
+  </div>
+{/snippet}
+
+<svelte:window onkeydown={handleKeydown} />
+
 <div class="flex h-full min-h-0 bg-white">
   <!-- Activity bar: switches the view of the sidebar -->
   <div
@@ -585,7 +652,12 @@
         bind:annotations={fileAnnotations}
         externalInspector
         onInspect={showInspector}
-      />
+      >
+        {#snippet headerStart()}
+          {@render historyButtons()}
+          <div class="min-w-0 truncate font-mono text-xs text-gray-500">{openedUnit?.name}</div>
+        {/snippet}
+      </CodeViewer>
     {:else if selectedTranslationUnit}
       <div class="flex flex-1 items-center justify-center">
         <LoadingSpinner message="Loading {selectedTranslationUnit.name}..." />
