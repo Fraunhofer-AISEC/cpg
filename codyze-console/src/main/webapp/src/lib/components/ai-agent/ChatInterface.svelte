@@ -600,6 +600,42 @@
     return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
   }
 
+  // The steps of the active block that have evidence in the code, to step through them like in a
+  // debugger: its tool calls, and the answer if it cites nodes no tool returned
+  const threadSteps = $derived.by(() => {
+    const evidence = blockEvidence[activeBlock];
+    const block = timeline[activeBlock];
+    if (!evidence || !block || !layers.visible.agent) return [];
+    const steps = evidence.steps.flatMap(({ step, ids }) => {
+      const nodes = stepNodes(ids);
+      const entry = block.entries.find((e) => e.step === step);
+      const tool = entry?.message.toolResult?.toolName ?? 'tool';
+      return nodes.length
+        ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
+        : [];
+    });
+    const claimed = stepNodes(evidence.claimed);
+    if (claimed.length) {
+      steps.push({
+        step: evidence.steps.length + 1,
+        nodes: claimed,
+        label: 'answer',
+        title: `The answer cites ${claimed.length} nodes that no tool returned`
+      });
+    }
+    return steps;
+  });
+
+  // The step of the inspected node, if it belongs to the active thread
+  const threadStepIndex = $derived(
+    threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
+  );
+
+  function goToThreadStep(index: number) {
+    const step = threadSteps[index];
+    if (step) selectRef(step.nodes[0]);
+  }
+
   // The evidence of the active block, shown as numbered markers in the code
   $effect(() => {
     const evidence = blockEvidence[activeBlock];
@@ -1157,6 +1193,17 @@
         {/each}
       </div>
     {/if}
+    {#if threadSteps.length > 0}
+      <StepBar
+        title="Agent"
+        steps={threadSteps.map((s) => ({ label: s.label, title: s.title, number: s.step }))}
+        index={threadStepIndex}
+        onSelect={goToThreadStep}
+        onClose={() => layers.toggle('agent')}
+        closeTitle="Hide the agent's evidence (● Agent layer)"
+        shape="square"
+      />
+    {/if}
     {#if focus.path.length >= 2}
       <StepBar
         title="Path"
@@ -1164,6 +1211,7 @@
         index={focus.pathIndex}
         onSelect={goToStep}
         onClose={() => focus.clearPath()}
+        closeTitle="Close the dataflow path"
       />
     {/if}
     <div class="flex min-h-0 flex-1">
