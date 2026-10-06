@@ -66,8 +66,10 @@ Writing the specification revealed the following bugs in the Go frontend (all fi
 ## Running on Go files
 
 The translation is called from the JVM in-process. `native/build.sh` builds a shared library
-(`.lake/build/native/libcpgverified.{dylib,so}`) that statically links the compiled Lean code and
-the Lean runtime, so it does not need a Lean installation at runtime. `native/cpg_verified.c` is its
+(`.lake/build/native/libcpgverified.{dylib,so}`) that statically links the compiled Lean code. On
+macOS it also links the Lean runtime statically, so it does not need a Lean installation at runtime.
+On Linux, Lean's static runtime uses thread-local storage that is only valid in executables, so the
+library links the shared runtime of the Lean installation it was built with instead. `native/cpg_verified.c` is its
 C interface: it initializes the Lean runtime and passes byte buffers to `Wire.translateBytes`.
 Requests and results are canonical S-expressions (`CpgVerified/Wire`). The same translation is
 also available as a standalone executable, `cpg-translate`, which reads requests from standard
