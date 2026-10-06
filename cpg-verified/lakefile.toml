@@ -1,6 +1,11 @@
 name = "cpg-verified"
 version = "0.1.0"
 defaultTargets = ["CpgVerified"]
+testDriver = "tests"
 
 [[lean_lib]]
 name = "CpgVerified"
+
+[[lean_exe]]
+name = "tests"
+root = "Tests.Main"

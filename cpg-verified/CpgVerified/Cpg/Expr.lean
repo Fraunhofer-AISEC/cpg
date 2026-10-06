@@ -37,7 +37,7 @@ inductive Expr where
   | call (loc : Span) (callee : Expr) (arguments : List Expr)
   /-- `ProblemExpression` -/
   | problem (loc : Span) (problem : String)
-deriving Repr, Inhabited
+deriving Repr, Inhabited, BEq
 
 /-- The location of a node. -/
 def Expr.loc : Expr → Span
