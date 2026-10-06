@@ -22,6 +22,8 @@
     offsetLeft: number;
     /** The space between the line numbers and the code in rem, e.g. for a lane of the gutter */
     gutterPadding?: number;
+    /** The lines of the selection (1-based, inclusive): tinted, with emphasized line numbers */
+    selection?: { first: number; last: number } | null;
   }
 
   let {
@@ -34,8 +36,12 @@
     charWidth,
     offsetTop,
     offsetLeft,
-    gutterPadding = 0.75
+    gutterPadding = 0.75,
+    selection = null
   }: Props = $props();
+
+  const isSelected = (line: number) =>
+    !!selection && line >= selection.first && line <= selection.last;
 
   const lines = $derived(splitHighlightedLines(highlighted));
   const visibleLines = $derived(lines.slice(start, end));
@@ -62,7 +68,7 @@
 </script>
 
 <div
-  class="hljs relative text-base"
+  class="hljs relative min-w-full text-base"
   style:height="{2 * offsetTop + lines.length * lineHeight}rem"
   style:width="{codeStart + maxColumns * charWidth + 2}rem"
 >
@@ -75,15 +81,27 @@
     ></div>
   {/each}
 
+  {#if selection}
+    <div
+      class="pointer-events-none absolute right-0 left-0 bg-blue-600/5"
+      style:top="{offsetTop + (selection.first - 1) * lineHeight}rem"
+      style:height="{(selection.last - selection.first + 1) * lineHeight}rem"
+    ></div>
+  {/if}
+
   {#each visibleLines as line, i (start + i)}
+    {@const selected = isSelected(start + i + 1)}
     <div
       class="absolute right-0 left-0 flex whitespace-pre"
       style:top="{offsetTop + (start + i) * lineHeight}rem"
       style:height="{lineHeight}rem"
       style:line-height="{lineHeight}rem"
     >
+      <!-- The line numbers of the selection are tinted like their lines (blue-600 at 5% on white) -->
       <span
-        class="sticky left-0 z-[25] shrink-0 bg-white text-right text-gray-400 select-none"
+        class="sticky left-0 z-[25] shrink-0 text-right select-none {selected
+          ? 'bg-[#f4f7fe] font-semibold text-blue-600'
+          : 'bg-white text-gray-400'}"
         style:width="{codeStart}rem"
         style:padding-right="{gutterPadding}rem"
       >
