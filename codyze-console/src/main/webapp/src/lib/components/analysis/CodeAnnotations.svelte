@@ -2,7 +2,7 @@
   import type { FileAnnotationsJSON } from '$lib/types';
   import { conceptIcon } from '$lib/annotations';
   import type { Layer } from '$lib/stores/layers.svelte';
-  import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
+  import type { CallFilter, InspectorSection } from '$lib/stores/codeFocus.svelte';
 
   /**
    * Draws the annotations of a file on top of the code: the key figures of each function at the end
@@ -23,7 +23,7 @@
     offsetTop: number;
     offsetLeft: number;
     /** Inspects a node, revealing a section of the inspector if given */
-    onInspect: (nodeId: string, section?: InspectorSection) => void;
+    onInspect: (nodeId: string, section?: InspectorSection, filter?: CallFilter) => void;
     /** Draws the annotations faintly, e.g. while a path is shown */
     dimmed?: boolean;
   }
@@ -56,7 +56,13 @@
 
   // The parts of the code lens of a function, each revealing its section of the inspector
   function lensParts(fn: (typeof functions)[number]) {
-    const parts: { label: string; count: number; section: InspectorSection; title: string }[] = [
+    const parts: {
+      label: string;
+      count: number;
+      section: InspectorSection;
+      filter?: CallFilter;
+      title: string;
+    }[] = [
       {
         label: `${fn.callers} callers`,
         count: fn.callers,
@@ -75,6 +81,7 @@
         label: `${fn.externalCalls} external`,
         count: fn.externalCalls,
         section: 'callees',
+        filter: 'EXTERNAL',
         title: `Show the calls in ${fn.function.name}, ${fn.externalCalls} of them to external code`
       });
     }
@@ -83,6 +90,7 @@
         label: `⚠ ${fn.unresolvedCalls} unresolved`,
         count: fn.unresolvedCalls,
         section: 'callees',
+        filter: 'UNRESOLVED',
         title: `Show the calls in ${fn.function.name}, ${fn.unresolvedCalls} of them unresolved`
       });
     }
@@ -133,7 +141,7 @@
               title={part.title}
               onclick={(e) => {
                 e.stopPropagation();
-                onInspect(fn.function.id, part.section);
+                onInspect(fn.function.id, part.section, part.filter);
               }}
             >
               {part.label}
