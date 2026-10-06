@@ -8,3 +8,4 @@ import CpgVerified.Go.Translate
 import CpgVerified.Go.Correctness
 import CpgVerified.Wire.Sexp
 import CpgVerified.Wire.Codec
+import CpgVerified.Wire.Export
