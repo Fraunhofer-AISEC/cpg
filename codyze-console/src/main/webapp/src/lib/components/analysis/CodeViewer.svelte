@@ -7,6 +7,7 @@
   import NodeInspector from './inspector/NodeInspector.svelte';
   import CodeAnnotations from './CodeAnnotations.svelte';
   import OverviewRuler, { type RulerMark } from './OverviewRuler.svelte';
+  import HoverCard from './HoverCard.svelte';
   import { getAnnotations } from '$lib/annotations';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
@@ -168,6 +169,7 @@
   });
 
   function rememberScrollPosition() {
+    hideHover();
     if (codeContainerElement)
       scrollPositions?.set(translationUnit.id, codeContainerElement.scrollTop);
   }
@@ -200,17 +202,91 @@
     if (componentName && id) inspect(() => getNodeDetails(id));
   });
 
-  function handleCodeClick(event: MouseEvent) {
-    if (!componentName) return;
-    // Do not interfere with selecting text
-    if (window.getSelection()?.toString()) return;
+  // The position in the code under the mouse: a 1-based line and a CPG column (1 is the first
+  // character), or null outside of the lines
+  function positionAt(event: MouseEvent): { line: number; column: number } | null {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const rem = remInPx();
     const line = Math.floor(((event.clientY - rect.top) / rem - offsetTop) / lineHeight) + 1;
     const column = Math.floor(((event.clientX - rect.left) / rem - offsetLeft) / charWidth);
-    if (line < 1 || line > totalLines || column < 0) return;
+    if (line < 1 || line > totalLines || column < 0) return null;
+    return { line, column };
+  }
+
+  function handleCodeClick(event: MouseEvent) {
+    hideHover();
+    if (!componentName) return;
+    // Do not interfere with selecting text
+    if (window.getSelection()?.toString()) return;
+    const position = positionAt(event);
+    if (!position) return;
     const component = componentName;
-    inspect(() => getNodeDetailsAt(component, translationUnit.id, line, column));
+    inspect(() => getNodeDetailsAt(component, translationUnit.id, position.line, position.column));
+  }
+
+  // The hover card for the node under the mouse, shown after resting on it for a moment. The
+  // position is relative to the code area
+  let hover = $state.raw<{
+    details: NodeDetailsJSON;
+    x: number;
+    /** The distance of the card from the top, or from the bottom near the end of the code area */
+    y: number;
+    above: boolean;
+  } | null>(null);
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+  // Incremented to discard pending lookups, e.g. when the mouse moved on
+  let hoverRequest = 0;
+  let codeAreaElement = $state<HTMLDivElement>();
+  const hoverDelay = 400;
+
+  function hideHover() {
+    clearTimeout(hoverTimer);
+    hoverRequest++;
+    hover = null;
+  }
+
+  function isInside(node: NodeRefJSON, line: number, column: number): boolean {
+    if (line < node.startLine || line > node.endLine) return false;
+    if (line === node.startLine && column < node.startColumn) return false;
+    return !(line === node.endLine && column >= node.endColumn);
+  }
+
+  function handleCodeMouseMove(event: MouseEvent) {
+    if (!componentName || event.buttons !== 0) return hideHover();
+    const position = positionAt(event);
+    // Only over the code itself, not over whitespace or after the end of a line
+    const char = position ? codeLines[position.line - 1]?.[position.column - 1] : undefined;
+    if (!position || !char || /\s/.test(char)) return hideHover();
+    // A shown card stays while the mouse is on its node
+    if (hover && isInside(hover.details.node, position.line, position.column)) return;
+
+    hideHover();
+    const request = hoverRequest;
+    const component = componentName;
+    const unitId = translationUnit.id;
+    const area = codeAreaElement?.getBoundingClientRect();
+    const x = area ? event.clientX - area.left : 0;
+    const y = area ? event.clientY - area.top : 0;
+    hoverTimer = setTimeout(async () => {
+      const details = await getNodeDetailsAt(
+        component,
+        unitId,
+        position.line,
+        position.column
+      ).catch(() => null);
+      if (request !== hoverRequest || !details) return;
+      // Keep the card inside the code area (it is 18rem wide)
+      const maxX = (area?.width ?? 0) - 18 * remInPx() - 8;
+      // Show the card above the mouse if there is not enough room below it
+      const height = area?.height ?? 0;
+      const above = y + 180 > height && y > 180;
+      hover = {
+        details,
+        x: Math.max(4, Math.min(x + 12, maxX)),
+        y: above ? height - y + 8 : y + 18,
+        above
+      };
+    }, hoverDelay);
   }
 
   // Annotations of the file (function key figures, call status, concepts), loaded per unit
@@ -468,7 +544,7 @@
       </div>
     </div>
 
-    <div class="flex min-h-0 flex-1">
+    <div class="relative flex min-h-0 flex-1" bind:this={codeAreaElement}>
       <div
         class="relative min-w-0 flex-1 overflow-auto"
         style="transform: translateZ(0);"
@@ -480,6 +556,8 @@
           class="relative inline-block w-max min-w-full align-top"
           class:cursor-pointer={!!componentName}
           onclick={handleCodeClick}
+          onmousemove={handleCodeMouseMove}
+          onmouseleave={hideHover}
         >
           <div class="font-mono">
             <Highlight language={getLanguage(translationUnit.name)} {code} let:highlighted>
@@ -550,6 +628,17 @@
           {/if}
         </div>
       </div>
+
+      {#if hover}
+        <div
+          class="pointer-events-none absolute z-40"
+          style:left="{hover.x}px"
+          style:top={hover.above ? undefined : `${hover.y}px`}
+          style:bottom={hover.above ? `${hover.y}px` : undefined}
+        >
+          <HoverCard details={hover.details} />
+        </div>
+      {/if}
 
       {#if annotations}
         <OverviewRuler
