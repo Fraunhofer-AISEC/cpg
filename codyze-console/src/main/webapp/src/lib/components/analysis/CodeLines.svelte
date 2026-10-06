@@ -20,6 +20,8 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
+    /** The space between the line numbers and the code in rem, e.g. for a lane of the gutter */
+    gutterPadding?: number;
   }
 
   let {
@@ -31,7 +33,8 @@
     lineHeight,
     charWidth,
     offsetTop,
-    offsetLeft
+    offsetLeft,
+    gutterPadding = 0.75
   }: Props = $props();
 
   const lines = $derived(splitHighlightedLines(highlighted));
@@ -80,8 +83,9 @@
       style:line-height="{lineHeight}rem"
     >
       <span
-        class="sticky left-0 z-[25] shrink-0 bg-white pr-3 text-right text-gray-400 select-none"
+        class="sticky left-0 z-[25] shrink-0 bg-white text-right text-gray-400 select-none"
         style:width="{codeStart}rem"
+        style:padding-right="{gutterPadding}rem"
       >
         {start + i + 1}
       </span>

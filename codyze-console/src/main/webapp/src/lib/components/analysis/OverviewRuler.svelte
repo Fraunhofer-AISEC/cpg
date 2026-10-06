@@ -9,6 +9,8 @@
     color: string;
     /** What the mark stands for, shown in the tooltip */
     label: string;
+    /** Drawn faintly, e.g. for other layers while a path is shown */
+    faded?: boolean;
   }
 </script>
 
@@ -87,6 +89,7 @@
       style:left="{1 + (group.lane * 12) / lanes}px"
       style:width="{Math.max(12 / lanes - 1, 2)}px"
       style:background-color={group.marks[0].color}
+      style:opacity={group.marks[0].faded ? 0.35 : undefined}
       aria-label={tooltip(group).join(', ')}
       onmouseenter={() => (hovered = group)}
       onmouseleave={() => (hovered = null)}

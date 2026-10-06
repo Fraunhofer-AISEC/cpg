@@ -1,0 +1,70 @@
+<script lang="ts" module>
+  /** A numbered step at a line of the code, e.g. of a dataflow path. */
+  export interface StepMarker {
+    /** The index of the step, shown as its number plus one */
+    index: number;
+    /** 1-based line */
+    line: number;
+    title: string;
+    /** Whether this is the current step */
+    current?: boolean;
+    /** Drawn dashed, e.g. for steps that are only claimed and not backed by evidence */
+    dashed?: boolean;
+  }
+</script>
+
+<script lang="ts">
+  /**
+   * Numbered badges for the steps of a path in a lane of the gutter, like the code-flow steps of
+   * CodeQL. Several steps in the same line share one badge, which shows the current or the first
+   * of them. Clicking a badge goes to its step.
+   */
+  interface Props {
+    markers: StepMarker[];
+    /** 0-based index of the first rendered line */
+    startLine: number;
+    /** 0-based index after the last rendered line */
+    endLine: number;
+    lineHeight: number;
+    offsetTop: number;
+    /** The left edge of the lane in rem */
+    left: number;
+    onSelect: (index: number) => void;
+  }
+
+  let { markers, startLine, endLine, lineHeight, offsetTop, left, onSelect }: Props = $props();
+
+  const byLine = $derived.by(() => {
+    const lines: Record<number, StepMarker[]> = {};
+    for (const marker of markers) {
+      if (marker.line - 1 < startLine || marker.line - 1 >= endLine) continue;
+      (lines[marker.line] ??= []).push(marker);
+    }
+    return Object.entries(lines).map(([line, steps]) => ({
+      line: Number(line),
+      steps,
+      shown: steps.find((s) => s.current) ?? steps[0]
+    }));
+  });
+</script>
+
+<div class="pointer-events-none absolute top-0 left-0 h-full w-full">
+  {#each byLine as entry (entry.line)}
+    {@const marker = entry.shown}
+    <button
+      type="button"
+      class="pointer-events-auto absolute z-[27] flex h-4 min-w-4 -translate-y-1/2 items-center justify-center rounded-full px-0.5 font-sans text-[10px] leading-none font-semibold tabular-nums {marker.dashed
+        ? 'border border-dashed border-slate-500 bg-white text-slate-700'
+        : 'bg-slate-700 text-white'} {marker.current ? 'ring-2 ring-blue-500' : ''}"
+      style:top="{offsetTop + (entry.line - 0.5) * lineHeight}rem"
+      style:left="{left}rem"
+      title={entry.steps.map((s) => `${s.index + 1}. ${s.title}`).join('\n')}
+      onclick={(e) => {
+        e.stopPropagation();
+        onSelect(marker.index);
+      }}
+    >
+      {marker.index + 1}{#if entry.steps.length > 1}<sup class="ml-px">+</sup>{/if}
+    </button>
+  {/each}
+</div>
