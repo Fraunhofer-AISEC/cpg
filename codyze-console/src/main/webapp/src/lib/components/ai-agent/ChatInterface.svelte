@@ -10,7 +10,9 @@
   import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
   import { CodeFocus, type CodeLocation } from '$lib/stores/codeFocus.svelte';
-  import { hasModifier, isTyping } from '$lib/utils/keyboard';
+  import { hasModifier, isTyping, modifierLabel } from '$lib/utils/keyboard';
+  import { layers, layerInfos } from '$lib/stores/layers.svelte';
+  import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
@@ -290,7 +292,132 @@
   // The files of the history, most recent first, which the quick open lists first
   const recentUnitIds = $derived([...new Set(focus.history.map((l) => l.unitId).reverse())]);
 
-  const paletteCommands: PaletteCommand[] = [];
+  // Inspects the selected node again, revealing a section of the inspector, e.g. its callers
+  function showSection(section: InspectorSection) {
+    const node = focus.details?.node;
+    if (!node) return;
+    showInspector();
+    focus.inspect(() => getNodeDetails(node.id), true, section, false);
+  }
+
+  // All actions of the page, for the command palette
+  const paletteCommands = $derived.by((): PaletteCommand[] => {
+    const mod = modifierLabel();
+    const details = focus.details;
+    const noSelection = details ? undefined : 'No node is selected';
+    return [
+      {
+        id: 'open-file',
+        category: 'Go',
+        label: 'Open file…',
+        shortcut: `${mod}P`,
+        run: () => (paletteQuery = '')
+      },
+      {
+        id: 'back',
+        category: 'Go',
+        label: 'Back',
+        shortcut: 'Alt+←',
+        disabledReason: focus.canGoBack ? undefined : 'Nothing to go back to',
+        run: goBack
+      },
+      {
+        id: 'forward',
+        category: 'Go',
+        label: 'Forward',
+        shortcut: 'Alt+→',
+        disabledReason: focus.canGoForward ? undefined : 'Nothing to go forward to',
+        run: goForward
+      },
+      ...layerInfos.map((layer) => ({
+        id: `layer-${layer.id}`,
+        category: 'Layers',
+        label: `${layers.visible[layer.id] ? 'Hide' : 'Show'} ${layer.icon} ${layer.label}`,
+        run: () => layers.toggle(layer.id)
+      })),
+      {
+        id: 'callers',
+        category: 'Selection',
+        label: 'Show callers',
+        disabledReason:
+          noSelection ?? (details!.callers.length > 0 ? undefined : 'The selection has no callers'),
+        run: () => showSection('callers')
+      },
+      {
+        id: 'callees',
+        category: 'Selection',
+        label: 'Show callees',
+        disabledReason:
+          noSelection ??
+          (details!.callTargets.length > 0 || details!.callees.length > 0
+            ? undefined
+            : 'The selection calls nothing'),
+        run: () => showSection(details!.callTargets.length > 0 ? 'callTargets' : 'callees')
+      },
+      {
+        id: 'ask',
+        category: 'Selection',
+        label: 'Ask the agent about it',
+        disabledReason:
+          noSelection ?? (selectedModel ? undefined : 'No LLM provider is configured'),
+        run: () => {
+          showAgent();
+          askAboutNode(details!, nodeQuestions[0].question);
+        }
+      },
+      {
+        id: 'reveal',
+        category: 'Selection',
+        label: 'Reveal the file in the file tree',
+        disabledReason: openedUnit ? undefined : 'No file is open',
+        run: () => openedUnit && revealInTree(openedUnit.id)
+      },
+      {
+        id: 'sidebar',
+        category: 'View',
+        label: sidebarOpen ? 'Hide the sidebar' : 'Show the sidebar',
+        run: () => (sidebarOpen = !sidebarOpen)
+      },
+      {
+        id: 'files',
+        category: 'View',
+        label: 'Show the files',
+        run: () => {
+          sidebarView = 'files';
+          sidebarOpen = true;
+        }
+      },
+      {
+        id: 'outline',
+        category: 'View',
+        label: 'Show the outline',
+        run: () => {
+          sidebarView = 'outline';
+          sidebarOpen = true;
+        }
+      },
+      {
+        id: 'context',
+        category: 'View',
+        label: contextCollapsed ? 'Show the right column' : 'Hide the right column',
+        run: () => (contextCollapsed ? openTab(contextTab) : (contextCollapsed = true))
+      },
+      {
+        id: 'inspector',
+        category: 'View',
+        label: 'Show the inspector',
+        run: () => openTab('inspector')
+      },
+      { id: 'agent', category: 'View', label: 'Show the agent', run: showAgent },
+      {
+        id: 'commands',
+        category: 'View',
+        label: 'Show all commands',
+        shortcut: `${mod}Shift+P`,
+        run: () => (paletteQuery = '>')
+      }
+    ];
+  });
 
   async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
     await onApplySuggestions?.(accepted);
