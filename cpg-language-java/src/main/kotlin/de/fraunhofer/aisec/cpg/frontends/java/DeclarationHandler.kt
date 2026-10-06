@@ -468,12 +468,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     frontend.scopeManager.addDeclaration(c)
                     recordDeclaration.constructors += c
                 }
-                is ClassOrInterfaceDeclaration -> {
-                    val cls = handle(decl) as Record
-                    frontend.scopeManager.addDeclaration(cls)
-                    recordDeclaration.records += cls
-                }
-                is EnumDeclaration -> {
+                is ClassOrInterfaceDeclaration,
+                is EnumDeclaration,
+                is RecordDeclaration -> {
                     val cls = handle(decl) as Record
                     frontend.scopeManager.addDeclaration(cls)
                     recordDeclaration.records += cls

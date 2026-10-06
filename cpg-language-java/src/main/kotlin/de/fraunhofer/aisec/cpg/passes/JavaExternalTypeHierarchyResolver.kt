@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
@@ -35,7 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
@@ -58,22 +54,8 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
                 override val scope: Scope?
                     get() = scopeManager.globalScope
             }
-        val resolver = CombinedTypeSolver()
-
-        resolver.add(ReflectionTypeSolver())
-        var root = ctx.currentComponent?.topLevel()
-        if (root == null && config.softwareComponents.size == 1) {
-            root =
-                config.softwareComponents[config.softwareComponents.keys.first()]?.let {
-                    CommonPath.commonPath(it)
-                }
-        }
-        if (root == null) {
-            log.warn("Could not determine source root for {}", config.softwareComponents)
-        } else {
-            log.info("Source file root used for type solver: {}", root)
-            resolver.add(JavaParserTypeSolver(root))
-        }
+        val language = ctx.availableLanguage<JavaLanguage>() ?: return
+        val resolver = language.typeSolverFor(ctx)
 
         // Iterate over all known types and add their (direct) supertypes.
         var types = typeManager.resolvedTypes.toList()
