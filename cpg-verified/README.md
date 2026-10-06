@@ -68,5 +68,6 @@ Install [elan](https://github.com/leanprover/elan) (e.g. `brew install elan-init
 ```bash
 cd cpg-verified
 lake build                    # builds and checks all proofs
+lake test                     # runs the compiled translation on test inputs (Tests/Main.lean)
 lake env lean Axioms.lean     # lists the axioms the main theorems depend on
 ```
