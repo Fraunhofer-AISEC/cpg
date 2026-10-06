@@ -68,8 +68,8 @@ data class TrustIssueJSON(
  *   direct dataflow neighbour of one),
  * - nodes the analysis could not handle or only inferred.
  *
- * Issues at the same place are merged, so that each place is listed once with all the evidence
- * that relies on it.
+ * Issues at the same place are merged, so that each place is listed once with all the evidence that
+ * relies on it.
  */
 fun trustIssues(evidence: Map<String, Node>): List<TrustIssueJSON> {
     val issues = mutableMapOf<Pair<TrustIssueKind, Node>, Pair<String, MutableSet<String>>>()
@@ -101,9 +101,9 @@ fun trustIssues(evidence: Map<String, Node>): List<TrustIssueJSON> {
         // the calls it directly flows from or into
         val passedCalls =
             listOfNotNull(
-                    node as? Call,
-                    (node.astParent as? Call)?.takeIf { node in it.arguments },
-                ) +
+                node as? Call,
+                (node.astParent as? Call)?.takeIf { node in it.arguments },
+            ) +
                 node.prevDFGEdges.mapNotNull { it.start as? Call } +
                 node.nextDFGEdges.mapNotNull { it.end as? Call }
         passedCalls
@@ -134,9 +134,7 @@ fun trustIssues(evidence: Map<String, Node>): List<TrustIssueJSON> {
         unresolvedCalls
             .getOrPut(function) {
                 function.body.calls.filter {
-                    it !is OperatorCall &&
-                        it.location != null &&
-                        it.status == CallStatus.UNRESOLVED
+                    it !is OperatorCall && it.location != null && it.status == CallStatus.UNRESOLVED
                 }
             }
             .forEach { call ->
