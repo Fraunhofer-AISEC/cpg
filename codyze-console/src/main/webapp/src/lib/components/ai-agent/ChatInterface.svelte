@@ -4,12 +4,12 @@
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
-  import { CodeViewer, FileTree } from '$lib/components/analysis';
+  import { CodeViewer, ConceptChecklist, FileTree } from '$lib/components/analysis';
   import NodeInspector from '$lib/components/analysis/inspector/NodeInspector.svelte';
   import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
   import { CodeFocus } from '$lib/stores/codeFocus.svelte';
-  import { getNodeDetails } from '$lib/nodeDetails';
+  import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import type {
     NodeJSON,
     AnalysisResultJSON,
@@ -27,12 +27,6 @@
   let selectedComponentName = $state<string | null>(null);
   // The selected unit including its code, which is not part of the units in analysisResult
   let openedUnit = $state.raw<TranslationUnitJSON | null>(null);
-  // These can contain tens of thousands of nodes and are only ever replaced as a whole, so they do
-  // not need to be deeply reactive
-  let overlayNodes = $state.raw<NodeJSON[]>([]);
-  let astNodes = $state.raw<NodeJSON[]>([]);
-  // The tables below the code are only shown on demand, the inspector is next to the code
-  let nodesPanelCollapsed = $state(true);
 
   // The inspected node, shared with the code viewer
   const focus = new CodeFocus();
@@ -45,20 +39,6 @@
       .catch(() => null);
     // Ignore the response if another unit was selected in the meantime
     if (selectedTranslationUnit?.id === tuId) openedUnit = unit;
-  }
-
-  async function loadNodes(componentName: string, tuId: string) {
-    const [overlay, ast] = await Promise.all([
-      fetch(`/api/component/${componentName}/translation-unit/${tuId}/overlay-nodes`)
-        .then((r) => r.json())
-        .catch(() => []),
-      fetch(`/api/component/${componentName}/translation-unit/${tuId}/ast-nodes`)
-        .then((r) => r.json())
-        .catch(() => [])
-    ]);
-    if (selectedTranslationUnit?.id !== tuId) return;
-    overlayNodes = overlay;
-    astNodes = ast;
   }
 
   function findTranslationUnit(node: NodeJSON): TranslationUnitJSON | null {
@@ -91,10 +71,7 @@
     selectedTranslationUnit = tu;
     const comp = findComponentForTu(tu.id);
     selectedComponentName = comp?.name ?? null;
-    if (comp) {
-      loadUnit(comp.name, tu.id);
-      loadNodes(comp.name, tu.id);
-    }
+    if (comp) loadUnit(comp.name, tu.id);
   }
 
   // Opens the file of a node selected in the inspector and inspects the node there
@@ -150,13 +127,7 @@
     selectedNode = null;
     const comp = findComponentForTu(unit.id);
     selectedComponentName = comp?.name ?? null;
-    if (comp) {
-      loadUnit(comp.name, unit.id);
-      loadNodes(comp.name, unit.id);
-    } else {
-      overlayNodes = [];
-      astNodes = [];
-    }
+    if (comp) loadUnit(comp.name, unit.id);
   }
 
   function handleComponentSelect(name: string) {
@@ -195,6 +166,8 @@
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
   }
 
+  const SUGGEST_LLM_CONCEPTS_TOOL = 'cpg_suggest_llm_concepts_and_operations';
+
   let {
     messages,
     currentMessage,
@@ -215,10 +188,29 @@
 
   async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
     await onApplySuggestions?.(accepted);
-    if (selectedComponentName && selectedTranslationUnit) {
-      await loadNodes(selectedComponentName, selectedTranslationUnit.id);
-    }
+    // The applied concepts change the details of the nodes they are attached to
+    clearNodeDetailsCache();
   }
+
+  // Selects and reveals a node referenced by a concept suggestion, opening its file if needed. The
+  // agent tab stays open, since the suggestions are shown there
+  function revealSuggestedNode(nodeId: string | null) {
+    if (!nodeId) return;
+    const node = suggestionNodes.get(nodeId);
+    if (node && node.translationUnitId !== selectedTranslationUnit?.id) {
+      const tu = findTranslationUnit(node);
+      if (tu) handleFileSelect(tu);
+    }
+    if (contextTab !== 'inspector' || contextCollapsed) inspectorUnseen = true;
+    focus.inspect(() => getNodeDetails(nodeId), true);
+  }
+
+  // The concept suggestions are attached to the last tool result that suggested a concept
+  const suggestionAnchorIndex = $derived(
+    suggestions.length > 0
+      ? messages.findLastIndex((m) => m.toolResult?.toolName === SUGGEST_LLM_CONCEPTS_TOOL)
+      : -1
+  );
 
   // The context column next to the code, with the inspector and the agent
   type ContextTab = 'inspector' | 'agent';
@@ -514,17 +506,10 @@
     {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
       <CodeViewer
         translationUnit={openedUnit}
-        {astNodes}
-        {overlayNodes}
         highlightLine={selectedNode?.startLine ?? undefined}
-        bind:nodePanelCollapsed={nodesPanelCollapsed}
-        bind:suggestions
-        {suggestionNodes}
-        onApplySuggestions={handleApplyAndReload}
         componentName={selectedComponentName ?? undefined}
         selectedNodeId={selectedNode?.id}
         onNavigateToNode={handleNavigateToNode}
-        panelPosition="bottom"
         {focus}
         externalInspector
         onInspect={showInspector}
@@ -695,6 +680,16 @@
                 {/if}
                 {#if message.contentType === 'tool-result' && message.toolResult}
                   <ToolResultBlock toolResult={message.toolResult} onItemClick={handleNodeClick} />
+                  {#if i === suggestionAnchorIndex}
+                    <!-- The pending concept suggestions of the agent, to accept or reject -->
+                    <div class="my-1 overflow-hidden rounded border border-gray-200">
+                      <ConceptChecklist
+                        bind:items={suggestions}
+                        onApplySuggestions={handleApplyAndReload}
+                        onHighlightNode={revealSuggestedNode}
+                      />
+                    </div>
+                  {/if}
                 {:else if message.content}
                   <div class="prose prose-sm max-w-none text-gray-800">
                     <MarkdownRenderer content={message.content} />

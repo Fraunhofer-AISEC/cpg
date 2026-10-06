@@ -1,14 +1,9 @@
 <script lang="ts">
   import { untrack, type Snippet } from 'svelte';
-  import type { TranslationUnitJSON, NodeJSON, ConceptSuggestionItem } from '$lib/types';
+  import type { TranslationUnitJSON, NodeJSON } from '$lib/types';
   import { TabNavigation } from '$lib/components/navigation';
   import { CollapsiblePanel } from '$lib/components/ui';
-  import {
-    NodeTable,
-    NodeOverlays,
-    FindingOverlay,
-    ConceptChecklist
-  } from '$lib/components/analysis';
+  import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
   import NodeInspector from './inspector/NodeInspector.svelte';
   import CodeAnnotations from './CodeAnnotations.svelte';
   import { type Lens, lenses, getAnnotations } from '$lib/annotations';
@@ -61,8 +56,9 @@
 
   interface Props {
     translationUnit: TranslationUnitJSON;
-    astNodes: NodeJSON[];
-    overlayNodes: NodeJSON[];
+    /** The nodes listed in the panel next to the code; not needed with an external inspector */
+    astNodes?: NodeJSON[];
+    overlayNodes?: NodeJSON[];
     conceptGroups?: any[];
     highlightLine?: number;
     finding?: string;
@@ -70,10 +66,6 @@
     headerActions?: Snippet;
     nodePanelCollapsed?: boolean;
     onClose?: () => void;
-    suggestions?: ConceptSuggestionItem[];
-    /** The nodes referenced by the suggestions, by ID, which may be nested anywhere in the unit */
-    suggestionNodes?: Map<string, NodeJSON>;
-    onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => void;
     /** The component of the unit; enables selecting nodes by clicking into the code */
     componentName?: string;
     /** The node to inspect initially, e.g. from a deep link */
@@ -82,16 +74,14 @@
     onNavigateToNode?: (ref: NodeRefJSON) => void;
     /** Additional actions for the inspected node, e.g. asking the agent about it */
     nodeActions?: Snippet<[NodeDetailsJSON]>;
-    /** Where the panel with the inspector and the node lists is shown */
-    panelPosition?: 'right' | 'bottom';
     /**
      * The inspected node. Pass it to share the inspected node with the parent, e.g. to show the
      * inspector outside of the viewer
      */
     focus?: CodeFocus;
     /**
-     * Whether the inspector is shown by the parent (using [focus]) instead of in the panel, which
-     * then only contains the node lists
+     * Whether the inspector is shown by the parent (using [focus]). The viewer then has no panel
+     * at all and the code takes the full space
      */
     externalInspector?: boolean;
     /** Called when the user inspects a node in the viewer, e.g. by clicking into the code */
@@ -100,8 +90,8 @@
 
   let {
     translationUnit,
-    astNodes,
-    overlayNodes,
+    astNodes = [],
+    overlayNodes = [],
     conceptGroups,
     highlightLine,
     finding,
@@ -109,14 +99,10 @@
     headerActions,
     nodePanelCollapsed = $bindable(false),
     onClose,
-    suggestions = $bindable([]),
-    suggestionNodes,
-    onApplySuggestions,
     componentName,
     selectedNodeId,
     onNavigateToNode,
     nodeActions,
-    panelPosition = 'right',
     focus: sharedFocus,
     externalInspector = false,
     onInspect
@@ -127,6 +113,8 @@
   const focus = sharedFocus ?? new CodeFocus();
   // svelte-ignore state_referenced_locally
   const inspectorInPanel = !!componentName && !externalInspector;
+  // svelte-ignore state_referenced_locally
+  const hasPanel = !externalInspector;
 
   let activeTab = $state(inspectorInPanel ? 'inspector' : 'astNodes');
   let nodes = $derived(
@@ -138,30 +126,8 @@
   const tabs = $derived([
     ...(inspectorInPanel ? [{ id: 'inspector', label: 'Inspector' }] : []),
     { id: 'astNodes', label: 'AST Nodes', count: astNodes?.length || 0 },
-    { id: 'overlayNodes', label: 'Overlay Nodes', count: overlayNodes?.length || 0 },
-    ...(suggestions.length > 0
-      ? [{ id: 'suggestions', label: 'Suggestions', count: suggestions.length }]
-      : [])
+    { id: 'overlayNodes', label: 'Overlay Nodes', count: overlayNodes?.length || 0 }
   ]);
-
-  let activeSuggestionNodeId = $state<string | null>(null);
-
-  $effect(() => {
-    if (!tabs.some((t) => t.id === activeTab)) {
-      activeTab = tabs[0]?.id ?? 'astNodes';
-    }
-  });
-
-  // Auto-switch to suggestions tab on transition from 0 -> >0 suggestions
-  let prevSuggestionCount = 0;
-  $effect(() => {
-    const count = suggestions.length;
-    if (prevSuggestionCount === 0 && count > 0) {
-      activeTab = 'suggestions';
-      nodePanelCollapsed = false;
-    }
-    prevSuggestionCount = count;
-  });
 
   // The node shown in the inspector
   const inspected = $derived(focus.details);
@@ -302,38 +268,8 @@
     codeContainerElement.scrollTo({ top: Math.max(0, top), behavior });
   }
 
-  // Resolve a nodeId to its line range via suggestionNodes, astNodes or overlayNodes
-  function findNodeById(nodeId: string): NodeJSON | undefined {
-    // A suggested node may be located in another file than the one that is shown
-    const suggestionNode = suggestionNodes?.get(nodeId);
-    return (
-      (suggestionNode?.translationUnitId === translationUnit.id ? suggestionNode : undefined) ??
-      astNodes.find((n) => n.id === nodeId) ??
-      overlayNodes.find((n) => n.id === nodeId)
-    );
-  }
-
-  function linesForNodeId(nodeId: string): number[] {
-    const node = findNodeById(nodeId);
-    if (!node) return [];
-    const lines: number[] = [];
-    for (let l = node.startLine; l <= node.endLine; l++) lines.push(l - 1); // 0-based
-    return lines;
-  }
-
-  // Lines to highlight for the currently active suggestion node (click-focused)
-  const activeNodeLines = $derived.by(() => {
-    if (!activeSuggestionNodeId) return [];
-    return linesForNodeId(activeSuggestionNodeId);
-  });
-
-  // Combined highlight lines for the code viewer
-  const allHighlightLines = $derived.by(() => {
-    if (activeTab === 'suggestions') {
-      return activeNodeLines;
-    }
-    return highlightLine ? [highlightLine - 1] : [];
-  });
+  // The highlighted line, 0-based
+  const allHighlightLines = $derived(highlightLine ? [highlightLine - 1] : []);
 
   const lineHeight = 1.5;
   const charWidth = 0.60015625;
@@ -365,14 +301,6 @@
     return codeViewport.range(lineHeight * remPx, totalLines, 40, offsetTop * remPx);
   });
 
-  // Scroll to focused suggestion node
-  $effect(() => {
-    if (activeSuggestionNodeId && codeContainerElement) {
-      const node = findNodeById(activeSuggestionNodeId);
-      if (node) scrollToLine(node.startLine);
-    }
-  });
-
   $effect(() => {
     if (highlightLine && codeContainerElement) {
       const line = highlightLine;
@@ -381,10 +309,7 @@
   });
 </script>
 
-<div
-  class="flex h-full w-full overflow-hidden rounded-[inherit]"
-  class:flex-col={panelPosition === 'bottom'}
->
+<div class="flex h-full w-full overflow-hidden rounded-[inherit]">
   <!-- Code display -->
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
     <div
@@ -521,8 +446,8 @@
           ></div>
         {/if}
 
-        <!-- The node boxes belong to the node lists, so they are hidden with them in the bottom panel -->
-        {#if (activeTab === 'astNodes' || activeTab === 'overlayNodes') && !(panelPosition === 'bottom' && nodePanelCollapsed)}
+        <!-- The node boxes belong to the node lists in the panel -->
+        {#if hasPanel && (activeTab === 'astNodes' || activeTab === 'overlayNodes')}
           <NodeOverlays
             {nodes}
             {codeLines}
@@ -567,14 +492,6 @@
           {/snippet}
         </NodeInspector>
       </div>
-    {:else if activeTab === 'suggestions'}
-      <div class="flex-1 overflow-auto p-4">
-        <ConceptChecklist
-          bind:items={suggestions}
-          {onApplySuggestions}
-          onHighlightNode={(nodeId) => (activeSuggestionNodeId = nodeId)}
-        />
-      </div>
     {:else}
       <!-- NodeTable is virtualized and needs to be its own scroll container -->
       <div class="min-h-0 flex-1 px-2">
@@ -590,36 +507,7 @@
     {/if}
   {/snippet}
 
-  {#if panelPosition === 'bottom'}
-    <div
-      class="flex min-h-0 shrink-0 flex-col border-t border-gray-200 bg-white"
-      style:height={nodePanelCollapsed ? undefined : '42%'}
-    >
-      <div class="flex shrink-0 items-center">
-        <div class="min-w-0 flex-1">
-          <TabNavigation
-            {tabs}
-            {activeTab}
-            onTabChange={(id) => {
-              activeTab = id;
-              nodePanelCollapsed = false;
-            }}
-          />
-        </div>
-        <button
-          type="button"
-          class="mr-2 rounded px-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-          onclick={() => (nodePanelCollapsed = !nodePanelCollapsed)}
-          aria-label={nodePanelCollapsed ? 'Show panel' : 'Hide panel'}
-        >
-          {nodePanelCollapsed ? '▴' : '▾'}
-        </button>
-      </div>
-      {#if !nodePanelCollapsed}
-        {@render panelContent()}
-      {/if}
-    </div>
-  {:else}
+  {#if hasPanel}
     <CollapsiblePanel title="Nodes" side="right" bind:collapsed={nodePanelCollapsed}>
       <div class="flex h-full flex-col overflow-hidden">
         <div class="shrink-0 bg-white">
