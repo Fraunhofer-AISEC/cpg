@@ -1,15 +1,17 @@
 <script lang="ts">
   import type { FileAnnotationsJSON } from '$lib/types';
-  import { type Lens, lenses, lensValue, conceptIcon } from '$lib/annotations';
+  import { conceptIcon } from '$lib/annotations';
+  import type { Layer } from '$lib/stores/layers.svelte';
 
   /**
-   * Draws the annotations of a file on top of the code: a colored bar next to each function (by the
-   * selected lens), the key figures of each function at the end of its first line, markers under
-   * external and unresolved calls, and icons for concepts in the gutter.
+   * Draws the annotations of a file on top of the code: the key figures of each function at the end
+   * of its first line, and, depending on the visible layers, markers under external and unresolved
+   * calls and icons for concepts in the gutter.
    */
   interface Props {
     annotations: FileAnnotationsJSON;
-    lens: Lens;
+    /** Which layers are shown */
+    layers: Record<Layer, boolean>;
     codeLines: string[];
     /** 0-based index of the first visible line */
     startLine: number;
@@ -22,20 +24,24 @@
     onInspect: (nodeId: string) => void;
   }
 
-  let { annotations, lens, codeLines, startLine, endLine, lineHeight, charWidth, offsetTop, offsetLeft, onInspect }: Props =
-    $props();
-
-  const lensInfo = $derived(lenses.find((l) => l.id === lens)!);
+  let {
+    annotations,
+    layers,
+    codeLines,
+    startLine,
+    endLine,
+    lineHeight,
+    charWidth,
+    offsetTop,
+    offsetLeft,
+    onInspect
+  }: Props = $props();
 
   // 1-based lines; visible if they overlap the rendered lines
   const isVisible = (first: number, last: number) => first - 1 < endLine && last - 1 >= startLine;
   const top = (line: number) => (line - 1) * lineHeight + offsetTop;
 
-  const functions = $derived.by(() => {
-    const values = annotations.functions.map((fn) => lensValue(lens, fn, annotations));
-    const max = Math.max(1, ...values);
-    return annotations.functions.map((fn, i) => ({ ...fn, value: values[i], intensity: values[i] / max }));
-  });
+  const functions = $derived(annotations.functions);
 
   // Rendered width of a line in characters, with tabs being 8 characters wide
   function lineColumns(line: number): number {
@@ -63,32 +69,16 @@
   });
 
   const markedCalls = $derived(
-    annotations.calls.filter((c) => c.status !== 'RESOLVED' && c.startLine === c.endLine)
+    annotations.calls.filter(
+      (c) =>
+        c.startLine === c.endLine &&
+        ((c.status === 'EXTERNAL' && layers.external) ||
+          (c.status === 'UNRESOLVED' && layers.uncertain))
+    )
   );
 </script>
 
 <div class="pointer-events-none absolute top-0 left-0 h-full w-full">
-  <!-- Bars next to the functions, by the selected lens -->
-  {#if lens !== 'none'}
-    {#each functions as fn (fn.function.id)}
-      {#if fn.value > 0 && isVisible(fn.function.startLine, fn.function.endLine)}
-        <button
-          type="button"
-          class="pointer-events-auto absolute left-0 z-[26] w-1 cursor-pointer rounded-r"
-          style:top="{top(fn.function.startLine)}rem"
-          style:height="{(fn.function.endLine - fn.function.startLine + 1) * lineHeight}rem"
-          style:background-color="rgba({lensInfo.color}, {0.15 + 0.85 * fn.intensity})"
-          title="{fn.function.name}: {lensInfo.describe(fn.value)}"
-          aria-label="Inspect {fn.function.name}"
-          onclick={(e) => {
-            e.stopPropagation();
-            onInspect(fn.function.id);
-          }}
-        ></button>
-      {/if}
-    {/each}
-  {/if}
-
   <!-- Key figures at the end of the first line of each function -->
   {#each functions as fn (fn.function.id)}
     {#if isVisible(fn.function.startLine, fn.function.startLine)}
@@ -113,7 +103,9 @@
   {#each markedCalls as call (call.id)}
     {#if isVisible(call.startLine, call.startLine)}
       <div
-        class="absolute z-[21] border-b-2 {call.status === 'EXTERNAL' ? 'border-dashed border-orange-500' : 'border-dotted border-red-500'}"
+        class="absolute z-[21] border-b-2 {call.status === 'EXTERNAL'
+          ? 'border-dashed border-orange-500'
+          : 'border-dotted border-red-500'}"
         style:top="{top(call.startLine)}rem"
         style:height="{lineHeight - 0.1}rem"
         style:left="{call.startColumn * charWidth + offsetLeft}rem"
@@ -123,14 +115,16 @@
   {/each}
 
   <!-- Concept icons in the gutter -->
-  {#each conceptsByLine as entry (entry.line)}
+  {#each layers.concepts ? conceptsByLine : [] as entry (entry.line)}
     {#if isVisible(entry.line, entry.line)}
       <button
         type="button"
         class="pointer-events-auto absolute left-1.5 z-[26] cursor-pointer text-[11px]"
         style:top="{top(entry.line)}rem"
         style:line-height="{lineHeight}rem"
-        title={entry.concepts.map((c) => `${c.isOperation ? 'Operation' : 'Concept'}: ${c.type}`).join('\n')}
+        title={entry.concepts
+          .map((c) => `${c.isOperation ? 'Operation' : 'Concept'}: ${c.type}`)
+          .join('\n')}
         onclick={(e) => {
           e.stopPropagation();
           onInspect(entry.concepts[0].id);

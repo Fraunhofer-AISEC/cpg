@@ -1,52 +1,13 @@
 import type { FileAnnotationsJSON, FunctionAnnotationJSON } from '$lib/types';
 
-/** The key figure by which functions are colored in the code viewer. */
-export type Lens = 'callers' | 'external' | 'uncertain' | 'concepts' | 'none';
-
-export const lenses: { id: Lens; label: string; color: string; describe: (n: number) => string }[] =
-  [
-    { id: 'callers', label: 'Callers', color: '37, 99, 235', describe: (n) => `${n} callers` },
-    {
-      id: 'external',
-      label: 'External calls',
-      color: '234, 88, 12',
-      describe: (n) => `${n} calls to external code`
-    },
-    {
-      id: 'uncertain',
-      label: 'Uncertainty',
-      color: '220, 38, 38',
-      describe: (n) => `${n} unresolved calls`
-    },
-    {
-      id: 'concepts',
-      label: 'Concepts',
-      color: '147, 51, 234',
-      describe: (n) => `${n} concepts / operations`
-    },
-    { id: 'none', label: 'No coloring', color: '0, 0, 0', describe: () => '' }
-  ];
-
-/** The value of a function for a lens. */
-export function lensValue(
-  lens: Lens,
+/** The number of concepts and operations in a function. */
+export function conceptsInFunction(
   fn: FunctionAnnotationJSON,
   annotations: FileAnnotationsJSON
 ): number {
-  switch (lens) {
-    case 'callers':
-      return fn.callers;
-    case 'external':
-      return fn.externalCalls;
-    case 'uncertain':
-      return fn.unresolvedCalls;
-    case 'concepts':
-      return annotations.concepts.filter(
-        (c) => c.line >= fn.function.startLine && c.line <= fn.function.endLine
-      ).length;
-    case 'none':
-      return 0;
-  }
+  return annotations.concepts.filter(
+    (c) => c.line >= fn.function.startLine && c.line <= fn.function.endLine
+  ).length;
 }
 
 const categoryIcons: Record<string, string> = {
