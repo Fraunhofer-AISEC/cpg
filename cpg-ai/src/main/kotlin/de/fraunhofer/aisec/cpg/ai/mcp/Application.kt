@@ -31,11 +31,8 @@ import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.configureServer
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.install
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
-import io.ktor.server.plugins.contentnegotiation.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
@@ -164,9 +161,6 @@ fun runHttpMcpServerUsingKtorPlugin(
     server: Server,
     wait: Boolean = false,
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
-    return embeddedServer(factory = CIO, host = host, port = port) {
-            install(ContentNegotiation) { json() }
-            mcpStreamableHttp { server }
-        }
+    return embeddedServer(factory = CIO, host = host, port = port) { mcpStreamableHttp { server } }
         .apply { start(wait = wait) }
 }
