@@ -6,6 +6,8 @@
     pdg: PdgNode;
     /** The statement is selected */
     selected: boolean;
+    /** The statement is hovered, in the graph or in the code */
+    hovered: boolean;
     /** The statement is not connected to the selected one */
     faded: boolean;
     /** The statement is the root of the slice */
@@ -40,15 +42,15 @@ dashed border. Far away only the line number is shown, see the zoom class of the
 by double click is a shortcut, the button at the border does the same -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="relative h-14 w-42 rounded-lg px-2.5 py-1.5 text-left transition-opacity {card.selected
+  class="relative h-14 w-39 rounded-lg px-2.5 py-1.5 text-left transition-opacity {card.selected
     ? 'border-2 border-blue-500 bg-blue-50 shadow-[0_0_0_3px_rgba(59,130,246,0.15)]'
     : stub
       ? 'border border-dashed border-gray-400 bg-gray-50'
       : branch
         ? 'border border-gray-300 bg-slate-50 shadow-sm'
-        : 'border border-gray-300 bg-white shadow-sm'} {card.faded && !card.selected
-    ? 'opacity-60'
-    : ''}"
+        : 'border border-gray-300 bg-white shadow-sm'} {card.hovered && !card.selected
+    ? 'ring-2 ring-blue-300'
+    : ''} {card.faded && !card.selected ? 'opacity-60' : ''}"
   title="{pdg.node.type} · {locationOf(pdg)}"
   ondblclick={() => pdg.more > 0 && card.onExpand(pdg.id)}
 >

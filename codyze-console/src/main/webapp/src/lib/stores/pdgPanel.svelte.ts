@@ -18,6 +18,8 @@ export class PdgPanel {
   hops = $state(2);
   slice = $state.raw<PdgSlice | null>(null);
   selectedId = $state<string | null>(null);
+  /** The statement under the mouse, in the graph or in the code */
+  hoveredId = $state<string | null>(null);
   loading = $state(false);
   error = $state<string | null>(null);
   /** Whether the slice stays when another node is inspected, instead of following it */
@@ -123,6 +125,7 @@ export class PdgPanel {
     this.request++;
     this.open = false;
     this.loading = false;
+    this.hoveredId = null;
     this.history = [];
   }
 }

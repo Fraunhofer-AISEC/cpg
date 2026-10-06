@@ -24,6 +24,10 @@
     gutterPadding?: number;
     /** The lines of the selection (1-based, inclusive): tinted, with emphasized line numbers */
     selection?: { first: number; last: number } | null;
+    /** The lines of a slice of the dependence graph (1-based): tinted, with a bar at the gutter */
+    sliceLines?: number[];
+    /** The lines of the statement hovered in the dependence graph, tinted more strongly */
+    sliceHover?: { first: number; last: number } | null;
   }
 
   let {
@@ -37,11 +41,26 @@
     offsetTop,
     offsetLeft,
     gutterPadding = 0.75,
-    selection = null
+    selection = null,
+    sliceLines = [],
+    sliceHover = null
   }: Props = $props();
 
   const isSelected = (line: number) =>
     !!selection && line >= selection.first && line <= selection.last;
+
+  const inSlice = $derived(new Set(sliceLines));
+
+  // Contiguous runs of the lines of the slice
+  const sliceRanges = $derived.by(() => {
+    const ranges: { first: number; last: number }[] = [];
+    for (const line of [...inSlice].sort((a, b) => a - b)) {
+      const previous = ranges.at(-1);
+      if (previous && previous.last === line - 1) previous.last = line;
+      else ranges.push({ first: line, last: line });
+    }
+    return ranges;
+  });
 
   const lines = $derived(splitHighlightedLines(highlighted));
   const visibleLines = $derived(lines.slice(start, end));
@@ -81,6 +100,24 @@
     ></div>
   {/each}
 
+  {#each sliceRanges as range (range.first)}
+    <div
+      class="pointer-events-none absolute right-0 left-0"
+      style:top="{offsetTop + (range.first - 1) * lineHeight}rem"
+      style:height="{(range.last - range.first + 1) * lineHeight}rem"
+      style:background-color="rgba(99, 133, 203, 0.08)"
+    ></div>
+  {/each}
+
+  {#if sliceHover}
+    <div
+      class="pointer-events-none absolute right-0 left-0"
+      style:top="{offsetTop + (sliceHover.first - 1) * lineHeight}rem"
+      style:height="{(sliceHover.last - sliceHover.first + 1) * lineHeight}rem"
+      style:background-color="rgba(99, 133, 203, 0.18)"
+    ></div>
+  {/if}
+
   {#if selection}
     <div
       class="pointer-events-none absolute right-0 left-0 bg-blue-600/5"
@@ -102,7 +139,11 @@
       <span
         class="sticky left-0 z-[25] shrink-0 text-right select-none {selected
           ? 'bg-[#f4f7fe] font-semibold text-blue-600'
-          : 'bg-white text-gray-400'}"
+          : inSlice.has(start + i + 1)
+            ? 'bg-[#f1f5fb] text-gray-500'
+            : 'bg-white text-gray-400'} {inSlice.has(start + i + 1)
+          ? 'shadow-[inset_3px_0_0_#a9c1ec]'
+          : ''}"
         style:width="{codeStart}rem"
         style:padding-right="{gutterPadding}rem"
       >
