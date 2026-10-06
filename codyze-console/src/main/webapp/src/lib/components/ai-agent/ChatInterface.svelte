@@ -667,6 +667,7 @@
             details={focus.details}
             loading={focus.loading}
             error={focus.error}
+            revealSection={focus.revealSection}
             onSelect={selectRef}
           >
             {#snippet actions()}
