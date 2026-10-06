@@ -87,9 +87,13 @@ data class FileAnnotationsJSON(
     val concepts: List<ConceptAnnotationJSON>,
 )
 
+/** The nodes of this translation unit that have a location in it. */
+private val TranslationUnit.ownNodes: List<Node>
+    get() = nodes.filter { it.location != null && it.translationUnit == this }
+
 fun TranslationUnit.toAnnotationsJSON(): FileAnnotationsJSON {
-    val ownNodes = nodes.filter { it.location != null && it.translationUnit == this }
-    val calls = ownNodes.filterIsInstance<Call>().filter { it !is OperatorCall && !it.isImplicit }
+    val unitNodes = ownNodes
+    val calls = unitNodes.filterIsInstance<Call>().filter { it !is OperatorCall && !it.isImplicit }
 
     val functions =
         functions
@@ -121,8 +125,18 @@ fun TranslationUnit.toAnnotationsJSON(): FileAnnotationsJSON {
             }
         }
 
-    val concepts =
-        ownNodes.flatMap { node ->
+    return FileAnnotationsJSON(
+        functions = functions,
+        calls = callAnnotations,
+        concepts = conceptAnnotations(unitNodes),
+    )
+}
+
+/** The concepts and operations attached to the nodes of this translation unit. */
+fun TranslationUnit.conceptAnnotations(
+    ownNodes: List<Node> = this.ownNodes
+): List<ConceptAnnotationJSON> =
+    ownNodes.flatMap { node ->
             node.overlays.mapNotNull { overlay ->
                 val line = node.location?.region?.startLine ?: return@mapNotNull null
                 if (overlay !is Concept && overlay !is Operation) return@mapNotNull null
@@ -138,10 +152,7 @@ fun TranslationUnit.toAnnotationsJSON(): FileAnnotationsJSON {
                     line = line,
                 )
             }
-        }
-
-    return FileAnnotationsJSON(functions = functions, calls = callAnnotations, concepts = concepts)
-}
+    }
 
 val Call.status: CallStatus
     get() =
