@@ -527,6 +527,34 @@
     if (ref) selectRef(ref);
   }
 
+  // The conversation as a timeline: one block per question, with the tool calls as numbered steps
+  // (the evidence trail) and the answer last
+  interface TimelineEntry {
+    message: ChatMessage;
+    /** The index of the message in [messages] */
+    index: number;
+    /** The number of the step, for tool calls */
+    step?: number;
+  }
+
+  const timeline = $derived.by(() => {
+    const blocks: { question: ChatMessage | null; entries: TimelineEntry[] }[] = [];
+    messages.forEach((message, index) => {
+      if (message.role === 'user') {
+        blocks.push({ question: message, entries: [] });
+        return;
+      }
+      if (blocks.length === 0) blocks.push({ question: null, entries: [] });
+      const block = blocks[blocks.length - 1];
+      const step =
+        message.contentType === 'tool-result'
+          ? block.entries.filter((e) => e.step).length + 1
+          : undefined;
+      block.entries.push({ message, index, step });
+    });
+    return blocks;
+  });
+
   // The concept suggestions are attached to the last tool result that suggested a concept
   const suggestionAnchorIndex = $derived(
     suggestions.length > 0
@@ -825,6 +853,38 @@
       {q.label}
     </button>
   {/each}
+{/snippet}
+
+<!-- The reasoning of the model before a message, collapsed -->
+{#snippet reasoning(message: ChatMessage)}
+  {#if message.reasoning}
+    <div class="my-1 inline-block">
+      <button
+        class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
+        onclick={() => toggleReasoning(message.id)}
+      >
+        <svg
+          class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(message.id)
+            ? 'rotate-90'
+            : ''}"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Thought process</span>
+      </button>
+      {#if expandedReasoning.has(message.id)}
+        <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
+          <p class="text-xs leading-relaxed whitespace-pre-wrap text-gray-400 italic">
+            {message.reasoning}
+          </p>
+        </div>
+      {/if}
+    </div>
+  {/if}
 {/snippet}
 
 {#snippet workingDot()}
@@ -1168,7 +1228,7 @@
       {:else}
         <!-- Messages -->
         <div
-          class="min-h-0 flex-1 overflow-y-auto"
+          class="min-h-0 flex-1 overflow-y-auto bg-gray-50"
           style="transform: translateZ(0);"
           bind:this={messagesContainer}
           onscroll={handleScroll}
@@ -1194,110 +1254,104 @@
             </div>
           {/if}
 
-          {#each messages as message, i (i)}
-            {#if message.role === 'user'}
-              <div class="flex flex-col items-end gap-1 px-3 py-2">
-                {#if message.context}
-                  <span
-                    class="max-w-[85%] truncate rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500"
-                    title={message.context}>📎 {message.context}</span
-                  >
-                {/if}
-                <div class="max-w-[85%] rounded-2xl bg-blue-600 px-3 py-2 text-white">
-                  <div class="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
-                </div>
-              </div>
-            {:else}
-              <div class={message.contentType === 'tool-result' ? 'px-3 py-1' : 'px-3 py-3'}>
-                {#if message.reasoning}
-                  <div class="mb-2 inline-block">
-                    <button
-                      class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
-                      onclick={() => toggleReasoning(message.id)}
+          {#each timeline as block, b (b)}
+            {@const isLast = b === timeline.length - 1}
+            <section class="mx-2 my-2 rounded-md border border-gray-200 bg-white">
+              {#if block.question}
+                <!-- The question, with the code it refers to -->
+                <header class="border-b border-gray-100 px-3 py-2">
+                  <p class="text-sm leading-snug font-medium whitespace-pre-wrap text-gray-900">
+                    {block.question.content}
+                  </p>
+                  {#if block.question.context}
+                    <p
+                      class="mt-1 truncate font-mono text-[10px] text-gray-500"
+                      title={block.question.context}
                     >
-                      <svg
-                        class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(
-                          message.id
-                        )
-                          ? 'rotate-90'
-                          : ''}"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
+                      📎 {block.question.context}
+                    </p>
+                  {/if}
+                </header>
+              {/if}
+              <div class="px-3 py-1.5">
+                {#each block.entries as entry (entry.index)}
+                  {@const message = entry.message}
+                  {@render reasoning(message)}
+                  {#if message.contentType === 'tool-result' && message.toolResult}
+                    <!-- A tool call: a numbered step of the evidence trail -->
+                    <div class="flex min-w-0 items-start gap-1.5">
+                      <span
+                        class="mt-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-slate-700 px-0.5 text-[10px] leading-none font-semibold text-white tabular-nums"
+                        title="Step {entry.step}"
                       >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                      <span>Thought process</span>
-                    </button>
-                    {#if expandedReasoning.has(message.id)}
-                      <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
-                        <p class="text-xs leading-relaxed whitespace-pre-wrap text-gray-400 italic">
-                          {message.reasoning}
-                        </p>
+                        {entry.step}
+                      </span>
+                      <div class="min-w-0 flex-1">
+                        <ToolResultBlock
+                          toolResult={message.toolResult}
+                          onItemClick={handleNodeClick}
+                        />
+                      </div>
+                    </div>
+                    {#if entry.index === suggestionAnchorIndex}
+                      <!-- The pending concept suggestions of the agent, to accept or reject -->
+                      <div class="my-1 ml-5 overflow-hidden rounded border border-gray-200">
+                        <ConceptChecklist
+                          bind:items={suggestions}
+                          onApplySuggestions={handleApplyAndReload}
+                          onHighlightNode={revealSuggestedNode}
+                        />
+                      </div>
+                    {/if}
+                  {:else if message.content}
+                    <!-- The answer (or an error) -->
+                    <div class="prose prose-sm max-w-none py-1.5 text-gray-800">
+                      <MarkdownRenderer
+                        content={message.content}
+                        citations={citedRefs}
+                        onCite={openCitation}
+                      />
+                    </div>
+                    {#if message.contentType === 'text' && extractCitations(message.content).length === 0}
+                      <!-- Answers are only verifiable through the nodes they rely on -->
+                      <p
+                        class="pb-1 text-[11px] text-gray-400"
+                        title="The answer cites no nodes of the code, so it is not backed by evidence from the analysis"
+                      >
+                        ○ Unsupported: no nodes cited
+                      </p>
+                    {/if}
+                  {/if}
+                {/each}
+
+                {#if isLast && (isLoading || displayContent)}
+                  <div class="py-1.5">
+                    {#if displayContent}
+                      <div class="prose prose-sm max-w-none text-gray-800">
+                        <MarkdownRenderer
+                          content={displayContent}
+                          citations={citedRefs}
+                          onCite={openCitation}
+                        />
+                      </div>
+                    {:else}
+                      <div class="flex gap-1 py-1" title="The agent is working">
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"
+                        ></div>
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"
+                        ></div>
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"
+                        ></div>
                       </div>
                     {/if}
                   </div>
                 {/if}
-                {#if message.contentType === 'tool-result' && message.toolResult}
-                  <ToolResultBlock toolResult={message.toolResult} onItemClick={handleNodeClick} />
-                  {#if i === suggestionAnchorIndex}
-                    <!-- The pending concept suggestions of the agent, to accept or reject -->
-                    <div class="my-1 overflow-hidden rounded border border-gray-200">
-                      <ConceptChecklist
-                        bind:items={suggestions}
-                        onApplySuggestions={handleApplyAndReload}
-                        onHighlightNode={revealSuggestedNode}
-                      />
-                    </div>
-                  {/if}
-                {:else if message.content}
-                  <div class="prose prose-sm max-w-none text-gray-800">
-                    <MarkdownRenderer
-                      content={message.content}
-                      citations={citedRefs}
-                      onCite={openCitation}
-                    />
-                  </div>
-                  {#if message.contentType === 'text' && extractCitations(message.content).length === 0}
-                    <!-- Answers are only verifiable through the nodes they rely on -->
-                    <p
-                      class="mt-1 text-[11px] text-gray-400"
-                      title="The answer cites no nodes of the code, so it is not backed by evidence from the analysis"
-                    >
-                      ○ Unsupported: no nodes cited
-                    </p>
-                  {/if}
-                {/if}
               </div>
-            {/if}
+            </section>
           {/each}
-
-          {#if isLoading || displayContent}
-            <div class="px-3 py-3">
-              {#if displayContent}
-                <div class="prose prose-sm max-w-none text-gray-800">
-                  <MarkdownRenderer
-                    content={displayContent}
-                    citations={citedRefs}
-                    onCite={openCitation}
-                  />
-                </div>
-              {:else}
-                <div class="flex gap-1">
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"
-                  ></div>
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"
-                  ></div>
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          {/if}
         </div>
 
         <!-- Input -->
