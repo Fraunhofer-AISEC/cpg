@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolAnnotations
@@ -50,10 +51,12 @@ import kotlin.reflect.KTypeParameter
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.memberProperties
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
@@ -61,19 +64,73 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import kotlinx.serialization.serializer
+
+/**
+ * Key in a tool's `_meta` that marks it as registered through [addTool] or [addToolWithoutCpg], so
+ * its arguments are decoded and reported the standard way. [toolRegistrationProblems] reports every
+ * tool without it.
+ */
+const val TYPED_ARGUMENTS_META_KEY = "de.fraunhofer.aisec.cpg.ai/typedArguments"
+
+/** Arguments of a tool that takes none; use it as the type parameter of [addTool]. */
+@Serializable object NoArguments
+
+/** A tool call's arguments, decoded into [T] or turned into the answer for the model. */
+sealed interface DecodedArguments<out T> {
+    data class Valid<T>(val payload: T) : DecodedArguments<T>
+
+    data class Invalid(val result: CallToolResult) : DecodedArguments<Nothing>
+}
+
+/**
+ * Decodes [request]'s arguments into [T]; on failure, the result lists every problem with them (see
+ * [describeInvalidArguments]). The only place tool arguments are decoded.
+ */
+@PublishedApi
+internal inline fun <reified T> decodeArguments(
+    name: String,
+    request: CallToolRequest,
+): DecodedArguments<T> =
+    try {
+        DecodedArguments.Valid(request.arguments.toPayload<T>())
+    } catch (e: SerializationException) {
+        val message =
+            describeInvalidArguments(name, serializer<T>().descriptor, request.arguments, e)
+        DecodedArguments.Invalid(CallToolResult(content = listOf(TextContent(message))))
+    }
+
+/** [description] followed by one line per parameter in [schema], if it has any. */
+@PublishedApi
+internal fun describeWithParameters(description: String, schema: ToolSchema): String {
+    val parameters =
+        schema.properties.orEmpty().map { (k, v) ->
+            "- $k: ${v.jsonObject["description"]?.jsonPrimitive?.content ?: ""}"
+        }
+    return if (parameters.isEmpty()) description
+    else parameters.joinToString("\n", prefix = "$description\n\nParameters:\n")
+}
+
+@PublishedApi
+internal fun withTypedArgumentsMarker(meta: JsonObject?): JsonObject =
+    JsonObject(meta.orEmpty() + (TYPED_ARGUMENTS_META_KEY to JsonPrimitive(true)))
 
 /**
  * Registers a [io.modelcontextprotocol.kotlin.sdk.types.Tool] to the MCP [Server]. The tool's input
- * schema is automatically generated from the reified type parameter [T] using reflection. The
- * handler function receives the deserialized input of type [T] and the current [TranslationResult],
- * and must return a [CallToolResult] with the output content. The [description] of the tool is
- * automatically extended with parameter information from the schema, so do NOT add this information
- * to the description yourself.
+ * schema is automatically generated from the reified type parameter [T] using reflection (use
+ * [NoArguments] for a tool without any). The handler function receives the deserialized input of
+ * type [T] and the current [TranslationResult], and must return a [CallToolResult] with the output
+ * content. The [description] of the tool is automatically extended with parameter information from
+ * the schema, so do NOT add this information to the description yourself. Arguments that do not
+ * decode are answered with the list of problems, without calling [handler].
  *
  * The handler runs under [CpgLock]: shared by default, so read-only tools stay concurrent. Pass
  * `mutating = true` if it changes the graph (or does a read-modify-write on a file shared with
  * other tools); it then runs exclusively. Forgetting it on a mutating tool is the one way to get
  * this wrong, since the default is the cheap one.
+ *
+ * Register every tool through this or [addToolWithoutCpg], never through the SDK's own `addTool`:
+ * only these decode arguments the standard way, and [toolRegistrationProblems] flags the rest.
  */
 inline fun <reified T> Server.addTool(
     name: String,
@@ -86,38 +143,65 @@ inline fun <reified T> Server.addTool(
     noinline handler: (TranslationResult, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
-    val parameters =
-        inputSchema.properties
-            ?.map { (k, v) ->
-                val type = v.jsonObject["type"]?.jsonPrimitive?.content ?: "unknown"
-                val description = v.jsonObject["description"]?.jsonPrimitive?.content ?: ""
-                "- $k: $description"
-            }
-            ?.joinToString(separator = "\n", prefix = "$description\n\nParameters:\n") { it }
     this.addTool(
         name,
-        description + parameters,
+        describeWithParameters(description, inputSchema),
         inputSchema = inputSchema,
         title = title,
         outputSchema = outputSchema,
         toolAnnotations = toolAnnotations,
-        meta = meta,
+        meta = withTypedArgumentsMarker(meta),
     ) { request ->
         try {
-            val payload =
-                try {
-                    request.arguments.toPayload<T>()
-                } catch (e: SerializationException) {
-                    return@addTool CallToolResult(
-                        content = listOf(TextContent("Invalid arguments for $name: ${e.message}"))
-                    )
-                }
-            payload.runOnCpg(mutating, handler)
+            when (val decoded = decodeArguments<T>(name, request)) {
+                is DecodedArguments.Invalid -> decoded.result
+                is DecodedArguments.Valid -> decoded.payload.runOnCpg(mutating, handler)
+            }
         } catch (e: Exception) {
             CallToolResult(
                 content =
                     listOf(
                         TextContent("Error executing query: ${e.message ?: e::class.simpleName}")
+                    )
+            )
+        }
+    }
+}
+
+/**
+ * Like [addTool], for tools that do not work on the shared CPG - they only touch files, or take
+ * [CpgLock] themselves (e.g. `cpg_analyze`, which replaces the graph): [handler] gets just the
+ * decoded arguments and runs without the lock.
+ */
+inline fun <reified T> Server.addToolWithoutCpg(
+    name: String,
+    description: String,
+    title: String? = null,
+    outputSchema: ToolSchema? = null,
+    toolAnnotations: ToolAnnotations? = null,
+    meta: JsonObject? = null,
+    noinline handler: (T) -> CallToolResult,
+) {
+    val inputSchema = T::class.toSchema()
+    this.addTool(
+        name,
+        describeWithParameters(description, inputSchema),
+        inputSchema = inputSchema,
+        title = title,
+        outputSchema = outputSchema,
+        toolAnnotations = toolAnnotations,
+        meta = withTypedArgumentsMarker(meta),
+    ) { request ->
+        try {
+            when (val decoded = decodeArguments<T>(name, request)) {
+                is DecodedArguments.Invalid -> decoded.result
+                is DecodedArguments.Valid -> handler(decoded.payload)
+            }
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent("Error executing $name: ${e.message ?: e::class.simpleName}")
                     )
             )
         }

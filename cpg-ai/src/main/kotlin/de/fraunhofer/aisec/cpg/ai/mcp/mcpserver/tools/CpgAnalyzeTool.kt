@@ -58,12 +58,12 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgLock
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NoArguments
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeIndex
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addToolWithoutCpg
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -105,7 +105,6 @@ import de.fraunhofer.aisec.cpg.project.Project
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import java.nio.file.Paths
 import java.util.IdentityHashMap
@@ -116,7 +115,6 @@ import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
 
 /**
  * The graph every tool operates on. Tools read it under [CpgLock], and [runCpgAnalyze] replaces it
@@ -156,13 +154,11 @@ val toolDescription =
         .trimIndent()
 
 fun Server.addCpgAnalyzeTool() {
-    this.addTool(
+    this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_analyze",
         description = toolDescription,
-        inputSchema = CpgAnalyzePayload::class.toSchema(),
-    ) { request ->
+    ) { payload ->
         try {
-            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -283,7 +279,7 @@ private fun analyzeAndStore(
 
 /** Translate source code into the AST of the CPG (Code Property Graph). */
 fun Server.addCpgTranslate() {
-    this.addTool(
+    this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_translate",
         description =
             """
@@ -305,10 +301,8 @@ fun Server.addCpgTranslate() {
         - "Analyze the project in /path/to/repo"
     """
                 .trimIndent(),
-        inputSchema = CpgAnalyzePayload::class.toSchema(),
-    ) { request ->
+    ) { payload ->
         try {
-            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload, runPasses = false, cleanup = false)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -322,12 +316,11 @@ fun Server.addCpgTranslate() {
 
 /** Provide a list of all passes that can be applied to the CPG. */
 fun Server.addListPasses() {
-    this.addTool(
+    this.addToolWithoutCpg<NoArguments>(
         name = "cpg_list_passes",
         description =
             """Provides a list of all available passes that can be applied to the CPG. It also lists dependencies and what kind of node the pass expects."""
                 .trimIndent(),
-        inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
     ) { _ ->
         try {
             fun passToInfo(pass: KClass<out Pass<*>>): PassInfo {

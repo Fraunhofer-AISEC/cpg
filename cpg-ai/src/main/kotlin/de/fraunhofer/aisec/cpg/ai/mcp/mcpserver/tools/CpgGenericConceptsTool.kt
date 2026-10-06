@@ -45,7 +45,6 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 private const val fileName = "concepts.yaml"
@@ -65,24 +64,10 @@ fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
         - "List all known concepts and operations"
         """
             .trimIndent()
-    this.addTool(
+    this.addToolWithoutCpg<CpgListPayload>(
         name = "cpg_list_llm_concepts_operations",
         description = toolDescription,
-        inputSchema = CpgListPayload::class.toSchema(),
-    ) { request ->
-        val payload =
-            try {
-                request.arguments.toPayload<CpgListPayload>()
-            } catch (e: SerializationException) {
-                return@addTool CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "Invalid arguments for cpg_list_llm_concepts_operations: ${e.message}"
-                            )
-                        )
-                )
-            }
+    ) { payload ->
         CallToolResult(content = listConcepts(file, payload))
     }
 }
@@ -112,16 +97,10 @@ fun Server.addOrUpdateConcept(file: File = File(fileName)) {
         """
             .trimIndent()
 
-    this.addTool(
+    this.addToolWithoutCpg<LLMConceptDescription>(
         name = "cpg_add_or_update_llm_concept",
         description = toolDescription,
-        inputSchema = LLMConceptDescription::class.toSchema(),
-    ) { request ->
-        val payload =
-            request.arguments?.toObject<LLMConceptDescription>()
-                ?: return@addTool CallToolResult(
-                    content = listOf(TextContent("Invalid input for adding/updating concept."))
-                )
+    ) { payload ->
         persistConceptSchemas(listOf(payload), file)
         CallToolResult(
             content = listOf(TextContent("Saved concept '${payload.name}' to ${file.path}."))

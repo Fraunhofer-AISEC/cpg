@@ -246,6 +246,20 @@ fun Server.myTool() =
     }
 ```
 
+Register every tool through `addTool<T>` or `addToolWithoutCpg<T>` (for a handler that does not work
+on the graph: it gets only the payload and runs without `CpgLock`), never through the MCP SDK's own
+`addTool`; use `NoArguments` as the payload of a tool that takes none. Only these helpers decode
+arguments the standard way: a call whose arguments do not fit the payload is answered with every
+problem at once (missing fields, wrong JSON types, nulls) and the expected shape, without running
+the handler, so the model can fix them in one retry. A host can check its whole tool set in a test:
+
+```kotlin
+assertEquals(emptyList(), server.toolRegistrationProblems())
+```
+
+It reports tools registered past the helpers and tools that do not answer wrongly typed arguments
+with that problem list.
+
 Rules for tools: the handler is not `suspend`, and the description of the payload's parameters is
 appended to the tool description automatically, so do not repeat it. Pass `mutating = true` to
 `addTool` if the handler changes the graph or does a read-modify-write on a file shared with other
