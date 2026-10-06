@@ -88,6 +88,8 @@
     externalInspector?: boolean;
     /** Called when the user inspects a node in the viewer, e.g. by clicking into the code */
     onInspect?: () => void;
+    /** The annotations of the file, loaded by the viewer; bind it to use them outside */
+    annotations?: FileAnnotationsJSON | null;
   }
 
   let {
@@ -107,7 +109,8 @@
     nodeActions,
     focus: sharedFocus,
     externalInspector = false,
-    onInspect
+    onInspect,
+    annotations = $bindable(null)
   }: Props = $props();
 
   // The focus and the placement of the inspector never change for a viewer
@@ -180,7 +183,6 @@
   }
 
   // Annotations of the file (function key figures, call status, concepts), loaded per unit
-  let annotations = $state.raw<FileAnnotationsJSON | null>(null);
 
   async function loadAnnotations(component: string, unitId: string) {
     const result = await getAnnotations(component, unitId);

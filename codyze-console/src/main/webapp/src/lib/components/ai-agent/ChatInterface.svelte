@@ -5,6 +5,7 @@
   import SessionBar from './SessionBar.svelte';
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, ConceptChecklist, FileTree } from '$lib/components/analysis';
+  import Outline from '$lib/components/analysis/Outline.svelte';
   import NodeInspector from '$lib/components/analysis/inspector/NodeInspector.svelte';
   import { LoadingSpinner } from '$lib/components/ui';
   import { agentSession } from '$lib/stores/agentSession.svelte';
@@ -20,7 +21,8 @@
     ConceptSuggestionItem,
     Model,
     NodeDetailsJSON,
-    NodeRefJSON
+    NodeRefJSON,
+    FileAnnotationsJSON
   } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
@@ -238,6 +240,35 @@
   // mark the inspector tab after the column was opened again
   let collapsedUnseen = $state(false);
   let sidebarOpen = $state(true);
+
+  // The views of the sidebar, switched in the activity bar
+  type SidebarView = 'files' | 'outline';
+  let sidebarView = $state<SidebarView>('files');
+  const sidebarViews: { id: SidebarView; label: string; icon: string }[] = [
+    {
+      id: 'files',
+      label: 'Files',
+      icon: 'M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75'
+    },
+    {
+      id: 'outline',
+      label: 'Outline',
+      icon: 'M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z'
+    }
+  ];
+
+  // Like in VS Code, clicking the active view hides the sidebar
+  function toggleSidebar(view: SidebarView) {
+    if (sidebarOpen && sidebarView === view) {
+      sidebarOpen = false;
+    } else {
+      sidebarView = view;
+      sidebarOpen = true;
+    }
+  }
+
+  // The annotations of the open file, loaded by the code viewer and shown in the outline
+  let fileAnnotations = $state.raw<FileAnnotationsJSON | null>(null);
 
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
   // its tab stays open and the inspector tab is only marked
@@ -481,42 +512,58 @@
   <div
     class="flex w-10 shrink-0 flex-col items-center gap-1 border-r border-gray-200 bg-gray-50 py-1.5"
   >
-    <button
-      type="button"
-      class="relative flex h-8 w-8 items-center justify-center rounded {sidebarOpen
-        ? 'text-gray-900'
-        : 'text-gray-400 hover:text-gray-700'}"
-      onclick={() => (sidebarOpen = !sidebarOpen)}
-      aria-label={sidebarOpen ? 'Hide files' : 'Show files'}
-      aria-pressed={sidebarOpen}
-      title="Files"
-    >
-      {#if sidebarOpen}
-        <span class="absolute top-1 bottom-1 -left-1 w-0.5 bg-gray-900"></span>
-      {/if}
-      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-        />
-      </svg>
-    </button>
+    {#each sidebarViews as view (view.id)}
+      {@const active = sidebarOpen && sidebarView === view.id}
+      <button
+        type="button"
+        class="relative flex h-8 w-8 items-center justify-center rounded {active
+          ? 'text-gray-900'
+          : 'text-gray-400 hover:text-gray-700'}"
+        onclick={() => toggleSidebar(view.id)}
+        aria-label={active ? `Hide ${view.label}` : `Show ${view.label}`}
+        aria-pressed={active}
+        title={view.label}
+      >
+        {#if active}
+          <span class="absolute top-1 bottom-1 -left-1 w-0.5 bg-gray-900"></span>
+        {/if}
+        <svg
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d={view.icon} />
+        </svg>
+      </button>
+    {/each}
   </div>
 
   <!-- Sidebar -->
   {#if sidebarOpen && selectedComponent}
     <div class="flex min-h-0 w-60 shrink-0 flex-col border-r border-gray-200">
-      <FileTree
-        component={selectedComponent}
-        allComponents={analysisResult?.components}
-        currentUnitId={selectedTranslationUnit?.id}
-        onFileSelect={handleFileSelect}
-        onComponentSelect={handleComponentSelect}
-        conceptSuggestions={tusWithSuggestions}
-        {conceptCounts}
-        embedded
-      />
+      {#if sidebarView === 'files'}
+        <FileTree
+          component={selectedComponent}
+          allComponents={analysisResult?.components}
+          currentUnitId={selectedTranslationUnit?.id}
+          onFileSelect={handleFileSelect}
+          onComponentSelect={handleComponentSelect}
+          conceptSuggestions={tusWithSuggestions}
+          {conceptCounts}
+          embedded
+        />
+      {:else}
+        <Outline
+          annotations={openedUnit?.id === selectedTranslationUnit?.id ? fileAnnotations : null}
+          fileName={selectedTranslationUnit?.name}
+          selectionLine={focus.details?.node.translationUnitId === selectedTranslationUnit?.id
+            ? focus.details?.node.startLine
+            : undefined}
+          onSelect={selectRef}
+        />
+      {/if}
     </div>
   {/if}
 
@@ -535,6 +582,7 @@
         selectedNodeId={selectedNode?.id}
         onNavigateToNode={handleNavigateToNode}
         {focus}
+        bind:annotations={fileAnnotations}
         externalInspector
         onInspect={showInspector}
       />
