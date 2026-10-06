@@ -32,9 +32,12 @@ import ai.koog.rag.base.files.FileSystemProvider
 import ai.koog.rag.base.files.JVMFileSystemProvider
 import ai.koog.rag.base.files.filter
 import ai.koog.rag.base.files.filter.PathFilters
+import ai.koog.rag.base.files.filter.TraversalFilter
 import ai.koog.skills.model.Skill
 import ai.koog.skills.prompt.SkillsPromptFormat
 import ai.koog.skills.prompt.generateSkillsPrompt
+import java.io.IOException
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -56,15 +59,50 @@ const val READ_FILE_TOOL_NAME = "__read_file__"
 
 /**
  * A read-only filesystem view jailed to [dirs]: every operation on a path that isn't inside (or an
- * ancestor of) one of [dirs] is rejected by Koog's own [PathFilters.byRoot] containment check -
- * including `../`-style traversal attempts, since paths get normalized before the check runs.
- * Shared by skill discovery and [buildSkillFileToolRegistry] so the file tools below can never read
- * anything outside the skills directory, even though they're otherwise generic/unrestricted tools.
+ * ancestor of) one of [dirs] is rejected. Two checks must both pass: Koog's [PathFilters.byRoot] on
+ * the normalized path (which catches `../`-style traversal), and [realPathWithin] on the path with
+ * symlinks resolved - `byRoot` alone is lexical, so a symlink under a skills directory pointing
+ * elsewhere would otherwise make its target readable. Shared by skill discovery and
+ * [buildSkillFileToolRegistry] so the file tools below can never read anything outside the skills
+ * directory, even though they're otherwise generic/unrestricted tools.
  */
 fun jailedSkillsFileSystem(dirs: List<Path>): FileSystemProvider.ReadOnly<Path> {
-    val combinedFilter =
+    val lexical =
         dirs.map { PathFilters.byRoot(it.toAbsolutePath().normalize()) }.reduce { a, b -> a or b }
-    return JVMFileSystemProvider.ReadOnly.filter(combinedFilter)
+    return JVMFileSystemProvider.ReadOnly.filter(lexical and realPathWithin(dirs))
+}
+
+/**
+ * Accepts a path whose real location (symlinks resolved) lies inside one of the real [roots], or is
+ * an ancestor of one - the same shape as [PathFilters.byRoot], which lets a client walk down to a
+ * root.
+ */
+private fun realPathWithin(roots: List<Path>): TraversalFilter<Path> {
+    val realRoots = roots.map { realPath(it.toAbsolutePath().normalize()) }
+    return object : TraversalFilter<Path> {
+        override suspend fun show(path: Path, fs: FileSystemProvider.ReadOnly<Path>): Boolean {
+            val real = realPath(path.toAbsolutePath().normalize())
+            return realRoots.any { root -> real.startsWith(root) || root.startsWith(real) }
+        }
+    }
+}
+
+/**
+ * [path] with symlinks resolved. A path that does not exist (yet) is resolved through its deepest
+ * existing ancestor, so a missing file under a symlinked directory is judged by where it would
+ * really be.
+ */
+private fun realPath(path: Path): Path {
+    var existing: Path? = path
+    while (existing != null && !Files.exists(existing)) existing = existing.parent
+    if (existing == null) return path
+    val real =
+        try {
+            existing.toRealPath()
+        } catch (_: IOException) {
+            return path
+        }
+    return real.resolve(existing.relativize(path))
 }
 
 /**

@@ -28,13 +28,17 @@ package de.fraunhofer.aisec.cpg.ai
 import ai.koog.skills.discovery.discoverSkills
 import de.fraunhofer.aisec.cpg.ai.skills.buildSkillCatalog
 import de.fraunhofer.aisec.cpg.ai.skills.jailedSkillsFileSystem
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.io.TempDir
 
 /**
  * Frontmatter parsing/discovery-edge-case coverage now lives upstream (Koog's own
@@ -104,6 +108,37 @@ class SkillFileToolsTest {
         val escapee = fs.fromAbsolutePathString("$skillsDir/../multi-skills/foo/SKILL.md")
 
         assertFalse(fs.exists(escapee))
+    }
+
+    @Test
+    fun jailRejectsSymlinkPointingOutsideTest(@TempDir dir: Path) = runTest {
+        val skills = Files.createDirectories(dir.resolve("skills/a"))
+        Files.writeString(skills.resolve("SKILL.md"), "inside")
+        val outside = Files.createDirectories(dir.resolve("outside"))
+        Files.writeString(outside.resolve("secret.txt"), "secret")
+        // Lexically inside the jail, really outside it.
+        Files.createSymbolicLink(dir.resolve("skills/evil"), outside)
+        val fs = jailedSkillsFileSystem(listOf(dir.resolve("skills")))
+
+        val leaked = dir.resolve("skills/evil/secret.txt")
+        assertFalse(fs.exists(leaked), "a symlink must not make its target readable")
+        assertNull(fs.metadata(leaked))
+        assertFailsWith<Exception> { fs.readBytes(leaked) }
+        assertFalse(fs.exists(dir.resolve("skills/evil")))
+        assertFalse(fs.exists(dir.resolve("skills/evil/not-there.txt")))
+    }
+
+    @Test
+    fun jailAllowsSymlinkStayingInsideTest(@TempDir dir: Path) = runTest {
+        val target = Files.createDirectories(dir.resolve("skills/a"))
+        Files.writeString(target.resolve("SKILL.md"), "inside")
+        Files.createSymbolicLink(dir.resolve("skills/alias"), target)
+        val fs = jailedSkillsFileSystem(listOf(dir.resolve("skills")))
+
+        assertTrue(fs.exists(dir.resolve("skills/alias/SKILL.md")))
+        assertTrue(fs.exists(dir.resolve("skills/a/SKILL.md")))
+        // Ancestors stay visible so a client can walk down to the root.
+        assertTrue(fs.exists(dir))
     }
 
     @Test
