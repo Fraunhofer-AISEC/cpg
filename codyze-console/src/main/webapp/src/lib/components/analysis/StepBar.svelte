@@ -8,14 +8,27 @@
   interface Props {
     /** What the steps are, e.g. "Path" */
     title: string;
-    steps: { label: string; title: string }[];
+    /** The steps, numbered by their position unless they have their own number */
+    steps: { label: string; title: string; number?: number }[];
     /** The index of the current step, or -1 if the current location is not on the path */
     index: number;
     onSelect: (index: number) => void;
     onClose: () => void;
+    /** The tooltip of the close button */
+    closeTitle?: string;
+    /** Round number badges (e.g. for a dataflow path) or square ones (e.g. for the agent) */
+    shape?: 'round' | 'square';
   }
 
-  let { title, steps, index, onSelect, onClose }: Props = $props();
+  let {
+    title,
+    steps,
+    index,
+    onSelect,
+    onClose,
+    closeTitle = 'Close',
+    shape = 'round'
+  }: Props = $props();
 
   let stepElements: HTMLButtonElement[] = $state([]);
 
@@ -53,8 +66,10 @@
           onclick={() => onSelect(i)}
         >
           <span
-            class="flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-slate-700 px-0.5 font-sans text-[9px] font-semibold text-white"
-            >{i + 1}</span
+            class="flex h-3.5 min-w-3.5 items-center justify-center {shape === 'round'
+              ? 'rounded-full'
+              : 'rounded-sm'} bg-slate-700 px-0.5 font-sans text-[9px] font-semibold text-white"
+            >{step.number ?? i + 1}</span
           >
           <span class="max-w-40 truncate">{step.label}</span>
         </button>
@@ -89,8 +104,8 @@
       type="button"
       class="ml-1 rounded px-1 leading-5 hover:bg-gray-200 hover:text-gray-900"
       onclick={onClose}
-      aria-label="Close the {title.toLowerCase()}"
-      title="Close"
+      aria-label={closeTitle}
+      title={closeTitle}
     >
       ×
     </button>
