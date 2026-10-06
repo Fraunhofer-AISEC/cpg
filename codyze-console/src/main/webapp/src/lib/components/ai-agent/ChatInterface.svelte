@@ -13,6 +13,7 @@
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
+  import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { getConceptCounts } from '$lib/annotations';
   import type {
@@ -204,6 +205,12 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (isTyping(event)) return;
+    if (hasModifier(event) && !event.altKey && event.key.toLowerCase() === 'p') {
+      // Replaces printing the page, like in editors
+      event.preventDefault();
+      paletteQuery = event.shiftKey ? '>' : '';
+      return;
+    }
     if (event.altKey && !hasModifier(event) && event.key === 'ArrowLeft') {
       event.preventDefault();
       goBack();
@@ -268,6 +275,22 @@
   const selectedComponent: ComponentJSON | null = $derived(
     analysisResult?.components.find((c) => c.name === selectedComponentName) ?? null
   );
+
+  // The query of the quick open and command palette, null while it is closed
+  let paletteQuery = $state<string | null>(null);
+
+  // The files of the open component for the quick open, with their relative paths
+  const paletteFiles = $derived(
+    (selectedComponent?.translationUnits ?? []).map((unit) => ({
+      unit,
+      path: relativePath(unit, selectedComponent?.topLevel)
+    }))
+  );
+
+  // The files of the history, most recent first, which the quick open lists first
+  const recentUnitIds = $derived([...new Set(focus.history.map((l) => l.unitId).reverse())]);
+
+  const paletteCommands: PaletteCommand[] = [];
 
   async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
     await onApplySuggestions?.(accepted);
@@ -687,6 +710,14 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
+<CommandPalette
+  bind:query={paletteQuery}
+  files={paletteFiles}
+  recentIds={recentUnitIds}
+  commands={paletteCommands}
+  onOpenFile={(unit) => handleFileSelect(unit)}
+/>
+
 <div class="flex h-full min-h-0 bg-white">
   <!-- Activity bar: switches the view of the sidebar -->
   <div
@@ -832,7 +863,7 @@
         </div>
       {:else}
         <div class="flex flex-1 items-center justify-center text-xs text-gray-400">
-          No file is open. Open one in the file tree.
+          No file is open. Open one in the file tree or with Ctrl+P.
         </div>
       {/if}
     </div>
