@@ -618,9 +618,11 @@
             {
               index: step - 1,
               line: ref.startLine,
-              title: `${claimed ? 'only cited in the answer: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
+              title: `${claimed ? 'only cited in the answer, no tool returned it: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
               current: ref.id === inspected?.node.id,
               dashed: claimed,
+              // Nodes only cited in the answer are no step of the agent
+              label: claimed ? '?' : undefined,
               nodeId: ref.id
             }
           ]

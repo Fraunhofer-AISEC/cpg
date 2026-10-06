@@ -16,7 +16,13 @@
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
-  import { extractCitations, extractNodeIds, resolveNodes } from '$lib/agentEvidence';
+  import {
+    checkTrust,
+    citationLabel,
+    extractCitations,
+    extractNodeIds,
+    resolveNodes
+  } from '$lib/agentEvidence';
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
@@ -31,7 +37,8 @@
     Model,
     NodeDetailsJSON,
     NodeRefJSON,
-    FileAnnotationsJSON
+    FileAnnotationsJSON,
+    TrustIssueJSON
   } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
@@ -600,13 +607,14 @@
     return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
   }
 
-  // The steps of the active block that have evidence in the code, to step through them like in a
-  // debugger: its tool calls, and the answer if it cites nodes no tool returned
+  // The tool calls of the active block that have evidence in the code, to step through them like in
+  // a debugger. Nodes only cited in the answer are no step: they are marked in the code and named
+  // in the trust notes under the answer
   const threadSteps = $derived.by(() => {
     const evidence = blockEvidence[activeBlock];
     const block = timeline[activeBlock];
     if (!evidence || !block || !layers.visible.agent) return [];
-    const steps = evidence.steps.flatMap(({ step, ids }) => {
+    return evidence.steps.flatMap(({ step, ids }) => {
       const nodes = stepNodes(ids);
       const entry = block.entries.find((e) => e.step === step);
       const tool = entry?.message.toolResult?.toolName ?? 'tool';
@@ -614,17 +622,43 @@
         ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
         : [];
     });
-    const claimed = stepNodes(evidence.claimed);
-    if (claimed.length) {
-      steps.push({
-        step: evidence.steps.length + 1,
-        nodes: claimed,
-        label: 'answer',
-        title: `The answer cites ${claimed.length} nodes that no tool returned`
-      });
-    }
-    return steps;
   });
+
+  // The places where the analysis is uncertain that the evidence of each block relies on. The block
+  // the agent is still working on is checked once it is done
+  let blockTrust = $state.raw<TrustIssueJSON[][]>([]);
+  $effect(() => {
+    const evidence = blockEvidence;
+    const pending = isLoading ? evidence.length - 1 : -1;
+    Promise.all(
+      evidence.map((e, b) =>
+        b === pending ? [] : checkTrust([...e.steps.flatMap((s) => s.ids), ...e.claimed])
+      )
+    ).then((trust) => {
+      if (evidence === blockEvidence) blockTrust = trust;
+    });
+  });
+
+  // The trust issues shown in full, by block; otherwise only the first few are shown
+  let trustExpanded = $state<Record<number, boolean>>({});
+  const TRUST_PREVIEW = 3;
+
+  // Who relies on an issue, e.g. "Step 1", "Steps 1, 3" or "The answer"
+  function trustSubject(issue: TrustIssueJSON, b: number): { text: string; plural: boolean } {
+    const evidence = blockEvidence[b];
+    const steps = (evidence?.steps ?? [])
+      .filter((s) => s.ids.some((id) => issue.evidence.includes(id)))
+      .map((s) => s.step);
+    if (steps.length === 0) return { text: 'The answer', plural: false };
+    return {
+      text: `${steps.length === 1 ? 'Step' : 'Steps'} ${steps.join(', ')}`,
+      plural: steps.length > 1
+    };
+  }
+
+  function trustLocation(ref: NodeRefJSON): string {
+    return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
+  }
 
   // The files with evidence of the active thread, marked in the file tree
   const threadUnits = $derived(
@@ -964,6 +998,73 @@
 {/snippet}
 
 <!-- The reasoning of the model before a message, collapsed -->
+<!-- Where the analysis is uncertain for the evidence of a block, in the color of uncertainty -->
+{#snippet trustNotes(b: number)}
+  {@const issues = blockTrust[b] ?? []}
+  {@const claimed = stepNodes(blockEvidence[b]?.claimed ?? [])}
+  {@const shown = trustExpanded[b] ? issues : issues.slice(0, TRUST_PREVIEW)}
+  {#if issues.length > 0 || claimed.length > 0}
+    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug text-red-700">
+      {#each shown as issue (issue.kind + issue.location.id)}
+        {@const subject = trustSubject(issue, b)}
+        <li>
+          <button
+            type="button"
+            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left hover:bg-red-50 disabled:hover:bg-transparent"
+            disabled={issue.location.startLine < 1}
+            title={issue.location.code || issue.location.name}
+            onclick={() => {
+              chosenBlock = b;
+              selectRef(issue.location);
+            }}
+          >
+            <span aria-hidden="true">⚠</span>
+            <span class="min-w-0 flex-1"
+              >{subject.text}
+              {subject.plural ? 'rely' : 'relies'} on {issue.reason}
+              <span class="font-mono whitespace-nowrap text-red-800/80"
+                >· {trustLocation(issue.location)}</span
+              ></span
+            >
+          </button>
+        </li>
+      {/each}
+      {#if issues.length > TRUST_PREVIEW}
+        <li>
+          <button
+            type="button"
+            class="rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+            onclick={() => (trustExpanded = { ...trustExpanded, [b]: !trustExpanded[b] })}
+          >
+            {trustExpanded[b] ? 'Show less' : `+ ${issues.length - TRUST_PREVIEW} more`}
+          </button>
+        </li>
+      {/if}
+      {#if claimed.length > 0}
+        <!-- Cited nodes no tool returned are claims of the model, not results of the analysis -->
+        <li class="flex flex-wrap items-center gap-1 px-1">
+          <span aria-hidden="true">⚠</span>
+          <span
+            >The answer cites {claimed.length === 1 ? 'a node' : `${claimed.length} nodes`} no tool returned:</span
+          >
+          {#each claimed as ref (ref.id)}
+            <button
+              type="button"
+              class="rounded border border-dashed border-gray-300 px-1 font-mono text-[10px] text-gray-700 hover:border-gray-500 hover:bg-gray-50"
+              onclick={() => {
+                chosenBlock = b;
+                selectRef(ref);
+              }}
+            >
+              {citationLabel(ref)}
+            </button>
+          {/each}
+        </li>
+      {/if}
+    </ul>
+  {/if}
+{/snippet}
+
 {#snippet reasoning(message: ChatMessage)}
   {#if message.reasoning}
     <div class="my-1 inline-block">
@@ -1489,6 +1590,10 @@
                     {/if}
                   {/if}
                 {/each}
+
+                {#if !(isLast && isLoading)}
+                  {@render trustNotes(b)}
+                {/if}
 
                 {#if isLast && (isLoading || displayContent)}
                   <div class="py-1.5">
