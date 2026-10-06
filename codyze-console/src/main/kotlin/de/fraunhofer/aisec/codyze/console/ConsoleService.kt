@@ -237,8 +237,8 @@ class ConsoleService {
     }
 
     /**
-     * Returns the number of concepts and operations in each translation unit of a component, by
-     * the ID of the unit, or `null` if there is no such component.
+     * Returns the number of concepts and operations in each translation unit of a component, by the
+     * ID of the unit, or `null` if there is no such component.
      */
     fun getConceptCounts(componentName: String): Map<String, Int>? {
         return getComponent(componentName)?.translationUnits?.associate {

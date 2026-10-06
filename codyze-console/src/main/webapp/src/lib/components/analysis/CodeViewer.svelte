@@ -187,7 +187,6 @@
   }
 
   // Annotations of the file (function key figures, call status, concepts), loaded per unit
-
   async function loadAnnotations(component: string, unitId: string) {
     const result = await getAnnotations(component, unitId);
     if (unitId === translationUnit.id) annotations = result;
