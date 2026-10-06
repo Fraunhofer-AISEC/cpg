@@ -61,7 +61,7 @@
 
 <div class="my-1">
   <button
-    class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] transition-colors
+    class="inline-flex max-w-full items-center gap-1.5 rounded-md px-2 py-1 text-[13px] transition-colors
       {toolResult.isError
       ? 'cursor-pointer text-red-500 hover:bg-red-50 hover:text-red-600'
       : 'cursor-pointer text-gray-500 hover:bg-gray-100 hover:text-gray-700'}
@@ -69,8 +69,8 @@
     onclick={() => (expanded = !expanded)}
     type="button"
   >
-    <span class="font-mono font-medium">{toolName}</span>
-    <span class="text-gray-400">{summary}</span>
+    <span class="shrink-0 font-mono font-medium">{toolName}</span>
+    <span class="min-w-0 truncate text-gray-400" title={summary}>{summary}</span>
 
     {#if hasExpandableContent}
       <svg
