@@ -112,9 +112,11 @@ open class JavaLanguage :
         val frontendConfiguration =
             config.frontendConfigurations[JavaLanguageFrontend::class] as? JavaFrontendConfiguration
                 ?: JavaFrontendConfiguration()
+        // We sort the paths, so that components whose top-level is already part of the configured
+        // source roots share the same type solver, regardless of the order
         val sourceRoots =
-            (listOfNotNull(root?.toPath()) + frontendConfiguration.sourceRoots).distinct()
-        val classpath = frontendConfiguration.classpath.distinct()
+            (listOfNotNull(root?.toPath()) + frontendConfiguration.sourceRoots).distinct().sorted()
+        val classpath = frontendConfiguration.classpath.distinct().sorted()
 
         return typeSolvers.computeIfAbsent(sourceRoots to classpath) {
             log.info(
