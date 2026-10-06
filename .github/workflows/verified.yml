@@ -40,6 +40,8 @@ jobs:
             echo "::error::A main theorem depends on sorry or native_decide"
             exit 1
           fi
+      - name: Build native library
+        run: cpg-verified/native/build.sh
       - uses: actions/setup-java@v5
         with:
           distribution: "corretto"

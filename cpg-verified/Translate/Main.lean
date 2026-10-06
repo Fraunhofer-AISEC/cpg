@@ -8,21 +8,14 @@ import CpgVerified
 # `cpg-translate`
 
 Reads translation requests (see `Wire.Codec`) from standard input and writes one translated CPG
-expression per request to standard output, one per line.
+expression per request to standard output, one per line. Does the same as the native library, as a
+standalone process.
 -/
 
 partial def readAll (stream : IO.FS.Stream) (acc : ByteArray := .empty) : IO ByteArray := do
   let chunk ← stream.read 65536
   if chunk.isEmpty then return acc else readAll stream (acc ++ chunk)
 
-def main : IO UInt32 := do
+def main : IO Unit := do
   let input ← readAll (← IO.getStdin)
-  match Wire.parseAll input with
-  | .error msg =>
-    IO.eprintln s!"cpg-translate: {msg}"
-    return 1
-  | .ok records =>
-    let stdout ← IO.getStdout
-    for record in records do
-      stdout.putStrLn (Wire.handleRecord record).encode
-    return 0
+  (← IO.getStdout).write (Wire.translateBytes input)

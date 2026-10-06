@@ -38,26 +38,22 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.math.BigInteger
 import java.nio.file.Path
+import java.util.concurrent.Executors
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 
 /**
  * Runs the verified translation of `cpg-verified` on the Go test files and compares its output with
- * the CPG that the Go frontend produces (without passes). Requires the `cpg-translate` executable,
- * which is built by `lake build` in `cpg-verified`; the test is skipped if it does not exist.
+ * the CPG that the Go frontend produces (without passes). The translation runs in-process via
+ * [LeanTranslator]; the test is skipped if the native library has not been built
+ * (`cpg-verified/native/build.sh`).
  */
 class VerifiedTranslationTest {
-
-    private val translator =
-        File(
-            System.getProperty("cpg.verified.translator")
-                ?: "../cpg-verified/.lake/build/bin/cpg-translate"
-        )
 
     /** Statistics about the comparison of one file. */
     private class Stats {
@@ -72,7 +68,10 @@ class VerifiedTranslationTest {
 
     @Test
     fun testGoFiles() {
-        assumeTrue(translator.canExecute(), "cpg-translate not found at $translator")
+        assumeTrue(
+            LeanTranslator.isAvailable,
+            "native library not found at ${LeanTranslator.libraryFile}",
+        )
 
         val topLevel = Path.of("src", "test", "resources", "golang")
         val files =
@@ -121,6 +120,49 @@ class VerifiedTranslationTest {
         assertTrue(total.mismatches.isEmpty(), "${total.mismatches.size} mismatches")
     }
 
+    @Test
+    fun testConcurrentTranslation() {
+        assumeTrue(LeanTranslator.isAvailable, "native library not found")
+
+        // x + 1 at package level of package main
+        val request =
+            sexpOf(
+                atom("expr"),
+                sexpOf(atom("main")),
+                sexpOf(),
+                sexpOf(),
+                sexpOf(),
+                sexpOf(
+                    atom("binary"),
+                    atom(0),
+                    atom(5),
+                    atom("+"),
+                    sexpOf(atom("ident"), atom(0), atom(1), atom("x")),
+                    sexpOf(atom("lit"), atom(4), atom(5), atom("int"), atom("1")),
+                ),
+            )
+        val expected = LeanTranslator.translate(listOf(request)).single()
+        assertEquals(
+            "(binary 0 5 + (reference 0 1 main.x) (literal 4 5 (int 1) (primitive int) ()))",
+            expected.toString(),
+        )
+
+        // Every thread registers itself with the Lean runtime on first use
+        val pool = Executors.newFixedThreadPool(8)
+        try {
+            val results =
+                (1..64)
+                    .map {
+                        pool.submit<List<Sexp>> { LeanTranslator.translate(List(100) { request }) }
+                    }
+                    .flatMap { it.get() }
+            assertEquals(6400, results.size)
+            assertTrue(results.all { it == expected })
+        } finally {
+            pool.shutdown()
+        }
+    }
+
     private fun compareFile(file: File, topLevel: Path): Stats {
         val stats = Stats()
 
@@ -137,7 +179,7 @@ class VerifiedTranslationTest {
         val requests = GoAstEncoder(raw).encode().requests
         stats.requests = requests.size
 
-        val results = translate(requests.map { it.record })
+        val results = LeanTranslator.translate(requests.map { it.record })
         check(results.size == requests.size) {
             "expected ${requests.size} results, got ${results.size}"
         }
@@ -180,22 +222,6 @@ class VerifiedTranslationTest {
         }
 
         return stats
-    }
-
-    /** Runs `cpg-translate` on all requests at once. */
-    private fun translate(records: List<Sexp>): List<Sexp> {
-        val input = ByteArrayOutputStream()
-        records.forEach { it.encodeTo(input) }
-
-        val process =
-            ProcessBuilder(translator.absolutePath)
-                .redirectError(ProcessBuilder.Redirect.INHERIT)
-                .start()
-        process.outputStream.use { it.write(input.toByteArray()) }
-        val output = process.inputStream.readBytes()
-        check(process.waitFor() == 0) { "cpg-translate failed" }
-
-        return Sexp.parseAll(output)
     }
 
     private fun Sexp.containsProblem(): Boolean =
