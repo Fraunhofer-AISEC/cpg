@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PageProps } from './$types';
   import type { ChatMessage, LLMMessage, ConceptSuggestionItem, LLMConcept, Model } from '$lib/types';
-  import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, SkillsModal, NotConfigured } from '$lib/components/ai-agent';
+  import { ChatInterface, McpCapabilitiesModal, SkillsModal, NotConfigured } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import { llmAgent, type StreamingCallbacks } from '$lib/services/llmAgent';
   import { agentSession } from '$lib/stores/agentSession.svelte';
@@ -90,10 +90,10 @@
   // Load persisted state from sessionStorage
   function loadPersistedState() {
     if (typeof window === 'undefined') {
-      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
+      return { messages: [], selectedClient: null, selectedModel: null };
     }
     const stored = sessionStorage.getItem('codyze-agent-state');
-    if (!stored) return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
+    if (!stored) return { messages: [], selectedClient: null, selectedModel: null };
     try {
       const parsed = JSON.parse(stored);
       const messages = parsed.messages.map((msg: any) => ({
@@ -102,12 +102,11 @@
       }));
       return {
         messages,
-        showWelcome: parsed.showWelcome,
         selectedClient: parsed.selectedClient ?? null,
         selectedModel: parsed.selectedModel ?? null
       };
     } catch {
-      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
+      return { messages: [], selectedClient: null, selectedModel: null };
     }
   }
 
@@ -118,7 +117,6 @@
   let isLoading = $state(false);
   let streamingContent = $state('');
   let streamingReasoning = $state('');
-  let showWelcome = $state(persisted.showWelcome);
   let selectedClient = $state<string | null>(persisted.selectedClient);
   let selectedModelName = $state<string | null>(persisted.selectedModel);
   let abortController: AbortController | null = null;
@@ -145,7 +143,6 @@
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('codyze-agent-state', JSON.stringify({
         messages: chatMessages,
-        showWelcome,
         selectedClient,
         selectedModel: selectedModelName
       }));
@@ -157,18 +154,11 @@
     selectedModelName = model.model;
   }
 
-  function handleWelcomeMessage(message: string) {
-    currentMessage = message;
-    showWelcome = false;
-    sendMessage();
-  }
-
   function resetChat() {
     if (abortController) {
       abortController.abort();
       abortController = null;
     }
-    showWelcome = true;
     chatMessages = [];
     currentMessage = '';
     streamingContent = '';
@@ -260,7 +250,6 @@
       const userMsg = resolvedMessages.find((m) => m.role === 'user');
       if (!userMsg) return;
 
-      showWelcome = false;
       chatMessages = [...chatMessages, {
         id: Date.now().toString(),
         role: 'user' as const,
@@ -342,16 +331,6 @@
 <div class="-mx-6 -mb-6 flex flex-col" style="height: calc(100vh - 120px);">
   {#if agentSession.mcpCapabilities === null}
     <NotConfigured />
-  {:else if showWelcome}
-    <div class="flex-1 overflow-hidden">
-      <WelcomeScreen
-        onWelcomeMessage={handleWelcomeMessage}
-        {models}
-        {selectedModel}
-        onModelSelect={selectModel}
-        onPromptSelect={handlePromptSelect}
-      />
-    </div>
   {:else}
     <ChatInterface
       messages={chatMessages}
