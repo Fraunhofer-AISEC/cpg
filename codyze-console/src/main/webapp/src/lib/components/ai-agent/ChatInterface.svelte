@@ -38,7 +38,8 @@
     NodeDetailsJSON,
     NodeRefJSON,
     FileAnnotationsJSON,
-    TrustIssueJSON
+    TrustIssueJSON,
+    CodeSelection
   } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
@@ -173,6 +174,29 @@
 
   function askAboutNode(details: NodeDetailsJSON, question: (where: string) => string) {
     onMessageChange(question(describeNode(details.node)));
+  }
+
+  // The input next to selected code asks right away. The selection is the context of the question,
+  // instead of the inspected node
+  const maxSelectionLength = 2000;
+
+  function describeSelection(s: CodeSelection): string {
+    const lines = s.startLine === s.endLine ? `${s.startLine}` : `${s.startLine}-${s.endLine}`;
+    const text =
+      s.text.length > maxSelectionLength ? `${s.text.slice(0, maxSelectionLength)}…` : s.text;
+    const node = s.node ? `; the innermost node containing it is ${describeNode(s.node)}` : '';
+    return `${s.fileName}:${lines}, selected code \`${text}\`${node}`;
+  }
+
+  function askAboutSelection(question: string, selection: CodeSelection) {
+    if (isLoading) return;
+    // The draft in the input stays where it is
+    const draft = currentMessage;
+    showAgent();
+    chosenBlock = null;
+    onMessageChange(question);
+    onSendMessage(describeSelection(selection));
+    onMessageChange(draft);
   }
 
   // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
@@ -344,6 +368,14 @@
         label: 'Open file…',
         shortcut: `${mod}P`,
         run: () => (paletteQuery = '')
+      },
+      {
+        id: 'ask',
+        category: 'Selection',
+        label: 'Ask the agent about the selected code',
+        shortcut: `${mod}K`,
+        disabledReason: openedUnit ? undefined : 'No file is open',
+        run: () => askRequest++
       },
       {
         id: 'back',
@@ -830,6 +862,13 @@
     window.addEventListener('pointerup', stop);
     document.body.style.cursor = 'col-resize';
   }
+
+  // Why the agent cannot be asked right now
+  const askDisabledReason = $derived(
+    isLoading ? 'The agent is still working' : !selectedModel ? 'No LLM provider configured' : null
+  );
+  // Incremented to open the input for the selected code, e.g. from the command palette
+  let askRequest = $state(0);
 
   // The selected node is attached to questions as context, unless the user removed it
   let dismissedContextId = $state<string | null>(null);
@@ -1343,6 +1382,9 @@
           externalInspector
           lanes
           onInspect={showInspector}
+          onAsk={askAboutSelection}
+          {askDisabledReason}
+          {askRequest}
         >
           {#snippet headerStart()}
             {@render historyButtons()}
