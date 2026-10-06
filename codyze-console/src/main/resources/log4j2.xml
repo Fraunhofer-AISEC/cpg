@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
     <Appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        <Console name="Console" target="SYSTEM_ERR">
+            <!-- noConsoleNoAnsi: skip color codes when stderr isn't a real console (piped,
+                 redirected to a file, CI logs), so those contexts don't end up with raw escape
+                 sequences cluttering the output. -->
+            <PatternLayout
+                pattern="%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n}{FATAL=red bold, ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan, TRACE=blue}"
+                noConsoleNoAnsi="true"/>
         </Console>
     </Appenders>
     <Loggers>
