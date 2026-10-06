@@ -37,6 +37,8 @@
     conceptSuggestions?: Set<string>;
     /** The number of concepts and operations per unit ID, shown right-aligned */
     conceptCounts?: Map<string, number>;
+    /** The units with evidence of the agent's active question, marked with a square dot */
+    agentUnits?: Set<string>;
     /** Renders the tree without its own collapsible panel, filling the parent (e.g. a sidebar) */
     embedded?: boolean;
     /**
@@ -58,6 +60,7 @@
     width = 'w-56',
     conceptSuggestions = new Set(),
     conceptCounts,
+    agentUnits = new Set(),
     embedded = false,
     revealUnit = null
   }: Props = $props();
@@ -177,6 +180,27 @@
     return new Set(folders);
   });
 
+  // The same for the evidence of the agent
+  const foldersWithAgentEvidence = $derived.by(() => {
+    const folders: string[] = [];
+    const visit = (node: TreeNode): boolean => {
+      if (node.type === 'file') return !!node.unit && agentUnits.has(node.unit.id);
+      let has = false;
+      for (const child of node.children) has = visit(child) || has;
+      if (has) folders.push(node.path);
+      return has;
+    };
+    fileTree.forEach(visit);
+    return new Set(folders);
+  });
+
+  // Like the counts, expanded folders do not repeat the marks of their files
+  function hasAgentEvidence(node: TreeNode): boolean {
+    if (node.type === 'file') return !!node.unit && agentUnits.has(node.unit.id);
+    const expanded = filterText || !collapsedFolders.has(node.path);
+    return !expanded && foldersWithAgentEvidence.has(node.path);
+  }
+
   function hasSuggestions(node: TreeNode): boolean {
     return node.type === 'file'
       ? !!node.unit && conceptSuggestions.has(node.unit.id)
@@ -282,6 +306,12 @@
     >
       ◆ {count}
     </span>
+  {/if}
+  {#if hasAgentEvidence(row.node)}
+    <span
+      class="h-1.5 w-1.5 shrink-0 rounded-[1px] bg-slate-800"
+      title="Has evidence of the agent's active question"
+    ></span>
   {/if}
   {#if hasSuggestions(row.node)}
     <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" title="Has concept suggestions"
