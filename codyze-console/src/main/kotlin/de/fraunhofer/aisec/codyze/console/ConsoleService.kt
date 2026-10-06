@@ -50,6 +50,7 @@ import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.script.experimental.api.ResultValue
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.ScriptDiagnostic
@@ -86,6 +87,10 @@ class ConsoleService {
 
     // Lookup of nodes (including overlays) by ID, built lazily on the first node request
     private var nodeIndex: Map<Uuid, Node>? = null
+
+    // The number of concepts per translation unit by component. Counting them walks all nodes of a
+    // component, so the result is kept until the analysis or its concepts change
+    private val conceptCountsCache = ConcurrentHashMap<String, Map<String, Int>>()
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -149,6 +154,7 @@ class ConsoleService {
         val json = result.toJSON()
         this@ConsoleService.analysisResult = json
         nodeIndex = null
+        conceptCountsCache.clear()
         return json
     }
 
@@ -246,9 +252,15 @@ class ConsoleService {
      * ID of the unit, or `null` if there is no such component.
      */
     fun getConceptCounts(componentName: String): Map<String, Int>? {
-        return getComponent(componentName)?.translationUnits?.associate {
-            it.id.toString() to (it.cpgTU?.conceptAnnotations()?.size ?: 0)
+        conceptCountsCache[componentName]?.let {
+            return it
         }
+        val counts =
+            getComponent(componentName)?.translationUnits?.associate {
+                it.id.toString() to (it.cpgTU?.conceptAnnotations()?.size ?: 0)
+            } ?: return null
+        conceptCountsCache[componentName] = counts
+        return counts
     }
 
     /**
@@ -456,6 +468,7 @@ class ConsoleService {
                 )
                 .also { newConceptNodes += it }
         nodeIndex = nodeIndex?.plus(concept.id to concept)
+        conceptCountsCache.clear()
 
         // Build the new persisted concept entry and store it, so we can export it later
         newPersistedConcepts += request.buildPersistedConcept(concept)
