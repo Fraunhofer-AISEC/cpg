@@ -90,6 +90,11 @@
     externalInspector?: boolean;
     /** Called when the user inspects a node in the viewer, e.g. by clicking into the code */
     onInspect?: () => void;
+    /**
+     * The scroll positions of files by their ID, to restore them when the viewer shows a file again
+     * (e.g. when switching between tabs). The viewer keeps them up to date
+     */
+    scrollPositions?: Map<string, number>;
     /** The annotations of the file, loaded by the viewer; bind it to use them outside */
     annotations?: FileAnnotationsJSON | null;
   }
@@ -113,6 +118,7 @@
     focus: sharedFocus,
     externalInspector = false,
     onInspect,
+    scrollPositions,
     annotations = $bindable(null)
   }: Props = $props();
 
@@ -153,11 +159,29 @@
     focus.inspect(load, reveal, section);
   }
 
-  // Scroll to the inspected node when it is to be revealed, e.g. after selecting it in the inspector
+  // When another file is shown in the same viewer (e.g. by switching tabs), go back to where it was
+  // scrolled to before. This runs before revealing a node, which takes precedence
   $effect(() => {
-    if (focus.revealCount === 0) return;
+    const unitId = translationUnit.id;
+    if (!scrollPositions || !codeContainerElement) return;
+    codeContainerElement.scrollTop = untrack(() => scrollPositions.get(unitId) ?? 0);
+  });
+
+  function rememberScrollPosition() {
+    if (codeContainerElement)
+      scrollPositions?.set(translationUnit.id, codeContainerElement.scrollTop);
+  }
+
+  // Scroll to the inspected node when it is to be revealed, e.g. after selecting it in the inspector.
+  // If the node is in another file, it is revealed once that file is shown
+  let revealed = 0;
+  $effect(() => {
+    const count = focus.revealCount;
+    const unitId = translationUnit.id;
+    if (count === revealed) return;
     const node = untrack(() => focus.details?.node);
-    if (node && node.translationUnitId === untrack(() => translationUnit.id)) {
+    if (node && node.translationUnitId === unitId) {
+      revealed = count;
       scrollToLine(node.startLine);
     }
   });
@@ -449,6 +473,7 @@
         class="relative min-w-0 flex-1 overflow-auto"
         style="transform: translateZ(0);"
         bind:this={codeContainerElement}
+        onscroll={rememberScrollPosition}
       >
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div
