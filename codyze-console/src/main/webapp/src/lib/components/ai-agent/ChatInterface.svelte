@@ -12,6 +12,7 @@
   import { CodeFocus, type CodeLocation } from '$lib/stores/codeFocus.svelte';
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
+  import { relativePath } from '$lib/utils/paths';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { getConceptCounts } from '$lib/annotations';
   import type {
@@ -346,6 +347,29 @@
     }
   }
 
+  // A file to reveal in the file tree, e.g. after clicking its path in the breadcrumb
+  let treeReveal = $state<{ unitId: string; request: number } | null>(null);
+
+  function revealInTree(unitId: string) {
+    sidebarView = 'files';
+    sidebarOpen = true;
+    treeReveal = { unitId, request: (treeReveal?.request ?? 0) + 1 };
+  }
+
+  // The segments of the breadcrumb above the code: the folders and the file of the open unit
+  const breadcrumbPath = $derived(
+    openedUnit ? relativePath(openedUnit, selectedComponent?.topLevel).split('/') : []
+  );
+
+  // The function containing the inspected node in the open file, or the node if it is a function
+  const breadcrumbFunction = $derived.by((): NodeRefJSON | null => {
+    const details = focus.details;
+    if (!details || details.node.translationUnitId !== openedUnit?.id) return null;
+    return (
+      details.enclosingFunction ?? (details.node.type.includes('Function') ? details.node : null)
+    );
+  });
+
   // The annotations of the open file, loaded by the code viewer and shown in the outline
   let fileAnnotations = $state.raw<FileAnnotationsJSON | null>(null);
 
@@ -616,6 +640,51 @@
   </div>
 {/snippet}
 
+<!-- Where the open file is: component › folders › file › function, each part clickable -->
+{#snippet breadcrumb()}
+  <nav
+    class="flex min-w-0 items-center gap-0.5 overflow-hidden text-xs whitespace-nowrap text-gray-500"
+    aria-label="Breadcrumb"
+  >
+    {#if selectedComponent}
+      <button
+        type="button"
+        class="shrink-0 rounded px-1 hover:bg-gray-100 hover:text-gray-900"
+        onclick={() => openedUnit && revealInTree(openedUnit.id)}
+        title="Component {selectedComponent.name}: show the file in the file tree"
+      >
+        {selectedComponent.name}
+      </button>
+    {/if}
+    {#each breadcrumbPath as segment, i (i)}
+      {@const isFile = i === breadcrumbPath.length - 1}
+      <span class="shrink-0 text-gray-300">›</span>
+      <button
+        type="button"
+        class="min-w-0 truncate rounded px-1 font-mono hover:bg-gray-100 hover:text-gray-900 {isFile
+          ? 'shrink-0 text-gray-800'
+          : ''}"
+        onclick={() => openedUnit && revealInTree(openedUnit.id)}
+        title="Show {breadcrumbPath.slice(0, i + 1).join('/')} in the file tree"
+      >
+        {segment}
+      </button>
+    {/each}
+    {#if breadcrumbFunction}
+      {@const fn = breadcrumbFunction}
+      <span class="shrink-0 text-gray-300">›</span>
+      <button
+        type="button"
+        class="min-w-0 truncate rounded px-1 font-mono text-gray-800 hover:bg-gray-100 hover:text-gray-900"
+        onclick={() => selectRef(fn)}
+        title="Go to the start of {fn.name} (line {fn.startLine})"
+      >
+        {fn.name}()
+      </button>
+    {/if}
+  </nav>
+{/snippet}
+
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="flex h-full min-h-0 bg-white">
@@ -663,6 +732,7 @@
           onComponentSelect={handleComponentSelect}
           conceptSuggestions={tusWithSuggestions}
           {conceptCounts}
+          revealUnit={treeReveal}
           embedded
         />
       {:else}
@@ -753,7 +823,7 @@
         >
           {#snippet headerStart()}
             {@render historyButtons()}
-            <div class="min-w-0 truncate font-mono text-xs text-gray-500">{openedUnit?.name}</div>
+            {@render breadcrumb()}
           {/snippet}
         </CodeViewer>
       {:else if selectedTranslationUnit}
