@@ -9,7 +9,7 @@
     type Node
   } from '@xyflow/svelte';
   import '@xyflow/svelte/dist/style.css';
-  import type { PdgSlice } from '$lib/pdg';
+  import type { PdgNode, PdgSlice } from '$lib/pdg';
   import type { PdgPanel } from '$lib/stores/pdgPanel.svelte';
   import {
     cardHeight,
@@ -30,9 +30,11 @@
    */
   interface Props {
     panel: PdgPanel;
+    /** Called when a statement is clicked, after it was selected */
+    onSelectNode?: (node: PdgNode) => void;
   }
 
-  let { panel }: Props = $props();
+  let { panel, onSelectNode }: Props = $props();
 
   const nodeTypes = { card: PdgCard };
   const edgeTypes = { pdg: PdgEdge };
@@ -54,7 +56,7 @@
 
   // Zoomed far out, the cards show only their line number
   let zoom = $state(1);
-  const far = $derived(zoom < 0.6);
+  const far = $derived(zoom < 0.4);
 
   const selectedId = $derived(panel.selectedId);
 
@@ -72,6 +74,7 @@
       const data: PdgCardData = {
         pdg,
         selected: pdg.id === selectedId,
+        hovered: pdg.id === panel.hoveredId,
         faded: selectedId !== null && pdg.id !== selectedId && !connected.has(pdg.id),
         root: pdg.id === slice.root,
         onExpand: (id) => panel.expand(id)
@@ -150,7 +153,14 @@
       nodesConnectable={false}
       elementsSelectable={false}
       deleteKey={null}
-      onnodeclick={({ node }) => panel.select(node.id)}
+      attributionPosition="top-left"
+      onnodeclick={({ node }) => {
+        panel.select(node.id);
+        const pdg = layout?.slice.nodes.find((n) => n.id === node.id);
+        if (pdg) onSelectNode?.(pdg);
+      }}
+      onnodepointerenter={({ node }) => (panel.hoveredId = node.id)}
+      onnodepointerleave={() => (panel.hoveredId = null)}
       onmove={(_, viewport) => (zoom = viewport.zoom)}
     >
       <Background gap={16} size={1} bgColor="#fbfbfc" patternColor="#e2e5ea" />

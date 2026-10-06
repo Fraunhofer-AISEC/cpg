@@ -2,7 +2,7 @@ import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api';
 import type { PdgEdge, PdgSlice } from '$lib/pdg';
 
 /** The size of the card of a statement, which the layout reserves space for. */
-export const cardWidth = 168;
+export const cardWidth = 156;
 export const cardHeight = 56;
 
 export interface Point {
@@ -47,7 +47,7 @@ export async function layoutSlice(slice: PdgSlice): Promise<SliceLayout> {
       'elk.algorithm': 'layered',
       'elk.direction': 'DOWN',
       'elk.edgeRouting': 'ORTHOGONAL',
-      'elk.spacing.nodeNode': '36',
+      'elk.spacing.nodeNode': '24',
       'elk.layered.spacing.nodeNodeBetweenLayers': '64',
       'elk.layered.spacing.edgeNodeBetweenLayers': '20',
       'elk.spacing.edgeEdge': '14',

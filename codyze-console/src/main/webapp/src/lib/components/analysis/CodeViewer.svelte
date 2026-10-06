@@ -116,6 +116,18 @@
      * which calls this with the question and the selection
      */
     onAsk?: (question: string, selection: CodeSelection) => void;
+    /**
+     * A slice of the program dependence graph shown in the code, as tinted lines and marks in the
+     * ruler. [onHover] is called with the statement under the mouse
+     */
+    slice?: {
+      ranges: { id: string; first: number; last: number; label: string }[];
+      selectedId: string | null;
+      hoveredId: string | null;
+      onHover: (id: string | null) => void;
+    };
+    /** Called on a right click in the code, with the node there and the place on the screen */
+    onCodeContextMenu?: (target: { details: NodeDetailsJSON; x: number; y: number }) => void;
     /** Buttons at the end of the row of the layers, e.g. to open a panel next to the code */
     layerActions?: Snippet;
     /** Why asking is not possible right now, e.g. while the agent is busy */
@@ -147,6 +159,8 @@
     annotations = $bindable(null),
     lanes = false,
     onAsk,
+    slice,
+    onCodeContextMenu,
     layerActions,
     askDisabledReason = null,
     askRequest = 0
@@ -478,7 +492,31 @@
     return !(line === node.endLine && column >= node.endColumn);
   }
 
+  // The statement of the slice at a line, if there is one
+  const sliceRangeAt = (line: number) =>
+    slice?.ranges.find((r) => line >= r.first && line <= r.last);
+
+  async function handleCodeContextMenu(event: MouseEvent) {
+    if (!onCodeContextMenu || !componentName) return;
+    const position = positionAt(event);
+    if (!position) return;
+    event.preventDefault();
+    hideHover();
+    const [x, y] = [event.clientX, event.clientY];
+    const details = await getNodeDetailsAt(
+      componentName,
+      translationUnit.id,
+      position.line,
+      position.column
+    ).catch(() => null);
+    if (details) onCodeContextMenu({ details, x, y });
+  }
+
   function handleCodeMouseMove(event: MouseEvent) {
+    if (slice) {
+      const position = positionAt(event);
+      slice.onHover((position && sliceRangeAt(position.line)?.id) || null);
+    }
     if (!componentName || event.buttons !== 0) return hideHover();
     const position = positionAt(event);
     // Only over the code itself, not over whitespace or after the end of a line
@@ -619,6 +657,14 @@
           });
         }
       }
+    }
+    for (const range of slice?.ranges ?? []) {
+      marks.push({
+        line: range.first,
+        lane: 5,
+        color: range.id === slice?.selectedId ? '#2563eb' : '#93b4ea',
+        label: range.label
+      });
     }
     // While a path or the agent's thread is shown, the other layers step back
     const faded = pathActive || threadActive;
@@ -941,7 +987,11 @@
           }}
           onclick={handleCodeClick}
           onmousemove={handleCodeMouseMove}
-          onmouseleave={hideHover}
+          oncontextmenu={handleCodeContextMenu}
+          onmouseleave={() => {
+            hideHover();
+            slice?.onHover(null);
+          }}
         >
           <div class="font-mono">
             <Highlight language={getLanguage(translationUnit.name)} {code} let:highlighted>
@@ -957,6 +1007,10 @@
                 {offsetLeft}
                 gutterPadding={0.75 + arcLaneWidth}
                 selection={selectedLines}
+                sliceLines={slice?.ranges.flatMap((r) =>
+                  Array.from({ length: r.last - r.first + 1 }, (_, i) => r.first + i)
+                )}
+                sliceHover={slice?.ranges.find((r) => r.id === slice.hoveredId) ?? null}
               />
             </Highlight>
           </div>
@@ -1096,7 +1150,7 @@
         <OverviewRuler
           marks={rulerMarks}
           {totalLines}
-          lanes={lanes ? 5 : 3}
+          lanes={lanes ? (slice ? 6 : 5) : 3}
           viewport={viewportLines}
           selectionLine={inspected?.node.translationUnitId === translationUnit.id
             ? inspected.node.startLine
