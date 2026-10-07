@@ -12,6 +12,8 @@
     faded: boolean;
     /** The statement is the root of the slice */
     root: boolean;
+    /** The file of the statement, if it is another one than the file of the root */
+    otherFile: string | null;
     onExpand: (id: string) => void;
   }
 </script>
@@ -73,6 +75,9 @@ by double click is a shortcut, the button at the border does the same -->
         class="font-medium tabular-nums group-[.graph-far]/flow:text-4xl group-[.graph-far]/flow:font-semibold group-[.graph-far]/flow:text-gray-700"
         >L{statement.startLine}</span
       >
+      {#if card.otherFile}
+        <span class="truncate text-gray-400 group-[.graph-far]/flow:hidden">{card.otherFile}</span>
+      {/if}
       {#if branch}
         <span
           class="rounded bg-gray-200 px-1 text-[9.5px] text-gray-600 group-[.graph-far]/flow:hidden"

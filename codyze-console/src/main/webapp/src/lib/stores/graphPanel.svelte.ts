@@ -2,6 +2,7 @@ import {
   getGraphSlice,
   mergeSlice,
   type DependenceGraph,
+  type SliceScope,
   type GraphDirection,
   type GraphNode,
   type GraphSlice
@@ -12,6 +13,7 @@ import type { NodePathsJSON } from '$lib/types';
 interface GraphView {
   nodeId: string;
   graph: DependenceGraph;
+  scope: SliceScope;
   direction: GraphDirection;
   hops: number;
   selectedId: string | null;
@@ -37,6 +39,8 @@ export class GraphPanel {
   paths = $state.raw<GraphPaths | null>(null);
   /** Which dependences the slice follows */
   graph = $state<DependenceGraph>('PDG');
+  /** Whether the slice follows dependences into other functions */
+  scope = $state<SliceScope>('interprocedural');
   direction = $state<GraphDirection>('BACKWARD');
   hops = $state(2);
   slice = $state.raw<GraphSlice | null>(null);
@@ -78,7 +82,7 @@ export class GraphPanel {
     graph = this.graph
   ) {
     if (this.open && this.slice && this.nodeId !== nodeId) this.remember();
-    await this.load(nodeId, graph, direction, hops, selectedId ?? null);
+    await this.load(nodeId, graph, this.scope, direction, hops, selectedId ?? null);
   }
 
   private remember() {
@@ -86,6 +90,7 @@ export class GraphPanel {
     const view = {
       nodeId: this.nodeId,
       graph: this.graph,
+      scope: this.scope,
       direction: this.direction,
       hops: this.hops,
       selectedId: this.selectedId
@@ -108,6 +113,7 @@ export class GraphPanel {
   private async load(
     nodeId: string,
     graph: DependenceGraph,
+    scope: SliceScope,
     direction: GraphDirection,
     hops: number,
     selectedId: string | null
@@ -118,7 +124,7 @@ export class GraphPanel {
     this.loading = true;
     this.error = null;
     try {
-      const slice = await getGraphSlice(nodeId, graph, direction, hops);
+      const slice = await getGraphSlice(nodeId, graph, direction, hops, scope);
       if (request !== this.request) return;
       if (!slice) {
         this.error = 'The node is not part of the analysis any more';
@@ -126,6 +132,7 @@ export class GraphPanel {
       }
       this.nodeId = nodeId;
       this.graph = graph;
+      this.scope = scope;
       this.direction = direction;
       this.hops = hops;
       this.slice = slice;
@@ -141,13 +148,19 @@ export class GraphPanel {
   /** Changes how far the slice reaches, keeping what is selected. */
   setHops(hops: number) {
     if (!this.nodeId || this.paths || hops === this.hops) return;
-    this.load(this.nodeId, this.graph, this.direction, hops, this.selectedId);
+    this.load(this.nodeId, this.graph, this.scope, this.direction, hops, this.selectedId);
   }
 
   /** Changes which dependences the slice follows, keeping what is selected. */
   setGraph(graph: DependenceGraph) {
     if (!this.nodeId || this.paths || graph === this.graph) return;
-    this.load(this.nodeId, graph, this.direction, this.hops, this.selectedId);
+    this.load(this.nodeId, graph, this.scope, this.direction, this.hops, this.selectedId);
+  }
+
+  /** Changes whether the slice follows dependences into other functions. */
+  setScope(scope: SliceScope) {
+    if (!this.nodeId || this.paths || scope === this.scope) return;
+    this.load(this.nodeId, this.graph, scope, this.direction, this.hops, this.selectedId);
   }
 
   /** Shows the slice around a statement of the slice in the given direction. */
@@ -163,7 +176,9 @@ export class GraphPanel {
   async expand(id: string) {
     const slice = this.slice;
     if (!slice) return;
-    const extra = await getGraphSlice(id, this.graph, slice.direction, 1).catch(() => null);
+    const extra = await getGraphSlice(id, this.graph, slice.direction, 1, this.scope).catch(
+      () => null
+    );
     // The slice may have changed meanwhile
     if (extra && this.slice === slice) this.slice = mergeSlice(slice, extra, id);
   }
@@ -172,7 +187,7 @@ export class GraphPanel {
     const view = this.history.at(-1);
     if (!view) return;
     this.history = this.history.slice(0, -1);
-    this.load(view.nodeId, view.graph, view.direction, view.hops, view.selectedId);
+    this.load(view.nodeId, view.graph, view.scope, view.direction, view.hops, view.selectedId);
   }
 
   close() {

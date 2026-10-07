@@ -68,6 +68,7 @@
       if (e.from === selectedId) connected.add(e.to);
       if (e.to === selectedId) connected.add(e.from);
     }
+    const rootFile = slice.nodes.find((n) => n.id === slice.root)?.node.fileName;
     return slice.nodes.flatMap((statement) => {
       const position = laid.positions.get(statement.id);
       if (!position) return [];
@@ -77,6 +78,10 @@
         hovered: statement.id === panel.hoveredId,
         faded: selectedId !== null && statement.id !== selectedId && !connected.has(statement.id),
         root: statement.id === slice.root,
+        otherFile:
+          statement.node.fileName && statement.node.fileName !== rootFile
+            ? statement.node.fileName
+            : null,
         onExpand: (id) => panel.expand(id)
       };
       return [
