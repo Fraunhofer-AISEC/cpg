@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.For
@@ -90,7 +89,7 @@ class CommentMatcherTest {
         assertTrue(constructorAssignment.comment?.contains(comment5) == true)
         assertNull(constructor.comment)
 
-        val mainMethod = classDeclaration.declarations[2] as Method
+        val mainMethod = classDeclaration.methods.single { it.name.localName == "main" }
         assertNull(mainMethod.comment)
         val forLoop = (mainMethod.body as Block).statements[0] as For
         forLoop.comment = null
