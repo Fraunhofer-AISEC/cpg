@@ -300,8 +300,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             } ?: listOf(),
         )
 
-        processImportDeclarations(recordDeclaration)
-
         frontend.scopeManager.enterScope(recordDeclaration)
         processRecordMembers(classInterDecl, recordDeclaration)
         frontend.scopeManager.leaveScope(recordDeclaration)
@@ -408,8 +406,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
 
-        processImportDeclarations(enumDeclaration)
-
         frontend.scopeManager.enterScope(enumDeclaration)
 
         processRecordMembers(enumDecl, enumDeclaration)
@@ -509,24 +505,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 .implicit(recordDeclaration.name.localName)
         }
         frontend.processAnnotations(recordDeclaration, typeDecl)
-    }
-
-    private fun processImportDeclarations(recordDeclaration: Record) {
-        val allImports =
-            frontend.context
-                ?.imports
-                ?.map {
-                    var iName: String = it.nameAsString
-                    // we need to ensure that x.* imports really preserve the asterisk!
-                    if (it.isAsterisk && !iName.endsWith(".*")) {
-                        iName += ".*"
-                    }
-                    Pair(it, iName)
-                }
-                ?.groupBy({ it.first.isStatic }, { it.second })
-
-        recordDeclaration.staticImportStatements = allImports?.get(true) ?: listOf()
-        recordDeclaration.importStatements = allImports?.get(false) ?: listOf()
     }
 
     /* Not so sure about the place of Annotations in the CPG currently */

@@ -37,12 +37,10 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import org.slf4j.LoggerFactory
 
 @DependsOn(TypeHierarchyResolver::class)
-@ExecuteBefore(JavaImportResolver::class)
 @RequiresLanguage(JavaLanguage::class)
 @Description(
     "Adds some java types and their hierarchy information that are not part of the analyzed code (e.g., from the standard library) to the CPG's type hierarchy."
