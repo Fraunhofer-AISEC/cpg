@@ -1,4 +1,4 @@
-#include "log.h"
+#include "../include/log.h"
 
 /* printf is not declared anywhere: the analysis does not know the code behind it (external) */
 void log_debug(const char *msg) {

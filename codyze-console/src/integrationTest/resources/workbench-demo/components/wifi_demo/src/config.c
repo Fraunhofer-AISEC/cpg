@@ -1,5 +1,5 @@
-#include "config.h"
-#include "log.h"
+#include "../include/config.h"
+#include "../include/log.h"
 
 static int is_valid_ssid(const char *ssid) {
     return ssid[0] != 0;
