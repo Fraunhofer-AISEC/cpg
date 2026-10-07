@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
+import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import io.ktor.http.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
@@ -71,11 +72,11 @@ import kotlinx.serialization.json.JsonObject
  *   the innermost node containing the whole range.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
  *   analysis warnings).
- * - GET `/api/node/{id}/pdg?direction=backward|forward&hops=1..3`: Retrieves the slice of the
- *   program dependence graph around the statement of the node, limited to its function.
+ * - GET `/api/node/{id}/pdg|dfg|cdg?direction=backward|forward&hops=1..3`: Retrieves the slice of
+ *   the program dependence graph around the statement of the node, limited to its function.
  * - GET `/api/node/{id}/pdg-counts?hops=1..3`: Retrieves the size of the slice in each direction.
- * - POST `/api/paths/graph`: Retrieves paths of node IDs (e.g. dataflows found by the agent) as a
- *   graph in the format of a PDG slice.
+ * - POST `/api/graph/from-paths`: Retrieves the paths a tool found (e.g. dataflows found by the
+ *   agent) as a graph of their statements in the format of a PDG slice.
  * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
  *   calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
@@ -292,22 +293,25 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             call.respond(service.getTrustIssues(nodeIds))
         }
 
-        // The endpoint to get the slice of the program dependence graph around a node
-        get("/node/{id}/pdg") {
-            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-            val direction =
-                when (call.parameters["direction"]?.lowercase()) {
-                    null,
-                    "backward" -> PdgDirection.BACKWARD
-                    "forward" -> PdgDirection.FORWARD
-                    else -> return@get call.respond(HttpStatusCode.BadRequest)
+        // The endpoints to get the slice of the program dependence graph around a node, or of its
+        // data or control dependences only
+        for (graph in DependenceGraph.entries) {
+            get("/node/{id}/${graph.name.lowercase()}") {
+                val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val direction =
+                    when (call.parameters["direction"]?.lowercase()) {
+                        null,
+                        "backward" -> SliceDirection.BACKWARD
+                        "forward" -> SliceDirection.FORWARD
+                        else -> return@get call.respond(HttpStatusCode.BadRequest)
+                    }
+                val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
+                val slice = service.getSlice(id, direction, hops, graph)
+                if (slice != null) {
+                    call.respond(slice)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
                 }
-            val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
-            val slice = service.getPdgSlice(id, direction, hops)
-            if (slice != null) {
-                call.respond(slice)
-            } else {
-                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
             }
         }
 
@@ -315,7 +319,7 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
         get("/node/{id}/pdg-counts") {
             val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
             val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
-            val counts = service.getPdgCounts(id, hops)
+            val counts = service.getSliceCounts(id, hops)
             if (counts != null) {
                 call.respond(counts)
             } else {
@@ -323,11 +327,11 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             }
         }
 
-        // The endpoint to get paths through the graph as a graph of their statements
-        post("/paths/graph") {
+        // The endpoint to get the paths a tool found as a graph of their statements
+        post("/graph/from-paths") {
             val request =
                 try {
-                    call.receive<PathsGraphRequestJSON>()
+                    call.receive<NodePaths>()
                 } catch (e: Exception) {
                     return@post call.respond(
                         HttpStatusCode.BadRequest,

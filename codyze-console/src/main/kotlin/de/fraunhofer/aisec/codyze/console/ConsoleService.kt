@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigu
 import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
@@ -304,27 +305,32 @@ class ConsoleService {
 
     /**
      * Returns the slice of the program dependence graph around the node with the given ID (see
-     * [pdgSlice]), or `null` if there is no such node.
+     * [slice]), or `null` if there is no such node.
      */
-    fun getPdgSlice(nodeId: String, direction: PdgDirection, hops: Int): PdgSliceJSON? {
-        return findNode(nodeId)?.let { pdgSlice(it, direction, hops) }
+    fun getSlice(
+        nodeId: String,
+        direction: SliceDirection,
+        hops: Int,
+        graph: DependenceGraph = DependenceGraph.PDG,
+    ): GraphSliceJSON? {
+        return findNode(nodeId)?.let { slice(it, direction, hops, graph) }
     }
 
     /**
      * Returns how many statements are in the slice of the program dependence graph around the node
      * with the given ID in each direction, or `null` if there is no such node.
      */
-    fun getPdgCounts(nodeId: String, hops: Int): PdgCountsJSON? {
-        return findNode(nodeId)?.let { pdgCounts(it, hops) }
+    fun getSliceCounts(nodeId: String, hops: Int): SliceCountsJSON? {
+        return findNode(nodeId)?.let { sliceCounts(it, hops) }
     }
 
     /**
-     * Returns the paths with the given node IDs as a graph in the format of a PDG slice. IDs of
-     * nodes that do not exist (e.g., because an LLM made them up) are left out of their path.
+     * Returns the paths a tool found as a graph of their statements, in the format of a PDG slice.
+     * Nodes that do not exist (any more) are left out of their path.
      */
-    fun getPathsGraph(request: PathsGraphRequestJSON): PdgSliceJSON {
-        val paths = request.paths.map { path -> path.mapNotNull { findNode(it) } }
-        return pathsGraph(paths.filter { it.isNotEmpty() }, request.kind)
+    fun getPathsGraph(paths: NodePaths): GraphSliceJSON {
+        val nodes = paths.paths.map { path -> path.mapNotNull { findNode(it.nodeId) } }
+        return pathsGraph(nodes.filter { it.isNotEmpty() }, paths.kind)
     }
 
     /** Returns the node (or overlay) with the given ID, using an index built on first use. */

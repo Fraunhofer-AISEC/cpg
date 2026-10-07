@@ -45,6 +45,8 @@ dependencies {
     integrationTestImplementation(libs.ktor.server.test.host)
     integrationTestImplementation(libs.ktor.client.content.negotiation)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
+    // The paths format the MCP tools return, which the tests send to the console
+    integrationTestImplementation(projects.cpgSerialization)
     // We depend on the Python frontend for the integration tests, but the frontend is only
     // available if enabled.
     // If it's not available, the integration tests fail (which is ok). But if we would directly
