@@ -33,6 +33,12 @@ structure Env where
   fields : Nat → String → Option Value
   /-- Methods by name, applied to the receiver and the arguments. -/
   methods : String → Option (Value → List Value → Option Value)
+  /-- Indexing `x[i]` of arrays, slices, maps and strings. -/
+  index : Value → Value → Option Value
+  /-- Slicing `x[low:high:max]`, with absent bounds as `none`. -/
+  slice : Value → Option Value → Option Value → Option Value → Option Value
+  /-- Dereferencing a pointer. -/
+  deref : Value → Option Value
 
 /-- Meaning of a (strict) binary operator code. -/
 def evalBinaryOp (L : LanguageSemantics) (code : String) (a b : Value) : Option Value :=
@@ -112,7 +118,21 @@ def Expr.eval (L : LanguageSemantics) (env : Env) : Expr → Option Value
     let m ← env.methods name
     m receiver (← Expr.evalList L env args)
   | .memberCall .. => none
+  | .subscription _ arr (.range _ low high max) => do
+    let a ← arr.eval L env
+    let l ← Expr.evalOpt L env low
+    let h ← Expr.evalOpt L env high
+    let m ← Expr.evalOpt L env max
+    env.slice a l h m
+  | .subscription _ arr idx => do env.index (← arr.eval L env) (← idx.eval L env)
+  | .range .. => none
+  | .pointerDereference _ input => do env.deref (← input.eval L env)
   | .problem .. => none
+
+/-- Evaluates an optional expression; an absent expression has no value, but does not fail. -/
+def Expr.evalOpt (L : LanguageSemantics) (env : Env) : Option Expr → Option (Option Value)
+  | none => some none
+  | some e => some <$> e.eval L env
 
 /-- Evaluates a list of expressions from left to right. -/
 def Expr.evalList (L : LanguageSemantics) (env : Env) : List Expr → Option (List Value)

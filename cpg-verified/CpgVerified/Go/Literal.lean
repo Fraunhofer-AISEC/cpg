@@ -12,9 +12,9 @@ The value denoted by the source text of a `*ast.BasicLit`, following
 <https://go.dev/ref/spec#String_literals>.
 
 The input has already been accepted by the Go parser, so these functions do not re-validate
-the lexical structure (e.g. the placement of `_`). Escape sequences in rune and interpreted
-string literals, as well as floating-point and imaginary literals, are not modelled yet; their
-value is `none`.
+the lexical structure (e.g. the placement of `_`). Imaginary literals, and strings that are not
+valid UTF-8, are not modelled; their value is `none`. Floating-point values are kept as text, since
+operations on them are not modelled.
 -/
 
 namespace Go
@@ -60,9 +60,56 @@ def stripDelimiters (d : Char) (cs : List Char) : Option (List Char) :=
     else none
   | [] => none
 
+/-- One unit of an interpreted string or rune literal: a code point, or a byte from `\x`/octal. -/
+inductive LitUnit where
+  | codePoint (n : Nat)
+  | byte (n : Nat)
+deriving Repr, DecidableEq
+
+/-- The numeric value of a unit. -/
+def LitUnit.value : LitUnit → Nat
+  | .codePoint n | .byte n => n
+
+/--
+Decodes the escape sequences of an interpreted string or rune literal
+(<https://go.dev/ref/spec#Rune_literals>).
+-/
+def unescape : List Char → Option (List LitUnit)
+  | [] => some []
+  | '\\' :: 'a' :: rest => (.codePoint 7 :: ·) <$> unescape rest
+  | '\\' :: 'b' :: rest => (.codePoint 8 :: ·) <$> unescape rest
+  | '\\' :: 'f' :: rest => (.codePoint 12 :: ·) <$> unescape rest
+  | '\\' :: 'n' :: rest => (.codePoint 10 :: ·) <$> unescape rest
+  | '\\' :: 'r' :: rest => (.codePoint 13 :: ·) <$> unescape rest
+  | '\\' :: 't' :: rest => (.codePoint 9 :: ·) <$> unescape rest
+  | '\\' :: 'v' :: rest => (.codePoint 11 :: ·) <$> unescape rest
+  | '\\' :: '\\' :: rest => (.codePoint 92 :: ·) <$> unescape rest
+  | '\\' :: '\'' :: rest => (.codePoint 39 :: ·) <$> unescape rest
+  | '\\' :: '"' :: rest => (.codePoint 34 :: ·) <$> unescape rest
+  | '\\' :: 'x' :: a :: b :: rest => do
+    let v ← parseDigits 16 [a, b]
+    (.byte v :: ·) <$> unescape rest
+  | '\\' :: 'u' :: a :: b :: c :: d :: rest => do
+    let v ← parseDigits 16 [a, b, c, d]
+    (.codePoint v :: ·) <$> unescape rest
+  | '\\' :: 'U' :: a :: b :: c :: d :: e :: f :: g :: h :: rest => do
+    let v ← parseDigits 16 [a, b, c, d, e, f, g, h]
+    if v.isValidChar then (.codePoint v :: ·) <$> unescape rest else none
+  | '\\' :: a :: b :: c :: rest => do
+    let v ← parseDigits 8 [a, b, c]
+    if v < 256 then (.byte v :: ·) <$> unescape rest else none
+  | '\\' :: _ => none
+  | c :: rest => (.codePoint c.toNat :: ·) <$> unescape rest
+
+/-- The UTF-8 encoding of a unit; bytes are taken as they are. -/
+def LitUnit.utf8 : LitUnit → List UInt8
+  | .codePoint n => (String.singleton (Char.ofNat n)).toUTF8.toList
+  | .byte n => [n.toUInt8]
+
 /--
 The value of a string literal. Raw strings (in back quotes) drop carriage returns; interpreted
-strings (in double quotes) must not contain escape sequences.
+strings (in double quotes) have their escape sequences decoded. Go strings are arbitrary byte
+sequences; strings that are not valid UTF-8 are not modelled.
 -/
 def parseStringLit (s : String) : Option String :=
   match s.toList with
@@ -71,20 +118,27 @@ def parseStringLit (s : String) : Option String :=
     pure (String.ofList (inner.filter (· != '\r')))
   | _ => do
     let inner ← stripDelimiters '"' s.toList
-    if inner.contains '\\' then none else pure (String.ofList inner)
+    let units ← unescape inner
+    String.fromUTF8? (ByteArray.mk (units.flatMap LitUnit.utf8).toArray)
 
-/-- The value of a rune literal (a single character without escape sequence). -/
-def parseRuneLit (s : String) : Option Nat :=
-  match s.toList with
-  | ['\'', c, '\''] => if c == '\\' then none else some c.toNat
+/-- The value of a rune literal, i.e. its code point. -/
+def parseRuneLit (s : String) : Option Nat := do
+  let inner ← stripDelimiters '\'' s.toList
+  match ← unescape inner with
+  | [u] => some u.value
   | _ => none
+
+/-- The value of a floating-point literal: its decimal or hexadecimal text without separators. -/
+def parseFloatLit (s : String) : String :=
+  String.ofList (s.toList.filter (· != '_'))
 
 /-- The value denoted by a basic literal. -/
 def litValue : LitKind → String → Option Value
   | .int, s => (Value.int ∘ Int.ofNat) <$> parseIntLit s
   | .string, s => Value.str <$> parseStringLit s
   | .char, s => (Value.int ∘ Int.ofNat) <$> parseRuneLit s
-  | .float, _ | .imag, _ => none
+  | .float, s => some (.float (parseFloatLit s))
+  | .imag, _ => none
 
 example : parseIntLit "42" = some 42 := by decide
 example : parseIntLit "1_000_000" = some 1000000 := by decide
@@ -94,7 +148,17 @@ example : parseIntLit "017" = some 15 := by decide
 example : parseIntLit "0b101" = some 5 := by decide
 example : parseIntLit "0" = some 0 := by decide
 example : parseRuneLit "'a'" = some 97 := by decide
-example : parseStringLit "\"hi\"" = some "hi" := by decide
+#guard parseStringLit "\"hi\"" == some "hi"
+example : parseRuneLit "'\\n'" = some 10 := by decide
+example : parseRuneLit "'\\x41'" = some 65 := by decide
+example : parseRuneLit "'\\101'" = some 65 := by decide
+example : parseRuneLit "'\\u00e9'" = some 233 := by decide
+example : parseRuneLit "'\\''" = some 39 := by decide
+#guard parseStringLit "\"a\\tb\"" == some "a\tb"
+#guard parseStringLit "\"\\xe2\\x82\\xac\"" == some "€"
+#guard parseStringLit "\"\\xff\"" == none
+#guard parseStringLit "\"\\u00e9\"" == some "é"
+#guard parseFloatLit "1_000.5e3" == "1000.5e3"
 example : parseStringLit "`a\rb`" = some "ab" := by decide
 
 end Go

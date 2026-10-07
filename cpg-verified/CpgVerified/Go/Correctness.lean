@@ -49,6 +49,10 @@ structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
   fields : cenv.fields = genv.fields
   /-- Both environments have the same methods. -/
   methods : cenv.methods = genv.methods
+  /-- Both environments index, slice and dereference in the same way. -/
+  index : cenv.index = genv.index
+  slice : cenv.slice = genv.slice
+  deref : cenv.deref = genv.deref
 
 /-- Every strict Go binary operator means the same as the CPG operator code it is mapped to. -/
 theorem evalBinaryOp_token (op : BinaryOp) (hand : op ≠ .land) (hor : op ≠ .lor) (a b : Value) :
@@ -69,13 +73,25 @@ theorem token_eq_lor (op : BinaryOp) : op.token = "||" ↔ op = .lor := by
 /-- Parentheses do not leave a trace in the CPG. -/
 theorem translate_unparen (ctx : Ctx) : ∀ e : Expr, translate ctx e.unparen = translate ctx e
   | .paren _ x => by simp only [Expr.unparen, translate]; exact translate_unparen ctx x
-  | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .unsupported .. =>
-    rfl
+  | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
+  | .slice .. | .star .. | .unsupported .. => rfl
 
 theorem unparen_not_paren (span : Cpg.Span) (x : Expr) : ∀ e : Expr, e.unparen ≠ .paren span x
   | .paren _ y => by simp only [Expr.unparen]; exact unparen_not_paren span x y
-  | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .unsupported .. =>
-    by simp [Expr.unparen]
+  | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
+  | .slice .. | .star .. | .unsupported .. => by simp [Expr.unparen]
+
+/-- The translation never produces a bare `Range`; ranges only occur inside subscriptions. -/
+theorem translate_ne_range (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
+    translate ctx e ≠ .range loc a b c := by
+  cases e with
+  | ident => simp only [translate, translateIdent]; split <;> (try split) <;> (try split) <;> simp
+  | basicLit => simp only [translate]; split <;> simp
+  | call _ fn _ =>
+    cases fn <;> simp only [translate] <;> (try split) <;> (try split) <;> simp
+  | selector => simp only [translate]; split <;> simp
+  | paren _ x => simp only [translate]; exact translate_ne_range ctx x loc a b c
+  | _ => simp [translate]
 
 theorem packageOf?_mem {packages : List String} {x : Expr} {p : String}
     (h : packageOf? packages x = some p) : p ∈ packages := by
@@ -129,6 +145,15 @@ theorem call_ident_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
   · simp [Cpg.Expr.eval, (h.constsUnshadowed "nil" (by simp) hs).2]
   · split <;> simp [Cpg.Expr.eval, (h.constsUnshadowed "iota" (by simp) hs).2]
   · simp only [Cpg.Expr.eval, h.funcs, hargs]
+
+/-- A subscription whose subscript is not a `Range` is an indexing. -/
+theorem eval_subscription_index (L : Cpg.LanguageSemantics) (env : Cpg.Env) (loc : Cpg.Span)
+    (arr idx : Cpg.Expr) (h : ∀ l a b c, idx ≠ .range l a b c) :
+    (Cpg.Expr.subscription loc arr idx).eval L env
+      = (do env.index (← arr.eval L env) (← idx.eval L env)) := by
+  cases idx with
+  | range l a b c => exact absurd rfl (h l a b c)
+  | _ => simp only [Cpg.Expr.eval]
 
 /-- A call of a named function is preserved, given that its arguments are. -/
 theorem call_ident_full_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
@@ -228,10 +253,35 @@ theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
       | some p =>
         simp only [Cpg.Expr.eval, ihargs, h.qualifiedFuncs p (packageOf?_mem hp) sel]
       | none => simp only [Cpg.Expr.eval, ihx, ihargs, h.methods]
-    | .basicLit .. | .ident .. | .binary .. | .unary .. | .paren .. | .call ..
-    | .unsupported .. =>
+    | .basicLit .. | .ident .. | .binary .. | .unary .. | .paren .. | .call .. | .index ..
+    | .slice .. | .star .. | .unsupported .. =>
       exact call_other_correct ctx genv cenv h span _ args (by simp) ihargs
+  | .index span x i => by
+    have ihx := translate_correct ctx genv cenv h x
+    have ihi := translate_correct ctx genv cenv h i
+    simp only [translate, Expr.eval]
+    rw [eval_subscription_index _ _ _ _ _ (translate_ne_range ctx i)]
+    simp only [ihx, ihi, h.index]
+  | .slice span x low high max => by
+    have ihx := translate_correct ctx genv cenv h x
+    have ihl := translateOpt_correct ctx genv cenv h low
+    have ihh := translateOpt_correct ctx genv cenv h high
+    have ihm := translateOpt_correct ctx genv cenv h max
+    simp only [translate, Cpg.Expr.eval, Expr.eval, ihx, ihl, ihh, ihm, h.slice]
+  | .star span x => by
+    have ihx := translate_correct ctx genv cenv h x
+    simp only [translate, Cpg.Expr.eval, Expr.eval, ihx, h.deref]
   | .unsupported span goType => by simp [translate, Cpg.Expr.eval, Expr.eval]
+
+/-- Semantic preservation for optional expressions. -/
+theorem translateOpt_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ e : Option Expr,
+      Cpg.Expr.evalOpt semantics cenv (translateOpt ctx e)
+        = Expr.evalOpt ctx.iota ctx.packages genv e
+  | none => by simp [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt]
+  | some e => by
+    simp only [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt, translate_correct ctx genv cenv h e]
 
 /-- Semantic preservation for lists of expressions. -/
 theorem translateList_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
@@ -255,7 +305,7 @@ theorem translate_loc (ctx : Ctx) : ∀ e : Expr, (translate ctx e).loc = e.unpa
     · rfl
     split <;> try rfl
     split <;> rfl
-  | .binary .. | .unary .. | .unsupported .. => by
+  | .binary .. | .unary .. | .index .. | .slice .. | .star .. | .unsupported .. => by
     simp only [translate, Cpg.Expr.loc, Expr.unparen, Expr.span]
   | .paren _ x => by simpa [translate, Expr.unparen] using translate_loc ctx x
   | .selector .. => by

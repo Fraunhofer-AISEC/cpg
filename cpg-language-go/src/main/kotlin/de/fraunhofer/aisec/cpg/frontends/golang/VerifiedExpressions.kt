@@ -145,8 +145,40 @@ private fun ExpressionHandler.materialize(result: Sexp, raw: Ast.Expr): Expressi
             }
             call
         }
+        "subscription" -> {
+            newSubscription(rawNode = node) { subscription ->
+                when (node) {
+                    is Ast.IndexExpr -> {
+                        subscription.arrayExpression = materialize(items[3], node.x)
+                        subscription.subscriptExpression = materialize(items[4], node.index)
+                    }
+                    is Ast.SliceExpr -> {
+                        subscription.arrayExpression = materialize(items[3], node.x)
+                        subscription.subscriptExpression = materializeRange(items[4], node)
+                    }
+                    else -> error("unexpected raw node ${node.goType} for a subscription")
+                }
+            }
+        }
+        "deref" -> {
+            node as Ast.StarExpr
+            val input = materialize(items[3], node.x)
+            newPointerDereference(input.name, unknownType(), rawNode = node).apply {
+                this.input = input
+            }
+        }
         // Outside the verified subset, so the regular handler is responsible
         else -> handle(node)
+    }
+}
+
+/** Creates the range of a slice expression from its translation [result]. */
+private fun ExpressionHandler.materializeRange(result: Sexp, raw: Ast.SliceExpr): Expression {
+    val bounds = (result as Sexp.SList).items.drop(3).map { (it as Sexp.SList).items.firstOrNull() }
+    return newRange(rawNode = raw) { range ->
+        raw.low?.let { range.floor = materialize(bounds[0]!!, it) }
+        raw.high?.let { range.ceiling = materialize(bounds[1]!!, it) }
+        raw.max?.let { range.third = materialize(bounds[2]!!, it) }
     }
 }
 
@@ -163,5 +195,6 @@ private fun literalValue(value: Sexp.SList): Any? =
         }
         "bool" -> value.items[1].toString().toBoolean()
         "str" -> value.items[1].toString()
+        "float" -> value.items[1].toString().toDouble()
         else -> null
     }

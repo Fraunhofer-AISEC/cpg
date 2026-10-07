@@ -34,7 +34,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -267,6 +270,7 @@ class VerifiedTranslationTest {
                                 BigInteger(value.items[1].toString())
                         "bool" -> kotlin.value == value.items[1].toString().toBoolean()
                         "str" -> kotlin.value == value.items[1].toString()
+                        "float" -> kotlin.value == value.items[1].toString().toDouble()
                         else -> kotlin.value == null
                     }
                 if (!valueMatches) diffs += "value $value vs ${kotlin.value}"
@@ -346,6 +350,31 @@ class VerifiedTranslationTest {
                 } else {
                     args.zip(kotlin.arguments).forEach { (a, k) -> diffs += compare(a, k, region) }
                 }
+            }
+            "subscription" -> {
+                if (kotlin !is Subscription) {
+                    return diffs + "expected Subscription, got ${kotlin::class.simpleName}"
+                }
+                diffs += compare(items[3], kotlin.arrayExpression, region)
+                diffs += compare(items[4], kotlin.subscriptExpression, region)
+            }
+            "range" -> {
+                if (kotlin !is Range) {
+                    return diffs + "expected Range, got ${kotlin::class.simpleName}"
+                }
+                val bounds = items.drop(3).map { (it as Sexp.SList).items.firstOrNull() }
+                listOf(kotlin.floor, kotlin.ceiling, kotlin.third).zip(bounds).forEach { (k, l) ->
+                    when {
+                        l == null && k != null -> diffs += "unexpected range bound $k"
+                        l != null -> diffs += compare(l, k, region)
+                    }
+                }
+            }
+            "deref" -> {
+                if (kotlin !is PointerDereference) {
+                    return diffs + "expected PointerDereference, got ${kotlin::class.simpleName}"
+                }
+                diffs += compare(items[3], kotlin.input, region)
             }
             else -> diffs += "unknown kind $kind"
         }
