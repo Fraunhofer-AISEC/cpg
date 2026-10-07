@@ -29,6 +29,10 @@ structure LanguageSemantics where
 structure Env where
   vars : String → Option Value
   funcs : String → Option (List Value → Option Value)
+  /-- The heap: the fields of the object at an address. -/
+  fields : Nat → String → Option Value
+  /-- Methods by name, applied to the receiver and the arguments. -/
+  methods : String → Option (Value → List Value → Option Value)
 
 /-- Meaning of a (strict) binary operator code. -/
 def evalBinaryOp (L : LanguageSemantics) (code : String) (a b : Value) : Option Value :=
@@ -100,6 +104,14 @@ def Expr.eval (L : LanguageSemantics) (env : Env) : Expr → Option Value
     let f ← env.funcs name
     f (← Expr.evalList L env args)
   | .call .. => none
+  | .memberAccess _ name base => do
+    let .obj address ← base.eval L env | none
+    env.fields address name
+  | .memberCall _ (.memberAccess _ name base) args => do
+    let receiver ← base.eval L env
+    let m ← env.methods name
+    m receiver (← Expr.evalList L env args)
+  | .memberCall .. => none
   | .problem .. => none
 
 /-- Evaluates a list of expressions from left to right. -/

@@ -20,6 +20,10 @@ open Cpg (Value)
 structure Env where
   vars : String → Option Value
   funcs : String → Option (List Value → Option Value)
+  /-- The heap: the fields of the struct at an address. -/
+  fields : Nat → String → Option Value
+  /-- Methods by name, applied to the receiver and the arguments. -/
+  methods : String → Option (Value → List Value → Option Value)
 
 /--
 Value of a predeclared constant identifier (<https://go.dev/ref/spec#Predeclared_identifiers>).
@@ -76,43 +80,61 @@ mutual
 
 /--
 Evaluates a Go expression. Identifiers bound in `env` shadow predeclared ones. Operands are
-evaluated left to right; `&&` and `||` short-circuit.
+evaluated left to right; `&&` and `||` short-circuit. `packages` are the names of the imported
+packages, whose members are bound in `env` under their qualified name (`fmt.Println`). Calls of
+parenthesized selectors, e.g. `(x.f)()`, are not modelled.
 -/
-def Expr.eval (iota : Option Int) (env : Env) : Expr → Option Value
+def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr → Option Value
   | .basicLit _ kind value => litValue kind value
   | .ident _ name =>
     match env.vars name with
     | some v => some v
     | none => predeclared iota name
   | .binary _ x .land y => do
-    let .bool a ← x.eval iota env | none
+    let .bool a ← x.eval iota packages env | none
     if a then
-      let .bool b ← y.eval iota env | none
+      let .bool b ← y.eval iota packages env | none
       pure (.bool b)
     else pure (.bool false)
   | .binary _ x .lor y => do
-    let .bool a ← x.eval iota env | none
+    let .bool a ← x.eval iota packages env | none
     if a then pure (.bool true)
     else
-      let .bool b ← y.eval iota env | none
+      let .bool b ← y.eval iota packages env | none
       pure (.bool b)
-  | .binary _ x op y => do evalBinary op (← x.eval iota env) (← y.eval iota env)
-  | .unary _ op x => do evalUnary op (← x.eval iota env)
-  | .paren _ x => x.eval iota env
+  | .binary _ x op y => do evalBinary op (← x.eval iota packages env) (← y.eval iota packages env)
+  | .unary _ op x => do evalUnary op (← x.eval iota packages env)
+  | .paren _ x => x.eval iota packages env
+  | .selector _ x sel =>
+    match packageOf? packages x with
+    | some p => env.vars (p ++ "." ++ sel)
+    | none => do
+      let .obj address ← x.eval iota packages env | none
+      env.fields address sel
+  | .call _ (.selector _ x sel) args =>
+    match packageOf? packages x with
+    | some p => do
+      let f ← env.funcs (p ++ "." ++ sel)
+      f (← Expr.evalList iota packages env args)
+    | none => do
+      let receiver ← x.eval iota packages env
+      let m ← env.methods sel
+      m receiver (← Expr.evalList iota packages env args)
   | .call _ fn args =>
     match fn.unparen with
     | .ident _ name => do
       let f ← env.funcs name
-      f (← Expr.evalList iota env args)
+      f (← Expr.evalList iota packages env args)
     | _ => none
   | .unsupported .. => none
 
 /-- Evaluates a list of expressions from left to right. -/
-def Expr.evalList (iota : Option Int) (env : Env) : List Expr → Option (List Value)
+def Expr.evalList (iota : Option Int) (packages : List String) (env : Env) :
+    List Expr → Option (List Value)
   | [] => some []
   | e :: es => do
-    let v ← e.eval iota env
-    let vs ← Expr.evalList iota env es
+    let v ← e.eval iota packages env
+    let vs ← Expr.evalList iota packages env es
     pure (v :: vs)
 
 end

@@ -74,6 +74,8 @@ fun encodeExpr(expr: Ast.Expr): Sexp {
         is Ast.ParenExpr -> sexpOf(atom("paren"), *span, encodeExpr(expr.x))
         is Ast.CallExpr ->
             sexpOf(atom("call"), *span, encodeExpr(expr.`fun`), sexpOf(expr.args.map(::encodeExpr)))
+        is Ast.SelectorExpr ->
+            sexpOf(atom("selector"), *span, encodeExpr(expr.x), atom(expr.sel.name))
         else -> sexpOf(atom("unsupported"), *span, atom(expr.goType))
     }
 }
@@ -85,7 +87,8 @@ fun isInVerifiedSubset(expr: Ast.Expr): Boolean =
         expr is Ast.BinaryExpr ||
         expr is Ast.UnaryExpr ||
         expr is Ast.ParenExpr ||
-        expr is Ast.CallExpr
+        expr is Ast.CallExpr ||
+        expr is Ast.SelectorExpr
 
 /** The identifiers occurring in [expr], not descending into expressions outside the subset. */
 fun identifiersIn(expr: Ast.Expr): Set<String> =
@@ -95,5 +98,6 @@ fun identifiersIn(expr: Ast.Expr): Set<String> =
         is Ast.UnaryExpr -> identifiersIn(expr.x)
         is Ast.ParenExpr -> identifiersIn(expr.x)
         is Ast.CallExpr -> identifiersIn(expr.`fun`) + expr.args.flatMap(::identifiersIn)
+        is Ast.SelectorExpr -> identifiersIn(expr.x)
         else -> emptySet()
     }

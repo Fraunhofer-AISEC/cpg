@@ -38,19 +38,36 @@ def shortCircuit : Go.Expr :=
         (int (sp 17 18) "0")))
 
 def goEnv : Go.Env where
-  vars | "x" => some (.int 5) | _ => none
+  vars
+    | "x" => some (.int 5)
+    | "p" => some (.obj 1)
+    | "fmt.Version" => some (.str "1.0")
+    | _ => none
   funcs
     | "f" => some fun
       | [.int a, .int b] => some (.int (a + b))
       | _ => none
+    | "fmt.Sprint" => some fun
+      | [.int _] => some (.str "printed")
+      | _ => none
+    | _ => none
+  fields
+    | 1, "X" => some (.int 3)
+    | _, _ => none
+  methods
+    | "Add" => some fun
+      | .obj 1, [.int a] => some (.int (a + 3))
+      | _, _ => none
     | _ => none
 
 /-- The CPG environment matching `goEnv`: names are resolved as in `ctx`. -/
 def cpgEnv : Cpg.Env where
   vars name := goEnv.vars (name.dropPrefix "main.").toString
   funcs name := goEnv.funcs (name.dropPrefix "main.").toString
+  fields := goEnv.fields
+  methods := goEnv.methods
 
-def goEval (e : Go.Expr) : Option Value := e.eval ctx.iota goEnv
+def goEval (e : Go.Expr) : Option Value := e.eval ctx.iota ctx.packages goEnv
 
 def cpgEval (e : Go.Expr) : Option Value := (translate ctx e).eval Go.semantics cpgEnv
 
@@ -114,6 +131,27 @@ def tests : List (String × Bool) := [
   ("evaluation: bitwise operators on negative numbers",
     let e := Go.Expr.binary (sp 0 6) (.unary (sp 0 2) .sub (int (sp 1 2) "6")) .andNot (int (sp 5 6) "3")
     cpgEval e == some (.int (-8)) && goEval e == some (.int (-8))),
+  ("package member is a qualified reference",
+    translate ctx (.selector (sp 0 11) (ident (sp 0 3) "fmt") "Version")
+      == .reference (sp 0 11) "fmt.Version"),
+  ("field access is a member access",
+    translate ctx (.selector (sp 0 3) (ident (sp 0 1) "p") "X")
+      == .memberAccess (sp 0 3) "X" (.reference (sp 0 1) "main.p")),
+  ("method call is a member call",
+    translate ctx (.call (sp 0 8) (.selector (sp 0 5) (ident (sp 0 1) "p") "Add") [int (sp 6 7) "1"])
+      == .memberCall (sp 0 8) (.memberAccess (sp 0 5) "Add" (.reference (sp 0 1) "main.p"))
+        [.literal (sp 6 7) (.int 1) (.primitive "int") none]),
+  ("package function call is a call",
+    translate ctx (.call (sp 0 14) (.selector (sp 0 10) (ident (sp 0 3) "fmt") "Sprint") [int (sp 11 12) "1"])
+      == .call (sp 0 14) (.reference (sp 0 10) "fmt.Sprint")
+        [.literal (sp 11 12) (.int 1) (.primitive "int") none]),
+  ("evaluation: field access, method and package calls agree",
+    let field := Go.Expr.selector (sp 0 3) (ident (sp 0 1) "p") "X"
+    let method := Go.Expr.call (sp 0 8) (.selector (sp 0 5) (ident (sp 0 1) "p") "Add") [int (sp 6 7) "1"]
+    let pkg := Go.Expr.call (sp 0 14) (.selector (sp 0 10) (ident (sp 0 3) "fmt") "Sprint") [int (sp 11 12) "1"]
+    goEval field == some (.int 3) && cpgEval field == some (.int 3) &&
+    goEval method == some (.int 4) && cpgEval method == some (.int 4) &&
+    goEval pkg == some (.str "printed") && cpgEval pkg == some (.str "printed")),
   ("evaluation: unbound names fail in both",
     goEval (ident (sp 0 1) "y") == none && cpgEval (ident (sp 0 1) "y") == none)
 ]

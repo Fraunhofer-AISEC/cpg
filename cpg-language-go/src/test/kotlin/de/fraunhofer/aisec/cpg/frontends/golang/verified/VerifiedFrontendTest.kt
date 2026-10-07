@@ -69,18 +69,70 @@ class VerifiedFrontendTest {
                 .sortedBy { it.path }
                 .toList()
 
+        compareFrontend(files) { topLevel }
+    }
+
+    /**
+     * Compares the frontend with and without the verified translation on some packages of the Go
+     * standard library. Skipped if Go is not installed.
+     */
+    @Test
+    fun testStandardLibrary() {
+        val library = VerifiedTranslationTest.libraryFile
+        assumeTrue(library.exists(), "native library not found at $library")
+
+        val goRoot =
+            runCatching {
+                    ProcessBuilder("go", "env", "GOROOT")
+                        .start()
+                        .inputStream
+                        .reader()
+                        .readText()
+                        .trim()
+                }
+                .getOrNull()
+        assumeTrue(!goRoot.isNullOrEmpty(), "Go is not installed")
+
+        val files =
+            listOf("strconv", "strings", "bytes", "fmt", "math/big", "go/scanner", "encoding/json")
+                .flatMap { pkg ->
+                    File(goRoot, "src/$pkg")
+                        .listFiles { f -> f.extension == "go" && !f.name.endsWith("_test.go") }
+                        .orEmpty()
+                        .sortedBy { it.name }
+                }
+        assumeTrue(files.isNotEmpty(), "Go standard library not found in $goRoot")
+
+        compareFrontend(files) { it.parentFile.toPath() }
+    }
+
+    /**
+     * Analyzes each of the [files] with and without the verified translation and checks that both
+     * produce the same expressions.
+     */
+    private fun compareFrontend(files: List<File>, topLevel: (File) -> Path) {
+        val library = VerifiedTranslationTest.libraryFile
         val before = LeanTranslator.translatedRequests.get()
         var expressions = 0
+        var regularTime = 0L
+        var verifiedTime = 0L
         for (file in files) {
-            val regular = expressionsOf(file, topLevel, null)
-            val verified = expressionsOf(file, topLevel, library)
+            var start = System.nanoTime()
+            val regular = expressionsOf(file, topLevel(file), null)
+            regularTime += System.nanoTime() - start
+
+            start = System.nanoTime()
+            val verified = expressionsOf(file, topLevel(file), library)
+            verifiedTime += System.nanoTime() - start
+
             assertEquals(regular, verified, "different expressions in $file")
             expressions += regular.size
         }
 
         val translated = LeanTranslator.translatedRequests.get() - before
         println(
-            "$expressions expressions in ${files.size} files, $translated verified translations"
+            "$expressions expressions in ${files.size} files, $translated verified translations, " +
+                "${regularTime / 1_000_000} ms regular, ${verifiedTime / 1_000_000} ms verified"
         )
         assertTrue(translated > 0, "the verified translation was not used")
     }

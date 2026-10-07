@@ -132,6 +132,19 @@ private fun ExpressionHandler.materialize(result: Sexp, raw: Ast.Expr): Expressi
             }
             call
         }
+        "member" -> {
+            node as Ast.SelectorExpr
+            newMemberAccess(items[3].toString(), materialize(items[4], node.x), rawNode = node)
+        }
+        "membercall" -> {
+            node as Ast.CallExpr
+            val call = newMemberCall(materialize(items[3], node.`fun`), rawNode = node)
+            call.type = unknownType()
+            (items[4] as Sexp.SList).items.zip(node.args).forEach { (arg, rawArg) ->
+                call.arguments += materialize(arg, rawArg)
+            }
+            call
+        }
         // Outside the verified subset, so the regular handler is responsible
         else -> handle(node)
     }
