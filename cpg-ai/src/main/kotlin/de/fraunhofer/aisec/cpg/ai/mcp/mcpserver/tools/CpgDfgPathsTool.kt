@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgPathsPayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodePaths
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.ContextSensitive
@@ -41,6 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.Intraprocedural
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.serialization.NodeInfo
+import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent

@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodePaths
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
+import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
