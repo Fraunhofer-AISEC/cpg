@@ -6,6 +6,7 @@
   import ToolStep from './ToolStep.svelte';
   import { CodeViewer, ConceptChecklist, FileTree } from '$lib/components/analysis';
   import Outline from '$lib/components/analysis/Outline.svelte';
+  import FindingsView from '$lib/components/analysis/FindingsView.svelte';
   import StepBar from '$lib/components/analysis/StepBar.svelte';
   import NodeInspector from '$lib/components/analysis/inspector/NodeInspector.svelte';
   import { LoadingSpinner } from '$lib/components/ui';
@@ -27,7 +28,7 @@
   } from '$lib/agentEvidence';
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
-  import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
+  import { clearNodeDetailsCache, getNodeDetails, getNodeDetailsAt } from '$lib/nodeDetails';
   import { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import {
     clearGraphCache,
@@ -42,8 +43,10 @@
   } from '$lib/components/analysis/CodeContextMenu.svelte';
   import { getConceptCounts } from '$lib/annotations';
   import type {
+    FindingsJSON,
     NodeJSON,
     NodePathsJSON,
+    RequirementJSON,
     AnalysisResultJSON,
     TranslationUnitJSON,
     ChatMessage,
@@ -778,6 +781,52 @@
     ];
   });
 
+  // The findings of the requirements: the file of each, and showing it in the code
+  function findingFile(finding: FindingsJSON): string {
+    const unit = finding.translationUnit ? findUnitById(finding.translationUnit) : null;
+    const component = unit ? findComponentForTu(unit.id) : null;
+    return unit && component
+      ? relativePath(component, unit)
+      : (finding.path.split('/').pop() ?? finding.path);
+  }
+
+  function openFinding(finding: FindingsJSON) {
+    const unit = finding.translationUnit ? findUnitById(finding.translationUnit) : null;
+    const component = unit ? findComponentForTu(unit.id) : null;
+    if (!unit || !component) return;
+    if (unit.id !== selectedTranslationUnit?.id) handleFileSelect(unit);
+    showInspector();
+    // The node at the place of the finding, which shows it in the code
+    focus.inspect(
+      () =>
+        getNodeDetailsAt(component.name, unit.id, finding.startLine, finding.startColumn, {
+          line: finding.endLine,
+          column: finding.endColumn
+        }),
+      true
+    );
+  }
+
+  function askAboutRequirement(requirement: RequirementJSON, finding?: FindingsJSON) {
+    showAgent();
+    onMessageChange(
+      finding
+        ? `The requirement "${requirement.name}" (${requirement.id}: ${requirement.description}) is violated at ${findingFile(finding)}:${finding.startLine}. Why? Follow the evidence in the code and explain what would have to change for the requirement to hold.`
+        : `Why is the requirement "${requirement.name}" (${requirement.id}: ${requirement.description}) not fulfilled? Find the places in the code that violate it and explain why.`
+    );
+  }
+
+  // The places in the open file that violate a requirement, for the findings layer
+  const openFindings = $derived(
+    (analysisResult?.findings ?? [])
+      .filter((f) => f.translationUnit === openedUnit?.id && f.kind.toLowerCase() === 'fail')
+      .map((f) => ({
+        startLine: f.startLine,
+        endLine: f.endLine,
+        label: `Violates ${f.rule ?? 'a requirement'}`
+      }))
+  );
+
   function askAboutGraphNode(node: NodeRefJSON) {
     showAgent();
     onMessageChange(
@@ -1069,7 +1118,7 @@
   let sidebarOpen = $state(true);
 
   // The views of the sidebar, switched in the activity bar
-  type SidebarView = 'files' | 'outline';
+  type SidebarView = 'files' | 'outline' | 'findings';
   let sidebarView = $state<SidebarView>('files');
   const sidebarViews: { id: SidebarView; label: string; icon: string }[] = [
     {
@@ -1081,6 +1130,11 @@
       id: 'outline',
       label: 'Outline',
       icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'
+    },
+    {
+      id: 'findings',
+      label: 'Findings',
+      icon: 'M12 3l9 16H3zM12 10v4M12 17h.01'
     }
   ];
 
@@ -1605,6 +1659,14 @@
           revealUnit={treeReveal}
           embedded
         />
+      {:else if sidebarView === 'findings'}
+        <FindingsView
+          categories={analysisResult?.requirementCategories ?? []}
+          findings={analysisResult?.findings ?? []}
+          fileOf={findingFile}
+          onOpen={openFinding}
+          onAsk={askAboutRequirement}
+        />
       {:else}
         <Outline
           annotations={openedUnit?.id === selectedTranslationUnit?.id ? fileAnnotations : null}
@@ -1722,6 +1784,7 @@
           {askDisabledReason}
           {askRequest}
           slice={graphSlice}
+          findings={openFindings}
           onCodeContextMenu={openCodeMenu}
         >
           {#snippet layerActions()}

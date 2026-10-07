@@ -137,6 +137,11 @@
     askDisabledReason?: string | null;
     /** Incremented to open the input for the selection (or else the inspected node) */
     askRequest?: number;
+    /**
+     * Places in this file that violate a requirement, shown as yellow lines with the findings layer.
+     * Without it, the viewer has no findings layer
+     */
+    findings?: { startLine: number; endLine: number; label: string }[];
   }
 
   let {
@@ -167,7 +172,8 @@
     onCodeContextMenu,
     layerActions,
     askDisabledReason = null,
-    askRequest = 0
+    askRequest = 0,
+    findings
   }: Props = $props();
 
   // The focus and the placement of the inspector never change for a viewer
@@ -620,6 +626,8 @@
           title: inspected ? info.description : `${info.description} (nothing is selected)`
         };
       }
+      case 'findings':
+        return { count: findings?.length ?? 0, title: info.description };
       case 'agent':
         return {
           count: new Set(agentMarkers.map((m) => m.nodeId)).size,
@@ -630,9 +638,25 @@
     }
   }
 
-  // The dataflow and agent layers need the lanes in the gutter
+  // The dataflow and agent layers need the lanes in the gutter, the findings layer its findings
   const shownLayers = $derived(
-    layerInfos.filter((l) => lanes || (l.id !== 'dataflow' && l.id !== 'agent'))
+    layerInfos.filter(
+      (l) =>
+        (lanes || (l.id !== 'dataflow' && l.id !== 'agent')) &&
+        (l.id !== 'findings' || findings !== undefined)
+    )
+  );
+
+  // The lines of the findings, while their layer is shown (0-based, like the highlighted line)
+  const findingLines = $derived(
+    findings && layers.visible.findings
+      ? findings.flatMap((f) =>
+          Array.from(
+            { length: Math.max(f.endLine - f.startLine, 0) + 1 },
+            (_, i) => f.startLine - 1 + i
+          )
+        )
+      : []
   );
 
   // The marks of the visible layers in the overview ruler, one lane per layer. The steps of the
@@ -673,13 +697,18 @@
     for (const range of slice?.ranges ?? []) {
       marks.push({
         line: range.first,
-        lane: 5,
+        lane: 6,
         color: range.id === slice?.selectedId ? '#2563eb' : '#93b4ea',
         label: range.label
       });
     }
     // While a path or the agent's thread is shown, the other layers step back
     const faded = pathActive || threadActive;
+    if (layers.visible.findings) {
+      for (const f of findings ?? []) {
+        marks.push({ line: f.startLine, lane: 5, color: color('findings'), label: f.label });
+      }
+    }
     if (layers.visible.concepts) {
       for (const c of annotations.concepts) {
         marks.push({
@@ -1026,7 +1055,7 @@
                 {highlighted}
                 start={visibleLines.start}
                 end={visibleLines.end}
-                highlightedLines={allHighlightLines}
+                highlightedLines={[...allHighlightLines, ...findingLines]}
                 {maxColumns}
                 {lineHeight}
                 {charWidth}
@@ -1182,7 +1211,7 @@
         <OverviewRuler
           marks={rulerMarks}
           {totalLines}
-          lanes={lanes ? (slice ? 6 : 5) : 3}
+          lanes={lanes ? (slice ? 7 : 6) : 3}
           viewport={viewportLines}
           selectionLine={inspected?.node.translationUnitId === translationUnit.id
             ? inspected.node.startLine
