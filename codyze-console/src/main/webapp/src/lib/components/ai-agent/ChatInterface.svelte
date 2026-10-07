@@ -2080,10 +2080,11 @@
               onPromptSelect?.(name, args);
             }}
             onNewChat={onReset}
-          />
-          <div class="mt-1.5">
-            <SessionBar {models} {selectedModel} {onModelSelect} />
-          </div>
+          >
+            {#snippet toolbar()}
+              <SessionBar {models} {selectedModel} {onModelSelect} />
+            {/snippet}
+          </MessageInput>
         </div>
       {/if}
     </div>

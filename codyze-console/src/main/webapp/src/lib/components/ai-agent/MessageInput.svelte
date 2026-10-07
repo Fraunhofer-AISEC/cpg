@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import type { McpPromptInfo } from '$lib/types';
 
   interface Props {
@@ -11,6 +12,8 @@
     prompts?: McpPromptInfo[];
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
     onNewChat?: () => void;
+    /** Controls in the row under the text, e.g. to choose the model */
+    toolbar?: Snippet;
   }
 
   let {
@@ -21,7 +24,8 @@
     disabled = false,
     prompts,
     onPromptSelect,
-    onNewChat
+    onNewChat,
+    toolbar
   }: Props = $props();
 
   let textareaElement: HTMLTextAreaElement;
@@ -114,23 +118,25 @@
   <!-- Slash-command picker: shown when user types "/..." to filter MCP prompts -->
   {#if showPicker}
     <div
-      class="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+      class="absolute right-0 bottom-full left-0 mb-1 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
     >
-      <div class="px-3 py-2 border-b border-gray-100">
-        <p class="text-xs font-medium text-gray-500">Available prompts</p>
+      <div class="border-b border-gray-100 px-2.5 py-1.5">
+        <p class="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">Prompts</p>
       </div>
       <ul>
-        {#each filteredPrompts as prompt, i}
+        {#each filteredPrompts as prompt, i (prompt.name)}
           <li>
             <button
               type="button"
-              class="flex w-full flex-col px-3 py-2.5 text-left transition-colors {i === pickerIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}"
+              class="flex w-full flex-col px-2.5 py-1.5 text-left {i === pickerIndex
+                ? 'bg-blue-50'
+                : 'hover:bg-gray-50'}"
               onmouseenter={() => (pickerIndex = i)}
               onclick={() => selectPrompt(prompt)}
             >
-              <span class="font-mono text-sm font-semibold text-gray-800">/{prompt.name}</span>
+              <span class="font-mono text-xs font-semibold text-gray-800">/{prompt.name}</span>
               {#if prompt.description}
-                <span class="mt-0.5 text-xs text-gray-500">{prompt.description}</span>
+                <span class="mt-0.5 text-[11px] text-gray-500">{prompt.description}</span>
               {/if}
             </button>
           </li>
@@ -140,40 +146,64 @@
   {/if}
 
   <div
-    class="flex items-center gap-3 rounded-3xl border-2 border-gray-200 bg-white py-2 pl-2 pr-2 shadow-lg transition-all duration-200 focus-within:border-blue-400 focus-within:shadow-xl focus-within:ring-4 focus-within:ring-blue-100"
+    class="rounded-md border border-gray-200 bg-white focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400"
   >
-    {#if onNewChat}
-      <button
-        type="button"
-        onclick={onNewChat}
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 active:scale-95"
-        aria-label="Start new chat"
-        title="New chat"
-      >
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-        </svg>
-      </button>
-      <div class="h-5 w-px bg-gray-200"></div>
-    {/if}
     <textarea
       bind:this={textareaElement}
-      class="max-h-30 min-h-6 flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-gray-900 placeholder-gray-400 outline-none focus:border-0 focus:outline-none focus:ring-0"
+      class="block max-h-30 min-h-9 w-full resize-none border-0 bg-transparent px-2.5 pt-2 pb-1 text-[13px] leading-snug text-gray-900 placeholder-gray-400 outline-none focus:ring-0"
       {placeholder}
       rows="1"
       {value}
       oninput={handleInput}
       onkeydown={handleKeyDown}
     ></textarea>
-    <button
-      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-r from-blue-600 to-blue-700 text-white shadow-md transition-all duration-200 hover:scale-105 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-md"
-      onclick={handleSend}
-      disabled={!value.trim() || disabled}
-      aria-label="Send message"
-    >
-      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m0 0l-7-7m7 7l-7 7"></path>
-      </svg>
-    </button>
+    <div class="flex items-center gap-1 px-1.5 pb-1.5">
+      <div class="flex min-w-0 flex-1 items-center gap-1">
+        {#if toolbar}
+          {@render toolbar()}
+        {/if}
+      </div>
+      {#if onNewChat}
+        <button
+          type="button"
+          onclick={onNewChat}
+          class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          aria-label="Start a new chat"
+          title="New chat"
+        >
+          <svg
+            class="h-3.5 w-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+            />
+          </svg>
+        </button>
+      {/if}
+      <button
+        type="button"
+        class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+        onclick={handleSend}
+        disabled={!value.trim() || disabled}
+        aria-label="Send message"
+        title="Send (Enter)"
+      >
+        <svg
+          class="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          stroke-width="2.5"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-6 6m6-6l6 6" />
+        </svg>
+      </button>
+    </div>
   </div>
 </div>
