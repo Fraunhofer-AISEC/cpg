@@ -45,6 +45,9 @@ jobs:
         run: |
           cpg-verified/native/build.sh
           ldd cpg-verified/.lake/build/native/libcpgverified.so
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
       - uses: actions/setup-java@v5
         with:
           distribution: "corretto"
@@ -54,17 +57,17 @@ jobs:
           # Only the Go frontend is needed
           echo "enableGoFrontend=true" > gradle.properties
           ./gradlew :cpg-language-go:test --tests "*.verified.*" --console=plain
-      - name: Run the Go frontend tests with the verified translation
-        run: |
-          ./gradlew :cpg-language-go:test --rerun-tasks --console=plain \
-            -Dcpg.go.verifiedLibrary="$PWD/cpg-verified/.lake/build/native/libcpgverified.so"
       - name: Report comparison
         if: always()
         run: |
           {
             echo '```'
             sed -n '/<system-out>/,/<\/system-out>/p' \
-              cpg-language-go/build/test-results/test/TEST-*VerifiedTranslationTest.xml \
-              | grep -E "requests,|not found:|MISMATCH|TOTAL" || true
+              cpg-language-go/build/test-results/test/TEST-*.verified.*.xml \
+              | grep -E "requests,|not found:|MISMATCH|TOTAL|verified translations" || true
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Run the Go frontend tests with the verified translation
+        run: |
+          ./gradlew :cpg-language-go:test --rerun-tasks --console=plain \
+            -Dcpg.go.verifiedLibrary="$PWD/cpg-verified/.lake/build/native/libcpgverified.so"

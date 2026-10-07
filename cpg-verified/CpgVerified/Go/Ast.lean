@@ -48,19 +48,30 @@ inductive Expr where
   | paren (span : Span) (x : Expr)
   /-- `*ast.CallExpr` (without `...` spreading) -/
   | call (span : Span) (fn : Expr) (args : List Expr)
-  /-- Any other expression node; `goType` is its Go type name, e.g. `*ast.SelectorExpr`. -/
+  /-- `*ast.SelectorExpr`, i.e. `x.sel` -/
+  | selector (span : Span) (x : Expr) (sel : String)
+  /-- Any other expression node; `goType` is its Go type name, e.g. `*ast.CompositeLit`. -/
   | unsupported (span : Span) (goType : String)
 deriving Repr, Inhabited
 
 /-- The source span of an expression. -/
 def Expr.span : Expr → Span
   | .basicLit span .. | .ident span _ | .binary span .. | .unary span ..
-  | .paren span _ | .call span .. | .unsupported span _ => span
+  | .paren span _ | .call span .. | .selector span .. | .unsupported span _ => span
 
 /-- Removes any enclosing parentheses. -/
 def Expr.unparen : Expr → Expr
   | .paren _ x => x.unparen
   | e => e
+
+/--
+The imported package that a selector `x.sel` refers into, if `x` is (a parenthesized) identifier
+that names an imported package.
+-/
+def packageOf? (packages : List String) (x : Expr) : Option String :=
+  match x.unparen with
+  | .ident _ name => if name ∈ packages then some name else none
+  | _ => none
 
 /-- The source text of a binary operator. -/
 def BinaryOp.token : BinaryOp → String

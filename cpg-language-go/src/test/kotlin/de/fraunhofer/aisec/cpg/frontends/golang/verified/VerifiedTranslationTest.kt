@@ -326,6 +326,27 @@ class VerifiedTranslationTest {
                     args.zip(kotlin.arguments).forEach { (a, k) -> diffs += compare(a, k, region) }
                 }
             }
+            "member" -> {
+                if (kotlin !is MemberAccess) {
+                    return diffs + "expected MemberAccess, got ${kotlin::class.simpleName}"
+                }
+                if (kotlin.name.localName != items[3].toString()) {
+                    diffs += "member ${items[3]} vs ${kotlin.name}"
+                }
+                diffs += compare(items[4], kotlin.base, region)
+            }
+            "membercall" -> {
+                if (kotlin !is MemberCall) {
+                    return diffs + "expected MemberCall, got ${kotlin::class.simpleName}"
+                }
+                diffs += compare(items[3], kotlin.callee, region)
+                val args = (items[4] as Sexp.SList).items
+                if (args.size != kotlin.arguments.size) {
+                    diffs += "${args.size} arguments vs ${kotlin.arguments.size}"
+                } else {
+                    args.zip(kotlin.arguments).forEach { (a, k) -> diffs += compare(a, k, region) }
+                }
+            }
             else -> diffs += "unknown kind $kind"
         }
         return diffs

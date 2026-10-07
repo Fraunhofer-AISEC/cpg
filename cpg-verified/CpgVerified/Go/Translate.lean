@@ -13,7 +13,7 @@ handler reads from mutable frontend state (current scope, imports, `iota`) is an
 input (`Ctx`), so the translation is a pure, total function.
 
 Intentional deviations from the Kotlin handler: `new` and `make`, calls of anything but a named
-function, and literals whose value is not modelled (floating-point, imaginary, escape sequences)
+function or a (non-parenthesized) selector, and literals whose value is not modelled (floating-point, imaginary, escape sequences)
 become `ProblemExpression`s, i.e. they are outside the verified subset. Shadowing of predeclared
 identifiers is taken from the context (`Ctx.shadowed`).
 -/
@@ -97,13 +97,22 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
   | .binary span x op y => .binaryOperator span op.token (translate ctx x) (translate ctx y)
   | .unary span op x => .unaryOperator span op.token (translate ctx x)
   | .paren _ x => translate ctx x
+  | .selector span x sel =>
+    match packageOf? ctx.packages x with
+    -- A member of an imported package is referred to by its qualified name
+    | some p => .reference span (p ++ "." ++ sel)
+    | none => .memberAccess span sel (translate ctx x)
+  | .call span fn@(.selector _ x _) args =>
+    match packageOf? ctx.packages x with
+    | some _ => .call span (translate ctx fn) (translateList ctx args)
+    | none => .memberCall span (translate ctx fn) (translateList ctx args)
   | .call span fn args =>
     match calleeName? fn with
     | some name =>
       if (name == "new" || name == "make") && !ctx.shadowed.contains name then
         .problem span "new and make are not in the verified subset"
       else .call span (translate ctx fn) (translateList ctx args)
-    | none => .problem span "only calls of named functions are in the verified subset"
+    | none => .problem span "only calls of named functions and methods are in the verified subset"
   | .unsupported span goType => .problem span s!"{goType} is not in the verified subset"
 
 /-- Translates a list of expressions. -/

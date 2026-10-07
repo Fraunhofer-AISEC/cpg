@@ -15,7 +15,9 @@ symbol and call resolution, ...) are not.
 ## Status
 
 First slice: Go expressions — basic literals, identifiers, binary and unary operators,
-parentheses and calls. Every other expression kind is translated into a `ProblemExpression`.
+parentheses, selectors (members of imported packages, struct fields) and calls of named functions,
+package functions and methods. Every other expression kind is translated into a
+`ProblemExpression`.
 
 | File                             | Content                                                       |
 |----------------------------------|---------------------------------------------------------------|

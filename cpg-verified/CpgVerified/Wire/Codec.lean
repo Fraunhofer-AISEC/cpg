@@ -22,6 +22,7 @@ EXPR      := (lit START END KIND VALUE)           KIND := int | float | imag | c
            | (unary START END OP X)
            | (paren START END X)
            | (call START END FN (ARG*))
+           | (selector START END X SEL)
            | (unsupported START END GOTYPE)
 ```
 
@@ -29,13 +30,15 @@ and translated CPG expressions are sent back as
 
 ```
 CPG := (literal START END VALUE TYPE NAME)
-         VALUE := (int n) | (bool true|false) | (str s) | (nil)
+         VALUE := (int n) | (bool true|false) | (str s) | (nil) | (obj address)
          TYPE  := (primitive name) | (unknown)
          NAME  := () | (name)
      | (reference START END NAME)
      | (binary START END CODE LHS RHS)
      | (unary START END CODE INPUT)
      | (call START END CALLEE (ARG*))
+     | (member START END NAME BASE)
+     | (membercall START END CALLEE (ARG*))
      | (problem START END MESSAGE)
 ```
 -/
@@ -90,6 +93,8 @@ partial def decodeExpr : Sexp → Except String Go.Expr
   | .list [.atom "paren", s, e, x] => return .paren (← decodeSpan s e) (← decodeExpr x)
   | .list [.atom "call", s, e, fn, .list args] =>
     return .call (← decodeSpan s e) (← decodeExpr fn) (← args.mapM decodeExpr)
+  | .list [.atom "selector", s, e, x, .atom sel] =>
+    return .selector (← decodeSpan s e) (← decodeExpr x) sel
   | .list [.atom "unsupported", s, e, .atom goType] =>
     return .unsupported (← decodeSpan s e) goType
   | s => throw s!"malformed expression {repr s}"
@@ -117,6 +122,7 @@ def encodeValue : Value → Sexp
   | .bool b => .list [.atom "bool", .atom (toString b)]
   | .str s => .list [.atom "str", .atom s]
   | .nil => .list [.atom "nil"]
+  | .obj address => .list [.atom "obj", .atom (toString address)]
 
 def encodeType : TypeRef → Sexp
   | .primitive name => .list [.atom "primitive", .atom name]
@@ -133,6 +139,11 @@ partial def encodeExpr : Cpg.Expr → Sexp
     .list ([.atom "unary"] ++ encodeSpan loc ++ [.atom code, encodeExpr x])
   | .call loc callee args =>
     .list ([.atom "call"] ++ encodeSpan loc ++ [encodeExpr callee, .list (args.map encodeExpr)])
+  | .memberAccess loc name base =>
+    .list ([.atom "member"] ++ encodeSpan loc ++ [.atom name, encodeExpr base])
+  | .memberCall loc callee args =>
+    .list ([.atom "membercall"] ++ encodeSpan loc ++
+      [encodeExpr callee, .list (args.map encodeExpr)])
   | .problem loc msg => .list ([.atom "problem"] ++ encodeSpan loc ++ [.atom msg])
 
 /-- Handles one request: decodes, translates and encodes the result (or an error). -/

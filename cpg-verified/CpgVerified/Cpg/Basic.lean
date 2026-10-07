@@ -33,6 +33,11 @@ inductive Value where
   | bool (b : Bool)
   | str (s : String)
   | nil
+  /--
+  A struct or pointer value, identified by its address. Its fields are looked up in the heap of the
+  evaluation environment.
+  -/
+  | obj (address : Nat)
 deriving Repr, DecidableEq, Inhabited
 
 namespace IntOps

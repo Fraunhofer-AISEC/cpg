@@ -35,6 +35,10 @@ inductive Expr where
   | unaryOperator (loc : Span) (operatorCode : String) (input : Expr)
   /-- `Call` -/
   | call (loc : Span) (callee : Expr) (arguments : List Expr)
+  /-- `MemberAccess` of the member `name` of `base` -/
+  | memberAccess (loc : Span) (name : String) (base : Expr)
+  /-- `MemberCall`; the callee is a `MemberAccess` -/
+  | memberCall (loc : Span) (callee : Expr) (arguments : List Expr)
   /-- `ProblemExpression` -/
   | problem (loc : Span) (problem : String)
 deriving Repr, Inhabited, BEq
@@ -42,6 +46,6 @@ deriving Repr, Inhabited, BEq
 /-- The location of a node. -/
 def Expr.loc : Expr → Span
   | .literal loc .. | .reference loc _ | .binaryOperator loc .. | .unaryOperator loc ..
-  | .call loc .. | .problem loc _ => loc
+  | .call loc .. | .memberAccess loc .. | .memberCall loc .. | .problem loc _ => loc
 
 end Cpg
