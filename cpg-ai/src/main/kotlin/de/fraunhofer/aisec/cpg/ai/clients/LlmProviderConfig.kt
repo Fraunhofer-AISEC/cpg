@@ -59,12 +59,10 @@ private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
  * rate-limit/timeout-ish keywords) - independent of, and unrelated to, the bounded retry of failed
  * *tool* calls described in [SYSTEM_PROMPT], which is about the model's own tool-call behavior, not
  * transport/provider failures. Deliberately much tighter than [RetryConfig.PRODUCTION] (3 attempts,
- * up to 20s max delay each): a host application layers its own outer per-call timeout (e.g. an
- * `--llm-call-timeout-seconds` flag), so retry backoff here must stay a small addition to that
- * budget, not something that can itself balloon into multiples of it. With these settings, the two
- * backoff waits between 3 attempts are at most ~1s and ~2s (before jitter) - each individual
- * attempt is still bounded by the client's own request/socket timeout exactly as before; only the
- * gap *between* attempts is new.
+ * up to 20s max delay each): a host application may bound a call with its own timeout, so retry
+ * backoff here must stay a small addition to that budget, not something that can itself balloon
+ * into multiples of it. With these settings, the two backoff waits between 3 attempts are at most
+ * ~1s and ~2s (before jitter); each attempt is bounded by the client's own request/socket timeout.
  */
 private val transientFailureRetryConfig =
     RetryConfig(maxAttempts = 3, initialDelay = 1.seconds, maxDelay = 5.seconds)
@@ -236,9 +234,8 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                                 }
                             level = if (log.isDebugEnabled) LogLevel.ALL else LogLevel.INFO
                             // At LogLevel.ALL, Ktor logs the full request including headers - an
-                            // unredacted Authorization header (a real API key, e.g. via
-                            // --api-key-env) would otherwise leak into the host application's debug
-                            // logs verbatim.
+                            // unredacted Authorization header (a real API key) would otherwise
+                            // leak into the host application's debug logs verbatim.
                             sanitizeHeader { header ->
                                 header.equals(HttpHeaders.Authorization, ignoreCase = true)
                             }
@@ -249,12 +246,8 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 // wiring exactly as the default apiKey-based OpenAILLMClient constructor would -
                 // only swapping in our logging-enabled Ktor client underneath.
                 // By default (requestTimeoutMillis == null) this leaves Koog's own
-                // ConnectionTimeoutConfig default (900s) in place. That default is *not* the
-                // same value as the host application's `--llm-call-timeout-seconds` (which guards
-                // against a
-                // connection kept technically alive with no real progress, e.g. periodic
-                // keep-alive bytes) - a caller that wants both to agree needs to set this
-                // explicitly.
+                // ConnectionTimeoutConfig default (900s) in place; a host application that bounds
+                // calls with its own timeout should set requestTimeoutMillis to match it.
                 val timeoutConfig =
                     config.requestTimeoutMillis?.let {
                         ConnectionTimeoutConfig(requestTimeoutMillis = it, socketTimeoutMillis = it)
