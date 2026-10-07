@@ -50,7 +50,7 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  *   to non-member (file- or namespace-scope) declarations.
  *
  * Static-vs-instance "membership" is an orthogonal axis and is intentionally *not* modeled here; it
- * is captured by [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration.isStatic].
+ * is captured by [de.fraunhofer.aisec.cpg.graph.declarations.Declaration.isStatic].
  *
  * Only the **C/C++** frontend currently populates this property. The remaining entries document the
  * *intended* canonical mapping for the other languages, to be wired up as each frontend starts
