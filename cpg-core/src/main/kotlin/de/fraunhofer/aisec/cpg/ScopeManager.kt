@@ -114,6 +114,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         val language: Language<*>,
         val qualifiedLookup: Boolean,
         val replaceImports: Boolean,
+        val fileScope: FileScope?,
     )
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
@@ -472,6 +473,15 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
+     * Returns the [FileScope] of the file (i.e., the [TranslationUnit]) that [node] belongs to, if
+     * the language frontend created one, e.g., to hold the file-level imports.
+     */
+    fun fileScopeOf(node: Node): FileScope? {
+        val tu = node as? TranslationUnit ?: node.translationUnit ?: return null
+        return scopeMap[tu] as? FileScope
+    }
+
+    /**
      * This function looks up scope by its FQN. This only works for [NameScope]s.
      *
      * Note: Beware that this only does a very simple lookup in the scope table and DOES NOT take
@@ -801,6 +811,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             scope,
             replaceImports = replaceImports,
             localSymbols = localSymbols,
+            fileScope = fileScopeOf(node),
             predicate = predicate,
         )
     }
@@ -814,7 +825,14 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
     ): List<T> {
-        return lookupSymbolByName(node.name, node.language, node.location, scope, replaceImports) {
+        return lookupSymbolByName(
+                node.name,
+                node.language,
+                node.location,
+                scope,
+                replaceImports,
+                fileScope = fileScopeOf(node),
+            ) {
                 it is T
             }
             .filterIsInstance<T>()
@@ -834,6 +852,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * This means that as soon one or more declarations (of the matching [language]) for the symbol
      * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
      * "higher" scope and only the ones from the lower ones will be returned.
+     *
+     * In the unqualified case, [fileScope] is the [FileScope] of the file in which the lookup takes
+     * place, so that its symbols (e.g., the imports of the file) are also considered (see
+     * [Scope.lookupSymbol]). [lookupSymbolByNodeName] sets this automatically.
      */
     fun lookupSymbolByName(
         name: Name,
@@ -842,6 +864,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         startScope: Scope? = currentScope,
         replaceImports: Boolean = true,
         localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
+        fileScope: FileScope? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val extractedScope = extractScope(name, language, location, startScope, localSymbols)
@@ -868,6 +891,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     language = language,
                     qualifiedLookup = scope != null,
                     replaceImports = replaceImports,
+                    fileScope = fileScope,
                 )
             } else {
                 null
@@ -907,6 +931,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                             languageOnly = language,
                             replaceImports = replaceImports,
                             localSymbols = localSymbols,
+                            fileScope = fileScope,
                             predicate = predicate,
                         )
                         ?.toMutableList() ?: mutableListOf()
