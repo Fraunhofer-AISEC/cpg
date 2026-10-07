@@ -240,44 +240,51 @@ class ImportResolverTest {
 
     @Test
     fun testInferImportTarget() {
-        val frontend =
-            TestLanguageFrontend(
-                ctx =
-                    TranslationContext(TranslationConfiguration.builder().defaultPasses().build()),
-                language = RecordImportTestLanguage(),
+        // The target of a static import, both of a single symbol (`import static a.D.something`)
+        // and of all symbols (`import static a.D.*`), is the record `a.D`, which is not part of our
+        // graph
+        val imports =
+            mapOf(
+                ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE to "a.D.something",
+                ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE to "a.D",
             )
-        val result =
-            frontend.build {
-                val tu = newTranslationUnit("file.b")
-                scopeManager.resetToGlobal(tu)
-                newNamespace("b", holder = tu, enterScope = true) { pkgB ->
-                    // The target of this static import is not part of our graph
-                    newImport(
-                        parseName("a.D.something"),
-                        style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
-                        holder = pkgB,
-                    ) {
-                        it.isStatic = true
+        for ((style, import) in imports) {
+            val frontend =
+                TestLanguageFrontend(
+                    ctx =
+                        TranslationContext(
+                            TranslationConfiguration.builder().defaultPasses().build()
+                        ),
+                    language = RecordImportTestLanguage(),
+                )
+            val result =
+                frontend.build {
+                    val tu = newTranslationUnit("file.b")
+                    scopeManager.resetToGlobal(tu)
+                    newNamespace("b", holder = tu, enterScope = true) { pkgB ->
+                        newImport(parseName(import), style = style, holder = pkgB) {
+                            it.isStatic = true
+                        }
                     }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
-            }
+            // Since this is a static import, we need to infer a record instead of a namespace
+            val record = result.records["a.D"]
+            assertNotNull(record, "expected an inferred record for $style")
+            assertTrue(record.isInferred)
+            assertNull(result.namespaces["a.D"])
 
-        // Since this is a static import, we need to infer a record instead of a namespace
-        val record = result.records["a.D"]
-        assertNotNull(record)
-        assertTrue(record.isInferred)
-        assertNull(result.namespaces["a.D"])
-
-        val pkgB = result.namespaces["b"]
-        assertNotNull(pkgB)
-        val recordScope = result.finalCtx.scopeManager.lookupScope(record)
-        assertNotNull(recordScope)
-        assertEquals<Set<Scope>?>(
-            setOf(recordScope),
-            result.finalCtx.scopeManager.lookupScope(pkgB)?.importedScopes?.toSet(),
-        )
+            val pkgB = result.namespaces["b"]
+            assertNotNull(pkgB)
+            val recordScope = result.finalCtx.scopeManager.lookupScope(record)
+            assertNotNull(recordScope)
+            assertEquals<Set<Scope>?>(
+                setOf(recordScope),
+                result.finalCtx.scopeManager.lookupScope(pkgB)?.importedScopes?.toSet(),
+            )
+        }
     }
 }
 
