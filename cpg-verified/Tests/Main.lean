@@ -68,6 +68,10 @@ def goEnv : Go.Env where
   deref
     | .obj 1 => some (.int 42)
     | _ => none
+  cast
+    | .arrayType _ (.ident _ "byte"), .str s => some (.int s.utf8ByteSize)
+    | .ident _ "T", v => some v
+    | _, _ => none
 
 /-- The CPG environment matching `goEnv`: names are resolved as in `ctx`. -/
 def cpgEnv : Cpg.Env where
@@ -78,6 +82,10 @@ def cpgEnv : Cpg.Env where
   index := goEnv.index
   slice := goEnv.slice
   deref := goEnv.deref
+  cast
+    | .array (.resolved (.object "byte" [])), .str s => some (.int s.utf8ByteSize)
+    | .resolved (.object "T" []), v => some v
+    | _, _ => none
 
 def goEval (e : Go.Expr) : Option Value := e.eval ctx.iota ctx.packages goEnv
 
@@ -186,6 +194,20 @@ def tests : List (String × Bool) := [
   ("escaped string literal",
     translate ctx (.basicLit (sp 0 6) .string "\"a\\tb\"")
       == .literal (sp 0 6) (.str "a\tb") (.primitive "string") none),
+  ("conversion is a cast",
+    translate ctx (.call (sp 0 9) (.arrayType (sp 0 6) (ident (sp 2 6) "byte")) [ident (sp 7 8) "x"])
+      == .cast (sp 0 9) (.array (.resolved (.object "byte" []))) (.reference (sp 7 8) "main.x")),
+  ("type assertion is a cast",
+    translate ctx (.typeAssert (sp 0 6) (ident (sp 0 1) "x") (some (ident (sp 3 4) "T")))
+      == .cast (sp 0 6) (.resolved (.object "T" [])) (.reference (sp 0 1) "main.x")),
+  ("type expressions",
+    typeOf? (.mapType (sp 0 1) (ident (sp 0 1) "string") (.star (sp 0 1) (.selector (sp 0 1) (ident (sp 0 1) "big") "Int")))
+      == some (.object "map" [.resolved (.object "string" []), .resolved (.pointer (.object "big.Int" []))])),
+  ("evaluation: conversion and type assertion agree",
+    let conv := Go.Expr.call (sp 0 13) (.arrayType (sp 0 6) (ident (sp 2 6) "byte")) [.basicLit (sp 7 12) .string "\"abc\""]
+    let assert := Go.Expr.typeAssert (sp 0 6) (ident (sp 0 1) "x") (some (ident (sp 3 4) "T"))
+    goEval conv == some (.int 3) && cpgEval conv == some (.int 3) &&
+    goEval assert == some (.int 5) && cpgEval assert == some (.int 5)),
   ("evaluation: unbound names fail in both",
     goEval (ident (sp 0 1) "y") == none && cpgEval (ident (sp 0 1) "y") == none)
 ]

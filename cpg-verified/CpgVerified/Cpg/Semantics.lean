@@ -39,6 +39,8 @@ structure Env where
   slice : Value → Option Value → Option Value → Option Value → Option Value
   /-- Dereferencing a pointer. -/
   deref : Value → Option Value
+  /-- Converting a value to a type, or asserting its dynamic type. -/
+  cast : TypeRef → Value → Option Value
 
 /-- Meaning of a (strict) binary operator code. -/
 def evalBinaryOp (L : LanguageSemantics) (code : String) (a b : Value) : Option Value :=
@@ -127,6 +129,7 @@ def Expr.eval (L : LanguageSemantics) (env : Env) : Expr → Option Value
   | .subscription _ arr idx => do env.index (← arr.eval L env) (← idx.eval L env)
   | .range .. => none
   | .pointerDereference _ input => do env.deref (← input.eval L env)
+  | .cast _ t expression => do env.cast t (← expression.eval L env)
   | .problem .. => none
 
 /-- Evaluates an optional expression; an absent expression has no value, but does not fail. -/

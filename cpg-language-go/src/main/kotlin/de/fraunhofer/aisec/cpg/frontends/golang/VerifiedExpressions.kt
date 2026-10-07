@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.verified.translationRequest
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.math.BigInteger
 import org.slf4j.LoggerFactory
 
@@ -94,12 +95,7 @@ private fun ExpressionHandler.materialize(result: Sexp, raw: Ast.Expr): Expressi
             val value = items[3] as Sexp.SList
             val type = items[4] as Sexp.SList
             val name = (items[5] as Sexp.SList).items.firstOrNull()
-            newLiteral(
-                literalValue(value),
-                if (type.kind == "primitive") primitiveType(type.items[1].toString())
-                else unknownType(),
-                rawNode = node,
-            ) { literal ->
+            newLiteral(literalValue(value), materializeType(type), rawNode = node) { literal ->
                 name?.let { literal.name = parseName(it.toString()) }
             }
         }
@@ -167,8 +163,47 @@ private fun ExpressionHandler.materialize(result: Sexp, raw: Ast.Expr): Expressi
                 this.input = input
             }
         }
+        "cast" -> {
+            val type = materializeType(items[3])
+            when (node) {
+                is Ast.CallExpr ->
+                    newCast(rawNode = node) { cast ->
+                        cast.castType = type
+                        cast.expression = materialize(items[4], node.args[0])
+                    }
+                is Ast.TypeAssertExpr ->
+                    newCast(rawNode = node) { cast ->
+                        cast.expression = materialize(items[4], node.x)
+                        cast.castType = type
+                    }
+                else -> error("unexpected raw node ${node.goType} for a cast")
+            }
+        }
         // Outside the verified subset, so the regular handler is responsible
         else -> handle(node)
+    }
+}
+
+/**
+ * Creates the type described by [type] with the type builders, like `GoLanguageFrontend.typeOf`.
+ */
+private fun ExpressionHandler.materializeType(type: Sexp): Type {
+    val items = (type as Sexp.SList).items
+    return when (type.kind) {
+        "primitive" -> primitiveType(items[1].toString())
+        "object" ->
+            objectType(
+                parseName(items[1].toString()),
+                (items[2] as Sexp.SList).items.map { materializeType(it) },
+            )
+        "pointer" -> materializeType(items[1]).pointer()
+        "array" -> materializeType(items[1]).array()
+        "resolved" ->
+            frontend.typeManager.resolvePossibleTypedef(
+                materializeType(items[1]),
+                frontend.scopeManager,
+            )
+        else -> unknownType()
     }
 }
 

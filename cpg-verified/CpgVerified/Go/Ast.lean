@@ -54,8 +54,16 @@ inductive Expr where
   | index (span : Span) (x : Expr) (index : Expr)
   /-- `*ast.SliceExpr`, i.e. `x[low:high:max]` -/
   | slice (span : Span) (x : Expr) (low high max : Option Expr)
-  /-- `*ast.StarExpr` in an expression, i.e. a pointer dereference `*x` -/
+  /-- `*ast.StarExpr`, i.e. a pointer dereference `*x` or a pointer type `*T` -/
   | star (span : Span) (x : Expr)
+  /-- `*ast.TypeAssertExpr`, i.e. `x.(T)`, or `x.(type)` in a type switch -/
+  | typeAssert (span : Span) (x : Expr) (type : Option Expr)
+  /-- `*ast.ArrayType`, i.e. `[n]T` or `[]T` (the length is not modelled) -/
+  | arrayType (span : Span) (elt : Expr)
+  /-- `*ast.MapType`, i.e. `map[K]V` -/
+  | mapType (span : Span) (key value : Expr)
+  /-- `*ast.ChanType`, i.e. `chan T` (the direction is not modelled) -/
+  | chanType (span : Span) (value : Expr)
   /-- Any other expression node; `goType` is its Go type name, e.g. `*ast.CompositeLit`. -/
   | unsupported (span : Span) (goType : String)
 deriving Repr, Inhabited
@@ -64,7 +72,8 @@ deriving Repr, Inhabited
 def Expr.span : Expr → Span
   | .basicLit span .. | .ident span _ | .binary span .. | .unary span ..
   | .paren span _ | .call span .. | .selector span .. | .index span .. | .slice span ..
-  | .star span _ | .unsupported span _ => span
+  | .star span _ | .typeAssert span .. | .arrayType span _ | .mapType span .. | .chanType span _
+  | .unsupported span _ => span
 
 /-- Removes any enclosing parentheses. -/
 def Expr.unparen : Expr → Expr
@@ -79,6 +88,11 @@ def packageOf? (packages : List String) (x : Expr) : Option String :=
   match x.unparen with
   | .ident _ name => if name ∈ packages then some name else none
   | _ => none
+
+/-- Whether a callee is a type expression that makes the call a conversion, e.g. `[]byte(s)`. -/
+def isConversion : Expr → Bool
+  | .arrayType .. | .chanType .. | .mapType .. => true
+  | _ => false
 
 /-- The source text of a binary operator. -/
 def BinaryOp.token : BinaryOp → String
