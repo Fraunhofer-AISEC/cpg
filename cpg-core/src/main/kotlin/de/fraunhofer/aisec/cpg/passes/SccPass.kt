@@ -235,12 +235,20 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 .filter { edge -> edge.start in sccElements }
                 .forEach { edge ->
                     edge.scc = level
+                    // This is the one edge that actually closes the loop (as opposed to a loop-exit
+                    // edge or an internal reconverging-branch edge, which are labeled with the same
+                    // `scc` further below) -- mark it so consumers can tell iteration boundaries
+                    // apart from those other two cases.
+                    edge.isLoopBackEdge = true
                     // also label the corresponding BasicBlock-level edge
                     (edge.start as? BasicBlock)
                         ?.endNode
                         ?.nextEOGEdges
                         ?.filter { it.end.basicBlock.all { it in sccElements } }
-                        ?.forEach { nodeEdge -> nodeEdge.scc = level }
+                        ?.forEach { nodeEdge ->
+                            nodeEdge.scc = level
+                            nodeEdge.isLoopBackEdge = true
+                        }
                 }
         }
 

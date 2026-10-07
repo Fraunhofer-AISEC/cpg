@@ -138,6 +138,10 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val nodeToBBMap = allBasicBlocks.flatMap { it.nodes.map { node -> node to it } }.toMap()
         val branchingNodeConditionals =
             getBranchingNodeConditions(startNode, allBasicBlocks, nodeToBBMap)
+        // For every genuine loop-closing edge, the set of nodes that belong to that loop's body.
+        // transfer() uses this to drop dominator entries that are artifacts of a previous loop
+        // iteration when such an edge is crossed.
+        val backEdgeLoopNodes = collectBackEdgeLoops(allBasicBlocks)
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
@@ -165,7 +169,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     firstBasicBlock.nextEOGEdges,
                     startState,
                     { lattice, edge, edgeState ->
-                        transfer(lattice, edge, edgeState, branchingNodeConditionals)
+                        transfer(lattice, edge, edgeState, backEdgeLoopNodes)
                     },
                     timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
                 )
@@ -303,6 +307,44 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         return visited
     }
 
+    /**
+     * For every edge among [allBasicBlocks] that [SccPass] marked as a genuine loop-closing edge
+     * ([EvaluationOrder.isLoopBackEdge]), computes that loop's "natural loop": the header (the
+     * edge's end) plus every basic block that can reach the edge's start without going through the
+     * header again. Returns the union of all member nodes of those basic blocks, keyed by the back
+     * edge. See [transfer] for how this is used.
+     */
+    private fun collectBackEdgeLoops(
+        allBasicBlocks: Collection<BasicBlock>
+    ): Map<EvaluationOrder, Set<Node>> {
+        val result = mutableMapOf<EvaluationOrder, Set<Node>>()
+        for (bb in allBasicBlocks) {
+            for (edge in bb.nextEOGEdges) {
+                if (!edge.isLoopBackEdge) continue
+                val latch = edge.start as? BasicBlock ?: continue
+                val header = edge.end as? BasicBlock ?: continue
+                result[edge] = naturalLoop(latch, header).flatMapTo(identitySetOf()) { it.nodes }
+            }
+        }
+        return result
+    }
+
+    /**
+     * Standard "natural loop" computation for the back edge `latch -> header`: [header] plus every
+     * basic block reachable backwards from [latch] without expanding past [header] itself.
+     */
+    private fun naturalLoop(latch: BasicBlock, header: BasicBlock): Set<BasicBlock> {
+        val loop = identitySetOf(header, latch)
+        val worklist = mutableListOf(latch)
+        while (worklist.isNotEmpty()) {
+            val bb = worklist.removeFirst()
+            bb.prevEOGEdges.forEach { edge ->
+                (edge.start as? BasicBlock)?.let { pred -> if (loop.add(pred)) worklist.add(pred) }
+            }
+        }
+        return loop
+    }
+
     /*
      * For a branching node, we identify which path(s) have to be found to be in a "merging point".
      * There are two options:
@@ -357,22 +399,25 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  *
  * Returns the updated state and true because we always expect an update of the state.
  *
- * [branchingNodeConditionals] is the same "branching node -> merge points" map used by [accept] to
- * resolve dominators once a branching node's merge point is reached. It is also consulted here:
  * `lub` (used to merge states at any join point, including a loop's back-edge) only ever grows a
- * map, it never removes entries. Without pruning, a dominator entry that already fully reconverged
- * earlier within one loop iteration would survive, via the back-edge, into the next iteration and
- * contaminate basic blocks that have nothing to do with it (see
- * `ComplexPdgTest.continueBreakGuards` for the regression this fixes). So whenever [currentEdge] is
- * part of a loop (i.e. labeled by [SccPass] with a non-null [EvaluationOrder.scc]), we
- * resolve/prune already-reconverged entries from this edge's contribution before it is merged into
- * the accumulated state.
+ * map, it never removes entries. Without pruning, a dominator entry created *within one loop
+ * iteration* (e.g. from an `if`/`break` inside the loop body) would survive, via the back-edge,
+ * into the next iteration and contaminate basic blocks that have nothing to do with it -- even
+ * though the next iteration will freshly (and correctly) recompute that same dominator relationship
+ * as control flow re-enters the branch that creates it (see `ComplexPdgTest.continueBreakGuards`
+ * for the regression this fixes). So whenever [currentEdge] is the single genuine loop-closing edge
+ * for some loop (i.e. [EvaluationOrder.isLoopBackEdge]), we drop every dominator entry whose node
+ * lies inside that loop's body -- using [backEdgeLoopNodes], precomputed once per function in
+ * [ControlDependenceGraphPass.accept] -- except the loop's own controlling condition
+ * ([BasicBlock.branchingNode] of [currentEdge]'s end), which legitimately recurs every iteration.
+ * Dominators from *outside* the loop (e.g. an `if` wrapped around the whole loop) are untouched, as
+ * they are stable ancestors that do not change between iterations.
  */
 suspend fun transfer(
     lattice: Lattice<PrevEOGStateElement>,
     currentEdge: EvaluationOrder,
     currentState: PrevEOGStateElement,
-    branchingNodeConditionals: Map<Node, Collection<BasicBlock>>,
+    backEdgeLoopNodes: Map<EvaluationOrder, Set<Node>>,
 ): PrevEOGStateElement {
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
@@ -413,19 +458,18 @@ suspend fun transfer(
                 ?: PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
         }
 
-    // Crossing a loop-carrying edge: resolve/prune entries the same way accept() does at the very
-    // end, so a stale entry can't be carried around the back-edge into the next iteration.
+    // Crossing the loop's back-edge: drop every dominator entry that originated inside the loop
+    // body (it's specific to the iteration that just ended and will be freshly recomputed as the
+    // next iteration re-enters the branch that creates it), except the loop's own condition, which
+    // legitimately dominates every iteration.
     val prunedContribution =
-        if (currentEdge.scc != null) {
+        backEdgeLoopNodes[currentEdge]?.let { loopNodes ->
             PrevEOGLatticeElement(
-                contribution.filter { (dom, reachingBBs) ->
-                    dom != currentEnd.branchingNode &&
-                        branchingNodeConditionals[dom]?.let { reachingBBs.containsAll(it) } != true
+                contribution.filter { (dom, _) ->
+                    dom == currentEnd.branchingNode || dom !in loopNodes
                 }
             )
-        } else {
-            contribution
-        }
+        } ?: contribution
 
     newState = lattice.push(newState, currentEnd, prunedContribution, true)
     return newState

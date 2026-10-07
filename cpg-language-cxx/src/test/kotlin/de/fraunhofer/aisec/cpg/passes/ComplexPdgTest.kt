@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
+import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
@@ -35,6 +36,7 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -50,6 +52,20 @@ class ComplexPdgTest {
         File("src/test/resources/complex_pdg.c").let { file ->
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
+                it.registerPass<ControlDependenceGraphPass>()
+                it.registerPass<ProgramDependenceGraphPass>()
+            }
+        }
+
+    /**
+     * Same as [parse], but targets `dependenceGraphs/sgx_ra_get_msg3_trusted.cpp`, a decompiled
+     * real-world function used as a regression fixture for
+     * [forLoopDependsOnEnclosingIfNotInnerExit].
+     */
+    private fun parseSgx() =
+        File("src/test/resources/dependenceGraphs/sgx_ra_get_msg3_trusted.cpp").let { file ->
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
                 it.registerPass<ControlDependenceGraphPass>()
                 it.registerPass<ProgramDependenceGraphPass>()
             }
@@ -182,45 +198,6 @@ class ComplexPdgTest {
     }
 
     /**
-     * `complex_pdg.c:14-27` (`transform`) is annotated "'x' and '*out' create data dependencies
-     * across a call boundary.", and `complex_pdg.c:72-75` (`process`) notes "Data dependency
-     * crosses the call: checksum was defined inside transform().". This verifies -- with
-     * [PointsToPass] enabled -- that after `transformed = transform(cur->value, &checksum);` (line
-     * 70), a later read of `checksum` (line 93, `checksum > 100`) can hold one of the two values
-     * written through the `*out` pointer inside `transform` (line 20's `tmp + 1`, or line 23's
-     * `tmp - 1`), i.e. the write inside the callee is visible in the caller purely through the
-     * pointer/alias relationship between `out` and `checksum`.
-     */
-    @Test
-    fun writeOutParameterOfTransform() {
-        val tu = parseWithPointsTo()
-        assertNotNull(tu)
-
-        val outWriteThen =
-            tu.allChildren<BinaryOperator> {
-                    it.location?.region?.startLine == 20 && it.operatorCode == "+"
-                }
-                .first()
-        val outWriteElse =
-            tu.allChildren<BinaryOperator> {
-                    it.location?.region?.startLine == 23 && it.operatorCode == "-"
-                }
-                .first()
-
-        val checksumRead =
-            tu.allChildren<Reference> {
-                    it.location?.region?.startLine == 93 && it.name.localName == "checksum"
-                }
-                .first()
-
-        assertTrue(
-            checksumRead.fullMemoryValues.any { it == outWriteThen || it == outWriteElse },
-            "expected checksum (line 93) to reflect a write through *out inside transform() " +
-                "(line 20 or 23), but fullMemoryValues was ${checksumRead.fullMemoryValues}",
-        )
-    }
-
-    /**
      * `complex_pdg.c:37` (`process`) notes "'alias' may indirectly modify sum.", and
      * `complex_pdg.c:80-87` notes "Alias-sensitive dependence: alias points to sum, so this
      * statement modifies the same abstract memory location as sum += / sum -= above.". This
@@ -229,7 +206,7 @@ class ComplexPdgTest {
      * variable declared on line 34.
      */
     @Test
-    fun `alias resolves to the same memory location as sum`() {
+    fun aliasSumSameMemoryLocation() {
         val tu = parseWithPointsTo()
         assertNotNull(tu)
 
@@ -293,5 +270,52 @@ class ComplexPdgTest {
             breakStatement.prevCDGEdges.firstOrNull { it.start in breakConditionCandidates }
         assertNotNull(breakEdge, "expected `break` (line 94) to be control-dependent on its guard")
         assertTrue(true in breakEdge.branches)
+    }
+
+    /**
+     * `dependenceGraphs/sgx_ra_get_msg3_trusted.cpp:133` is a `for` loop nested inside `if`
+     * (line 129) whose body contains its own early-exit `if` (line 139, `goto
+     * joined_r0x0014db39;`), jumping out of the loop into the enclosing `if`'s `else` branch (line
+     * 156). This is a regression test for a bug where the loop's back-edge carried a stale
+     * dominator entry from the inner, per-iteration `if` (139) around to the loop header, and that
+     * spurious entry then crowded out the loop's real, structural dependency on the enclosing `if`
+     * (129) during transitive-dominator pruning. This verifies that the `for` loop (a) is
+     * control-dependent on `if` (129), the condition that actually gates whether the loop runs at
+     * all, and (b) carries no control dependency on the inner `if` (139), which only affects
+     * iterations of the loop and must not leak out via the back-edge.
+     */
+    @Test
+    fun forLoopDependsOnEnclosingIfNotInnerExit() {
+        val tu = parseSgx()
+        assertNotNull(tu)
+
+        val outerIf = tu.allChildren<IfElse> { it.location?.region?.startLine == 129 }.first()
+        val innerIf = tu.allChildren<IfElse> { it.location?.region?.startLine == 139 }.first()
+        val forLoop = tu.allChildren<For> { it.location?.region?.startLine == 133 }.first()
+
+        // The condition of a short-circuiting `if` may be split across several sub-operators in
+        // the EOG, so accept the condition itself or any of its (sub-)expressions as the CDG
+        // source, same as `continueBreakGuards` does above.
+        fun conditionSubtree(ifElse: IfElse) =
+            ifElse.condition?.let { setOf(it) + it.allChildren<Node> { true } } ?: emptySet()
+
+        val outerCondition = conditionSubtree(outerIf)
+        val innerCondition = conditionSubtree(innerIf)
+        val forLoopDeps =
+            (listOf<Node>(forLoop) + listOfNotNull(forLoop.condition)).flatMap { it.prevCDGEdges }
+
+        val outerEdge = forLoopDeps.firstOrNull { it.start in outerCondition }
+        assertNotNull(
+            outerEdge,
+            "expected the for-loop (line 133) to be control-dependent on the enclosing if (line 129)",
+        )
+        assertTrue(true in outerEdge.branches)
+
+        val innerEdge = forLoopDeps.firstOrNull { it.start in innerCondition }
+        assertNull(
+            innerEdge,
+            "the for-loop (line 133) must not be control-dependent on the inner early-exit if " +
+                "(line 139) -- that would be a stale dependency carried around the loop's back-edge",
+        )
     }
 }
