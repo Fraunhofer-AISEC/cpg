@@ -465,8 +465,7 @@
     // Do not interfere with selecting text
     if (window.getSelection()?.toString()) return;
     const position = positionAt(event);
-    // A click into empty space (whitespace, after the end of a line, below the code) deselects,
-    // like in editors
+    // A click into empty space (whitespace, after the end of a line, below the code) deselects
     const char = position ? codeLines[position.line - 1]?.[position.column - 1] : undefined;
     if (!position || !char || /\s/.test(char)) {
       focus.clear();
@@ -648,7 +647,8 @@
           line: step.line,
           lane: 4,
           color: color('agent'),
-          label: `${step.index + 1}. ${step.title}`
+          label: `${step.index + 1}. ${step.title}`,
+          faded: step.faded
         });
       }
       for (const step of pathMarkers) {
@@ -782,7 +782,7 @@
   // The highlighted line, 0-based
   const allHighlightLines = $derived(highlightLine ? [highlightLine - 1] : []);
 
-  // The code is set in 13px, like in editors, and a monospace character is 0.6em wide
+  // The code is set in 13px, and a monospace character is 0.6em wide
   const fontSize = 0.8125;
   const lineHeight = 1.25;
   const charWidth = 0.60015625 * fontSize;
@@ -868,7 +868,10 @@
   }
 
   // The steps of the path in this file, and whether a path is shown at all
-  const pathActive = $derived(lanes && focus.path.length >= 2);
+  // The path and the agent's thread share the lane of the steps; only the one the user turned to
+  // last is shown (see [CodeFocus.sequence])
+  const sequence = $derived(lanes ? focus.sequence(layers.visible.agent) : null);
+  const pathActive = $derived(sequence === 'path');
   const pathMarkers = $derived.by((): StepMarker[] => {
     if (!pathActive) return [];
     return focus.path.flatMap((ref, index) =>
@@ -886,7 +889,7 @@
   });
 
   // The evidence of the agent's active thread in this file, and whether it is shown at all
-  const threadActive = $derived(lanes && layers.visible.agent && focus.thread.length > 0);
+  const threadActive = $derived(sequence === 'thread');
   const agentMarkers = $derived.by((): StepMarker[] => {
     if (!threadActive) return [];
     return focus.thread.flatMap(({ ref, step, claimed }) =>
@@ -898,6 +901,8 @@
               title: `${claimed ? 'only cited in the answer, no tool returned it: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
               current: ref.id === inspected?.node.id,
               dashed: claimed,
+              // The nodes of the step the user points at stand out
+              faded: focus.highlightedStep !== null && focus.highlightedStep !== step,
               // Nodes only cited in the answer are no step of the agent
               label: claimed ? '?' : undefined,
               nodeId: ref.id
@@ -1088,8 +1093,7 @@
             />
           {/if}
 
-          <!-- The path and the agent's thread share the lane of the steps, the path takes precedence
-          while it is shown -->
+          <!-- The path and the agent's thread share the lane of the steps -->
           {#if pathActive}
             {#if pathMarkers.length > 0}
               <StepMarkers

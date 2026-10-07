@@ -3,7 +3,7 @@
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
-  import ToolResultBlock from './widgets/ToolResultBlock.svelte';
+  import ToolStep from './ToolStep.svelte';
   import { CodeViewer, ConceptChecklist, FileTree } from '$lib/components/analysis';
   import Outline from '$lib/components/analysis/Outline.svelte';
   import StepBar from '$lib/components/analysis/StepBar.svelte';
@@ -271,7 +271,7 @@
     // The palette is also opened from an input, e.g. the question to the agent. It is a shortcut
     // with a modifier, so it does not get in the way of typing
     if (hasModifier(event) && !event.altKey && event.key.toLowerCase() === 'p') {
-      // Replaces printing the page, like in editors
+      // Replaces printing the page
       event.preventDefault();
       paletteQuery = event.shiftKey ? '>' : '';
       return;
@@ -903,9 +903,9 @@
     return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
   }
 
-  // The tool calls of the active block that have evidence in the code, to step through them like in
-  // a debugger. Nodes only cited in the answer are no step: they are marked in the code and named
-  // in the trust notes under the answer
+  // The tool calls of the active block that have evidence in the code, to step through them. Nodes
+  // only cited in the answer are no step: they are marked in the code and named in the trust notes
+  // under the answer
   const threadSteps = $derived.by(() => {
     const evidence = blockEvidence[activeBlock];
     const block = timeline[activeBlock];
@@ -918,6 +918,15 @@
         ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
         : [];
     });
+  });
+
+  // The steps shown in the code and in the bar above it: the path or the agent's thread
+  const sequence = $derived(focus.sequence(layers.visible.agent));
+
+  // A new question with evidence, or choosing another one, turns to the agent's thread
+  $effect(() => {
+    void activeBlock;
+    untrack(() => (focus.showing = 'thread'));
   });
 
   // The places where the analysis is uncertain that the evidence of each block relies on. The block
@@ -1025,7 +1034,7 @@
     }
   ];
 
-  // Like in VS Code, clicking the active view hides the sidebar
+  // Clicking the active view hides the sidebar
   function toggleSidebar(view: SidebarView) {
     if (sidebarOpen && sidebarView === view) {
       sidebarOpen = false;
@@ -1613,7 +1622,8 @@
         {/each}
       </div>
     {/if}
-    {#if threadSteps.length > 0}
+    <!-- One bar for the steps shown in the code: the path or the agent's thread -->
+    {#if sequence === 'thread' && threadSteps.length > 0}
       <StepBar
         title="Agent"
         steps={threadSteps.map((s) => ({ label: s.label, title: s.title, number: s.step }))}
@@ -1622,9 +1632,11 @@
         onClose={() => layers.toggle('agent')}
         closeTitle="Hide the agent's evidence (● Agent layer)"
         shape="square"
+        other={focus.path.length >= 2
+          ? { label: 'Path', onSwitch: () => (focus.showing = 'path') }
+          : undefined}
       />
-    {/if}
-    {#if focus.path.length >= 2}
+    {:else if sequence === 'path'}
       <StepBar
         title="Path"
         steps={pathSteps}
@@ -1632,6 +1644,9 @@
         onSelect={goToStep}
         onClose={() => focus.clearPath()}
         closeTitle="Close the dataflow path"
+        other={threadSteps.length > 0
+          ? { label: 'Agent', onSwitch: () => (focus.showing = 'thread') }
+          : undefined}
       />
     {/if}
     <div class="flex min-h-0 flex-1">
@@ -1858,14 +1873,17 @@
                         class="mt-0.5 shrink-0 rounded px-1 text-[11px] {isActive
                           ? 'text-slate-800'
                           : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}"
-                        aria-pressed={isActive}
-                        disabled={isActive}
+                        aria-pressed={isActive && sequence === 'thread'}
+                        disabled={isActive && sequence === 'thread'}
                         title={isActive
                           ? 'The evidence of this question is shown in the code'
                           : 'Show the evidence of this question in the code'}
-                        onclick={() => (chosenBlock = b)}
+                        onclick={() => {
+                          chosenBlock = b;
+                          focus.showing = 'thread';
+                        }}
                       >
-                        {isActive ? '● in code' : '○ show in code'}
+                        {isActive && sequence === 'thread' ? '● in code' : '○ show in code'}
                       </button>
                     {/if}
                   </div>
@@ -1885,37 +1903,25 @@
                   {@render reasoning(message)}
                   {#if message.contentType === 'tool-result' && message.toolResult}
                     <!-- A tool call: a numbered step of the evidence trail -->
-                    <div class="flex min-w-0 items-start gap-1.5">
-                      <span
-                        class="mt-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-slate-700 px-0.5 text-[10px] leading-none font-semibold text-white tabular-nums"
-                        title="Step {entry.step}"
-                      >
-                        {entry.step}
-                      </span>
-                      <div class="min-w-0 flex-1">
-                        <ToolResultBlock
-                          toolResult={message.toolResult}
-                          onItemClick={(item) => revealFromAgent(item?.id ?? item?.nodeId)}
-                        />
-                      </div>
-                      {#if stepNodes(evidence.steps.find((s) => s.step === entry.step)?.ids ?? []).length > 0}
-                        {@const nodes = stepNodes(
-                          evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
-                        )}
-                        <button
-                          type="button"
-                          class="mt-1.5 shrink-0 rounded px-1 text-[11px] text-gray-400 tabular-nums hover:bg-gray-100 hover:text-gray-700"
-                          title="Go to the first of the nodes this step returned"
-                          onclick={() => {
-                            chosenBlock = b;
-                            revealFromAgent(nodes[0].id);
-                          }}
-                        >
-                          {nodes.length}
-                          {nodes.length === 1 ? 'node' : 'nodes'} →
-                        </button>
-                      {/if}
-                    </div>
+                    {@const nodes = stepNodes(
+                      evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
+                    )}
+                    <ToolStep
+                      toolResult={message.toolResult}
+                      step={entry.step ?? 0}
+                      {nodes}
+                      selectedId={focus.details?.node.id}
+                      onSelect={(ref) => revealFromAgent(ref.id)}
+                      onActivate={() => {
+                        chosenBlock = b;
+                        focus.showing = 'thread';
+                        if (nodes[0]) revealFromAgent(nodes[0].id);
+                      }}
+                      onHover={(hovered) => {
+                        // Only the steps of the thread in the code can stand out there
+                        focus.highlightedStep = hovered && isActive ? (entry.step ?? null) : null;
+                      }}
+                    />
                     {#if entry.index === suggestionAnchorIndex}
                       <!-- The pending concept suggestions of the agent, to accept or reject -->
                       <div class="my-1 ml-5 overflow-hidden rounded border border-gray-200">
