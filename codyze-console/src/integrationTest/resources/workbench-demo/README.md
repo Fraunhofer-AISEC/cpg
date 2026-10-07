@@ -31,7 +31,7 @@ reliable. Everything except the agent (code, layers, PDG, ...) works without a m
 | `src/crypto.c` | `encrypt` and `copy_plain` with loops |
 | `src/log.c` | `log_debug` and `log_error`, which call the undeclared `printf` |
 | `src/net.c` | `net_open` and `net_send`, which call the undeclared `socket` and `send` |
-| `tagging.codyze.kts` | Concepts for `get_key` (secret) and `encrypt` (cipher) |
+| `tagging.codyze.kts` | Concepts (the things) and operations (what the code does with them): the variable `key` is a `Secret` that the call of `get_key` gets (`GetSecret`), the function `encrypt` in `crypto.c` is a `Cipher` that the call of `encrypt` uses (`Encrypt`, with the key as its secret) |
 | `project.codyze.kts` | The project, two requirements, and the dependence graph passes |
 
 Calls to functions that are not declared anywhere (`get_key`, `printf`, `socket`, `send`) are
@@ -44,9 +44,10 @@ Calls to functions that are not declared anywhere (`get_key`, `printf`, `socket`
 - `Ctrl/Cmd+P` opens a file by name, `Ctrl/Cmd+Shift+P` shows all commands.
 
 **Code, layers and the code lens above `app_main`**
-- The layers *Concepts*, *External*, *Uncertain* show the calls of the analysis in the code and in the
-  ruler. `get_key`/`encrypt` have concepts, `get_key`, `send`, ... are external, `cfg.on_connect` is
-  uncertain.
+- The layers *Concepts*, *External*, *Uncertain* show the results of the analysis in the code and in
+  the ruler. In the gutter, ◆ marks a concept and ◇ an operation (hover for which): `key = get_key(&cfg)`
+  has both (the secret and getting it), the call of `encrypt` an operation, the function `encrypt` in
+  `crypto.c` the cipher. `get_key`, `send`, ... are external, `cfg.on_connect` is uncertain.
 - The code lens above a function (`calls 8 · 3 external · ⚠ 1 unresolved`) lists only the external or
   unresolved calls in the inspector when clicked.
 - Hover over a name for the hover card, click it for the inspector.

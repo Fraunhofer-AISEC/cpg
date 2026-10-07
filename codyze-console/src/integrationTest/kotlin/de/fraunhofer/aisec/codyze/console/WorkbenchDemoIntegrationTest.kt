@@ -25,6 +25,15 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.AnalysisProject
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.GetSecret
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.get
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -33,8 +42,10 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
 import java.io.File
+import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
@@ -65,7 +76,9 @@ class WorkbenchDemoIntegrationTest {
     @Test
     fun testWorkbenchDemo() = testApplication {
         application { configureWebconsole(ConsoleService()) }
-        val client = createClient { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        val client = createClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
 
         val response =
             client.post("/api/analyze") {
@@ -88,7 +101,9 @@ class WorkbenchDemoIntegrationTest {
         // What affects the call of encrypt: the key (data) and the condition (control)
         val encrypt = client.nodeAt(base, "encrypt(key, buf, len)")
         val backward =
-            client.get("/api/node/${encrypt.node.id}/pdg?direction=backward&hops=2").body<PdgSliceJSON>()
+            client
+                .get("/api/node/${encrypt.node.id}/pdg?direction=backward&hops=2")
+                .body<PdgSliceJSON>()
         val root = backward.nodes.first { it.id == backward.root }
         assertTrue("encrypt" in root.code, "root: ${root.code}")
         val getKey = backward.nodes.firstOrNull { "get_key" in it.code }
@@ -112,16 +127,15 @@ class WorkbenchDemoIntegrationTest {
 
         // What the key affects: the encryption, the plain copy and the log
         val forward =
-            client
-                .get("/api/node/${getKey.id}/pdg?direction=forward&hops=3")
-                .body<PdgSliceJSON>()
+            client.get("/api/node/${getKey.id}/pdg?direction=forward&hops=3").body<PdgSliceJSON>()
         val affected = forward.nodes.map { it.code }
         assertTrue(affected.any { "encrypt" in it }, "affected: $affected")
         assertTrue(affected.any { "copy_plain" in it }, "affected: $affected")
         assertTrue(affected.any { "report_key" in it }, "affected: $affected")
 
         // The counts of the context menu
-        val counts = client.get("/api/node/${encrypt.node.id}/pdg-counts?hops=2").body<PdgCountsJSON>()
+        val counts =
+            client.get("/api/node/${encrypt.node.id}/pdg-counts?hops=2").body<PdgCountsJSON>()
         assertTrue(counts.backward > 0 && counts.forward >= 0, "counts: $counts")
 
         // The evidence of an answer relies on the unresolved call in the function
@@ -141,8 +155,42 @@ class WorkbenchDemoIntegrationTest {
         val (line, column) = positionOf("encrypt(key, buf, len)")
         val selection =
             client
-                .get("$base/node-at?line=$line&column=$column&endLine=$line&endColumn=${column + 7}")
+                .get(
+                    "$base/node-at?line=$line&column=$column&endLine=$line&endColumn=${column + 7}"
+                )
                 .body<NodeDetailsJSON>()
         assertTrue("encrypt" in selection.node.code, "selection: ${selection.node.code}")
+    }
+
+    /**
+     * Runs the project of the demo with its tagging: concepts are attached to the things (the
+     * variable `key`, the function `encrypt`), operations to the calls that use them.
+     */
+    @Test
+    fun testWorkbenchDemoTagging() {
+        val project =
+            AnalysisProject.fromScript(
+                Path("src/integrationTest/resources/workbench-demo/project.codyze.kts")
+            )
+        val result = assertNotNull(project).analyze().translationResult
+
+        // The variable the key from get_key is stored in
+        val getKey = assertNotNull(result.calls["get_key"])
+        val key = assertIs<Variable>(getKey.astParent)
+        val secret = assertNotNull(key.overlays.filterIsInstance<Secret>().singleOrNull())
+        val getSecret = assertNotNull(getKey.overlays.filterIsInstance<GetSecret>().singleOrNull())
+        assertEquals(secret, getSecret.concept)
+        assertTrue(getKey.overlays.none { it is Secret }, "the call is not the secret")
+
+        // The definition in crypto.c, not the declaration in crypto.h
+        val encryptFunction =
+            result.functions.first { it.name.localName == "encrypt" && it.body != null }
+        val cipher =
+            assertNotNull(encryptFunction.overlays.filterIsInstance<Cipher>().singleOrNull())
+        val encryptCall = assertNotNull(result.calls["encrypt"])
+        val encrypt = assertNotNull(encryptCall.overlays.filterIsInstance<Encrypt>().singleOrNull())
+        assertEquals(cipher, encrypt.concept)
+        assertEquals(secret, encrypt.key)
+        assertTrue(encryptCall.overlays.none { it is Cipher }, "the call is not the cipher")
     }
 }
