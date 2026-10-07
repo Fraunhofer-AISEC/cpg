@@ -32,9 +32,12 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.paginate
-import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
+import de.fraunhofer.aisec.cpg.graph.Backward
+import de.fraunhofer.aisec.cpg.graph.GraphToFollow
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -73,8 +76,7 @@ internal fun dfgBackward(
                 content = listOf(TextContent("No node found with ID ${payload.id}"))
             )
 
-    val paths = startNode.collectAllPrevDFGPaths()
-    val nodes = paths.mapFlatMapped({ it.nodes }) { NodeInfo(it) }
+    val nodes = backwardSliceNodes(startNode).map { NodeInfo(it) }
 
     // One JSON array per call, sliced to a page, so that a node with a huge backward slice cannot
     // flood the context by itself; the summary says how to fetch the rest.
@@ -84,4 +86,37 @@ internal fun dfgBackward(
             listOf(TextContent(Json.encodeToString(page.items))) +
                 listOfNotNull(page.summary?.let { TextContent(it) })
     )
+}
+
+/**
+ * The nodes on the backward data-flow paths from [start] (including [start]), in the order they are
+ * first reached.
+ *
+ * Only the set of nodes is needed, not every path, so the traversal visits each (node, context)
+ * pair once (`findAllPossiblePaths = false`): linear in the size of the slice. Enumerating every
+ * path instead (`collectAllPrevDFGPaths`) grows exponentially with the branching of the data flow;
+ * on a real library one call never returned and exhausted the heap while holding the graph's read
+ * lock. The nodes are collected as they are reached (via `earlyTermination`, which sees every node
+ * the traversal steps to), not from the returned paths: a path that runs into an already visited
+ * node is dropped without being reported, so its own nodes would be missing.
+ */
+internal fun backwardSliceNodes(start: Node): List<Node> {
+    val seen = IdentitySet<Node>()
+    val ordered = mutableListOf<Node>()
+    fun reach(node: Node) {
+        if (seen.add(node)) ordered += node
+    }
+    reach(start)
+    start.followDFGEdgesUntilHit(
+        collectFailedPaths = false,
+        findAllPossiblePaths = false,
+        direction = Backward(GraphToFollow.DFG),
+        earlyTermination = { next, _ ->
+            reach(next)
+            false
+        },
+    ) {
+        false
+    }
+    return ordered
 }
