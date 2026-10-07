@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { NodeRefJSON, ToolResult } from '$lib/types';
-  import type { ToolPaths } from '$lib/agentEvidence';
+  import type { NodePathsJSON, NodeRefJSON, ToolResult } from '$lib/types';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -14,7 +13,7 @@
     /** The nodes the tool returned, resolved to their locations */
     nodes: NodeRefJSON[];
     /** The paths the tool returned, if it searched for paths */
-    paths?: ToolPaths | null;
+    paths?: NodePathsJSON | null;
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
     onSelect: (ref: NodeRefJSON) => void;

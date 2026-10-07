@@ -61,9 +61,10 @@ Calls to functions that are not declared anywhere (`get_key`, `printf`, `socket`
   `get_key → encrypt / copy_plain → report_key → log_debug` (arcs and steps in the code).
 
 **Dependence graph (PDG)**
-- Select `net_send(sock, buf, len)` in `send_with_retries`, then the *PDG* chip or right click →
-  *PDG: What affects this?* / *What does this affect?*. Try the hops, `+N` at the border, double click,
-  pinning, *Show what this affects →*, and clicking lines in the code.
+- Select `net_send(sock, buf, len)` in `send_with_retries`, then the *Graph* button or right click →
+  *PDG: What affects this?* / *What does this affect?*. Switch between *PDG*, *DFG* (only data) and
+  *CDG* (only control), try the hops, `+N` at the border, double click, pinning, *Show what this
+  affects →*, and clicking lines in the code.
 - `encrypt(key, buf, len)` has a control dependence on `if (cfg.secure)` (true/false edges).
 - `send`/`socket` calls show external stubs.
 

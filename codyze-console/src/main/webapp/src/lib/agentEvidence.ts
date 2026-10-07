@@ -1,4 +1,10 @@
-import type { NodeJSON, NodeRefJSON, TrustIssueJSON } from '$lib/types';
+import type {
+  NodeInfoJSON,
+  NodeJSON,
+  NodePathsJSON,
+  NodeRefJSON,
+  TrustIssueJSON
+} from '$lib/types';
 
 /**
  * The evidence of the agent's answers: the nodes returned by its tool calls and the nodes it cites
@@ -15,49 +21,35 @@ export function extractCitations(text: string): string[] {
   return [...new Set([...text.matchAll(citationPattern)].map((m) => m[1].toLowerCase()))];
 }
 
-/**
- * Paths through the graph in the result of a tool call (the format `NodePaths` of the tools that
- * find paths): what they follow, what they show, and the node IDs of each path in the direction of
- * the flow.
- */
-export interface ToolPaths {
-  kind: string;
-  description: string;
-  paths: string[][];
-  truncated: boolean;
+function isNodeInfo(value: unknown): value is NodeInfoJSON {
+  return !!value && typeof (value as NodeInfoJSON).nodeId === 'string';
 }
 
-function asToolPaths(value: unknown): ToolPaths | null {
-  if (!value || typeof value !== 'object') return null;
-  const v = value as Record<string, unknown>;
-  if (typeof v.kind !== 'string' || !Array.isArray(v.paths)) return null;
-  const paths = v.paths
-    .filter(Array.isArray)
-    .map((path) =>
-      (path as unknown[]).flatMap((n) =>
-        n && typeof n === 'object' && typeof (n as { nodeId?: unknown }).nodeId === 'string'
-          ? [(n as { nodeId: string }).nodeId]
-          : []
-      )
-    )
-    .filter((path) => path.length > 0);
-  if (paths.length === 0) return null;
-  return {
-    kind: v.kind,
-    description: typeof v.description === 'string' ? v.description : v.kind,
-    paths,
-    truncated: v.truncated === true
-  };
+/** Whether a value is paths in the format of the tools that find paths. */
+function isNodePaths(value: unknown): value is NodePathsJSON {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as NodePathsJSON;
+  return (
+    typeof v.kind === 'string' &&
+    Array.isArray(v.paths) &&
+    v.paths.length > 0 &&
+    v.paths.every((path) => Array.isArray(path) && path.every(isNodeInfo))
+  );
+}
+
+/** The node IDs of each of the paths. */
+export function pathNodeIds(paths: NodePathsJSON): string[][] {
+  return paths.paths.map((path) => path.map((node) => node.nodeId));
 }
 
 /**
  * The paths in the result of a tool call, if it returned paths. The result may be the JSON as text,
  * parsed, or the text contents of the tool.
  */
-export function extractToolPaths(content: unknown): ToolPaths | null {
+export function extractToolPaths(content: unknown): NodePathsJSON | null {
   if (typeof content === 'string') {
     try {
-      return asToolPaths(JSON.parse(content));
+      return extractToolPaths(JSON.parse(content));
     } catch {
       return null;
     }
@@ -70,7 +62,7 @@ export function extractToolPaths(content: unknown): ToolPaths | null {
     }
     return null;
   }
-  return asToolPaths(content);
+  return isNodePaths(content) ? content : null;
 }
 
 /**

@@ -9,8 +9,8 @@
     type Node
   } from '@xyflow/svelte';
   import '@xyflow/svelte/dist/style.css';
-  import type { PdgNode, PdgSlice } from '$lib/pdg';
-  import type { PdgPanel } from '$lib/stores/pdgPanel.svelte';
+  import type { GraphNode, GraphSlice } from '$lib/graph';
+  import type { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import {
     cardHeight,
     cardWidth,
@@ -19,8 +19,8 @@
     layoutSlice,
     type SliceLayout
   } from './layout';
-  import PdgCard, { type PdgCardData } from './PdgCard.svelte';
-  import PdgEdge, { type PdgEdgeData } from './PdgEdge.svelte';
+  import GraphCard, { type GraphCardData } from './GraphCard.svelte';
+  import GraphEdgeLine, { type GraphEdgeData } from './GraphEdgeLine.svelte';
   import FitView from './FitView.svelte';
 
   /**
@@ -29,19 +29,19 @@
    * the others step back.
    */
   interface Props {
-    panel: PdgPanel;
+    panel: GraphPanel;
     /** Called when a statement is clicked, after it was selected */
-    onSelectNode?: (node: PdgNode) => void;
+    onSelectNode?: (node: GraphNode) => void;
   }
 
   let { panel, onSelectNode }: Props = $props();
 
-  const nodeTypes = { card: PdgCard };
-  const edgeTypes = { pdg: PdgEdge };
+  const nodeTypes = { card: GraphCard };
+  const edgeTypes = { dependence: GraphEdgeLine };
 
   // The layout of the slice it was computed for. The graph keeps showing the previous slice until
   // the new one is laid out
-  let layout = $state.raw<{ slice: PdgSlice; laid: SliceLayout } | null>(null);
+  let layout = $state.raw<{ slice: GraphSlice; laid: SliceLayout } | null>(null);
 
   $effect(() => {
     const slice = panel.slice;
@@ -68,20 +68,20 @@
       if (e.from === selectedId) connected.add(e.to);
       if (e.to === selectedId) connected.add(e.from);
     }
-    return slice.nodes.flatMap((pdg) => {
-      const position = laid.positions.get(pdg.id);
+    return slice.nodes.flatMap((statement) => {
+      const position = laid.positions.get(statement.id);
       if (!position) return [];
-      const data: PdgCardData = {
-        pdg,
-        selected: pdg.id === selectedId,
-        hovered: pdg.id === panel.hoveredId,
-        faded: selectedId !== null && pdg.id !== selectedId && !connected.has(pdg.id),
-        root: pdg.id === slice.root,
+      const data: GraphCardData = {
+        statement,
+        selected: statement.id === selectedId,
+        hovered: statement.id === panel.hoveredId,
+        faded: selectedId !== null && statement.id !== selectedId && !connected.has(statement.id),
+        root: statement.id === slice.root,
         onExpand: (id) => panel.expand(id)
       };
       return [
         {
-          id: pdg.id,
+          id: statement.id,
           type: 'card',
           position,
           width: cardWidth,
@@ -102,7 +102,7 @@
       if (!route) return [];
       const active = selectedId !== null && (e.from === selectedId || e.to === selectedId);
       const marked = e.kind === 'DATA' && hoveredVariable !== null && e.label === hoveredVariable;
-      const data: PdgEdgeData = {
+      const data: GraphEdgeData = {
         points: route.points,
         label: route.label,
         text: e.label,
@@ -117,7 +117,7 @@
           id: edgeKey(e),
           source: e.from,
           target: e.to,
-          type: 'pdg',
+          type: 'dependence',
           selectable: false,
           focusable: false,
           // The tip has the color of the edge
@@ -134,13 +134,13 @@
   });
 
   function nodeColor(node: Node): string {
-    const pdg = (node.data as PdgCardData).pdg;
-    if (pdg.id === selectedId) return '#3b82f6';
-    return pdg.kind === 'STUB' ? '#d1d5db' : '#94a3b8';
+    const statement = (node.data as GraphCardData).statement;
+    if (statement.id === selectedId) return '#3b82f6';
+    return statement.kind === 'STUB' ? '#d1d5db' : '#94a3b8';
   }
 </script>
 
-<div class="group/flow relative h-full min-h-0 w-full {far ? 'pdg-far' : ''}">
+<div class="group/flow relative h-full min-h-0 w-full {far ? 'graph-far' : ''}">
   {#if layout}
     <SvelteFlow
       {nodes}
@@ -156,8 +156,8 @@
       attributionPosition="top-left"
       onnodeclick={({ node }) => {
         panel.select(node.id);
-        const pdg = layout?.slice.nodes.find((n) => n.id === node.id);
-        if (pdg) onSelectNode?.(pdg);
+        const statement = layout?.slice.nodes.find((n) => n.id === node.id);
+        if (statement) onSelectNode?.(statement);
       }}
       onnodepointerenter={({ node }) => (panel.hoveredId = node.id)}
       onnodepointerleave={() => (panel.hoveredId = null)}

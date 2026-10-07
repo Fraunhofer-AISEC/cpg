@@ -46,21 +46,29 @@ export interface TranslationUnitJSON {
   findings: FindingsJSON[];
 }
 
-export interface NodeJSON {
-  id: string;
-  type: string;
+/** A range of code: 1-based lines and columns, the end column is exclusive. */
+export interface CodeRangeJSON {
   startLine: number;
   startColumn: number;
   endLine: number;
   endColumn: number;
-  code: string;
+}
+
+/** The fields every node has in the JSON of the backend. */
+export interface NodeBaseJSON extends CodeRangeJSON {
+  id: string;
+  type: string;
   name: string;
+  code: string;
   fileName?: string;
+  translationUnitId?: string;
+  componentName?: string;
+}
+
+export interface NodeJSON extends NodeBaseJSON {
   astChildren: NodeJSON[];
   prevDFG: EdgeJSON[];
   nextDFG: EdgeJSON[];
-  translationUnitId?: string;
-  componentName?: string;
 }
 
 export interface EdgeJSON {
@@ -71,35 +79,18 @@ export interface EdgeJSON {
 }
 
 /** A compact reference to a node, used to list and navigate to related nodes. */
-export interface NodeRefJSON {
-  id: string;
-  type: string;
-  name: string;
-  code: string;
-  fileName?: string;
-  startLine: number;
-  startColumn: number;
-  endLine: number;
-  endColumn: number;
-  translationUnitId?: string;
-  componentName?: string;
+export interface NodeRefJSON extends NodeBaseJSON {
   isInferred: boolean;
   /** How the node relates to the inspected node, e.g. the granularity of a dataflow */
   label?: string;
 }
 
 /** A range of code selected by the user, e.g. to ask the agent about it. */
-export interface CodeSelection {
+export interface CodeSelection extends CodeRangeJSON {
   unitId: string;
   /** The name of the file */
   fileName: string;
   text: string;
-  startLine: number;
-  /** 1-based, like the columns of the nodes */
-  startColumn: number;
-  endLine: number;
-  /** 1-based and exclusive */
-  endColumn: number;
   /** The innermost node containing the whole selection, if there is one */
   node: NodeRefJSON | null;
 }
@@ -128,14 +119,10 @@ export interface FunctionAnnotationJSON {
 }
 
 /** A call, located at its callee, and how well the analysis knows its target. */
-export interface CallAnnotationJSON {
+export interface CallAnnotationJSON extends CodeRangeJSON {
   id: string;
   name: string;
   status: 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
-  startLine: number;
-  startColumn: number;
-  endLine: number;
-  endColumn: number;
 }
 
 /** A concept or operation in the code; the category is e.g. `crypto` or `file`. */
@@ -172,6 +159,32 @@ export interface NodeDetailsJSON {
   dataflowFrom: NodeRefJSON[];
   dataflowTo: NodeRefJSON[];
   warnings: string[];
+}
+
+/** A compact reference to a node in the results of the MCP tools (`NodeInfo` in the backend). */
+export interface NodeInfoJSON {
+  nodeId: string;
+  name: string;
+  code?: string | null;
+  type?: string | null;
+  fileName?: string | null;
+  startLine?: number | null;
+  endLine?: number | null;
+}
+
+/**
+ * Paths through the graph that a tool found (`NodePaths` in the backend), each in the direction of
+ * the flow, e.g. the dataflows to a node.
+ */
+export interface NodePathsJSON {
+  /** What the paths follow, e.g. `dataflow` */
+  kind: string;
+  /** What the paths show, e.g. "where the value of `key` comes from" */
+  description: string;
+  start: NodeInfoJSON;
+  paths: NodeInfoJSON[][];
+  /** Whether paths are missing because of the limits of the search */
+  truncated: boolean;
 }
 
 // MCP capabilities
