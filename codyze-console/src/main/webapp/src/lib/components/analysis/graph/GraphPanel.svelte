@@ -44,7 +44,7 @@
     paths
       ? `${paths.count} ${paths.count === 1 ? 'path' : 'paths'} · ${paths.kind}`
       : `${panel.graph} · ${backward ? 'backward' : 'forward'} · ${root?.code ?? ''}${
-          slice?.function ? ` · in ${slice.function.name}` : ''
+          panel.scope === 'intraprocedural' && slice?.function ? ` · in ${slice.function.name}` : ''
         }`
   );
 
@@ -147,6 +147,20 @@
           </button>
         {/each}
       </div>
+      <button
+        type="button"
+        class="h-6 rounded-md px-1.5 text-[11px] {panel.scope === 'intraprocedural'
+          ? 'bg-gray-200 text-gray-900'
+          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}"
+        aria-pressed={panel.scope === 'intraprocedural'}
+        title={panel.scope === 'intraprocedural'
+          ? 'Intraprocedural: only the function of the statement. Click to follow the dependences into other functions'
+          : 'Interprocedural: across functions. Click to stay in the function of the statement'}
+        onclick={() =>
+          panel.setScope(panel.scope === 'intraprocedural' ? 'interprocedural' : 'intraprocedural')}
+      >
+        intraprocedural
+      </button>
       <span class="text-[11px] text-gray-500">Hops</span>
       <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Hops">
         {#each hopOptions as hops (hops)}
