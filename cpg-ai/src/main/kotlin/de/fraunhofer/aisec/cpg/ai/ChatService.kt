@@ -480,10 +480,9 @@ class ChatService(
             val requestLlmStream by nodeLLMRequestStreaming()
             val requestLlm by
                 node<Flow<StreamFrame>, Message.Assistant>("collectRequestLlmStream") { frames ->
-                    frames
-                        .toList()
-                        .toMessageResponseLoggingFailures("collectRequestLlmStream")
-                        .also { logTokenUsage(it) }
+                    frames.toList().assembleStreamedAnswer("collectRequestLlmStream").also {
+                        logTokenUsage(it)
+                    }
                 }
             // Not a plain nodeExecuteTools(): that node is all-or-nothing (every call in the
             // turn parallel, or every call sequential). This splits a turn's tool calls into
@@ -507,10 +506,9 @@ class ChatService(
             val sendToolResult by
                 node<Flow<StreamFrame>, Message.Assistant>("collectSendToolResultStream") { frames
                     ->
-                    frames
-                        .toList()
-                        .toMessageResponseLoggingFailures("collectSendToolResultStream")
-                        .also { logTokenUsage(it) }
+                    frames.toList().assembleStreamedAnswer("collectSendToolResultStream").also {
+                        logTokenUsage(it)
+                    }
                 }
             val compressionStrategy =
                 FactRetrievalHistoryCompressionStrategy(
@@ -546,10 +544,9 @@ class ChatService(
             val nudgeRequestStream by nodeLLMRequestStreaming("nudgeRequestStream")
             val nudgeRequest by
                 node<Flow<StreamFrame>, Message.Assistant>("collectNudgeRequestStream") { frames ->
-                    frames
-                        .toList()
-                        .toMessageResponseLoggingFailures("collectNudgeRequestStream")
-                        .also { logTokenUsage(it) }
+                    frames.toList().assembleStreamedAnswer("collectNudgeRequestStream").also {
+                        logTokenUsage(it)
+                    }
                 }
 
             // Some models attempt a tool call as free-form text instead of a real structured

@@ -37,23 +37,40 @@ private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.ai.StreamDiag
 private const val MAX_LOGGED_ARGUMENTS = 2000
 
 /**
- * The streamed [frames] assembled into one assistant message, like [toMessageResponse]. If that
+ * The streamed [frames] assembled into one assistant message, like [toMessageResponse].
+ *
+ * A tool call with an empty argument string is assembled as one with `{}`: some models send that
+ * for a call without parameters, and Koog's own assembly fails on it (it parses the arguments as
+ * JSON), ending the whole agent run. Each such call is logged, naming the tool. If assembly still
  * fails to parse, the frames are logged ([describeFrames]) before the exception is rethrown, so the
- * log shows what the model actually sent - e.g. a tool call with empty or cut-off arguments, as
- * opposed to a stream that broke off. [node] names the strategy node for the log.
+ * log shows what the model actually sent. [node] names the strategy node for the log.
  */
-internal fun List<StreamFrame>.toMessageResponseLoggingFailures(node: String): Message.Assistant =
-    try {
-        toMessageResponse()
+internal fun List<StreamFrame>.assembleStreamedAnswer(node: String): Message.Assistant {
+    val frames = map { frame ->
+        if (frame is StreamFrame.ToolCallComplete && frame.content.isBlank()) {
+            log.info(
+                "Tool call {} ({}) in {} came with empty arguments; using an empty JSON object.",
+                frame.name,
+                frame.id,
+                node,
+            )
+            frame.copy(content = "{}")
+        } else {
+            frame
+        }
+    }
+    return try {
+        frames.toMessageResponse()
     } catch (e: SerializationException) {
         log.warn(
             "Could not assemble the streamed answer in {}: {}. Streamed frames: {}",
             node,
             e.message,
-            describeFrames(this),
+            describeFrames(frames),
         )
         throw e
     }
+}
 
 /**
  * A compact description of [frames]: how many of each frame type, plus every tool-call frame in

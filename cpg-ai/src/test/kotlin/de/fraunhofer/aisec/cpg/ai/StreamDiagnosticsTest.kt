@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai
 
 import ai.koog.prompt.streaming.StreamFrame
+import ai.koog.prompt.streaming.toMessageResponse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -35,16 +36,25 @@ import kotlinx.serialization.SerializationException
 class StreamDiagnosticsTest {
 
     @Test
-    fun aToolCallWithEmptyArgumentsFailsLikeInTheRun() {
-        // The error seen in log_review_fixes: "Cannot read Json element because of unexpected
-        // end of the input at path: $" while assembling a streamed answer.
-        val frames = listOf(StreamFrame.ToolCallComplete("call-1", "cpg_get_node", "", null))
+    fun aToolCallWithEmptyArgumentsIsAssembledWithAnEmptyObject() {
+        // Assembled as is, this fails exactly like in log_review_fixes ("Cannot read Json element
+        // because of unexpected end of the input"), ending the agent run.
+        val frames =
+            listOf(StreamFrame.ToolCallComplete("call-1", "cpg_persist_to_neo4j", "", null))
+        assertFailsWith<SerializationException> { frames.toMessageResponse() }
 
-        val e =
-            assertFailsWith<SerializationException> {
-                frames.toMessageResponseLoggingFailures("test")
-            }
-        assertTrue("unexpected end of the input" in e.message.orEmpty(), e.message)
+        val message = frames.assembleStreamedAnswer("test")
+
+        assertTrue("cpg_persist_to_neo4j" in message.toString(), message.toString())
+    }
+
+    @Test
+    fun argumentsThatAreNotJsonStillFailAndAreRethrown() {
+        val frames =
+            listOf(StreamFrame.ToolCallComplete("call-1", "cpg_get_node", """{"id":""", null))
+
+        val e = assertFailsWith<SerializationException> { frames.assembleStreamedAnswer("test") }
+        assertTrue("id" in describeFrames(frames), e.message)
     }
 
     @Test
@@ -75,7 +85,7 @@ class StreamDiagnosticsTest {
         val frames =
             listOf(StreamFrame.ToolCallComplete("call-1", "cpg_get_node", """{"id":"n1"}""", null))
 
-        val message = frames.toMessageResponseLoggingFailures("test")
+        val message = frames.assembleStreamedAnswer("test")
 
         assertTrue("cpg_get_node" in message.toString(), message.toString())
     }
