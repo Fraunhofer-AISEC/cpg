@@ -58,6 +58,10 @@ inductive Expr where
   | star (span : Span) (x : Expr)
   /-- `*ast.TypeAssertExpr`, i.e. `x.(T)`, or `x.(type)` in a type switch -/
   | typeAssert (span : Span) (x : Expr) (type : Option Expr)
+  /-- `*ast.CompositeLit`, i.e. `T{elts...}`; the type is elided in nested literals -/
+  | compositeLit (span : Span) (type : Option Expr) (elts : List Expr)
+  /-- `*ast.KeyValueExpr`, i.e. `key: value` in a composite literal -/
+  | keyValue (span : Span) (key value : Expr)
   /-- `*ast.ArrayType`, i.e. `[n]T` or `[]T` (the length is not modelled) -/
   | arrayType (span : Span) (elt : Expr)
   /-- `*ast.MapType`, i.e. `map[K]V` -/
@@ -72,7 +76,8 @@ deriving Repr, Inhabited
 def Expr.span : Expr → Span
   | .basicLit span .. | .ident span _ | .binary span .. | .unary span ..
   | .paren span _ | .call span .. | .selector span .. | .index span .. | .slice span ..
-  | .star span _ | .typeAssert span .. | .arrayType span _ | .mapType span .. | .chanType span _
+  | .star span _ | .typeAssert span .. | .compositeLit span .. | .keyValue span .. | .arrayType span _
+  | .mapType span .. | .chanType span _
   | .unsupported span _ => span
 
 /-- Removes any enclosing parentheses. -/
@@ -98,6 +103,17 @@ def isConversion : Expr → Bool
 def isArrayType : Expr → Bool
   | .arrayType .. => true
   | _ => false
+
+/--
+Whether the keys of the elements of a composite literal are in the verified subset: identifiers
+(except the predeclared constants) and basic literals.
+-/
+def keysSupported (elts : List Expr) : Bool :=
+  elts.all fun
+    | .keyValue _ (.ident _ name) _ => !["true", "false", "nil", "iota"].contains name
+    | .keyValue _ (.basicLit ..) _ => true
+    | .keyValue .. => false
+    | _ => true
 
 /-- The source text of a binary operator. -/
 def BinaryOp.token : BinaryOp → String

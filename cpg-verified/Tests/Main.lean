@@ -78,6 +78,9 @@ def goEnv : Go.Env where
   make
     | .arrayType _ (.ident _ "int"), [.int n] => some (.int n)
     | _, _ => none
+  composite
+    | .ident _ "T", [(some (.name "X"), .int x)] => some (.int x)
+    | _, _ => none
 
 /-- The CPG environment matching `goEnv`: names are resolved as in `ctx`. -/
 def cpgEnv : Cpg.Env where
@@ -100,6 +103,9 @@ def cpgEnv : Cpg.Env where
     | _, _ => none
   new
     | .pointer (.resolved (.object "T" [])), .nil => some (.obj 7)
+    | _, _ => none
+  composite
+    | .resolved (.object "T" []), [(some (.name "main.X"), .int x)] => some (.int x)
     | _, _ => none
 
 def goEval (e : Go.Expr) : Option Value := e.eval ctx.iota ctx.packages goEnv
@@ -240,6 +246,17 @@ def tests : List (String × Bool) := [
       [.arrayType (sp 5 10) (ident (sp 7 10) "int"), int (sp 11 12) "3"]
     goEval n == some (.obj 7) && cpgEval n == some (.obj 7) &&
     goEval m == some (.int 3) && cpgEval m == some (.int 3)),
+  ("composite literal is an initializer list",
+    translate ctx (.compositeLit (sp 0 9) (some (ident (sp 0 1) "T"))
+        [.keyValue (sp 2 8) (ident (sp 2 3) "X") (int (sp 5 6) "1")])
+      == .initializerList (sp 0 9) (.resolved (.object "T" []))
+        [.keyValue (sp 2 8) (.reference (sp 2 3) "main.X") (.literal (sp 5 6) (.int 1) (.primitive "int") none)]),
+  ("nested literal with elided type is outside the subset",
+    isProblem (translate ctx (.compositeLit (sp 0 4) none []))),
+  ("evaluation: composite literal agrees",
+    let c := Go.Expr.compositeLit (sp 0 9) (some (ident (sp 0 1) "T"))
+      [.keyValue (sp 2 8) (ident (sp 2 3) "X") (int (sp 5 6) "1")]
+    goEval c == some (.int 1) && cpgEval c == some (.int 1)),
   ("evaluation: unbound names fail in both",
     goEval (ident (sp 0 1) "y") == none && cpgEval (ident (sp 0 1) "y") == none)
 ]

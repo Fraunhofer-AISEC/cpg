@@ -26,6 +26,11 @@ def semantics : Cpg.LanguageSemantics where
   intQuo := Cpg.IntOps.quo
   intRem := Cpg.IntOps.rem
 
+/-- The key of a composite literal element in the CPG, where identifiers are resolved. -/
+def resolveKey (ctx : Ctx) : Option Cpg.Key × Value → Option Cpg.Key × Value
+  | (some (.name n), v) => (some (.name (resolveName ctx n)), v)
+  | kv => kv
+
 /-- The Go environment and the CPG environment describe the same state. -/
 structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
   /-- A reference to `resolveName ctx name` refers to the Go variable `name`. -/
@@ -70,6 +75,11 @@ structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
     cenv.constructArray t vs = genv.make te vs
   /-- Types outside the verified subset are never allocated. -/
   allocUnmodelled : ∀ te, typeOf? te = none → genv.new te = none ∧ ∀ vs, genv.make te vs = none
+  /-- A composite literal is an initializer list, whose keys are resolved names. -/
+  composite : ∀ te t elems, typeOf? te = some t →
+    cenv.composite t (elems.map (resolveKey ctx)) = genv.composite te elems
+  /-- Composite literals of types outside the verified subset are never created. -/
+  compositeUnmodelled : ∀ te, typeOf? te = none → ∀ elems, genv.composite te elems = none
 
 /-- Every strict Go binary operator means the same as the CPG operator code it is mapped to. -/
 theorem evalBinaryOp_token (op : BinaryOp) (hand : op ≠ .land) (hor : op ≠ .lor) (a b : Value) :
@@ -91,14 +101,14 @@ theorem token_eq_lor (op : BinaryOp) : op.token = "||" ↔ op = .lor := by
 theorem translate_unparen (ctx : Ctx) : ∀ e : Expr, translate ctx e.unparen = translate ctx e
   | .paren _ x => by simp only [Expr.unparen, translate]; exact translate_unparen ctx x
   | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
-  | .slice .. | .star .. | .typeAssert .. | .arrayType .. | .mapType .. | .chanType ..
-  | .unsupported .. => rfl
+  | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType ..
+  | .mapType .. | .chanType .. | .unsupported .. => rfl
 
 theorem unparen_not_paren (span : Cpg.Span) (x : Expr) : ∀ e : Expr, e.unparen ≠ .paren span x
   | .paren _ y => by simp only [Expr.unparen]; exact unparen_not_paren span x y
   | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
-  | .slice .. | .star .. | .typeAssert .. | .arrayType .. | .mapType .. | .chanType ..
-  | .unsupported .. => by simp [Expr.unparen]
+  | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType ..
+  | .mapType .. | .chanType .. | .unsupported .. => by simp [Expr.unparen]
 
 theorem translateConversion_ne_range (span : Cpg.Span) (t : Option Cpg.TypeRef)
     (args : List Cpg.Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
@@ -129,9 +139,75 @@ theorem translate_ne_range (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (a b c : Opti
     cases fn <;> simp only [translate] <;> (repeat' split) <;>
       simp [translateConversion_ne_range, translateAllocation_ne_range]
   | typeAssert _ _ t => cases t <;> simp only [translate] <;> (try split) <;> simp
+  | compositeLit _ t _ => cases t <;> simp only [translate] <;> (repeat' split) <;> simp
   | selector => simp only [translate]; split <;> simp
   | paren _ x => simp only [translate]; exact translate_ne_range ctx x loc a b c
   | _ => simp [translate]
+
+theorem translateConversion_ne_keyValue (span : Cpg.Span) (t : Option Cpg.TypeRef)
+    (args : List Cpg.Expr) (loc : Cpg.Span) (k v : Cpg.Expr) :
+    translateConversion span t args ≠ .keyValue loc k v := by
+  unfold translateConversion
+  split <;> simp
+
+theorem translateAllocation_ne_keyValue (span : Cpg.Span) (name : String) (args : List Expr)
+    (tail : List Cpg.Expr) (loc : Cpg.Span) (k v : Cpg.Expr) :
+    translateAllocation span name args tail ≠ .keyValue loc k v := by
+  unfold translateAllocation
+  repeat' split
+  all_goals simp
+
+/-- The translation never produces a bare `KeyValue`; they only occur in initializer lists. -/
+theorem translate_ne_keyValue (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (k v : Cpg.Expr) :
+    translate ctx e ≠ .keyValue loc k v := by
+  cases e with
+  | ident => simp only [translate, translateIdent]; split <;> (try split) <;> (try split) <;> simp
+  | basicLit => simp only [translate]; split <;> simp
+  | call _ fn _ =>
+    cases fn <;> simp only [translate] <;> (repeat' split) <;>
+      simp [translateConversion_ne_keyValue, translateAllocation_ne_keyValue]
+  | typeAssert _ _ t => cases t <;> simp only [translate] <;> (try split) <;> simp
+  | compositeLit _ t _ => cases t <;> simp only [translate] <;> (repeat' split) <;> simp
+  | selector => simp only [translate]; split <;> simp
+  | paren _ x => simp only [translate]; exact translate_ne_keyValue ctx x loc k v
+  | _ => simp [translate]
+
+theorem translateElems_cons (ctx : Ctx) (e : Expr) (rest : List Expr)
+    (he : ∀ s k v, e ≠ .keyValue s k v) :
+    translateElems ctx (e :: rest) = translate ctx e :: translateElems ctx rest := by
+  cases e <;> first | exact absurd rfl (he _ _ _) | simp only [translateElems]
+
+theorem evalInits_cons (L : Cpg.LanguageSemantics) (env : Cpg.Env) (x : Cpg.Expr)
+    (rest : List Cpg.Expr) (hx : ∀ s k v, x ≠ .keyValue s k v) :
+    Cpg.Expr.evalInits L env (x :: rest)
+      = (do
+        let v ← x.eval L env
+        let vs ← Cpg.Expr.evalInits L env rest
+        pure ((none, v) :: vs)) := by
+  cases x <;> first | exact absurd rfl (hx _ _ _) | simp only [Cpg.Expr.evalInits]
+
+theorem evalElems_cons (iota : Option Int) (packages : List String) (env : Env) (e : Expr)
+    (rest : List Expr) (he : ∀ s k v, e ≠ .keyValue s k v) :
+    Expr.evalElems iota packages env (e :: rest)
+      = (do
+        let v ← e.eval iota packages env
+        let vs ← Expr.evalElems iota packages env rest
+        pure ((none, v) :: vs)) := by
+  cases e <;> first | exact absurd rfl (he _ _ _) | simp only [Expr.evalElems]
+
+theorem keysSupported_tail {e : Expr} {rest : List Expr} (h : keysSupported (e :: rest) = true) :
+    keysSupported rest = true := by
+  simp only [keysSupported, List.all_cons, Bool.and_eq_true] at h ⊢
+  exact h.2
+
+/-- An identifier that is not a predeclared constant is a reference. -/
+theorem translateIdent_reference (ctx : Ctx) (s : Cpg.Span) (n : String)
+    (hn : n ∉ ["true", "false", "nil", "iota"]) :
+    translateIdent ctx s n = .reference s (resolveName ctx n) := by
+  unfold translateIdent
+  split
+  · rfl
+  · split <;> simp_all
 
 theorem packageOf?_mem {packages : List String} {x : Expr} {p : String}
     (h : packageOf? packages x = some p) : p ∈ packages := by
@@ -390,8 +466,8 @@ theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
         simp only [Cpg.Expr.eval, ihargs, h.qualifiedFuncs p (packageOf?_mem hp) sel]
       | none => simp only [Cpg.Expr.eval, ihx, ihargs, h.methods]
     | .basicLit .. | .ident .. | .binary .. | .unary .. | .paren .. | .call .. | .index ..
-    | .slice .. | .star .. | .typeAssert .. | .arrayType .. | .mapType .. | .chanType ..
-    | .unsupported .. =>
+    | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType ..
+    | .mapType .. | .chanType .. | .unsupported .. =>
       exact call_other_correct ctx genv cenv h span _ args (by simp) ihargs
         (translateTail_correct ctx genv cenv h args)
   | .index span x i => by
@@ -418,6 +494,21 @@ theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
       simp only [Cpg.Expr.eval]
       cases x.eval ctx.iota ctx.packages genv <;> simp [h.castUnmodelled te ht]
   | .typeAssert span x none => by simp [translate, Cpg.Expr.eval, Expr.eval]
+  | .compositeLit span (some te) elts => by
+    simp only [translate, Expr.eval]
+    by_cases hk : keysSupported elts = true
+    · have ihelts := translateElems_correct ctx genv cenv h elts hk
+      cases ht : typeOf? te with
+      | some t =>
+        simp only [hk, ite_true, Cpg.Expr.eval, ihelts]
+        cases Expr.evalElems ctx.iota ctx.packages genv elts <;> simp [h.composite te t _ ht]
+      | none =>
+        simp only [hk, ite_true, Cpg.Expr.eval]
+        cases Expr.evalElems ctx.iota ctx.packages genv elts <;>
+          simp [h.compositeUnmodelled te ht]
+    · cases typeOf? te <;> simp [hk, Cpg.Expr.eval]
+  | .compositeLit span none elts => by simp [translate, Cpg.Expr.eval, Expr.eval]
+  | .keyValue .. => by simp [translate, Cpg.Expr.eval, Expr.eval]
   | .arrayType .. | .mapType .. | .chanType .. => by simp [translate, Cpg.Expr.eval, Expr.eval]
   | .unsupported span goType => by simp [translate, Cpg.Expr.eval, Expr.eval]
 
@@ -430,6 +521,47 @@ theorem translateOpt_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
   | none => by simp [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt]
   | some e => by
     simp only [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt, translate_correct ctx genv cenv h e]
+
+/-- Semantic preservation for the elements of a composite literal. -/
+theorem translateElems_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ elts : List Expr, keysSupported elts = true →
+      Cpg.Expr.evalInits semantics cenv (translateElems ctx elts)
+        = (Expr.evalElems ctx.iota ctx.packages genv elts).map (List.map (resolveKey ctx))
+  | [], _ => by simp [translateElems, Cpg.Expr.evalInits, Expr.evalElems]
+  | e :: rest, hk => by
+    have ihrest := translateElems_correct ctx genv cenv h rest (keysSupported_tail hk)
+    match e with
+    | .keyValue s key value =>
+      have ihv := translate_correct ctx genv cenv h value
+      match key with
+      | .ident s' n =>
+        have hn : n ∉ ["true", "false", "nil", "iota"] := by
+          simp only [keysSupported, List.all_cons, Bool.and_eq_true] at hk
+          simpa using hk.1
+        simp only [translateElems, translate, translateIdent_reference ctx s' n hn,
+          Cpg.Expr.evalInits, Expr.evalElems, ihv, ihrest]
+        cases Expr.eval ctx.iota ctx.packages genv value <;>
+          cases Expr.evalElems ctx.iota ctx.packages genv rest <;> simp [resolveKey]
+      | .basicLit s' kind lit =>
+        have ihk := translate_correct ctx genv cenv h (.basicLit s' kind lit)
+        simp only [translateElems, Expr.evalElems]
+        simp only [translate] at ihk ⊢
+        split at ihk <;> simp only [Cpg.Expr.evalInits, ihk, ihv, ihrest] <;>
+          cases Expr.eval ctx.iota ctx.packages genv (.basicLit s' kind lit) <;>
+          cases Expr.eval ctx.iota ctx.packages genv value <;>
+          cases Expr.evalElems ctx.iota ctx.packages genv rest <;> simp [resolveKey]
+      | .binary .. | .unary .. | .paren .. | .call .. | .selector .. | .index .. | .slice ..
+      | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType .. | .mapType ..
+      | .chanType .. | .unsupported .. => simp [keysSupported] at hk
+    | .basicLit .. | .ident .. | .binary .. | .unary .. | .paren .. | .call .. | .selector ..
+    | .index .. | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .arrayType ..
+    | .mapType .. | .chanType .. | .unsupported .. =>
+      rw [translateElems_cons ctx _ rest (by simp), evalElems_cons _ _ _ _ rest (by simp),
+        evalInits_cons _ _ _ _ (translate_ne_keyValue ctx _), ihrest,
+        translate_correct ctx genv cenv h _]
+      cases Expr.eval ctx.iota ctx.packages genv _ <;>
+        cases Expr.evalElems ctx.iota ctx.packages genv rest <;> simp [resolveKey]
 
 /-- Semantic preservation for all but the first expression of a list. -/
 theorem translateTail_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
@@ -482,7 +614,9 @@ theorem translate_loc (ctx : Ctx) : ∀ e : Expr, (translate ctx e).loc = e.unpa
       | simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
   | .typeAssert _ _ t => by
     cases t <;> simp only [translate] <;> (try split) <;> simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
-  | .arrayType .. | .mapType .. | .chanType .. => by
+  | .compositeLit _ t _ => by
+    cases t <;> simp only [translate] <;> (repeat' split) <;> simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
+  | .keyValue .. | .arrayType .. | .mapType .. | .chanType .. => by
     simp only [translate, Cpg.Expr.loc, Expr.unparen, Expr.span]
 
 end Go

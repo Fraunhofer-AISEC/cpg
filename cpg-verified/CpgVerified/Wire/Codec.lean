@@ -27,6 +27,8 @@ EXPR      := (lit START END KIND VALUE)           KIND := int | float | imag | c
            | (slice START END X OPT OPT OPT)      OPT := () | (EXPR)
            | (star START END X)
            | (typeassert START END X OPT)         OPT := () | (TYPEEXPR)
+           | (compositelit START END OPT (ELT*))   OPT := () | (TYPEEXPR)
+           | (keyvalue START END KEY VALUE)
            | (arraytype START END ELT)
            | (maptype START END KEY VALUE)
            | (chantype START END VALUE)
@@ -52,6 +54,8 @@ CPG := (literal START END VALUE TYPE NAME)
      | (deref START END INPUT)
      | (cast START END TYPE EXPRESSION)
      | (new START END TYPE INITIALIZER)
+     | (initializerlist START END TYPE (INITIALIZER*))
+     | (keyvalue START END KEY VALUE)
      | (construction START END TYPE (ARG*))
      | (arrayconstruction START END TYPE (DIMENSION*))
      | (problem START END MESSAGE)
@@ -125,6 +129,10 @@ partial def decodeExpr : Sexp → Except String Go.Expr
   | .list [.atom "star", s, e, x] => return .star (← decodeSpan s e) (← decodeExpr x)
   | .list [.atom "typeassert", s, e, x, type] =>
     return .typeAssert (← decodeSpan s e) (← decodeExpr x) (← decodeOptExpr type)
+  | .list [.atom "compositelit", s, e, type, .list elts] =>
+    return .compositeLit (← decodeSpan s e) (← decodeOptExpr type) (← elts.mapM decodeExpr)
+  | .list [.atom "keyvalue", s, e, k, v] =>
+    return .keyValue (← decodeSpan s e) (← decodeExpr k) (← decodeExpr v)
   | .list [.atom "arraytype", s, e, elt] => return .arrayType (← decodeSpan s e) (← decodeExpr elt)
   | .list [.atom "maptype", s, e, k, v] =>
     return .mapType (← decodeSpan s e) (← decodeExpr k) (← decodeExpr v)
@@ -194,6 +202,10 @@ partial def encodeExpr : Cpg.Expr → Sexp
     .list ([.atom "deref"] ++ encodeSpan loc ++ [encodeExpr input])
   | .cast loc t e => .list ([.atom "cast"] ++ encodeSpan loc ++ [encodeType t, encodeExpr e])
   | .new loc t init => .list ([.atom "new"] ++ encodeSpan loc ++ [encodeType t, encodeExpr init])
+  | .initializerList loc t inits =>
+    .list ([.atom "initializerlist"] ++ encodeSpan loc ++
+      [encodeType t, .list (inits.map encodeExpr)])
+  | .keyValue loc k v => .list ([.atom "keyvalue"] ++ encodeSpan loc ++ [encodeExpr k, encodeExpr v])
   | .construction loc t args =>
     .list ([.atom "construction"] ++ encodeSpan loc ++ [encodeType t, .list (args.map encodeExpr)])
   | .arrayConstruction loc t dims =>

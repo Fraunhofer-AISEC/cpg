@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
@@ -239,12 +241,17 @@ class VerifiedTranslationTest {
         return stats
     }
 
-    /** The name of the type described by [type], assuming that no type aliases are involved. */
+    private val goBuiltins = GoLanguage().builtInTypes
+
+    /**
+     * The name of the type described by [type], assuming that no user-defined aliases are involved.
+     */
     private fun typeName(type: Sexp): String {
         val items = (type as Sexp.SList).items
         return when (items[0].toString()) {
+            // Built-in types can be aliases, e.g., byte is uint8
             "primitive",
-            "object" -> items[1].toString()
+            "object" -> items[1].toString().let { goBuiltins[it]?.name?.toString() ?: it }
             "pointer" -> typeName(items[1]) + "*"
             "array" -> typeName(items[1]) + "[]"
             "resolved" -> typeName(items[1])
@@ -437,6 +444,29 @@ class VerifiedTranslationTest {
                 } else {
                     dims.zip(kotlin.dimensions).forEach { (a, k) -> diffs += compare(a, k, region) }
                 }
+            }
+            "initializerlist" -> {
+                if (kotlin !is InitializerList) {
+                    return diffs + "expected InitializerList, got ${kotlin::class.simpleName}"
+                }
+                if (kotlin.type.name.toString() != typeName(items[3])) {
+                    diffs += "initializer list type ${typeName(items[3])} vs ${kotlin.type.name}"
+                }
+                val inits = (items[4] as Sexp.SList).items
+                if (inits.size != kotlin.initializers.size) {
+                    diffs += "${inits.size} initializers vs ${kotlin.initializers.size}"
+                } else {
+                    inits.zip(kotlin.initializers).forEach { (a, k) ->
+                        diffs += compare(a, k, region)
+                    }
+                }
+            }
+            "keyvalue" -> {
+                if (kotlin !is KeyValue) {
+                    return diffs + "expected KeyValue, got ${kotlin::class.simpleName}"
+                }
+                diffs += compare(items[3], kotlin.key, region)
+                diffs += compare(items[4], kotlin.value, region)
             }
             else -> diffs += "unknown kind $kind"
         }

@@ -42,6 +42,15 @@ inductive Value where
   | float (text : String)
 deriving Repr, DecidableEq, Inhabited
 
+/--
+The key of an element in a composite literal: an identifier, passed by name (a struct field, or a
+variable used as a map key), or the value of any other key expression.
+-/
+inductive Key where
+  | name (n : String)
+  | value (v : Value)
+deriving Repr, DecidableEq, Inhabited
+
 namespace IntOps
 
 /-!
