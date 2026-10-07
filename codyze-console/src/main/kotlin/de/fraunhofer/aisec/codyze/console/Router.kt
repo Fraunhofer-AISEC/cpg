@@ -74,6 +74,8 @@ import kotlinx.serialization.json.JsonObject
  * - GET `/api/node/{id}/pdg?direction=backward|forward&hops=1..3`: Retrieves the slice of the
  *   program dependence graph around the statement of the node, limited to its function.
  * - GET `/api/node/{id}/pdg-counts?hops=1..3`: Retrieves the size of the slice in each direction.
+ * - POST `/api/paths/graph`: Retrieves paths of node IDs (e.g. dataflows found by the agent) as a
+ *   graph in the format of a PDG slice.
  * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
  *   calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
@@ -319,6 +321,20 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
             }
+        }
+
+        // The endpoint to get paths through the graph as a graph of their statements
+        post("/paths/graph") {
+            val request =
+                try {
+                    call.receive<PathsGraphRequestJSON>()
+                } catch (e: Exception) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Invalid request format: ${e.message}"),
+                    )
+                }
+            call.respond(service.getPathsGraph(request))
         }
 
         // The endpoint to add a concept node to the current analysis result

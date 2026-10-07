@@ -318,6 +318,15 @@ class ConsoleService {
         return findNode(nodeId)?.let { pdgCounts(it, hops) }
     }
 
+    /**
+     * Returns the paths with the given node IDs as a graph in the format of a PDG slice. IDs of
+     * nodes that do not exist (e.g., because an LLM made them up) are left out of their path.
+     */
+    fun getPathsGraph(request: PathsGraphRequestJSON): PdgSliceJSON {
+        val paths = request.paths.map { path -> path.mapNotNull { findNode(it) } }
+        return pathsGraph(paths.filter { it.isNotEmpty() }, request.kind)
+    }
+
     /** Returns the node (or overlay) with the given ID, using an index built on first use. */
     private fun findNode(nodeId: String): Node? {
         val id = runCatching { Uuid.parse(nodeId) }.getOrNull() ?: return null
