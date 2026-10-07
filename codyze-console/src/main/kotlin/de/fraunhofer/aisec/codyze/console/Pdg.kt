@@ -341,3 +341,80 @@ fun pdgCounts(root: Node, hops: Int): PdgCountsJSON =
         backward = PdgCollector(root, PdgDirection.BACKWARD, hops).statements.size - 1,
         forward = PdgCollector(root, PdgDirection.FORWARD, hops).statements.size - 1,
     )
+
+/** Paths through the graph to show as a graph, e.g. the dataflows a tool of the agent found. */
+@Serializable
+data class PathsGraphRequestJSON(
+    /** What the paths follow, e.g. `dataflow` */
+    val kind: String,
+    /** The node IDs of each path, in the direction of the flow */
+    val paths: List<List<String>>,
+)
+
+/** The name a value has when it reaches [node], to label the edge to its statement. */
+private fun valueName(node: Node): String? =
+    when (node) {
+        is Reference,
+        is ValueDeclaration -> node.name.localName.ifEmpty { null }
+        else -> null
+    }
+
+/**
+ * The statements of [paths] and the steps between them, in the format of a PDG slice so that the
+ * console shows them like one. Consecutive nodes of a path that belong to the same statement are
+ * one statement; a step between two statements becomes an edge, a data dependence for dataflows
+ * ([kind] `dataflow`) and a control dependence otherwise. Nodes outside of the analysed code are
+ * stubs. The root is the end of the first path, and the depth of a statement is its distance from
+ * the end of its path.
+ */
+fun pathsGraph(paths: List<List<Node>>, kind: String): PdgSliceJSON {
+    val statements = linkedMapOf<Uuid, Node>()
+    val depths = mutableMapOf<Uuid, Int>()
+    val edges = linkedMapOf<Pair<Uuid, Uuid>, PdgEdgeJSON>()
+    val edgeKind = if (kind == "dataflow") PdgEdgeKind.DATA else PdgEdgeKind.CONTROL
+    for (path in paths) {
+        // The statements of the path, each with the node the path enters it with
+        val steps = mutableListOf<Pair<Node, Node>>()
+        for (node in path) {
+            val statement = if (node.location == null) node else node.pdgStatement()
+            if (steps.lastOrNull()?.first !== statement) steps += statement to node
+        }
+        steps.forEachIndexed { i, (statement, _) ->
+            statements.putIfAbsent(statement.id, statement)
+            val depth = steps.size - 1 - i
+            depths[statement.id] = minOf(depths[statement.id] ?: depth, depth)
+        }
+        steps.zipWithNext().forEach { (from, to) ->
+            val key = from.first.id to to.first.id
+            edges.putIfAbsent(
+                key,
+                PdgEdgeJSON(
+                    from = from.first.id.toString(),
+                    to = to.first.id.toString(),
+                    kind = edgeKind,
+                    label = if (edgeKind == PdgEdgeKind.DATA) valueName(to.second) else null,
+                ),
+            )
+        }
+    }
+    val root = paths.firstOrNull()?.lastOrNull()
+    val rootStatement = root?.let { if (it.location == null) it else it.pdgStatement() }
+    return PdgSliceJSON(
+        root = rootStatement?.id?.toString() ?: "",
+        direction = PdgDirection.BACKWARD,
+        hops = paths.maxOfOrNull { it.size } ?: 0,
+        function = null,
+        nodes =
+            statements.values.map {
+                val nodeKind =
+                    when {
+                        it.location == null || it.isInferred -> PdgNodeKind.STUB
+                        it.isBranching -> PdgNodeKind.BRANCH
+                        else -> PdgNodeKind.STATEMENT
+                    }
+                it.toPdgNode(nodeKind, depths.getValue(it.id), 0)
+            },
+        edges = edges.values.toList(),
+        truncated = false,
+    )
+}

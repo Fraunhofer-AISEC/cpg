@@ -162,6 +162,49 @@ class WorkbenchDemoIntegrationTest {
         assertTrue("encrypt" in selection.node.code, "selection: ${selection.node.code}")
     }
 
+    /** Paths of nodes become a graph of their statements, like a slice of the dependence graph. */
+    @Test
+    fun testPathsGraph() = testApplication {
+        application { configureWebconsole(ConsoleService()) }
+        val client = createClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+        val result =
+            client
+                .post("/api/analyze") {
+                    contentType(ContentType.Application.Json)
+                    setBody(AnalyzeRequestJSON(sourceDir = demoDir, topLevel = demoDir))
+                }
+                .body<AnalysisResultJSON>()
+        val component = result.components.single()
+        val main = component.translationUnits.first { it.name.endsWith("main.c") }
+        val base = "/api/component/${component.name}/translation-unit/${main.id}"
+
+        val getKey = client.nodeAt(base, "get_key(&cfg)")
+        val encrypt = client.nodeAt(base, "encrypt(key, buf, len)")
+        val graph =
+            client
+                .post("/api/paths/graph") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        PathsGraphRequestJSON(
+                            kind = "dataflow",
+                            paths =
+                                listOf(
+                                    listOf(getKey.node.id.toString(), encrypt.node.id.toString())
+                                ),
+                        )
+                    )
+                }
+                .body<PdgSliceJSON>()
+        assertEquals(2, graph.nodes.size, "nodes: ${graph.nodes.map { it.code }}")
+        val root = graph.nodes.single { it.id == graph.root }
+        assertTrue("encrypt" in root.code, "root: ${root.code}")
+        val edge = graph.edges.single()
+        assertEquals(PdgEdgeKind.DATA, edge.kind)
+        assertEquals(root.id, edge.to)
+    }
+
     /**
      * Runs the project of the demo with its tagging: concepts are attached to the things (the
      * variable `key`, the function `encrypt`), operations to the calls that use them.
