@@ -2,8 +2,8 @@
   import type { NodeDetailsJSON } from '$lib/types';
 
   /**
-   * A small card with the key facts about the node under the mouse, like the hover cards of
-   * Sourcegraph. Clicking the node still opens it in the inspector.
+   * A small card with the key facts about the node under the mouse. Clicking the node still opens
+   * it in the inspector.
    */
   interface Props {
     details: NodeDetailsJSON;

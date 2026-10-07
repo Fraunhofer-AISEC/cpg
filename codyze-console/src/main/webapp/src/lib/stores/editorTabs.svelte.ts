@@ -1,8 +1,8 @@
 import type { TranslationUnitJSON } from '$lib/types';
 
 /**
- * The files opened in tabs, like the editor tabs of VS Code. When more than [max] files are open,
- * the least recently used tab is closed.
+ * The files opened in tabs. When more than [max] files are open, the least recently used tab is
+ * closed.
  */
 export class EditorTabs {
   /** The open files, in the order of their tabs */
