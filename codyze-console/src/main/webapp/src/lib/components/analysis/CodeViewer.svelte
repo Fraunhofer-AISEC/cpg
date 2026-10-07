@@ -465,7 +465,13 @@
     // Do not interfere with selecting text
     if (window.getSelection()?.toString()) return;
     const position = positionAt(event);
-    if (!position) return;
+    // A click into empty space (whitespace, after the end of a line, below the code) deselects,
+    // like in editors
+    const char = position ? codeLines[position.line - 1]?.[position.column - 1] : undefined;
+    if (!position || !char || /\s/.test(char)) {
+      focus.clear();
+      return;
+    }
     const component = componentName;
     inspect(() => getNodeDetailsAt(component, translationUnit.id, position.line, position.column));
   }

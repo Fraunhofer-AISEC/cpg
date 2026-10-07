@@ -277,6 +277,14 @@
       return;
     }
     if (isTyping(event)) return;
+    if (event.key === 'Escape' && !pdg.open) {
+      // Deselects, unless something else used the key (e.g. closing a popup). That is only known
+      // once all listeners have run
+      setTimeout(() => {
+        if (!event.defaultPrevented) focus.clear();
+      });
+      return;
+    }
     if (event.altKey && !hasModifier(event) && event.key === 'ArrowLeft') {
       event.preventDefault();
       goBack();

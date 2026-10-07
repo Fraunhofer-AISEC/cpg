@@ -201,10 +201,14 @@ export class CodeFocus {
     this.revision++;
   }
 
+  /** Deselects the inspected node, e.g. after a click into empty space. The path stays. */
   clear() {
     this.request++;
     this.details = null;
     this.loading = false;
     this.error = null;
+    this.revealSection = null;
+    this.callFilter = null;
+    this.pathIndex = -1;
   }
 }
