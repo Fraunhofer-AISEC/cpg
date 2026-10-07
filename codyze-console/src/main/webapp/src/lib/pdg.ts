@@ -182,3 +182,17 @@ export function describeDependences(slice: PdgSlice, id: string): string {
   }
   return parts.join(' · ') || 'No dependences in this slice';
 }
+
+/**
+ * The statements of paths of nodes (e.g. dataflows a tool of the agent found) and the steps between
+ * them, in the format of a slice. [kind] is what the paths follow, e.g. `dataflow`.
+ */
+export async function getPathsGraph(kind: string, paths: string[][]): Promise<PdgSlice> {
+  const res = await fetch('/api/paths/graph', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, paths })
+  });
+  if (!res.ok) throw new Error(`Failed to load the paths: ${res.statusText}`);
+  return res.json();
+}

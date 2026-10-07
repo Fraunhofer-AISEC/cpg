@@ -27,14 +27,20 @@
   const selected = $derived(panel.selected);
   const backward = $derived(panel.direction === 'BACKWARD');
 
+  // Paths (e.g. found by the agent) are shown instead of a slice, without its controls
+  const paths = $derived(panel.paths);
+
   const title = $derived.by(() => {
+    if (paths) return `Agent: ${paths.description}`;
     const where = root && root.startLine > 0 ? `line ${root.startLine}` : 'this statement';
     return backward ? `What affects ${where}?` : `What does ${where} affect?`;
   });
   const subtitle = $derived(
-    `${backward ? 'Backward' : 'Forward'} slice · ${root?.code ?? ''}${
-      slice?.function ? ` · in ${slice.function.name}` : ''
-    }`
+    paths
+      ? `${paths.count} ${paths.count === 1 ? 'path' : 'paths'} · ${paths.kind}`
+      : `${backward ? 'Backward' : 'Forward'} slice · ${root?.code ?? ''}${
+          slice?.function ? ` · in ${slice.function.name}` : ''
+        }`
   );
 
   // The tones of the notes about a statement, in the colors of the analysis
@@ -113,45 +119,47 @@
       <div class="truncate text-[13px] font-semibold text-gray-900">{title}</div>
       <div class="truncate font-mono text-[11px] text-gray-500" title={subtitle}>{subtitle}</div>
     </div>
-    <span class="text-[11px] text-gray-500">Hops</span>
-    <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Hops">
-      {#each hopOptions as hops (hops)}
-        <button
-          type="button"
-          class="h-6 w-6 rounded text-xs {panel.hops === hops
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-800'}"
-          aria-pressed={panel.hops === hops}
-          onclick={() => panel.setHops(hops)}
-        >
-          {hops}
-        </button>
-      {/each}
-    </div>
-    <button
-      type="button"
-      class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 {panel.pinned
-        ? 'bg-gray-200 text-gray-900'
-        : ''}"
-      aria-pressed={panel.pinned}
-      onclick={() => (panel.pinned = !panel.pinned)}
-      aria-label="Pin the graph"
-      title={panel.pinned
-        ? 'Pinned: the graph stays when another node is inspected'
-        : 'Pin the graph, so that it stays when another node is inspected'}
-    >
-      <svg
-        class="h-4 w-4"
-        viewBox="0 0 24 24"
-        fill={panel.pinned ? 'currentColor' : 'none'}
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+    {#if !paths}
+      <span class="text-[11px] text-gray-500">Hops</span>
+      <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Hops">
+        {#each hopOptions as hops (hops)}
+          <button
+            type="button"
+            class="h-6 w-6 rounded text-xs {panel.hops === hops
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-800'}"
+            aria-pressed={panel.hops === hops}
+            onclick={() => panel.setHops(hops)}
+          >
+            {hops}
+          </button>
+        {/each}
+      </div>
+      <button
+        type="button"
+        class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 {panel.pinned
+          ? 'bg-gray-200 text-gray-900'
+          : ''}"
+        aria-pressed={panel.pinned}
+        onclick={() => (panel.pinned = !panel.pinned)}
+        aria-label="Pin the graph"
+        title={panel.pinned
+          ? 'Pinned: the graph stays when another node is inspected'
+          : 'Pin the graph, so that it stays when another node is inspected'}
       >
-        <path d="M9 4h6l-1 6 4 3H6l4-3zM12 13v7" />
-      </svg>
-    </button>
+        <svg
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill={panel.pinned ? 'currentColor' : 'none'}
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M9 4h6l-1 6 4 3H6l4-3zM12 13v7" />
+        </svg>
+      </button>
+    {/if}
     <button
       type="button"
       class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900"
@@ -211,7 +219,7 @@
             ? `Open ${selected.node.fileName ?? 'file'}`
             : 'Inspect'}
         </button>
-        {#if selected.kind !== 'STUB'}
+        {#if selected.kind !== 'STUB' && !paths}
           <button
             type="button"
             class="h-7 rounded-md border border-blue-200 bg-blue-50 px-2.5 text-xs text-blue-700 hover:bg-blue-100"
