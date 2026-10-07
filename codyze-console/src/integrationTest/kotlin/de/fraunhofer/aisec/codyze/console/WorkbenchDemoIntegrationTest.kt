@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.serialization.NodeInfo
+import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -103,23 +105,23 @@ class WorkbenchDemoIntegrationTest {
         val backward =
             client
                 .get("/api/node/${encrypt.node.id}/pdg?direction=backward&hops=2")
-                .body<PdgSliceJSON>()
+                .body<GraphSliceJSON>()
         val root = backward.nodes.first { it.id == backward.root }
         assertTrue("encrypt" in root.code, "root: ${root.code}")
         val getKey = backward.nodes.firstOrNull { "get_key" in it.code }
         assertNotNull(getKey, "nodes: ${backward.nodes.map { it.code }}")
         assertTrue(
             backward.edges.any {
-                it.kind == PdgEdgeKind.DATA && it.from == getKey.id && it.label == "key"
+                it.kind == GraphEdgeKind.DATA && it.from == getKey.id && it.label == "key"
             },
             "edges: ${backward.edges}",
         )
         val condition = backward.nodes.firstOrNull { "cfg.secure" in it.code }
         assertNotNull(condition, "nodes: ${backward.nodes.map { it.code }}")
-        assertEquals(PdgNodeKind.BRANCH, condition.kind)
+        assertEquals(GraphNodeKind.BRANCH, condition.kind)
         assertTrue(
             backward.edges.any {
-                it.kind == PdgEdgeKind.CONTROL && it.from == condition.id && it.label == "true"
+                it.kind == GraphEdgeKind.CONTROL && it.from == condition.id && it.label == "true"
             },
             "edges: ${backward.edges}",
         )
@@ -127,7 +129,7 @@ class WorkbenchDemoIntegrationTest {
 
         // What the key affects: the encryption, the plain copy and the log
         val forward =
-            client.get("/api/node/${getKey.id}/pdg?direction=forward&hops=3").body<PdgSliceJSON>()
+            client.get("/api/node/${getKey.id}/pdg?direction=forward&hops=3").body<GraphSliceJSON>()
         val affected = forward.nodes.map { it.code }
         assertTrue(affected.any { "encrypt" in it }, "affected: $affected")
         assertTrue(affected.any { "copy_plain" in it }, "affected: $affected")
@@ -135,7 +137,7 @@ class WorkbenchDemoIntegrationTest {
 
         // The counts of the context menu
         val counts =
-            client.get("/api/node/${encrypt.node.id}/pdg-counts?hops=2").body<PdgCountsJSON>()
+            client.get("/api/node/${encrypt.node.id}/pdg-counts?hops=2").body<SliceCountsJSON>()
         assertTrue(counts.backward > 0 && counts.forward >= 0, "counts: $counts")
 
         // The evidence of an answer relies on the unresolved call in the function
@@ -184,25 +186,61 @@ class WorkbenchDemoIntegrationTest {
         val encrypt = client.nodeAt(base, "encrypt(key, buf, len)")
         val graph =
             client
-                .post("/api/paths/graph") {
+                .post("/api/graph/from-paths") {
                     contentType(ContentType.Application.Json)
                     setBody(
-                        PathsGraphRequestJSON(
+                        NodePaths(
                             kind = "dataflow",
+                            description = "where the key goes to",
+                            start =
+                                NodeInfo(
+                                    getKey.node.id.toString(),
+                                    "get_key",
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                ),
                             paths =
                                 listOf(
-                                    listOf(getKey.node.id.toString(), encrypt.node.id.toString())
+                                    listOf(getKey.node, encrypt.node).map {
+                                        NodeInfo(
+                                            it.id.toString(),
+                                            it.name,
+                                            it.code,
+                                            it.type,
+                                            null,
+                                            null,
+                                            null,
+                                        )
+                                    }
                                 ),
+                            truncated = false,
                         )
                     )
                 }
-                .body<PdgSliceJSON>()
+                .body<GraphSliceJSON>()
         assertEquals(2, graph.nodes.size, "nodes: ${graph.nodes.map { it.code }}")
         val root = graph.nodes.single { it.id == graph.root }
         assertTrue("encrypt" in root.code, "root: ${root.code}")
         val edge = graph.edges.single()
-        assertEquals(PdgEdgeKind.DATA, edge.kind)
+        assertEquals(GraphEdgeKind.DATA, edge.kind)
         assertEquals(root.id, edge.to)
+
+        // The data and the control dependences of the call of encrypt, each on their own
+        val dfg =
+            client
+                .get("/api/node/${encrypt.node.id}/dfg?direction=backward&hops=2")
+                .body<GraphSliceJSON>()
+        assertTrue(dfg.edges.isNotEmpty() && dfg.edges.all { it.kind == GraphEdgeKind.DATA })
+        assertTrue(dfg.nodes.any { "get_key" in it.code }, "nodes: ${dfg.nodes.map { it.code }}")
+        val cdg =
+            client
+                .get("/api/node/${encrypt.node.id}/cdg?direction=backward&hops=1")
+                .body<GraphSliceJSON>()
+        assertTrue(cdg.edges.isNotEmpty() && cdg.edges.all { it.kind == GraphEdgeKind.CONTROL })
+        assertTrue(cdg.nodes.any { "cfg.secure" in it.code }, "nodes: ${cdg.nodes.map { it.code }}")
     }
 
     /**
