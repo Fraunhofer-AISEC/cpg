@@ -76,9 +76,22 @@ fun encodeExpr(expr: Ast.Expr): Sexp {
             sexpOf(atom("call"), *span, encodeExpr(expr.`fun`), sexpOf(expr.args.map(::encodeExpr)))
         is Ast.SelectorExpr ->
             sexpOf(atom("selector"), *span, encodeExpr(expr.x), atom(expr.sel.name))
+        is Ast.IndexExpr -> sexpOf(atom("index"), *span, encodeExpr(expr.x), encodeExpr(expr.index))
+        is Ast.SliceExpr ->
+            sexpOf(
+                atom("slice"),
+                *span,
+                encodeExpr(expr.x),
+                encodeOptExpr(expr.low),
+                encodeOptExpr(expr.high),
+                encodeOptExpr(expr.max),
+            )
+        is Ast.StarExpr -> sexpOf(atom("star"), *span, encodeExpr(expr.x))
         else -> sexpOf(atom("unsupported"), *span, atom(expr.goType))
     }
 }
+
+private fun encodeOptExpr(expr: Ast.Expr?): Sexp = sexpOf(listOfNotNull(expr?.let(::encodeExpr)))
 
 /** Whether [expr] is of a kind that the verified translation can handle at all. */
 fun isInVerifiedSubset(expr: Ast.Expr): Boolean =
@@ -88,7 +101,10 @@ fun isInVerifiedSubset(expr: Ast.Expr): Boolean =
         expr is Ast.UnaryExpr ||
         expr is Ast.ParenExpr ||
         expr is Ast.CallExpr ||
-        expr is Ast.SelectorExpr
+        expr is Ast.SelectorExpr ||
+        expr is Ast.IndexExpr ||
+        expr is Ast.SliceExpr ||
+        expr is Ast.StarExpr
 
 /** The identifiers occurring in [expr], not descending into expressions outside the subset. */
 fun identifiersIn(expr: Ast.Expr): Set<String> =
@@ -99,5 +115,10 @@ fun identifiersIn(expr: Ast.Expr): Set<String> =
         is Ast.ParenExpr -> identifiersIn(expr.x)
         is Ast.CallExpr -> identifiersIn(expr.`fun`) + expr.args.flatMap(::identifiersIn)
         is Ast.SelectorExpr -> identifiersIn(expr.x)
+        is Ast.IndexExpr -> identifiersIn(expr.x) + identifiersIn(expr.index)
+        is Ast.SliceExpr ->
+            identifiersIn(expr.x) +
+                listOfNotNull(expr.low, expr.high, expr.max).flatMap(::identifiersIn)
+        is Ast.StarExpr -> identifiersIn(expr.x)
         else -> emptySet()
     }

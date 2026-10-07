@@ -50,6 +50,12 @@ inductive Expr where
   | call (span : Span) (fn : Expr) (args : List Expr)
   /-- `*ast.SelectorExpr`, i.e. `x.sel` -/
   | selector (span : Span) (x : Expr) (sel : String)
+  /-- `*ast.IndexExpr`, i.e. `x[index]` -/
+  | index (span : Span) (x : Expr) (index : Expr)
+  /-- `*ast.SliceExpr`, i.e. `x[low:high:max]` -/
+  | slice (span : Span) (x : Expr) (low high max : Option Expr)
+  /-- `*ast.StarExpr` in an expression, i.e. a pointer dereference `*x` -/
+  | star (span : Span) (x : Expr)
   /-- Any other expression node; `goType` is its Go type name, e.g. `*ast.CompositeLit`. -/
   | unsupported (span : Span) (goType : String)
 deriving Repr, Inhabited
@@ -57,7 +63,8 @@ deriving Repr, Inhabited
 /-- The source span of an expression. -/
 def Expr.span : Expr → Span
   | .basicLit span .. | .ident span _ | .binary span .. | .unary span ..
-  | .paren span _ | .call span .. | .selector span .. | .unsupported span _ => span
+  | .paren span _ | .call span .. | .selector span .. | .index span .. | .slice span ..
+  | .star span _ | .unsupported span _ => span
 
 /-- Removes any enclosing parentheses. -/
 def Expr.unparen : Expr → Expr

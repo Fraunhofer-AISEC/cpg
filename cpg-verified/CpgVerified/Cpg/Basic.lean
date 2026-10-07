@@ -38,6 +38,8 @@ inductive Value where
   evaluation environment.
   -/
   | obj (address : Nat)
+  /-- A floating-point constant, as its literal text. Operations on floats are not modelled. -/
+  | float (text : String)
 deriving Repr, DecidableEq, Inhabited
 
 namespace IntOps

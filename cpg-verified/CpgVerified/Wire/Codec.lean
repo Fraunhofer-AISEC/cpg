@@ -23,6 +23,9 @@ EXPR      := (lit START END KIND VALUE)           KIND := int | float | imag | c
            | (paren START END X)
            | (call START END FN (ARG*))
            | (selector START END X SEL)
+           | (index START END X INDEX)
+           | (slice START END X OPT OPT OPT)      OPT := () | (EXPR)
+           | (star START END X)
            | (unsupported START END GOTYPE)
 ```
 
@@ -30,7 +33,7 @@ and translated CPG expressions are sent back as
 
 ```
 CPG := (literal START END VALUE TYPE NAME)
-         VALUE := (int n) | (bool true|false) | (str s) | (nil) | (obj address)
+         VALUE := (int n) | (bool true|false) | (str s) | (nil) | (obj address) | (float text)
          TYPE  := (primitive name) | (unknown)
          NAME  := () | (name)
      | (reference START END NAME)
@@ -39,6 +42,9 @@ CPG := (literal START END VALUE TYPE NAME)
      | (call START END CALLEE (ARG*))
      | (member START END NAME BASE)
      | (membercall START END CALLEE (ARG*))
+     | (subscription START END ARRAY SUBSCRIPT)
+     | (range START END OPT OPT OPT)           OPT := () | (CPG)
+     | (deref START END INPUT)
      | (problem START END MESSAGE)
 ```
 -/
@@ -80,6 +86,13 @@ def decodeLitKind : String → Except String Go.LitKind
   | "string" => pure .string
   | k => throw s!"unknown literal kind {k}"
 
+mutual
+
+partial def decodeOptExpr : Sexp → Except String (Option Go.Expr)
+  | .list [] => pure none
+  | .list [x] => some <$> decodeExpr x
+  | s => throw s!"expected an optional expression, got {repr s}"
+
 partial def decodeExpr : Sexp → Except String Go.Expr
   | .list [.atom "lit", s, e, .atom kind, .atom value] =>
     return .basicLit (← decodeSpan s e) (← decodeLitKind kind) value
@@ -95,9 +108,17 @@ partial def decodeExpr : Sexp → Except String Go.Expr
     return .call (← decodeSpan s e) (← decodeExpr fn) (← args.mapM decodeExpr)
   | .list [.atom "selector", s, e, x, .atom sel] =>
     return .selector (← decodeSpan s e) (← decodeExpr x) sel
+  | .list [.atom "index", s, e, x, i] =>
+    return .index (← decodeSpan s e) (← decodeExpr x) (← decodeExpr i)
+  | .list [.atom "slice", s, e, x, low, high, max] =>
+    return .slice (← decodeSpan s e) (← decodeExpr x) (← decodeOptExpr low)
+      (← decodeOptExpr high) (← decodeOptExpr max)
+  | .list [.atom "star", s, e, x] => return .star (← decodeSpan s e) (← decodeExpr x)
   | .list [.atom "unsupported", s, e, .atom goType] =>
     return .unsupported (← decodeSpan s e) goType
   | s => throw s!"malformed expression {repr s}"
+
+end
 
 def decodeOption (f : Sexp → Except String α) : Sexp → Except String (Option α)
   | .list [] => pure none
@@ -123,6 +144,7 @@ def encodeValue : Value → Sexp
   | .str s => .list [.atom "str", .atom s]
   | .nil => .list [.atom "nil"]
   | .obj address => .list [.atom "obj", .atom (toString address)]
+  | .float text => .list [.atom "float", .atom text]
 
 def encodeType : TypeRef → Sexp
   | .primitive name => .list [.atom "primitive", .atom name]
@@ -144,6 +166,13 @@ partial def encodeExpr : Cpg.Expr → Sexp
   | .memberCall loc callee args =>
     .list ([.atom "membercall"] ++ encodeSpan loc ++
       [encodeExpr callee, .list (args.map encodeExpr)])
+  | .subscription loc arr idx =>
+    .list ([.atom "subscription"] ++ encodeSpan loc ++ [encodeExpr arr, encodeExpr idx])
+  | .range loc floor ceiling third =>
+    .list ([.atom "range"] ++ encodeSpan loc ++
+      [floor, ceiling, third].map fun e => .list (e.toList.map encodeExpr))
+  | .pointerDereference loc input =>
+    .list ([.atom "deref"] ++ encodeSpan loc ++ [encodeExpr input])
   | .problem loc msg => .list ([.atom "problem"] ++ encodeSpan loc ++ [.atom msg])
 
 /-- Handles one request: decodes, translates and encodes the result (or an error). -/

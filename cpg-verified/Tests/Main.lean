@@ -59,6 +59,15 @@ def goEnv : Go.Env where
       | .obj 1, [.int a] => some (.int (a + 3))
       | _, _ => none
     | _ => none
+  index
+    | .obj 1, .int i => some (.int (i * 10))
+    | _, _ => none
+  slice
+    | .obj 1, some (.int l), none, none => some (.int l)
+    | _, _, _, _ => none
+  deref
+    | .obj 1 => some (.int 42)
+    | _ => none
 
 /-- The CPG environment matching `goEnv`: names are resolved as in `ctx`. -/
 def cpgEnv : Cpg.Env where
@@ -66,6 +75,9 @@ def cpgEnv : Cpg.Env where
   funcs name := goEnv.funcs (name.dropPrefix "main.").toString
   fields := goEnv.fields
   methods := goEnv.methods
+  index := goEnv.index
+  slice := goEnv.slice
+  deref := goEnv.deref
 
 def goEval (e : Go.Expr) : Option Value := e.eval ctx.iota ctx.packages goEnv
 
@@ -152,6 +164,28 @@ def tests : List (String × Bool) := [
     goEval field == some (.int 3) && cpgEval field == some (.int 3) &&
     goEval method == some (.int 4) && cpgEval method == some (.int 4) &&
     goEval pkg == some (.str "printed") && cpgEval pkg == some (.str "printed")),
+  ("index, slice and dereference",
+    translate ctx (.index (sp 0 4) (ident (sp 0 1) "p") (int (sp 2 3) "2"))
+      == .subscription (sp 0 4) (.reference (sp 0 1) "main.p")
+        (.literal (sp 2 3) (.int 2) (.primitive "int") none) &&
+    translate ctx (.slice (sp 0 5) (ident (sp 0 1) "p") (some (int (sp 2 3) "1")) none none)
+      == .subscription (sp 0 5) (.reference (sp 0 1) "main.p")
+        (.range (sp 0 5) (some (.literal (sp 2 3) (.int 1) (.primitive "int") none)) none none) &&
+    translate ctx (.star (sp 0 2) (ident (sp 1 2) "p"))
+      == .pointerDereference (sp 0 2) (.reference (sp 1 2) "main.p")),
+  ("evaluation: index, slice and dereference agree",
+    let idx := Go.Expr.index (sp 0 4) (ident (sp 0 1) "p") (int (sp 2 3) "2")
+    let sl := Go.Expr.slice (sp 0 5) (ident (sp 0 1) "p") (some (int (sp 2 3) "1")) none none
+    let st := Go.Expr.star (sp 0 2) (ident (sp 1 2) "p")
+    goEval idx == some (.int 20) && cpgEval idx == some (.int 20) &&
+    goEval sl == some (.int 1) && cpgEval sl == some (.int 1) &&
+    goEval st == some (.int 42) && cpgEval st == some (.int 42)),
+  ("float literal keeps its text",
+    translate ctx (.basicLit (sp 0 7) .float "1_000.5")
+      == .literal (sp 0 7) (.float "1000.5") (.primitive "float64") none),
+  ("escaped string literal",
+    translate ctx (.basicLit (sp 0 6) .string "\"a\\tb\"")
+      == .literal (sp 0 6) (.str "a\tb") (.primitive "string") none),
   ("evaluation: unbound names fail in both",
     goEval (ident (sp 0 1) "y") == none && cpgEval (ident (sp 0 1) "y") == none)
 ]

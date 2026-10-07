@@ -15,9 +15,11 @@ symbol and call resolution, ...) are not.
 ## Status
 
 First slice: Go expressions — basic literals, identifiers, binary and unary operators,
-parentheses, selectors (members of imported packages, struct fields) and calls of named functions,
-package functions and methods. Every other expression kind is translated into a
-`ProblemExpression`.
+parentheses, selectors (members of imported packages, struct fields), indexing, slicing, pointer
+dereferences and calls of named functions, package functions and methods. Literals include escape
+sequences and floating-point constants (kept as text). Every other expression kind is translated
+into a `ProblemExpression`; most of the remaining ones depend on types (composite literals,
+conversions, type assertions, `new` and `make`).
 
 | File                             | Content                                                       |
 |----------------------------------|---------------------------------------------------------------|

@@ -113,7 +113,17 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
         .problem span "new and make are not in the verified subset"
       else .call span (translate ctx fn) (translateList ctx args)
     | none => .problem span "only calls of named functions and methods are in the verified subset"
+  | .index span x i => .subscription span (translate ctx x) (translate ctx i)
+  | .slice span x low high max =>
+    .subscription span (translate ctx x)
+      (.range span (translateOpt ctx low) (translateOpt ctx high) (translateOpt ctx max))
+  | .star span x => .pointerDereference span (translate ctx x)
   | .unsupported span goType => .problem span s!"{goType} is not in the verified subset"
+
+/-- Translates an optional expression. -/
+def translateOpt (ctx : Ctx) : Option Expr → Option Cpg.Expr
+  | none => none
+  | some e => some (translate ctx e)
 
 /-- Translates a list of expressions. -/
 def translateList (ctx : Ctx) : List Expr → List Cpg.Expr

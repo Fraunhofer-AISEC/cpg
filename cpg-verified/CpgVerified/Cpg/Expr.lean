@@ -39,6 +39,12 @@ inductive Expr where
   | memberAccess (loc : Span) (name : String) (base : Expr)
   /-- `MemberCall`; the callee is a `MemberAccess` -/
   | memberCall (loc : Span) (callee : Expr) (arguments : List Expr)
+  /-- `Subscription` of `arrayExpression` with `subscriptExpression` (an index or a `Range`) -/
+  | subscription (loc : Span) (arrayExpression subscriptExpression : Expr)
+  /-- `Range` with optional `floor`, `ceiling` and `third` -/
+  | range (loc : Span) (floor ceiling third : Option Expr)
+  /-- `PointerDereference` -/
+  | pointerDereference (loc : Span) (input : Expr)
   /-- `ProblemExpression` -/
   | problem (loc : Span) (problem : String)
 deriving Repr, Inhabited, BEq
@@ -46,6 +52,7 @@ deriving Repr, Inhabited, BEq
 /-- The location of a node. -/
 def Expr.loc : Expr → Span
   | .literal loc .. | .reference loc _ | .binaryOperator loc .. | .unaryOperator loc ..
-  | .call loc .. | .memberAccess loc .. | .memberCall loc .. | .problem loc _ => loc
+  | .call loc .. | .memberAccess loc .. | .memberCall loc .. | .subscription loc ..
+  | .range loc .. | .pointerDereference loc _ | .problem loc _ => loc
 
 end Cpg

@@ -24,6 +24,12 @@ structure Env where
   fields : Nat → String → Option Value
   /-- Methods by name, applied to the receiver and the arguments. -/
   methods : String → Option (Value → List Value → Option Value)
+  /-- Indexing `x[i]` of arrays, slices, maps and strings. -/
+  index : Value → Value → Option Value
+  /-- Slicing `x[low:high:max]`, with absent bounds as `none`. -/
+  slice : Value → Option Value → Option Value → Option Value → Option Value
+  /-- Dereferencing a pointer. -/
+  deref : Value → Option Value
 
 /--
 Value of a predeclared constant identifier (<https://go.dev/ref/spec#Predeclared_identifiers>).
@@ -82,7 +88,8 @@ mutual
 Evaluates a Go expression. Identifiers bound in `env` shadow predeclared ones. Operands are
 evaluated left to right; `&&` and `||` short-circuit. `packages` are the names of the imported
 packages, whose members are bound in `env` under their qualified name (`fmt.Println`). Calls of
-parenthesized selectors, e.g. `(x.f)()`, are not modelled.
+parenthesized selectors, e.g. `(x.f)()`, are not modelled. Indexing, slicing and dereferencing are
+left to the environment.
 -/
 def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr → Option Value
   | .basicLit _ kind value => litValue kind value
@@ -126,7 +133,21 @@ def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr �
       let f ← env.funcs name
       f (← Expr.evalList iota packages env args)
     | _ => none
+  | .index _ x i => do env.index (← x.eval iota packages env) (← i.eval iota packages env)
+  | .slice _ x low high max => do
+    let a ← x.eval iota packages env
+    let l ← Expr.evalOpt iota packages env low
+    let h ← Expr.evalOpt iota packages env high
+    let m ← Expr.evalOpt iota packages env max
+    env.slice a l h m
+  | .star _ x => do env.deref (← x.eval iota packages env)
   | .unsupported .. => none
+
+/-- Evaluates an optional expression; an absent expression has no value, but does not fail. -/
+def Expr.evalOpt (iota : Option Int) (packages : List String) (env : Env) :
+    Option Expr → Option (Option Value)
+  | none => some none
+  | some e => some <$> e.eval iota packages env
 
 /-- Evaluates a list of expressions from left to right. -/
 def Expr.evalList (iota : Option Int) (packages : List String) (env : Env) :
