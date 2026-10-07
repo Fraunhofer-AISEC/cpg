@@ -58,8 +58,8 @@
 
   // The distance between the nesting levels of the arcs and the number of levels that fit into the
   // lane; further arcs share the outermost level
-  const levelStep = 0.3;
-  const innerOffset = 0.55;
+  const levelStep = 0.2;
+  const innerOffset = 0.4;
   const maxLevels = $derived(
     Math.max(1, Math.floor((laneRight - laneLeft - innerOffset) / levelStep) + 1)
   );
