@@ -788,17 +788,19 @@
     if (selectedComponentName) loadConceptCounts(selectedComponentName);
   });
 
-  // Selects and reveals a node referenced by a concept suggestion, opening its file if needed. The
-  // agent tab stays open, since the suggestions are shown there
-  function revealSuggestedNode(nodeId: string | null) {
+  // Selects and reveals a node the agent refers to (a citation, a node a tool returned, a
+  // suggestion, ...), opening its file if needed. The agent tab stays open, so the answer stays in
+  // view; the inspector tab is only marked. The location is resolved by the backend, since tool
+  // results only name the file
+  async function revealFromAgent(nodeId: string | null | undefined) {
     if (!nodeId) return;
-    const node = suggestionNodes.get(nodeId);
-    if (node && node.translationUnitId !== selectedTranslationUnit?.id) {
-      const tu = findTranslationUnit(node);
-      if (tu) handleFileSelect(tu);
-    }
+    const details = await getNodeDetails(nodeId).catch(() => null);
+    if (!details) return;
+    const unitId = details.node.translationUnitId;
+    const unit = unitId ? findUnitById(unitId) : null;
+    if (unit && unit.id !== selectedTranslationUnit?.id) handleFileSelect(unit);
     if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
-    focus.inspect(() => getNodeDetails(nodeId), true);
+    focus.inspect(() => Promise.resolve(details), true);
   }
 
   // The nodes cited in the answers of the agent, resolved to their locations to label and open them
@@ -825,9 +827,8 @@
   });
 
   // Inspects a node cited by the agent and shows it in the code
-  async function openCitation(nodeId: string) {
-    const ref = citedRefs.get(nodeId) ?? (await getNodeDetails(nodeId).catch(() => null))?.node;
-    if (ref) selectRef(ref);
+  function openCitation(nodeId: string) {
+    revealFromAgent(nodeId);
   }
 
   // The conversation as a timeline: one block per question, with the tool calls as numbered steps
@@ -971,7 +972,7 @@
 
   function goToThreadStep(index: number) {
     const step = threadSteps[index];
-    if (step) selectRef(step.nodes[0]);
+    if (step) revealFromAgent(step.nodes[0].id);
   }
 
   // The evidence of the active block, shown as numbered markers in the code
@@ -1328,7 +1329,7 @@
             title={issue.location.code || issue.location.name}
             onclick={() => {
               chosenBlock = b;
-              selectRef(issue.location);
+              revealFromAgent(issue.location.id);
             }}
           >
             <span aria-hidden="true">⚠</span>
@@ -1366,7 +1367,7 @@
               class="rounded border border-dashed border-gray-300 px-1 font-mono text-[10px] text-gray-700 hover:border-gray-500 hover:bg-gray-50"
               onclick={() => {
                 chosenBlock = b;
-                selectRef(ref);
+                revealFromAgent(ref.id);
               }}
             >
               {citationLabel(ref)}
@@ -1894,7 +1895,7 @@
                       <div class="min-w-0 flex-1">
                         <ToolResultBlock
                           toolResult={message.toolResult}
-                          onItemClick={handleNodeClick}
+                          onItemClick={(item) => revealFromAgent(item?.id ?? item?.nodeId)}
                         />
                       </div>
                       {#if stepNodes(evidence.steps.find((s) => s.step === entry.step)?.ids ?? []).length > 0}
@@ -1907,7 +1908,7 @@
                           title="Go to the first of the nodes this step returned"
                           onclick={() => {
                             chosenBlock = b;
-                            selectRef(nodes[0]);
+                            revealFromAgent(nodes[0].id);
                           }}
                         >
                           {nodes.length}
@@ -1921,7 +1922,7 @@
                         <ConceptChecklist
                           bind:items={suggestions}
                           onApplySuggestions={handleApplyAndReload}
-                          onHighlightNode={revealSuggestedNode}
+                          onHighlightNode={revealFromAgent}
                         />
                       </div>
                     {/if}
