@@ -96,7 +96,7 @@
   function buildFileTree(units: TranslationUnitJSON[]): TreeNode[] {
     const root: TreeNode[] = [];
     for (const unit of units) {
-      const parts = relativePath(unit, component.topLevel)
+      const parts = relativePath(component, unit)
         .split('/')
         .filter((p) => p.length > 0);
       let level = root;

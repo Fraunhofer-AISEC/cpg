@@ -349,7 +349,7 @@
   const paletteFiles = $derived(
     (selectedComponent?.translationUnits ?? []).map((unit) => ({
       unit,
-      path: relativePath(unit, selectedComponent?.topLevel)
+      path: relativePath(selectedComponent, unit)
     }))
   );
 
@@ -1037,7 +1037,7 @@
 
   // The segments of the breadcrumb above the code: the folders and the file of the open unit
   const breadcrumbPath = $derived(
-    openedUnit ? relativePath(openedUnit, selectedComponent?.topLevel).split('/') : []
+    openedUnit ? relativePath(selectedComponent, openedUnit).split('/') : []
   );
 
   // The first visible line of the open file
