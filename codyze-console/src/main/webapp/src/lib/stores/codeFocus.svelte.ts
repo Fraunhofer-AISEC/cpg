@@ -66,8 +66,8 @@ export class CodeFocus {
   historyIndex = $state(-1);
 
   /**
-   * The dataflow path the user followed, from the source to the sink, like the code-flow steps of
-   * CodeQL. It is built by following dataflows hop by hop (in the inspector or along the arcs in
+   * The dataflow path the user followed, from the source to the sink. It is built by following
+   * dataflows hop by hop (in the inspector or along the arcs in
    * the code) and stays until it is cleared, so the user can step through it
    */
   path = $state.raw<NodeRefJSON[]>([]);
@@ -80,7 +80,28 @@ export class CodeFocus {
    */
   thread = $state.raw<ThreadNode[]>([]);
 
+  /**
+   * The path and the thread share the lane of the steps in the code and the bar above it, so only
+   * one of them is shown: the one the user turned to last
+   */
+  showing = $state<'path' | 'thread'>('thread');
+
+  /** The step of the thread the user points at (e.g. in the timeline), whose nodes stand out */
+  highlightedStep = $state<number | null>(null);
+
   private request = 0;
+
+  /**
+   * The sequence of steps that is shown: the one the user turned to last, or else the other one if
+   * only that exists. [threadVisible] is false while the agent's evidence is hidden
+   */
+  sequence(threadVisible: boolean): 'path' | 'thread' | null {
+    const hasPath = this.path.length >= 2;
+    const hasThread = threadVisible && this.thread.length > 0;
+    if (this.showing === 'path' && hasPath) return 'path';
+    if (hasThread) return 'thread';
+    return hasPath ? 'path' : null;
+  }
 
   get canGoBack(): boolean {
     return this.historyIndex > 0;
@@ -178,6 +199,15 @@ export class CodeFocus {
     const end = path.findIndex((step, i) => path.findIndex((s) => s.id === step.id) < i);
     if (end >= 0) path = path.slice(0, end);
     this.path = path.slice(0, maxPathSteps);
+    this.showing = 'path';
+  }
+
+  /** Shows the given nodes as the path, e.g. a dataflow a tool of the agent returned. */
+  setPath(path: NodeRefJSON[]) {
+    const unique = path.filter((step, i) => path.findIndex((s) => s.id === step.id) === i);
+    this.path = unique.slice(0, maxPathSteps);
+    this.pathIndex = this.path.findIndex((step) => step.id === this.details?.node.id);
+    this.showing = 'path';
   }
 
   /**
@@ -194,6 +224,7 @@ export class CodeFocus {
   clearPath() {
     this.path = [];
     this.pathIndex = -1;
+    this.showing = 'thread';
   }
 
   /** Marks the analysis result as changed, see [revision]. */
