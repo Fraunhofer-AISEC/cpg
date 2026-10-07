@@ -16,6 +16,64 @@ export function extractCitations(text: string): string[] {
 }
 
 /**
+ * Paths through the graph in the result of a tool call (the format `NodePaths` of the tools that
+ * find paths): what they follow, what they show, and the node IDs of each path in the direction of
+ * the flow.
+ */
+export interface ToolPaths {
+  kind: string;
+  description: string;
+  paths: string[][];
+  truncated: boolean;
+}
+
+function asToolPaths(value: unknown): ToolPaths | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.kind !== 'string' || !Array.isArray(v.paths)) return null;
+  const paths = v.paths
+    .filter(Array.isArray)
+    .map((path) =>
+      (path as unknown[]).flatMap((n) =>
+        n && typeof n === 'object' && typeof (n as { nodeId?: unknown }).nodeId === 'string'
+          ? [(n as { nodeId: string }).nodeId]
+          : []
+      )
+    )
+    .filter((path) => path.length > 0);
+  if (paths.length === 0) return null;
+  return {
+    kind: v.kind,
+    description: typeof v.description === 'string' ? v.description : v.kind,
+    paths,
+    truncated: v.truncated === true
+  };
+}
+
+/**
+ * The paths in the result of a tool call, if it returned paths. The result may be the JSON as text,
+ * parsed, or the text contents of the tool.
+ */
+export function extractToolPaths(content: unknown): ToolPaths | null {
+  if (typeof content === 'string') {
+    try {
+      return asToolPaths(JSON.parse(content));
+    } catch {
+      return null;
+    }
+  }
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      const text = (part as { text?: unknown })?.text;
+      const paths = typeof text === 'string' ? extractToolPaths(text) : null;
+      if (paths) return paths;
+    }
+    return null;
+  }
+  return asToolPaths(content);
+}
+
+/**
  * The IDs of the nodes in the result of a tool call, in the order of their first occurrence. Tool
  * results have no common format, so every UUID in them is taken; IDs that are no nodes are dropped
  * when they are resolved.
