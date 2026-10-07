@@ -28,17 +28,19 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodePaths
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
+import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 
-class CpgDfgBackwardToolTest {
+class CpgDfgPathsToolTest {
     @BeforeEach
     fun setAnalysisResult() {
         val payload =
@@ -50,32 +52,43 @@ class CpgDfgBackwardToolTest {
     }
 
     @Test
-    fun dfgBackwardToolTest() =
+    fun dfgPathsToolTest() =
         withClient(
             registerTools = {
                 listCalls()
                 addDfgBackwardTool()
+                addDfgForwardTool()
             }
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertNotNull(callsResult)
-            assertTrue(callsResult.content.isNotEmpty())
-
             val callInfo =
                 Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
 
-            val result =
-                client.callTool(
-                    name = "cpg_dfg_backward",
-                    arguments = mapOf("id" to callInfo.nodeId),
-                )
-            assertNotNull(result)
-            assertTrue(result.content.isNotEmpty())
+            // print(foo) gets its value from bar, through foo
+            val backward = callTool(client, "cpg_dfg_backward", callInfo.nodeId)
+            assertEquals("dataflow", backward.kind)
+            assertEquals(callInfo.nodeId, backward.start.nodeId)
+            assertTrue(backward.paths.isNotEmpty(), "no paths")
+            for (path in backward.paths) {
+                assertEquals(callInfo.nodeId, path.last().nodeId, "a path ends at the call")
+            }
+            assertTrue(backward.paths.any { path -> path.any { it.name == "bar" } })
 
-            val content = result.content.single()
-            assertIs<TextContent>(content)
-
-            val nodes = Json.decodeFromString<List<NodeInfo>>(content.text)
-            assertTrue(nodes.isNotEmpty())
+            // The value of bar flows to the call, so the path starts at bar
+            val bar = backward.paths.flatten().first { it.name == "bar" }
+            val forward = callTool(client, "cpg_dfg_forward", bar.nodeId)
+            for (path in forward.paths) {
+                assertEquals(bar.nodeId, path.first().nodeId, "a path starts at bar")
+            }
+            assertTrue(forward.paths.any { path -> path.any { it.nodeId == callInfo.nodeId } })
         }
+
+    private suspend fun callTool(client: Client, name: String, id: String): NodePaths {
+        val result = client.callTool(name = name, arguments = mapOf("id" to id))
+        assertNotNull(result)
+        val content = result.content.single()
+        assertIs<TextContent>(content)
+        return Json.decodeFromString<NodePaths>(content.text)
+    }
 }
