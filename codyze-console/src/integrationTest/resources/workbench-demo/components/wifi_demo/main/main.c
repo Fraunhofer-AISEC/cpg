@@ -1,7 +1,7 @@
-#include "config.h"
-#include "crypto.h"
-#include "log.h"
-#include "net.h"
+#include "../include/config.h"
+#include "../include/crypto.h"
+#include "../include/log.h"
+#include "../include/net.h"
 
 static int sock;
 

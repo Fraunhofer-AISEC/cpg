@@ -45,8 +45,8 @@ import kotlinx.serialization.json.Json
  * for it.
  */
 class WorkbenchDemoIntegrationTest {
-    private val demoDir = "src/integrationTest/resources/workbench-demo/components/wifi_demo/main"
-    private val mainLines = File("$demoDir/main.c").readLines()
+    private val demoDir = "src/integrationTest/resources/workbench-demo/components/wifi_demo"
+    private val mainLines = File("$demoDir/main/main.c").readLines()
 
     /** The 1-based line and column of the first occurrence of [text] in main.c. */
     private fun positionOf(text: String): Pair<Int, Int> {
