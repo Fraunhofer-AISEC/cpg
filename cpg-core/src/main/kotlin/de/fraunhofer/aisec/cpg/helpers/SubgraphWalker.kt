@@ -613,32 +613,30 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
                     }
                     else -> false
                 }
+            // Setting the input of these nodes already propagates their access value to the new
+            // input (see exchangeTypeObserverWithAccessPropagation), so we do not need to do it
+            // here
             is UnaryOperator ->
                 if (parent.input == old) {
                     parent.input = new
-                    parent.input.access = parent.access
                     true
                 } else {
                     false
                 }
-            is PointerDereference -> {
+            is PointerDereference ->
                 if (parent.input == old) {
                     parent.input = new
-                    parent.input.access = parent.access
                     true
                 } else {
                     false
                 }
-            }
-            is PointerReference -> {
+            is PointerReference ->
                 if (parent.input == old) {
                     parent.input = new
-                    parent.input.access = parent.access
                     true
                 } else {
                     false
                 }
-            }
             is While -> {
                 parent.condition = new
                 true
