@@ -1,5 +1,5 @@
 import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api';
-import type { PdgEdge, PdgSlice } from '$lib/pdg';
+import type { GraphEdge, GraphSlice } from '$lib/graph';
 
 /** The size of the card of a statement, which the layout reserves space for. */
 export const cardWidth = 156;
@@ -23,7 +23,7 @@ export interface SliceLayout {
 }
 
 /** Identifies an edge of a slice. */
-export function edgeKey(e: PdgEdge): string {
+export function edgeKey(e: GraphEdge): string {
   return `${e.from}>${e.to}:${e.kind}:${e.label ?? ''}`;
 }
 
@@ -37,7 +37,7 @@ export function labelSize(label: string): { width: number; height: number } {
  * on it: the causes of a backward slice end up above its root. Edges are routed orthogonally
  * around the cards, with their labels on them. ELK is only loaded when the first slice is shown.
  */
-export async function layoutSlice(slice: PdgSlice): Promise<SliceLayout> {
+export async function layoutSlice(slice: GraphSlice): Promise<SliceLayout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js');
   const elk = new ELK();
   const keyed = slice.edges.map((e, i) => ({ edge: e, id: `e${i}` }));

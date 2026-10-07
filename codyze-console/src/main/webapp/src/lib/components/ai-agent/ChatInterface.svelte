@@ -22,27 +22,28 @@
     extractCitations,
     extractNodeIds,
     extractToolPaths,
-    resolveNodes,
-    type ToolPaths
+    pathNodeIds,
+    resolveNodes
   } from '$lib/agentEvidence';
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
-  import { PdgPanel } from '$lib/stores/pdgPanel.svelte';
+  import { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import {
-    clearPdgCache,
+    clearGraphCache,
     getPathsGraph,
-    getPdgCounts,
-    type PdgCounts,
-    type PdgNode
-  } from '$lib/pdg';
-  import PdgPanelView from '$lib/components/analysis/pdg/PdgPanel.svelte';
+    getSliceCounts,
+    type SliceCounts,
+    type GraphNode
+  } from '$lib/graph';
+  import GraphPanelView from '$lib/components/analysis/graph/GraphPanel.svelte';
   import CodeContextMenu, {
     type ContextMenuItem
   } from '$lib/components/analysis/CodeContextMenu.svelte';
   import { getConceptCounts } from '$lib/annotations';
   import type {
     NodeJSON,
+    NodePathsJSON,
     AnalysisResultJSON,
     TranslationUnitJSON,
     ChatMessage,
@@ -285,7 +286,7 @@
       return;
     }
     if (isTyping(event)) return;
-    if (event.key === 'Escape' && !pdg.open) {
+    if (event.key === 'Escape' && !graph.open) {
       // Deselects, unless something else used the key (e.g. closing a popup). That is only known
       // once all listeners have run
       setTimeout(() => {
@@ -424,25 +425,25 @@
         run: () => layers.toggle(layer.id)
       })),
       {
-        id: 'pdg-backward',
+        id: 'graph-backward',
         category: 'Graph',
-        label: `PDG: What affects this?${pdgPreview(pdgCounts?.backward)}`,
-        disabledReason: noSelection ?? pdgDisabledReason(pdgCounts?.backward),
-        run: () => details && pdg.show(details.node.id, 'BACKWARD')
+        label: `PDG: What affects this?${slicePreview(sliceCounts?.backward)}`,
+        disabledReason: noSelection ?? graphDisabledReason(sliceCounts?.backward),
+        run: () => details && graph.show(details.node.id, 'BACKWARD', undefined, undefined, 'PDG')
       },
       {
-        id: 'pdg-forward',
+        id: 'graph-forward',
         category: 'Graph',
-        label: `PDG: What does this affect?${pdgPreview(pdgCounts?.forward)}`,
-        disabledReason: noSelection ?? pdgDisabledReason(pdgCounts?.forward),
-        run: () => details && pdg.show(details.node.id, 'FORWARD')
+        label: `PDG: What does this affect?${slicePreview(sliceCounts?.forward)}`,
+        disabledReason: noSelection ?? graphDisabledReason(sliceCounts?.forward),
+        run: () => details && graph.show(details.node.id, 'FORWARD', undefined, undefined, 'PDG')
       },
       {
-        id: 'pdg-close',
+        id: 'graph-close',
         category: 'Graph',
         label: 'Close the dependence graph',
-        disabledReason: pdg.open ? undefined : 'No graph is shown',
-        run: () => pdg.close()
+        disabledReason: graph.open ? undefined : 'No graph is shown',
+        run: () => graph.close()
       },
       {
         id: 'path-next',
@@ -554,18 +555,18 @@
     // The applied concepts change the details of the nodes they are attached to, the annotations
     // and the counts in the file tree
     clearNodeDetailsCache();
-    clearPdgCache();
+    clearGraphCache();
     focus.invalidate();
   }
 
   // The dependence graph of a statement, shown next to the code
-  const pdg = new PdgPanel();
-  const pdgWidthKey = 'codyze-agent-pdg-width';
-  let pdgWidth = $state(loadPdgWidth());
+  const graph = new GraphPanel();
+  const graphWidthKey = 'codyze-agent-graph-width';
+  let graphWidth = $state(loadGraphWidth());
 
-  function loadPdgWidth(): number {
+  function loadGraphWidth(): number {
     try {
-      const stored = Number(localStorage.getItem(pdgWidthKey));
+      const stored = Number(localStorage.getItem(graphWidthKey));
       if (stored >= 360) return stored;
     } catch {
       // Storage is not available, e.g. during SSR or in a private window
@@ -573,20 +574,20 @@
     return 540;
   }
 
-  function startPdgResize(event: PointerEvent) {
+  function startGraphResize(event: PointerEvent) {
     event.preventDefault();
     const startX = event.clientX;
-    const startWidth = pdgWidth;
+    const startWidth = graphWidth;
     const move = (e: PointerEvent) => {
       const max = Math.max(400, window.innerWidth * 0.6);
-      pdgWidth = Math.round(Math.min(max, Math.max(360, startWidth + startX - e.clientX)));
+      graphWidth = Math.round(Math.min(max, Math.max(360, startWidth + startX - e.clientX)));
     };
     const stop = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', stop);
       document.body.style.removeProperty('cursor');
       try {
-        localStorage.setItem(pdgWidthKey, String(pdgWidth));
+        localStorage.setItem(graphWidthKey, String(graphWidth));
       } catch {
         // Not remembering the width is fine
       }
@@ -599,7 +600,7 @@
   // The graph needs room, so the file tree makes way for it while it is shown
   let sidebarHiddenByGraph = false;
   $effect(() => {
-    const open = pdg.open;
+    const open = graph.open;
     untrack(() => {
       if (open && sidebarOpen) {
         sidebarOpen = false;
@@ -612,21 +613,21 @@
   });
 
   // How many statements are in the slices of the inspected node, to preview them in the commands
-  let pdgCounts = $state.raw<PdgCounts | null>(null);
+  let sliceCounts = $state.raw<SliceCounts | null>(null);
   $effect(() => {
     const id = focus.details?.node.id;
     void focus.revision;
-    const hops = pdg.hops;
-    pdgCounts = null;
+    const hops = graph.hops;
+    sliceCounts = null;
     if (!id) return;
-    getPdgCounts(id, hops)
+    getSliceCounts(id, hops)
       .then((counts) => {
-        if (id === focus.details?.node.id) pdgCounts = counts;
+        if (id === focus.details?.node.id) sliceCounts = counts;
       })
       .catch(() => {});
   });
 
-  function pdgPreview(count: number | undefined): string {
+  function slicePreview(count: number | undefined): string {
     return count === undefined
       ? ''
       : count > 0
@@ -634,14 +635,14 @@
         : '';
   }
 
-  function pdgDisabledReason(count: number | undefined): string | undefined {
+  function graphDisabledReason(count: number | undefined): string | undefined {
     return count === 0 ? 'None in this function' : undefined;
   }
 
   // The statement of the slice a node belongs to: the statement itself, or the innermost one that
   // contains the start of the node
-  function sliceNodeFor(node: NodeRefJSON): PdgNode | null {
-    const nodes = pdg.slice?.nodes ?? [];
+  function sliceNodeFor(node: NodeRefJSON): GraphNode | null {
+    const nodes = graph.slice?.nodes ?? [];
     const exact = nodes.find((n) => n.id === node.id);
     if (exact || node.startLine < 1) return exact ?? null;
     return (
@@ -662,30 +663,30 @@
   $effect(() => {
     const details = focus.details;
     untrack(() => {
-      if (!pdg.open || !details) return;
+      if (!graph.open || !details) return;
       const hit = sliceNodeFor(details.node);
       if (hit) {
-        if (pdg.selectedId !== hit.id) pdg.select(hit.id);
+        if (graph.selectedId !== hit.id) graph.select(hit.id);
         return;
       }
       // Functions and nodes outside of functions have no slice of their own
       const fn = details.enclosingFunction;
       // Paths stay as they are, like a pinned slice
-      if (pdg.pinned || pdg.paths || !fn || fn.id === details.node.id) return;
-      pdg.show(details.node.id, pdg.direction, pdg.hops);
+      if (graph.pinned || graph.paths || !fn || fn.id === details.node.id) return;
+      graph.show(details.node.id, graph.direction, graph.hops);
     });
   });
 
   // Clicking a statement in the graph inspects it, which shows it in the code
-  function selectPdgNode(node: PdgNode) {
+  function selectGraphNode(node: GraphNode) {
     if (node.kind === 'STUB') return;
     if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
     focus.inspect(() => getNodeDetails(node.id), true);
   }
 
   // The statements of the slice in the open file, shown as tinted lines in the code
-  const pdgSlice = $derived.by(() => {
-    const slice = pdg.open ? pdg.slice : null;
+  const graphSlice = $derived.by(() => {
+    const slice = graph.open ? graph.slice : null;
     const unit = openedUnit;
     if (!slice || !unit) return undefined;
     return {
@@ -699,9 +700,9 @@
           last: n.endLine,
           label: `Dependence graph: ${n.code}`
         })),
-      selectedId: pdg.selectedId,
-      hoveredId: pdg.hoveredId,
-      onHover: (id: string | null) => (pdg.hoveredId = id)
+      selectedId: graph.selectedId,
+      hoveredId: graph.hoveredId,
+      onHover: (id: string | null) => (graph.hoveredId = id)
     };
   });
 
@@ -710,12 +711,12 @@
     details: NodeDetailsJSON;
     x: number;
     y: number;
-    counts: PdgCounts | null;
+    counts: SliceCounts | null;
   } | null>(null);
 
   function openCodeMenu(target: { details: NodeDetailsJSON; x: number; y: number }) {
     codeMenu = { ...target, counts: null };
-    getPdgCounts(target.details.node.id, pdg.hops)
+    getSliceCounts(target.details.node.id, graph.hops)
       .then((counts) => {
         if (codeMenu?.details === target.details) codeMenu = { ...codeMenu, counts };
       })
@@ -744,13 +745,13 @@
         label: 'PDG: What affects this?',
         hint: size(counts?.backward),
         disabledReason: none(counts?.backward),
-        run: () => pdg.show(details.node.id, 'BACKWARD')
+        run: () => graph.show(details.node.id, 'BACKWARD', undefined, undefined, 'PDG')
       },
       {
         label: 'PDG: What does this affect?',
         hint: size(counts?.forward),
         disabledReason: none(counts?.forward),
-        run: () => pdg.show(details.node.id, 'FORWARD')
+        run: () => graph.show(details.node.id, 'FORWARD', undefined, undefined, 'PDG')
       },
       {
         label: 'Show callers',
@@ -777,7 +778,7 @@
     ];
   });
 
-  function askAboutPdgNode(node: NodeRefJSON) {
+  function askAboutGraphNode(node: NodeRefJSON) {
     showAgent();
     onMessageChange(
       `How does ${describeNode(node)} depend on the rest of its function? Look at its data and control dependences: what affects it, and what does it affect?`
@@ -931,23 +932,24 @@
 
   // Shows paths a tool returned: a single path as the path in the code, several ones as a graph next
   // to the code
-  async function showToolPaths(toolPaths: ToolPaths) {
+  async function showToolPaths(toolPaths: NodePathsJSON) {
     if (toolPaths.paths.length === 1) {
-      const refs = await resolveNodes(toolPaths.paths[0]);
-      const path = toolPaths.paths[0].flatMap((id) => refs.get(id) ?? []);
+      const ids = pathNodeIds(toolPaths)[0];
+      const refs = await resolveNodes(ids);
+      const path = ids.flatMap((id) => refs.get(id) ?? []);
       if (path.length < 2) return;
       focus.setPath(path);
       revealFromAgent(path[0].id);
       return;
     }
-    const graph = await getPathsGraph(toolPaths.kind, toolPaths.paths).catch(() => null);
-    if (!graph || graph.nodes.length === 0) return;
-    pdg.showPaths(
+    const pathsGraph = await getPathsGraph(toolPaths).catch(() => null);
+    if (!pathsGraph || pathsGraph.nodes.length === 0) return;
+    graph.showPaths(
       { description: toolPaths.description, kind: toolPaths.kind, count: toolPaths.paths.length },
-      graph
+      pathsGraph
     );
-    // The graph is shown next to the code, at the end of the paths
-    const end = graph.nodes.find((n) => n.id === graph.root);
+    // The pathsGraph is shown next to the code, at the end of the paths
+    const end = pathsGraph.nodes.find((n) => n.id === pathsGraph.root);
     if (end) revealFromAgent(end.node.id);
   }
 
@@ -1719,27 +1721,27 @@
           onAsk={askAboutSelection}
           {askDisabledReason}
           {askRequest}
-          slice={pdgSlice}
+          slice={graphSlice}
           onCodeContextMenu={openCodeMenu}
         >
           {#snippet layerActions()}
             {@const details = focus.details}
             <button
               type="button"
-              class="h-6 rounded-md border px-2.5 text-[11.5px] disabled:text-gray-300 {pdg.open
+              class="h-6 rounded-md border px-2.5 text-[11.5px] disabled:text-gray-300 {graph.open
                 ? 'border-blue-200 bg-blue-50 text-blue-700'
                 : 'border-gray-200 text-gray-500 hover:text-gray-800'}"
-              aria-pressed={pdg.open}
-              disabled={!pdg.open && !details}
-              title={pdg.open
+              aria-pressed={graph.open}
+              disabled={!graph.open && !details}
+              title={graph.open
                 ? 'Close the dependence graph (Esc)'
                 : details
-                  ? 'Show what affects the selected node in the program dependence graph'
+                  ? `Show what affects the selected node in the dependence graph (${graph.graph})`
                   : 'Select a node first'}
               onclick={() =>
-                pdg.open ? pdg.close() : details && pdg.show(details.node.id, 'BACKWARD')}
+                graph.open ? graph.close() : details && graph.show(details.node.id, 'BACKWARD')}
             >
-              PDG
+              Graph
             </button>
           {/snippet}
           {#snippet headerStart()}
@@ -1760,19 +1762,19 @@
   </div>
 
   <!-- The dependence graph, which narrows the code -->
-  {#if pdg.open && openedUnit}
+  {#if graph.open && openedUnit}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="w-1 shrink-0 cursor-col-resize border-l border-gray-200 hover:bg-blue-200"
-      onpointerdown={startPdgResize}
+      onpointerdown={startGraphResize}
       title="Drag to resize"
     ></div>
-    <div class="min-h-0 min-w-[18.75rem]" style:flex="0 1 {pdgWidth}px">
-      <PdgPanelView
-        panel={pdg}
+    <div class="min-h-0 min-w-[18.75rem]" style:flex="0 1 {graphWidth}px">
+      <GraphPanelView
+        panel={graph}
         onInspect={selectRef}
-        onAsk={askAboutPdgNode}
-        onSelectNode={selectPdgNode}
+        onAsk={askAboutGraphNode}
+        onSelectNode={selectGraphNode}
       />
     </div>
   {/if}
