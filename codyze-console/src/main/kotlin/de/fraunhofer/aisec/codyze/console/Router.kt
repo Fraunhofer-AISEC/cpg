@@ -72,9 +72,12 @@ import kotlinx.serialization.json.JsonObject
  *   the innermost node containing the whole range.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
  *   analysis warnings).
- * - GET `/api/node/{id}/pdg|dfg|cdg?direction=backward|forward&hops=1..3`: Retrieves the slice of
- *   the program dependence graph around the statement of the node, limited to its function.
- * - GET `/api/node/{id}/pdg-counts?hops=1..3`: Retrieves the size of the slice in each direction.
+ * - GET
+ *   `/api/node/{id}/pdg|dfg|cdg?direction=backward|forward&hops=1..3&scope=interprocedural|intraprocedural`:
+ *   Retrieves the slice of the program dependence graph (or of its data or control dependences)
+ *   around the statement of the node, interprocedural (the default) or intraprocedural.
+ * - GET `/api/node/{id}/pdg-counts?hops=1..3&scope=interprocedural|intraprocedural`: Retrieves the
+ *   size of the slice in each direction.
  * - POST `/api/graph/from-paths`: Retrieves the paths a tool found (e.g. dataflows found by the
  *   agent) as a graph of their statements in the format of a PDG slice.
  * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
@@ -306,7 +309,10 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                         else -> return@get call.respond(HttpStatusCode.BadRequest)
                     }
                 val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
-                val slice = service.getSlice(id, direction, hops, graph)
+                val interprocedural =
+                    interproceduralScope(call.parameters["scope"])
+                        ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val slice = service.getSlice(id, direction, hops, graph, interprocedural)
                 if (slice != null) {
                     call.respond(slice)
                 } else {
@@ -319,7 +325,10 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
         get("/node/{id}/pdg-counts") {
             val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
             val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
-            val counts = service.getSliceCounts(id, hops)
+            val interprocedural =
+                interproceduralScope(call.parameters["scope"])
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val counts = service.getSliceCounts(id, hops, interprocedural)
             if (counts != null) {
                 call.respond(counts)
             } else {
@@ -531,3 +540,14 @@ fun KClass<*>.getConstructorArguments(): ConceptInfo {
         } ?: listOf(),
     )
 }
+
+/**
+ * Whether the `scope` parameter of a slice asks for an interprocedural one, null if it is invalid.
+ */
+private fun interproceduralScope(scope: String?): Boolean? =
+    when (scope?.lowercase()) {
+        null,
+        "interprocedural" -> true
+        "intraprocedural" -> false
+        else -> null
+    }
