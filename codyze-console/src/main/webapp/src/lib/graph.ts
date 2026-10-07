@@ -12,6 +12,9 @@ export type GraphDirection = 'BACKWARD' | 'FORWARD';
  * dependences (the dataflow) or only the control dependences.
  */
 export type DependenceGraph = 'PDG' | 'DFG' | 'CDG';
+
+/** Whether a slice follows dependences into other functions (interprocedural) or not. */
+export type SliceScope = 'interprocedural' | 'intraprocedural';
 export type GraphNodeKind = 'STATEMENT' | 'BRANCH' | 'STUB';
 
 export interface GraphNode {
@@ -67,18 +70,19 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   return res.json();
 }
 
-/** The slice around the statement of a node in the given graph, limited to its function. */
+/** The slice around the statement of a node in the given graph. */
 export function getGraphSlice(
   nodeId: string,
   graph: DependenceGraph,
   direction: GraphDirection,
-  hops: number
+  hops: number,
+  scope: SliceScope = 'interprocedural'
 ): Promise<GraphSlice | null> {
-  const key = `${nodeId}/${graph}/${direction}/${hops}`;
+  const key = `${nodeId}/${graph}/${direction}/${hops}/${scope}`;
   let request = sliceCache.get(key);
   if (!request) {
     request = fetchJson<GraphSlice>(
-      `/api/node/${nodeId}/${graph.toLowerCase()}?direction=${direction.toLowerCase()}&hops=${hops}`
+      `/api/node/${nodeId}/${graph.toLowerCase()}?direction=${direction.toLowerCase()}&hops=${hops}&scope=${scope}`
     );
     request.catch(() => sliceCache.delete(key));
     sliceCache.set(key, request);
@@ -145,12 +149,17 @@ export function locationOf(node: GraphNode): string {
 
 /**
  * The dependences of a statement in words, e.g. `Data ← lines 10, 12 (buf) · line 14 (len)`.
- * Lines of the function are given by their number, others by their file.
+ * Lines of the file of the root are given by their number, others by their file.
  */
 export function describeDependences(slice: GraphSlice, id: string): string {
   const byId = new Map(slice.nodes.map((n) => [n.id, n]));
+  const rootFile = byId.get(slice.root)?.node.fileName;
   const where = (n: GraphNode) =>
-    n.kind === 'STUB' ? locationOf(n) : n.startLine > 0 ? `${n.startLine}` : '?';
+    n.kind === 'STUB' || n.node.fileName !== rootFile
+      ? locationOf(n)
+      : n.startLine > 0
+        ? `${n.startLine}`
+        : '?';
 
   // Groups the statements by what the dependence is on, e.g. the variable
   const group = (edges: GraphEdge[], end: 'from' | 'to') => {

@@ -738,7 +738,7 @@
         : count > 0
           ? `${count} ${count === 1 ? 'node' : 'nodes'}`
           : undefined;
-    const none = (count: number | undefined) => (count === 0 ? 'none in this function' : undefined);
+    const none = (count: number | undefined) => (count === 0 ? 'none' : undefined);
     const hasCallees = details.callTargets.length > 0 || details.callees.length > 0;
     return [
       {
