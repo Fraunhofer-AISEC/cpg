@@ -2,10 +2,24 @@
 
 A small WiFi application in C to try the features of the console on the agent page. Start it with the
 run configuration **Codyze Compliance Scan (with Console and Workbench Demo)** (or
-`compliance scan --project-dir codyze-compliance/src/integrationTest/resources/workbench-demo --components wifi_demo --console=true`)
+`compliance scan --project-dir codyze-console/examples/workbench-demo --components wifi_demo --console=true`)
 and open <http://localhost:8080/chat>.
 
 The frontend for C has to be enabled (`enableCXXFrontend=true` in `gradle.properties`).
+
+## A model for the agent
+
+The agent needs an LLM provider. Copy `cpg-ai/src/main/resources/application.conf.example` to
+`application.conf` (next to it) and keep one client, e.g. a local model with
+[Ollama](https://ollama.com):
+
+```
+llm { clients { ollama { baseUrl = "http://localhost:11434" } } }
+```
+
+and `ollama pull qwen2.5:7b` (or another model with tool calling). Models of this size follow
+simple questions; for the citations of nodes and longer chains of tool calls a larger model is more
+reliable. Everything except the agent (code, layers, PDG, ...) works without a model.
 
 ## What is in the code
 

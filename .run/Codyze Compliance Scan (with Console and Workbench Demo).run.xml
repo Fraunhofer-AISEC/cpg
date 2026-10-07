@@ -2,7 +2,7 @@
   <configuration default="false" name="Codyze Compliance Scan (with Console and Workbench Demo)" type="JetRunConfigurationType">
     <option name="MAIN_CLASS_NAME" value="de.fraunhofer.aisec.codyze.ApplicationKt" />
     <module name="cpg.codyze.main" />
-    <option name="PROGRAM_PARAMETERS" value="compliance scan --project-dir codyze-compliance/src/integrationTest/resources/workbench-demo --components wifi_demo --console=true" />
+    <option name="PROGRAM_PARAMETERS" value="compliance scan --project-dir codyze-console/examples/workbench-demo --components wifi_demo --console=true" />
     <shortenClasspath name="NONE" />
     <method v="2">
       <option name="Make" enabled="true" />
