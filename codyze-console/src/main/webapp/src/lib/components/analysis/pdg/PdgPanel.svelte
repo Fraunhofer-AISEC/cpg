@@ -86,6 +86,7 @@
   // Escape closes the panel, unless something else (e.g. an input or a popup) used it
   function handleKeydown(event: KeyboardEvent) {
     if (event.key !== 'Escape' || event.defaultPrevented || isTyping(event)) return;
+    event.preventDefault();
     panel.close();
   }
 
