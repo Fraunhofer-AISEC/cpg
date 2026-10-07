@@ -21,13 +21,21 @@
     citationLabel,
     extractCitations,
     extractNodeIds,
-    resolveNodes
+    extractToolPaths,
+    resolveNodes,
+    type ToolPaths
   } from '$lib/agentEvidence';
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { PdgPanel } from '$lib/stores/pdgPanel.svelte';
-  import { clearPdgCache, getPdgCounts, type PdgCounts, type PdgNode } from '$lib/pdg';
+  import {
+    clearPdgCache,
+    getPathsGraph,
+    getPdgCounts,
+    type PdgCounts,
+    type PdgNode
+  } from '$lib/pdg';
   import PdgPanelView from '$lib/components/analysis/pdg/PdgPanel.svelte';
   import CodeContextMenu, {
     type ContextMenuItem
@@ -662,7 +670,8 @@
       }
       // Functions and nodes outside of functions have no slice of their own
       const fn = details.enclosingFunction;
-      if (pdg.pinned || !fn || fn.id === details.node.id) return;
+      // Paths stay as they are, like a pinned slice
+      if (pdg.pinned || pdg.paths || !fn || fn.id === details.node.id) return;
       pdg.show(details.node.id, pdg.direction, pdg.hops);
     });
   });
@@ -918,6 +927,45 @@
         ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
         : [];
     });
+  });
+
+  // Shows paths a tool returned: a single path as the path in the code, several ones as a graph next
+  // to the code
+  async function showToolPaths(toolPaths: ToolPaths) {
+    if (toolPaths.paths.length === 1) {
+      const refs = await resolveNodes(toolPaths.paths[0]);
+      const path = toolPaths.paths[0].flatMap((id) => refs.get(id) ?? []);
+      if (path.length < 2) return;
+      focus.setPath(path);
+      revealFromAgent(path[0].id);
+      return;
+    }
+    const graph = await getPathsGraph(toolPaths.kind, toolPaths.paths).catch(() => null);
+    if (!graph || graph.nodes.length === 0) return;
+    pdg.showPaths(
+      { description: toolPaths.description, kind: toolPaths.kind, count: toolPaths.paths.length },
+      graph
+    );
+    // The graph is shown next to the code, at the end of the paths
+    const end = graph.nodes.find((n) => n.id === graph.root);
+    if (end) revealFromAgent(end.node.id);
+  }
+
+  // Once the agent has answered, the last paths a tool of the question found are shown
+  let wasLoading = false;
+  $effect(() => {
+    const loading = isLoading;
+    if (wasLoading && !loading) {
+      untrack(() => {
+        const block = timeline[timeline.length - 1];
+        const entry = block?.entries.findLast((e) =>
+          extractToolPaths(e.message.toolResult?.content)
+        );
+        const toolPaths = entry && extractToolPaths(entry.message.toolResult?.content);
+        if (toolPaths) showToolPaths(toolPaths);
+      });
+    }
+    wasLoading = loading;
   });
 
   // The steps shown in the code and in the bar above it: the path or the agent's thread
@@ -1906,8 +1954,10 @@
                     {@const nodes = stepNodes(
                       evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
                     )}
+                    {@const toolPaths = extractToolPaths(message.toolResult.content)}
                     <ToolStep
                       toolResult={message.toolResult}
+                      paths={toolPaths}
                       step={entry.step ?? 0}
                       {nodes}
                       selectedId={focus.details?.node.id}
@@ -1915,7 +1965,8 @@
                       onActivate={() => {
                         chosenBlock = b;
                         focus.showing = 'thread';
-                        if (nodes[0]) revealFromAgent(nodes[0].id);
+                        if (toolPaths) showToolPaths(toolPaths);
+                        else if (nodes[0]) revealFromAgent(nodes[0].id);
                       }}
                       onHover={(hovered) => {
                         // Only the steps of the thread in the code can stand out there

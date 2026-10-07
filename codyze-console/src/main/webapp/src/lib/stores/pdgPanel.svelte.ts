@@ -8,12 +8,24 @@ interface PdgView {
   selectedId: string | null;
 }
 
+/** Paths through the graph that the panel shows instead of a slice, e.g. found by the agent. */
+export interface PdgPaths {
+  /** What the paths show, e.g. "where the value of `key` comes from" */
+  description: string;
+  kind: string;
+  count: number;
+}
+
 /**
  * The state of the PDG panel: which slice is shown, what is selected in it and where to go back
- * to. The slice is loaded from the backend whenever its root, direction or hops change.
+ * to. The slice is loaded from the backend whenever its root, direction or hops change. Instead of
+ * a slice, the panel can show the statements of paths (see [showPaths]), which do not change with
+ * the hops or the inspected node.
  */
 export class PdgPanel {
   open = $state(false);
+  /** The paths shown instead of a slice, or null while a slice is shown */
+  paths = $state.raw<PdgPaths | null>(null);
   direction = $state<PdgDirection>('BACKWARD');
   hops = $state(2);
   slice = $state.raw<PdgSlice | null>(null);
@@ -50,7 +62,7 @@ export class PdgPanel {
   }
 
   private remember() {
-    if (!this.nodeId) return;
+    if (!this.nodeId || this.paths) return;
     const view = {
       nodeId: this.nodeId,
       direction: this.direction,
@@ -58,6 +70,18 @@ export class PdgPanel {
       selectedId: this.selectedId
     };
     this.history = [...this.history.slice(-19), view];
+  }
+
+  /** Shows the statements of paths, given as a graph in the format of a slice. */
+  showPaths(paths: PdgPaths, graph: PdgSlice) {
+    if (this.open && this.slice && !this.paths) this.remember();
+    this.request++;
+    this.open = true;
+    this.loading = false;
+    this.error = null;
+    this.paths = paths;
+    this.slice = graph;
+    this.selectedId = graph.root || null;
   }
 
   private async load(
@@ -68,6 +92,7 @@ export class PdgPanel {
   ) {
     const request = ++this.request;
     this.open = true;
+    this.paths = null;
     this.loading = true;
     this.error = null;
     try {
@@ -92,7 +117,7 @@ export class PdgPanel {
 
   /** Changes how far the slice reaches, keeping what is selected. */
   setHops(hops: number) {
-    if (!this.nodeId || hops === this.hops) return;
+    if (!this.nodeId || this.paths || hops === this.hops) return;
     this.load(this.nodeId, this.direction, hops, this.selectedId);
   }
 
@@ -127,5 +152,6 @@ export class PdgPanel {
     this.loading = false;
     this.hoveredId = null;
     this.history = [];
+    this.paths = null;
   }
 }
