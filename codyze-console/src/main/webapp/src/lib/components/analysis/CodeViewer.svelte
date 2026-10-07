@@ -792,9 +792,9 @@
   // svelte-ignore state_referenced_locally
   const markerLaneWidth = lanes ? 1.25 : 0.5;
   const glyphLaneLeft = 0.1;
-  const glyphLaneWidth = 1;
+  const glyphLaneWidth = 0.75;
   // svelte-ignore state_referenced_locally
-  const gutterPadding = lanes ? 2.5 : 1.25;
+  const gutterPadding = lanes ? 2.25 : 1;
   const lineNumbersRight = $derived(markerLaneWidth + lineNumberWidth * charWidth);
   const offsetLeft = $derived(lineNumbersRight + gutterPadding - charWidth);
   // The arcs lie between the concept icons and the first character of a line (see CodeLines)
