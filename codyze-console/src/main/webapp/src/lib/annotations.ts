@@ -1,4 +1,8 @@
-import type { FileAnnotationsJSON, FunctionAnnotationJSON } from '$lib/types';
+import type {
+  ConceptAnnotationJSON,
+  FileAnnotationsJSON,
+  FunctionAnnotationJSON
+} from '$lib/types';
 
 /** The number of concepts and operations in a function. */
 export function conceptsInFunction(
@@ -8,6 +12,16 @@ export function conceptsInFunction(
   return annotations.concepts.filter(
     (c) => c.line >= fn.function.startLine && c.line <= fn.function.endLine
   ).length;
+}
+
+/**
+ * Describes a concept (a thing, e.g. a secret) or an operation (what the code does with it, e.g.
+ * getting the secret) and the node it is attached to.
+ */
+export function describeConcept(c: ConceptAnnotationJSON): string {
+  return c.isOperation
+    ? `Operation ${c.type}${c.concept ? ` (of ${c.concept})` : ''} · ${c.target}`
+    : `Concept ${c.type} · ${c.target}`;
 }
 
 /** Fetches the number of concepts and operations per translation unit (by ID) of a component. */

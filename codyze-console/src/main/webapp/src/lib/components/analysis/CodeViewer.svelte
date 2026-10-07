@@ -12,7 +12,7 @@
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
-  import { getAnnotations } from '$lib/annotations';
+  import { describeConcept, getAnnotations } from '$lib/annotations';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
@@ -676,12 +676,11 @@
     const faded = pathActive || threadActive;
     if (layers.visible.concepts) {
       for (const c of annotations.concepts) {
-        const kind = c.isOperation ? 'Operation' : 'Concept';
         marks.push({
           line: c.line,
           lane: 0,
           color: color('concepts'),
-          label: `${kind} ${c.type}`,
+          label: describeConcept(c),
           faded
         });
       }
@@ -793,9 +792,9 @@
   // svelte-ignore state_referenced_locally
   const markerLaneWidth = lanes ? 1.25 : 0.5;
   const glyphLaneLeft = 0.1;
-  const glyphLaneWidth = 0.75;
+  const glyphLaneWidth = 1;
   // svelte-ignore state_referenced_locally
-  const gutterPadding = lanes ? 2.25 : 1;
+  const gutterPadding = lanes ? 2.5 : 1.25;
   const lineNumbersRight = $derived(markerLaneWidth + lineNumberWidth * charWidth);
   const offsetLeft = $derived(lineNumbersRight + gutterPadding - charWidth);
   // The arcs lie between the concept icons and the first character of a line (see CodeLines)

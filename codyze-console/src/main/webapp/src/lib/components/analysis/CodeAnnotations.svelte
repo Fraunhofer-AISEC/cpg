@@ -1,12 +1,13 @@
 <script lang="ts">
   import type { FileAnnotationsJSON } from '$lib/types';
+  import { describeConcept } from '$lib/annotations';
   import type { Layer } from '$lib/stores/layers.svelte';
   import type { CallFilter, InspectorSection } from '$lib/stores/codeFocus.svelte';
 
   /**
    * Draws the annotations of a file on top of the code: the key figures of each function at the end
    * of its first line, and, depending on the visible layers, markers under external and unresolved
-   * calls and a purple ◆ for the concepts and operations of a line in the gutter.
+   * calls and purple marks in the gutter: ◆ for the concepts of a line, ◇ for its operations.
    */
   interface Props {
     annotations: FileAnnotationsJSON;
@@ -169,26 +170,25 @@
     {/if}
   {/each}
 
-  <!-- Concepts and operations in the gutter: one ◆ per line, the tooltip lists them -->
+  <!-- Concepts (◆, the things) and operations (◇, what the code does with them) in the gutter, the
+  tooltip lists them -->
   {#each layers.concepts ? conceptsByLine : [] as entry (entry.line)}
     {#if isVisible(entry.line, entry.line)}
       <button
         type="button"
-        class="pointer-events-auto absolute z-[26] flex cursor-pointer items-center justify-center font-sans text-[11px] text-purple-600 hover:text-purple-800"
+        class="pointer-events-auto absolute z-[26] flex cursor-pointer items-center justify-center font-sans text-[11px] tracking-[-0.15em] text-purple-600 hover:text-purple-800"
         style:top="{top(entry.line)}rem"
         style:height="{lineHeight}rem"
         style:left="{glyphLeft}rem"
         style:width="{glyphWidth}rem"
-        title={entry.concepts
-          .map((c) => `${c.isOperation ? 'Operation' : 'Concept'}: ${c.type}`)
-          .join('\n')}
-        aria-label="{entry.concepts.length} concepts and operations"
+        title={entry.concepts.map(describeConcept).join('\n')}
+        aria-label={entry.concepts.map(describeConcept).join(', ')}
         onclick={(e) => {
           e.stopPropagation();
           onInspect(entry.concepts[0].id);
         }}
       >
-        ◆
+        {#if entry.concepts.some((c) => !c.isOperation)}◆{/if}{#if entry.concepts.some((c) => c.isOperation)}◇{/if}
       </button>
     {/if}
   {/each}
