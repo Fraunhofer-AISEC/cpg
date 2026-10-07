@@ -25,11 +25,12 @@ reliable. Everything except the agent (code, layers, PDG, ...) works without a m
 
 | File | What it is for |
 |---|---|
-| `main.c` | `app_main`: branches, a loop (`send_with_retries`), a `switch` (`describe`), the key flowing into `encrypt`, `copy_plain`, the log (`report_key`) and the network |
-| `config.c/.h` | A struct with a function pointer (`on_connect`), validation with early returns |
-| `crypto.c/.h` | `encrypt` and `copy_plain` with loops |
-| `log.c/.h` | `log_debug` and `log_error`, which call the undeclared `printf` |
-| `net.c/.h` | `net_open` and `net_send`, which call the undeclared `socket` and `send` |
+| `main/main.c` | `app_main`: branches, a loop (`send_with_retries`), a `switch` (`describe`), the key flowing into `encrypt`, `copy_plain`, the log (`report_key`) and the network |
+| `include/*.h` | The headers; `config.h` has a struct with a function pointer (`on_connect`) |
+| `src/config.c` | Loading and validating the configuration, with early returns |
+| `src/crypto.c` | `encrypt` and `copy_plain` with loops |
+| `src/log.c` | `log_debug` and `log_error`, which call the undeclared `printf` |
+| `src/net.c` | `net_open` and `net_send`, which call the undeclared `socket` and `send` |
 | `tagging.codyze.kts` | Concepts for `get_key` (secret) and `encrypt` (cipher) |
 | `project.codyze.kts` | The project, two requirements, and the dependence graph passes |
 

@@ -1,4 +1,4 @@
-#include "crypto.h"
+#include "../include/crypto.h"
 
 int encrypt(const char *key, char *buf, int len) {
     for (int i = 0; i < len; i++) {

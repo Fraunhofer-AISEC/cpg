@@ -1,4 +1,4 @@
-#include "net.h"
+#include "../include/net.h"
 
 /* socket and send are not declared anywhere: external code */
 int net_open(void) {

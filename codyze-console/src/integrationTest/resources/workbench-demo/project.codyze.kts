@@ -57,7 +57,7 @@ project {
             modules {
                 module("wifi_demo") {
                     directory = "components/wifi_demo"
-                    include("main")
+                    includeAll()
                 }
             }
         }
