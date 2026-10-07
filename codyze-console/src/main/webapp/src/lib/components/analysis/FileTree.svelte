@@ -274,7 +274,7 @@
   }
 
   const rowClass =
-    'relative flex h-[22px] w-full items-center gap-1 pr-2 text-left text-xs whitespace-nowrap';
+    'relative flex h-[22px] w-full items-center gap-1 pr-2 text-left text-[12.5px] whitespace-nowrap';
 </script>
 
 {#snippet rowContent(row: Row, selected: boolean)}
@@ -286,7 +286,7 @@
     ></span>
   {/each}
   {#if selected}
-    <span class="absolute top-0 bottom-0 left-0 w-0.5 bg-blue-500"></span>
+    <span class="absolute top-0 bottom-0 left-0 w-0.5 bg-blue-600"></span>
   {/if}
   <!-- Fixed-width chevron column, so that files and folders are aligned -->
   <span
@@ -312,7 +312,7 @@
   {#if conceptCount(row.node) > 0}
     {@const count = conceptCount(row.node)}
     <span
-      class="shrink-0 font-mono text-[10px] text-purple-600/80 tabular-nums"
+      class="shrink-0 text-[10.5px] text-purple-700 tabular-nums"
       title="{count} concepts and operations"
     >
       ◆ {count}
@@ -331,12 +331,18 @@
 {/snippet}
 
 {#snippet tree()}
-  <div class="flex h-full min-h-0 flex-col bg-white">
-    <!-- Header: component and filter -->
-    <div class="shrink-0 space-y-1.5 border-b border-gray-200 px-2 py-2">
+  <div class="flex h-full min-h-0 flex-col bg-[#fbfbfc]">
+    <!-- Header: the component, and the filter below it -->
+    <div
+      class="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-gray-100 pr-2.5 pl-3"
+    >
+      <!-- Outside of the agent page, the panel around the tree is titled already -->
+      {#if embedded}
+        <span class="text-[11px] font-semibold tracking-wider text-gray-500">FILES</span>
+      {/if}
       {#if allComponents && allComponents.length > 1}
         <select
-          class="w-full rounded border-gray-300 py-0.5 pr-7 pl-1.5 text-xs font-semibold text-gray-700"
+          class="h-6 max-w-[60%] min-w-0 truncate rounded-md border border-gray-200 bg-white py-0 pr-6 pl-2 text-xs text-gray-700"
           value={component.name}
           onchange={(e) => selectComponent(e.currentTarget.value)}
           aria-label="Component"
@@ -347,13 +353,18 @@
           {/each}
         </select>
       {:else}
-        <p class="truncate px-0.5 text-xs font-semibold text-gray-700" title={component.topLevel}>
+        <span
+          class="flex h-6 min-w-0 items-center truncate rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-700"
+          title={component.topLevel}
+        >
           {component.name}
-        </p>
+        </span>
       {/if}
+    </div>
+    <div class="shrink-0 px-2.5 py-2">
       <input
         type="search"
-        class="w-full rounded border-gray-300 px-1.5 py-0.5 text-xs placeholder-gray-400"
+        class="h-7 w-full rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-900 placeholder-gray-400"
         placeholder="Filter files"
         aria-label="Filter files"
         bind:value={filter}
@@ -363,7 +374,7 @@
       />
     </div>
 
-    <nav class="min-h-0 flex-1 overflow-y-auto py-1 text-gray-700" bind:this={navElement}>
+    <nav class="min-h-0 flex-1 overflow-y-auto pb-1 text-gray-700" bind:this={navElement}>
       {#each rows as row (row.node.path + ':' + row.node.type)}
         {@const selected = row.node.type === 'file' && currentUnitId === row.node.unit?.id}
         {#if row.node.type === 'folder'}
@@ -381,7 +392,7 @@
           <a
             href={fileHref(row.node.unit)}
             data-unit-id={row.node.unit.id}
-            class="{rowClass} {selected ? 'bg-gray-200/70 text-gray-900' : 'hover:bg-gray-100'}"
+            class="{rowClass} {selected ? 'bg-[#e8effc] text-gray-900' : 'hover:bg-gray-100'}"
             aria-current={selected ? 'page' : undefined}
           >
             {@render rowContent(row, selected)}
@@ -390,7 +401,7 @@
         {:else}
           <button
             type="button"
-            class="{rowClass} {selected ? 'bg-gray-200/70 text-gray-900' : 'hover:bg-gray-100'}"
+            class="{rowClass} {selected ? 'bg-[#e8effc] text-gray-900' : 'hover:bg-gray-100'}"
             data-unit-id={row.node.unit?.id}
             onclick={() => row.node.unit && onFileSelect?.(row.node.unit)}
             aria-current={selected ? 'page' : undefined}

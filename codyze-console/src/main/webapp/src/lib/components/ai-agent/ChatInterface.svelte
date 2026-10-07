@@ -1007,12 +1007,12 @@
     {
       id: 'files',
       label: 'Files',
-      icon: 'M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75'
+      icon: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'
     },
     {
       id: 'outline',
       label: 'Outline',
-      icon: 'M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z'
+      icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'
     }
   ];
 
@@ -1495,30 +1495,25 @@
 
 <div class="flex h-full min-h-0 bg-white">
   <!-- Activity bar: switches the view of the sidebar -->
-  <div
-    class="flex w-10 shrink-0 flex-col items-center gap-1 border-r border-gray-200 bg-gray-50 py-1.5"
-  >
+  <div class="flex w-11 shrink-0 flex-col items-center border-r border-gray-200 bg-gray-100">
     {#each sidebarViews as view (view.id)}
       {@const active = sidebarOpen && sidebarView === view.id}
       <button
         type="button"
-        class="relative flex h-8 w-8 items-center justify-center rounded {active
-          ? 'text-gray-900'
-          : 'text-gray-400 hover:text-gray-700'}"
+        class="flex h-11 w-11 items-center justify-center {active
+          ? 'text-gray-900 shadow-[inset_2px_0_0_#2563eb]'
+          : 'text-gray-500 hover:text-gray-900'}"
         onclick={() => toggleSidebar(view.id)}
         aria-label={active ? `Hide ${view.label}` : `Show ${view.label}`}
         aria-pressed={active}
         title={view.label}
       >
-        {#if active}
-          <span class="absolute top-1 bottom-1 -left-1 w-0.5 bg-gray-900"></span>
-        {/if}
         <svg
           class="h-5 w-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          stroke-width="1.5"
+          stroke-width="1.6"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d={view.icon} />
         </svg>
@@ -1528,7 +1523,7 @@
 
   <!-- Sidebar -->
   {#if sidebarOpen && selectedComponent}
-    <div class="flex min-h-0 w-60 shrink-0 flex-col border-r border-gray-200">
+    <div class="flex min-h-0 w-56 shrink-0 flex-col border-r border-gray-200">
       {#if sidebarView === 'files'}
         <FileTree
           component={selectedComponent}
