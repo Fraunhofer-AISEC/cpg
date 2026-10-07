@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependence
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
@@ -57,11 +59,18 @@ enum class DependenceGraph(val kinds: Set<GraphEdgeKind>) {
     CDG(setOf(GraphEdgeKind.CONTROL)),
 }
 
-/** The number of statements in the function that are affected by or affect a statement. */
+/** How many statements around a statement are affected by it or affect it, without itself. */
 @Serializable data class SliceCountsJSON(val backward: Int, val forward: Int)
 
 private val Node.sliceFunction: Function?
     get() = this as? Function ?: firstParentOrNull<Function>()
+
+/**
+ * Whether the code of a statement is not part of the analysis, e.g. a function that is not
+ * declared.
+ */
+private val Node.isOutsideOfAnalysis: Boolean
+    get() = location == null || isInferred || sliceFunction?.isInferred == true
 
 /**
  * A dependence between two statements, before it is turned into JSON. Nodes are compared by their
@@ -76,11 +85,16 @@ private class StatementDependence(
     val key = listOf(from.id, to.id, kind, label)
 }
 
+/** A statement of the slice with the context of the analysis it was reached in, e.g. its calls. */
+private data class SliceState(val statement: Node, val context: Context)
+
 private class SliceCollector(
     root: Node,
     val direction: SliceDirection,
     val hops: Int,
     val graph: DependenceGraph = DependenceGraph.PDG,
+    /** Whether the slice follows dependences into other functions or stops at its function */
+    val interprocedural: Boolean = true,
 ) {
     val rootStatement = root.enclosingStatement()
     val function = rootStatement.sliceFunction
@@ -92,40 +106,100 @@ private class SliceCollector(
     val dependences = LinkedHashMap<List<Any?>, StatementDependence>()
     var truncated = false
 
+    private val backward = direction == SliceDirection.BACKWARD
+
+    // The context of calls is kept like in the dataflow analysis of the CPG
+    private val analysisDirection =
+        if (backward) Backward(GraphToFollow.DFG) else Forward(GraphToFollow.DFG)
+
     init {
-        if (function != null) collect()
+        if (function != null || interprocedural) collect()
     }
 
-    private fun isInFunction(statement: Node) = statement.sliceFunction === function
+    /**
+     * Whether a statement becomes a stub: code that is not analysed, or outside of the function.
+     */
+    private fun isStub(statement: Node) =
+        statement.isOutsideOfAnalysis || (!interprocedural && statement.sliceFunction !== function)
 
-    /** The dependences of a statement in the direction of the slice. */
-    private fun dependencesOf(statement: Node): List<StatementDependence> =
-        statement.statementMembers().flatMap { member ->
-            val edges =
-                if (direction == SliceDirection.BACKWARD) member.prevPDGEdges
-                else member.nextPDGEdges
-            edges.mapNotNull { edge ->
-                val kind =
-                    when ((edge as? ProgramDependence)?.dependence) {
-                        DependenceType.DATA -> GraphEdgeKind.DATA
-                        DependenceType.CONTROL -> GraphEdgeKind.CONTROL
-                        null -> return@mapNotNull null
+    /**
+     * The dependences of a statement in the direction of the slice, each with the context after
+     * following it. If [interprocedural], dependences are followed like the CPG follows the PDG
+     * across functions: dataflows into and out of functions only in their calling context (see
+     * [ContextSensitive]), and from a function to the calls of it (backward) or from a call to the
+     * functions it invokes (forward).
+     */
+    private fun dependencesOf(state: SliceState): List<Pair<StatementDependence, Context>> =
+        state.statement.statementMembers().flatMap { member ->
+            val edges = if (backward) member.prevPDGEdges else member.nextPDGEdges
+            val dependences =
+                edges.mapNotNull { edge ->
+                    val kind =
+                        when ((edge as? ProgramDependence)?.dependence) {
+                            DependenceType.DATA -> GraphEdgeKind.DATA
+                            DependenceType.CONTROL -> GraphEdgeKind.CONTROL
+                            null -> return@mapNotNull null
+                        }
+                    if (kind !in graph.kinds) return@mapNotNull null
+                    val context = state.context.clone()
+                    if (
+                        interprocedural &&
+                            !ContextSensitive.followEdge(
+                                member,
+                                edge,
+                                context,
+                                emptyList(),
+                                mutableSetOf(),
+                                analysisDirection,
+                                true,
+                            )
+                    ) {
+                        return@mapNotNull null
                     }
-                if (kind !in graph.kinds) return@mapNotNull null
-                val from = edge.start.enclosingStatement()
-                val to = edge.end.enclosingStatement()
-                if (from === to || from is Block || to is Block) return@mapNotNull null
-                val label =
-                    when (edge) {
-                        is ControlDependence -> edge.branches.singleOrNull()?.toString()
-                        else ->
-                            listOf(edge.end, edge.start).firstNotNullOfOrNull {
-                                (it as? Reference)?.name?.localName
-                                    ?: (it as? ValueDeclaration)?.name?.localName
-                            }
-                    }
-                StatementDependence(from, to, kind, label)
+                    dependence(edge.start, edge.end, kind, labelOf(edge))?.let { it to context }
+                }
+            dependences + callsOf(member, state.context)
+        }
+
+    /** The edges between functions and their calls the CPG follows in an interprocedural PDG. */
+    private fun callsOf(member: Node, context: Context): List<Pair<StatementDependence, Context>> {
+        if (!interprocedural || GraphEdgeKind.CONTROL !in graph.kinds) return emptyList()
+        return if (backward) {
+            (member as? Function)?.usageEdges.orEmpty().mapNotNull { edge ->
+                val call = edge.end.astParent as? Call ?: return@mapNotNull null
+                val next = context.clone().also { it.callStack.push(call) }
+                dependence(edge.end, member, GraphEdgeKind.CONTROL, null)?.let { it to next }
             }
+        } else {
+            (member as? Call)?.invokeEdges.orEmpty().mapNotNull { edge ->
+                dependence(member, edge.end, GraphEdgeKind.CONTROL, null)?.let {
+                    it to context.clone()
+                }
+            }
+        }
+    }
+
+    /** The dependence of the statement of [end] on the statement of [start], if they differ. */
+    private fun dependence(
+        start: Node,
+        end: Node,
+        kind: GraphEdgeKind,
+        label: String?,
+    ): StatementDependence? {
+        val from = start.enclosingStatement()
+        val to = end.enclosingStatement()
+        if (from === to || from is Block || to is Block) return null
+        return StatementDependence(from, to, kind, label)
+    }
+
+    private fun labelOf(edge: Edge<Node>): String? =
+        when (edge) {
+            is ControlDependence -> edge.branches.singleOrNull()?.toString()
+            else ->
+                listOf(edge.end, edge.start).firstNotNullOfOrNull {
+                    (it as? Reference)?.name?.localName
+                        ?: (it as? ValueDeclaration)?.name?.localName
+                }
         }
 
     private fun otherEnd(dependence: StatementDependence) =
@@ -134,39 +208,46 @@ private class SliceCollector(
     private fun collect() {
         depths[rootStatement.id] = 0
         statements[rootStatement.id] = rootStatement
-        var frontier = listOf(rootStatement)
+        val visited = mutableSetOf(rootStatement.id to emptyList<Uuid>())
+        var frontier = listOf(SliceState(rootStatement, Context(steps = 0)))
         for (depth in 0..hops) {
-            val next = mutableListOf<Node>()
-            for (statement in frontier) {
-                val found = dependencesOf(statement)
+            val next = mutableListOf<SliceState>()
+            for (state in frontier) {
+                val found = dependencesOf(state)
                 if (depth == hops) {
                     // At the border only the dependences inside of the slice are kept, the others
-                    // are
-                    // counted
+                    // are counted
                     found
-                        .filter { otherEnd(it).id in depths }
-                        .forEach { dependences.putIfAbsent(it.key, it) }
-                    more[statement.id] =
+                        .filter { (dependence, _) -> otherEnd(dependence).id in depths }
+                        .forEach { (dependence, _) ->
+                            dependences.putIfAbsent(dependence.key, dependence)
+                        }
+                    more[state.statement.id] =
                         found
-                            .map { otherEnd(it) }
-                            .filter { it.id !in depths && isInFunction(it) }
+                            .map { (dependence, _) -> otherEnd(dependence) }
+                            .filter { it.id !in depths && !isStub(it) }
                             .distinctBy { it.id }
                             .size
                     continue
                 }
-                for (dependence in found) {
+                for ((dependence, context) in found) {
                     val other = otherEnd(dependence)
                     when {
-                        other.id in depths -> {}
-                        !isInFunction(other) -> stubs[other.id] = other
-                        depths.size >= MAX_SLICE_NODES -> {
+                        isStub(other) -> stubs[other.id] = other
+                        other.id !in depths && depths.size >= MAX_SLICE_NODES -> {
                             truncated = true
                             continue
                         }
                         else -> {
-                            depths[other.id] = depth + 1
-                            statements[other.id] = other
-                            next += other
+                            // The same statement may be reached through other calls, which can
+                            // lead further
+                            if (visited.add(other.id to context.callStack.toList().map { it.id })) {
+                                next += SliceState(other, context)
+                            }
+                            if (other.id !in depths) {
+                                depths[other.id] = depth + 1
+                                statements[other.id] = other
+                            }
                         }
                     }
                     dependences.putIfAbsent(dependence.key, dependence)
@@ -178,18 +259,21 @@ private class SliceCollector(
 }
 
 /**
- * The slice of the program dependence graph around the statement of [root]: the statements of its
- * function that affect it ([SliceDirection.BACKWARD]) or are affected by it
- * ([SliceDirection.FORWARD]), up to [hops] dependences away, following the dependences of [graph].
- * Dependences that leave the function end in stub nodes.
+ * The slice of the program dependence graph around the statement of [root]: the statements that
+ * affect it ([SliceDirection.BACKWARD]) or are affected by it ([SliceDirection.FORWARD]), up to
+ * [hops] dependences away, following the dependences of [graph]. If [interprocedural], the slice
+ * follows the dependences across functions like the CPG does (see [SliceCollector.dependencesOf]);
+ * otherwise it stays in the function of [root]. Dependences into code that is not analysed (or out
+ * of the function) end in stub nodes.
  */
 fun slice(
     root: Node,
     direction: SliceDirection,
     hops: Int,
     graph: DependenceGraph = DependenceGraph.PDG,
+    interprocedural: Boolean = true,
 ): GraphSliceJSON {
-    val collector = SliceCollector(root, direction, hops, graph)
+    val collector = SliceCollector(root, direction, hops, graph, interprocedural)
     val nodes =
         collector.statements.values.map {
             it.toGraphNode(
@@ -212,9 +296,15 @@ fun slice(
     )
 }
 
-/** The number of statements in the function of [root] in each direction, without the root. */
-fun sliceCounts(root: Node, hops: Int): SliceCountsJSON =
+/** The number of statements in the slice of [root] in each direction, without the root. */
+fun sliceCounts(root: Node, hops: Int, interprocedural: Boolean = true): SliceCountsJSON =
     SliceCountsJSON(
-        backward = SliceCollector(root, SliceDirection.BACKWARD, hops).statements.size - 1,
-        forward = SliceCollector(root, SliceDirection.FORWARD, hops).statements.size - 1,
+        backward =
+            SliceCollector(root, SliceDirection.BACKWARD, hops, interprocedural = interprocedural)
+                .statements
+                .size - 1,
+        forward =
+            SliceCollector(root, SliceDirection.FORWARD, hops, interprocedural = interprocedural)
+                .statements
+                .size - 1,
     )

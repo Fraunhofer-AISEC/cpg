@@ -312,16 +312,21 @@ class ConsoleService {
         direction: SliceDirection,
         hops: Int,
         graph: DependenceGraph = DependenceGraph.PDG,
+        interprocedural: Boolean = true,
     ): GraphSliceJSON? {
-        return findNode(nodeId)?.let { slice(it, direction, hops, graph) }
+        return findNode(nodeId)?.let { slice(it, direction, hops, graph, interprocedural) }
     }
 
     /**
      * Returns how many statements are in the slice of the program dependence graph around the node
      * with the given ID in each direction, or `null` if there is no such node.
      */
-    fun getSliceCounts(nodeId: String, hops: Int): SliceCountsJSON? {
-        return findNode(nodeId)?.let { sliceCounts(it, hops) }
+    fun getSliceCounts(
+        nodeId: String,
+        hops: Int,
+        interprocedural: Boolean = true,
+    ): SliceCountsJSON? {
+        return findNode(nodeId)?.let { sliceCounts(it, hops, interprocedural) }
     }
 
     /**

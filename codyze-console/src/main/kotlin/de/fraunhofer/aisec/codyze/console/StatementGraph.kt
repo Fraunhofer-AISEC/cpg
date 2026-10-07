@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -134,9 +136,14 @@ private fun Node.isBodyOf(parent: Node): Boolean =
 /**
  * The statement a node belongs to: the outermost expression that is not part of another statement.
  * The header of an if or a loop (its condition, the initializer and iteration of a for loop)
- * belongs to it, while its body consists of statements of their own.
+ * belongs to it, while its body consists of statements of their own. Likewise, the parameters of a
+ * function belong to its header.
  */
 internal fun Node.enclosingStatement(): Node {
+    if (this is Parameter)
+        (astParent as? Function)?.let {
+            return it
+        }
     var current: Node = this
     while (true) {
         val parent = current.astParent ?: return current
@@ -167,11 +174,13 @@ internal fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): Graph
     val calls = members.filterIsInstance<Call>()
     val statuses = calls.filter { it !is OperatorCall }.map { it.status }
     val startLine = location?.region?.startLine ?: -1
+    // Branches and functions are shown by their head, without their body
     val endLine =
-        if (isBranching) {
-            ((this as? BranchingNode)?.branchedBy?.location?.region?.endLine ?: startLine)
-        } else {
-            location?.region?.endLine ?: startLine
+        when {
+            isBranching ->
+                ((this as? BranchingNode)?.branchedBy?.location?.region?.endLine ?: startLine)
+            this is Function -> startLine
+            else -> location?.region?.endLine ?: startLine
         }
     return GraphNodeJSON(
         id = id.toString(),
@@ -179,7 +188,8 @@ internal fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): Graph
         node = toRefJSON(),
         startLine = startLine,
         endLine = maxOf(endLine, startLine),
-        code = toRefJSON().code,
+        // Code that is not analysed, e.g. a function that is not declared, has no code but a name
+        code = toRefJSON().code.ifEmpty { name.localName },
         depth = depth,
         more = more,
         concept = members.any { m -> m.overlays.any { it is Concept || it is Operation } },

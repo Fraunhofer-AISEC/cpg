@@ -241,6 +241,27 @@ class WorkbenchDemoIntegrationTest {
                 .body<GraphSliceJSON>()
         assertTrue(cdg.edges.isNotEmpty() && cdg.edges.all { it.kind == GraphEdgeKind.CONTROL })
         assertTrue(cdg.nodes.any { "cfg.secure" in it.code }, "nodes: ${cdg.nodes.map { it.code }}")
+
+        // Interprocedural (the default), the key reaches the code of encrypt in crypto.c and only
+        // code that is not analysed is a stub; intraprocedural, it stays in app_main
+        fun GraphSliceJSON.inCrypto() =
+            nodes.filter { it.kind != GraphNodeKind.STUB && it.node.fileName == "crypto.c" }
+        val across =
+            client
+                .get("/api/node/${getKey.node.id}/pdg?direction=forward&hops=3")
+                .body<GraphSliceJSON>()
+        assertTrue(across.inCrypto().isNotEmpty(), "nodes: ${across.nodes.map { it.code }}")
+        assertTrue(
+            across.nodes.filter { it.kind == GraphNodeKind.STUB }.all { it.external },
+            "stubs: ${across.nodes.filter { it.kind == GraphNodeKind.STUB }.map { it.code }}",
+        )
+        val local =
+            client
+                .get(
+                    "/api/node/${getKey.node.id}/pdg?direction=forward&hops=3&scope=intraprocedural"
+                )
+                .body<GraphSliceJSON>()
+        assertTrue(local.inCrypto().isEmpty(), "nodes: ${local.nodes.map { it.code }}")
     }
 
     /**
