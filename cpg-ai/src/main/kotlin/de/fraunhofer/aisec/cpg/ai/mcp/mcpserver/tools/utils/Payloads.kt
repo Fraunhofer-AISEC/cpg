@@ -70,6 +70,17 @@ data class CpgIdPayload(
 ) : HasProjectNamePayload
 
 @Serializable
+@Description("The payload to follow the dataflow of a node.")
+data class CpgDfgPathsPayload(
+    @Description("The id of the node whose dataflow is followed.") val id: String,
+    @Description("Whether to follow the dataflow into and out of called functions (default true).")
+    val interprocedural: Boolean = true,
+    @Description("The maximum number of paths to return (default 20, at most 100).")
+    val maxPaths: Int = 20,
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
+
+@Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
     @Description("ID of the method/function call whose arguments should be listed.")
     val nodeId: String,
