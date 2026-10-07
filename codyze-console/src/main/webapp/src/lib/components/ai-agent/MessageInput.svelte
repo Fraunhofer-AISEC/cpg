@@ -50,8 +50,13 @@
 
   const showPicker = $derived(filteredPrompts.length > 0);
 
-  function resetTextareaHeight() {
-    if (textareaElement) textareaElement.style.height = 'auto';
+  // The text grows the input up to this height in px, then it scrolls
+  const maxHeight = 200;
+
+  function fitHeight() {
+    if (!textareaElement) return;
+    textareaElement.style.height = 'auto';
+    textareaElement.style.height = Math.min(textareaElement.scrollHeight, maxHeight) + 'px';
   }
 
   // Handles keyboard navigation for the slash-command prompt picker,
@@ -89,28 +94,25 @@
   function handleInput(e: Event) {
     const target = e.target as HTMLTextAreaElement;
     onValueChange(target.value);
-    // Auto-grow up to 120px, then scroll
-    target.style.height = 'auto';
-    target.style.height = Math.min(target.scrollHeight, 120) + 'px';
     pickerIndex = 0; // reset picker selection on every keystroke
   }
 
   function selectPrompt(prompt: McpPromptInfo) {
     onValueChange('');
-    resetTextareaHeight();
     onPromptSelect?.(prompt.name, {});
   }
 
   function handleSend() {
     if (value.trim() && !disabled) {
       onSend();
-      resetTextareaHeight();
     }
   }
 
-  // When the parent clears the value (e.g. after sending), reset textarea height too
+  // The height follows the text, also when it is set from outside (e.g. a question about a node)
+  // or cleared after sending
   $effect(() => {
-    if (value === '') resetTextareaHeight();
+    void value;
+    fitHeight();
   });
 </script>
 
@@ -150,7 +152,7 @@
   >
     <textarea
       bind:this={textareaElement}
-      class="block max-h-30 min-h-9 w-full resize-none border-0 bg-transparent px-2.5 pt-2 pb-1 text-[13px] leading-snug text-gray-900 placeholder-gray-400 outline-none focus:ring-0"
+      class="block max-h-50 min-h-9 w-full resize-none border-0 bg-transparent px-2.5 pt-2 pb-1 text-[13px] leading-snug text-gray-900 placeholder-gray-400 outline-none focus:ring-0"
       {placeholder}
       rows="1"
       {value}
