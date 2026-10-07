@@ -51,6 +51,9 @@ CPG := (literal START END VALUE TYPE NAME)
      | (range START END OPT OPT OPT)           OPT := () | (CPG)
      | (deref START END INPUT)
      | (cast START END TYPE EXPRESSION)
+     | (new START END TYPE INITIALIZER)
+     | (construction START END TYPE (ARG*))
+     | (arrayconstruction START END TYPE (DIMENSION*))
      | (problem START END MESSAGE)
 ```
 -/
@@ -190,6 +193,12 @@ partial def encodeExpr : Cpg.Expr → Sexp
   | .pointerDereference loc input =>
     .list ([.atom "deref"] ++ encodeSpan loc ++ [encodeExpr input])
   | .cast loc t e => .list ([.atom "cast"] ++ encodeSpan loc ++ [encodeType t, encodeExpr e])
+  | .new loc t init => .list ([.atom "new"] ++ encodeSpan loc ++ [encodeType t, encodeExpr init])
+  | .construction loc t args =>
+    .list ([.atom "construction"] ++ encodeSpan loc ++ [encodeType t, .list (args.map encodeExpr)])
+  | .arrayConstruction loc t dims =>
+    .list ([.atom "arrayconstruction"] ++ encodeSpan loc ++
+      [encodeType t, .list (dims.map encodeExpr)])
   | .problem loc msg => .list ([.atom "problem"] ++ encodeSpan loc ++ [.atom msg])
 
 /-- Handles one request: decodes, translates and encodes the result (or an error). -/

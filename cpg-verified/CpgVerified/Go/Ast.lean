@@ -94,6 +94,11 @@ def isConversion : Expr → Bool
   | .arrayType .. | .chanType .. | .mapType .. => true
   | _ => false
 
+/-- Whether a type expression is an array or slice type, for which `make` creates an array. -/
+def isArrayType : Expr → Bool
+  | .arrayType .. => true
+  | _ => false
+
 /-- The source text of a binary operator. -/
 def BinaryOp.token : BinaryOp → String
   | .add => "+" | .sub => "-" | .mul => "*" | .quo => "/" | .rem => "%"

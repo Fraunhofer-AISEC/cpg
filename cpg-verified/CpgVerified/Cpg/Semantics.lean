@@ -41,6 +41,12 @@ structure Env where
   deref : Value → Option Value
   /-- Converting a value to a type, or asserting its dynamic type. -/
   cast : TypeRef → Value → Option Value
+  /-- Constructing a value of a type from arguments. -/
+  construct : TypeRef → List Value → Option Value
+  /-- Constructing an array of a type with dimensions. -/
+  constructArray : TypeRef → List Value → Option Value
+  /-- Allocating a new value of a (pointer) type with an initializer. -/
+  new : TypeRef → Value → Option Value
 
 /-- Meaning of a (strict) binary operator code. -/
 def evalBinaryOp (L : LanguageSemantics) (code : String) (a b : Value) : Option Value :=
@@ -130,6 +136,9 @@ def Expr.eval (L : LanguageSemantics) (env : Env) : Expr → Option Value
   | .range .. => none
   | .pointerDereference _ input => do env.deref (← input.eval L env)
   | .cast _ t expression => do env.cast t (← expression.eval L env)
+  | .new _ t initializer => do env.new t (← initializer.eval L env)
+  | .construction _ t args => do env.construct t (← Expr.evalList L env args)
+  | .arrayConstruction _ t dims => do env.constructArray t (← Expr.evalList L env dims)
   | .problem .. => none
 
 /-- Evaluates an optional expression; an absent expression has no value, but does not fail. -/

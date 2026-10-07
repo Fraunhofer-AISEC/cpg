@@ -37,6 +37,8 @@ structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
     genv.vars name = none ∧ genv.funcs name = none
   /-- Built-in allocation functions that the context does not mark as shadowed are not declared. -/
   allocUnshadowed : ∀ name ∈ ["new", "make"], name ∉ ctx.shadowed → genv.funcs name = none
+  /-- Built-in allocation functions that the context marks as shadowed are declared functions. -/
+  allocShadowed : ∀ name ∈ ["new", "make"], name ∈ ctx.shadowed → genv.funcs name ≠ none
   /-- A shadowed predeclared identifier refers to its declaration, never to the predeclared value. -/
   shadowedDeclared : ∀ name ∈ ctx.shadowed, genv.vars name = none → predeclared ctx.iota name = none
   /-- Members of imported packages have the same qualified name in both environments. -/
@@ -57,6 +59,17 @@ structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
   cast : ∀ te t, typeOf? te = some t → cenv.cast t = genv.cast te
   /-- Types outside the verified subset are never cast to. -/
   castUnmodelled : ∀ te, typeOf? te = none → ∀ v, genv.cast te v = none
+  /-- `new(T)` is a `New` of `T*` initialized with a `Construction` of `T`. -/
+  new : ∀ te t, typeOf? te = some t →
+    (do cenv.new (.pointer t) (← cenv.construct t [])) = genv.new te
+  /-- `make(T, args...)` of a non-array type is a `Construction` of `T`. -/
+  make : ∀ te t vs, typeOf? te = some t → isArrayType te = false →
+    cenv.construct t vs = genv.make te vs
+  /-- `make([]T, n)` is an `ArrayConstruction` with the dimension `n`. -/
+  makeArray : ∀ te t vs, typeOf? te = some t → isArrayType te = true →
+    cenv.constructArray t vs = genv.make te vs
+  /-- Types outside the verified subset are never allocated. -/
+  allocUnmodelled : ∀ te, typeOf? te = none → genv.new te = none ∧ ∀ vs, genv.make te vs = none
 
 /-- Every strict Go binary operator means the same as the CPG operator code it is mapped to. -/
 theorem evalBinaryOp_token (op : BinaryOp) (hand : op ≠ .land) (hor : op ≠ .lor) (a b : Value) :
@@ -93,6 +106,19 @@ theorem translateConversion_ne_range (span : Cpg.Span) (t : Option Cpg.TypeRef)
   unfold translateConversion
   split <;> simp
 
+theorem translateAllocation_ne_range (span : Cpg.Span) (name : String) (args : List Expr)
+    (tail : List Cpg.Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
+    translateAllocation span name args tail ≠ .range loc a b c := by
+  unfold translateAllocation
+  repeat' split
+  all_goals simp
+
+theorem translateAllocation_loc (span : Cpg.Span) (name : String) (args : List Expr)
+    (tail : List Cpg.Expr) : (translateAllocation span name args tail).loc = span := by
+  unfold translateAllocation
+  repeat' split
+  all_goals rfl
+
 /-- The translation never produces a bare `Range`; ranges only occur inside subscriptions. -/
 theorem translate_ne_range (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
     translate ctx e ≠ .range loc a b c := by
@@ -100,7 +126,8 @@ theorem translate_ne_range (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (a b c : Opti
   | ident => simp only [translate, translateIdent]; split <;> (try split) <;> (try split) <;> simp
   | basicLit => simp only [translate]; split <;> simp
   | call _ fn _ =>
-    cases fn <;> simp only [translate] <;> (repeat' split) <;> simp [translateConversion_ne_range]
+    cases fn <;> simp only [translate] <;> (repeat' split) <;>
+      simp [translateConversion_ne_range, translateAllocation_ne_range]
   | typeAssert _ _ t => cases t <;> simp only [translate] <;> (try split) <;> simp
   | selector => simp only [translate]; split <;> simp
   | paren _ x => simp only [translate]; exact translate_ne_range ctx x loc a b c
@@ -142,23 +169,6 @@ theorem translateIdent_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     simp only [Cpg.Expr.eval, Expr.eval, h.vars, hp]
     split <;> simp_all
 
-/-- Calling a translated identifier calls the same function as in Go. -/
-theorem call_ident_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
-    (h : EnvAgree ctx genv cenv) (span s : Cpg.Span) (name : String) (args : List Cpg.Expr)
-    (vs : Option (List Value)) (hargs : Cpg.Expr.evalList semantics cenv args = vs) :
-    (Cpg.Expr.call span (translateIdent ctx s name) args).eval semantics cenv
-      = (do let f ← genv.funcs name; f (← vs)) := by
-  unfold translateIdent
-  by_cases hs : name ∈ ctx.shadowed
-  · simp only [hs, ite_true, Cpg.Expr.eval, h.funcs, hargs]
-  simp only [hs, ite_false]
-  split
-  · simp [Cpg.Expr.eval, (h.constsUnshadowed "true" (by simp) hs).2]
-  · simp [Cpg.Expr.eval, (h.constsUnshadowed "false" (by simp) hs).2]
-  · simp [Cpg.Expr.eval, (h.constsUnshadowed "nil" (by simp) hs).2]
-  · split <;> simp [Cpg.Expr.eval, (h.constsUnshadowed "iota" (by simp) hs).2]
-  · simp only [Cpg.Expr.eval, h.funcs, hargs]
-
 /-- A subscription whose subscript is not a `Range` is an indexing. -/
 theorem eval_subscription_index (L : Cpg.LanguageSemantics) (env : Cpg.Env) (loc : Cpg.Span)
     (arr idx : Cpg.Expr) (h : ∀ l a b c, idx ≠ .range l a b c) :
@@ -168,22 +178,97 @@ theorem eval_subscription_index (L : Cpg.LanguageSemantics) (env : Cpg.Env) (loc
   | range l a b c => exact absurd rfl (h l a b c)
   | _ => simp only [Cpg.Expr.eval]
 
-/-- A call of a named function is preserved, given that its arguments are. -/
+/-- The built-ins `new` and `make` are preserved, given that their arguments are. -/
+theorem allocation_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (name : String)
+    (hn : name = "new" ∨ name = "make") (args : List Expr) (tail : List Cpg.Expr)
+    (htail : Cpg.Expr.evalList semantics cenv tail = Expr.evalTail ctx.iota ctx.packages genv args) :
+    (translateAllocation span name args tail).eval semantics cenv
+      = evalBuiltin genv name args (Expr.evalTail ctx.iota ctx.packages genv args) := by
+  rw [← htail]
+  rcases hn with rfl | rfl
+  · match args with
+    | [te] =>
+      cases ht : typeOf? te with
+      | some t =>
+        simp only [translateAllocation, ht, evalBuiltin, Cpg.Expr.eval, Cpg.Expr.evalList]
+        rw [← h.new te t ht]
+        rfl
+      | none =>
+        simp [translateAllocation, ht, evalBuiltin, Cpg.Expr.eval, (h.allocUnmodelled te ht).1]
+    | [] => simp [translateAllocation, evalBuiltin, Cpg.Expr.eval]
+    | _ :: _ :: _ => simp [translateAllocation, evalBuiltin, Cpg.Expr.eval]
+  · match args with
+    | te :: rest =>
+      cases ht : typeOf? te with
+      | some t =>
+        cases ha : isArrayType te
+        · simp [translateAllocation, ht, ha, evalBuiltin, Cpg.Expr.eval, h.make te t _ ht ha]
+        · by_cases hl : rest.length ≤ 1
+          · have hl' : ¬ 2 < rest.length + 1 := by omega
+            simp [translateAllocation, ht, ha, hl, evalBuiltin, hl', Cpg.Expr.eval,
+              h.makeArray te t _ ht ha]
+          · have hl' : 2 < rest.length + 1 := by omega
+            simp [translateAllocation, ht, ha, hl, evalBuiltin, hl', Cpg.Expr.eval]
+      | none =>
+        simp only [translateAllocation, ht, evalBuiltin, Cpg.Expr.eval]
+        split
+        · rfl
+        · cases Cpg.Expr.evalList semantics cenv tail <;> simp [(h.allocUnmodelled te ht).2]
+    | [] => simp [translateAllocation, evalBuiltin, Cpg.Expr.eval]
+
+theorem evalBuiltin_other (genv : Env) (name : String) (args : List Expr)
+    (tail : Option (List Value)) (hn : name ≠ "new" ∧ name ≠ "make") :
+    evalBuiltin genv name args tail = none := by
+  unfold evalBuiltin
+  split <;> simp_all
+
+/-- A call of a named function (or of a built-in) is preserved, given that its arguments are. -/
 theorem call_ident_full_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
-    (h : EnvAgree ctx genv cenv) (span s : Cpg.Span) (name : String) (args : List Cpg.Expr)
-    (vs : Option (List Value)) (hargs : Cpg.Expr.evalList semantics cenv args = vs) :
+    (h : EnvAgree ctx genv cenv) (span s : Cpg.Span) (name : String) (args : List Expr)
+    (hargs : Cpg.Expr.evalList semantics cenv (translateList ctx args)
+      = Expr.evalList ctx.iota ctx.packages genv args)
+    (htail : Cpg.Expr.evalList semantics cenv (translateTail ctx args)
+      = Expr.evalTail ctx.iota ctx.packages genv args) :
     (if (name == "new" || name == "make") && !ctx.shadowed.contains name then
-        Cpg.Expr.problem span "new and make are not in the verified subset"
-      else Cpg.Expr.call span (translateIdent ctx s name) args).eval semantics cenv
-      = (do let f ← genv.funcs name; f (← vs)) := by
+        translateAllocation span name args (translateTail ctx args)
+      else Cpg.Expr.call span (translateIdent ctx s name) (translateList ctx args)).eval semantics cenv
+      = (match genv.funcs name with
+        | some f => do f (← Expr.evalList ctx.iota ctx.packages genv args)
+        | none => evalBuiltin genv name args (Expr.evalTail ctx.iota ctx.packages genv args)) := by
   split
   · rename_i halloc
     simp only [Bool.and_eq_true, Bool.not_eq_true'] at halloc
     obtain ⟨hname, hs⟩ := halloc
     have hs' : name ∉ ctx.shadowed := by simpa using hs
-    have hf := h.allocUnshadowed name (by simpa using hname) hs'
-    simp [Cpg.Expr.eval, hf]
-  · exact call_ident_correct ctx genv cenv h span s name _ _ hargs
+    have hn : name = "new" ∨ name = "make" := by simpa using hname
+    have hf := h.allocUnshadowed name (by rcases hn with rfl | rfl <;> simp) hs'
+    simp only [hf]
+    exact allocation_correct ctx genv cenv h span name hn args _ htail
+  · rename_i halloc
+    unfold translateIdent
+    by_cases hs : name ∈ ctx.shadowed
+    · simp only [hs, ite_true, Cpg.Expr.eval, h.funcs, hargs]
+      cases hf : genv.funcs name with
+      | some f => rfl
+      | none =>
+        have hn : name ≠ "new" ∧ name ≠ "make" := by
+          constructor <;> intro e <;> subst e <;> exact h.allocShadowed _ (by simp) hs hf
+        simp [evalBuiltin_other genv name args _ hn]
+    · have hn : name ≠ "new" ∧ name ≠ "make" := by
+        constructor <;> intro e <;> subst e <;> simp_all
+      simp only [hs, ite_false]
+      split
+      · simp [Cpg.Expr.eval, (h.constsUnshadowed "true" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · simp [Cpg.Expr.eval, (h.constsUnshadowed "false" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · simp [Cpg.Expr.eval, (h.constsUnshadowed "nil" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · split <;> simp [Cpg.Expr.eval, (h.constsUnshadowed "iota" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · simp only [Cpg.Expr.eval, h.funcs, hargs]
+        cases genv.funcs name <;> simp [evalBuiltin_other _ _ _ _ hn]
 
 /-- A conversion is preserved, given that its arguments are. -/
 theorem conversion_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
@@ -216,7 +301,9 @@ theorem call_other_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (fn : Expr) (args : List Expr)
     (hfn : ∀ s x sel, fn ≠ .selector s x sel)
     (ihargs : Cpg.Expr.evalList semantics cenv (translateList ctx args)
-      = Expr.evalList ctx.iota ctx.packages genv args) :
+      = Expr.evalList ctx.iota ctx.packages genv args)
+    (ihtail : Cpg.Expr.evalList semantics cenv (translateTail ctx args)
+      = Expr.evalTail ctx.iota ctx.packages genv args) :
     (translate ctx (.call span fn args)).eval semantics cenv
       = (Expr.call span fn args).eval ctx.iota ctx.packages genv := by
   cases fn with
@@ -224,7 +311,7 @@ theorem call_other_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
   | ident s name =>
     simp only [translate, Expr.eval, calleeName?, Expr.unparen, isConversion, Bool.false_eq_true,
       ite_false]
-    exact call_ident_full_correct ctx genv cenv h span s name _ _ ihargs
+    exact call_ident_full_correct ctx genv cenv h span s name args ihargs ihtail
   | arrayType | chanType | mapType =>
     simp only [translate, Expr.eval, Expr.unparen, isConversion, ite_true]
     exact conversion_correct ctx genv cenv h span _ args ihargs
@@ -239,7 +326,7 @@ theorem call_other_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     cases u with
     | ident s' name =>
       simp only [translate]
-      exact call_ident_full_correct ctx genv cenv h span s' name _ _ ihargs
+      exact call_ident_full_correct ctx genv cenv h span s' name args ihargs ihtail
     | paren s' x => exact absurd hu (unparen_not_paren s' x y)
     | arrayType | chanType | mapType => simp [isConversion] at hc
     | _ => simp [Cpg.Expr.eval]
@@ -306,6 +393,7 @@ theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     | .slice .. | .star .. | .typeAssert .. | .arrayType .. | .mapType .. | .chanType ..
     | .unsupported .. =>
       exact call_other_correct ctx genv cenv h span _ args (by simp) ihargs
+        (translateTail_correct ctx genv cenv h args)
   | .index span x i => by
     have ihx := translate_correct ctx genv cenv h x
     have ihi := translate_correct ctx genv cenv h i
@@ -342,6 +430,16 @@ theorem translateOpt_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
   | none => by simp [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt]
   | some e => by
     simp only [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt, translate_correct ctx genv cenv h e]
+
+/-- Semantic preservation for all but the first expression of a list. -/
+theorem translateTail_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ es : List Expr,
+      Cpg.Expr.evalList semantics cenv (translateTail ctx es)
+        = Expr.evalTail ctx.iota ctx.packages genv es
+  | [] => by simp [translateTail, Cpg.Expr.evalList, Expr.evalTail]
+  | _ :: rest => by
+    simp only [translateTail, Expr.evalTail, translateList_correct ctx genv cenv h rest]
 
 /-- Semantic preservation for lists of expressions. -/
 theorem translateList_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
@@ -380,6 +478,7 @@ theorem translate_loc (ctx : Ctx) : ∀ e : Expr, (translate ctx e).loc = e.unpa
     cases fn <;> simp only [translate] <;> (repeat' split) <;>
       first
       | exact translateConversion_loc _ _ _
+      | exact translateAllocation_loc _ _ _ _
       | simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
   | .typeAssert _ _ t => by
     cases t <;> simp only [translate] <;> (try split) <;> simp [Cpg.Expr.loc, Expr.unparen, Expr.span]

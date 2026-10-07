@@ -28,13 +28,16 @@ package de.fraunhofer.aisec.cpg.frontends.golang.verified
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
@@ -399,6 +402,41 @@ class VerifiedTranslationTest {
                     diffs += "cast type $expected vs ${kotlin.castType.name}"
                 }
                 diffs += compare(items[4], kotlin.expression, region)
+            }
+            "new" -> {
+                if (kotlin !is New) return diffs + "expected New, got ${kotlin::class.simpleName}"
+                if (kotlin.type.name.toString() != typeName(items[3])) {
+                    diffs += "new type ${typeName(items[3])} vs ${kotlin.type.name}"
+                }
+                diffs += compare(items[4], kotlin.initializer, region)
+            }
+            "construction" -> {
+                if (kotlin !is Construction) {
+                    return diffs + "expected Construction, got ${kotlin::class.simpleName}"
+                }
+                if (kotlin.type.name.toString() != typeName(items[3])) {
+                    diffs += "construction type ${typeName(items[3])} vs ${kotlin.type.name}"
+                }
+                val args = (items[4] as Sexp.SList).items
+                if (args.size != kotlin.arguments.size) {
+                    diffs += "${args.size} arguments vs ${kotlin.arguments.size}"
+                } else {
+                    args.zip(kotlin.arguments).forEach { (a, k) -> diffs += compare(a, k, region) }
+                }
+            }
+            "arrayconstruction" -> {
+                if (kotlin !is ArrayConstruction) {
+                    return diffs + "expected ArrayConstruction, got ${kotlin::class.simpleName}"
+                }
+                if (kotlin.type.name.toString() != typeName(items[3])) {
+                    diffs += "array type ${typeName(items[3])} vs ${kotlin.type.name}"
+                }
+                val dims = (items[4] as Sexp.SList).items
+                if (dims.size != kotlin.dimensions.size) {
+                    diffs += "${dims.size} dimensions vs ${kotlin.dimensions.size}"
+                } else {
+                    dims.zip(kotlin.dimensions).forEach { (a, k) -> diffs += compare(a, k, region) }
+                }
             }
             else -> diffs += "unknown kind $kind"
         }
