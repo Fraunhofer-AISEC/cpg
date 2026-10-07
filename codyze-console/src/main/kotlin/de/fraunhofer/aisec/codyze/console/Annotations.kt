@@ -69,6 +69,9 @@ data class CallAnnotationJSON(
  * A concept or operation in the code.
  *
  * @property category The area of the concept, derived from its package, e.g. `crypto` or `file`.
+ * @property target The name (or else the code) of the node the concept or operation is attached to,
+ *   e.g. the variable `key` or the call `get_key`.
+ * @property concept For operations: the type of the concept they belong to, e.g. `Secret`.
  */
 @Serializable
 data class ConceptAnnotationJSON(
@@ -77,6 +80,8 @@ data class ConceptAnnotationJSON(
     val category: String,
     val isOperation: Boolean,
     val line: Int,
+    val target: String,
+    val concept: String? = null,
 )
 
 /** Everything the code viewer shows about a file without any interaction. */
@@ -150,6 +155,9 @@ fun TranslationUnit.conceptAnnotations(
                         .ifEmpty { "other" },
                 isOperation = overlay is Operation,
                 line = line,
+                target =
+                    node.name.localName.ifEmpty { node.code?.lineSequence()?.firstOrNull() ?: "" },
+                concept = (overlay as? Operation)?.concept?.javaClass?.simpleName,
             )
         }
     }

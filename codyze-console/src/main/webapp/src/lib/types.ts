@@ -145,6 +145,10 @@ export interface ConceptAnnotationJSON {
   category: string;
   isOperation: boolean;
   line: number;
+  /** The name (or else the code) of the node it is attached to */
+  target: string;
+  /** For operations: the type of the concept they belong to */
+  concept?: string | null;
 }
 
 /** Everything the code viewer shows about a file without interaction, see `.../annotations`. */
