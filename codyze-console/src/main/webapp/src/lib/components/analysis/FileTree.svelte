@@ -124,12 +124,12 @@
 
   const fileTree = $derived(buildFileTree(component.translationUnits));
 
-  // Folders are expanded by default, so only the collapsed ones are tracked
-  const collapsedFolders = new SvelteSet<string>();
+  // Folders are collapsed at first, so only the expanded ones are tracked
+  const expandedFolders = new SvelteSet<string>();
 
   function toggleFolder(path: string) {
-    if (collapsedFolders.has(path)) collapsedFolders.delete(path);
-    else collapsedFolders.add(path);
+    if (expandedFolders.has(path)) expandedFolders.delete(path);
+    else expandedFolders.add(path);
   }
 
   let filter = $state('');
@@ -157,7 +157,7 @@
     const visit = (nodes: TreeNode[], depth: number) => {
       for (const node of nodes) {
         result.push({ node, depth });
-        if (node.type === 'folder' && (filterText || !collapsedFolders.has(node.path))) {
+        if (node.type === 'folder' && (filterText || expandedFolders.has(node.path))) {
           visit(node.children, depth + 1);
         }
       }
@@ -197,7 +197,7 @@
   // Like the counts, expanded folders do not repeat the marks of their files
   function hasAgentEvidence(node: TreeNode): boolean {
     if (node.type === 'file') return !!node.unit && agentUnits.has(node.unit.id);
-    const expanded = filterText || !collapsedFolders.has(node.path);
+    const expanded = filterText || expandedFolders.has(node.path);
     return !expanded && foldersWithAgentEvidence.has(node.path);
   }
 
@@ -225,7 +225,7 @@
   // Files always show their count; expanded folders do not, since their files show it
   function conceptCount(node: TreeNode): number {
     if (node.type === 'file') return node.unit ? (conceptCounts?.get(node.unit.id) ?? 0) : 0;
-    const expanded = filterText || !collapsedFolders.has(node.path);
+    const expanded = filterText || expandedFolders.has(node.path);
     return expanded ? 0 : (folderConceptCounts[node.path] ?? 0);
   }
 
@@ -237,14 +237,25 @@
     if (target) untrack(() => reveal(target.unitId));
   });
 
-  function reveal(unitId: string) {
+  // The open file stays visible: its folders are expanded whenever another file is opened
+  $effect(() => {
+    const unitId = currentUnitId;
+    if (unitId) untrack(() => expandTo(unitId));
+  });
+
+  // Expands the folders containing a file, and returns whether the tree contains it
+  function expandTo(unitId: string): boolean {
     const expand = (node: TreeNode): boolean => {
       if (node.type === 'file') return node.unit?.id === unitId;
       const contains = node.children.some(expand);
-      if (contains) collapsedFolders.delete(node.path);
+      if (contains) expandedFolders.add(node.path);
       return contains;
     };
-    if (!fileTree.some(expand)) return;
+    return fileTree.some(expand);
+  }
+
+  function reveal(unitId: string) {
+    if (!expandTo(unitId)) return;
     filter = '';
     tick().then(() => {
       navElement?.querySelector(`[data-unit-id="${unitId}"]`)?.scrollIntoView({ block: 'nearest' });
@@ -284,7 +295,7 @@
   >
     {#if row.node.type === 'folder'}
       <svg
-        class="h-3 w-3 transition-transform {filterText || !collapsedFolders.has(row.node.path)
+        class="h-3 w-3 transition-transform {filterText || expandedFolders.has(row.node.path)
           ? 'rotate-90'
           : ''}"
         fill="none"
@@ -360,7 +371,7 @@
             type="button"
             class="{rowClass} hover:bg-gray-100"
             onclick={() => toggleFolder(row.node.path)}
-            aria-expanded={!!filterText || !collapsedFolders.has(row.node.path)}
+            aria-expanded={!!filterText || expandedFolders.has(row.node.path)}
           >
             {@render rowContent(row, false)}
           </button>

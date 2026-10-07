@@ -1154,15 +1154,10 @@
     onSendMessage(contextNode ? describeNode(contextNode) : undefined);
   }
 
-  // The code is the main view, so a file is open from the start (but not after closing all tabs)
-  let openedInitially = false;
+  // The file tree shows the first component from the start, but no file is opened for the user
   $effect(() => {
-    if (openedInitially || selectedTranslationUnit || !analysisResult) return;
-    openedInitially = true;
-    const first = analysisResult.components
-      .flatMap((c) => c.translationUnits)
-      .sort((a, b) => a.path.localeCompare(b.path))[0];
-    if (first) handleFileSelect(first);
+    if (selectedComponentName || !analysisResult) return;
+    selectedComponentName = analysisResult.components[0]?.name ?? null;
   });
 
   // Questions to start with, as long as the chat is empty
@@ -1565,7 +1560,7 @@
     {#if tabs.tabs.length > 0}
       <!-- Editor tabs -->
       <div
-        class="flex h-8 shrink-0 items-stretch overflow-x-auto border-b border-gray-200 bg-gray-50"
+        class="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-gray-200 bg-gray-50"
         role="tablist"
         aria-label="Open files"
       >
@@ -1585,7 +1580,7 @@
               type="button"
               role="tab"
               aria-selected={active}
-              class="flex min-w-0 items-center gap-1.5 py-1 pr-1 pl-3 font-mono text-xs"
+              class="flex min-w-0 items-center gap-1.5 py-1 pr-1 pl-3 text-[12.5px]"
               onclick={() => !active && handleFileSelect(unit)}
               onauxclick={(e) => {
                 if (e.button === 1) {
@@ -1664,7 +1659,7 @@
             {@const details = focus.details}
             <button
               type="button"
-              class="rounded-md border px-2.5 py-px text-[11px] disabled:text-gray-300 {pdg.open
+              class="h-6 rounded-md border px-2.5 text-[11.5px] disabled:text-gray-300 {pdg.open
                 ? 'border-blue-200 bg-blue-50 text-blue-700'
                 : 'border-gray-200 text-gray-500 hover:text-gray-800'}"
               aria-pressed={pdg.open}
