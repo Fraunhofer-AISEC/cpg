@@ -28,18 +28,22 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.HasImportsFromRecords
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import as ScopeImport
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -287,7 +291,12 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     // leaf namespaces. However, this can be extremely slow because it first gathers
                     // all children and then filters them. Instead, we can directly filter for the
                     // child declarations.
-                    it is Namespace && !it.isInferred && it.declarations.none { it is Namespace }
+                    (it is Namespace &&
+                        !it.isInferred &&
+                        it.declarations.none { it is Namespace }) ||
+                        // For languages that can import from records, a record is also an
+                        // authoritative source, since it is always declared in a single file
+                        (it is Record && !it.isInferred && it.language is HasImportsFromRecords)
                 }
 
             // We are only interested in "leaf" namespace declarations, meaning that they do not
@@ -369,14 +378,25 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             return
         }
 
-        // Try to look up the namespace scope by the name
-        var targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+        // Try to look up the scope by the name. This is usually a namespace, but languages with
+        // the HasImportsFromRecords trait can also import from a record
+        val language = language
+        var targetScope = scopeManager.lookupScope(name)
+        if (targetScope is RecordScope && language !is HasImportsFromRecords) {
+            errorWithFileLocation(this, log, "The language does not support imports from records")
+            return
+        }
+
         if (targetScope == null) {
             // Try to infer it, if inference is configured
-            val decl = tryNamespaceInference(name, this)
-            if (decl != null) {
-                targetScope = scopeManager.lookupScope(name) as? NamespaceScope
-            }
+            targetScope =
+                if (language is HasImportsFromRecords && language.importsFromRecord(this)) {
+                    language.inferImportTarget(this)
+                } else {
+                    tryNamespaceInference(name, this)?.let {
+                        scopeManager.lookupScope(name) as? NamespaceScope
+                    }
+                }
         }
 
         // If we have a target scope, we can create an "import" edge
@@ -410,19 +430,45 @@ fun ScopeManager.updateImportedSymbols(import: Import) {
         if (symbol != null) {
             // In this case, the symbol must point to a name scope
             val symbolScope = lookupScope(symbol)
-            if (symbolScope is NameScope) {
+            if (symbolScope is RecordScope) {
+                // Only some members of a record can be imported (e.g., only static ones)
+                import.importedSymbols =
+                    symbolScope.symbols
+                        .mapValues { (_, declarations) ->
+                            declarations.filterTo(mutableListOf()) { import.isImportable(it) }
+                        }
+                        .filterValues { it.isNotEmpty() }
+                        .toMutableMap()
+            } else if (symbolScope is NameScope) {
                 import.importedSymbols = symbolScope.symbols
             }
         }
     } else {
         // or a symbol directly
         val list =
-            lookupSymbolByName(import.import, import.language, import.location, scope)
-                .toMutableList()
+            lookupSymbolByName(import.import, import.language, import.location, scope).filterTo(
+                mutableListOf()
+            ) {
+                import.isImportable(it)
+            }
         import.importedSymbols = mutableMapOf(import.symbol to list)
     }
 
     // Import.importedSymbols is read by Scope.lookupSymbol (via replaceImports), so any cached
     // ScopeManager.lookupSymbolByName results may no longer be valid.
     invalidateSymbolLookupCache()
+}
+
+/**
+ * Checks whether [declaration] can be imported by this [Import]. For languages that can import from
+ * records ([HasImportsFromRecords]), only some members of a record can be imported (see
+ * [HasImportsFromRecords.isImportableFromRecord]). Everything else can always be imported.
+ */
+private fun Import.isImportable(declaration: Declaration): Boolean {
+    val language = language
+    return if (language is HasImportsFromRecords && declaration.scope is RecordScope) {
+        language.isImportableFromRecord(declaration)
+    } else {
+        true
+    }
 }
