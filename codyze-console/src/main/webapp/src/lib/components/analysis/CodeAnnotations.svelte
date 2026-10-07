@@ -1,13 +1,12 @@
 <script lang="ts">
   import type { FileAnnotationsJSON } from '$lib/types';
-  import { conceptIcon } from '$lib/annotations';
   import type { Layer } from '$lib/stores/layers.svelte';
   import type { CallFilter, InspectorSection } from '$lib/stores/codeFocus.svelte';
 
   /**
    * Draws the annotations of a file on top of the code: the key figures of each function at the end
    * of its first line, and, depending on the visible layers, markers under external and unresolved
-   * calls and icons for concepts in the gutter.
+   * calls and a purple ◆ for the concepts and operations of a line in the gutter.
    */
   interface Props {
     annotations: FileAnnotationsJSON;
@@ -22,6 +21,9 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
+    /** The left edge and the width of the lane of the concept icons in rem */
+    glyphLeft: number;
+    glyphWidth: number;
     /** Inspects a node, revealing a section of the inspector if given */
     onInspect: (nodeId: string, section?: InspectorSection, filter?: CallFilter) => void;
     /** Draws the annotations faintly, e.g. while a path is shown */
@@ -38,6 +40,8 @@
     charWidth,
     offsetTop,
     offsetLeft,
+    glyphLeft,
+    glyphWidth,
     onInspect,
     dimmed = false
   }: Props = $props();
@@ -102,11 +106,7 @@
     for (const concept of annotations.concepts) {
       byLine.set(concept.line, [...(byLine.get(concept.line) ?? []), concept]);
     }
-    return [...byLine.entries()].map(([line, concepts]) => ({
-      line,
-      concepts,
-      icons: [...new Set(concepts.map((c) => conceptIcon(c.category)))].slice(0, 2).join('')
-    }));
+    return [...byLine.entries()].map(([line, concepts]) => ({ line, concepts }));
   });
 
   const markedCalls = $derived(
@@ -169,23 +169,26 @@
     {/if}
   {/each}
 
-  <!-- Concept icons in the gutter -->
+  <!-- Concepts and operations in the gutter: one ◆ per line, the tooltip lists them -->
   {#each layers.concepts ? conceptsByLine : [] as entry (entry.line)}
     {#if isVisible(entry.line, entry.line)}
       <button
         type="button"
-        class="pointer-events-auto absolute left-1.5 z-[26] cursor-pointer text-[11px]"
+        class="pointer-events-auto absolute z-[26] flex cursor-pointer items-center justify-center font-sans text-[11px] text-purple-600 hover:text-purple-800"
         style:top="{top(entry.line)}rem"
-        style:line-height="{lineHeight}rem"
+        style:height="{lineHeight}rem"
+        style:left="{glyphLeft}rem"
+        style:width="{glyphWidth}rem"
         title={entry.concepts
           .map((c) => `${c.isOperation ? 'Operation' : 'Concept'}: ${c.type}`)
           .join('\n')}
+        aria-label="{entry.concepts.length} concepts and operations"
         onclick={(e) => {
           e.stopPropagation();
           onInspect(entry.concepts[0].id);
         }}
       >
-        {entry.icons}
+        ◆
       </button>
     {/if}
   {/each}

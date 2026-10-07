@@ -777,29 +777,30 @@
   // The highlighted line, 0-based
   const allHighlightLines = $derived(highlightLine ? [highlightLine - 1] : []);
 
-  const lineHeight = 1.5;
-  const charWidth = 0.60015625;
-  const offsetTop = 1;
-  const baseOffsetLeft = 2.4;
+  // The code is set in 13px, like in editors, and a monospace character is 0.6em wide
+  const fontSize = 0.8125;
+  const lineHeight = 1.25;
+  const charWidth = 0.60015625 * fontSize;
+  const offsetTop = 0.5;
 
   const code = $derived(translationUnit.code ?? '');
   const codeLines = $derived(code.split('\n'));
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
-  // The lanes of the gutter: the markers of the agent's steps and of the path before the line
-  // numbers, the arcs after them
+  // The gutter, from left to right: a lane for the numbered steps (of the path or the agent's
+  // thread), the line numbers, a narrow lane for the concept icons, and the space for the dataflow
+  // arcs
   // svelte-ignore state_referenced_locally
-  const agentLaneWidth = lanes ? 1.2 : 0;
+  const markerLaneWidth = lanes ? 1.25 : 0.5;
+  const glyphLaneLeft = 0.1;
+  const glyphLaneWidth = 0.75;
   // svelte-ignore state_referenced_locally
-  const markerLaneWidth = lanes ? 1.2 : 0;
-  // svelte-ignore state_referenced_locally
-  const arcLaneWidth = lanes ? 2.4 : 0;
-  const offsetLeft = $derived(
-    baseOffsetLeft + agentLaneWidth + markerLaneWidth + lineNumberWidth * charWidth + arcLaneWidth
-  );
-  // The arc lane ends shortly before the first character of a line (see CodeLines)
+  const gutterPadding = lanes ? 2.25 : 1;
+  const lineNumbersRight = $derived(markerLaneWidth + lineNumberWidth * charWidth);
+  const offsetLeft = $derived(lineNumbersRight + gutterPadding - charWidth);
+  // The arcs lie between the concept icons and the first character of a line (see CodeLines)
   const arcLaneRight = $derived(offsetLeft + charWidth - 0.35);
-  const arcLaneLeft = $derived(arcLaneRight - arcLaneWidth + 0.2);
+  const arcLaneLeft = $derived(lineNumbersRight + glyphLaneLeft + glyphLaneWidth);
   const maxColumns = $derived.by(() => {
     let max = 0;
     for (const line of codeLines) {
@@ -913,8 +914,10 @@
   <!-- Code display -->
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
     <!-- Header: where the file is, and below it the layer toggles -->
-    <div class="shrink-0 border-b border-gray-200 bg-white px-4 py-1.5">
-      <div class="flex min-h-6 items-center justify-between gap-3">
+    <div class="shrink-0 border-b border-gray-200 bg-white">
+      <div
+        class="flex min-h-[1.875rem] items-center justify-between gap-3 border-b border-gray-100 px-3 py-0.5"
+      >
         <div class="flex min-w-0 items-center gap-3">
           {#if headerStart}
             {@render headerStart()}
@@ -954,12 +957,16 @@
       </div>
       {#if annotations}
         <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
-        <div class="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label="Layers">
+        <div
+          class="flex h-9 items-center gap-1.5 overflow-x-auto px-3 whitespace-nowrap"
+          role="group"
+          aria-label="Layers"
+        >
           {#each shownLayers as layer (layer.id)}
             {@const summary = layerSummary(layer.id)}
             <button
               type="button"
-              class="flex items-center gap-1 rounded-full border px-2 py-px text-[11px] {layers
+              class="flex h-6 items-center gap-1 rounded-full border px-2 text-[11.5px] {layers
                 .visible[layer.id]
                 ? layer.activeClass
                 : 'border-gray-200 text-gray-400 hover:text-gray-600'}"
@@ -1015,7 +1022,8 @@
                 {charWidth}
                 {offsetTop}
                 {offsetLeft}
-                gutterPadding={0.75 + arcLaneWidth}
+                {fontSize}
+                {gutterPadding}
                 selection={selectedLines}
                 sliceLines={slice?.ranges.flatMap((r) =>
                   Array.from({ length: r.last - r.first + 1 }, (_, i) => r.first + i)
@@ -1047,6 +1055,8 @@
               {charWidth}
               {offsetTop}
               {offsetLeft}
+              glyphLeft={lineNumbersRight + glyphLaneLeft}
+              glyphWidth={glyphLaneWidth}
               onInspect={(id, section, filter) =>
                 inspect(() => getNodeDetails(id), true, section, filter)}
             />
@@ -1073,26 +1083,28 @@
             />
           {/if}
 
-          {#if pathMarkers.length > 0}
-            <StepMarkers
-              markers={pathMarkers}
-              startLine={visibleLines.start}
-              endLine={visibleLines.end}
-              {lineHeight}
-              {offsetTop}
-              left={baseOffsetLeft - 0.3 + agentLaneWidth}
-              onSelect={(marker) => selectRef(focus.path[marker.index])}
-            />
-          {/if}
-
-          {#if agentMarkers.length > 0}
+          <!-- The path and the agent's thread share the lane of the steps, the path takes precedence
+          while it is shown -->
+          {#if pathActive}
+            {#if pathMarkers.length > 0}
+              <StepMarkers
+                markers={pathMarkers}
+                startLine={visibleLines.start}
+                endLine={visibleLines.end}
+                {lineHeight}
+                {offsetTop}
+                left={(markerLaneWidth - 1) / 2}
+                onSelect={(marker) => selectRef(focus.path[marker.index])}
+              />
+            {/if}
+          {:else if agentMarkers.length > 0}
             <StepMarkers
               markers={agentMarkers}
               startLine={visibleLines.start}
               endLine={visibleLines.end}
               {lineHeight}
               {offsetTop}
-              left={baseOffsetLeft - 0.3}
+              left={(markerLaneWidth - 1) / 2}
               shape="square"
               onSelect={(marker) => {
                 const node = focus.thread.find((n) => n.ref.id === marker.nodeId);

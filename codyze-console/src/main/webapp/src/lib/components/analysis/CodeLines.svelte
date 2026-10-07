@@ -20,6 +20,8 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
+    /** The font size of the code in rem */
+    fontSize?: number;
     /** The space between the line numbers and the code in rem, e.g. for a lane of the gutter */
     gutterPadding?: number;
     /** The lines of the selection (1-based, inclusive): tinted, with emphasized line numbers */
@@ -40,6 +42,7 @@
     charWidth,
     offsetTop,
     offsetLeft,
+    fontSize = 1,
     gutterPadding = 0.75,
     selection = null,
     sliceLines = [],
@@ -87,7 +90,8 @@
 </script>
 
 <div
-  class="hljs relative min-w-full text-base"
+  class="hljs relative min-w-full"
+  style:font-size="{fontSize}rem"
   style:height="{2 * offsetTop + lines.length * lineHeight}rem"
   style:width="{codeStart + maxColumns * charWidth + 2}rem"
 >
