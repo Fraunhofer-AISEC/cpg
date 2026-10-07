@@ -10,25 +10,6 @@ export function conceptsInFunction(
   ).length;
 }
 
-const categoryIcons: Record<string, string> = {
-  crypto: '🔒',
-  file: '📄',
-  http: '🌐',
-  network: '🌐',
-  auth: '🔑',
-  logging: '📝',
-  memory: '🧠',
-  config: '⚙️',
-  flows: '🚪',
-  diskEncryption: '💽',
-  policy: '📋'
-};
-
-/** An icon for the category (package) of a concept. */
-export function conceptIcon(category: string): string {
-  return categoryIcons[category] ?? '◆';
-}
-
 /** Fetches the number of concepts and operations per translation unit (by ID) of a component. */
 export async function getConceptCounts(componentName: string): Promise<Map<string, number>> {
   const res = await fetch(
