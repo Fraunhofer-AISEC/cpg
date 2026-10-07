@@ -45,8 +45,8 @@ Calls to functions that are not declared anywhere (`get_key`, `printf`, `socket`
 
 **Code, layers and the code lens above `app_main`**
 - The layers *Concepts*, *External*, *Uncertain* show the results of the analysis in the code and in
-  the ruler. In the gutter, ◆ marks a concept and ◇ an operation (hover for which): `key = get_key(&cfg)`
-  has both (the secret and getting it), the call of `encrypt` an operation, the function `encrypt` in
+  the ruler. In the gutter, ◆ marks concepts and operations (hover for which): `key = get_key(&cfg)` has
+  the secret and getting it, the call of `encrypt` the encryption, the function `encrypt` in
   `crypto.c` the cipher. `get_key`, `send`, ... are external, `cfg.on_connect` is uncertain.
 - The code lens above a function (`calls 8 · 3 external · ⚠ 1 unresolved`) lists only the external or
   unresolved calls in the inspector when clicked.
