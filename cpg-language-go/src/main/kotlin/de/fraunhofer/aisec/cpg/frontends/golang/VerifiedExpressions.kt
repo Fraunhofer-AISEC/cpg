@@ -179,6 +179,32 @@ private fun ExpressionHandler.materialize(result: Sexp, raw: Ast.Expr): Expressi
                 else -> error("unexpected raw node ${node.goType} for a cast")
             }
         }
+        "new" -> {
+            node as Ast.CallExpr
+            newNew(rawNode = node) { new ->
+                new.type = materializeType(items[3])
+                new.initializer = materialize(items[4], node)
+            }
+        }
+        "construction" -> {
+            node as Ast.CallExpr
+            newConstruction(rawNode = node).apply {
+                // The first argument of make is the type
+                (items[4] as Sexp.SList).items.zip(node.args.drop(1)).forEach { (arg, rawArg) ->
+                    arguments += materialize(arg, rawArg)
+                }
+                type = materializeType(items[3])
+            }
+        }
+        "arrayconstruction" -> {
+            node as Ast.CallExpr
+            newArrayConstruction(rawNode = node).apply {
+                (items[4] as Sexp.SList).items.zip(node.args.drop(1)).forEach { (dim, rawDim) ->
+                    addDimension(materialize(dim, rawDim))
+                }
+                type = materializeType(items[3])
+            }
+        }
         // Outside the verified subset, so the regular handler is responsible
         else -> handle(node)
     }

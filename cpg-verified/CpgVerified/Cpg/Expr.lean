@@ -58,6 +58,12 @@ inductive Expr where
   | pointerDereference (loc : Span) (input : Expr)
   /-- `Cast` of `expression` to `castType` (a conversion or a type assertion) -/
   | cast (loc : Span) (castType : TypeRef) (expression : Expr)
+  /-- `New` with its type and initializer -/
+  | new (loc : Span) (type : TypeRef) (initializer : Expr)
+  /-- `Construction` of a type with arguments -/
+  | construction (loc : Span) (type : TypeRef) (arguments : List Expr)
+  /-- `ArrayConstruction` of a type with dimensions -/
+  | arrayConstruction (loc : Span) (type : TypeRef) (dimensions : List Expr)
   /-- `ProblemExpression` -/
   | problem (loc : Span) (problem : String)
 deriving Repr, Inhabited, BEq
@@ -66,6 +72,7 @@ deriving Repr, Inhabited, BEq
 def Expr.loc : Expr → Span
   | .literal loc .. | .reference loc _ | .binaryOperator loc .. | .unaryOperator loc ..
   | .call loc .. | .memberAccess loc .. | .memberCall loc .. | .subscription loc ..
-  | .range loc .. | .pointerDereference loc _ | .cast loc .. | .problem loc _ => loc
+  | .range loc .. | .pointerDereference loc _ | .cast loc .. | .new loc .. | .construction loc ..
+  | .arrayConstruction loc .. | .problem loc _ => loc
 
 end Cpg

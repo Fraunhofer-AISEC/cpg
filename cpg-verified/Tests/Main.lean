@@ -72,6 +72,12 @@ def goEnv : Go.Env where
     | .arrayType _ (.ident _ "byte"), .str s => some (.int s.utf8ByteSize)
     | .ident _ "T", v => some v
     | _, _ => none
+  new
+    | .ident _ "T" => some (.obj 7)
+    | _ => none
+  make
+    | .arrayType _ (.ident _ "int"), [.int n] => some (.int n)
+    | _, _ => none
 
 /-- The CPG environment matching `goEnv`: names are resolved as in `ctx`. -/
 def cpgEnv : Cpg.Env where
@@ -85,6 +91,15 @@ def cpgEnv : Cpg.Env where
   cast
     | .array (.resolved (.object "byte" [])), .str s => some (.int s.utf8ByteSize)
     | .resolved (.object "T" []), v => some v
+    | _, _ => none
+  construct
+    | .resolved (.object "T" []), [] => some .nil
+    | _, _ => none
+  constructArray
+    | .array (.resolved (.object "int" [])), [.int n] => some (.int n)
+    | _, _ => none
+  new
+    | .pointer (.resolved (.object "T" [])), .nil => some (.obj 7)
     | _, _ => none
 
 def goEval (e : Go.Expr) : Option Value := e.eval ctx.iota ctx.packages goEnv
@@ -208,6 +223,23 @@ def tests : List (String × Bool) := [
     let assert := Go.Expr.typeAssert (sp 0 6) (ident (sp 0 1) "x") (some (ident (sp 3 4) "T"))
     goEval conv == some (.int 3) && cpgEval conv == some (.int 3) &&
     goEval assert == some (.int 5) && cpgEval assert == some (.int 5)),
+  ("new and make",
+    translate ctx (.call (sp 0 6) (ident (sp 0 3) "new") [ident (sp 4 5) "T"])
+      == .new (sp 0 6) (.pointer (.resolved (.object "T" [])))
+        (.construction (sp 0 6) (.resolved (.object "T" [])) []) &&
+    translate ctx (.call (sp 0 13) (ident (sp 0 4) "make")
+        [.arrayType (sp 5 10) (ident (sp 7 10) "int"), int (sp 11 12) "3"])
+      == .arrayConstruction (sp 0 13) (.array (.resolved (.object "int" [])))
+        [.literal (sp 11 12) (.int 3) (.primitive "int") none]),
+  ("make with a capacity is outside the subset",
+    isProblem (translate ctx (.call (sp 0 16) (ident (sp 0 4) "make")
+      [.arrayType (sp 5 10) (ident (sp 7 10) "int"), int (sp 11 12) "3", int (sp 14 15) "4"]))),
+  ("evaluation: new and make agree",
+    let n := Go.Expr.call (sp 0 6) (ident (sp 0 3) "new") [ident (sp 4 5) "T"]
+    let m := Go.Expr.call (sp 0 13) (ident (sp 0 4) "make")
+      [.arrayType (sp 5 10) (ident (sp 7 10) "int"), int (sp 11 12) "3"]
+    goEval n == some (.obj 7) && cpgEval n == some (.obj 7) &&
+    goEval m == some (.int 3) && cpgEval m == some (.int 3)),
   ("evaluation: unbound names fail in both",
     goEval (ident (sp 0 1) "y") == none && cpgEval (ident (sp 0 1) "y") == none)
 ]

@@ -32,6 +32,10 @@ structure Env where
   deref : Value → Option Value
   /-- Converting a value to a type, or asserting its dynamic type; types are type expressions. -/
   cast : Expr → Value → Option Value
+  /-- The built-in `new(T)`. -/
+  new : Expr → Option Value
+  /-- The built-in `make(T, args...)`. -/
+  make : Expr → List Value → Option Value
 
 /--
 Value of a predeclared constant identifier (<https://go.dev/ref/spec#Predeclared_identifiers>).
@@ -89,6 +93,19 @@ def evalConversion (env : Env) (type : Expr) : List Value → Option Value
   | [v] => env.cast type v
   | _ => none
 
+/--
+A call of the built-in functions `new` and `make` (if they are not shadowed). `tail` are the values
+of all arguments but the first, which is a type.
+-/
+def evalBuiltin (env : Env) (name : String) (args : List Expr) (tail : Option (List Value)) :
+    Option Value :=
+  match name, args with
+  | "new", [type] => env.new type
+  | "make", type :: _ =>
+    -- The capacity of slices is not modelled
+    if isArrayType type && args.length > 2 then none else do env.make type (← tail)
+  | _, _ => none
+
 mutual
 
 /--
@@ -139,9 +156,10 @@ def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr �
       evalConversion env fn.unparen (← Expr.evalList iota packages env args)
     else
     match fn.unparen with
-    | .ident _ name => do
-      let f ← env.funcs name
-      f (← Expr.evalList iota packages env args)
+    | .ident _ name =>
+      match env.funcs name with
+      | some f => do f (← Expr.evalList iota packages env args)
+      | none => evalBuiltin env name args (Expr.evalTail iota packages env args)
     | _ => none
   | .index _ x i => do env.index (← x.eval iota packages env) (← i.eval iota packages env)
   | .slice _ x low high max => do
@@ -161,6 +179,12 @@ def Expr.evalOpt (iota : Option Int) (packages : List String) (env : Env) :
     Option Expr → Option (Option Value)
   | none => some none
   | some e => some <$> e.eval iota packages env
+
+/-- Evaluates all but the first expression of a list. -/
+def Expr.evalTail (iota : Option Int) (packages : List String) (env : Env) :
+    List Expr → Option (List Value)
+  | [] => some []
+  | _ :: rest => Expr.evalList iota packages env rest
 
 /-- Evaluates a list of expressions from left to right. -/
 def Expr.evalList (iota : Option Int) (packages : List String) (env : Env) :

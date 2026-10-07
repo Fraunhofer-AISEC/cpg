@@ -12,8 +12,8 @@ The verified counterpart of `ExpressionHandler` in `cpg-language-go`. Everything
 handler reads from mutable frontend state (current scope, imports, `iota`) is an explicit
 input (`Ctx`), so the translation is a pure, total function.
 
-Intentional deviations from the Kotlin handler: `new` and `make`, calls of anything but a named
-function or a (non-parenthesized) selector, and literals whose value is not modelled (floating-point, imaginary, escape sequences)
+Intentional deviations from the Kotlin handler: calls of anything but a named function, a
+conversion or a (non-parenthesized) selector, and literals whose value is not modelled (floating-point, imaginary, escape sequences)
 become `ProblemExpression`s, i.e. they are outside the verified subset. Shadowing of predeclared
 identifiers is taken from the context (`Ctx.shadowed`).
 -/
@@ -106,6 +106,28 @@ def translateConversion (span : Span) : Option TypeRef → List Cpg.Expr → Cpg
   | some t, [arg] => .cast span t arg
   | _, _ => .problem span "conversion is not in the verified subset"
 
+/--
+Translates a call of the built-in `new` or `make` with the raw arguments `args`, of which `tail` are
+all but the first one, translated. The Go frontend drops the capacity of `make([]T, n, c)`, so
+`make` with a capacity is not in the verified subset.
+-/
+def translateAllocation (span : Span) (name : String) (args : List Expr) (tail : List Cpg.Expr) :
+    Cpg.Expr :=
+  match name, args with
+  | "new", [type] =>
+    match typeOf? type with
+    | some t => .new span (.pointer t) (.construction span t [])
+    | none => .problem span "new is not in the verified subset"
+  | "make", type :: _ =>
+    match typeOf? type with
+    | some t =>
+      if isArrayType type then
+        if args.length ≤ 2 then .arrayConstruction span t tail
+        else .problem span "make with a capacity is not in the verified subset"
+      else .construction span t tail
+    | none => .problem span "make is not in the verified subset"
+  | _, _ => .problem span "new and make are not in the verified subset"
+
 mutual
 
 /-- Translates a Go expression into a CPG expression. -/
@@ -134,7 +156,7 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
     match calleeName? fn with
     | some name =>
       if (name == "new" || name == "make") && !ctx.shadowed.contains name then
-        .problem span "new and make are not in the verified subset"
+        translateAllocation span name args (translateTail ctx args)
       else .call span (translate ctx fn) (translateList ctx args)
     | none => .problem span "only calls of named functions and methods are in the verified subset"
   | .index span x i => .subscription span (translate ctx x) (translate ctx i)
@@ -155,6 +177,11 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
 def translateOpt (ctx : Ctx) : Option Expr → Option Cpg.Expr
   | none => none
   | some e => some (translate ctx e)
+
+/-- Translates all but the first expression of a list. -/
+def translateTail (ctx : Ctx) : List Expr → List Cpg.Expr
+  | [] => []
+  | _ :: rest => translateList ctx rest
 
 /-- Translates a list of expressions. -/
 def translateList (ctx : Ctx) : List Expr → List Cpg.Expr
