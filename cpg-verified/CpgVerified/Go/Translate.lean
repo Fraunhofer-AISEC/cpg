@@ -85,6 +85,27 @@ def calleeName? (fn : Expr) : Option String :=
   | .ident _ name => some name
   | _ => none
 
+/--
+The type that the frontend builds for a type expression (`GoLanguageFrontend.typeOf`), including
+where it resolves aliases, or `none` if the type expression is not in the verified subset. Anonymous
+struct, interface and function types (which create declarations or need formatted names) and
+generic instantiations are not.
+-/
+def typeOf? : Expr → Option TypeRef
+  | .ident _ name => some (.resolved (.object name []))
+  | .selector _ (.ident _ base) sel => some (.object (base ++ "." ++ sel) [])
+  | .selector _ _ sel => some (.object sel [])
+  | .arrayType _ elt => .array <$> typeOf? elt
+  | .chanType _ value => do pure (.object "chan" [← typeOf? value])
+  | .mapType _ key value => do pure (.object "map" [← typeOf? key, ← typeOf? value])
+  | .star _ x => (.resolved ∘ .pointer) <$> typeOf? x
+  | _ => none
+
+/-- Translates a conversion to the type `t` with the (translated) arguments `args`. -/
+def translateConversion (span : Span) : Option TypeRef → List Cpg.Expr → Cpg.Expr
+  | some t, [arg] => .cast span t arg
+  | _, _ => .problem span "conversion is not in the verified subset"
+
 mutual
 
 /-- Translates a Go expression into a CPG expression. -/
@@ -107,6 +128,9 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
     | some _ => .call span (translate ctx fn) (translateList ctx args)
     | none => .memberCall span (translate ctx fn) (translateList ctx args)
   | .call span fn args =>
+    if isConversion fn.unparen then
+      translateConversion span (typeOf? fn.unparen) (translateList ctx args)
+    else
     match calleeName? fn with
     | some name =>
       if (name == "new" || name == "make") && !ctx.shadowed.contains name then
@@ -118,6 +142,13 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
     .subscription span (translate ctx x)
       (.range span (translateOpt ctx low) (translateOpt ctx high) (translateOpt ctx max))
   | .star span x => .pointerDereference span (translate ctx x)
+  | .typeAssert span x (some type) =>
+    match typeOf? type with
+    | some t => .cast span t (translate ctx x)
+    | none => .problem span "type assertion is not in the verified subset"
+  | .typeAssert span _ none => .problem span "type switch guards are not in the verified subset"
+  | .arrayType span _ | .mapType span .. | .chanType span _ =>
+    .problem span "type expressions are not values"
   | .unsupported span goType => .problem span s!"{goType} is not in the verified subset"
 
 /-- Translates an optional expression. -/

@@ -30,6 +30,8 @@ structure Env where
   slice : Value → Option Value → Option Value → Option Value → Option Value
   /-- Dereferencing a pointer. -/
   deref : Value → Option Value
+  /-- Converting a value to a type, or asserting its dynamic type; types are type expressions. -/
+  cast : Expr → Value → Option Value
 
 /--
 Value of a predeclared constant identifier (<https://go.dev/ref/spec#Predeclared_identifiers>).
@@ -82,6 +84,11 @@ def evalUnary : UnaryOp → Value → Option Value
   | .not, .bool x => some (.bool (!x))
   | _, _ => none
 
+/-- A conversion to the type `type` takes exactly one argument. -/
+def evalConversion (env : Env) (type : Expr) : List Value → Option Value
+  | [v] => env.cast type v
+  | _ => none
+
 mutual
 
 /--
@@ -128,6 +135,9 @@ def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr �
       let m ← env.methods sel
       m receiver (← Expr.evalList iota packages env args)
   | .call _ fn args =>
+    if isConversion fn.unparen then do
+      evalConversion env fn.unparen (← Expr.evalList iota packages env args)
+    else
     match fn.unparen with
     | .ident _ name => do
       let f ← env.funcs name
@@ -141,6 +151,9 @@ def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr �
     let m ← Expr.evalOpt iota packages env max
     env.slice a l h m
   | .star _ x => do env.deref (← x.eval iota packages env)
+  | .typeAssert _ x (some type) => do env.cast type (← x.eval iota packages env)
+  | .typeAssert _ _ none => none
+  | .arrayType .. | .mapType .. | .chanType .. => none
   | .unsupported .. => none
 
 /-- Evaluates an optional expression; an absent expression has no value, but does not fail. -/

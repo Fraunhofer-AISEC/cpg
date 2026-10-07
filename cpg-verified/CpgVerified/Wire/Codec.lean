@@ -26,6 +26,10 @@ EXPR      := (lit START END KIND VALUE)           KIND := int | float | imag | c
            | (index START END X INDEX)
            | (slice START END X OPT OPT OPT)      OPT := () | (EXPR)
            | (star START END X)
+           | (typeassert START END X OPT)         OPT := () | (TYPEEXPR)
+           | (arraytype START END ELT)
+           | (maptype START END KEY VALUE)
+           | (chantype START END VALUE)
            | (unsupported START END GOTYPE)
 ```
 
@@ -34,7 +38,8 @@ and translated CPG expressions are sent back as
 ```
 CPG := (literal START END VALUE TYPE NAME)
          VALUE := (int n) | (bool true|false) | (str s) | (nil) | (obj address) | (float text)
-         TYPE  := (primitive name) | (unknown)
+         TYPE  := (primitive name) | (unknown) | (object name (TYPE*)) | (pointer TYPE)
+                | (array TYPE) | (resolved TYPE)
          NAME  := () | (name)
      | (reference START END NAME)
      | (binary START END CODE LHS RHS)
@@ -45,6 +50,7 @@ CPG := (literal START END VALUE TYPE NAME)
      | (subscription START END ARRAY SUBSCRIPT)
      | (range START END OPT OPT OPT)           OPT := () | (CPG)
      | (deref START END INPUT)
+     | (cast START END TYPE EXPRESSION)
      | (problem START END MESSAGE)
 ```
 -/
@@ -114,6 +120,12 @@ partial def decodeExpr : Sexp → Except String Go.Expr
     return .slice (← decodeSpan s e) (← decodeExpr x) (← decodeOptExpr low)
       (← decodeOptExpr high) (← decodeOptExpr max)
   | .list [.atom "star", s, e, x] => return .star (← decodeSpan s e) (← decodeExpr x)
+  | .list [.atom "typeassert", s, e, x, type] =>
+    return .typeAssert (← decodeSpan s e) (← decodeExpr x) (← decodeOptExpr type)
+  | .list [.atom "arraytype", s, e, elt] => return .arrayType (← decodeSpan s e) (← decodeExpr elt)
+  | .list [.atom "maptype", s, e, k, v] =>
+    return .mapType (← decodeSpan s e) (← decodeExpr k) (← decodeExpr v)
+  | .list [.atom "chantype", s, e, v] => return .chanType (← decodeSpan s e) (← decodeExpr v)
   | .list [.atom "unsupported", s, e, .atom goType] =>
     return .unsupported (← decodeSpan s e) goType
   | s => throw s!"malformed expression {repr s}"
@@ -146,9 +158,13 @@ def encodeValue : Value → Sexp
   | .obj address => .list [.atom "obj", .atom (toString address)]
   | .float text => .list [.atom "float", .atom text]
 
-def encodeType : TypeRef → Sexp
+partial def encodeType : TypeRef → Sexp
   | .primitive name => .list [.atom "primitive", .atom name]
   | .unknown => .list [.atom "unknown"]
+  | .object name generics => .list [.atom "object", .atom name, .list (generics.map encodeType)]
+  | .pointer t => .list [.atom "pointer", encodeType t]
+  | .array t => .list [.atom "array", encodeType t]
+  | .resolved t => .list [.atom "resolved", encodeType t]
 
 partial def encodeExpr : Cpg.Expr → Sexp
   | .literal loc v t name =>
@@ -173,6 +189,7 @@ partial def encodeExpr : Cpg.Expr → Sexp
       [floor, ceiling, third].map fun e => .list (e.toList.map encodeExpr))
   | .pointerDereference loc input =>
     .list ([.atom "deref"] ++ encodeSpan loc ++ [encodeExpr input])
+  | .cast loc t e => .list ([.atom "cast"] ++ encodeSpan loc ++ [encodeType t, encodeExpr e])
   | .problem loc msg => .list ([.atom "problem"] ++ encodeSpan loc ++ [.atom msg])
 
 /-- Handles one request: decodes, translates and encodes the result (or an error). -/

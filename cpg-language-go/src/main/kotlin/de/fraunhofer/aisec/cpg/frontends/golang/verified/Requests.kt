@@ -87,6 +87,12 @@ fun encodeExpr(expr: Ast.Expr): Sexp {
                 encodeOptExpr(expr.max),
             )
         is Ast.StarExpr -> sexpOf(atom("star"), *span, encodeExpr(expr.x))
+        is Ast.TypeAssertExpr ->
+            sexpOf(atom("typeassert"), *span, encodeExpr(expr.x), encodeOptExpr(expr.type))
+        is Ast.ArrayType -> sexpOf(atom("arraytype"), *span, encodeExpr(expr.elt))
+        is Ast.MapType ->
+            sexpOf(atom("maptype"), *span, encodeExpr(expr.key), encodeExpr(expr.value))
+        is Ast.ChanType -> sexpOf(atom("chantype"), *span, encodeExpr(expr.value))
         else -> sexpOf(atom("unsupported"), *span, atom(expr.goType))
     }
 }
@@ -104,7 +110,8 @@ fun isInVerifiedSubset(expr: Ast.Expr): Boolean =
         expr is Ast.SelectorExpr ||
         expr is Ast.IndexExpr ||
         expr is Ast.SliceExpr ||
-        expr is Ast.StarExpr
+        expr is Ast.StarExpr ||
+        expr is Ast.TypeAssertExpr
 
 /** The identifiers occurring in [expr], not descending into expressions outside the subset. */
 fun identifiersIn(expr: Ast.Expr): Set<String> =
@@ -120,5 +127,6 @@ fun identifiersIn(expr: Ast.Expr): Set<String> =
             identifiersIn(expr.x) +
                 listOfNotNull(expr.low, expr.high, expr.max).flatMap(::identifiersIn)
         is Ast.StarExpr -> identifiersIn(expr.x)
+        is Ast.TypeAssertExpr -> identifiersIn(expr.x)
         else -> emptySet()
     }

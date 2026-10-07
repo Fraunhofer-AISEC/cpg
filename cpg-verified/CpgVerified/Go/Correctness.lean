@@ -53,6 +53,10 @@ structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
   index : cenv.index = genv.index
   slice : cenv.slice = genv.slice
   deref : cenv.deref = genv.deref
+  /-- Casting to a type expression means casting to the type it is translated to. -/
+  cast : ∀ te t, typeOf? te = some t → cenv.cast t = genv.cast te
+  /-- Types outside the verified subset are never cast to. -/
+  castUnmodelled : ∀ te, typeOf? te = none → ∀ v, genv.cast te v = none
 
 /-- Every strict Go binary operator means the same as the CPG operator code it is mapped to. -/
 theorem evalBinaryOp_token (op : BinaryOp) (hand : op ≠ .land) (hor : op ≠ .lor) (a b : Value) :
@@ -74,12 +78,20 @@ theorem token_eq_lor (op : BinaryOp) : op.token = "||" ↔ op = .lor := by
 theorem translate_unparen (ctx : Ctx) : ∀ e : Expr, translate ctx e.unparen = translate ctx e
   | .paren _ x => by simp only [Expr.unparen, translate]; exact translate_unparen ctx x
   | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
-  | .slice .. | .star .. | .unsupported .. => rfl
+  | .slice .. | .star .. | .typeAssert .. | .arrayType .. | .mapType .. | .chanType ..
+  | .unsupported .. => rfl
 
 theorem unparen_not_paren (span : Cpg.Span) (x : Expr) : ∀ e : Expr, e.unparen ≠ .paren span x
   | .paren _ y => by simp only [Expr.unparen]; exact unparen_not_paren span x y
   | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
-  | .slice .. | .star .. | .unsupported .. => by simp [Expr.unparen]
+  | .slice .. | .star .. | .typeAssert .. | .arrayType .. | .mapType .. | .chanType ..
+  | .unsupported .. => by simp [Expr.unparen]
+
+theorem translateConversion_ne_range (span : Cpg.Span) (t : Option Cpg.TypeRef)
+    (args : List Cpg.Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
+    translateConversion span t args ≠ .range loc a b c := by
+  unfold translateConversion
+  split <;> simp
 
 /-- The translation never produces a bare `Range`; ranges only occur inside subscriptions. -/
 theorem translate_ne_range (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
@@ -88,7 +100,8 @@ theorem translate_ne_range (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (a b c : Opti
   | ident => simp only [translate, translateIdent]; split <;> (try split) <;> (try split) <;> simp
   | basicLit => simp only [translate]; split <;> simp
   | call _ fn _ =>
-    cases fn <;> simp only [translate] <;> (try split) <;> (try split) <;> simp
+    cases fn <;> simp only [translate] <;> (repeat' split) <;> simp [translateConversion_ne_range]
+  | typeAssert _ _ t => cases t <;> simp only [translate] <;> (try split) <;> simp
   | selector => simp only [translate]; split <;> simp
   | paren _ x => simp only [translate]; exact translate_ne_range ctx x loc a b c
   | _ => simp [translate]
@@ -172,6 +185,32 @@ theorem call_ident_full_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     simp [Cpg.Expr.eval, hf]
   · exact call_ident_correct ctx genv cenv h span s name _ _ hargs
 
+/-- A conversion is preserved, given that its arguments are. -/
+theorem conversion_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (te : Expr) (args : List Expr)
+    (ihargs : Cpg.Expr.evalList semantics cenv (translateList ctx args)
+      = Expr.evalList ctx.iota ctx.packages genv args) :
+    (translateConversion span (typeOf? te) (translateList ctx args)).eval semantics cenv
+      = (do evalConversion genv te (← Expr.evalList ctx.iota ctx.packages genv args)) := by
+  rw [← ihargs]
+  match translateList ctx args with
+  | [] => cases typeOf? te <;> simp [translateConversion, Cpg.Expr.eval, Cpg.Expr.evalList,
+      evalConversion]
+  | [arg] =>
+    simp only [Cpg.Expr.evalList]
+    cases ht : typeOf? te with
+    | some t =>
+      cases hv : arg.eval semantics cenv <;>
+        simp [hv, translateConversion, Cpg.Expr.eval, evalConversion, h.cast te t ht]
+    | none =>
+      cases hv : arg.eval semantics cenv <;>
+        simp [hv, translateConversion, Cpg.Expr.eval, evalConversion, h.castUnmodelled te ht]
+  | a :: b :: rest =>
+    cases typeOf? te <;> simp only [translateConversion, Cpg.Expr.eval] <;>
+      simp [Cpg.Expr.evalList, evalConversion] <;>
+      cases a.eval semantics cenv <;> simp <;> cases b.eval semantics cenv <;> simp <;>
+      cases Cpg.Expr.evalList semantics cenv rest <;> simp
+
 /-- A call whose callee is not a selector is preserved, given that its arguments are. -/
 theorem call_other_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
     (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (fn : Expr) (args : List Expr)
@@ -183,19 +222,29 @@ theorem call_other_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
   cases fn with
   | selector s x sel => exact absurd rfl (hfn s x sel)
   | ident s name =>
-    simp only [translate, Expr.eval, calleeName?, Expr.unparen]
+    simp only [translate, Expr.eval, calleeName?, Expr.unparen, isConversion, Bool.false_eq_true,
+      ite_false]
     exact call_ident_full_correct ctx genv cenv h span s name _ _ ihargs
+  | arrayType | chanType | mapType =>
+    simp only [translate, Expr.eval, Expr.unparen, isConversion, ite_true]
+    exact conversion_correct ctx genv cenv h span _ args ihargs
   | paren s y =>
     simp only [translate, Expr.eval, calleeName?, Expr.unparen]
+    by_cases hc : isConversion y.unparen = true
+    · simp only [hc, ite_true]
+      exact conversion_correct ctx genv cenv h span _ args ihargs
+    simp only [hc, Bool.false_eq_true, ite_false]
     rw [← translate_unparen ctx y]
-    generalize hu : y.unparen = u
+    generalize hu : y.unparen = u at hc
     cases u with
     | ident s' name =>
       simp only [translate]
       exact call_ident_full_correct ctx genv cenv h span s' name _ _ ihargs
     | paren s' x => exact absurd hu (unparen_not_paren s' x y)
+    | arrayType | chanType | mapType => simp [isConversion] at hc
     | _ => simp [Cpg.Expr.eval]
-  | _ => simp [translate, calleeName?, Expr.unparen, Expr.eval, Cpg.Expr.eval]
+  | _ =>
+    simp [translate, calleeName?, Expr.unparen, Expr.eval, Cpg.Expr.eval, isConversion]
 
 mutual
 
@@ -254,7 +303,8 @@ theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
         simp only [Cpg.Expr.eval, ihargs, h.qualifiedFuncs p (packageOf?_mem hp) sel]
       | none => simp only [Cpg.Expr.eval, ihx, ihargs, h.methods]
     | .basicLit .. | .ident .. | .binary .. | .unary .. | .paren .. | .call .. | .index ..
-    | .slice .. | .star .. | .unsupported .. =>
+    | .slice .. | .star .. | .typeAssert .. | .arrayType .. | .mapType .. | .chanType ..
+    | .unsupported .. =>
       exact call_other_correct ctx genv cenv h span _ args (by simp) ihargs
   | .index span x i => by
     have ihx := translate_correct ctx genv cenv h x
@@ -271,6 +321,16 @@ theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
   | .star span x => by
     have ihx := translate_correct ctx genv cenv h x
     simp only [translate, Cpg.Expr.eval, Expr.eval, ihx, h.deref]
+  | .typeAssert span x (some te) => by
+    have ihx := translate_correct ctx genv cenv h x
+    simp only [translate, Expr.eval]
+    cases ht : typeOf? te with
+    | some t => simp only [Cpg.Expr.eval, ihx, h.cast te t ht]
+    | none =>
+      simp only [Cpg.Expr.eval]
+      cases x.eval ctx.iota ctx.packages genv <;> simp [h.castUnmodelled te ht]
+  | .typeAssert span x none => by simp [translate, Cpg.Expr.eval, Expr.eval]
+  | .arrayType .. | .mapType .. | .chanType .. => by simp [translate, Cpg.Expr.eval, Expr.eval]
   | .unsupported span goType => by simp [translate, Cpg.Expr.eval, Expr.eval]
 
 /-- Semantic preservation for optional expressions. -/
@@ -296,6 +356,11 @@ theorem translateList_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
 
 end
 
+theorem translateConversion_loc (span : Cpg.Span) (t : Option Cpg.TypeRef)
+    (args : List Cpg.Expr) : (translateConversion span t args).loc = span := by
+  unfold translateConversion
+  split <;> rfl
+
 /-- **Location preservation.** Every translated node is located at its (unparenthesized) source. -/
 theorem translate_loc (ctx : Ctx) : ∀ e : Expr, (translate ctx e).loc = e.unparen.span
   | .basicLit .. => by simp only [translate]; split <;> rfl
@@ -312,6 +377,13 @@ theorem translate_loc (ctx : Ctx) : ∀ e : Expr, (translate ctx e).loc = e.unpa
     simp only [translate]
     split <;> rfl
   | .call _ fn _ => by
-    cases fn <;> simp only [translate] <;> (try split) <;> (try split) <;> rfl
+    cases fn <;> simp only [translate] <;> (repeat' split) <;>
+      first
+      | exact translateConversion_loc _ _ _
+      | simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
+  | .typeAssert _ _ t => by
+    cases t <;> simp only [translate] <;> (try split) <;> simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
+  | .arrayType .. | .mapType .. | .chanType .. => by
+    simp only [translate, Cpg.Expr.loc, Expr.unparen, Expr.span]
 
 end Go

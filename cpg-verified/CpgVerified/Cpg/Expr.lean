@@ -15,13 +15,24 @@ passes (EOG, DFG, `refersTo`, ...) are deliberately absent.
 
 namespace Cpg
 
-/-- The type that the frontend assigns to a node. -/
+/--
+A type, as the frontend builds it with the type builders. Types are unresolved names here; they are
+resolved by the `TypeResolver` pass later.
+-/
 inductive TypeRef where
   /-- `primitiveType(name)` -/
   | primitive (name : String)
   /-- `unknownType()` -/
   | unknown
-deriving Repr, DecidableEq, Inhabited
+  /-- `objectType(name, generics)`, which is a primitive type if `name` is a built-in type -/
+  | object (name : String) (generics : List TypeRef)
+  /-- `type.pointer()` -/
+  | pointer (type : TypeRef)
+  /-- `type.array()` -/
+  | array (type : TypeRef)
+  /-- `typeManager.resolvePossibleTypedef(type)`, i.e. the type behind an alias, if any -/
+  | resolved (type : TypeRef)
+deriving Repr, BEq, Inhabited
 
 /-- CPG expression nodes. -/
 inductive Expr where
@@ -45,6 +56,8 @@ inductive Expr where
   | range (loc : Span) (floor ceiling third : Option Expr)
   /-- `PointerDereference` -/
   | pointerDereference (loc : Span) (input : Expr)
+  /-- `Cast` of `expression` to `castType` (a conversion or a type assertion) -/
+  | cast (loc : Span) (castType : TypeRef) (expression : Expr)
   /-- `ProblemExpression` -/
   | problem (loc : Span) (problem : String)
 deriving Repr, Inhabited, BEq
@@ -53,6 +66,6 @@ deriving Repr, Inhabited, BEq
 def Expr.loc : Expr → Span
   | .literal loc .. | .reference loc _ | .binaryOperator loc .. | .unaryOperator loc ..
   | .call loc .. | .memberAccess loc .. | .memberCall loc .. | .subscription loc ..
-  | .range loc .. | .pointerDereference loc _ | .problem loc _ => loc
+  | .range loc .. | .pointerDereference loc _ | .cast loc .. | .problem loc _ => loc
 
 end Cpg

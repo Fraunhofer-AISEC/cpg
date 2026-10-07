@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
@@ -235,6 +236,19 @@ class VerifiedTranslationTest {
         return stats
     }
 
+    /** The name of the type described by [type], assuming that no type aliases are involved. */
+    private fun typeName(type: Sexp): String {
+        val items = (type as Sexp.SList).items
+        return when (items[0].toString()) {
+            "primitive",
+            "object" -> items[1].toString()
+            "pointer" -> typeName(items[1]) + "*"
+            "array" -> typeName(items[1]) + "[]"
+            "resolved" -> typeName(items[1])
+            else -> "UNKNOWN"
+        }
+    }
+
     private fun Sexp.containsProblem(): Boolean =
         this is Sexp.SList &&
             (items.firstOrNull()?.toString() == "problem" || items.any { it.containsProblem() })
@@ -375,6 +389,16 @@ class VerifiedTranslationTest {
                     return diffs + "expected PointerDereference, got ${kotlin::class.simpleName}"
                 }
                 diffs += compare(items[3], kotlin.input, region)
+            }
+            "cast" -> {
+                if (kotlin !is Cast) {
+                    return diffs + "expected Cast, got ${kotlin::class.simpleName}"
+                }
+                val expected = typeName(items[3])
+                if (kotlin.castType.name.toString() != expected) {
+                    diffs += "cast type $expected vs ${kotlin.castType.name}"
+                }
+                diffs += compare(items[4], kotlin.expression, region)
             }
             else -> diffs += "unknown kind $kind"
         }
