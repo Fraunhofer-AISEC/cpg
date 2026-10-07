@@ -32,6 +32,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeS
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -92,13 +93,16 @@ open class JavaLanguage :
     private val typeSolvers = ConcurrentHashMap<Pair<List<Path>, List<Path>>, CombinedTypeSolver>()
 
     /**
-     * Returns the (shared) JavaParser type solver for the current component of [ctx]. It resolves
-     * against the JDK, the top-level of the component as well as the additional source roots and
-     * jars of the [JavaFrontendConfiguration].
+     * Returns the (shared) JavaParser type solver for the [component] (by default, the current
+     * component of [ctx]). It resolves against the JDK, the top-level of the component as well as
+     * the additional source roots and jars of the [JavaFrontendConfiguration].
      */
-    internal fun typeSolverFor(ctx: TranslationContext): CombinedTypeSolver {
+    internal fun typeSolverFor(
+        ctx: TranslationContext,
+        component: Component? = ctx.currentComponent,
+    ): CombinedTypeSolver {
         val config = ctx.config
-        var root = ctx.currentComponent?.let { config.topLevels[it.name.localName] }
+        var root = component?.let { config.topLevels[it.name.localName] }
         if (root == null && config.softwareComponents.size == 1) {
             root =
                 config.softwareComponents[config.softwareComponents.keys.first()]?.let {
