@@ -89,6 +89,15 @@ fun encodeExpr(expr: Ast.Expr): Sexp {
         is Ast.StarExpr -> sexpOf(atom("star"), *span, encodeExpr(expr.x))
         is Ast.TypeAssertExpr ->
             sexpOf(atom("typeassert"), *span, encodeExpr(expr.x), encodeOptExpr(expr.type))
+        is Ast.CompositeLit ->
+            sexpOf(
+                atom("compositelit"),
+                *span,
+                encodeOptExpr(expr.type),
+                sexpOf(expr.elts.map(::encodeExpr)),
+            )
+        is Ast.KeyValueExpr ->
+            sexpOf(atom("keyvalue"), *span, encodeExpr(expr.key), encodeExpr(expr.value))
         is Ast.ArrayType -> sexpOf(atom("arraytype"), *span, encodeExpr(expr.elt))
         is Ast.MapType ->
             sexpOf(atom("maptype"), *span, encodeExpr(expr.key), encodeExpr(expr.value))
@@ -111,7 +120,8 @@ fun isInVerifiedSubset(expr: Ast.Expr): Boolean =
         expr is Ast.IndexExpr ||
         expr is Ast.SliceExpr ||
         expr is Ast.StarExpr ||
-        expr is Ast.TypeAssertExpr
+        expr is Ast.TypeAssertExpr ||
+        expr is Ast.CompositeLit
 
 /** The identifiers occurring in [expr], not descending into expressions outside the subset. */
 fun identifiersIn(expr: Ast.Expr): Set<String> =
@@ -128,5 +138,7 @@ fun identifiersIn(expr: Ast.Expr): Set<String> =
                 listOfNotNull(expr.low, expr.high, expr.max).flatMap(::identifiersIn)
         is Ast.StarExpr -> identifiersIn(expr.x)
         is Ast.TypeAssertExpr -> identifiersIn(expr.x)
+        is Ast.CompositeLit -> expr.elts.flatMap(::identifiersIn).toSet()
+        is Ast.KeyValueExpr -> identifiersIn(expr.key) + identifiersIn(expr.value)
         else -> emptySet()
     }

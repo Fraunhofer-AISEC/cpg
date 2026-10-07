@@ -64,6 +64,10 @@ inductive Expr where
   | construction (loc : Span) (type : TypeRef) (arguments : List Expr)
   /-- `ArrayConstruction` of a type with dimensions -/
   | arrayConstruction (loc : Span) (type : TypeRef) (dimensions : List Expr)
+  /-- `InitializerList` of a type with initializers -/
+  | initializerList (loc : Span) (type : TypeRef) (initializers : List Expr)
+  /-- `KeyValue` -/
+  | keyValue (loc : Span) (key value : Expr)
   /-- `ProblemExpression` -/
   | problem (loc : Span) (problem : String)
 deriving Repr, Inhabited, BEq
@@ -73,6 +77,6 @@ def Expr.loc : Expr → Span
   | .literal loc .. | .reference loc _ | .binaryOperator loc .. | .unaryOperator loc ..
   | .call loc .. | .memberAccess loc .. | .memberCall loc .. | .subscription loc ..
   | .range loc .. | .pointerDereference loc _ | .cast loc .. | .new loc .. | .construction loc ..
-  | .arrayConstruction loc .. | .problem loc _ => loc
+  | .arrayConstruction loc .. | .initializerList loc .. | .keyValue loc .. | .problem loc _ => loc
 
 end Cpg

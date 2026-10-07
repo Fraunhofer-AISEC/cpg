@@ -47,6 +47,8 @@ structure Env where
   constructArray : TypeRef → List Value → Option Value
   /-- Allocating a new value of a (pointer) type with an initializer. -/
   new : TypeRef → Value → Option Value
+  /-- Creating a value of a type from the (optionally keyed) elements of an initializer list. -/
+  composite : TypeRef → List (Option Key × Value) → Option Value
 
 /-- Meaning of a (strict) binary operator code. -/
 def evalBinaryOp (L : LanguageSemantics) (code : String) (a b : Value) : Option Value :=
@@ -139,7 +141,29 @@ def Expr.eval (L : LanguageSemantics) (env : Env) : Expr → Option Value
   | .new _ t initializer => do env.new t (← initializer.eval L env)
   | .construction _ t args => do env.construct t (← Expr.evalList L env args)
   | .arrayConstruction _ t dims => do env.constructArray t (← Expr.evalList L env dims)
+  | .initializerList _ t inits => do env.composite t (← Expr.evalInits L env inits)
+  | .keyValue .. => none
   | .problem .. => none
+
+/--
+Evaluates the initializers of an initializer list. A key that is a reference is passed by name,
+other keys are evaluated.
+-/
+def Expr.evalInits (L : LanguageSemantics) (env : Env) : List Expr → Option (List (Option Key × Value))
+  | [] => some []
+  | .keyValue _ (.reference _ name) value :: rest => do
+    let v ← value.eval L env
+    let vs ← Expr.evalInits L env rest
+    pure ((some (.name name), v) :: vs)
+  | .keyValue _ key value :: rest => do
+    let k ← key.eval L env
+    let v ← value.eval L env
+    let vs ← Expr.evalInits L env rest
+    pure ((some (.value k), v) :: vs)
+  | e :: rest => do
+    let v ← e.eval L env
+    let vs ← Expr.evalInits L env rest
+    pure ((none, v) :: vs)
 
 /-- Evaluates an optional expression; an absent expression has no value, but does not fail. -/
 def Expr.evalOpt (L : LanguageSemantics) (env : Env) : Option Expr → Option (Option Value)

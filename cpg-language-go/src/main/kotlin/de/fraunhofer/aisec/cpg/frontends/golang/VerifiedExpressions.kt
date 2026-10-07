@@ -205,6 +205,27 @@ private fun ExpressionHandler.materialize(result: Sexp, raw: Ast.Expr): Expressi
                 type = materializeType(items[3])
             }
         }
+        "initializerlist" -> {
+            node as Ast.CompositeLit
+            val type = materializeType(items[3])
+            newInitializerList(type, rawNode = node) { list ->
+                list.type = type
+                list.initializers =
+                    (items[4] as Sexp.SList)
+                        .items
+                        .zip(node.elts)
+                        .map { (elt, rawElt) -> materialize(elt, rawElt) }
+                        .toMutableList()
+            }
+        }
+        "keyvalue" -> {
+            node as Ast.KeyValueExpr
+            newKeyValue(
+                materialize(items[3], node.key),
+                materialize(items[4], node.value),
+                rawNode = node,
+            )
+        }
         // Outside the verified subset, so the regular handler is responsible
         else -> handle(node)
     }

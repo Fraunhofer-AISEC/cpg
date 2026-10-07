@@ -169,6 +169,15 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
     | some t => .cast span t (translate ctx x)
     | none => .problem span "type assertion is not in the verified subset"
   | .typeAssert span _ none => .problem span "type switch guards are not in the verified subset"
+  | .compositeLit span (some type) elts =>
+    match typeOf? type with
+    | some t =>
+      if keysSupported elts then .initializerList span t (translateElems ctx elts)
+      else .problem span "composite literal keys are not in the verified subset"
+    | none => .problem span "composite literal type is not in the verified subset"
+  | .compositeLit span none _ =>
+    .problem span "composite literals with elided types are not in the verified subset"
+  | .keyValue span .. => .problem span "key-value pairs only occur in composite literals"
   | .arrayType span _ | .mapType span .. | .chanType span _ =>
     .problem span "type expressions are not values"
   | .unsupported span goType => .problem span s!"{goType} is not in the verified subset"
@@ -177,6 +186,13 @@ def translate (ctx : Ctx) : Expr → Cpg.Expr
 def translateOpt (ctx : Ctx) : Option Expr → Option Cpg.Expr
   | none => none
   | some e => some (translate ctx e)
+
+/-- Translates the elements of a composite literal. -/
+def translateElems (ctx : Ctx) : List Expr → List Cpg.Expr
+  | [] => []
+  | .keyValue span key value :: rest =>
+    .keyValue span (translate ctx key) (translate ctx value) :: translateElems ctx rest
+  | e :: rest => translate ctx e :: translateElems ctx rest
 
 /-- Translates all but the first expression of a list. -/
 def translateTail (ctx : Ctx) : List Expr → List Cpg.Expr

@@ -36,6 +36,8 @@ structure Env where
   new : Expr → Option Value
   /-- The built-in `make(T, args...)`. -/
   make : Expr → List Value → Option Value
+  /-- Creating a value of a type from the (optionally keyed) elements of a composite literal. -/
+  composite : Expr → List (Option Cpg.Key × Value) → Option Value
 
 /--
 Value of a predeclared constant identifier (<https://go.dev/ref/spec#Predeclared_identifiers>).
@@ -112,8 +114,8 @@ mutual
 Evaluates a Go expression. Identifiers bound in `env` shadow predeclared ones. Operands are
 evaluated left to right; `&&` and `||` short-circuit. `packages` are the names of the imported
 packages, whose members are bound in `env` under their qualified name (`fmt.Println`). Calls of
-parenthesized selectors, e.g. `(x.f)()`, are not modelled. Indexing, slicing and dereferencing are
-left to the environment.
+parenthesized selectors, e.g. `(x.f)()`, are not modelled. Indexing, slicing, dereferencing, conversions,
+`new`, `make` and composite literals are left to the environment.
 -/
 def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr → Option Value
   | .basicLit _ kind value => litValue kind value
@@ -171,8 +173,36 @@ def Expr.eval (iota : Option Int) (packages : List String) (env : Env) : Expr �
   | .star _ x => do env.deref (← x.eval iota packages env)
   | .typeAssert _ x (some type) => do env.cast type (← x.eval iota packages env)
   | .typeAssert _ _ none => none
+  | .compositeLit _ (some type) elts =>
+    -- Only identifiers and basic literals are modelled as keys
+    if keysSupported elts then do env.composite type (← Expr.evalElems iota packages env elts)
+    else none
+  -- The types of nested literals with elided types are not modelled
+  | .compositeLit _ none _ => none
+  | .keyValue .. => none
   | .arrayType .. | .mapType .. | .chanType .. => none
   | .unsupported .. => none
+
+/--
+Evaluates the elements of a composite literal. A key that is an identifier is passed by name (it is
+a struct field or a variable used as a map key, depending on the type), other keys are evaluated.
+-/
+def Expr.evalElems (iota : Option Int) (packages : List String) (env : Env) :
+    List Expr → Option (List (Option Cpg.Key × Value))
+  | [] => some []
+  | .keyValue _ (.ident _ name) value :: rest => do
+    let v ← value.eval iota packages env
+    let vs ← Expr.evalElems iota packages env rest
+    pure ((some (Cpg.Key.name name), v) :: vs)
+  | .keyValue _ key value :: rest => do
+    let k ← key.eval iota packages env
+    let v ← value.eval iota packages env
+    let vs ← Expr.evalElems iota packages env rest
+    pure ((some (Cpg.Key.value k), v) :: vs)
+  | e :: rest => do
+    let v ← e.eval iota packages env
+    let vs ← Expr.evalElems iota packages env rest
+    pure ((none, v) :: vs)
 
 /-- Evaluates an optional expression; an absent expression has no value, but does not fail. -/
 def Expr.evalOpt (iota : Option Int) (packages : List String) (env : Env) :

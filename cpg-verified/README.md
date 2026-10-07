@@ -16,10 +16,15 @@ symbol and call resolution, ...) are not.
 
 First slice: Go expressions — basic literals, identifiers, binary and unary operators,
 parentheses, selectors (members of imported packages, struct fields), indexing, slicing, pointer
-dereferences and calls of named functions, package functions and methods. Literals include escape
-sequences and floating-point constants (kept as text). Every other expression kind is translated
-into a `ProblemExpression`; most of the remaining ones depend on types (composite literals,
-conversions, type assertions, `new` and `make`).
+dereferences, calls of named functions, package functions and methods, conversions, type
+assertions, `new`, `make` and composite literals. Literals include escape sequences and
+floating-point constants (kept as text). Type expressions are translated into CPG type references
+like `GoLanguageFrontend.typeOf` does (except anonymous struct, interface and function types and
+generic instantiations).
+
+Everything else becomes a `ProblemExpression`, for which the Go frontend falls back to its regular
+handler: function literals, literals with elided types, `make` with a capacity, unusual composite
+literal keys, and calls of other callees.
 
 | File                             | Content                                                       |
 |----------------------------------|---------------------------------------------------------------|
