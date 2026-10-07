@@ -152,7 +152,24 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // import would be visible as symbols in the whole namespace
             scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
-                newInclude(anImport.nameAsString, holder = tud)
+                // `import a.b.C;` imports a single symbol from the namespace `a.b` and `import
+                // a.b.*;` all of them. Static imports (`import static a.b.C.m;`) do the same, but
+                // import from the record `a.b.C` instead.
+                val style =
+                    if (anImport.isAsterisk) {
+                        ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
+                    } else {
+                        ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
+                    }
+                newImport(
+                    parseName(anImport.nameAsString),
+                    style = style,
+                    rawNode = anImport,
+                    holder = tud,
+                ) {
+                    it.modifiers = if (anImport.isStatic) setOf(STATIC) else setOf()
+                    language.applyModifiers(it, scopeManager.currentScope)
+                }
             }
 
             // We create an implicit import for "java.lang.*"
