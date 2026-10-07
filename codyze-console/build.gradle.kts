@@ -51,6 +51,8 @@ dependencies {
     // reference the project here, the build system would fail any task since it will not find a
     // non-enabled project.
     findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
+    // The workbench demo (src/integrationTest/resources) is a C project
+    findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
 }
 
 node {

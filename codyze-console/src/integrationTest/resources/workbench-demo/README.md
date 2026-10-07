@@ -2,7 +2,7 @@
 
 A small WiFi application in C to try the features of the console on the agent page. Start it with the
 run configuration **Codyze Compliance Scan (with Console and Workbench Demo)** (or
-`compliance scan --project-dir codyze-console/examples/workbench-demo --components wifi_demo --console=true`)
+`compliance scan --project-dir codyze-console/src/integrationTest/resources/workbench-demo --components wifi_demo --console=true`)
 and open <http://localhost:8080/chat>.
 
 The frontend for C has to be enabled (`enableCXXFrontend=true` in `gradle.properties`).
