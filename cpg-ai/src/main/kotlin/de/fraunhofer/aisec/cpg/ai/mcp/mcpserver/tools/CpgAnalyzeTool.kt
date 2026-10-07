@@ -385,9 +385,6 @@ fun Server.addListPasses() {
             optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaExtraPass")?.let {
                 passesList += it
             }
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaImportResolver")?.let {
-                passesList += it
-            }
 
             // Go-specific pass is added only if Go language is available
             optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.GoExtraPass")?.let {
