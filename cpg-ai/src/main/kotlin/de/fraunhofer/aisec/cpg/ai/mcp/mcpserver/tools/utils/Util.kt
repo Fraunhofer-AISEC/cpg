@@ -59,6 +59,7 @@ import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -84,6 +85,13 @@ sealed interface DecodedArguments<out T> {
 }
 
 /**
+ * Key under which the chat side passes on a tool call whose argument string is not a JSON object
+ * (e.g. cut off mid-stream by the backend), so the tool reports it to the model instead of the
+ * whole agent run failing (see `assembleStreamedAnswer`).
+ */
+const val UNPARSABLE_ARGUMENTS_KEY = "cpg_ai_unparsable_arguments"
+
+/**
  * Decodes [request]'s arguments into [T]; on failure, the result lists every problem with them (see
  * [describeInvalidArguments]). The only place tool arguments are decoded.
  */
@@ -91,14 +99,29 @@ sealed interface DecodedArguments<out T> {
 internal inline fun <reified T> decodeArguments(
     name: String,
     request: CallToolRequest,
-): DecodedArguments<T> =
-    try {
+): DecodedArguments<T> {
+    val unparsable = request.arguments?.get(UNPARSABLE_ARGUMENTS_KEY)
+    if (unparsable != null) {
+        val message = describeUnparsableArguments(name, unparsable.jsonPrimitive.contentOrNull)
+        return DecodedArguments.Invalid(CallToolResult(content = listOf(TextContent(message))))
+    }
+    return try {
         DecodedArguments.Valid(request.arguments.toPayload<T>())
     } catch (e: SerializationException) {
         val message =
             describeInvalidArguments(name, serializer<T>().descriptor, request.arguments, e)
         DecodedArguments.Invalid(CallToolResult(content = listOf(TextContent(message))))
     }
+}
+
+/**
+ * The answer to a call whose argument string was not a JSON object ([UNPARSABLE_ARGUMENTS_KEY]).
+ */
+@PublishedApi
+internal fun describeUnparsableArguments(tool: String, received: String?): String =
+    "Invalid arguments for $tool: the arguments did not arrive as complete JSON (received: " +
+        "${received?.take(200)?.let { "`$it`" } ?: "nothing"}; probably cut off). " +
+        "Send the complete call again."
 
 /** [description] followed by one line per parameter in [schema], if it has any. */
 @PublishedApi

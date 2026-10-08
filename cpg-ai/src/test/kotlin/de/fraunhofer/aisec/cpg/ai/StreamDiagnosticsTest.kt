@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.ai
 
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponse
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.UNPARSABLE_ARGUMENTS_KEY
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -49,12 +50,28 @@ class StreamDiagnosticsTest {
     }
 
     @Test
-    fun argumentsThatAreNotJsonStillFailAndAreRethrown() {
+    fun cutOffArgumentsArePassedToTheToolAsUnparsable() {
+        // The frames of the failing call in log_pr_ready (qwen, vorbis tag): the backend ended the
+        // stream after `{"concepts": `. Assembled as is, this ends the agent run.
+        val cutOff = """{"concepts": """
         val frames =
-            listOf(StreamFrame.ToolCallComplete("call-1", "cpg_get_node", """{"id":""", null))
+            listOf(
+                StreamFrame.ToolCallDelta("call-1", "cpg_add_llm_concept_and_operations", null, 0),
+                StreamFrame.ToolCallDelta(null, null, cutOff, 0),
+                StreamFrame.ToolCallComplete(
+                    "call-1",
+                    "cpg_add_llm_concept_and_operations",
+                    cutOff,
+                    0,
+                ),
+                StreamFrame.End(),
+            )
+        assertFailsWith<SerializationException> { frames.toMessageResponse() }
 
-        val e = assertFailsWith<SerializationException> { frames.assembleStreamedAnswer("test") }
-        assertTrue("id" in describeFrames(frames), e.message)
+        val toolCall = frames.assembleStreamedAnswer("test").toString()
+
+        assertTrue("cpg_add_llm_concept_and_operations" in toolCall, toolCall)
+        assertTrue(UNPARSABLE_ARGUMENTS_KEY in toolCall, toolCall)
     }
 
     @Test

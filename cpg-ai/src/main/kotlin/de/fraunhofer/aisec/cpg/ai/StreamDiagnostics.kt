@@ -28,7 +28,12 @@ package de.fraunhofer.aisec.cpg.ai
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponse
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.UNPARSABLE_ARGUMENTS_KEY
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.ai.StreamDiagnostics")
@@ -39,24 +44,42 @@ private const val MAX_LOGGED_ARGUMENTS = 2000
 /**
  * The streamed [frames] assembled into one assistant message, like [toMessageResponse].
  *
- * A tool call with an empty argument string is assembled as one with `{}`: some models send that
- * for a call without parameters, and Koog's own assembly fails on it (it parses the arguments as
- * JSON), ending the whole agent run. Each such call is logged, naming the tool. If assembly still
- * fails to parse, the frames are logged ([describeFrames]) before the exception is rethrown, so the
- * log shows what the model actually sent. [node] names the strategy node for the log.
+ * Koog's own assembly parses every tool call's argument string as JSON and fails on anything else,
+ * ending the whole agent run. Two such cases are repaired here, each logged with the tool's name:
+ * - an empty argument string (some models send that for a call without parameters) becomes `{}`;
+ * - an argument string that is not a JSON object (seen: cut off by the backend after `{"concepts":
+ *   `) is passed on under [UNPARSABLE_ARGUMENTS_KEY], so the tool answers with an error the model
+ *   can act on (it resends the call) instead of the run failing.
+ *
+ * If assembly still fails, the frames are logged ([describeFrames]) before the exception is
+ * rethrown. [node] names the strategy node for the log.
  */
 internal fun List<StreamFrame>.assembleStreamedAnswer(node: String): Message.Assistant {
     val frames = map { frame ->
-        if (frame is StreamFrame.ToolCallComplete && frame.content.isBlank()) {
-            log.info(
-                "Tool call {} ({}) in {} came with empty arguments; using an empty JSON object.",
-                frame.name,
-                frame.id,
-                node,
-            )
-            frame.copy(content = "{}")
-        } else {
-            frame
+        if (frame !is StreamFrame.ToolCallComplete) return@map frame
+        when {
+            frame.content.isBlank() -> {
+                log.info(
+                    "Tool call {} ({}) in {} came with empty arguments; using an empty JSON object.",
+                    frame.name,
+                    frame.id,
+                    node,
+                )
+                frame.copy(content = "{}")
+            }
+            !isJsonObject(frame.content) -> {
+                log.warn(
+                    "Tool call {} ({}) in {} came with arguments that are not a JSON object ({}); " +
+                        "passing them to the tool as unparsable.",
+                    frame.name,
+                    frame.id,
+                    node,
+                    quote(frame.content),
+                )
+                val wrapped = buildJsonObject { put(UNPARSABLE_ARGUMENTS_KEY, frame.content) }
+                frame.copy(content = wrapped.toString())
+            }
+            else -> frame
         }
     }
     return try {
@@ -71,6 +94,13 @@ internal fun List<StreamFrame>.assembleStreamedAnswer(node: String): Message.Ass
         throw e
     }
 }
+
+private fun isJsonObject(text: String): Boolean =
+    try {
+        Json.parseToJsonElement(text) is JsonObject
+    } catch (_: SerializationException) {
+        false
+    }
 
 /**
  * A compact description of [frames]: how many of each frame type, plus every tool-call frame in

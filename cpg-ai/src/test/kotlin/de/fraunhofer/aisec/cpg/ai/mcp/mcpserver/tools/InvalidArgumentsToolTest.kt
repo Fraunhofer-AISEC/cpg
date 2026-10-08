@@ -38,6 +38,7 @@ import java.io.File
 import java.lang.reflect.Proxy
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
@@ -129,5 +130,26 @@ class InvalidArgumentsToolTest {
             text,
         )
         assertTrue("Expected shape:" in text, text)
+    }
+
+    @Test
+    fun argumentsCutOffInTheStreamAreReportedSoTheModelCanResend(@TempDir dir: Path) {
+        val server = server()
+        server.addLLMConceptAndOperations(File(dir.toFile(), "concepts.yaml"))
+
+        val text =
+            call(
+                    server,
+                    "cpg_add_llm_concept_and_operations",
+                    """{"cpg_ai_unparsable_arguments": "{\"concepts\": "}""",
+                )
+                .text()
+
+        assertEquals(
+            "Invalid arguments for cpg_add_llm_concept_and_operations: the arguments did not " +
+                "arrive as complete JSON (received: `{\"concepts\": `; probably cut off). Send the " +
+                "complete call again.",
+            text,
+        )
     }
 }
