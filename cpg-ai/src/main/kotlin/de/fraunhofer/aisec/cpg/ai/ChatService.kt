@@ -84,32 +84,36 @@ import org.slf4j.LoggerFactory
  * not any one consumer's specific skill/workflow vocabulary. A consumer with its own task-specific
  * concepts (e.g. named skills/workflows) should pass its own list instead.
  */
-val defaultHistoryCompressionConcepts =
+val defaultHistoryCompressionConcepts: List<Concept> =
     listOf(
-        HistoryCompressionConcept(
+        Concept(
             keyword = "CompletedWork",
             description =
                 "Targets or entities already fully handled so far, with their outcome/status " +
                     "and any noted properties or prerequisites.",
+            factType = FactType.MULTIPLE,
         ),
-        HistoryCompressionConcept(
+        Concept(
             keyword = "OpenIssues",
             description =
                 "Targets or entities noted as ambiguous, unresolved, or blocked so far, and " +
                     "why - so they aren't silently dropped from the eventual summary.",
+            factType = FactType.MULTIPLE,
         ),
-        HistoryCompressionConcept(
+        Concept(
             keyword = "ExploredCpgEntities",
             description =
                 "Functions, records, or files already looked up via CPG tools so far, and a " +
                     "brief note of what was found, to avoid redundant re-querying.",
+            factType = FactType.MULTIPLE,
         ),
-        HistoryCompressionConcept(
+        Concept(
             keyword = "SkippedTargets",
             description =
                 "Targets explicitly marked as unresolvable or given up on so far, and why - so " +
                     "an already-abandoned target isn't independently re-investigated after " +
                     "history compression.",
+            factType = FactType.MULTIPLE,
         ),
     )
 
@@ -130,43 +134,19 @@ class ChatService(
      * should pass its own list instead, since [chatStrategy] is built once from this value and
      * shared across every [chat] call on this instance.
      */
-    private val historyCompressionConcepts: List<HistoryCompressionConcept> =
-        defaultHistoryCompressionConcepts,
-    /** Generation parameters sent on every [chat] call, valid for any client. */
-    private val genericChatParams: GenericChatParams = GenericChatParams(),
+    private val historyCompressionConcepts: List<Concept> = defaultHistoryCompressionConcepts,
     /**
-     * Generation parameters sent on every [chat] call, only meaningful for an OpenAI-compatible
-     * client - left `null` (the default) for a Gemini client, or to leave every OpenAI-specific
-     * parameter at the provider's own default.
+     * Generation parameters sent on every [chat] call. Pass an [OpenAIChatParams] to set the
+     * OpenAI-specific fields (e.g. `reasoningEffort`) for an OpenAI-compatible client; a plain
+     * [LLMParams] is valid for any client. Its `toolChoice` is overridden with
+     * [LLMParams.ToolChoice.Auto]: [chatStrategy] relies on the model being free to choose whether
+     * to call a tool.
      */
-    private val openAiCompatibleChatParams: OpenAiCompatibleChatParams? = null,
+    generationParams: LLMParams = LLMParams(),
 ) {
-    /**
-     * [LLMParams] built once from [genericChatParams]/[openAiCompatibleChatParams] and reused for
-     * every [chat] call - an [OpenAIChatParams] (carrying the OpenAI-specific fields on top of the
-     * generic ones) when [openAiCompatibleChatParams] is given, a plain [LLMParams] otherwise.
-     * [LLMParams.ToolChoice.Auto] is always set - not caller-configurable, [chatStrategy] relies on
-     * the model being free to choose whether to call a tool.
-     */
+    /** [generationParams] with tool choice fixed to auto, reused for every [chat] call. */
     private val chatParams: LLMParams =
-        openAiCompatibleChatParams?.let { openAi ->
-            OpenAIChatParams(
-                temperature = genericChatParams.temperature,
-                maxTokens = genericChatParams.maxTokens,
-                toolChoice = LLMParams.ToolChoice.Auto,
-                reasoningEffort =
-                    openAi.reasoningEffort?.let { ReasoningEffort.valueOf(it.uppercase()) },
-                frequencyPenalty = openAi.frequencyPenalty,
-                presencePenalty = openAi.presencePenalty,
-                topP = openAi.topP,
-                stop = openAi.stop,
-            )
-        }
-            ?: LLMParams(
-                temperature = genericChatParams.temperature,
-                maxTokens = genericChatParams.maxTokens,
-                toolChoice = LLMParams.ToolChoice.Auto,
-            )
+        generationParams.copy(toolChoice = LLMParams.ToolChoice.Auto)
 
     /**
      * In-memory backing store for Koog `ChatMemory`, shared across [chat] calls on this
@@ -512,14 +492,7 @@ class ChatService(
                 }
             val compressionStrategy =
                 FactRetrievalHistoryCompressionStrategy(
-                    concepts =
-                        historyCompressionConcepts.map {
-                            Concept(
-                                keyword = it.keyword,
-                                description = it.description,
-                                factType = if (it.multiple) FactType.MULTIPLE else FactType.SINGLE,
-                            )
-                        },
+                    concepts = historyCompressionConcepts,
                     fallback =
                         HistoryCompressionStrategy.FromLastNMessages(historyCompressionKeepLastN),
                 )
@@ -746,11 +719,8 @@ class ChatService(
             edge(finishWithTaskStatus forwardTo nodeFinish)
         }
 
-    /**
-     * Return the discovered skills' name/description as [SkillInfo] - deliberately not Koog's own
-     * [Skill] type, which isn't visible to callers outside this module (see [SkillInfo]'s doc).
-     */
-    fun getSkills(): List<SkillInfo> = skills.map { SkillInfo(it.name, it.description) }
+    /** The skills discovered by [connect], as reported by Koog's Agent Skills discovery. */
+    fun getSkills(): List<Skill> = skills
 
     /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
@@ -1075,37 +1045,32 @@ class ChatService(
                     }
                 }
 
-            val (genericChatParams, openAiCompatibleChatParams) = config.toGenerationParams()
             return ChatService(
                 httpClient = httpClient,
                 llmProviderConfig = config.toLlmProviderConfig(httpClient),
                 mcpServerUrl = mcpServerUrl,
-                genericChatParams = genericChatParams,
-                openAiCompatibleChatParams = openAiCompatibleChatParams,
+                generationParams = config.toGenerationParams(),
             )
         }
     }
 }
 
 /**
- * Reads the optional `llm.generation` block: `temperature` and `maxTokens` apply to every client,
- * while `reasoningEffort`, `frequencyPenalty`, `presencePenalty`, `topP` and `stop` only mean
- * something to an OpenAI-compatible one (see [OpenAiCompatibleChatParams]) and are only passed on
- * if at least one of them is set. A `reasoningEffort` that is not one of Koog's levels fails here,
- * with the accepted values, rather than as an opaque enum error when the service is built.
+ * Reads the optional `llm.generation` block into the [LLMParams] [ChatService] sends with every
+ * request: `temperature` and `maxTokens` apply to every client, while `reasoningEffort`,
+ * `frequencyPenalty`, `presencePenalty`, `topP` and `stop` only mean something to an
+ * OpenAI-compatible one, so an [OpenAIChatParams] is built only if at least one of them is set. A
+ * `reasoningEffort` that is not one of Koog's levels fails here, with the accepted values, rather
+ * than as an opaque enum error when the service is built.
  */
-internal fun Config.toGenerationParams(): Pair<GenericChatParams, OpenAiCompatibleChatParams?> {
-    if (!hasPath("llm.generation")) return GenericChatParams() to null
+internal fun Config.toGenerationParams(): LLMParams {
+    if (!hasPath("llm.generation")) return LLMParams()
     val generation = getConfig("llm.generation")
 
     fun double(key: String) = if (generation.hasPath(key)) generation.getDouble(key) else null
 
-    val generic =
-        GenericChatParams(
-            temperature = double("temperature"),
-            maxTokens =
-                if (generation.hasPath("maxTokens")) generation.getInt("maxTokens") else null,
-        )
+    val temperature = double("temperature")
+    val maxTokens = if (generation.hasPath("maxTokens")) generation.getInt("maxTokens") else null
 
     val reasoningEffort =
         if (generation.hasPath("reasoningEffort")) generation.getString("reasoningEffort") else null
@@ -1113,14 +1078,24 @@ internal fun Config.toGenerationParams(): Pair<GenericChatParams, OpenAiCompatib
     require(reasoningEffort == null || reasoningEffort.lowercase() in allowedEfforts) {
         "llm.generation.reasoningEffort must be one of $allowedEfforts, but was \"$reasoningEffort\""
     }
+    val frequencyPenalty = double("frequencyPenalty")
+    val presencePenalty = double("presencePenalty")
+    val topP = double("topP")
+    val stop = if (generation.hasPath("stop")) generation.getStringList("stop") else null
 
-    val openAi =
-        OpenAiCompatibleChatParams(
-            reasoningEffort = reasoningEffort,
-            frequencyPenalty = double("frequencyPenalty"),
-            presencePenalty = double("presencePenalty"),
-            topP = double("topP"),
-            stop = if (generation.hasPath("stop")) generation.getStringList("stop") else null,
+    val openAiSpecific =
+        listOf(reasoningEffort, frequencyPenalty, presencePenalty, topP, stop).any { it != null }
+    return if (openAiSpecific) {
+        OpenAIChatParams(
+            temperature = temperature,
+            maxTokens = maxTokens,
+            reasoningEffort = reasoningEffort?.let { ReasoningEffort.valueOf(it.uppercase()) },
+            frequencyPenalty = frequencyPenalty,
+            presencePenalty = presencePenalty,
+            topP = topP,
+            stop = stop,
         )
-    return generic to openAi.takeIf { it != OpenAiCompatibleChatParams() }
+    } else {
+        LLMParams(temperature = temperature, maxTokens = maxTokens)
+    }
 }

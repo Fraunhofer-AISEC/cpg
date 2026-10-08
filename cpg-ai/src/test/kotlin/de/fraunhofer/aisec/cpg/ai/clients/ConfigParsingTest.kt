@@ -25,16 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
+import ai.koog.prompt.executor.clients.openai.OpenAIChatParams
+import ai.koog.prompt.executor.clients.openai.base.models.ReasoningEffort
+import ai.koog.prompt.params.LLMParams
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
-import de.fraunhofer.aisec.cpg.ai.GenericChatParams
-import de.fraunhofer.aisec.cpg.ai.OpenAiCompatibleChatParams
 import de.fraunhofer.aisec.cpg.ai.toGenerationParams
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -56,7 +58,7 @@ class ConfigParsingTest {
             setOf("ollama", "vLLM", "mlx", "openai", "gemini"),
             config.toLlmProviderConfig(HttpClient(CIO)).clients.map { it.name }.toSet(),
         )
-        assertEquals(GenericChatParams() to null, config.toGenerationParams())
+        assertNoGenerationOptions(config.toGenerationParams())
     }
 
     @Test
@@ -83,7 +85,7 @@ class ConfigParsingTest {
     fun noGenerationBlockMeansDefaults() {
         val config = ConfigFactory.parseString("""llm.clients.vLLM { baseUrl = "http://x" }""")
 
-        assertEquals(GenericChatParams() to null, config.toGenerationParams())
+        assertNoGenerationOptions(config.toGenerationParams())
     }
 
     @Test
@@ -91,10 +93,11 @@ class ConfigParsingTest {
         val config =
             ConfigFactory.parseString("llm.generation { temperature = 0.3, maxTokens = 512 }")
 
-        assertEquals(
-            GenericChatParams(temperature = 0.3, maxTokens = 512) to null,
-            config.toGenerationParams(),
-        )
+        val params = config.toGenerationParams()
+
+        assertEquals(0.3, params.temperature)
+        assertEquals(512, params.maxTokens)
+        assertTrue(params !is OpenAIChatParams, "no OpenAI-specific key was set")
     }
 
     @Test
@@ -103,7 +106,6 @@ class ConfigParsingTest {
             ConfigFactory.parseString(
                 """
                 llm.generation {
-                  temperature = 0.2
                   maxTokens = 4096
                   reasoningEffort = "low"
                   frequencyPenalty = 0.1
@@ -114,17 +116,24 @@ class ConfigParsingTest {
                 """
             )
 
-        assertEquals(
-            GenericChatParams(temperature = 0.2, maxTokens = 4096) to
-                OpenAiCompatibleChatParams(
-                    reasoningEffort = "low",
-                    frequencyPenalty = 0.1,
-                    presencePenalty = 0.2,
-                    topP = 0.9,
-                    stop = listOf("###", "END"),
-                ),
-            config.toGenerationParams(),
-        )
+        val params = assertIs<OpenAIChatParams>(config.toGenerationParams())
+
+        assertNull(params.temperature)
+        assertEquals(4096, params.maxTokens)
+        assertEquals(ReasoningEffort.LOW, params.reasoningEffort)
+        assertEquals(0.1, params.frequencyPenalty)
+        assertEquals(0.2, params.presencePenalty)
+        assertEquals(0.9, params.topP)
+        assertEquals(listOf("###", "END"), params.stop)
+    }
+
+    @Test
+    fun temperatureTogetherWithTopPIsRejectedWhenParsing() {
+        val config = ConfigFactory.parseString("llm.generation { temperature = 0.2, topP = 0.9 }")
+
+        // Koog's OpenAIChatParams refuses both; failing here is earlier than when the service is
+        // built.
+        assertFailsWith<IllegalArgumentException> { config.toGenerationParams() }
     }
 
     @Test
@@ -144,5 +153,11 @@ class ConfigParsingTest {
         val config = ConfigFactory.parseString("""llm.generation { temperature = "hot" }""")
 
         assertFailsWith<ConfigException> { config.toGenerationParams() }
+    }
+
+    private fun assertNoGenerationOptions(params: LLMParams) {
+        assertNull(params.temperature)
+        assertNull(params.maxTokens)
+        assertTrue(params !is OpenAIChatParams, "no OpenAI-specific key was set")
     }
 }

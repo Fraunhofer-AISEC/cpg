@@ -80,9 +80,9 @@ dependencies {
     // invocation (see ChatService.mcp). The tool-calling loop the LLM itself drives goes through
     // Koog's ToolRegistry (McpToolRegistryProvider.fromClient), reusing that same connected client.
     implementation(libs.mcp.client)
-    implementation(libs.koog.agents)
+    api(libs.koog.agents)
+    api(libs.koog.skills)
     implementation(libs.koog.agents.mcp)
-    implementation(libs.koog.skills)
     implementation(libs.koog.agents.ext)
     api(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
