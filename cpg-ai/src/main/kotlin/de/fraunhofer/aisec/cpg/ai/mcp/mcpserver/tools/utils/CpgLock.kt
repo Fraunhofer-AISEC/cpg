@@ -42,9 +42,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
  *
  * Tools registered through [addTool] take the right side automatically (see its `mutating`
  * parameter); take it manually only for work outside an MCP tool call. Both sides are reentrant,
- * and a [write] holder may call [read]. Going the other way - [write] while the same thread holds
- * [read]
- * - would deadlock, so it throws instead.
+ * and a [write] holder may call [read]. Taking [write] while the same thread holds only [read]
+ * would deadlock, so it throws instead.
  */
 object CpgLock {
     private val lock = ReentrantReadWriteLock()
