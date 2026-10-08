@@ -61,15 +61,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 
 /**
- * Phase 0 spike test for the ChatMemory migration.
- *
- * Verifies that Koog's ChatMemory feature preserves tool-call/tool-result messages across
- * agent.run() call boundaries, that the system message is not duplicated, that history compression
- * and windowSize work as expected, and that evict() clears the session.
- *
- * This is a HARD GATE: assertions #1, #2, #4, #6 must pass before any migration code.
+ * The Koog ChatMemory behavior [ChatService] relies on: tool-call/tool-result messages survive
+ * across agent.run() call boundaries, the system message is not duplicated, history compression and
+ * windowSize work as expected, and evict() clears the session.
  */
-class ChatMemorySpikeTest {
+class ChatMemoryTest {
 
     /** A ChatHistoryProvider that records all store/load calls and supports evict(). */
     private class RecordingChatHistoryProvider : ChatHistoryProvider {
@@ -160,7 +156,7 @@ class ChatMemorySpikeTest {
 
     /** Build the chat strategy without compression. */
     private fun buildStrategy() =
-        strategy<String, String>("spike-chat-memory") {
+        strategy<String, String>("chat-memory") {
             val requestLlm by nodeLLMRequest("requestLlm")
             val executeTool by nodeExecuteTools("executeTool")
             val sendToolResult by nodeLLMSendToolResults("sendToolResult")
@@ -175,7 +171,7 @@ class ChatMemorySpikeTest {
 
     /** Build the chat strategy with history compression after tool execution. */
     private fun buildStrategyWithCompression() =
-        strategy<String, String>("spike-chat-memory-compress") {
+        strategy<String, String>("chat-memory-compress") {
             val requestLlm by nodeLLMRequest("requestLlm")
             val executeTool by nodeExecuteTools("executeTool")
             val compressHistory by
@@ -224,10 +220,9 @@ class ChatMemorySpikeTest {
         }
 
     /**
-     * Assertion #1 (HARD GATE): Tool-call and tool-result messages survive across agent.run() call
-     * boundaries.
+     * Tool-call and tool-result messages survive across agent.run() call boundaries.
      *
-     * Assertion #2 (HARD GATE): The system message is not duplicated across calls.
+     * The system message is not duplicated across calls.
      */
     @Test
     fun toolCallAndToolResultSurviveAcrossCallBoundary() = runTest {
@@ -254,22 +249,19 @@ class ChatMemorySpikeTest {
         val storedAfterRun1 = provider.stored(sessionId)
         assertTrue(storedAfterRun1.isNotEmpty(), "Stored history after run 1 should not be empty")
 
-        // Assertion #1: stored history must contain a tool-call message
+        // Stored history must contain a tool-call message
         val hasToolCall =
             storedAfterRun1.any { msg ->
                 msg is Message.Assistant && msg.parts.any { it is MessagePart.Tool.Call }
             }
-        assertTrue(hasToolCall, "Stored history must contain a tool-call message (assertion #1)")
+        assertTrue(hasToolCall, "Stored history must contain a tool-call message")
 
-        // Assertion #1: stored history must contain a tool-result message (in a Message.User)
+        // Stored history must contain a tool-result message (in a Message.User)
         val hasToolResult =
             storedAfterRun1.any { msg ->
                 msg is Message.User && msg.parts.any { it is MessagePart.Tool.Result }
             }
-        assertTrue(
-            hasToolResult,
-            "Stored history must contain a tool-result message (assertion #1)",
-        )
+        assertTrue(hasToolResult, "Stored history must contain a tool-result message")
 
         // Run 2: input "query2", same sessionId
         agent.run("query2", sessionId)
@@ -300,7 +292,7 @@ class ChatMemorySpikeTest {
             "Run 2's prompt must contain the tool-result from run 1 (loaded by ChatMemory)",
         )
 
-        // Assertion #2 (HARD GATE): system message not duplicated across calls.
+        // The system message is not duplicated across calls.
         val systemCount = run2FirstPrompt.messages.count { it is Message.System }
         assertTrue(
             systemCount <= 1,
@@ -308,7 +300,7 @@ class ChatMemorySpikeTest {
         )
     }
 
-    /** Assertion #3: History compression (FromLastNMessages) runs and reduces the message count. */
+    /** History compression (FromLastNMessages) runs and reduces the message count. */
     @Test
     fun compressionReducesMessageCount() = runTest {
         val provider = RecordingChatHistoryProvider()
@@ -333,7 +325,7 @@ class ChatMemorySpikeTest {
         )
     }
 
-    /** Assertion #4 (HARD GATE): windowSize safety floor limits the number of messages loaded. */
+    /** windowSize safety floor limits the number of messages loaded. */
     @Test
     fun windowSizeLimitsLoadedMessages() = runTest {
         val provider = RecordingChatHistoryProvider()
@@ -375,7 +367,7 @@ class ChatMemorySpikeTest {
         )
     }
 
-    /** Assertion #5: evict() clears the session, so the next run starts with no loaded history. */
+    /** evict() clears the session, so the next run starts with no loaded history. */
     @Test
     fun evictClearsSession() = runTest {
         val provider = RecordingChatHistoryProvider()
@@ -408,9 +400,8 @@ class ChatMemorySpikeTest {
     }
 
     /**
-     * Assertion #6 (HARD GATE): prompt.messages.size is observable/loggable per turn (the
-     * pre-processor runs and records message sizes, confirming the plumbing works for per-turn
-     * logging in the real ChatService).
+     * prompt.messages.size is observable/loggable per turn (the pre-processor runs and records
+     * message sizes, confirming the plumbing works for per-turn logging in the real ChatService).
      */
     @Test
     fun promptMessagesSizeObservablePerTurn() = runTest {
