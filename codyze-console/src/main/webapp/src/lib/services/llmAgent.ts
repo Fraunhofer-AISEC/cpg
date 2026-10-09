@@ -14,15 +14,21 @@ class LLMAgent {
     messages: LLMMessage[],
     client: string,
     model: string,
+    sessionId: string,
     callbacks: StreamingCallbacks
   ): Promise<void> {
     await this.apiService.streamPost(
       '/api/chat',
-      { messages, client, model },
+      { messages, client, model, sessionId },
       callbacks.onChunk,
       callbacks.onError,
       callbacks.onComplete
     );
+  }
+  async createSession(): Promise<string> {
+    const response = await fetch('/api/chat/sessions', { method: 'POST' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    return (await response.json()).sessionId;
   }
 }
 

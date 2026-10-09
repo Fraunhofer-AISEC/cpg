@@ -30,17 +30,10 @@ import ai.koog.prompt.message.Message
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * In-memory [ChatHistoryProvider] that additionally exposes [evict] to drop a single session's
- * stored history. Backs Koog's `ChatMemory` feature inside [ChatService] so that tool-call and
- * tool-result messages (which [ChatService.toChatMessageJsonOrNull] drops) survive across the
- * per-call agent rebuild.
- *
- * One instance lives for the lifetime of a [ChatService] (one per host-application batch). Sessions
- * are keyed by the `sessionId` string the caller passes via [ChatRequestJSON]; [evict] is called by
- * [ChatService.evictSession] when the batch finishes (success or failure) so memory doesn't leak
- * across batches.
+ * [ChatHistoryProvider] for Koog's `ChatMemory` in [ChatService], keeping the history per
+ * `sessionId` of [ChatRequestJSON] in memory (including tool-call/tool-result messages).
  */
-class EvictingChatHistoryProvider : ChatHistoryProvider {
+class SessionChatHistoryProvider : ChatHistoryProvider {
     private val storage = ConcurrentHashMap<String, List<Message>>()
 
     override suspend fun store(conversationId: String, messages: List<Message>) {
@@ -49,6 +42,9 @@ class EvictingChatHistoryProvider : ChatHistoryProvider {
 
     override suspend fun load(conversationId: String): List<Message> =
         storage[conversationId] ?: emptyList()
+
+    /** Whether any history is stored for [sessionId]. */
+    fun contains(sessionId: String): Boolean = storage.containsKey(sessionId)
 
     /** Remove the stored history for [sessionId]; a subsequent [load] returns empty. */
     fun evict(sessionId: String) {

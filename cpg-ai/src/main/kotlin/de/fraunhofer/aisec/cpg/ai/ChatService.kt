@@ -73,6 +73,7 @@ import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.ClientOptions
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
 import io.modelcontextprotocol.kotlin.sdk.types.*
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -156,7 +157,7 @@ class ChatService(
      * [ChatService] instance. One [ChatService] per host-application batch/processing run, so this
      * typically holds a single session; [evictSession] clears it when the batch finishes.
      */
-    private val chatHistoryProvider = EvictingChatHistoryProvider()
+    private val chatHistoryProvider = SessionChatHistoryProvider()
 
     /**
      * Safety floor on the number of messages `ChatMemory` will load/store per session. The
@@ -168,6 +169,9 @@ class ChatService(
      * normal compression.
      */
     private val chatMemoryWindowSize = 200
+
+    /** A new id for [ChatRequestJSON.sessionId], to start a conversation with fresh memory. */
+    fun createSession(): String = UUID.randomUUID().toString()
 
     /** Drop the stored ChatMemory history for [sessionId]; a no-op if it was never used. */
     fun evictSession(sessionId: String) {
@@ -707,16 +711,14 @@ class ChatService(
         )
 
         try {
-            // When ChatMemory is active (sessionId != null), the initial prompt carries only the
-            // system message; ChatMemory loads prior history (including the tool-call/tool-result
-            // messages that toChatMessageJsonOrNull drops) from the provider and appends it after
-            // the system message at strategy start. When sessionId is null, fall back to seeding
-            // history from request.messages directly (the pre-ChatMemory behavior).
+            // Stored session history is loaded by ChatMemory; only seed from request.messages if
+            // there is none yet, otherwise the history would appear twice.
             val sessionId = request.sessionId
+            val seedFromRequest = sessionId == null || !chatHistoryProvider.contains(sessionId)
             val history =
                 prompt(id = "chat-history", params = chatParams) {
                     system(buildSystemPrompt(skills))
-                    if (sessionId == null) {
+                    if (seedFromRequest) {
                         priorMessages.forEach { msg ->
                             if (msg.content.isNotBlank()) {
                                 if (msg.role == "assistant") assistant(msg.content)

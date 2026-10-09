@@ -39,8 +39,8 @@ data class ChatRequestJSON(
     /**
      * Optional session identifier for Koog `ChatMemory` continuity across [ChatService.chat] calls.
      * When non-null, [ChatService.chat] installs `ChatMemory` keyed on this id so
-     * tool-call/tool-result messages survive the per-call agent rebuild. When null,
-     * [ChatService.chat] falls back to seeding history from [messages] directly.
+     * tool-call/tool-result messages survive the per-call agent rebuild. When null, or when no
+     * history is stored for this id yet, [ChatService.chat] seeds history from [messages].
      */
     val sessionId: String? = null,
 )
