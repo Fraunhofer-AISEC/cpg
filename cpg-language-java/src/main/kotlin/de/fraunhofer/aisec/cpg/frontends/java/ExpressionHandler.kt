@@ -365,7 +365,37 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
      * into a [MemberAccess].
      */
-    private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): MemberAccess {
+    private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): Expression {
+        // If the scope is the name of a type (e.g., `Errors` in `Errors.NOT_ALLOWED`), this is an
+        // access to a static field (or an enum constant). We model this as a reference with the
+        // fully qualified name of the field, so that we do not mistake the type for a field of the
+        // current class.
+        val symbol =
+            try {
+                fieldAccessExpr.resolve()
+            } catch (_: RuntimeException) {
+                null
+            }
+        val declaringType =
+            when {
+                symbol == null -> null
+                symbol.isField ->
+                    symbol.asField().takeIf { it.isStatic }?.declaringType()?.qualifiedName
+                symbol.isEnumConstant -> symbol.type.describe()
+                else -> null
+            }
+        if (symbol == null || declaringType != null) {
+            val typeName = staticScopeType(fieldAccessExpr.scope, declaringType)
+            if (typeName != null) {
+                return newReference(
+                        parseName(typeName).fqn(fieldAccessExpr.nameAsString),
+                        type = symbol?.let { frontend.typeOf(it.type) } ?: unknownType(),
+                        rawNode = fieldAccessExpr,
+                    )
+                    .apply { isStaticAccess = true }
+            }
+        }
+
         var baseType = unknownType()
         var fieldType = unknownType()
 
@@ -508,6 +538,18 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val symbol = nameExpr.resolve()
             if (symbol.isField) {
                 val field = symbol.asField()
+                if (field.isStatic) {
+                    // A static field (e.g., of the current class or from a static import) is a
+                    // static reference with the fully qualified name of the field
+                    val typeName = field.declaringType().qualifiedName
+                    return newReference(
+                            parseName(typeName).fqn(field.name),
+                            type = frontend.typeOf(field.type),
+                            rawNode = nameExpr,
+                        )
+                        .apply { isStaticAccess = true }
+                }
+
                 // handle it as a field expression
                 return handle(field.toFieldAccessExpr(nameExpr))
             }
@@ -607,7 +649,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             // If the scope is the name of a type (e.g., `Arrays` in `Arrays.asList()`), we set the
             // type of the base to the (fully qualified) declaring type, so that the call can be
             // resolved (or inferred) even if the type is not part of our graph.
-            val declaringType = staticScopeType(scope, resolved)
+            val declaringType =
+                if (resolved != null && !resolved.isStatic) {
+                    null
+                } else {
+                    staticScopeType(scope, resolved?.declaringType()?.qualifiedName)
+                }
             if (base is Reference && declaringType != null) {
                 isStatic = true
                 base.isStaticAccess = true
@@ -659,22 +706,21 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Returns the fully qualified name of the type that [scope] refers to, if the [scope] of a
-     * method call is the name of a type rather than a value, e.g., `Arrays` in `Arrays.asList()`.
-     * We use the [resolved] method if JavaParser could resolve it, and the imports otherwise.
+     * Returns the fully qualified name of the type that [scope] refers to, if [scope] is the name
+     * of a type rather than a value, e.g., `Arrays` in `Arrays.asList()` or `Errors` in
+     * `Errors.NOT_ALLOWED`. We use [declaringType], i.e., the declaring type of the member that
+     * JavaParser resolved, if available. Otherwise, we try the imports and the implicitly imported
+     * `java.lang` package.
      */
-    private fun staticScopeType(
-        scope: JPExpression,
-        resolved: ResolvedMethodDeclaration?,
-    ): String? {
-        if (scope !is NameExpr) {
-            return null
-        }
-
-        // If the name resolves to a value (e.g., a variable), it is not a type
+    private fun staticScopeType(scope: JPExpression, declaringType: String?): String? {
+        // If the name resolves to a value (e.g., a variable or a field), it is not a type
         val isValue =
             try {
-                scope.resolve()
+                when (scope) {
+                    is NameExpr -> scope.resolve()
+                    is FieldAccessExpr -> scope.resolve()
+                    else -> return null
+                }
                 true
             } catch (_: RuntimeException) {
                 false
@@ -683,11 +729,21 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             return null
         }
 
-        if (resolved != null) {
-            return if (resolved.isStatic) resolved.declaringType().qualifiedName else null
+        if (declaringType != null) {
+            return declaringType
+        }
+
+        // Without a resolved member, we can only handle simple names
+        if (scope !is NameExpr) {
+            return null
         }
 
         return frontend.getQualifiedNameFromImports(scope.nameAsString)?.toString()
+            ?: frontend.nativeTypeResolver
+                .tryToSolveType("java.lang.${scope.nameAsString}")
+                .takeIf { it.isSolved }
+                ?.correspondingDeclaration
+                ?.qualifiedName
     }
 
     /**

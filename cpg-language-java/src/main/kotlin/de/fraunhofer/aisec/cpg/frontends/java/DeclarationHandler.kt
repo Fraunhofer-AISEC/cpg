@@ -415,7 +415,12 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         processRecordMembers(enumDecl, enumDeclaration)
 
         val entries = enumDecl.entries.mapNotNull { handle(it) as EnumConstant? }
-        entries.forEach { it.type = this.objectType(enumDeclaration.name) }
+        entries.forEach {
+            it.type = this.objectType(enumDeclaration.name)
+            // Add the constant to the scope of the enum, so that we can resolve it (e.g., in
+            // `MyEnum.CONSTANT`)
+            frontend.scopeManager.addDeclaration(it)
+        }
         enumDeclaration.entries = entries.toMutableList()
 
         frontend.scopeManager.leaveScope(enumDeclaration)
