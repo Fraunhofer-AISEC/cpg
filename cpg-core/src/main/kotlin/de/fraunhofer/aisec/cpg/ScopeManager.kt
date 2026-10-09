@@ -662,7 +662,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     ) {
                         it is Namespace || it is Record || it is Typedef
                     }
-                    .mapTo(mutableSetOf()) {
+                    .map {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
@@ -673,7 +673,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                                 it.name
                             }]
                     }
-                    .singleOrNull()
+                    // We need exactly one scope. We compare them by identity, since hashing a
+                    // scope (and therefore its AST node, e.g., a namespace with all its
+                    // declarations) is very expensive
+                    .let { scopes -> scopes.firstOrNull()?.takeIf { s -> scopes.all { it === s } } }
         }
 
         return scope
