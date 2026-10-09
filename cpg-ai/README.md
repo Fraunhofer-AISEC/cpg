@@ -86,6 +86,7 @@ tool changes shared server state (see [Concurrency](#concurrency)).
 | `cpg_translate` | Parse code into the AST only, no passes. Same arguments. | graph (replaces it) |
 | `cpg_list_passes` | List available passes, their dependencies and expected node type. | - |
 | `cpg_run_pass` | Run a pass (`passName` = FQN) on a node (`nodeId`), including unmet dependencies. | graph |
+| `cpg_overview` | Compact, fixed-size overview: counts, files with most functions, most called and external functions, entry point candidates. Call it first. | - |
 | `cpg_list_functions` | Functions as compact summaries (no code). Filter by `pattern`, `file`, `calls`; paginated. | - |
 | `cpg_list_records` | Classes/structs as compact summaries. Filter by `pattern`, `file`; paginated. | - |
 | `cpg_list_calls` | Calls as compact summaries. Filter by `pattern` (called function's name), `file`; paginated. | - |

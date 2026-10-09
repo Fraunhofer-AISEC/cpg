@@ -133,7 +133,7 @@ fun Server.addSuggestConceptsPrompt() {
                                             "You can use the tools to explore the code before making suggestions."
                                         )
                                         appendLine(
-                                            "The listing tools e.g., `cpg_list_functions` or `cpg_list_records`, provide a summary of functions or classes with the name, parameters and code."
+                                            "Start with `cpg_overview` to get oriented, then narrow down with the filter parameters of the listing tools (e.g., `cpg_list_functions` with `calls` or `file`) instead of listing everything."
                                         )
                                         appendLine(
                                             "To inspect interesting nodes in more detail use `cpg_get_node`. This retrieves the complete details of a specific node filtered by its ID."
