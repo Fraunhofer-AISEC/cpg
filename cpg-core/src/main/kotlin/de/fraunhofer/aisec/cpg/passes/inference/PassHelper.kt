@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.methods
+import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
@@ -177,8 +178,19 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): Variable? {
     } else if (ref.name.isQualified()) {
         // For now, we only infer globals at the top-most global level, i.e., no globals in
         // namespaces
-        val extractedScope = scopeManager.extractScope(ref, ref.language)
-        when (val scope = extractedScope?.scope) {
+        var scope = scopeManager.extractScope(ref, ref.language)?.scope
+
+        // A static access (e.g., `java.lang.Integer.MAX_VALUE` in Java) refers to a field of the
+        // record that is named by its parent. If this record is not part of our graph, we infer it
+        val parentName = ref.name.parent
+        if (scope == null && ref.isStaticAccess && parentName != null) {
+            scope =
+                tryRecordInference(ref.objectType(parentName), ref)?.let {
+                    scopeManager.lookupScope(it)
+                }
+        }
+
+        when (scope) {
             is NamespaceScope -> {
                 log.warn(
                     "We should infer a namespace variable ${ref.name} at this point, but this is not yet implemented."
