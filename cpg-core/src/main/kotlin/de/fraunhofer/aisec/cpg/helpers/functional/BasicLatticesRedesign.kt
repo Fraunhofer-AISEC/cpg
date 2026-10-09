@@ -430,7 +430,7 @@ interface Lattice<T : Lattice.Element> {
         // we leaked entries here, all subsequent analyses would measure their runtime against a
         // stale budget.
         val timeoutStackDepth = timeouts.size
-        if (timeout != null && teimeout != Duration.INFINITE) {
+        if (timeout != Duration.INFINITE) {
             timeouts.addLast(timeout)
         }
 

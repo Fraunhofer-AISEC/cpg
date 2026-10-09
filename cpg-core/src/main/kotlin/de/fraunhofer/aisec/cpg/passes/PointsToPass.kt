@@ -3979,7 +3979,9 @@ fun PointsToState.Element.getValues(
                         // To indicate that there is another value than the one of the
                         // base, we add an UnknownMemoryValue
                         val umv =
-                            nodesCreatingUnknownValues.computeIfAbsent(Pair(node, fieldName)) {
+                            nodesCreatingUnknownValues.computeIfAbsent(
+                                UnknownValueKey(node, fieldName)
+                            ) {
                                 UnknownMemoryValue(fieldName)
                             }
                         retVal.add(Pair(umv, false))
