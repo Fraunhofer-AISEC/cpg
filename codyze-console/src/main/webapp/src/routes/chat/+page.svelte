@@ -197,7 +197,7 @@
                 role: 'assistant' as const,
                 content: '',
                 contentType: 'tool-result',
-                toolResult: { toolName: event.toolName, content: event.content },
+                toolResult: { toolName: event.toolName, args: event.args, content: event.content },
                 timestamp: new Date()
               }];
             }

@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
  * In-memory [ChatHistoryProvider] that additionally exposes [evict] to drop a single session's
  * stored history. Backs Koog's `ChatMemory` feature inside [ChatService] so that tool-call and
  * tool-result messages (which [ChatService.toChatMessageJsonOrNull] drops) survive across the
- * per-call agent rebuild - the root cause of the repeated `activate_skill` calls.
+ * per-call agent rebuild.
  *
  * One instance lives for the lifetime of a [ChatService] (one per host-application batch). Sessions
  * are keyed by the `sessionId` string the caller passes via [ChatRequestJSON]; [evict] is called by

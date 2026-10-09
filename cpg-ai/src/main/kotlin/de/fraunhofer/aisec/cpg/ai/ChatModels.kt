@@ -39,9 +39,8 @@ data class ChatRequestJSON(
     /**
      * Optional session identifier for Koog `ChatMemory` continuity across [ChatService.chat] calls.
      * When non-null, [ChatService.chat] installs `ChatMemory` keyed on this id so
-     * tool-call/tool-result messages survive the per-call agent rebuild (the root cause of the
-     * repeated `activate_skill` bug). When null, [ChatService.chat] falls back to seeding history
-     * from [messages] directly (the pre-ChatMemory behavior).
+     * tool-call/tool-result messages survive the per-call agent rebuild. When null,
+     * [ChatService.chat] falls back to seeding history from [messages] directly.
      */
     val sessionId: String? = null,
 )

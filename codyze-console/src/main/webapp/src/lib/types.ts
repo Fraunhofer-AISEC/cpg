@@ -135,6 +135,7 @@ export interface LLMMessage {
 
 export interface ToolResult {
   toolName?: string;
+  args?: Record<string, unknown>;
   content: any;
   isError?: boolean;
 }
