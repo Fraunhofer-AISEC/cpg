@@ -449,6 +449,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** The timeout after which we stop analyzing a function. Default 60 minutes */
         var timeout: Duration = 60.minutes,
 
+        /**
+         * The number of state entries after which we stop analyzing a function, i.e. the number of
+         * states the analysis keeps alive times the number of entries in each of them. This is the
+         * memory equivalent of [timeout] and it is treated in the same way: we keep the results we
+         * have and continue with the next function.
+         *
+         * Unlimited (`null`) by default, matching [maxComplexity]'s convention for "no limit". An
+         * entry costs roughly 500 bytes, so a budget of 20 million entries corresponds to about 10
+         * GB. Set this if analyzing a single huge function must not be able to take the whole
+         * analysis down with an [OutOfMemoryError].
+         */
+        var maxStateEntries: Long? = null,
+
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
 
@@ -594,16 +607,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (node is Function && node.body == null) {
                 handleEmptyFunction(lattice, startState, node)
             } else {
-                var (result, timeout) =
+                var (result, aborted) =
                     lattice.iterateEOG(
                         node.nextEOGEdges,
                         startState,
                         ::transfer,
                         timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
+                        maxStateEntries = passConfig<Configuration>()?.maxStateEntries,
                     )
-                // If we had a timeout, treat it as an empty Function but still
+                // If we ran out of time or memory, treat it as an empty Function but still
                 // include the results we got
-                if (timeout && node is Function) {
+                if (aborted && node is Function) {
                     analysisTimeout = true
                     result = handleEmptyFunction(lattice, result as PointsToState.Element, node)
                 }
@@ -864,7 +878,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         value: Node,
         shortFS: Boolean,
         subAccessName: String,
-        lastWrites: ConcurrentIdentitySet<NodeWithPropertiesKey>,
+        lastWrites: PowersetLattice.Element<NodeWithPropertiesKey>,
     ) {
         // Extract the value depth from the value's localName
         val srcValueDepth = stringToDepth(value.name.localName)
@@ -2103,14 +2117,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         if (log.isTraceEnabled) {
                             log.trace("Finished with acceptInternal(${invoke.name.localName})")
                         }
-                        if (timeouts.isNotEmpty()) {
+                        // acceptInternal ran its own, independently timed nested analysis. Credit
+                        // the time it took back to our own (enclosing) budget, if any, so that we
+                        // aren't unfairly penalized for time spent in a callee that has already
+                        // been charged against its own budget.
+                        val budget = currentCoroutineContext()[TimeoutBudget]
+                        if (budget != null) {
+                            val elapsed = startTime.elapsedNow()
                             if (log.isTraceEnabled) {
-                                log.trace("Old last timeout: ${timeouts.last()}")
+                                log.trace("Old remaining timeout: ${budget.remaining}")
                             }
-                            timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow()
+                            budget.credit(elapsed)
                             if (log.isTraceEnabled) {
                                 log.trace(
-                                    "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
+                                    "Increased remaining timeout to consider time spent in acceptInternal. New remaining timeout: ${budget.remaining}"
                                 )
                             }
                         }
@@ -3555,7 +3575,7 @@ data class FetchElementFromDeclarationStateEntry(
     val value: Node,
     val shortFS: Boolean,
     val subAccessName: String,
-    val lastWrites: ConcurrentIdentitySet<NodeWithPropertiesKey>,
+    val lastWrites: PowersetLattice.Element<NodeWithPropertiesKey>,
 )
 
 /** Fetch the value for `node` from the GeneralState */
@@ -3979,7 +3999,9 @@ fun PointsToState.Element.getValues(
                         // To indicate that there is another value than the one of the
                         // base, we add an UnknownMemoryValue
                         val umv =
-                            nodesCreatingUnknownValues.computeIfAbsent(Pair(node, fieldName)) {
+                            nodesCreatingUnknownValues.computeIfAbsent(
+                                UnknownValueKey(node, fieldName)
+                            ) {
                                 UnknownMemoryValue(fieldName)
                             }
                         retVal.add(Pair(umv, false))

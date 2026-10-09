@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel
 import de.fraunhofer.aisec.cpg.graph.isBranchOf
+import de.fraunhofer.aisec.cpg.helpers.AbstractConcurrentSet
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
@@ -48,8 +48,11 @@ import kotlin.collections.set
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.ceil
 import kotlin.time.Duration
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
@@ -61,6 +64,149 @@ val MIN_CHUNK_SIZE = 100
  * EOG. See `pruneGlobalState` in [Lattice.iterateEogInternal].
  */
 const val MIN_GLOBAL_STATE_PRUNE_SIZE = 256
+
+/**
+ * The number of state entries an [Lattice.iterateEOG] run may keep alive before we warn about it.
+ *
+ * A single entry of a points-to state costs roughly 500 bytes, so this corresponds to about a
+ * gigabyte. If an analysis runs out of memory, the last function warned about here is the one to
+ * look at.
+ */
+const val LARGE_STATE_ENTRY_WARN_THRESHOLD = 2_000_000L
+
+/**
+ * The number of edges after which [IterationStatistics] takes its first sample of how much state an
+ * [Lattice.iterateEOG] run keeps alive. Every further sample is taken after twice as many edges as
+ * the previous one, so the sampling costs are logarithmic in the length of the run.
+ */
+private const val FIRST_STATE_SAMPLE_AFTER_EDGES = 64
+
+/** The number of states [IterationStatistics] looks at when it takes a sample. */
+private const val STATES_PER_SAMPLE = 8
+
+/**
+ * Bookkeeping for a single [Lattice.iterateEOG] run. Memory consumption of the analysis is driven
+ * by the product of [peakLiveStates] and the number of entries in each of them, neither of which is
+ * visible from the outside, so we report both.
+ *
+ * We report *while* iterating and not only at the end, because a run that exhausts the heap never
+ * reaches the end: without the intermediate reports, the log would name every function but the one
+ * that actually caused the problem.
+ */
+private class IterationStatistics(private val startEdges: List<EvaluationOrder>) {
+    /** The number of edges we took off a worklist. */
+    var processedEdges = 0
+        private set
+
+    /**
+     * The high-water mark of the number of states we kept alive at the same time, sampled before
+     * pruning.
+     */
+    var peakLiveStates = 0
+        private set
+
+    /** The number of entries of the resulting state, or -1 if we did not get that far. */
+    var finalStateEntries = -1
+
+    /** The number of entries of the biggest state we looked at, or -1 if we never sampled one. */
+    private var sampledStateEntries = -1
+
+    /** The number of processed edges at which we take the next sample. */
+    private var nextSampleEdge = FIRST_STATE_SAMPLE_AFTER_EDGES
+
+    /** The number of entries above which the next warning is due. */
+    private var nextWarnEntries = LARGE_STATE_ENTRY_WARN_THRESHOLD
+
+    private val name: String
+        get() = startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+
+    /**
+     * Records that we are about to process another edge while [liveStates] states are alive, and
+     * returns our current estimate of the total number of entries they hold.
+     *
+     * Counting the entries of a state is linear in its size, so we only do that every now and then
+     * (see [FIRST_STATE_SAMPLE_AFTER_EDGES]) and for a few states only (see [STATES_PER_SAMPLE]).
+     * [states] is therefore not a collection but a function: we do not even want to iterate the
+     * states unless we are going to sample them.
+     */
+    fun sample(liveStates: Int, states: () -> Iterable<Lattice.Element>): Long {
+        processedEdges++
+        if (liveStates > peakLiveStates) {
+            peakLiveStates = liveStates
+        }
+
+        if (processedEdges >= nextSampleEdge) {
+            nextSampleEdge *= 2
+            sampledStateEntries =
+                states().take(STATES_PER_SAMPLE).maxOfOrNull { it.entryCount() } ?: 0
+        }
+
+        val entries = liveStates.toLong() * sampledStateEntries.coerceAtLeast(0)
+        if (entries > nextWarnEntries && Pass.log.isDebugEnabled) {
+            // This is exploratory, not actionable on its own (the actual safety net is
+            // [Lattice.Configuration.maxStateEntries]), so it is debug-level: useful when hunting
+            // for a specific runaway function, noise otherwise.
+            Pass.log.debug(
+                "The analysis of {} is keeping {} states of about {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
+                name,
+                liveStates,
+                sampledStateEntries,
+                entries,
+            )
+            // Only log again once the problem has become noticeably worse.
+            nextWarnEntries = entries * 2
+        }
+
+        return entries
+    }
+
+    /**
+     * Logs what the finished - or abandoned - run kept alive. This is a
+     * [org.slf4j.event.Level.WARN] only if [aborted] by [Lattice.Configuration.maxStateEntries]: a
+     * run that merely got large but still finished isn't something anyone needs to act on.
+     */
+    fun report(aborted: Boolean) {
+        // The final state is the union of all end states, so its size is an upper bound for the
+        // size of every intermediate state. If we never got there, we have to make do with the last
+        // state we sampled.
+        val entriesPerState = if (finalStateEntries >= 0) finalStateEntries else sampledStateEntries
+        val peakEntries = peakLiveStates.toLong() * entriesPerState.coerceAtLeast(0)
+        if (aborted && peakEntries > LARGE_STATE_ENTRY_WARN_THRESHOLD) {
+            Pass.log.warn(
+                "The analysis of {} kept up to {} states of up to {} entries alive at the same time ({} entries in total) before it was aborted. This may exhaust the heap.",
+                name,
+                peakLiveStates,
+                entriesPerState,
+                peakEntries,
+            )
+        } else if (Pass.log.isDebugEnabled) {
+            Pass.log.debug(
+                "Iterated the EOG of {} in {} steps, keeping up to {} states of up to {} entries alive ({} entries in total).",
+                name,
+                processedEdges,
+                peakLiveStates,
+                entriesPerState,
+                peakEntries,
+            )
+        }
+    }
+}
+
+/**
+ * The number of entries this element holds, summed over all nested containers. Together with the
+ * number of states that are alive at the same time, this is what determines the memory consumption
+ * of an [Lattice.iterateEOG] run, so we use it for the diagnostics in [IterationStatistics].
+ */
+private fun Lattice.Element.entryCount(): Int =
+    when (this) {
+        is TupleLattice.Element<*, *> -> first.entryCount() + second.entryCount()
+        is TripleLattice.Element<*, *, *> ->
+            first.entryCount() + second.entryCount() + third.entryCount()
+        is ConcurrentMapLattice.Element<*, *> -> size
+        is HashMapLattice.Element<*, *> -> size
+        is PowersetLattice.Element<*> -> size
+        else -> 1
+    }
 
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
 open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
@@ -224,10 +370,6 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
 
-    internal fun copyFrom(other: ConcurrentIdentityHashMap<K, V>) {
-        backing.putAll(other.backing)
-    }
-
     fun clear() = backing.clear()
 
     override fun hashCode() = backing.hashCode()
@@ -264,8 +406,37 @@ fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
     return set
 }
 
-/** Used to track the timeout of all functions being currently analyzed * */
-val timeouts = mutableListOf<Duration>()
+/**
+ * Carries the timeout budget of the currently running [Lattice.iterateEOG] analysis in the
+ * [CoroutineContext], scoped to exactly the subtree of coroutines it belongs to (including those
+ * spawned in parallel via [de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel]). A nested analysis
+ * (e.g. one triggered mid-analysis to compute a function summary) installs its own instance for its
+ * own subtree via [kotlinx.coroutines.withContext], so unrelated/concurrent analyses never observe
+ * or mutate each other's budget -- unlike a single global mutable stack, which two concurrently
+ * running analyses could corrupt by interleaving pushes and pops.
+ */
+@OptIn(ExperimentalAtomicApi::class)
+class TimeoutBudget(private val startMark: TimeMark, timeout: Duration) :
+    AbstractCoroutineContextElement(Key) {
+    private val remainingTimeout = AtomicReference(timeout)
+
+    /** The time left until this budget is exhausted. */
+    val remaining: Duration
+        get() = remainingTimeout.load() - startMark.elapsedNow()
+
+    /**
+     * Extends this budget by [elapsed], e.g. to exempt time spent in a nested analysis that is
+     * governed by its own, independent budget.
+     */
+    fun credit(elapsed: Duration) {
+        while (true) {
+            val current = remainingTimeout.load()
+            if (remainingTimeout.compareAndSet(current, current + elapsed)) break
+        }
+    }
+
+    companion object Key : CoroutineContext.Key<TimeoutBudget>
+}
 
 /** Used to identify the order of elements */
 enum class Order {
@@ -403,6 +574,13 @@ interface Lattice<T : Lattice.Element> {
      * [timeout] can be used to limit the time spent in this function. If the timeout is reached and
      * the fixpoint is not reached yet, we return `null`. If [timeout] is `null`, we will not time
      * out.
+     *
+     * [maxStateEntries] is the same kind of budget for memory instead of time: it limits the number
+     * of entries this run may keep alive, i.e. the number of states times the number of entries in
+     * each of them. Exceeding it ends the analysis exactly like a timeout does. It is `null`
+     * (unlimited) by default, because - unlike a timeout - a run that is too big for the heap takes
+     * the whole analysis down with it, so the right value depends on the heap the caller is willing
+     * to spend. As a rule of thumb, an entry of a points-to state costs about 500 bytes.
      */
     fun iterateEOG(
         startEdges: List<EvaluationOrder>,
@@ -410,9 +588,17 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
         timeout: Duration = Duration.INFINITE,
+        maxStateEntries: Long? = null,
     ): Pair<T, Boolean> {
         return runBlocking {
-            iterateEogInternal(startEdges, startState, transformation, strategy, timeout)
+            iterateEogInternal(
+                startEdges,
+                startState,
+                transformation,
+                strategy,
+                timeout,
+                maxStateEntries,
+            )
         }
     }
 
@@ -422,31 +608,48 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Duration,
+        maxStateEntries: Long? = null,
     ): Pair<T, Boolean> {
-        // [timeouts] is a stack of the budgets of all analyses that are currently running (an
-        // analysis can trigger a nested one, e.g., to compute a function summary). We remember the
-        // depth we started at and restore it in the "finally" below. This guarantees that our entry
-        // is removed on every exit path, including an exception thrown out of [transformation]. If
-        // we leaked entries here, all subsequent analyses would measure their runtime against a
-        // stale budget.
-        val timeoutStackDepth = timeouts.size
-        if (timeout != null && teimeout != Duration.INFINITE) {
-            timeouts.addLast(timeout)
-        }
+        // [TimeoutBudget] is installed in the coroutine context for the duration of this call (an
+        // analysis can trigger a nested one, e.g., to compute a function summary), scoping the
+        // budget to exactly this call's subtree of coroutines. [kotlinx.coroutines.withContext]
+        // guarantees the previous context (and thus the enclosing budget, if any) is restored on
+        // every exit path, including an exception thrown out of [transformation], so we can't leak
+        // an entry that would make some unrelated analysis measure its runtime against a stale
+        // budget.
+        val context =
+            if (timeout != Duration.INFINITE) {
+                currentCoroutineContext() + TimeoutBudget(TimeSource.Monotonic.markNow(), timeout)
+            } else {
+                currentCoroutineContext()
+            }
 
-        try {
-            return iterateEogWorklist(startEdges, startState, transformation, strategy, timeout)
-        } finally {
-            while (timeouts.size > timeoutStackDepth) {
-                timeouts.removeLast()
+        val statistics = IterationStatistics(startEdges)
+        var aborted = true
+        return withContext(context) {
+            try {
+                val result =
+                    iterateEogWorklist(
+                        startEdges,
+                        startState,
+                        transformation,
+                        strategy,
+                        timeout,
+                        maxStateEntries,
+                        statistics,
+                    )
+                statistics.finalStateEntries = result.first.entryCount()
+                aborted = result.second
+                result
+            } finally {
+                statistics.report(aborted)
             }
         }
     }
 
     /**
      * The actual worklist algorithm behind [iterateEogInternal]. The [timeout] budget it observes
-     * has already been pushed onto [timeouts] by the caller, which is also responsible for removing
-     * it again.
+     * has already been installed as a [TimeoutBudget] in the coroutine context by the caller.
      */
     private suspend fun iterateEogWorklist(
         startEdges: List<EvaluationOrder>,
@@ -454,10 +657,9 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Duration,
+        maxStateEntries: Long?,
+        statistics: IterationStatistics,
     ): Pair<T, Boolean> {
-        // mark the time when we started the calculation to know when we stop
-        val startTime = TimeSource.Monotonic.markNow()
-
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
@@ -575,15 +777,6 @@ interface Lattice<T : Lattice.Element> {
             nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, globalState.size * 2)
         }
 
-        suspend fun cleanup(one: T, two: T, lattice: Lattice<T>): T {
-            Pass.log.info(
-                "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
-            )
-            finalState = lattice.lub(one, two, false)
-            Pass.log.info("Finished calculating final lub")
-            return finalState
-        }
-
         startEdges.forEach { nextBranchEdgesList.add(it) }
 
         while (
@@ -593,6 +786,10 @@ interface Lattice<T : Lattice.Element> {
                 sccEdgesQueue.isNotEmpty()
         ) {
             currentCoroutineContext().ensureActive()
+            // Sample the retention before pruning: that high-water mark is what actually has to fit
+            // into the heap.
+            val liveEntries = statistics.sample(globalState.size) { globalState.values }
+
             // All edges which are still to be processed are in one of the worklists at this point,
             // so this is the only place where we can determine which states are still live.
             pruneGlobalState()
@@ -621,6 +818,19 @@ interface Lattice<T : Lattice.Element> {
             // its state.
             val nextGlobal = globalState[nextEdge] ?: continue
 
+            if (maxStateEntries != null && liveEntries > maxStateEntries) {
+                // We are out of memory budget. We stop here in exactly the same way as we do when
+                // we run out of time: the caller gets what we have computed so far, together with
+                // the information that this is not a fixpoint.
+                Pass.log.warn(
+                    "Exceeded the budget of {} state entries for {}, stopping further analysis",
+                    maxStateEntries,
+                    startEdges.first().start.name.localName,
+                )
+                finalState = this@Lattice.lub(finalState, nextGlobal, false)
+                return Pair(finalState, true)
+            }
+
             // Either immediately before or after this edge, there's a branching node. In these
             // cases, we definitely want to check if there's an update to the state.
             val isNoBranchingPoint =
@@ -642,7 +852,8 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.start.prevEOGEdges.single().start.prevEOGEdges.size == 1
 
             val remainingTime =
-                if (timeout != Duration.INFINITE) timeouts.last() - startTime.elapsedNow()
+                if (timeout != Duration.INFINITE)
+                    currentCoroutineContext()[TimeoutBudget]?.remaining ?: Duration.INFINITE
                 else Duration.INFINITE
             @Suppress("UNCHECKED_CAST")
             val newState =
@@ -763,8 +974,6 @@ interface Lattice<T : Lattice.Element> {
                 Pass.log.info(
                     "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
                 )
-                // We are done, so we remove the current timeout
-                timeouts.removeLast()
                 finalState = this@Lattice.lub(finalState, newState, false)
                 Pass.log.info("Finished calculating final lub")
                 return Pair(finalState, true)
@@ -780,13 +989,23 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<T>>
 
     class Element<T>(expectedMaxSize: Int) :
-        ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
+        AbstractConcurrentSet<T, Element.Key>(expectedMaxSize), Lattice.Element {
 
-        // Secondary track indexes to accelerate 'contains', 'equals', and 'compare' to O(1)
-        private val nodeIndex = ConcurrentHashMap<PointsToPass.NodeWithPropertiesKey, T>()
-        private val pairIndex = ConcurrentHashMap<PairKey, Pair<*, *>>()
+        /**
+         * The keys [keyFor] may produce. Points-to sets contain elements whose reference identity
+         * is meaningless, because they are created on the fly while transferring a state: a [Pair]
+         * or a [PointsToPass.NodeWithPropertiesKey] describing the same nodes must count as one
+         * element, no matter how often it was constructed. For those we therefore key the set by a
+         * structural key instead of by reference. Everything else - in particular [Node]s - keeps
+         * reference semantics via [IdentityKey].
+         */
+        sealed interface Key
 
-        private class PairKey(val first: Any?, val second: Any?) {
+        private data class IdentityKey<T>(val ref: PointsToPass.IdKey<T>) : Key
+
+        private data class NodeKey(val key: PointsToPass.NodeWithPropertiesKey) : Key
+
+        private class PairKey(val first: Any?, val second: Any?) : Key {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (other !is PairKey) return false
@@ -798,85 +1017,49 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             }
         }
 
-        // We make the new element a bit bigger than the current size to avoid resizing
-        constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
-            addAllWithoutCheck(set as? ConcurrentIdentitySet<T> ?: set.toConcurrentIdentitySet())
-            buildIndexFromCurrentElements()
+        /**
+         * This is the only place which knows about the special element types; [add], [remove],
+         * [contains] and hence [equals] and [compare] all agree on it because they all go through
+         * this method.
+         */
+        override fun keyFor(element: T): Key =
+            when (element) {
+                is Pair<*, *> -> PairKey(element.first, element.second)
+                // This one is its own key already: it compares its node by reference and its
+                // properties structurally.
+                is PointsToPass.NodeWithPropertiesKey -> NodeKey(element)
+                else -> IdentityKey(PointsToPass.IdKey(element))
+            }
+
+        /**
+         * Fast path for [addAllWithoutCheck]: since every [Element] computes its keys the same way,
+         * we can copy [elements]' backing map directly instead of recomputing a key for every
+         * element. This is what makes [lub] cheap when merging two large states.
+         */
+        fun addAllWithoutCheck(elements: Element<T>) {
+            map.putAll(elements.map)
         }
 
-        constructor() : this(16)
+        // We make the new element a bit bigger than the current size to avoid resizing
+        constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
+            addAllWithoutCheck(set)
+        }
+
+        // Points-to sets are tiny (usually a single element), and there are millions of them, so we
+        // start small and accept the occasional resize instead of reserving 16 slots up front.
+        constructor() : this(2)
 
         // We make the new element a bit bigger than the current size to avoid resizing
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
-            addAll(entries) // standard addAll loops and calls our overridden add()
+            addAll(entries) // standard addAll loops and calls add(), which uses our keyFor()
         }
 
         /**
-         * Rebuilds the secondary indexes from scratch. Crucial when batch operations like
-         * [addAllWithoutCheck] bypass the standard [add] method.
+         * O(1) containment check. Unlike [contains] this accepts an arbitrary object, which is
+         * handy when comparing two sets of unrelated element types.
          */
-        fun buildIndexFromCurrentElements() {
-            nodeIndex.clear()
-            pairIndex.clear()
-            for (item in this) {
-                when (item) {
-                    is Pair<*, *> -> pairIndex[PairKey(item.first, item.second)] = item
-                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex[item] = item
-                }
-            }
-        }
-
-        override fun add(element: T): Boolean {
-            when (element) {
-                is Pair<*, *> -> {
-                    val key = PairKey(element.first, element.second)
-                    if (pairIndex.containsKey(key)) return false
-                    val added = super.add(element)
-                    if (added) {
-                        pairIndex[key] = element
-                    }
-                    return added
-                }
-                is PointsToPass.NodeWithPropertiesKey -> {
-                    if (nodeIndex.containsKey(element)) return false
-                    val added = super.add(element)
-                    if (added) {
-                        nodeIndex[element] = element
-                    }
-                    return added
-                }
-                else -> {
-                    return super.add(element)
-                }
-            }
-        }
-
-        // Note: If your framework's base class uses 'Any?' for remove, change 'T' to 'Any?'
-        override fun remove(element: T): Boolean {
-            val removed = super.remove(element)
-            if (removed) {
-                when (element) {
-                    is Pair<*, *> -> pairIndex.remove(PairKey(element.first, element.second))
-                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex.remove(element)
-                }
-            }
-            return removed
-        }
-
-        override fun clear() {
-            super.clear()
-            nodeIndex.clear()
-            pairIndex.clear()
-        }
-
-        /** High-performance O(1) containment check utilizing our secondary indexes. */
-        fun containsFast(element: Any?): Boolean {
-            return when (element) {
-                is Pair<*, *> -> pairIndex.containsKey(PairKey(element.first, element.second))
-                is PointsToPass.NodeWithPropertiesKey -> nodeIndex.containsKey(element)
-                else -> (element as? T)?.let { super.contains(it) } ?: false
-            }
-        }
+        @Suppress("UNCHECKED_CAST")
+        fun containsFast(element: Any?): Boolean = contains(element as T)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -971,7 +1154,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         val result = Element<T>(one.size + two.size)
         result.addAllWithoutCheck(one)
-        result.buildIndexFromCurrentElements() // Force index generation after raw batch load!
         result += two
         return result
     }

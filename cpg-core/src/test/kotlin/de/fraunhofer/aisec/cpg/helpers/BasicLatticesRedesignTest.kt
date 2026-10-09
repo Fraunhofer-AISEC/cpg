@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
@@ -37,18 +35,21 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_GLOBAL_STATE_PRUNE_SIZE
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.TimeoutBudget
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.timeouts
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 
 class BasicLatticesRedesignTest {
@@ -619,33 +620,63 @@ class BasicLatticesRedesignTest {
     }
 
     @Test
-    fun testIterateEOGRestoresTimeoutStack() {
+    fun testIterateEOGRestoresTimeoutStack() = runBlocking {
         val lattice = PowersetLattice<String>()
 
         val start = Literal<Int>()
         val end = Literal<Int>()
         start.nextEOGEdges += end
 
-        val depthBefore = timeouts.size
-
-        // A regular run has to leave the stack of timeout budgets exactly as it found it.
-        lattice.iterateEOG(
+        // A regular run must not leak its timeout budget into the ambient coroutine context, so
+        // that concurrent/unrelated analyses can never observe or corrupt it.
+        lattice.iterateEogInternal(
             start.nextEOGEdges.toList(),
             lattice.bottom,
             { _, _, state -> state },
-            timeout = 10000.milliseconds,
+            Lattice.Strategy.PRECISE,
+            10000.milliseconds,
         )
-        assertEquals(depthBefore, timeouts.size)
+        assertNull(currentCoroutineContext()[TimeoutBudget])
 
-        // ... and so does a run whose transformation throws.
+        // ... and neither does a run whose transformation throws.
         assertThrows<IllegalStateException> {
-            lattice.iterateEOG(
+            lattice.iterateEogInternal(
                 start.nextEOGEdges.toList(),
                 lattice.bottom,
                 { _, _, _ -> throw IllegalStateException("transformation failed") },
-                timeout = 10000.milliseconds,
+                Lattice.Strategy.PRECISE,
+                10000.milliseconds,
             )
         }
-        assertEquals(depthBefore, timeouts.size)
+        assertNull(currentCoroutineContext()[TimeoutBudget])
+    }
+
+    @Test
+    @Timeout(60)
+    fun testIterateEOGRespectsStateEntryBudget() {
+        val lattice = PowersetLattice<Int>()
+
+        // A cycle in the EOG, so the analysis only terminates once the state stops growing ...
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+        end.nextEOGEdges += start
+
+        // ... which it never does here: every visit adds an element which was not in the state
+        // before, so without a budget this run would go on forever.
+        var counter = 0
+
+        val (result, aborted) =
+            lattice.iterateEOG(
+                start.nextEOGEdges.toList(),
+                lattice.bottom,
+                { _, _, state -> PowersetLattice.Element(state).also { it += counter++ } },
+                maxStateEntries = 100,
+            )
+
+        // We get the results computed so far, together with the information that they are not a
+        // fixpoint.
+        assertTrue(aborted)
+        assertTrue(result.isNotEmpty())
     }
 }
