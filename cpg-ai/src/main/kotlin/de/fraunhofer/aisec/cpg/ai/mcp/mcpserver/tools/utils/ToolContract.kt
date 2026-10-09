@@ -44,10 +44,11 @@ import kotlinx.serialization.json.jsonPrimitive
  * [addToolWithoutCpg], as "<tool>: <what is wrong>". Empty means fine.
  *
  * Checks that each tool carries the [TYPED_ARGUMENTS_META_KEY] marker (i.e. was not registered
- * through the SDK's own `addTool`), and that a call whose every argument has the wrong JSON type is
- * answered with the "Invalid arguments for <tool>:" problem list. The second check invokes the
- * handlers in-process; decoding fails before any handler code runs, so it has no side effects for
- * tools that follow the conventions. Tools without parameters are only checked for the marker.
+ * through the SDK's own `addTool`) and declares `readOnlyHint` (the chat runs only read-only tools
+ * concurrently), and that a call whose every argument has the wrong JSON type is answered with the
+ * "Invalid arguments for <tool>:" problem list. The second check invokes the handlers in-process;
+ * decoding fails before any handler code runs, so it has no side effects for tools that follow the
+ * conventions. Tools without parameters are only checked for the marker.
  */
 fun Server.toolRegistrationProblems(): List<String> =
     tools.values
@@ -57,6 +58,8 @@ fun Server.toolRegistrationProblems(): List<String> =
             buildList {
                 if (registered.tool.meta?.get(TYPED_ARGUMENTS_META_KEY) != JsonPrimitive(true)) {
                     add("$name: registered without addTool/addToolWithoutCpg")
+                } else if (registered.tool.annotations?.readOnlyHint == null) {
+                    add("$name: does not declare readOnlyHint")
                 }
                 val wrong = wronglyTypedArguments(registered)
                 if (wrong.isNotEmpty()) {

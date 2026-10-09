@@ -156,6 +156,7 @@ val toolDescription =
 fun Server.addCpgAnalyzeTool() {
     this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_analyze",
+        readOnly = false,
         description = toolDescription,
     ) { payload ->
         try {
@@ -281,6 +282,7 @@ private fun analyzeAndStore(
 fun Server.addCpgTranslate() {
     this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_translate",
+        readOnly = false,
         description =
             """
         Translates the source code into the AST of the CPG (Code Property Graph). This serves as a basis for subsequent passes and analyses.
@@ -318,6 +320,7 @@ fun Server.addCpgTranslate() {
 fun Server.addListPasses() {
     this.addToolWithoutCpg<NoArguments>(
         name = "cpg_list_passes",
+        readOnly = true,
         description =
             """Provides a list of all available passes that can be applied to the CPG. It also lists dependencies and what kind of node the pass expects."""
                 .trimIndent(),
@@ -432,7 +435,7 @@ val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
  */
 fun Server.addRunPass() {
     this.addTool<CpgRunPassPayload>(
-        mutating = true,
+        readOnly = false,
         name = "cpg_run_pass",
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""

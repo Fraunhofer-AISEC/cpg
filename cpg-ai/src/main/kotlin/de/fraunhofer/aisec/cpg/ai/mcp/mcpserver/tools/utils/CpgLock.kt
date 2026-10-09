@@ -40,7 +40,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
  * - [write] is exclusive: a tool that mutates the graph, replaces it, or does a read-modify-write
  *   on a file shared with other tools runs alone.
  *
- * Tools registered through [addTool] take the right side automatically (see its `mutating`
+ * Tools registered through [addTool] take the right side automatically (see its `readOnly`
  * parameter); take it manually only for work outside an MCP tool call. Both sides are reentrant,
  * and a [write] holder may call [read]. Taking [write] while the same thread holds only [read]
  * would deadlock, so it throws instead.
@@ -63,7 +63,7 @@ object CpgLock {
     fun <T> write(block: () -> T): T {
         check(lock.readHoldCount == 0 || lock.isWriteLockedByCurrentThread) {
             "Cannot take the CPG write lock while holding its read lock (it would deadlock). " +
-                "Register the tool with mutating = true instead of nesting write inside read."
+                "Register the tool with readOnly = false instead of nesting write inside read."
         }
         val writeLock = lock.writeLock()
         writeLock.lock()

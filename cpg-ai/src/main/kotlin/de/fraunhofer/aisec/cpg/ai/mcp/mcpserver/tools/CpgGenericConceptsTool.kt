@@ -66,6 +66,7 @@ fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
             .trimIndent()
     this.addToolWithoutCpg<CpgListPayload>(
         name = "cpg_list_llm_concepts_operations",
+        readOnly = true,
         description = toolDescription,
     ) { payload ->
         CallToolResult(content = listConcepts(file, payload))
@@ -99,6 +100,7 @@ fun Server.addOrUpdateConcept(file: File = File(fileName)) {
 
     this.addToolWithoutCpg<LLMConceptDescription>(
         name = "cpg_add_or_update_llm_concept",
+        readOnly = false,
         description = toolDescription,
     ) { payload ->
         persistConceptSchemas(listOf(payload), file)
@@ -164,7 +166,7 @@ fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
     this.addTool<LLMConceptList>(
         name = "cpg_add_llm_concept_and_operations",
         description = toolDescription,
-        mutating = true,
+        readOnly = false,
     ) { result: TranslationResult, payload: LLMConceptList ->
         val response = applyLLMConcepts(result, payload, file)
         CallToolResult(content = listOf(TextContent(Json.encodeToString(response))))

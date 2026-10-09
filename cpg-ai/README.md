@@ -214,9 +214,9 @@ Other useful methods: `getSkills()`, `getPrompt(name, arguments)`, `callTool(nam
 - **Oversized results:** as a last resort, a single tool result larger than half the context window is
   truncated, with a warning in the log. Pagination on the list tools usually keeps results well below
   that.
-- **Parallel tools:** when the model requests several tool calls in one turn, only an explicit
-  allowlist of read-only tools (`parallelSafeToolNames`) runs concurrently; everything else runs
-  sequentially. A new tool is therefore sequential until you add it.
+- **Parallel tools:** when the model requests several tool calls in one turn, only tools that
+  announce `readOnlyHint` (see [Extending and embedding](#extending-and-embedding)) run concurrently; everything else runs
+  sequentially, in the order given. A tool without the hint is therefore sequential.
 
 ## Skills
 
@@ -267,10 +267,12 @@ It reports tools registered past the helpers and tools that do not answer wrongl
 with that problem list.
 
 Rules for tools: the handler is not `suspend`, and the description of the payload's parameters is
-appended to the tool description automatically, so do not repeat it. Pass `mutating = true` to
+appended to the tool description automatically, so do not repeat it. Pass `readOnly = false` to
 `addTool` if the handler changes the graph or does a read-modify-write on a file shared with other
 tools (see [Concurrency](#concurrency)); forgetting it is the one way to get this wrong, because
-the default is the cheap, shared one. A host only needs to set `globalAnalysisResult`:
+the default is the cheap, shared one. `addToolWithoutCpg` requires `readOnly` to be stated. Both
+announce it to clients as the MCP annotation `readOnlyHint`, and the chat runs only tools that
+announce it concurrently within one turn. A host only needs to set `globalAnalysisResult`:
 `cpg_run_pass` runs passes with the context of that result itself. Its bookkeeping of which pass ran
 on which node (`nodeToPass`) is cleared when `cpg_analyze`/`cpg_translate` replace the graph; a host
 that swaps `globalAnalysisResult` on its own should call `nodeToPass.clear()` too.
@@ -291,7 +293,7 @@ The graph is not thread-safe, so tool calls go through `CpgLock`, a read/write l
 
 - Tools registered through `addTool` run under the **read** lock by default, so any number of
   queries run in parallel.
-- Tools registered with `mutating = true` run under the **write** lock, alone: `cpg_apply_concepts`,
+- Tools registered with `readOnly = false` run under the **write** lock, alone: `cpg_apply_concepts`,
   `cpg_run_pass` and `cpg_add_llm_concept_and_operations`. `cpg_analyze` and `cpg_translate` take it
   for the whole analysis, since they replace the graph. These are the tools marked *graph* in the
   *Writes* column above. While one runs, every other call waits.
@@ -303,7 +305,7 @@ The graph is not thread-safe, so tool calls go through `CpgLock`, a read/write l
 
 Both sides are reentrant, and a write holder may read. A tool that already holds the read lock cannot
 take the write lock (it would deadlock), so `CpgLock.write` throws instead - register such a tool with
-`mutating = true`. Code that touches the graph outside an MCP call, e.g. a host assigning
+`readOnly = false`. Code that touches the graph outside an MCP call, e.g. a host assigning
 `globalAnalysisResult` while the server is running, can use `CpgLock.read { }` / `CpgLock.write { }`
 itself.
 

@@ -55,6 +55,7 @@ fun Server.listAvailableConcepts() {
             .trimIndent()
     this.addToolWithoutCpg<NoArguments>(
         name = "cpg_list_available_concepts",
+        readOnly = true,
         description = toolDescription,
     ) { _ ->
         CallToolResult(content = availableConcepts.map { TextContent(it.name) })
@@ -75,6 +76,7 @@ fun Server.listAvailableOperations() {
             .trimIndent()
     this.addToolWithoutCpg<NoArguments>(
         name = "cpg_list_available_operations",
+        readOnly = true,
         description = toolDescription,
     ) { _ ->
         CallToolResult(content = availableOperations.map { TextContent(it.name) })
@@ -113,7 +115,7 @@ fun Server.addCpgApplyConceptsTool() {
     this.addTool<CpgApplyConceptsPayload>(
         name = "cpg_apply_concepts",
         description = toolDescription,
-        mutating = true,
+        readOnly = false,
     ) { result: TranslationResult, payload: CpgApplyConceptsPayload ->
         val applied = mutableListOf<String>()
 

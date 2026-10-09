@@ -148,9 +148,10 @@ internal fun withTypedArgumentsMarker(meta: JsonObject?): JsonObject =
  * decode are answered with the list of problems, without calling [handler].
  *
  * The handler runs under [CpgLock]: shared by default, so read-only tools stay concurrent. Pass
- * `mutating = true` if it changes the graph (or does a read-modify-write on a file shared with
- * other tools); it then runs exclusively. Forgetting it on a mutating tool is the one way to get
- * this wrong, since the default is the cheap one.
+ * `readOnly = false` if it changes the graph (or does a read-modify-write on a file shared with
+ * other tools); it then runs exclusively. Forgetting it on such a tool is the one way to get this
+ * wrong, since the default is the cheap one. The tool is announced to clients with the MCP
+ * annotation `readOnlyHint = readOnly`; the chat side runs only read-only tools concurrently.
  *
  * Register every tool through this or [addToolWithoutCpg], never through the SDK's own `addTool`:
  * only these decode arguments the standard way, and [toolRegistrationProblems] flags the rest.
@@ -162,7 +163,7 @@ inline fun <reified T> Server.addTool(
     outputSchema: ToolSchema? = null,
     toolAnnotations: ToolAnnotations? = null,
     meta: JsonObject? = null,
-    mutating: Boolean = false,
+    readOnly: Boolean = true,
     noinline handler: (TranslationResult, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
@@ -172,13 +173,13 @@ inline fun <reified T> Server.addTool(
         inputSchema = inputSchema,
         title = title,
         outputSchema = outputSchema,
-        toolAnnotations = toolAnnotations,
+        toolAnnotations = toolAnnotations ?: ToolAnnotations(readOnlyHint = readOnly),
         meta = withTypedArgumentsMarker(meta),
     ) { request ->
         try {
             when (val decoded = decodeArguments<T>(name, request)) {
                 is DecodedArguments.Invalid -> decoded.result
-                is DecodedArguments.Valid -> decoded.payload.runOnCpg(mutating, handler)
+                is DecodedArguments.Valid -> decoded.payload.runOnCpg(!readOnly, handler)
             }
         } catch (e: Exception) {
             CallToolResult(
@@ -194,11 +195,13 @@ inline fun <reified T> Server.addTool(
 /**
  * Like [addTool], for tools that do not work on the shared CPG - they only touch files, or take
  * [CpgLock] themselves (e.g. `cpg_analyze`, which replaces the graph): [handler] gets just the
- * decoded arguments and runs without the lock.
+ * decoded arguments and runs without the lock. Unlike in [addTool], [readOnly] is required: say
+ * `false` if the tool changes the graph or a file (see [addTool]).
  */
 inline fun <reified T> Server.addToolWithoutCpg(
     name: String,
     description: String,
+    readOnly: Boolean,
     title: String? = null,
     outputSchema: ToolSchema? = null,
     toolAnnotations: ToolAnnotations? = null,
@@ -212,7 +215,7 @@ inline fun <reified T> Server.addToolWithoutCpg(
         inputSchema = inputSchema,
         title = title,
         outputSchema = outputSchema,
-        toolAnnotations = toolAnnotations,
+        toolAnnotations = toolAnnotations ?: ToolAnnotations(readOnlyHint = readOnly),
         meta = withTypedArgumentsMarker(meta),
     ) { request ->
         try {

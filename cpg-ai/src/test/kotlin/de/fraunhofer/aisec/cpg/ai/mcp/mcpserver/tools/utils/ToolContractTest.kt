@@ -32,6 +32,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolAnnotations
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -61,6 +62,7 @@ class ToolContractTest {
         server.addToolWithoutCpg<NoArguments>(
             name = "typed_without_arguments",
             description = "d",
+            readOnly = true,
         ) { _ ->
             ok()
         }
@@ -69,6 +71,36 @@ class ToolContractTest {
             listOf("raw_without_arguments: registered without addTool/addToolWithoutCpg"),
             server.toolRegistrationProblems(),
         )
+    }
+
+    @Test
+    fun aToolWithoutReadOnlyHintIsReported() {
+        val server = server()
+        server.addToolWithoutCpg<NoArguments>(
+            name = "no_hint",
+            description = "d",
+            readOnly = true,
+            toolAnnotations = ToolAnnotations(title = "no hint"),
+        ) { _ ->
+            ok()
+        }
+
+        assertEquals(
+            listOf("no_hint: does not declare readOnlyHint"),
+            server.toolRegistrationProblems(),
+        )
+    }
+
+    @Test
+    fun theHintFollowsTheLockMode() {
+        val server = server()
+        server.addTool<NoArguments>(name = "reads", description = "d") { _, _ -> ok() }
+        server.addTool<NoArguments>(name = "writes", description = "d", readOnly = false) { _, _ ->
+            ok()
+        }
+
+        assertEquals(true, server.tools["reads"]?.tool?.annotations?.readOnlyHint)
+        assertEquals(false, server.tools["writes"]?.tool?.annotations?.readOnlyHint)
     }
 
     @Test
@@ -83,6 +115,7 @@ class ToolContractTest {
             name = "swallows_arguments",
             description = "d",
             inputSchema = schema,
+            toolAnnotations = ToolAnnotations(readOnlyHint = true),
             meta = withTypedArgumentsMarker(null), // pretends to be typed, to isolate the 2nd check
         ) { _ ->
             ok("done")

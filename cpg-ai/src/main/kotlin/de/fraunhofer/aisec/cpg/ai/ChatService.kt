@@ -191,6 +191,13 @@ class ChatService(
         )
 
     private var tools: List<Tool> = emptyList()
+
+    /**
+     * Names of the MCP tools that announce `readOnlyHint`: only these are run concurrently by
+     * [chatStrategy] within one turn. A tool without the hint (e.g. from a host's own tools) stays
+     * sequential, which is always safe, just not maximally fast.
+     */
+    private var readOnlyToolNames: Set<String> = emptySet()
     private var prompts: List<Prompt> = emptyList()
     private var resources: List<Resource> = emptyList()
 
@@ -202,6 +209,8 @@ class ChatService(
         val transport = StreamableHttpClientTransport(url = mcpServerUrl, client = httpClient)
         mcp.connect(transport)
         tools = mcp.listTools().tools
+        readOnlyToolNames =
+            tools.filter { it.annotations?.readOnlyHint == true }.map { it.name }.toSet()
         prompts = mcp.listPrompts().prompts
         resources = mcp.listResources().resources
         mcpToolRegistry =
@@ -422,16 +431,16 @@ class ChatService(
                 }
             // Not a plain nodeExecuteTools(): that node is all-or-nothing (every call in the
             // turn parallel, or every call sequential). This splits a turn's tool calls into
-            // parallelSafeToolNames (executed concurrently via environment.executeTools) and
-            // everything else (executed one at a time, in order, via environment.executeTool) -
-            // see parallelSafeToolNames doc for why this can't just be "parallel = true".
+            // readOnlyToolNames (executed concurrently via environment.executeTools) and
+            // everything else (executed one at a time, in order, via environment.executeTool),
+            // so that tools that change something keep the order the model gave them.
             val executeTool by
                 node<ToolCalls, ReceivedToolResults>("executeToolsPartiallyParallel") { toolCalls ->
                     val contextLength = llm.readSession { contextLengthOf(model) }
-                    val (parallelSafe, sequential) =
-                        toolCalls.toolCalls.partition { it.tool in parallelSafeToolNames }
+                    val (parallelCalls, sequential) =
+                        toolCalls.toolCalls.partition { it.tool in readOnlyToolNames }
                     ReceivedToolResults(
-                        (environment.executeTools(parallelSafe) +
+                        (environment.executeTools(parallelCalls) +
                                 sequential.map { environment.executeTool(it) })
                             .map {
                                 it.copy(output = truncateForLlm(it.output, it.tool, contextLength))
@@ -948,34 +957,6 @@ class ChatService(
 
     companion object {
         private val log = LoggerFactory.getLogger(ChatService::class.java)
-
-        /**
-         * Tool names safe to execute concurrently with each other in [chatStrategy]'s `executeTool`
-         * node - i.e. read-only CPG queries with no shared mutable state. Deliberately an explicit
-         * allowlist rather than "everything except a known mutating list": a host application may
-         * register its own mutating tools (e.g. persist/skip-style tools that do an unsynchronized
-         * read-modify-write on a shared YAML/markdown file), and two concurrent calls to such a
-         * tool could race and silently drop a write. A new tool not added here simply stays
-         * sequential, which is always safe, just not maximally fast - the reverse (a new mutating
-         * tool accidentally inheriting parallelism) would not be.
-         */
-        internal val parallelSafeToolNames =
-            setOf(
-                "cpg_dataflow",
-                "cpg_dfg_backward",
-                "cpg_list_functions",
-                "cpg_list_records",
-                "cpg_list_calls",
-                "cpg_list_calls_to",
-                "cpg_list_call_args",
-                "cpg_list_call_arg_by_name_or_index",
-                "cpg_get_functions_by_name",
-                "cpg_get_node",
-                "cpg_list_llm_concepts_operations",
-                "cpg_list_concepts_and_operations",
-                "cpg_get_last_write",
-                "cpg_suggest_llm_concepts_and_operations",
-            )
 
         /**
          * Extracts a tool call from [text] when the model attempted one via free-form text instead
