@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.invoke
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -207,7 +208,7 @@ fun Server.getAllArgs() {
 
 internal fun listCallArgs(result: TranslationResult, payload: CpgIdPayload): CallToolResult {
     val call =
-        result.calls.firstOrNull { it.id.toString() == payload.id }
+        result.findNodeById(payload.id) as? Call
             ?: return CallToolResult(
                 content = listOf(TextContent("No call found with id ${payload.id}."))
             )
@@ -235,7 +236,7 @@ internal fun listCallArgByNameOrIndex(
     payload: CpgCallArgumentByNameOrIndexPayload,
 ): CallToolResult {
     val call =
-        result.calls.firstOrNull { it.id.toString() == payload.nodeId }
+        result.findNodeById(payload.nodeId) as? Call
             ?: return CallToolResult(
                 content = listOf(TextContent("No call found with id ${payload.nodeId}."))
             )

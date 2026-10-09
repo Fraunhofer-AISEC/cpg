@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgCallArgumentByNam
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.test.analyze
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -66,6 +67,17 @@ class CallArgumentToolsTest {
         assertEquals(
             listOf("No call found with id nope."),
             texts(listCallArgs(result, CpgIdPayload("nope"))),
+        )
+    }
+
+    @Test
+    fun theIdOfANodeThatIsNoCallIsNoCall(@TempDir dir: Path) {
+        val (result, _) = analyzeCall(dir)
+        val functionId = result.functions.single { it.name.localName == "f" }.id.toString()
+
+        assertEquals(
+            listOf("No call found with id $functionId."),
+            texts(listCallArgs(result, CpgIdPayload(functionId))),
         )
     }
 
