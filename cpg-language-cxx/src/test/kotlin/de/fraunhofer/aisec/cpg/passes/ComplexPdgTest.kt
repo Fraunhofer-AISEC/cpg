@@ -273,16 +273,26 @@ class ComplexPdgTest {
     }
 
     /**
-     * `dependenceGraphs/sgx_ra_get_msg3_trusted.cpp:133` is a `for` loop nested inside `if`
-     * (line 129) whose body contains its own early-exit `if` (line 139, `goto
-     * joined_r0x0014db39;`), jumping out of the loop into the enclosing `if`'s `else` branch (line
-     * 156). This is a regression test for a bug where the loop's back-edge carried a stale
-     * dominator entry from the inner, per-iteration `if` (139) around to the loop header, and that
-     * spurious entry then crowded out the loop's real, structural dependency on the enclosing `if`
-     * (129) during transitive-dominator pruning. This verifies that the `for` loop (a) is
-     * control-dependent on `if` (129), the condition that actually gates whether the loop runs at
-     * all, and (b) carries no control dependency on the inner `if` (139), which only affects
-     * iterations of the loop and must not leak out via the back-edge.
+     * `dependenceGraphs/sgx_ra_get_msg3_trusted.cpp:133` is a `for` loop nested inside `if` (line
+     * 129) whose body contains its own early-exit `if` (line 139, `goto joined_r0x0014db39;`),
+     *      jumping out of the loop into the enclosing `if`'s `else` branch (line 156).
+     *
+     * Formally (Ferrante/Ottenstein/Warren postdominance-based control dependence), the loop's own
+     * condition re-check *is* control-dependent on line 139: re-reaching it is exactly what
+     * distinguishes 139's false outcome from its true one, and 139's own execution is in turn
+     * control-dependent on the loop condition -- the two form the cycle that loop headers always
+     * produce in a textbook control dependence graph. [ControlDependenceGraphPass] does not
+     * reproduce that cycle: per [transfer], every dominator entry that originates inside a loop
+     * body is dropped when the computation crosses that loop's back-edge (keeping only the loop's
+     * own controlling condition), so dependencies on internal early-exits never reach the header.
+     * This is a deliberate simplification -- a tree-shaped approximation of control dependence
+     * rather than the full cyclic one -- not a claim that depending on 139 would be incorrect.
+     *
+     * This test pins down that approximation for a real-world regression: before the back-edge fix,
+     * the loop incorrectly lost its (non-cyclic, structurally real) dependency on the enclosing
+     * `if` (129) -- the condition that gates whether the loop runs at all -- while retaining the
+     * cyclic-but-pruned-by-design dependency on 139. After the fix it must have (a) a dependency on
+     * 129 and (b), consistent with this pass's chosen approximation, none on 139.
      */
     @Test
     fun forLoopDependsOnEnclosingIfNotInnerExit() {
@@ -314,8 +324,11 @@ class ComplexPdgTest {
         val innerEdge = forLoopDeps.firstOrNull { it.start in innerCondition }
         assertNull(
             innerEdge,
-            "the for-loop (line 133) must not be control-dependent on the inner early-exit if " +
-                "(line 139) -- that would be a stale dependency carried around the loop's back-edge",
+            "expected no CDG edge from the inner early-exit if (line 139) to the for-loop (line " +
+                "133): ControlDependenceGraphPass deliberately prunes dependencies that originate " +
+                "inside a loop body when crossing the loop's back-edge, trading away the cyclic " +
+                "dependency a textbook postdominance-based CDG would have here for a simpler, " +
+                "tree-shaped approximation",
         )
     }
 }
