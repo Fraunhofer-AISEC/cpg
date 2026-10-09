@@ -455,11 +455,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * memory equivalent of [timeout] and it is treated in the same way: we keep the results we
          * have and continue with the next function.
          *
-         * Unlimited by default. An entry costs roughly 500 bytes, so a budget of 20 million entries
-         * corresponds to about 10 GB. Set this if analyzing a single huge function must not be able
-         * to take the whole analysis down with an [OutOfMemoryError].
+         * Unlimited (`null`) by default, matching [maxComplexity]'s convention for "no limit". An
+         * entry costs roughly 500 bytes, so a budget of 20 million entries corresponds to about 10
+         * GB. Set this if analyzing a single huge function must not be able to take the whole
+         * analysis down with an [OutOfMemoryError].
          */
-        var maxStateEntries: Long = Long.MAX_VALUE,
+        var maxStateEntries: Long? = null,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
@@ -612,8 +613,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         startState,
                         ::transfer,
                         timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
-                        maxStateEntries =
-                            passConfig<Configuration>()?.maxStateEntries ?: Long.MAX_VALUE,
+                        maxStateEntries = passConfig<Configuration>()?.maxStateEntries,
                     )
                 // If we ran out of time or memory, treat it as an empty Function but still
                 // include the results we got

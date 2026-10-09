@@ -214,7 +214,16 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * Returns the key under which [element] is stored. Two elements are the same element for this
      * set if and only if their keys are equal, so this method defines the set's notion of equality.
      *
-     * The default implementation wraps the element in a reference-equality key.
+     * The default implementation wraps the element in a reference-equality key, which is why the
+     * backing [map] is a plain [ConcurrentHashMap] and not some concurrent identity map: this
+     * method is the intended override point for sets that need something other than pure reference
+     * equality. [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element] is one such
+     * case - it holds a mix of [Node]s (kept by reference, since two distinct nodes are never the
+     * same points-to target) and synthetic values like [Pair]s or
+     * [PointsToPass.NodeWithPropertiesKey] created on the fly while transferring a state, where
+     * only structural equality makes two separately-constructed instances count as one element.
+     * [Any] is deliberately not narrowed to [PointsToPass.IdKey] because overriding subclasses are
+     * free to return other key types entirely, as that example shows.
      */
     protected open fun keyFor(element: T): Any = PointsToPass.IdKey(element)
 

@@ -141,31 +141,38 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
         }
 
         val entries = liveStates.toLong() * sampledStateEntries.coerceAtLeast(0)
-        if (entries > nextWarnEntries) {
-            Pass.log.warn(
+        if (entries > nextWarnEntries && Pass.log.isDebugEnabled) {
+            // This is exploratory, not actionable on its own (the actual safety net is
+            // [Lattice.Configuration.maxStateEntries]), so it is debug-level: useful when hunting
+            // for a specific runaway function, noise otherwise.
+            Pass.log.debug(
                 "The analysis of {} is keeping {} states of about {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
                 name,
                 liveStates,
                 sampledStateEntries,
                 entries,
             )
-            // Only warn again once the problem has become noticeably worse.
+            // Only log again once the problem has become noticeably worse.
             nextWarnEntries = entries * 2
         }
 
         return entries
     }
 
-    /** Logs what the finished - or abandoned - run kept alive. */
-    fun report() {
+    /**
+     * Logs what the finished - or abandoned - run kept alive. This is a
+     * [org.slf4j.event.Level.WARN] only if [aborted] by [Lattice.Configuration.maxStateEntries]: a
+     * run that merely got large but still finished isn't something anyone needs to act on.
+     */
+    fun report(aborted: Boolean) {
         // The final state is the union of all end states, so its size is an upper bound for the
         // size of every intermediate state. If we never got there, we have to make do with the last
         // state we sampled.
         val entriesPerState = if (finalStateEntries >= 0) finalStateEntries else sampledStateEntries
         val peakEntries = peakLiveStates.toLong() * entriesPerState.coerceAtLeast(0)
-        if (peakEntries > LARGE_STATE_ENTRY_WARN_THRESHOLD) {
+        if (aborted && peakEntries > LARGE_STATE_ENTRY_WARN_THRESHOLD) {
             Pass.log.warn(
-                "The analysis of {} kept up to {} states of up to {} entries alive at the same time ({} entries in total). This may exhaust the heap.",
+                "The analysis of {} kept up to {} states of up to {} entries alive at the same time ({} entries in total) before it was aborted. This may exhaust the heap.",
                 name,
                 peakLiveStates,
                 entriesPerState,
@@ -569,10 +576,10 @@ interface Lattice<T : Lattice.Element> {
      *
      * [maxStateEntries] is the same kind of budget for memory instead of time: it limits the number
      * of entries this run may keep alive, i.e. the number of states times the number of entries in
-     * each of them. Exceeding it ends the analysis exactly like a timeout does. It is unlimited by
-     * default, because - unlike a timeout - a run that is too big for the heap takes the whole
-     * analysis down with it, so the right value depends on the heap the caller is willing to spend.
-     * As a rule of thumb, an entry of a points-to state costs about 500 bytes.
+     * each of them. Exceeding it ends the analysis exactly like a timeout does. It is `null`
+     * (unlimited) by default, because - unlike a timeout - a run that is too big for the heap takes
+     * the whole analysis down with it, so the right value depends on the heap the caller is willing
+     * to spend. As a rule of thumb, an entry of a points-to state costs about 500 bytes.
      */
     fun iterateEOG(
         startEdges: List<EvaluationOrder>,
@@ -580,7 +587,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
         timeout: Duration = Duration.INFINITE,
-        maxStateEntries: Long = Long.MAX_VALUE,
+        maxStateEntries: Long? = null,
     ): Pair<T, Boolean> {
         return runBlocking {
             iterateEogInternal(
@@ -600,7 +607,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Duration,
-        maxStateEntries: Long = Long.MAX_VALUE,
+        maxStateEntries: Long? = null,
     ): Pair<T, Boolean> {
         // [TimeoutBudget] is installed in the coroutine context for the duration of this call (an
         // analysis can trigger a nested one, e.g., to compute a function summary), scoping the
@@ -617,6 +624,7 @@ interface Lattice<T : Lattice.Element> {
             }
 
         val statistics = IterationStatistics(startEdges)
+        var aborted = true
         return withContext(context) {
             try {
                 val result =
@@ -630,9 +638,10 @@ interface Lattice<T : Lattice.Element> {
                         statistics,
                     )
                 statistics.finalStateEntries = result.first.entryCount()
+                aborted = result.second
                 result
             } finally {
-                statistics.report()
+                statistics.report(aborted)
             }
         }
     }
@@ -647,7 +656,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Duration,
-        maxStateEntries: Long,
+        maxStateEntries: Long?,
         statistics: IterationStatistics,
     ): Pair<T, Boolean> {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
@@ -808,7 +817,7 @@ interface Lattice<T : Lattice.Element> {
             // its state.
             val nextGlobal = globalState[nextEdge] ?: continue
 
-            if (liveEntries > maxStateEntries) {
+            if (maxStateEntries != null && liveEntries > maxStateEntries) {
                 // We are out of memory budget. We stop here in exactly the same way as we do when
                 // we run out of time: the caller gets what we have computed so far, together with
                 // the information that this is not a fixpoint.
