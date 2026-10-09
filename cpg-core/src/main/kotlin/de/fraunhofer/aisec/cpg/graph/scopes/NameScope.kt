@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.passes.updateImportedSymbols
@@ -67,9 +68,24 @@ sealed class NameScope(node: AstNode) : Scope(node) {
     override fun addSymbol(symbol: Symbol, declaration: Declaration): Declaration {
         val canonical = super.addSymbol(symbol, declaration)
 
-        // Update imported symbols of dependent scopes
+        // Update imported symbols of dependent scopes, but only those that are affected by the new
+        // symbol. This is important for performance, since a namespace can be imported by a lot of
+        // files and new symbols are added frequently (e.g., by inference).
         for (edge in importedByEdges) {
-            edge.declaration?.let { provider.ctx.scopeManager.updateImportedSymbols(it) }
+            val import = edge.declaration ?: continue
+            val affected =
+                when (import.style) {
+                    // A wildcard import of a namespace directly uses our symbols, so it is already
+                    // up to date. A wildcard import of a record only contains some of them.
+                    ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE -> this is RecordScope
+                    ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE ->
+                        import.import.localName == symbol
+                    // The imported symbol is the namespace itself
+                    ImportStyle.IMPORT_NAMESPACE -> false
+                }
+            if (affected) {
+                provider.ctx.scopeManager.updateImportedSymbols(import)
+            }
         }
 
         return canonical
