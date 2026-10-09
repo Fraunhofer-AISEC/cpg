@@ -878,7 +878,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         value: Node,
         shortFS: Boolean,
         subAccessName: String,
-        lastWrites: ConcurrentIdentitySet<NodeWithPropertiesKey>,
+        lastWrites: PowersetLattice.Element<NodeWithPropertiesKey>,
     ) {
         // Extract the value depth from the value's localName
         val srcValueDepth = stringToDepth(value.name.localName)
@@ -3575,7 +3575,7 @@ data class FetchElementFromDeclarationStateEntry(
     val value: Node,
     val shortFS: Boolean,
     val subAccessName: String,
-    val lastWrites: ConcurrentIdentitySet<NodeWithPropertiesKey>,
+    val lastWrites: PowersetLattice.Element<NodeWithPropertiesKey>,
 )
 
 /** Fetch the value for `node` from the GeneralState */

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel
 import de.fraunhofer.aisec.cpg.graph.isBranchOf
+import de.fraunhofer.aisec.cpg.helpers.AbstractConcurrentSet
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
@@ -988,30 +989,23 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<T>>
 
     class Element<T>(expectedMaxSize: Int) :
-        ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
+        AbstractConcurrentSet<T, Element.Key>(expectedMaxSize), Lattice.Element {
 
         /**
-         * Points-to sets contain elements whose reference identity is meaningless, because they are
-         * created on the fly while transferring a state: a [Pair] or a
-         * [PointsToPass.NodeWithPropertiesKey] describing the same nodes must count as one element,
-         * no matter how often it was constructed. For those we therefore key the set by a
+         * The keys [keyFor] may produce. Points-to sets contain elements whose reference identity
+         * is meaningless, because they are created on the fly while transferring a state: a [Pair]
+         * or a [PointsToPass.NodeWithPropertiesKey] describing the same nodes must count as one
+         * element, no matter how often it was constructed. For those we therefore key the set by a
          * structural key instead of by reference. Everything else - in particular [Node]s - keeps
-         * the reference semantics of [ConcurrentIdentitySet].
-         *
-         * This is the only place which knows about the special element types; [add], [remove],
-         * [contains] and hence [equals] and [compare] all agree on it because they all go through
-         * this method.
+         * reference semantics via [IdentityKey].
          */
-        override fun keyFor(element: T): Any =
-            when (element) {
-                is Pair<*, *> -> PairKey(element.first, element.second)
-                // This one is its own key already: it compares its node by reference and its
-                // properties structurally.
-                is PointsToPass.NodeWithPropertiesKey -> element
-                else -> super.keyFor(element)
-            }
+        sealed interface Key
 
-        private class PairKey(val first: Any?, val second: Any?) {
+        private data class IdentityKey<T>(val ref: PointsToPass.IdKey<T>) : Key
+
+        private data class NodeKey(val key: PointsToPass.NodeWithPropertiesKey) : Key
+
+        private class PairKey(val first: Any?, val second: Any?) : Key {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (other !is PairKey) return false
@@ -1021,6 +1015,29 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             override fun hashCode(): Int {
                 return 31 * System.identityHashCode(first) + (second?.hashCode() ?: 0)
             }
+        }
+
+        /**
+         * This is the only place which knows about the special element types; [add], [remove],
+         * [contains] and hence [equals] and [compare] all agree on it because they all go through
+         * this method.
+         */
+        override fun keyFor(element: T): Key =
+            when (element) {
+                is Pair<*, *> -> PairKey(element.first, element.second)
+                // This one is its own key already: it compares its node by reference and its
+                // properties structurally.
+                is PointsToPass.NodeWithPropertiesKey -> NodeKey(element)
+                else -> IdentityKey(PointsToPass.IdKey(element))
+            }
+
+        /**
+         * Fast path for [addAllWithoutCheck]: since every [Element] computes its keys the same way,
+         * we can copy [elements]' backing map directly instead of recomputing a key for every
+         * element. This is what makes [lub] cheap when merging two large states.
+         */
+        fun addAllWithoutCheck(elements: Element<T>) {
+            map.putAll(elements.map)
         }
 
         // We make the new element a bit bigger than the current size to avoid resizing
