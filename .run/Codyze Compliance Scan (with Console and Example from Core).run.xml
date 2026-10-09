@@ -1,8 +1,5 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Codyze Compliance Scan (with Console and Example from Core)" type="JetRunConfigurationType">
-    <envs>
-      <env name="CODYZE_FHGENIE_API_KEY" value="w2K7V7BSdniNzzOtIv2BPC9NPZUXJ6K6" />
-    </envs>
     <option name="MAIN_CLASS_NAME" value="de.fraunhofer.aisec.codyze.ApplicationKt" />
     <module name="cpg.codyze.main" />
     <option name="PROGRAM_PARAMETERS" value="compliance scan --project-dir codyze-core/src/integrationTest/resources/example --console=true" />
