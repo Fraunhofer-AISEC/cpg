@@ -50,7 +50,9 @@ fun compareSequenceSets(
     b: Set<List<String>>,
     listSimilarity: (List<String>, List<String>) -> Double,
     consumeMatches: Boolean = false,
-    aggregate: (List<Double>) -> Double = { it.minOrNull() ?: 1.0 },
+    aggregate: (List<Double>) -> Double = {
+        it.minOrNull() ?: 1.0
+    }, // what happens if a is empty? vacuously similar, nothing to compare
 ): Double {
     val pool = if (consumeMatches) b.toMutableList() else null
 
