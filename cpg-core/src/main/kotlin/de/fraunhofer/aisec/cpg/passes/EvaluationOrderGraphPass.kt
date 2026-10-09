@@ -602,8 +602,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See [Specification for Return](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#return)
      */
     protected fun handleReturn(node: Return) {
-        // analyze the return value
-        handleEOG(node.returnValue)
+        // analyze the return values from left to right
+        node.returnValues.forEach { handleEOG(it) }
 
         // push the statement itself
         attachToEOG(node)

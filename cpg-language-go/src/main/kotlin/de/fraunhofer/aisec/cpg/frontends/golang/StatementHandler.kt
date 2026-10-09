@@ -327,15 +327,9 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
     private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): Return {
         return newReturn(rawNode = returnStmt) { `return` ->
-            val results = returnStmt.results
-            if (results.isNotEmpty()) {
-                val expr = frontend.expressionHandler.handle(results[0])
-
-                // TODO: parse more than one result expression
-                `return`.returnValue = expr
-            } else {
-                // TODO: connect result statement to result variables
-            }
+            // TODO: connect an empty return statement to named result variables
+            `return`.returnValues =
+                returnStmt.results.map { frontend.expressionHandler.handle(it) }.toMutableList()
         }
     }
 
