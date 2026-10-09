@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.ai
 import de.fraunhofer.aisec.cpg.ai.clients.Events
 import de.fraunhofer.aisec.cpg.ai.clients.LlmProviderConfig
 import io.ktor.client.*
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.*
 import kotlinx.serialization.json.*
 
@@ -39,6 +41,55 @@ class ChatServiceTest {
             llmProviderConfig = LlmProviderConfig(HttpClient(), emptyList()),
             mcpServerUrl = "localhost",
         )
+    }
+
+    /** What Koog's `McpTool.encodeResult` hands to the event handlers for [result]. */
+    private fun asKoogEncodes(result: CallToolResult): JsonElement =
+        Json.encodeToJsonElement(CallToolResult.serializer(), result)
+
+    @Test
+    fun unwrapMcpToolResultParsesJsonText() {
+        val wrapped =
+            asKoogEncodes(CallToolResult(content = listOf(TextContent("""[{"id": "1"}]"""))))
+
+        val result = createChatService().unwrapMcpToolResult(wrapped)
+
+        assertEquals(Json.parseToJsonElement("""[{"id": "1"}]"""), result)
+    }
+
+    @Test
+    fun unwrapMcpToolResultKeepsPlainTextAsString() {
+        val wrapped = asKoogEncodes(CallToolResult(content = listOf(TextContent("No node found"))))
+
+        val result = createChatService().unwrapMcpToolResult(wrapped)
+
+        assertEquals(JsonPrimitive("No node found"), result)
+    }
+
+    @Test
+    fun unwrapMcpToolResultCollectsSeveralItemsIntoAnArray() {
+        val wrapped =
+            asKoogEncodes(
+                CallToolResult(
+                    content = listOf(TextContent("""{"a": 1}"""), TextContent("two items"))
+                )
+            )
+
+        val result = createChatService().unwrapMcpToolResult(wrapped)
+
+        assertEquals(
+            JsonArray(listOf(Json.parseToJsonElement("""{"a": 1}"""), JsonPrimitive("two items"))),
+            result,
+        )
+    }
+
+    @Test
+    fun unwrapMcpToolResultLeavesOtherShapesUnchanged() {
+        val service = createChatService()
+        val notMcp = Json.parseToJsonElement("""{"content": "file text", "size": 9}""")
+
+        assertEquals(notMcp, service.unwrapMcpToolResult(notMcp))
+        assertEquals(JsonPrimitive("plain"), service.unwrapMcpToolResult(JsonPrimitive("plain")))
     }
 
     @Test

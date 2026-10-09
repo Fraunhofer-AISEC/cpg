@@ -75,6 +75,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.toList
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 
@@ -807,7 +808,9 @@ class ChatService(
                         }
                         onToolCallCompleted { ctx ->
                             val args = ctx.toolArgs.toKotlinxJsonElement()
-                            val content = ctx.toolResult?.toKotlinxJsonElement() ?: JsonNull
+                            val content =
+                                ctx.toolResult?.toKotlinxJsonElement()?.let(::unwrapMcpToolResult)
+                                    ?: JsonNull
                             send(Events.toolResult(ctx.toolName, args, content))
                         }
                         onToolCallFailed { ctx -> send(Events.text("Tool failed: ${ctx.message}")) }
@@ -926,6 +929,28 @@ class ChatService(
                 content = (msg.content as? TextContent)?.text ?: "",
             )
         }
+    }
+
+    /**
+     * The payload of an MCP tool result as it reaches the frontend.
+     *
+     * Koog's `McpTool` hands the whole serialized [CallToolResult] to the event handlers, while the
+     * frontend's widgets (code items, data flow) match on the payload itself. This decodes [result]
+     * back into a [CallToolResult] (like `McpTool.decodeResult`) and parses its [TextContent] items
+     * with [parseToolResultContent], which is what the frontend got before the tool calls went
+     * through Koog. A result that is not a [CallToolResult] (e.g. from a file tool) is returned
+     * unchanged.
+     */
+    fun unwrapMcpToolResult(result: JsonElement): JsonElement {
+        val callToolResult =
+            try {
+                Json.decodeFromJsonElement(CallToolResult.serializer(), result)
+            } catch (_: SerializationException) {
+                return result
+            }
+        return parseToolResultContent(
+            callToolResult.content.filterIsInstance<TextContent>().map { it.text }
+        )
     }
 
     /**
