@@ -328,22 +328,10 @@ fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
 /**
  * Converts to a [FunctionInfo], omitting the (often large - can be an entire function body)
- * [FunctionInfo.code] field when [includeCode] is false. Used for a single targeted lookup (e.g.
- * `cpg_get_functions_by_name`) where the caller already knows which function(s) it wants and the
- * full parameter/callee/file-line detail is worth the size - for bulk listing, see
- * [Function.toSignatureInfo] instead.
+ * [FunctionInfo.code] field when [includeCode] is false, as bulk listings do: `cpg_get_node`
+ * fetches the full details (code included) for a specific function once picked.
  */
 fun Function.toInfo(includeCode: Boolean = true) = FunctionInfo(this, includeCode)
-
-/**
- * Converts to a minimal [FunctionSignatureInfo] (just enough to find a candidate by name/signature
- * and disambiguate same-named overloads, without [FunctionInfo]'s full
- * parameters/callees/file-line/ code detail). Used by bulk-listing tools (e.g.
- * `cpg_list_functions`): embedding every returned function's full detail multiplies context size
- * for data the model will mostly never read - `cpg_get_node` fetches the full details (code
- * included) for a specific one once picked.
- */
-fun Function.toSignatureInfo() = FunctionSignatureInfo(this)
 
 fun Record.toInfo() = RecordInfo(this)
 
@@ -379,12 +367,18 @@ fun <T> paginate(items: List<T>, limit: Int?, offset: Int?): Page<T> {
 }
 
 /**
- * Paginates [texts] according to the `limit`/`offset` in [payload] (see [paginate]) and wraps each
- * item of the resulting page in a [TextContent], followed by the summary entry if there is more.
+ * The page of this list selected by [limit]/[offset] (see [paginate]) as the result of a tool: the
+ * [toText] of each item of that page as a [TextContent], followed by the summary entry if there is
+ * more. Only the items of the page are converted, so a large listing is not serialized to show a
+ * few of its entries.
  */
-fun paginatedTextContent(texts: List<String>, payload: CpgListPayload): List<TextContent> {
-    val page = paginate(texts, payload.limit, payload.offset)
-    return page.items.map { TextContent(it) } + listOfNotNull(page.summary?.let { TextContent(it) })
+fun <T> List<T>.toPagedResult(limit: Int?, offset: Int?, toText: (T) -> String): CallToolResult {
+    val page = paginate(this, limit, offset)
+    return CallToolResult(
+        content =
+            page.items.map { TextContent(toText(it)) } +
+                listOfNotNull(page.summary?.let { TextContent(it) })
+    )
 }
 
 /** Returns all available concrete (non-abstract) concept classes. */

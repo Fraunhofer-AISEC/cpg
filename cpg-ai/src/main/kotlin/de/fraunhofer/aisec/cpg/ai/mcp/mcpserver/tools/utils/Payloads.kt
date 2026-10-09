@@ -96,7 +96,34 @@ data class CpgDfgBackwardPayload(
     @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
 )
 
+/** Shared parameter descriptions of the filters of the listing tools. */
+private const val PATTERN_DESCRIPTION =
+    "Only include nodes whose name matches this regular expression (case-insensitive, partial match)."
+private const val FILE_DESCRIPTION =
+    "Only include nodes located in a file whose path contains this string, e.g. 'main.c'."
+
 @Serializable
+@Description("The payload to filter and page through a listing of nodes.")
+data class CpgListNodesPayload(
+    @Description(PATTERN_DESCRIPTION) val pattern: String? = null,
+    @Description(FILE_DESCRIPTION) val file: String? = null,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+@Serializable
+@Description("The payload to filter and page through a listing of functions.")
+data class CpgListFunctionsPayload(
+    @Description(PATTERN_DESCRIPTION) val pattern: String? = null,
+    @Description(FILE_DESCRIPTION) val file: String? = null,
+    @Description("Only include functions that call a function with this local name, e.g. 'memcpy'.")
+    val calls: String? = null,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+@Serializable
+@Description("The payload to page through a listing.")
 data class CpgListPayload(
     @Description("Maximum number of items to return. Defaults to 20 if not specified.")
     val limit: Int? = null,

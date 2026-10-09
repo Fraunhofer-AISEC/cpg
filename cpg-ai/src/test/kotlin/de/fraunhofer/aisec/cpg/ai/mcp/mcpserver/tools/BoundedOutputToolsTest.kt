@@ -111,11 +111,12 @@ class BoundedOutputToolsTest {
         val schemas = (1..3).map { LLMConceptDescription("C$it", "d", emptyList(), emptyList()) }
         ObjectMapper(YAMLFactory()).registerKotlinModule().writeValue(file, schemas)
 
-        val page = listConcepts(file, CpgListPayload(limit = 2))
+        val page =
+            listConcepts(file, CpgListPayload(limit = 2)).content.filterIsInstance<TextContent>()
 
         assertEquals(3, page.size, "2 concepts and the summary")
         assertTrue(page.first().text.contains("\"C1\""))
         assertTrue(page.last().text.contains("offset=2"))
-        assertEquals(3, listConcepts(file, CpgListPayload()).size)
+        assertEquals(3, listConcepts(file, CpgListPayload()).content.size)
     }
 }

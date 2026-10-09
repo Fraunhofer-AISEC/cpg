@@ -40,28 +40,40 @@ import de.fraunhofer.aisec.cpg.graph.invoke
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import java.util.regex.PatternSyntaxException
 import kotlinx.serialization.json.Json
 
 fun Server.listFunctions() {
     val toolDescription =
         """
         This tool lists all functions, more precisely function declarations, which are held in the
-        graph, as a minimal nodeId + signature index (no parameters/callees/file-line/code detail).
-        Use cpg_get_node with a id to retrieve the full node details (including its code) for a
+        graph, as compact summaries (name, parameters, signature, callees, location) without source
+        code. Use cpg_get_node with a id to retrieve the full node details (including its code) for a
         specific function once picked.
-        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
+        Results come in pages of at most $DEFAULT_LIST_LIMIT items. Narrow large listings down with pattern, file or calls
+        instead of paging through everything; use the limit/offset parameters to page through the rest.
 
         Example prompts:
         - "Show me all functions in the analyzed code"
-        - "What functions are defined in this codebase?"
+        - "Which functions call memcpy?"
+        - "Which functions are defined in main.c?"
         """
             .trimIndent()
 
-    this.addTool<CpgListPayload>(name = "cpg_list_functions", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgListPayload ->
-        val texts = result.functions.map { Json.encodeToString(it.toSignatureInfo()) }
-        CallToolResult(content = paginatedTextContent(texts, payload))
+    this.addTool<CpgListFunctionsPayload>(
+        name = "cpg_list_functions",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListFunctionsPayload ->
+        val pattern = compilePattern(payload.pattern)
+        val matching =
+            result.functions.filter { function ->
+                function.matches(pattern, payload.file) &&
+                    (payload.calls == null ||
+                        function.calls.any { it.name.localName == payload.calls })
+            }
+        matching.toPagedResult(payload.limit, payload.offset) {
+            Json.encodeToString(it.toInfo(includeCode = false))
+        }
     }
 }
 
@@ -70,7 +82,8 @@ fun Server.listRecords() {
         """
         This tool lists all classes and structs, more precisely their declarations as compact summaries.
         Use cpg_get_node with a id to retrieve the full node details.
-        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
+        Results come in pages of at most $DEFAULT_LIST_LIMIT items. Narrow large listings down with pattern or file instead of
+        paging through everything; use the limit/offset parameters to page through the rest.
 
         Example prompts:
         - "Show me all classes in the code"
@@ -78,11 +91,12 @@ fun Server.listRecords() {
         """
             .trimIndent()
 
-    this.addTool<CpgListPayload>(name = "cpg_list_records", description = toolDescription) {
+    this.addTool<CpgListNodesPayload>(name = "cpg_list_records", description = toolDescription) {
         result: TranslationResult,
-        payload: CpgListPayload ->
-        val texts = result.records.map { Json.encodeToString(it.toInfo()) }
-        CallToolResult(content = paginatedTextContent(texts, payload))
+        payload: CpgListNodesPayload ->
+        val pattern = compilePattern(payload.pattern)
+        val matching = result.records.filter { it.matches(pattern, payload.file) }
+        matching.toPagedResult(payload.limit, payload.offset) { Json.encodeToString(it.toInfo()) }
     }
 }
 
@@ -95,10 +109,9 @@ fun Server.listConceptsAndOperations() {
         name = "cpg_list_concepts_and_operations",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgListPayload ->
-        val concepts = result.allChildrenWithOverlays<Concept>().map { it.toJson() }
-        val operations = result.allChildrenWithOverlays<Operation>().map { it.toJson() }
-        val texts = concepts + operations
-        CallToolResult(content = paginatedTextContent(texts, payload))
+        val overlays: List<OverlayNode> =
+            result.allChildrenWithOverlays<Concept>() + result.allChildrenWithOverlays<Operation>()
+        overlays.toPagedResult(payload.limit, payload.offset) { it.toJson() }
     }
 }
 
@@ -107,7 +120,9 @@ fun Server.listCalls() {
         """
         This tool lists all function and method calls as compact summaries.
         Use cpg_get_node with a id to retrieve the full node details.
-        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
+        Results come in pages of at most $DEFAULT_LIST_LIMIT items. Narrow large listings down with pattern (matched against
+        the name of the called function) or file instead of paging through everything; use the
+        limit/offset parameters to page through the rest.
 
         Example prompts:
         - "Show me all function calls in the code"
@@ -115,11 +130,14 @@ fun Server.listCalls() {
         """
             .trimIndent()
 
-    this.addTool<CpgListPayload>(name = "cpg_list_calls", description = toolDescription) {
+    this.addTool<CpgListNodesPayload>(name = "cpg_list_calls", description = toolDescription) {
         result: TranslationResult,
-        payload: CpgListPayload ->
-        val texts = result.calls.map { Json.encodeToString(it.toInfo(includeCode = false)) }
-        CallToolResult(content = paginatedTextContent(texts, payload))
+        payload: CpgListNodesPayload ->
+        val pattern = compilePattern(payload.pattern)
+        val matching = result.calls.filter { it.matches(pattern, payload.file) }
+        matching.toPagedResult(payload.limit, payload.offset) {
+            Json.encodeToString(it.toInfo(includeCode = false))
+        }
     }
 }
 
@@ -149,12 +167,31 @@ internal fun listCallsTo(
     result: TranslationResult,
     payload: CpgListCallsToPayload,
 ): CallToolResult {
-    val texts =
-        result.calls(payload.name).map { Json.encodeToString(it.toInfo(includeCode = false)) }
-    return CallToolResult(
-        content = paginatedTextContent(texts, CpgListPayload(payload.limit, payload.offset))
-    )
+    return result.calls(payload.name).toPagedResult(payload.limit, payload.offset) {
+        Json.encodeToString(it.toInfo(includeCode = false))
+    }
 }
+
+/** [pattern] as a case-insensitive regex, compiled once for a whole listing. */
+private fun compilePattern(pattern: String?): Regex? =
+    pattern?.let {
+        try {
+            Regex(it, RegexOption.IGNORE_CASE)
+        } catch (e: PatternSyntaxException) {
+            throw IllegalArgumentException(
+                "pattern is not a valid regular expression: ${e.description}"
+            )
+        }
+    }
+
+/** Whether this node is in a file whose path contains [file]. */
+private fun Node.isInFile(file: String): Boolean =
+    location?.artifactLocation?.uri?.toString()?.contains(file) == true
+
+/** Whether this node's name matches [pattern] and its file [file], where given. */
+private fun Node.matches(pattern: Regex?, file: String?): Boolean =
+    (pattern == null || pattern.containsMatchIn(name.toString())) &&
+        (file == null || isInFile(file))
 
 fun Server.getAllArgs() {
     val toolDescription =

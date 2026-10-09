@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -76,14 +75,13 @@ internal fun dfgBackward(
                 content = listOf(TextContent("No node found with ID ${payload.id}"))
             )
 
-    val nodes = backwardSliceNodes(startNode).map { NodeInfo(it) }
-
     // One JSON array per call, sliced to a page, so that a node with a huge backward slice cannot
-    // flood the context by itself; the summary says how to fetch the rest.
-    val page = paginate(nodes.toList(), payload.limit, payload.offset)
+    // flood the context by itself; the summary says how to fetch the rest. Only the nodes of the
+    // page are converted.
+    val page = paginate(backwardSliceNodes(startNode), payload.limit, payload.offset)
     return CallToolResult(
         content =
-            listOf(TextContent(Json.encodeToString(page.items))) +
+            listOf(TextContent(Json.encodeToString(page.items.map { NodeInfo(it) }))) +
                 listOfNotNull(page.summary?.let { TextContent(it) })
     )
 }

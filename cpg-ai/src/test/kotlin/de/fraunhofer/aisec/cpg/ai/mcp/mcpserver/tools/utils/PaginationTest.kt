@@ -25,17 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class PaginatedTextContentTest {
+class PaginationTest {
+
+    private fun CallToolResult.texts() = content.filterIsInstance<TextContent>()
 
     @Test
     fun defaultsToFullListWhenUnderTheLimit() {
         val texts = listOf("a", "b", "c")
 
-        val result = paginatedTextContent(texts, CpgListPayload())
+        val result = texts.toPagedResult(null, null) { it }.texts()
 
         assertEquals(listOf("a", "b", "c"), result.map { it.text })
     }
@@ -44,7 +48,7 @@ class PaginatedTextContentTest {
     fun defaultLimitCapsAtTwentyAndAddsSummary() {
         val texts = (1..30).map { "item$it" }
 
-        val result = paginatedTextContent(texts, CpgListPayload())
+        val result = texts.toPagedResult(null, null) { it }.texts()
 
         assertEquals(21, result.size, "20 items + 1 summary entry")
         assertEquals("item1", result.first().text)
@@ -56,7 +60,7 @@ class PaginatedTextContentTest {
     fun explicitLimitAndOffsetPaginate() {
         val texts = (1..10).map { "item$it" }
 
-        val result = paginatedTextContent(texts, CpgListPayload(limit = 3, offset = 4))
+        val result = texts.toPagedResult(limit = 3, offset = 4) { it }.texts()
 
         assertEquals(listOf("item5", "item6", "item7"), result.take(3).map { it.text })
         assertTrue(result.last().text.contains("offset=7"))
@@ -66,7 +70,7 @@ class PaginatedTextContentTest {
     fun noSummaryWhenPageReachesTheEnd() {
         val texts = listOf("a", "b", "c")
 
-        val result = paginatedTextContent(texts, CpgListPayload(limit = 10, offset = 0))
+        val result = texts.toPagedResult(limit = 10, offset = 0) { it }.texts()
 
         assertEquals(listOf("a", "b", "c"), result.map { it.text })
     }
@@ -75,7 +79,7 @@ class PaginatedTextContentTest {
     fun negativeOffsetAndZeroLimitAreClamped() {
         val texts = listOf("a", "b", "c")
 
-        val result = paginatedTextContent(texts, CpgListPayload(limit = 0, offset = -5))
+        val result = texts.toPagedResult(limit = 0, offset = -5) { it }.texts()
 
         assertEquals("a", result.first().text, "limit clamped up to 1, offset up to 0")
         assertTrue(result.last().text.contains("offset=1"))
@@ -95,5 +99,17 @@ class PaginatedTextContentTest {
 
         assertEquals((21..30).toList(), page.items)
         assertEquals(null, page.summary)
+    }
+
+    @Test
+    fun onlyTheItemsOfThePageAreConverted() {
+        val converted = mutableListOf<Int>()
+
+        (1..100).toList().toPagedResult(limit = 3, offset = 10) {
+            converted += it
+            "item$it"
+        }
+
+        assertEquals(listOf(11, 12, 13), converted)
     }
 }

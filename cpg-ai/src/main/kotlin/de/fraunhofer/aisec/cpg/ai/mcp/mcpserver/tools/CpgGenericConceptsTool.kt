@@ -69,15 +69,16 @@ fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
         readOnly = true,
         description = toolDescription,
     ) { payload ->
-        CallToolResult(content = listConcepts(file, payload))
+        listConcepts(file, payload)
     }
 }
 
 /** One JSON entry per persisted concept schema in [file], paginated according to [payload]. */
-internal fun listConcepts(file: File, payload: CpgListPayload): List<TextContent> {
+internal fun listConcepts(file: File, payload: CpgListPayload): CallToolResult {
     val jsonMapper = ObjectMapper().registerKotlinModule()
-    val texts = loadPersistedConceptsAndOperations(file).map { jsonMapper.writeValueAsString(it) }
-    return paginatedTextContent(texts, payload)
+    return loadPersistedConceptsAndOperations(file).toPagedResult(payload.limit, payload.offset) {
+        jsonMapper.writeValueAsString(it)
+    }
 }
 
 /**
