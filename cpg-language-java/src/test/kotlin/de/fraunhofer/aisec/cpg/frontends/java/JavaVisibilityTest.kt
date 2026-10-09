@@ -33,7 +33,9 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 internal class JavaVisibilityTest : BaseTest() {
     private val topLevel = Path.of("src", "test", "resources", "java", "visibility")
@@ -137,6 +139,16 @@ internal class JavaVisibilityTest : BaseTest() {
             Visibility.PACKAGE,
             recordByLocalName(result.records, "PackageEnum").visibility,
         )
+    }
+
+    @Test
+    fun testNestedTypeStatic() {
+        val result = analyzeFixture()
+
+        // `static` on a nested type is mapped onto `isStatic`, just like for fields and methods
+        assertTrue(recordByLocalName(result.records, "StaticNested").isStatic)
+        assertFalse(recordByLocalName(result.records, "PublicInner").isStatic)
+        assertFalse(recordByLocalName(result.records, "Visibility").isStatic)
     }
 
     @Test
