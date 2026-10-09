@@ -56,6 +56,7 @@ import ai.koog.skills.model.Skill
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.cpg.ai.clients.*
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.UNPARSABLE_ARGUMENTS_KEY
 import de.fraunhofer.aisec.cpg.ai.skills.LIST_DIRECTORY_TOOL_NAME
 import de.fraunhofer.aisec.cpg.ai.skills.READ_FILE_TOOL_NAME
 import de.fraunhofer.aisec.cpg.ai.skills.buildSkillCatalog
@@ -72,6 +73,7 @@ import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.ClientOptions
 import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
 import io.modelcontextprotocol.kotlin.sdk.types.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.toList
@@ -373,65 +375,17 @@ class ChatService(
     }
 
     /**
-     * Extracts a tool call from [text] when the model attempted one via free-form text instead of a
-     * real structured `tool_calls` response - e.g. because the LLM provider's tool-call parser
-     * doesn't recognize this particular model's native tool-call format (observed with some
-     * self-hosted models/servers). Rather than special-casing any one model's native syntax (which
-     * varies across model families and even across attempts by the same model), this looks for a
-     * JSON object - optionally inside a fenced code block or a `<tool_call>` tag, both common
-     * conventions - with a name-like key matching one of [validToolNames] and an arguments-like
-     * key. Returns null if no such match is found, which is the common case (real tool calls and
-     * genuine final answers never match).
+     * [extractFallbackToolCall] for [text], logging when it recovers a call so that a model or
+     * server that needs this fallback shows up in the log.
      */
-    private fun extractFallbackToolCall(
-        text: String,
-        validToolNames: Set<String>,
-    ): MessagePart.Tool.Call? {
-        val candidates = buildList {
-            FENCED_CODE_BLOCK_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
-            TOOL_CALL_TAG_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
-            add(text)
+    private fun detectFallbackToolCall(text: String): MessagePart.Tool.Call? =
+        extractFallbackToolCall(text, validToolNames()).also {
+            if (it != null)
+                log.info("Recovered a tool call to {} from the model's text answer", it.tool)
         }
 
-        for (candidate in candidates) {
-            for (jsonText in findJsonObjects(candidate)) {
-                val obj =
-                    runCatching { Json.parseToJsonElement(jsonText).jsonObject }.getOrNull()
-                        ?: continue
-                val name =
-                    NAME_KEYS.firstNotNullOfOrNull { key -> obj[key]?.jsonPrimitive?.contentOrNull }
-                if (name == null || name !in validToolNames) continue
-                val args = ARGUMENT_KEYS.firstNotNullOfOrNull { key -> obj[key]?.jsonObject }
-                return MessagePart.Tool.Call(tool = name, args = args ?: JsonObject(emptyMap()))
-            }
-        }
-        return null
-    }
-
-    /** Finds all top-level, brace-balanced `{...}` substrings in [text]. */
-    private fun findJsonObjects(text: String): List<String> {
-        val results = mutableListOf<String>()
-        var depth = 0
-        var start = -1
-        for ((i, c) in text.withIndex()) {
-            when (c) {
-                '{' -> {
-                    if (depth == 0) start = i
-                    depth++
-                }
-                '}' -> {
-                    if (depth > 0) {
-                        depth--
-                        if (depth == 0 && start >= 0) {
-                            results.add(text.substring(start, i + 1))
-                            start = -1
-                        }
-                    }
-                }
-            }
-        }
-        return results
-    }
+    private fun validToolNames() =
+        tools.map { it.name }.toSet() + LIST_DIRECTORY_TOOL_NAME + READ_FILE_TOOL_NAME
 
     /**
      * The agent's tool-calling loop: request the LLM, and if it calls tool(s), execute them and
@@ -527,13 +481,10 @@ class ChatService(
             // tool_calls response (see extractFallbackToolCall doc). Both "first attempt" and
             // "after the nudge" responses get this same check before falling through to the
             // nudge/finish behavior above, since a text-only reply can happen at either point.
-            fun validToolNames() =
-                tools.map { it.name }.toSet() + LIST_DIRECTORY_TOOL_NAME + READ_FILE_TOOL_NAME
-
             val detectFallbackToolCall by
                 node<String, Pair<String, MessagePart.Tool.Call?>>("detectFallbackToolCall") { text
                     ->
-                    text to extractFallbackToolCall(text, validToolNames())
+                    text to detectFallbackToolCall(text)
                 }
             val fallbackToolCallDetected by
                 node<Pair<String, MessagePart.Tool.Call?>, ToolCalls>("fallbackToolCallDetected") {
@@ -550,7 +501,7 @@ class ChatService(
                 node<String, Pair<String, MessagePart.Tool.Call?>>(
                     "detectFallbackToolCallAfterNudge"
                 ) { text ->
-                    text to extractFallbackToolCall(text, validToolNames())
+                    text to detectFallbackToolCall(text)
                 }
             val fallbackToolCallDetectedAfterNudge by
                 node<Pair<String, MessagePart.Tool.Call?>, ToolCalls>(
@@ -589,6 +540,8 @@ class ChatService(
                         rewritePrompt { it.withParams(it.params.copy(toolChoice = null)) }
                         try {
                             requestLLMStructured<TaskStatus>()
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             log.warn("requestLLMStructured failed: {}", e.message)
                             Result.failure(e)
@@ -854,6 +807,8 @@ class ChatService(
             runCatching { Json.decodeFromString<TaskStatus>(finalResult) }
                 .getOrNull()
                 ?.let { send(Events.taskStatus(it.done, it.resolvedItems)) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.error("Chat error: {}", e.message, e)
             send(Events.text("Error: ${e.message}"))
@@ -1020,6 +975,107 @@ class ChatService(
                 "cpg_get_last_write",
                 "cpg_suggest_llm_concepts_and_operations",
             )
+
+        /**
+         * Extracts a tool call from [text] when the model attempted one via free-form text instead
+         * of a real structured `tool_calls` response - e.g. because the LLM provider's tool-call
+         * parser doesn't recognize this particular model's native tool-call format (observed with
+         * some self-hosted models/servers).
+         *
+         * Only deliberate-looking forms count, so that a model merely *talking about* a call does
+         * not run it: a JSON object inside a fenced code block or a `<tool_call>` tag, or a message
+         * that consists of nothing but one JSON object. The object needs a name-like key
+         * ([NAME_KEYS]) matching one of [validToolNames]; the arguments may be an object or - like
+         * in the OpenAI format, where the call sits under `function` - a JSON string. Returns null
+         * if nothing matches, which is the common case.
+         */
+        internal fun extractFallbackToolCall(
+            text: String,
+            validToolNames: Set<String>,
+        ): MessagePart.Tool.Call? {
+            val deliberate = buildList {
+                FENCED_CODE_BLOCK_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
+                TOOL_CALL_TAG_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
+            }
+            for (candidate in deliberate) {
+                for (jsonText in findJsonObjects(candidate)) {
+                    toToolCall(jsonText, validToolNames)?.let {
+                        return it
+                    }
+                }
+            }
+            return toToolCall(text.trim(), validToolNames)
+        }
+
+        private fun toToolCall(
+            jsonText: String,
+            validToolNames: Set<String>,
+        ): MessagePart.Tool.Call? {
+            if (!jsonText.startsWith("{")) return null
+            val obj =
+                runCatching { Json.parseToJsonElement(jsonText) }.getOrNull() as? JsonObject
+                    ?: return null
+            // OpenAI format: {"function": {"name": ..., "arguments": "<json string>"}}
+            val call = obj["function"] as? JsonObject ?: obj
+            val name =
+                NAME_KEYS.firstNotNullOfOrNull { key ->
+                    (call[key] as? JsonPrimitive)?.contentOrNull
+                }
+            if (name == null || name !in validToolNames) return null
+            val arguments =
+                when (val value = ARGUMENT_KEYS.firstNotNullOfOrNull { key -> call[key] }) {
+                    null -> JsonObject(emptyMap())
+                    is JsonObject -> value
+                    is JsonPrimitive ->
+                        // Arguments sent as a JSON string; if they are not valid, let the tool
+                        // answer with an error the model can act on (see assembleStreamedAnswer).
+                        runCatching { Json.parseToJsonElement(value.content) }.getOrNull()
+                            as? JsonObject
+                            ?: JsonObject(
+                                mapOf(UNPARSABLE_ARGUMENTS_KEY to JsonPrimitive(value.content))
+                            )
+                    else -> JsonObject(emptyMap())
+                }
+            return MessagePart.Tool.Call(tool = name, args = arguments)
+        }
+
+        /**
+         * Finds all top-level, brace-balanced `{...}` substrings in [text], ignoring braces inside
+         * JSON strings (a tool argument may well be source code).
+         */
+        internal fun findJsonObjects(text: String): List<String> {
+            val results = mutableListOf<String>()
+            var depth = 0
+            var start = -1
+            var inString = false
+            var escaped = false
+            for ((i, c) in text.withIndex()) {
+                if (inString) {
+                    when {
+                        escaped -> escaped = false
+                        c == '\\' -> escaped = true
+                        c == '"' -> inString = false
+                    }
+                    continue
+                }
+                when (c) {
+                    '"' -> if (depth > 0) inString = true
+                    '{' -> {
+                        if (depth == 0) start = i
+                        depth++
+                    }
+                    '}' ->
+                        if (depth > 0) {
+                            depth--
+                            if (depth == 0 && start >= 0) {
+                                results.add(text.substring(start, i + 1))
+                                start = -1
+                            }
+                        }
+                }
+            }
+            return results
+        }
 
         /** Matches fenced code blocks, e.g. ` ```json ... ``` ` (see [extractFallbackToolCall]). */
         private val FENCED_CODE_BLOCK_REGEX = Regex("```(?:\\w+)?\\s*([\\s\\S]*?)```")
