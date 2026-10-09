@@ -61,6 +61,14 @@ class EvaluationOrder(
      */
     var scc: Int? = null
 
+    /**
+     * True if this edge is the single edge that actually closes a loop (i.e. the "latch -> header"
+     * edge of a natural loop), as opposed to a loop-exit edge or an edge between two branches that
+     * both stay inside the loop -- [SccPass] labels all three kinds with [scc], but only this kind
+     * marks a genuine iteration boundary. Populated by [de.fraunhofer.aisec.cpg.passes.SccPass].
+     */
+    var isLoopBackEdge: Boolean = false
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EvaluationOrder) return false
