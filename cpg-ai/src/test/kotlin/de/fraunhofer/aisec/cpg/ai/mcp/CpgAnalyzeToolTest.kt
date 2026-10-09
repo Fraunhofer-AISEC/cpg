@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -44,7 +43,7 @@ class CpgAnalyzeToolTest {
             cleanup = true,
         )
         val oldGlobalAnalysisResult = globalAnalysisResult
-        val oldCtx = ctx
+        val oldCtx = oldGlobalAnalysisResult?.ctx
         assertNotNull(oldGlobalAnalysisResult)
         assertNotNull(oldCtx)
 
@@ -54,7 +53,7 @@ class CpgAnalyzeToolTest {
             runPasses = false,
             cleanup = true,
         )
-        assertNotSame(oldCtx, ctx)
+        assertNotSame(oldCtx, globalAnalysisResult?.ctx)
         assertNotSame(oldGlobalAnalysisResult, globalAnalysisResult)
     }
 }

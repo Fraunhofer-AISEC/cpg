@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai.mcp
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
@@ -36,12 +37,20 @@ import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
 import io.modelcontextprotocol.kotlin.sdk.server.mcpStreamableHttp
+import java.net.InetAddress
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
 import org.slf4j.LoggerFactory
+
+/**
+ * The address the MCP servers bind to unless told otherwise: loopback only. The server has no
+ * authentication and can be asked to read any file the process can, so exposing it beyond the local
+ * machine must be an explicit decision (`--host 0.0.0.0` on the command line).
+ */
+const val DEFAULT_MCP_HOST = "127.0.0.1"
 
 class Application : CliktCommand(name = "cpg-mcp") {
     private val log = LoggerFactory.getLogger(Application::class.java)
@@ -52,20 +61,34 @@ class Application : CliktCommand(name = "cpg-mcp") {
     private val httpPort by
         option("--http", help = "Provide the port to run streamable HTTP.").int()
 
-    private val host by option("--host", help = "The host/IP address to bind the server to.")
+    private val host by
+        option(
+            "--host",
+            help =
+                "The host/IP address to bind the server to (default: $DEFAULT_MCP_HOST). " +
+                    "The server has no authentication, so only bind a non-loopback address on a " +
+                    "trusted network.",
+        )
 
     override fun run() {
         val http = httpPort
         val sse = ssePort
         if (http != null && sse != null) {
-            log.error("Please specify only one option, either --sse or --http.")
-            return
+            throw UsageError("Please specify only one option, either --sse or --http.")
+        }
+        val bindHost = host ?: DEFAULT_MCP_HOST
+        if ((http != null || sse != null) && !InetAddress.getByName(bindHost).isLoopbackAddress) {
+            log.warn(
+                "Binding the MCP server to {}: it has no authentication, so anyone who can reach " +
+                    "this address can make it read files and change the analysis.",
+                bindHost,
+            )
         }
         if (http != null) {
             log.info("Starting MCP server in streamable HTTP mode on port {}...", http)
             runHttpMcpServerUsingKtorPlugin(
                 port = http,
-                host = host ?: "0.0.0.0",
+                host = bindHost,
                 server = configureServer(),
                 wait = true,
             )
@@ -75,7 +98,7 @@ class Application : CliktCommand(name = "cpg-mcp") {
                 port = sse,
                 server = configureServer(),
                 wait = true,
-                host = host ?: "0.0.0.0",
+                host = bindHost,
             )
         } else {
             log.info("Starting MCP server in stdio mode...")
@@ -108,7 +131,8 @@ fun runMcpServerUsingStdio() {
  * @param port The port number on which the SSE MCP server will listen for client connections.
  * @param wait If true the thread is blocked until the server stops. This flag is needed when the
  *   server runs in the background alongside another server (e.g. in codyze-console).
- * @param host The host/IP address on which the server will bind.
+ * @param host The host/IP address on which the server will bind, [DEFAULT_MCP_HOST] (loopback) by
+ *   default.
  * @param server The MCP server instance that will handle incoming requests and provide responses to
  *   clients.
  */
@@ -116,7 +140,7 @@ fun runSseMcpServerUsingKtorPlugin(
     port: Int,
     server: Server,
     wait: Boolean = false,
-    host: String = "0.0.0.0",
+    host: String = DEFAULT_MCP_HOST,
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     return embeddedServer(CIO, host = host, port = port) { mcp { server } }
         .apply { start(wait = wait) }
@@ -126,13 +150,14 @@ fun runSseMcpServerUsingKtorPlugin(
  * Starts a streamable HTTP MCP server using the Ktor framework and the specified port.
  *
  * @param port The port number on which the HTTP MCP server will listen for client connections.
- * @param host The host/IP address on which the server will bind.
+ * @param host The host/IP address on which the server will bind, [DEFAULT_MCP_HOST] (loopback) by
+ *   default.
  * @param server The MCP server instance that will handle incoming requests and provide responses to
  *   clients.
  */
 fun runHttpMcpServerUsingKtorPlugin(
     port: Int,
-    host: String = "0.0.0.0",
+    host: String = DEFAULT_MCP_HOST,
     server: Server,
     wait: Boolean = false,
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {

@@ -45,12 +45,21 @@ data class CpgAnalyzePayload(
 )
 
 @Serializable
-@Description("The payload to identify a node by its name.")
-data class CpgNamePayload(@Description("The local name of the node to consider.") val name: String)
-
-@Serializable
 @Description("The payload to identify a node by its id.")
 data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
+
+@Serializable
+@Description("The payload to identify a batch of functions by their names.")
+data class CpgNamesPayload(
+    @Description(
+        "The local names of the functions to look up. Keep this batch reasonably small (e.g. around 10 names) to avoid overly large responses."
+    )
+    val names: List<String>,
+    @Description(
+        "Whether to include each function's source code in the response. Defaults to true. Set to false if you only need to confirm a function exists or inspect its signature/parameters - use cpg_get_node afterwards to fetch the full source for a specific one once picked."
+    )
+    val includeCode: Boolean = true,
+)
 
 @Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
@@ -62,6 +71,64 @@ data class CpgCallArgumentByNameOrIndexPayload(
         "The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here."
     )
     val index: Int? = null,
+)
+
+/** Shared parameter descriptions of the paginated tools' `limit`/`offset`. */
+private const val LIMIT_DESCRIPTION =
+    "Maximum number of items to return. Defaults to 20 if not specified."
+private const val OFFSET_DESCRIPTION =
+    "Number of items to skip before returning results, for pagination. Defaults to 0."
+
+@Serializable
+@Description("The payload to list the calls to a function, paginated.")
+data class CpgListCallsToPayload(
+    @Description("The local name of the function or method whose calls should be listed.")
+    val name: String,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+@Serializable
+@Description("The payload to trace a node's data back to its sources, paginated.")
+data class CpgDfgBackwardPayload(
+    @Description("The id of the node to start from.") val id: String,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+/** Shared parameter descriptions of the filters of the listing tools. */
+private const val PATTERN_DESCRIPTION =
+    "Only include nodes whose name matches this regular expression (case-insensitive, partial match)."
+private const val FILE_DESCRIPTION =
+    "Only include nodes located in a file whose path contains this string, e.g. 'main.c'."
+
+@Serializable
+@Description("The payload to filter and page through a listing of nodes.")
+data class CpgListNodesPayload(
+    @Description(PATTERN_DESCRIPTION) val pattern: String? = null,
+    @Description(FILE_DESCRIPTION) val file: String? = null,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+@Serializable
+@Description("The payload to filter and page through a listing of functions.")
+data class CpgListFunctionsPayload(
+    @Description(PATTERN_DESCRIPTION) val pattern: String? = null,
+    @Description(FILE_DESCRIPTION) val file: String? = null,
+    @Description("Only include functions that call a function with this local name, e.g. 'memcpy'.")
+    val calls: String? = null,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
+)
+
+@Serializable
+@Description("The payload to page through a listing.")
+data class CpgListPayload(
+    @Description("Maximum number of items to return. Defaults to 20 if not specified.")
+    val limit: Int? = null,
+    @Description("Number of items to skip before returning results, for pagination. Defaults to 0.")
+    val offset: Int? = null,
 )
 
 @Serializable

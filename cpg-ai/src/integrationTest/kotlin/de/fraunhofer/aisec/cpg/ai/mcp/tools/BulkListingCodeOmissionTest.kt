@@ -46,9 +46,10 @@ import org.junit.jupiter.api.BeforeEach
 
 /**
  * Covers the bulk-listing code-omission change: `cpg_list_functions`/`cpg_list_calls` are for
- * finding candidates by name/signature, not for reading every returned item's full body, so they
- * should omit [FunctionInfo.code]/[CallInfo.code] - `cpg_get_node` remains the way to fetch full
- * details (code included) for a specific node once picked.
+ * finding candidates by name/signature, not for reading every returned item's full body.
+ * `cpg_list_calls` omits [CallInfo.code] and `cpg_list_functions` omits [FunctionInfo.code].
+ * `cpg_get_node` remains the way to fetch full details (code included) for a specific node once
+ * picked.
  */
 class BulkListingCodeOmissionTest {
     @BeforeEach
@@ -71,6 +72,7 @@ class BulkListingCodeOmissionTest {
                 assertIs<TextContent>(it)
                 val info = Json.decodeFromString<FunctionInfo>(it.text)
                 assertNull(info.code, "cpg_list_functions should omit code for ${info.name}")
+                assertTrue(info.signature.isNotBlank(), "Should have a non-blank signature")
             }
         }
 

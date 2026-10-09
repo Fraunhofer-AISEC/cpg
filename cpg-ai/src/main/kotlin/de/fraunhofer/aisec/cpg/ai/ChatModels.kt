@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai
 
-import java.nio.file.Path
+import ai.koog.agents.core.tools.annotations.LLMDescription
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonObject
 
 @Serializable data class ChatMessageJSON(val role: String, val content: String)
@@ -37,6 +36,13 @@ data class ChatRequestJSON(
     val messages: List<ChatMessageJSON>,
     val client: String,
     val model: String,
+    /**
+     * Optional session identifier for Koog `ChatMemory` continuity across [ChatService.chat] calls.
+     * When non-null, [ChatService.chat] installs `ChatMemory` keyed on this id so
+     * tool-call/tool-result messages survive the per-call agent rebuild. When null, or when no
+     * history is stored for this id yet, [ChatService.chat] seeds history from [messages].
+     */
+    val sessionId: String? = null,
 )
 
 @Serializable data class ToolSchemaJSON(val properties: JsonObject?, val required: List<String>?)
@@ -75,10 +81,28 @@ data class McpCapabilitiesJSON(
     val resources: List<McpResourceJSON>,
 )
 
+/**
+ * Structured completion signal requested once from the LLM whenever [ChatService.chatStrategy]
+ * believes a turn is finished (see [ChatService.requestTaskStatus]), as a more reliable alternative
+ * to a caller inferring completion by re-parsing whatever the skill happened to persist to disk.
+ * Deliberately skill-agnostic - the same "resolved identifiers" shape covers both tag-library's
+ * tagged/skipped function names and match-library's matched/unmatched ones - matching the existing
+ * [ChatService]-level design principle (see `historyCompressionConcepts`).
+ */
 @Serializable
-data class Skill(
-    val name: String,
-    val description: String,
-    val body: String,
-    @Transient val location: Path? = null,
+@LLMDescription(
+    "The current status of the requested task, reported once you believe you have finished (or " +
+        "given up on) everything asked of you."
+)
+data class TaskStatus(
+    @property:LLMDescription(
+        "True only if every requested item has been addressed - either completed or explicitly " +
+            "given up on as unresolvable. False if meaningful work remains."
+    )
+    val done: Boolean,
+    @property:LLMDescription(
+        "Identifiers (e.g. function names) that were completed or explicitly given up on/skipped " +
+            "this run, written exactly as used elsewhere in this conversation."
+    )
+    val resolvedItems: List<String> = emptyList(),
 )

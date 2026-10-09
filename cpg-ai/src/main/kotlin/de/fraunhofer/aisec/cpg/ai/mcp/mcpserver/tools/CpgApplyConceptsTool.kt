@@ -27,13 +27,15 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NoArguments
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addToolWithoutCpg
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
-import de.fraunhofer.aisec.cpg.graph.nodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -51,7 +53,11 @@ fun Server.listAvailableConcepts() {
         - "Show me all available concepts"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_available_concepts", description = toolDescription) { _ ->
+    this.addToolWithoutCpg<NoArguments>(
+        name = "cpg_list_available_concepts",
+        readOnly = true,
+        description = toolDescription,
+    ) { _ ->
         CallToolResult(content = availableConcepts.map { TextContent(it.name) })
     }
 }
@@ -68,7 +74,11 @@ fun Server.listAvailableOperations() {
         - "Show me all available operations"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_available_operations", description = toolDescription) { _ ->
+    this.addToolWithoutCpg<NoArguments>(
+        name = "cpg_list_available_operations",
+        readOnly = true,
+        description = toolDescription,
+    ) { _ ->
         CallToolResult(content = availableOperations.map { TextContent(it.name) })
     }
 }
@@ -105,12 +115,13 @@ fun Server.addCpgApplyConceptsTool() {
     this.addTool<CpgApplyConceptsPayload>(
         name = "cpg_apply_concepts",
         description = toolDescription,
+        readOnly = false,
     ) { result: TranslationResult, payload: CpgApplyConceptsPayload ->
         val applied = mutableListOf<String>()
 
         payload.assignments.forEach { assignment ->
             try {
-                val node = result.nodes.find { it.id.toString() == assignment.nodeId }
+                val node = result.findNodeById(assignment.nodeId)
                 if (node == null) {
                     applied.add("Node ${assignment.nodeId} not found")
                     return@forEach
@@ -138,7 +149,7 @@ fun Server.addCpgApplyConceptsTool() {
                             return@forEach
                         }
 
-                        val conceptNode = result.nodes.find { it.id.toString() == conceptNodeId }
+                        val conceptNode = result.findNodeById(conceptNodeId)
                         val concept =
                             conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
                         if (concept == null) {

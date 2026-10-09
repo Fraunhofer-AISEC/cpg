@@ -44,7 +44,9 @@ import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -72,19 +74,109 @@ class ListCommandsTest {
 
             assertNotNull(result, "Result should not be null")
             assertEquals(2, result.content.size, "Should return two function declarations")
-            val functionNames =
+            val signatures =
                 result.content.map {
                     assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).name
+                    Json.decodeFromString<FunctionInfo>(it.text).signature
                 }
             assertNotNull(
-                functionNames.singleOrNull { it == "print" },
+                signatures.singleOrNull { it.startsWith("print") },
                 "There is exactly one function declaration with name print",
             )
             assertNotNull(
-                functionNames.singleOrNull { it.endsWith("hello") },
+                signatures.singleOrNull { it.contains("hello") },
                 "There is exactly one function declaration with local name hello",
             )
+        }
+
+    @Test
+    fun listFunctionsFilterTest() =
+        withClient(registerTools = { listFunctions() }) { client ->
+            val byPattern =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("pattern" to "^pri"))
+            assertEquals(
+                listOf("print"),
+                byPattern.content.map {
+                    Json.decodeFromString<FunctionInfo>((it as TextContent).text).name
+                },
+            )
+
+            val byCallee =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("calls" to "print"))
+            assertEquals(
+                listOf("hello"),
+                byCallee.content.map {
+                    Json.decodeFromString<FunctionInfo>((it as TextContent).text)
+                        .name
+                        .substringAfterLast('.')
+                },
+            )
+
+            val byOtherFile =
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("file" to "no-such-file.c"),
+                )
+            assertTrue(byOtherFile.content.isEmpty(), "No function is in that file")
+        }
+
+    @Test
+    fun anInvalidPatternIsReportedToTheCaller() =
+        withClient(registerTools = { listFunctions() }) { client ->
+            val result =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("pattern" to "(["))
+
+            val text = (result.content.single() as TextContent).text
+            assertContains(text, "pattern is not a valid regular expression")
+        }
+
+    @Test
+    fun listFunctionsPagingTest() =
+        withClient(registerTools = { listFunctions() }) { client ->
+            val firstPage =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("limit" to 1))
+            assertEquals(2, firstPage.content.size, "Should return one function and a paging note")
+            val note = (firstPage.content.last() as TextContent).text
+            assertContains(note, "Showing 1 of 2")
+            assertContains(note, "offset=1")
+
+            val secondPage =
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("limit" to 1, "offset" to 1),
+                )
+            assertEquals(1, secondPage.content.size, "The last page has no paging note")
+            assertFalse((secondPage.content.single() as TextContent).text.contains("Showing"))
+        }
+
+    @Test
+    fun listRecordsFilterTest() =
+        withClient(registerTools = { listRecords() }) { client ->
+            val match =
+                client.callTool(name = "cpg_list_records", arguments = mapOf("pattern" to "foo"))
+            assertEquals(1, match.content.size, "pattern is case-insensitive: Foo matches foo")
+
+            val noMatch =
+                client.callTool(name = "cpg_list_records", arguments = mapOf("pattern" to "Bar"))
+            assertTrue(noMatch.content.isEmpty())
+        }
+
+    @Test
+    fun listCallsFilterTest() =
+        withClient(registerTools = { listCalls() }) { client ->
+            val match =
+                client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "^print$"))
+            assertTrue(match.content.isNotEmpty(), "The call to print matches")
+            match.content.forEach {
+                assertEquals(
+                    "print",
+                    Json.decodeFromString<CallInfo>((it as TextContent).text).name,
+                )
+            }
+
+            val noMatch =
+                client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "nothing"))
+            assertTrue(noMatch.content.isEmpty())
         }
 
     @Test

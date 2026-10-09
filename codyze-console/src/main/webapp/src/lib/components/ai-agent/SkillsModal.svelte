@@ -1,5 +1,4 @@
 <script lang="ts">
-  import MarkdownRenderer from './MarkdownRenderer.svelte';
   import type { SkillInfo } from '$lib/types';
 
   interface Props {
@@ -76,15 +75,6 @@
                     {/if}
                   </div>
                 </summary>
-
-                {#if skill.body}
-                  <div class="border-t border-gray-200 px-4 pb-3 pt-2.5">
-                    <p class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Instructions</p>
-                    <div class="prose prose-sm max-w-none text-xs text-gray-700">
-                      <MarkdownRenderer content={skill.body} />
-                    </div>
-                  </div>
-                {/if}
               </details>
             </li>
           {/each}
