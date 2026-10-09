@@ -249,7 +249,8 @@ class ChatService(
      * [LlmProviderConfig.clientFor] always sets it (override, live-detected or generic default);
      * the fallback here only covers [LLModel.contextLength] being nullable in Koog's type.
      */
-    private fun contextLengthOf(model: LLModel): Long = model.contextLength ?: 128_000L
+    private fun contextLengthOf(model: LLModel): Long =
+        model.contextLength ?: DEFAULT_CONTEXT_LENGTH
 
     /**
      * Once [tokenizer]'s estimated token count for the running prompt exceeds this fraction of the

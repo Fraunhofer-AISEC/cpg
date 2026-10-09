@@ -55,9 +55,8 @@ data class ClientConfig(
     val requestTimeoutMillis: Long? = null,
     /**
      * Explicit override for the model's context window, in tokens. `null` (the default) lets
-     * [LlmProviderConfig.clientFor] auto-detect it from the server instead, falling back to a
-     * generic default if that isn't possible. When set, this always wins over the auto-detected
-     * value - see [LlmProviderConfig.resolveContextLength].
+     * [LlmProviderConfig.clientFor] auto-detect it from the server, falling back to a generic
+     * default. When set, it is used as is, without asking the server.
      */
     val contextLengthOverride: Long? = null,
 )

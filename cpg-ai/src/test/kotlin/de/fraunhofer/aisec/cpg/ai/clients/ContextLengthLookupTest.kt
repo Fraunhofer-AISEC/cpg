@@ -39,7 +39,6 @@ import java.net.ServerSocket
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
@@ -50,6 +49,7 @@ class ContextLengthLookupTest {
     private fun withModelsServer(
         status: () -> Boolean,
         requests: AtomicInteger,
+        listing: String = """{"data":[{"id":"m","max_model_len":4096}]}""",
         body: (baseUrl: String) -> Unit,
     ) {
         val port = ServerSocket(0).use { it.localPort }
@@ -59,10 +59,7 @@ class ContextLengthLookupTest {
                     get("/v1/models") {
                         requests.incrementAndGet()
                         if (status()) {
-                            call.respondText(
-                                """{"data":[{"id":"m","max_model_len":4096}]}""",
-                                ContentType.Application.Json,
-                            )
+                            call.respondText(listing, ContentType.Application.Json)
                         } else {
                             call.respondText(
                                 "unavailable",
@@ -97,34 +94,43 @@ class ContextLengthLookupTest {
         )
 
     @Test
-    fun aDetectedContextLengthIsFetchedOncePerModel() {
+    fun theServersContextLengthIsUsedAndAskedForOnce() {
         val requests = AtomicInteger()
         withModelsServer({ true }, requests) { baseUrl ->
             val providers = config(baseUrl)
 
             runBlocking {
-                assertEquals(4096L, providers.contextLengthFor("vLLM", "m"))
-                assertEquals(4096L, providers.contextLengthFor("vLLM", "m"))
+                repeat(2) {
+                    assertEquals(4096L, providers.clientFor("vLLM", "m")?.model?.contextLength)
+                }
             }
 
             assertEquals(1, requests.get())
+            providers.close()
         }
     }
 
     @Test
-    fun aFailedLookupIsRetriedNextTime() {
+    fun aModelBuiltWhileTheServerWasDownKeepsTheDefault() {
         val requests = AtomicInteger()
         var healthy = false
         withModelsServer({ healthy }, requests) { baseUrl ->
             val providers = config(baseUrl)
 
             runBlocking {
-                assertNull(providers.contextLengthFor("vLLM", "m"))
+                assertEquals(
+                    DEFAULT_CONTEXT_LENGTH,
+                    providers.clientFor("vLLM", "m")?.model?.contextLength,
+                )
                 healthy = true
-                assertEquals(4096L, providers.contextLengthFor("vLLM", "m"))
+                assertEquals(
+                    DEFAULT_CONTEXT_LENGTH,
+                    providers.clientFor("vLLM", "m")?.model?.contextLength,
+                )
             }
 
-            assertEquals(2, requests.get())
+            assertEquals(1, requests.get())
+            providers.close()
         }
     }
 }

@@ -68,41 +68,11 @@ private val transientFailureRetryConfig =
     RetryConfig(maxAttempts = 3, initialDelay = 1.seconds, maxDelay = 5.seconds)
 
 /**
- * Generic context-length fallback used when constructing an [LLModel] for a model chosen
- * dynamically (by name) via config/`listAvailableProviders`, rather than one of Koog's predefined
- * per-provider model catalogs (e.g. `OpenAIModels`, `GoogleModels`), and neither
- * [ClientConfig.contextLengthOverride] nor live detection ([LlmProviderConfig.contextLengthFor]) is
- * available. This is glm-4.5-air's real context length - the smallest of the models actually used
- * with this codebase, chosen deliberately as a conservative fallback: underestimating a model's
- * window just makes history-compression trigger a bit earlier than strictly necessary, while
- * overestimating it risks an actual context-overflow error from the provider.
+ * Context length used when neither [ClientConfig.contextLengthOverride] nor the server
+ * ([LlmProviderConfig.contextLengthFor]) provides one. Deliberately conservative: too small only
+ * makes history compression start earlier, too large risks a context-overflow error.
  */
-private const val DEFAULT_CONTEXT_LENGTH = 128_000L
-
-/**
- * Decides the context length to actually use for [config], given [liveDetected] (the value
- * [LlmProviderConfig.contextLengthFor] fetched from the server, if any).
- * [ClientConfig.contextLengthOverride] always wins when set - even over a disagreeing
- * [liveDetected] value, in which case a warning is logged so the mismatch isn't silently swallowed.
- * Otherwise, prefers [liveDetected] and only falls back to [DEFAULT_CONTEXT_LENGTH] if neither is
- * available.
- */
-private fun resolveContextLength(config: ClientConfig, liveDetected: Long?): Long {
-    val override = config.contextLengthOverride
-    if (override != null) {
-        if (liveDetected != null && liveDetected != override) {
-            log.warn(
-                "Configured context length ({}) for {} disagrees with the server-reported value " +
-                    "({}) - using the configured value.",
-                override,
-                config.name,
-                liveDetected,
-            )
-        }
-        return override
-    }
-    return liveDetected ?: DEFAULT_CONTEXT_LENGTH
-}
+internal const val DEFAULT_CONTEXT_LENGTH = 128_000L
 
 /** A [ChatLlm] built by [LlmProviderConfig], together with the HTTP clients it created for it. */
 private class OwnedChatLlm(val chatLlm: ChatLlm, val httpClients: List<HttpClient>) :
@@ -126,21 +96,10 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     @Volatile private var closed = false
 
     /**
-     * Context lengths already reported by a server, per client and model: [clientFor] runs on every
-     * chat call, but a model's window does not change, so asking again would only add a request to
-     * each call. Only successful lookups are kept, so a server that was briefly unreachable is
-     * asked again next time.
-     */
-    private val detectedContextLengths = ConcurrentHashMap<Pair<String, String>, Long>()
-
-    /**
-     * Resolves the [ClientProvider] name with the chosen model to a [ChatLlm] (a Koog prompt
-     * executor bound to a specific model). Returns `null` if the provider is unknown, or if a
-     * required API key is missing.
-     *
-     * The returned [ChatLlm]'s `model.contextLength` is resolved via [resolveContextLength]:
-     * [ClientConfig.contextLengthOverride] if set, otherwise the live-detected value from
-     * [contextLengthFor] if the server reports one, otherwise [DEFAULT_CONTEXT_LENGTH].
+     * Resolves [clientName] and [model] to a [ChatLlm], or `null` if the client is unknown or its
+     * required API key is missing. Built once per client and model, so the context length is too:
+     * [ClientConfig.contextLengthOverride], else the server's value (see [contextLengthFor]), else
+     * [DEFAULT_CONTEXT_LENGTH].
      */
     suspend fun clientFor(clientName: String, model: String): ChatLlm? {
         check(!closed) { "LlmProviderConfig is closed" }
@@ -148,9 +107,10 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
         chatLlms[key]?.let {
             return it.chatLlm
         }
-        // Built outside any lock (it may query the server for the context length); if a
-        // concurrent call built one for the same key first, ours is closed and theirs is used.
-        val created = createChatLlm(clientName, model) ?: return null
+        val config = clients.firstOrNull { it.name == clientName } ?: return null
+        // Built outside any lock; if a concurrent call built one for the same key first, ours is
+        // closed and theirs is used.
+        val created = createChatLlm(config, model) ?: return null
         val winner = chatLlms.putIfAbsent(key, created)
         if (winner != null) {
             created.close()
@@ -170,9 +130,11 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
         chatLlms.keys.toList().forEach { key -> chatLlms.remove(key)?.close() }
     }
 
-    private suspend fun createChatLlm(clientName: String, model: String): OwnedChatLlm? {
-        val config = clients.firstOrNull { it.name == clientName } ?: return null
-        val contextLength = resolveContextLength(config, contextLengthFor(clientName, model))
+    private suspend fun createChatLlm(config: ClientConfig, model: String): OwnedChatLlm? {
+        val contextLength =
+            config.contextLengthOverride
+                ?: contextLengthFor(config, model)
+                ?: DEFAULT_CONTEXT_LENGTH
 
         return when (config.provider) {
             ClientProvider.GEMINI -> {
@@ -338,20 +300,12 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     }
 
     /**
-     * Looks up [model]'s real context window (in tokens) for [clientName], if the server reports
-     * it - currently only `max_model_len`, a vLLM `/v1/models` extension field (see [OpenAiModel]).
-     * Returns `null` if the client is unknown/unreachable, isn't
-     * [ClientProvider.OPENAI_COMPATIBLE], the model isn't listed, or the server doesn't report this
-     * field at all - callers should fall back to a hardcoded default in that case, not treat `null`
-     * as an error.
+     * The context window (in tokens) [config]'s server reports for [model], or `null` if it does
+     * not: only OpenAI-compatible servers are asked, and only some report it - `max_model_len`, a
+     * vLLM extension field of `/v1/models` (see [OpenAiModel]).
      */
-    suspend fun contextLengthFor(clientName: String, model: String): Long? {
-        val config = clients.firstOrNull { it.name == clientName } ?: return null
+    private suspend fun contextLengthFor(config: ClientConfig, model: String): Long? {
         if (config.provider != ClientProvider.OPENAI_COMPATIBLE) return null
-        val key = clientName to model
-        detectedContextLengths[key]?.let {
-            return it
-        }
         return try {
             val response =
                 httpClient.get("${config.baseUrl}/v1/models") {
@@ -359,14 +313,9 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                     config.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
                 }
             if (!response.status.isSuccess()) return null
-            response
-                .body<OpenAiModelsResponse>()
-                .data
-                .firstOrNull { it.id == model }
-                ?.maxModelLen
-                ?.also { detectedContextLengths[key] = it }
+            response.body<OpenAiModelsResponse>().data.firstOrNull { it.id == model }?.maxModelLen
         } catch (e: Exception) {
-            log.debug("Could not fetch context length for {}/{}: {}", clientName, model, e.message)
+            log.debug("Could not fetch context length for {}/{}: {}", config.name, model, e.message)
             null
         }
     }
