@@ -43,6 +43,7 @@ class TestCommon {
                 "code",
                 "comment",
                 "id",
+                "idAst", // TODO working name of new URI style node ids
                 "isImplicit",
                 "isInferred",
                 "isStatic",
