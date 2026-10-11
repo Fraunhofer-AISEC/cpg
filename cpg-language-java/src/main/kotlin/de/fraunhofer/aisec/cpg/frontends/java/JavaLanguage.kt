@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
@@ -64,7 +65,8 @@ open class JavaLanguage :
     HasShortCircuitOperators,
     HasFunctionOverloading,
     HasImplicitReceiver,
-    HasVisibilityModifiers {
+    HasVisibilityModifiers,
+    HasImportsFromRecords {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
     @DoNotPersist
@@ -122,7 +124,8 @@ open class JavaLanguage :
      * Applies Java's declaration modifiers to [declaration]. Java has genuine member access
      * control, so the access modifiers `public`/`protected`/`private` map onto the corresponding
      * [Visibility]. The `static` modifier marks a class-level (rather than per-instance) member
-     * when it appears on a record member, including nested types ([Declaration.isStatic]).
+     * when it appears on a record member, including nested types, as well as a static import, which
+     * imports from a record rather than from a package ([Declaration.isStatic]).
      *
      * The subtle case is Java's access-control *default*: a member or a (top-level or nested) type
      * without any of `public`/`protected`/`private` is package-private. Therefore, once all present
@@ -137,7 +140,7 @@ open class JavaLanguage :
             PRIVATE in declaration.modifiers -> declaration.visibility = Visibility.PRIVATE
         }
 
-        if (STATIC in declaration.modifiers && scope is RecordScope) {
+        if (STATIC in declaration.modifiers && (scope is RecordScope || declaration is Import)) {
             declaration.isStatic = true
         }
 

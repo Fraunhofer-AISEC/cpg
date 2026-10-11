@@ -937,9 +937,21 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val enum = result.records["Enums"] as Enumeration
         assertNotNull(enum)
 
-        assertNotNull(enum.imports["EnumsImport"])
-        assertNotNull(enum.staticImports["CONSTANT"])
-        assertNotNull(enum.staticImports["getConstant"])
+        // The imports (and static imports) of the file are resolved by the import resolver
+        val imports = enum.translationUnit?.imports
+        assertNotNull(imports)
+        assertEquals(
+            result.records["compiling.enums.EnumsImport"],
+            imports.single { it.symbol == "EnumsImport" }.importedSymbols["EnumsImport"]?.single(),
+        )
+        assertEquals(
+            result.fields["compiling.enums.EnumsImport.CONSTANT"],
+            imports.single { it.symbol == "CONSTANT" }.importedSymbols["CONSTANT"]?.single(),
+        )
+        assertEquals(
+            result.methods["compiling.enums.EnumsImport.getConstant"],
+            imports.single { it.symbol == "getConstant" }.importedSymbols["getConstant"]?.single(),
+        )
 
         assertEquals(2, enum.entries.size)
 
