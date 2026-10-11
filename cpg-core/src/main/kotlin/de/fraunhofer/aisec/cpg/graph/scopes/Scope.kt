@@ -98,7 +98,7 @@ sealed class Scope(
     @DoNotPersist var wildcardImports: MutableSet<Import> = mutableSetOf()
 
     /**
-     * This set of edges is used to store [Import] edges that denotes foreign [NamespaceScope]
+     * This set of edges is used to store [Import] edges that denotes foreign [NameScope]
      * information that is imported into this scope. The edge holds information about the "style" of
      * the import (see [ImportStyle]) and the [Import] that is responsible for this. The property is
      * populated by the [ImportResolver].
@@ -106,7 +106,7 @@ sealed class Scope(
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(ImportResolver::class)
     val importedScopeEdges =
-        Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
+        Imports(this, mirrorProperty = NameScope::importedByEdges, outgoing = true)
 
     /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedScopes by unwrapping(Scope::importedScopeEdges)

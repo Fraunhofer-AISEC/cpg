@@ -35,13 +35,17 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
 import java.io.File
 import kotlin.reflect.KClass
 
@@ -350,6 +354,52 @@ interface HasRedeclarations : LanguageTrait {
  * unexported identifiers) does not declare it.
  */
 interface HasVisibilityModifiers : LanguageTrait
+
+/**
+ * A language trait that specifies that symbols can be imported from a [Record] (i.e., from its
+ * [RecordScope]) and not only from a [NamespaceScope]. A common example are static imports in Java,
+ * e.g., `import static java.util.Collections.emptyList;` or `import static
+ * java.util.Collections.*;`.
+ *
+ * Both are modelled as an [Import] with the regular [ImportStyle]s (a single symbol or all
+ * symbols), the only difference is that the target scope is a [RecordScope]. Without this trait,
+ * the [ImportResolver] ignores imports whose target is a record.
+ */
+interface HasImportsFromRecords : LanguageTrait {
+    /**
+     * Returns whether [import] imports from a record rather than from a namespace. Since the name
+     * of an import alone does not tell us whether the target is a record or a namespace, we need
+     * this information to decide what to infer if the target is not part of the graph. By default,
+     * this is the case for a static import ([Declaration.isStatic]).
+     */
+    fun importsFromRecord(import: Import): Boolean = import.isStatic
+
+    /**
+     * Returns whether [declaration], which is a member of a record, can be imported from it. By
+     * default, only static members can be imported, e.g., static fields and methods, or nested
+     * records.
+     */
+    fun isImportableFromRecord(declaration: Declaration): Boolean =
+        declaration.isStatic || declaration is Record
+
+    /**
+     * Infers the [Record] that [import] imports from, if it is not part of the graph, and returns
+     * its scope. For a single symbol (`a.b.C.m`), the record is the parent of the imported name
+     * (`a.b.C`), for all symbols (`a.b.C.*`), it is the imported name itself.
+     */
+    context(pass: Pass<*>)
+    fun inferImportTarget(import: Import): RecordScope? {
+        val name =
+            when (import.style) {
+                ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE -> import.import.parent
+                ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                ImportStyle.IMPORT_NAMESPACE -> import.import
+            } ?: return null
+
+        val record = pass.tryRecordInference(import.objectType(name), import) ?: return null
+        return pass.scopeManager.lookupScope(record) as? RecordScope
+    }
+}
 
 /**
  * Creates a [Pair] of class and operator code used in
