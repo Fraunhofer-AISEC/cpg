@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDataflowPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DataflowResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.QueryTreeNode
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
@@ -61,9 +61,9 @@ fun Server.addCpgDataflowTool() {
             .trimIndent()
 
     this.addTool<CpgDataflowPayload>(name = "cpg_dataflow", description = toolDescription) {
-        result: TranslationResult,
+        session: CpgSession,
         payload: CpgDataflowPayload ->
-        val allOverlayNodes = result.allChildrenWithOverlays<OverlayNode>()
+        val allOverlayNodes = session.translationResult.allChildrenWithOverlays<OverlayNode>()
         val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
         val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
 

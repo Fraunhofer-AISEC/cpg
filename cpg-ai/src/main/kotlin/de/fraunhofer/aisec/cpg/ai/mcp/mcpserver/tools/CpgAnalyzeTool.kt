@@ -57,8 +57,11 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -115,10 +118,6 @@ import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 
-var globalAnalysisResult: TranslationResult? = null
-
-var ctx: TranslationContext? = null
-
 val toolDescription =
     """
         Analyze source code using CPG (Code Property Graph).
@@ -132,6 +131,10 @@ val toolDescription =
         project directory on the local filesystem (using 'path'). For project directories,
         the project structure is detected automatically, e.g., components based on Go
         modules or a C/C++ compilation database (compile_commands.json).
+
+        The result contains the 'projectName' the project is identified by, i.e. the name of the
+        given file or directory. Several projects can be kept side by side; pass this name as
+        'projectName' to the other tools to choose which one they operate on.
 
         Example usage:
         - "Analyze this code: print('hello')"
@@ -220,21 +223,17 @@ fun runCpgAnalyze(
         }
     project.config.disableCleanup = !cleanup
 
-    if (ctx != null) {
-        ctx?.executedFrontends?.forEach { frontend ->
-            // If there has been another analysis before, reset the context and clean up all
-            // frontends.
-            frontend.cleanup()
-        }
+    // The project is identified by the last segment of the analyzed path (see ProjectBuilder.name)
+    val projectName = project.name
 
-        ctx = null
+    // If this project has been analyzed before, its session is replaced below, so clean up the
+    // frontends it still holds on to.
+    getSession(projectName)?.translationContext?.executedFrontends?.forEach { frontend ->
+        frontend.cleanup()
     }
 
     val result = project.analyze()
-    ctx = result.ctx
-
-    // Store the result globally
-    globalAnalysisResult = result
+    registerSession(projectName, result)
 
     val allNodes = result.nodes
     val functions = result.functions
@@ -242,6 +241,7 @@ fun runCpgAnalyze(
     val callExpressions = result.calls
 
     return CpgAnalysisResult(
+        projectName = projectName,
         totalNodes = allNodes.size,
         functions = functions.size,
         variables = variables.size,
@@ -277,6 +277,10 @@ fun Server.addCpgTranslate() {
         project directory on the local filesystem (using 'path'). For project directories,
         the project structure is detected automatically, e.g., components based on Go
         modules or a C/C++ compilation database (compile_commands.json).
+
+        The result contains the 'projectName' the project is identified by, i.e. the name of the
+        given file or directory. Several projects can be kept side by side; pass this name as
+        'projectName' to the other tools to choose which one they operate on.
 
         Example usage:
         - "Analyze this code: print('hello')"
@@ -408,9 +412,6 @@ fun Server.addListPasses() {
     }
 }
 
-/** Keeps track of which passes have been run on which nodes to avoid redundant executions. */
-val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
-
 /**
  * Registers a tool which runs a [Pass] on a specified [Node] or the closest suitable node(s) for
  * the pass by first searching upwards and then (in case no suitable node was found) downwards the
@@ -422,7 +423,7 @@ fun Server.addRunPass() {
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
-    ) { result: TranslationResult, payload: CpgRunPassPayload ->
+    ) { session: CpgSession, payload: CpgRunPassPayload ->
         val passClass =
             try {
                 (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
@@ -436,7 +437,7 @@ fun Server.addRunPass() {
                 )
             }
 
-        val nodes = result.nodes.filter { it.id.toString() == payload.nodeId }
+        val nodes = session.translationResult.nodes.filter { it.id.toString() == payload.nodeId }
 
         if (nodes.isEmpty())
             return@addTool CallToolResult(
@@ -460,32 +461,30 @@ fun Server.addRunPass() {
         for (node in nodes) {
             for (passToExecute in orderedPassesToExecute) {
                 // Check if pass has already been executed for the respective node
-                if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+                if (passToExecute !in session.nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
                     // Execute the pass for the node
-                    ctx?.let { ctx ->
-                        val passResult =
-                            runPassForNode(nodeToPass, result, node, passToExecute, ctx)
-                        if (passResult.success) {
-                            executedPasses.add(TextContent(passResult.message))
-                        } else {
-                            // Return if there was an error during pass execution
-                            return@addTool CallToolResult(
-                                content =
-                                    listOf(
-                                        TextContent(passResult.message),
-                                        *executedPasses.toTypedArray(),
-                                    )
-                            )
-                        }
-                        // Mark pass as executed
-                        nodeToPass[node]?.add(passToExecute)
-                    }
-                        ?: return@addTool CallToolResult(
+                    val passResult =
+                        runPassForNode(
+                            session.nodeToPass,
+                            session.translationResult,
+                            node,
+                            passToExecute,
+                            session.translationContext,
+                        )
+                    if (passResult.success) {
+                        executedPasses.add(TextContent(passResult.message))
+                    } else {
+                        // Return if there was an error during pass execution
+                        return@addTool CallToolResult(
                             content =
                                 listOf(
-                                    TextContent("Cannot run run_pass without translation context.")
+                                    TextContent(passResult.message),
+                                    *executedPasses.toTypedArray(),
                                 )
                         )
+                    }
+                    // Mark pass as executed
+                    session.nodeToPass[node]?.add(passToExecute)
                 }
             }
         }

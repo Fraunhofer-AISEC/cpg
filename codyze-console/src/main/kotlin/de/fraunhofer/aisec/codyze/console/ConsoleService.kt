@@ -31,7 +31,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -131,8 +132,10 @@ class ConsoleService {
 
         val result = project.analyze()
 
-        // Update the global analysis result in the MCP server
-        globalAnalysisResult = result.translationResult
+        // The console only works on one project at a time, so replace any previous session in the
+        // MCP server instead of keeping it alongside
+        analysisSessions.clear()
+        registerSession(project.name, result.translationResult)
 
         // Populate QueryTree cache for lazy loading
         populateQueryTreeCache(result.requirementsResults)

@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.RecordInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -56,6 +57,8 @@ import org.junit.jupiter.api.assertThrows
 class ListCommandsTest {
     @BeforeEach
     fun setAnalysisResult() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
         val payload =
             CpgAnalyzePayload(
                 content =
