@@ -289,8 +289,17 @@ interface HasWidening<T : Lattice.Element> {
      * Computes the widening of [one] and [two]. This is used to ensure that the fixpoint iteration
      * converges (faster).
      *
-     * @param one The first element to widen
-     * @param two The second element to widen
+     * By convention, [one] is the stable/previous-iteration value and [two] is the newly computed
+     * value from the current iteration. Implementations are generally NOT symmetric in [one]/[two]:
+     * growth-detection logic (e.g. jumping straight to an unbounded/top-like value once growth is
+     * observed across iterations, as done by `LatticeInterval.widen` and `StringLattice.widen`)
+     * relies on comparing the new value against the stable baseline in this specific order to
+     * converge in bounded steps. Calling `widen(two, one)` instead of `widen(one, two)` may still
+     * be sound but can silently break termination. Callers must pass arguments in this order; do
+     * not assume `widen` is commutative.
+     *
+     * @param one The stable/previous-iteration element
+     * @param two The newly computed element to widen against [one]
      * @return The widened element
      */
     fun widen(one: T, two: T): T
@@ -1092,16 +1101,27 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                         one.put(k, v)
                     } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
                         // This key already exists in "one" and the values in one and
-                        // two are different, so we have to compute the lub of the values
+                        // two are different, so we have to compute the lub of the values.
+                        // We must store the result back into the map rather than relying on
+                        // in-place mutation of `oneValue`: that only happens to work for inner
+                        // lattices whose `Element` is a mutable wrapper (e.g.
+                        // `NewIntervalLattice.Element`). An inner lattice whose `Element` is
+                        // immutable (e.g. `StringPattern`, see design decision D8 in
+                        // `docs/docs/CPG/impl/string-analysis.md`) returns a *new* value from
+                        // `lub` instead of mutating anything, and discarding that return value
+                        // here would silently drop every join for an already-present key.
                         one[k]?.let { oneValue ->
-                            innerLattice.lub(
-                                oneValue,
-                                v,
-                                allowModify = true,
-                                widen = widen,
-                                // We already run on $CPU_CORES coroutines, so we
-                                // don't need any additional ones
-                                1,
+                            one.put(
+                                k,
+                                innerLattice.lub(
+                                    oneValue,
+                                    v,
+                                    allowModify = true,
+                                    widen = widen,
+                                    // We already run on $CPU_CORES coroutines, so we
+                                    // don't need any additional ones
+                                    1,
+                                ),
                             )
                         }
                     }
@@ -1287,11 +1307,18 @@ open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) 
                     // Key only in `two` -> copy it across.
                     one.put(k, v)
                 } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                    // Key in both with different values -> lub them in-place.
+                    // Key in both with different values -> lub them in-place. The result must be
+                    // stored back explicitly rather than relying solely on in-place mutation of
+                    // `oneValue`: that only works for inner lattices whose `Element` is a mutable
+                    // wrapper (e.g. `NewIntervalLattice.Element`). An inner lattice whose
+                    // `Element` is immutable (e.g. `StringPattern`, see design decision D8 in
+                    // `docs/docs/CPG/impl/string-analysis.md`) returns a *new* value from `lub`
+                    // instead of mutating anything, and discarding that return value here would
+                    // silently drop every join for an already-present key.
                     one[k]?.let { oneValue ->
                         // The outer forEachMaybeParallel already spawns CPU_CORES coroutines;
                         // tell the inner lub not to spawn more.
-                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
+                        one[k] = innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
                     }
                 }
             }
