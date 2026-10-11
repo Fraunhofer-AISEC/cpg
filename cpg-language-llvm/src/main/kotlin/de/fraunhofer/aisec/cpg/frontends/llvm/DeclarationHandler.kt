@@ -65,6 +65,55 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
+     * Maps the [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) of a global value
+     * or function (as returned by `LLVMGetLinkage`) to its LLVM IR keyword spelling, or `null` for
+     * the default `external` linkage, which is not written out in LLVM IR. Only the linkage types
+     * this frontend can meaningfully project onto the canonical visibility model are listed
+     * explicitly; every other one is returned by its keyword so that it is still recorded
+     * losslessly in [Declaration.modifiers].
+     */
+    private fun linkageKeyword(linkage: Int): String? {
+        return when (linkage) {
+            LLVMExternalLinkage -> null
+            LLVMInternalLinkage -> "internal"
+            LLVMPrivateLinkage -> "private"
+            LLVMLinkerPrivateLinkage -> "linker_private"
+            LLVMLinkerPrivateWeakLinkage -> "linker_private_weak"
+            LLVMAvailableExternallyLinkage -> "available_externally"
+            LLVMLinkOnceAnyLinkage -> "linkonce"
+            LLVMLinkOnceODRLinkage -> "linkonce_odr"
+            LLVMWeakAnyLinkage -> "weak"
+            LLVMWeakODRLinkage -> "weak_odr"
+            LLVMAppendingLinkage -> "appending"
+            LLVMCommonLinkage -> "common"
+            LLVMExternalWeakLinkage -> "extern_weak"
+            else -> null
+        }
+    }
+
+    /**
+     * Determines the [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) of a global
+     * [value][valueRef] (a global variable or a function), records its raw keyword spelling in
+     * [Declaration.modifiers] and lets the language project it onto the canonical
+     * [Declaration.visibility] via [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers].
+     *
+     * `private`/`internal` linkage confines the symbol to its own module and therefore becomes
+     * [de.fraunhofer.aisec.cpg.graph.Visibility.INTERNAL], while the default `external` linkage
+     * (which LLVM does not spell out, so we record it explicitly here) becomes
+     * [de.fraunhofer.aisec.cpg.graph.Visibility.PUBLIC]. Linkage types that carry no canonical
+     * visibility meaning are still recorded in [Declaration.modifiers] but leave the visibility
+     * untouched.
+     */
+    private fun handleLinkage(declaration: Declaration, valueRef: LLVMValueRef) {
+        val linkage = LLVMGetLinkage(valueRef)
+        // `external` is LLVM's default and is not written out in the IR; we record it explicitly as
+        // the raw keyword so that the language can project it onto Visibility.PUBLIC.
+        val keyword = linkageKeyword(linkage) ?: LLVM_EXTERNAL_LINKAGE
+        declaration.modifiers = declaration.modifiers + keyword
+        language.applyModifiers(declaration, frontend.scopeManager.currentScope)
+    }
+
+    /**
      * Handles parsing of [global variables](https://llvm.org/docs/LangRef.html#global-variables).
      */
     private fun handleGlobal(valueRef: LLVMValueRef): Declaration {
@@ -75,6 +124,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         val type = frontend.typeOf(valueRef)
 
         val variableDeclaration = newVariable(name, type, false, rawNode = valueRef)
+
+        // Project the LLVM linkage type onto the canonical visibility (e.g. `private`/`internal`
+        // linkage -> internal linkage confined to this module).
+        handleLinkage(variableDeclaration, valueRef)
 
         // cache binding
         frontend.bindingsCache[valueRef.symbolName] = variableDeclaration
@@ -97,6 +150,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleFunction(func: LLVMValueRef): Function {
         val name = LLVMGetValueName(func)
         val functionDeclaration = newFunction(name.string, rawNode = func)
+
+        // Project the LLVM linkage type onto the canonical visibility (e.g. `private`/`internal`
+        // linkage -> internal linkage confined to this module).
+        handleLinkage(functionDeclaration, func)
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it
