@@ -5184,10 +5184,16 @@ class PointsToPassTest {
         val sgxInitEcallFunc = tu.functions("sgx_t_global_init_ecall").single()
         assertNotNull(sgxInitEcallFunc)
 
+        val initEcallFunc = sgxInitEcallFunc.calls("t_global_init_ecall").last().invokes.single()
+
         // Params and PMVs
         val dlfreeParam = dlfreeFunc.parameters.single()
         val dlfreePMV = dlfreeParam.memoryValues.single { it.name.localName == "derefvalue" }
         assertNotNull(dlfreePMV)
+
+        val initEcallParam2 = initEcallFunc.parameters[1]
+        val initEcallDerefPMV2 =
+            initEcallParam2.memoryValues.single { it.name.localName == "derefvalue" }
 
         // Calls
         val memcpyCall = sgxInitEcallFunc.calls("memcpy_s").single()
@@ -5227,18 +5233,29 @@ class PointsToPassTest {
             memcpyCall.invokes.single().parameters[2].memoryValues.single {
                 it.name.localName == "derefvalue"
             }
+        // 1)
         assertEquals(sgxInitEcallDerefDerefPMV, memcpySrcDerefPMV.prevDFG.single())
+        // 3)
+        assertEquals(
+            1,
+            initEcallDerefPMV2.prevDFG
+                .filter {
+                    (it as? ParameterMemoryValue)?.name.toString() == "memcpy_s.u8Ptr0.derefvalue"
+                }
+                .size,
+        )
 
-        val foo =
-            dlfreePMV.prevDFGEdges.filter {
-                (it as? ContextSensitiveDataflow)
-                    ?.callingContext
-                    ?.calls
-                    ?.single()
-                    ?.location
-                    ?.region
-                    ?.startLine == 42
-            }
-        //        assertEquals(emptyList<Dataflow>(), foo)
+        // The derefPMV of dlfree should have 2 prevDFG edges, to the 2 memcpy dst deref PMVs
+        assertEquals(
+            2,
+            dlfreePMV.prevDFGEdges
+                .filter {
+                    ((it as? ContextSensitiveDataflow)?.start as? ParameterMemoryValue)
+                        ?.name
+                        ?.localName == "derefvalue" &&
+                        it.start.name.toString().startsWith("memcpy_s")
+                }
+                .size,
+        )
     }
 }
