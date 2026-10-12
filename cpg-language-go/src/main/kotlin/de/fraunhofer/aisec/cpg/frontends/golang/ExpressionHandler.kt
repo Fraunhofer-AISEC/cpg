@@ -346,6 +346,14 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     /**
      * Checks whether the predeclared identifier [name] is shadowed by a declaration that is visible
      * in the current scope.
+     *
+     * This only sees declarations that the frontend has already processed, which covers parameters
+     * and local declarations. In Go, package-level declarations are visible in all files of the
+     * package regardless of their order, and an import alias (`import nil "fmt"`) shadows within
+     * its file; neither is considered here yet.
+     *
+     * TODO: Determine shadowing with package-level visibility, i.e., from the package-level
+     *   declarations of all files of the package and the import aliases of the file.
      */
     internal fun isShadowed(name: String): Boolean {
         return frontend.scopeManager.lookupSymbolByName(parseName(name), language).isNotEmpty()
