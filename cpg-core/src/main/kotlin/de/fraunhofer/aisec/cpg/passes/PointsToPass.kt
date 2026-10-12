@@ -3962,30 +3962,7 @@ fun PointsToState.Element.getValues(
             val baseAddresses = getAddresses(base, startNode)
             val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
             if (fieldAddresses.isNotEmpty()) {
-                val retVal = PowersetLattice.Element<Pair<Node, Boolean>>()
-                fieldAddresses.forEach { fa ->
-                    if (hasDeclarationStateValueEntry(fa)) {
-                        fetchValueFromDeclarationState(fa).forEach {
-                            retVal.add(Pair(it.value, it.shortFS))
-                        }
-                    } else {
-                        // Let's overapproximate here: In case we find no known value for the field,
-                        // we try again with the baseAddresses
-                        baseAddresses.forEach { ba ->
-                            fetchValueFromDeclarationState(ba).forEach {
-                                retVal.add(Pair(it.value, it.shortFS))
-                            }
-                        }
-                        // To indicate that there is another value than the one of the
-                        // base, we add an UnknownMemoryValue
-                        val umv =
-                            nodesCreatingUnknownValues.computeIfAbsent(Pair(node, fieldName)) {
-                                UnknownMemoryValue(fieldName)
-                            }
-                        retVal.add(Pair(umv, false))
-                    }
-                }
-                retVal
+                getFieldValueOrBase(fieldAddresses, baseAddresses, node, fieldName)
             } else {
                 val newName = Name(getNodeName(node).localName, base.name)
                 PowersetLattice.Element(
@@ -4033,9 +4010,15 @@ fun PointsToState.Element.getValues(
             this.getValues(node.expression, startNode)
         }
         is Subscription -> {
-            this.getAddresses(node, startNode).flatMapTo(PowersetLattice.Element()) {
-                this.getValues(it, it)
-            }
+            val offsetName = getNodeName(node.subscriptExpression)
+            // This seems confusing, but since a Subscription always dereferences, the address of
+            // the base is actually its value
+            val baseAddresses =
+                getValues(node.arrayExpression, startNode).mapNotNullTo(IdentitySet()) {
+                    if (it.second) null else it.first
+                }
+            val fieldAddresses = getAddresses(node, startNode)
+            getFieldValueOrBase(fieldAddresses, baseAddresses, node, offsetName)
         }
         // For BinaryOperators, UnaryOperators, Literals etc. we'll end up here
         // For those, we define that they are the values of themselves
@@ -4051,6 +4034,41 @@ fun PointsToState.Element.getValues(
                 PowersetLattice.Element(Pair(node, false))
             }
     }
+}
+
+/*
+Given a set of fieldAddresses, either fetch the values of those, or if there are none in the state, get the one from the base
+*/
+private fun PointsToState.Element.getFieldValueOrBase(
+    fieldAddresses: IdentitySet<Node>,
+    baseAddresses: IdentitySet<Node>,
+    node: Node,
+    fieldName: Name,
+): PowersetLattice.Element<Pair<Node, Boolean>> {
+    val retVal = PowersetLattice.Element<Pair<Node, Boolean>>()
+    fieldAddresses.forEach { fa ->
+        if (hasDeclarationStateValueEntry(fa)) {
+            fetchValueFromDeclarationState(fa).forEach { retVal.add(Pair(it.value, it.shortFS)) }
+        } else {
+            // Let's overapproximate here: In case we find no known value for the field,
+            // we try again with the baseAddresses
+            baseAddresses.forEach { ba ->
+                if (hasDeclarationStateValueEntry(ba)) {
+                    fetchValueFromDeclarationState(ba).forEach {
+                        retVal.add(Pair(it.value, it.shortFS))
+                    }
+                }
+            }
+            // To indicate that there is another value than the one of the
+            // base, we add an UnknownMemoryValue
+            val umv =
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(node, fieldName)) {
+                    UnknownMemoryValue(fieldName)
+                }
+            retVal.add(Pair(umv, false))
+        }
+    }
+    return retVal
 }
 
 fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
