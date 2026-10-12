@@ -104,9 +104,11 @@ fun Server.addGetLastWriteTool() {
   """
             .trimIndent()
 
-    this.addTool<CpgIdPayload>(name = "cpg_get_last_write", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgIdPayload ->
+    this.addTool<CpgIdPayload>(
+        readOnly = true,
+        name = "cpg_get_last_write",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgIdPayload ->
         getLastWrite(result, payload)
     }
 }

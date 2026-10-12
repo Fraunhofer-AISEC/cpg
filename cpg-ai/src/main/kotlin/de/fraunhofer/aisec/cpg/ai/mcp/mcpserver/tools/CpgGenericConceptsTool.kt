@@ -123,6 +123,7 @@ fun Server.suggestLLMConceptsAndOperations() {
             .trimIndent()
 
     this.addTool<LLMConcept>(
+        readOnly = true,
         name = "cpg_suggest_llm_concepts_and_operations",
         description = toolDescription,
     ) { result: TranslationResult, payload: LLMConcept ->

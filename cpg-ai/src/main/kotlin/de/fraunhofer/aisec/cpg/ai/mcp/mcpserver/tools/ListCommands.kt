@@ -63,6 +63,7 @@ fun Server.listFunctions() {
             .trimIndent()
 
     this.addTool<CpgListFunctionsPayload>(
+        readOnly = true,
         name = "cpg_list_functions",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgListFunctionsPayload ->
@@ -95,9 +96,11 @@ fun Server.listRecords() {
         """
             .trimIndent()
 
-    this.addTool<CpgListNodesPayload>(name = "cpg_list_records", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgListNodesPayload ->
+    this.addTool<CpgListNodesPayload>(
+        readOnly = true,
+        name = "cpg_list_records",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListNodesPayload ->
         val pattern = compilePattern(payload.pattern)
         val matching = result.records.filter { it.matches(pattern, payload.file) }
         matching.toPagedResult(payload.limit, payload.offset) {
@@ -113,6 +116,7 @@ fun Server.listConceptsAndOperations() {
             "Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more."
 
     this.addTool<CpgListPayload>(
+        readOnly = true,
         name = "cpg_list_concepts_and_operations",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgListPayload ->
@@ -139,9 +143,11 @@ fun Server.listCalls() {
         """
             .trimIndent()
 
-    this.addTool<CpgListNodesPayload>(name = "cpg_list_calls", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgListNodesPayload ->
+    this.addTool<CpgListNodesPayload>(
+        readOnly = true,
+        name = "cpg_list_calls",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListNodesPayload ->
         val pattern = compilePattern(payload.pattern)
         val matching = result.calls.filter { it.matches(pattern, payload.file) }
         matching.toPagedResult(payload.limit, payload.offset) {
@@ -166,6 +172,7 @@ fun Server.listCallsTo() {
             .trimIndent()
 
     this.addTool<CpgListCallsToPayload>(
+        readOnly = true,
         name = "cpg_list_calls_to",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgListCallsToPayload ->
@@ -208,9 +215,11 @@ fun Server.getAllArgs() {
         """This tool lists all arguments passed to the method/function call with the specified ID."""
             .trimIndent()
 
-    this.addTool<CpgIdPayload>(name = "cpg_list_call_args", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgIdPayload ->
+    this.addTool<CpgIdPayload>(
+        readOnly = true,
+        name = "cpg_list_call_args",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgIdPayload ->
         listCallArgs(result, payload)
     }
 }
@@ -233,6 +242,7 @@ fun Server.getArgByIndexOrName() {
             .trimIndent()
 
     this.addTool<CpgCallArgumentByNameOrIndexPayload>(
+        readOnly = true,
         name = "cpg_list_call_arg_by_name_or_index",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgCallArgumentByNameOrIndexPayload ->
@@ -267,9 +277,11 @@ fun Server.getNode() {
         """
             .trimIndent()
 
-    this.addTool<CpgIdPayload>(name = "cpg_get_node", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgIdPayload ->
+    this.addTool<CpgIdPayload>(
+        readOnly = true,
+        name = "cpg_get_node",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgIdPayload ->
         val node = result.findNodeById(payload.id)
         if (node != null) {
             CallToolResult(content = listOf(TextContent(node.toJson())))

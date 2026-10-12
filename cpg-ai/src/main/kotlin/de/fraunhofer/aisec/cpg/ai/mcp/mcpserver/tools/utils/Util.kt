@@ -147,11 +147,11 @@ internal fun withTypedArgumentsMarker(meta: JsonObject?): JsonObject =
  * the schema, so do NOT add this information to the description yourself. Arguments that do not
  * decode are answered with the list of problems, without calling [handler].
  *
- * The handler runs under [CpgLock]: shared by default, so read-only tools stay concurrent. Pass
- * `readOnly = false` if it changes the graph (or does a read-modify-write on a file shared with
- * other tools); it then runs exclusively. Forgetting it on such a tool is the one way to get this
- * wrong, since the default is the cheap one. The tool is announced to clients with the MCP
- * annotation `readOnlyHint = readOnly`; the chat side runs only read-only tools concurrently.
+ * The handler runs under [CpgLock]. [readOnly] is required, so every tool has to decide: `true`
+ * keeps it concurrent (shared lock), `false` is for tools that change the graph (or do a
+ * read-modify-write on a file shared with other tools); they run exclusively. The tool is announced
+ * to clients with the MCP annotation `readOnlyHint = readOnly`; the chat side runs only read-only
+ * tools concurrently and everything else sequentially, in the order the model called them.
  *
  * Register every tool through this or [addToolWithoutCpg], never through the SDK's own `addTool`:
  * only these decode arguments the standard way, and [toolRegistrationProblems] flags the rest.
@@ -159,11 +159,11 @@ internal fun withTypedArgumentsMarker(meta: JsonObject?): JsonObject =
 inline fun <reified T> Server.addTool(
     name: String,
     description: String,
+    readOnly: Boolean,
     title: String? = null,
     outputSchema: ToolSchema? = null,
     toolAnnotations: ToolAnnotations? = null,
     meta: JsonObject? = null,
-    readOnly: Boolean = true,
     noinline handler: (TranslationResult, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()

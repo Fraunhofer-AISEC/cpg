@@ -58,9 +58,11 @@ fun Server.addDfgBackwardTool() {
     """
             .trimIndent()
 
-    this.addTool<CpgDfgBackwardPayload>(name = "cpg_dfg_backward", description = toolDescription) {
-        result: TranslationResult,
-        payload: CpgDfgBackwardPayload ->
+    this.addTool<CpgDfgBackwardPayload>(
+        readOnly = true,
+        name = "cpg_dfg_backward",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgDfgBackwardPayload ->
         dfgBackward(result, payload)
     }
 }

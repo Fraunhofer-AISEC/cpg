@@ -56,9 +56,11 @@ fun Server.addOverview() {
         """
             .trimIndent()
 
-    this.addTool<NoArguments>(name = "cpg_overview", description = toolDescription) {
-        result: TranslationResult,
-        _ ->
+    this.addTool<NoArguments>(
+        readOnly = true,
+        name = "cpg_overview",
+        description = toolDescription,
+    ) { result: TranslationResult, _ ->
         CallToolResult(content = listOf(TextContent(result.overview().toText())))
     }
 }

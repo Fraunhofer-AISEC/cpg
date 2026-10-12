@@ -52,6 +52,7 @@ fun Server.getFunctionsByName() {
             .trimIndent()
 
     this.addTool<CpgNamesPayload>(
+        readOnly = true,
         name = "cpg_get_functions_by_name",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgNamesPayload ->
