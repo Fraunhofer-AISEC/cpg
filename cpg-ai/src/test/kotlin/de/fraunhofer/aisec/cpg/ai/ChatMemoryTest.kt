@@ -49,6 +49,7 @@ import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.MessagePart
+import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.message.ResponseMetaInfo
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.serialization.typeToken
@@ -431,5 +432,70 @@ class ChatMemoryTest {
             "Pre-processor should have been called, recording prompt.messages.size",
         )
         assertTrue(observedSizes.any { it > 0 }, "Observed message sizes should be non-zero")
+    }
+
+    private fun user(text: String) = Message.User(text, RequestMetaInfo.Empty)
+
+    private fun toolResult(tool: String) =
+        Message.User(MessagePart.Tool.Result(null, tool, "result"), RequestMetaInfo.Empty)
+
+    private val control = setOf("nudge", "status?")
+
+    @Test
+    fun dropsTrailingControlMessagesAndTheirReplies() {
+        val messages =
+            listOf(
+                user("question"),
+                assistantText("answer"),
+                user("nudge"),
+                assistantText("nothing more to do"),
+                user("status?"),
+                assistantText("{}"),
+            )
+
+        assertEquals(messages.take(2), ChatService.dropTrailingControlMessages(messages, control))
+    }
+
+    @Test
+    fun dropsStatusRequestWithoutReply() {
+        val messages = listOf(user("question"), assistantText("answer"), user("status?"))
+
+        assertEquals(messages.take(2), ChatService.dropTrailingControlMessages(messages, control))
+    }
+
+    @Test
+    fun keepsNudgeFollowedByToolCall() {
+        val messages =
+            listOf(
+                user("question"),
+                assistantText("let me check"),
+                user("nudge"),
+                assistantToolCall("lookup", "{}"),
+                toolResult("lookup"),
+                assistantText("answer"),
+            )
+
+        assertEquals(messages, ChatService.dropTrailingControlMessages(messages, control))
+    }
+
+    @Test
+    fun windowKeepsSystemMessageAndDoesNotSplitToolPairs() {
+        val system = Message.System("system", RequestMetaInfo.Empty)
+        val messages =
+            listOf(
+                system,
+                user("q1"),
+                assistantToolCall("lookup", "{}"),
+                toolResult("lookup"),
+                assistantText("a1"),
+                user("q2"),
+                assistantText("a2"),
+            )
+
+        // takeLast(3) would start with the tool result; the window must start on "q1"/"q2" instead.
+        val result = ChatService.windowKeepingSystem(messages, 4)
+
+        assertEquals(system, result.first())
+        assertEquals(listOf(system, messages[5], messages[6]), result)
     }
 }

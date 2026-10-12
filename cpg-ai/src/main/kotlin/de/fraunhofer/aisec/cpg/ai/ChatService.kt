@@ -358,6 +358,9 @@ class ChatService(
     private val taskStatusRequestMessage =
         "Report your current task status now via the structured response format requested."
 
+    /** Messages added only to steer a run; not kept in the stored history. */
+    private val controlMessages = setOf(continueNudgeMessage, taskStatusRequestMessage)
+
     /**
      * Converts one history [Message] to a [ChatMessageJSON] for [Events.finalHistory], or `null` to
      * omit it: system messages (a caller resending this history gets a fresh one via
@@ -745,18 +748,26 @@ class ChatService(
                     if (sessionId != null) {
                         install(ChatMemory.Feature) {
                             chatHistoryProvider(this@ChatService.chatHistoryProvider)
-                            windowSize(chatMemoryWindowSize)
                             addPreProcessor(
                                 object : ChatMemoryPreProcessor {
                                     override fun preprocess(
                                         messages: List<Message>
                                     ): List<Message> {
+                                        val result =
+                                            windowKeepingSystem(
+                                                dropTrailingControlMessages(
+                                                    messages,
+                                                    controlMessages,
+                                                ),
+                                                chatMemoryWindowSize,
+                                            )
                                         log.info(
-                                            "ChatMemory session {}: {} messages loaded/stored",
+                                            "ChatMemory session {}: {} of {} messages kept",
                                             sessionId,
+                                            result.size,
                                             messages.size,
                                         )
-                                        return messages
+                                        return result
                                     }
                                 }
                             )
@@ -959,6 +970,53 @@ class ChatService(
 
     companion object {
         private val log = LoggerFactory.getLogger(ChatService::class.java)
+
+        /**
+         * Drops the trailing control messages ([controlMessages], e.g. the nudge and the task
+         * status request, plus the replies to them) from [messages], so they are not kept in the
+         * stored history. The model still sees them during the run. Only the end is trimmed, so the
+         * history keeps ending on the message before them and roles still alternate.
+         */
+        internal fun dropTrailingControlMessages(
+            messages: List<Message>,
+            controlMessages: Set<String>,
+        ): List<Message> {
+            fun Message.isControl() =
+                this is Message.User &&
+                    parts.all { it is MessagePart.Text } &&
+                    textContent() in controlMessages
+
+            var end = messages.size
+            while (end > 0) {
+                val last = messages[end - 1]
+                end =
+                    when {
+                        last.isControl() -> end - 1
+                        last is Message.Assistant &&
+                            last.parts.none { it is MessagePart.Tool.Call } &&
+                            end >= 2 &&
+                            messages[end - 2].isControl() -> end - 2
+                        else -> break
+                    }
+            }
+            return messages.subList(0, end)
+        }
+
+        /**
+         * Keeps the last [windowSize] messages of [messages], but always the system message (it
+         * holds the skill catalog) and starting on a user message without a tool result, so no tool
+         * call/result pair is cut in half.
+         */
+        internal fun windowKeepingSystem(messages: List<Message>, windowSize: Int): List<Message> {
+            if (messages.size <= windowSize) return messages
+            val system = messages.firstOrNull() as? Message.System
+            val window =
+                messages.takeLast(if (system != null) windowSize - 1 else windowSize).dropWhile {
+                    !(it is Message.User &&
+                        it.parts.none { part -> part is MessagePart.Tool.Result })
+                }
+            return listOfNotNull(system) + window
+        }
 
         /**
          * Extracts a tool call from [text] when the model attempted one via free-form text instead
