@@ -5157,4 +5157,52 @@ class PointsToPassTest {
         // The PMV should have no prevDFG
         assertTrue(dataDerefPMV.prevDFG.isEmpty())
     }
+
+    @Test
+    fun testPMVDerefHandling() {
+        val file = File("src/test/resources/pointsToPass/RustTLSClient.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val dlfreeFunc = tu.functions("dlfree").single()
+        assertNotNull(dlfreeFunc)
+
+        // Params and PMVs
+        val dlfreeParam = dlfreeFunc.parameters.single()
+        val dlfreePMV = dlfreeParam.memoryValues.single { it.name.localName == "derefvalue" }
+        assertNotNull(dlfreePMV)
+
+        // First check: all memcpy_s deref-PMVs should have a prevDFG to the previous PMV
+        // TODO: Actually, we should only have one memcpy_s
+        tu.functions("memcpy_s").forEach { func ->
+            val dstParamDerefPMV =
+                func.parameters.first().memoryValues.singleOrNull {
+                    it.name.localName == "derefvalue"
+                }
+            assertNotNull(dstParamDerefPMV)
+            val srcParamDerefPVM =
+                dstParamDerefPMV.prevDFGEdges.singleOrNull {
+                    (it.start as? ParameterMemoryValue)?.name?.localName == "derefvalue"
+                }
+            assertNotNull(srcParamDerefPVM)
+        }
+
+        val foo =
+            dlfreePMV.prevDFGEdges.filter {
+                (it as? ContextSensitiveDataflow)
+                    ?.callingContext
+                    ?.calls
+                    ?.single()
+                    ?.location
+                    ?.region
+                    ?.startLine == 42
+            }
+        //        assertEquals(emptyList<Dataflow>(), foo)
+    }
 }

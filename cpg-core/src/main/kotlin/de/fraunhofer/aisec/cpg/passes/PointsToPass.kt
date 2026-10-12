@@ -757,6 +757,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     val src =
                         when (entry.srcNode) {
                             is Parameter -> {
+                                // In case this is a Parameter for which we didn't create deref-PMVs
+                                // for some
+                                // reason (for example an unexpected type) we do create them now
+                                if (
+                                    entry.srcValueDepth > 1 &&
+                                        entry.srcNode.memoryValues.none {
+                                            (it as? ParameterMemoryValue)?.name?.localName ==
+                                                "deref".repeat(entry.destValueDepth - 1) + "value"
+                                        } &&
+                                        doubleState.getValues(entry.srcNode, entry.srcNode).none {
+                                            (it.first as? ParameterMemoryValue)?.let { pmv ->
+                                                doubleState.hasDeclarationStateValueEntry(pmv)
+                                            } ?: false
+                                        }
+                                ) {
+                                    doubleState =
+                                        initializeParameter(
+                                            lattice,
+                                            function,
+                                            entry.srcNode,
+                                            doubleState,
+                                            forceDerefPMVCreation = true,
+                                        )
+                                }
                                 doubleState
                                     .getNestedValues(
                                         entry.srcNode,
@@ -1885,6 +1909,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             currentNode,
                                             inv,
                                             srcNode,
+                                            dstValueDepth,
+                                            dst,
+                                            doubleState,
                                         )
                                     depthBuckets[dstValueDepth].add(
                                         PreprocessedFSEntry(
@@ -1995,6 +2022,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         currentNode: Call,
         invoke: Function,
         srcNode: Any?,
+        dstValueDepth: Int,
+        dst: Expression,
+        doubleState: PointsToState.Element,
     ): MutableSet<NodeWithPropertiesKey> {
         val ret = mutableSetOf<NodeWithPropertiesKey>()
         // If we have nothing, the last write is probably the Function
@@ -2003,7 +2033,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // If the lastWrite is a Record, that's a hint from the functionSummary that we have
             // a write to the base. Since we didn't know the base yet when creating the
             // functionSummary, we fetch it now
-            val prev = if (lw is Record && srcNode is Node) srcNode else lw
+            val prev =
+                when (lw) {
+                    is Record if srcNode is Node -> srcNode
+                    is Parameter if srcNode is Parameter && dstValueDepth > 1 -> {
+                        val newPrev = doubleState.getNestedValues(dst, dstValueDepth)
+                        srcNode
+                    }
+
+                    else -> lw
+                }
             if (shortFS) {
                 when (prev) {
                     is Function -> ret.add(NodeWithPropertiesKey(currentNode, properties))
