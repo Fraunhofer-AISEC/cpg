@@ -69,5 +69,17 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Run the Go frontend tests with the verified translation
         run: |
-          ./gradlew :cpg-language-go:test --rerun-tasks --console=plain \
+          ./gradlew :cpg-language-go:test koverXmlReport --rerun-tasks --console=plain \
             -Dcpg.go.verifiedLibrary="$PWD/cpg-verified/.lake/build/native/libcpgverified.so"
+      # The regular build cannot run the code that uses the verified translation, since it has no
+      # Lean toolchain, so we contribute its coverage from here. Codecov merges both uploads.
+      - name: Prepare report.xml for Codecov
+        run: |
+          # See the build workflow for why these lines are removed
+          grep -v 'mi="0" ci="0" mb="0" cb="0"' ./build/reports/kover/report.xml \
+            > ./build/reports/kover/report-codecov.xml
+      - name: Upload code coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./build/reports/kover/report-codecov.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
