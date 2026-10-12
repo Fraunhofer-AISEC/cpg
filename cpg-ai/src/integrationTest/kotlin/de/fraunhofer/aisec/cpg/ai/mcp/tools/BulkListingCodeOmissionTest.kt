@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -66,7 +67,8 @@ class BulkListingCodeOmissionTest {
     @Test
     fun listFunctionsOmitsCode() =
         withClient(registerTools = { listFunctions() }) { client ->
-            val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
+            val result =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("detail" to true))
             assertTrue(result.content.isNotEmpty(), "Should have function declarations")
             result.content.forEach {
                 assertIs<TextContent>(it)
@@ -79,7 +81,8 @@ class BulkListingCodeOmissionTest {
     @Test
     fun listCallsOmitsCode() =
         withClient(registerTools = { listCalls() }) { client ->
-            val result = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
+            val result =
+                client.callTool(name = "cpg_list_calls", arguments = mapOf("detail" to true))
             assertTrue(result.content.isNotEmpty(), "Should have call expressions")
             result.content.forEach {
                 assertIs<TextContent>(it)
@@ -111,7 +114,7 @@ class BulkListingCodeOmissionTest {
         ) { client ->
             val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
             val functionInfo =
-                Json.decodeFromString<FunctionInfo>(
+                Json.decodeFromString<SignatureInfo>(
                     (listResult.content.first() as TextContent).text
                 )
 

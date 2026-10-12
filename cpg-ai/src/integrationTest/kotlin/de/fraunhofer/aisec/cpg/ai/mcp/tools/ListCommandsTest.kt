@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.RecordInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -74,26 +75,34 @@ class ListCommandsTest {
 
             assertNotNull(result, "Result should not be null")
             assertEquals(2, result.content.size, "Should return two function declarations")
+            // Decoding strictly fails if an entry carries more than nodeId and signature.
             val signatures =
                 result.content.map {
                     assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).signature
+                    Json.decodeFromString<SignatureInfo>(it.text).signature
                 }
-            assertNotNull(
-                signatures.singleOrNull { it.startsWith("print") },
-                "There is exactly one function declaration with name print",
-            )
-            assertNotNull(
-                signatures.singleOrNull { it.contains("hello") },
-                "There is exactly one function declaration with local name hello",
-            )
+            val print =
+                assertNotNull(
+                    signatures.singleOrNull { it.startsWith("print") },
+                    "There is exactly one function declaration with name print",
+                )
+            assertFalse(print.contains(" @ "), "The inferred print has no location: $print")
+            val hello =
+                assertNotNull(
+                    signatures.singleOrNull { it.contains("hello") },
+                    "There is exactly one function declaration with local name hello",
+                )
+            assertTrue(hello.endsWith(":3"), "hello is defined in line 3: $hello")
         }
 
     @Test
     fun listFunctionsFilterTest() =
         withClient(registerTools = { listFunctions() }) { client ->
             val byPattern =
-                client.callTool(name = "cpg_list_functions", arguments = mapOf("pattern" to "^pri"))
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("pattern" to "^pri", "detail" to true),
+                )
             assertEquals(
                 listOf("print"),
                 byPattern.content.map {
@@ -102,7 +111,10 @@ class ListCommandsTest {
             )
 
             val byCallee =
-                client.callTool(name = "cpg_list_functions", arguments = mapOf("calls" to "print"))
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("calls" to "print", "detail" to true),
+                )
             assertEquals(
                 listOf("hello"),
                 byCallee.content.map {
@@ -166,13 +178,23 @@ class ListCommandsTest {
         withClient(registerTools = { listCalls() }) { client ->
             val match =
                 client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "^print$"))
-            assertTrue(match.content.isNotEmpty(), "The call to print matches")
-            match.content.forEach {
-                assertEquals(
-                    "print",
-                    Json.decodeFromString<CallInfo>((it as TextContent).text).name,
+            val signature =
+                Json.decodeFromString<SignatureInfo>((match.content.single() as TextContent).text)
+                    .signature
+            // The string literal has no name, so it is shown as _.
+            assertTrue(signature.startsWith("print(_) @ "), signature)
+            assertTrue(signature.endsWith(":4"), "print is called in line 4: $signature")
+
+            val detailed =
+                client.callTool(
+                    name = "cpg_list_calls",
+                    arguments = mapOf("pattern" to "^print$", "detail" to true),
                 )
-            }
+            assertEquals(
+                "print",
+                Json.decodeFromString<CallInfo>((detailed.content.single() as TextContent).text)
+                    .name,
+            )
 
             val noMatch =
                 client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "nothing"))
@@ -188,11 +210,17 @@ class ListCommandsTest {
                 result.content.isNotEmpty(),
                 "There is a record declaration \"Foo\" in the test code",
             )
-            assertDoesNotThrow {
-                Json.decodeFromString<RecordInfo>(
-                    (result.content.singleOrNull() as? TextContent)?.text.orEmpty()
-                )
-            }
+            val signature =
+                Json.decodeFromString<SignatureInfo>((result.content.single() as TextContent).text)
+                    .signature
+            assertTrue(signature.contains("Foo @ "), signature)
+            assertTrue(signature.endsWith(":1"), "Foo is defined in line 1: $signature")
+
+            val detailed =
+                client.callTool(name = "cpg_list_records", arguments = mapOf("detail" to true))
+            val info =
+                Json.decodeFromString<RecordInfo>((detailed.content.single() as TextContent).text)
+            assertEquals(listOf("secretKey"), info.fieldNames)
         }
 
     @Test
@@ -222,7 +250,9 @@ class ListCommandsTest {
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                Json.decodeFromString<SignatureInfo>(
+                        (callsResult.content.first() as TextContent).text
+                    )
                     .nodeId
 
             val argsResult =
@@ -256,7 +286,9 @@ class ListCommandsTest {
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                Json.decodeFromString<SignatureInfo>(
+                        (callsResult.content.first() as TextContent).text
+                    )
                     .nodeId
 
             val argResultByIndex =
@@ -332,7 +364,7 @@ class ListCommandsTest {
             assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
 
             val functionInfo =
-                Json.decodeFromString<FunctionInfo>(
+                Json.decodeFromString<SignatureInfo>(
                     (listResult.content.first() as TextContent).text
                 )
 

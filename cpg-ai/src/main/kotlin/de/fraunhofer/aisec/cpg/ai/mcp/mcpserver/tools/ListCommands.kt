@@ -48,9 +48,10 @@ fun Server.listFunctions() {
     val toolDescription =
         """
         This tool lists all functions, more precisely function declarations, which are held in the
-        graph, as compact summaries (name, parameters, signature, callees, location) without source
-        code. Use cpg_get_node with a id to retrieve the full node details (including its code) for a
-        specific function once picked.
+        graph, as nodeId and a one-line signature with location, e.g. "parse(char*) @ parser.c:40".
+        Set detail to true to also get name, parameters and callees (still without source code). Use
+        cpg_get_node with a id to retrieve the full node details (including its code) for a specific
+        function once picked.
         Results come in pages of at most $DEFAULT_LIST_LIMIT items. Narrow large listings down with pattern, file or calls
         instead of paging through everything; use the limit/offset parameters to page through the rest.
 
@@ -73,7 +74,8 @@ fun Server.listFunctions() {
                         function.calls.any { it.name.localName == payload.calls })
             }
         matching.toPagedResult(payload.limit, payload.offset) {
-            Json.encodeToString(it.toInfo(includeCode = false))
+            if (payload.detail) Json.encodeToString(it.toInfo(includeCode = false))
+            else Json.encodeToString(it.toSignatureInfo())
         }
     }
 }
@@ -81,8 +83,9 @@ fun Server.listFunctions() {
 fun Server.listRecords() {
     val toolDescription =
         """
-        This tool lists all classes and structs, more precisely their declarations as compact summaries.
-        Use cpg_get_node with a id to retrieve the full node details.
+        This tool lists all classes and structs, more precisely their declarations, as nodeId and a
+        one-line signature with location, e.g. "struct Connection @ net.h:12". Set detail to true to
+        also get their method and field names. Use cpg_get_node with a id to retrieve the full node details.
         Results come in pages of at most $DEFAULT_LIST_LIMIT items. Narrow large listings down with pattern or file instead of
         paging through everything; use the limit/offset parameters to page through the rest.
 
@@ -97,7 +100,10 @@ fun Server.listRecords() {
         payload: CpgListNodesPayload ->
         val pattern = compilePattern(payload.pattern)
         val matching = result.records.filter { it.matches(pattern, payload.file) }
-        matching.toPagedResult(payload.limit, payload.offset) { Json.encodeToString(it.toInfo()) }
+        matching.toPagedResult(payload.limit, payload.offset) {
+            if (payload.detail) Json.encodeToString(it.toInfo())
+            else Json.encodeToString(it.toSignatureInfo())
+        }
     }
 }
 
@@ -119,8 +125,10 @@ fun Server.listConceptsAndOperations() {
 fun Server.listCalls() {
     val toolDescription =
         """
-        This tool lists all function and method calls as compact summaries.
-        Use cpg_get_node with a id to retrieve the full node details.
+        This tool lists all function and method calls as nodeId and a one-line signature with
+        location, e.g. "memcpy(buf, src, len) @ net.c:142" (arguments without a name are shown as _).
+        Set detail to true to also get what each call resolves to, or use cpg_list_calls_to for the
+        calls to one function. Use cpg_get_node with a id to retrieve the full node details.
         Results come in pages of at most $DEFAULT_LIST_LIMIT items. Narrow large listings down with pattern (matched against
         the name of the called function) or file instead of paging through everything; use the
         limit/offset parameters to page through the rest.
@@ -137,7 +145,8 @@ fun Server.listCalls() {
         val pattern = compilePattern(payload.pattern)
         val matching = result.calls.filter { it.matches(pattern, payload.file) }
         matching.toPagedResult(payload.limit, payload.offset) {
-            Json.encodeToString(it.toInfo(includeCode = false))
+            if (payload.detail) Json.encodeToString(it.toInfo(includeCode = false))
+            else Json.encodeToString(it.toSignatureInfo())
         }
     }
 }

@@ -157,6 +157,8 @@ data class FunctionInfo(
     )
 }
 
+@Serializable data class SignatureInfo(val nodeId: String, val signature: String)
+
 @Serializable
 data class RecordInfo(
     val nodeId: String,

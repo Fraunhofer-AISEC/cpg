@@ -61,7 +61,8 @@ For OpenWebUI, see [OpenWebUI.md](src/main/kotlin/de/fraunhofer/aisec/cpg/ai/mcp
    detected automatically) or `content` + `extension` (a snippet). This replaces any previously
    analyzed graph.
 2. **Explore.** `cpg_list_functions`, `cpg_list_records`, `cpg_list_calls` and
-   `cpg_list_concepts_and_operations` return compact summaries, 20 per page by default - use
+   `cpg_list_concepts_and_operations` return compact entries (one-line signatures for functions,
+   records and calls; `detail: true` for more), 20 per page by default - use
    `limit`/`offset` for more (as do `cpg_list_calls_to`, `cpg_dfg_backward` and
    `cpg_list_llm_concepts_operations`). `cpg_get_functions_by_name` is cheaper than listing when you already
    know the names. `cpg_get_node` returns the full details (including code) of one node id.
@@ -87,9 +88,9 @@ tool changes shared server state (see [Concurrency](#concurrency)).
 | `cpg_list_passes` | List available passes, their dependencies and expected node type. | - |
 | `cpg_run_pass` | Run a pass (`passName` = FQN) on a node (`nodeId`), including unmet dependencies. | graph |
 | `cpg_overview` | Compact, fixed-size overview: counts, files with most functions, most called and external functions, entry point candidates. Call it first. | - |
-| `cpg_list_functions` | Functions as compact summaries (no code). Filter by `pattern`, `file`, `calls`; paginated. | - |
-| `cpg_list_records` | Classes/structs as compact summaries. Filter by `pattern`, `file`; paginated. | - |
-| `cpg_list_calls` | Calls as compact summaries. Filter by `pattern` (called function's name), `file`; paginated. | - |
+| `cpg_list_functions` | Functions as `nodeId` + one-line `signature` with location (`parse(char*) @ parser.c:40`); `detail: true` adds name, parameters and callees (no code). Filter by `pattern`, `file`, `calls`; paginated. | - |
+| `cpg_list_records` | Classes/structs as `nodeId` + `signature` (`struct Connection @ net.h:12`); `detail: true` adds method and field names. Filter by `pattern`, `file`; paginated. | - |
+| `cpg_list_calls` | Calls as `nodeId` + `signature` (`memcpy(buf, src, len) @ net.c:142`); `detail: true` adds argument names and resolved targets (no code). Filter by `pattern` (called function's name), `file`; paginated. | - |
 | `cpg_list_calls_to` | Calls to the function/method with the given `name`. Paginated. | - |
 | `cpg_list_call_args` | Arguments of the call with the given `id`. | - |
 | `cpg_list_call_arg_by_name_or_index` | One argument of a call, by `argumentName` or `index`. | - |

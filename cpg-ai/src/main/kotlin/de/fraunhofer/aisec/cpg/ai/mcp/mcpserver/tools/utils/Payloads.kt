@@ -101,12 +101,15 @@ private const val PATTERN_DESCRIPTION =
     "Only include nodes whose name matches this regular expression (case-insensitive, partial match)."
 private const val FILE_DESCRIPTION =
     "Only include nodes located in a file whose path contains this string, e.g. 'main.c'."
+private const val DETAIL_DESCRIPTION =
+    "If true, return each node's full summary (without source code); by default only its nodeId and a one-line signature."
 
 @Serializable
 @Description("The payload to filter and page through a listing of nodes.")
 data class CpgListNodesPayload(
     @Description(PATTERN_DESCRIPTION) val pattern: String? = null,
     @Description(FILE_DESCRIPTION) val file: String? = null,
+    @Description(DETAIL_DESCRIPTION) val detail: Boolean = false,
     @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
     @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
 )
@@ -118,6 +121,7 @@ data class CpgListFunctionsPayload(
     @Description(FILE_DESCRIPTION) val file: String? = null,
     @Description("Only include functions that call a function with this local name, e.g. 'memcpy'.")
     val calls: String? = null,
+    @Description(DETAIL_DESCRIPTION) val detail: Boolean = false,
     @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
     @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
 )

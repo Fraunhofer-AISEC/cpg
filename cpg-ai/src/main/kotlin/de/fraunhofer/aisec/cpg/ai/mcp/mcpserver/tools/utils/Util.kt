@@ -338,6 +338,37 @@ fun Record.toInfo() = RecordInfo(this)
 /** See [Function.toInfo] - the same reasoning applies to [Call]/[CallInfo.code]. */
 fun Call.toInfo(includeCode: Boolean = true) = CallInfo(this, includeCode)
 
+/**
+ * The compact entry of a function listing, e.g. `parse(char*) @ parser.c:40`. The location tells
+ * apart functions with the same signature, such as a declaration and its definition.
+ */
+fun Function.toSignatureInfo() = SignatureInfo(id.toString(), signature + locationSuffix())
+
+/**
+ * The compact entry of a call listing, e.g. `memcpy(buf, src, len) @ net.c:142`. Arguments without
+ * a name (literals, nested expressions) are shown as `_`.
+ */
+fun Call.toSignatureInfo() =
+    SignatureInfo(
+        id.toString(),
+        "$name(${arguments.joinToString { it.name.localName.ifBlank { "_" } }})" + locationSuffix(),
+    )
+
+/** The compact entry of a record listing, e.g. `struct Connection @ net.h:12`. */
+fun Record.toSignatureInfo() =
+    SignatureInfo(
+        id.toString(),
+        listOfNotNull(kind, name.toString()).joinToString(" ") + locationSuffix(),
+    )
+
+/** ` @ file:line`, or nothing if the node has no usable location. */
+private fun Node.locationSuffix(): String {
+    val location = location ?: return ""
+    val line = location.region.startLine
+    return if (location.artifactLocation.uri == null || line < 0) ""
+    else " @ ${location.artifactLocation.fileName}:$line"
+}
+
 /** The default maximum number of items returned by paginated list tools. */
 const val DEFAULT_LIST_LIMIT = 20
 
