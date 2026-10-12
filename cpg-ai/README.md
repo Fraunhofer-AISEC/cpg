@@ -249,7 +249,8 @@ tool gets its JSON schema generated from a Kotlin payload class (non-nullable pr
 
 ```kotlin
 fun Server.myTool() =
-    addTool<MyPayload>(name = "my_tool", description = "...") { result: TranslationResult, payload ->
+    addTool<MyPayload>(name = "my_tool", description = "...", readOnly = true) {
+        result: TranslationResult, payload ->
         CallToolResult(content = listOf(TextContent("...")))
     }
 ```
@@ -269,12 +270,12 @@ It reports tools registered past the helpers and tools that do not answer wrongl
 with that problem list.
 
 Rules for tools: the handler is not `suspend`, and the description of the payload's parameters is
-appended to the tool description automatically, so do not repeat it. Pass `readOnly = false` to
-`addTool` if the handler changes the graph or does a read-modify-write on a file shared with other
-tools (see [Concurrency](#concurrency)); forgetting it is the one way to get this wrong, because
-the default is the cheap, shared one. `addToolWithoutCpg` requires `readOnly` to be stated. Both
-announce it to clients as the MCP annotation `readOnlyHint`, and the chat runs only tools that
-announce it concurrently within one turn. A host only needs to set `globalAnalysisResult`:
+appended to the tool description automatically, so do not repeat it. `readOnly` is required in both
+`addTool` and `addToolWithoutCpg`, so every tool has to decide. Pass `false` if the handler changes
+the graph or does a read-modify-write on a file shared with other tools (see
+[Concurrency](#concurrency)); such a tool runs exclusively and, within one chat turn, sequentially
+in the order the model called it. Both announce it to clients as the MCP annotation
+`readOnlyHint`, and the chat runs only tools that announce `true` concurrently. A host only needs to set `globalAnalysisResult`:
 `cpg_run_pass` runs passes with the context of that result itself. Its bookkeeping of which pass ran
 on which node (`nodeToPass`) is cleared when `cpg_analyze`/`cpg_translate` replace the graph; a host
 that swaps `globalAnalysisResult` on its own should call `nodeToPass.clear()` too.
