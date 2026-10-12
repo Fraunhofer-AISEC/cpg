@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
@@ -151,7 +150,7 @@ open class CLanguage :
      * - at file/namespace scope it grants *internal linkage*, confining the declaration to its own
      *   translation unit ([Visibility.INTERNAL]);
      * - on a record member it makes the member *static*, i.e. bound to the record itself rather
-     *   than to an instance ([ValueDeclaration.isStatic]);
+     *   than to an instance ([Declaration.isStatic]);
      * - inside a function body it only affects storage duration, which is irrelevant to symbol
      *   resolution, so it is ignored.
      *
@@ -162,7 +161,7 @@ open class CLanguage :
     override fun applyModifiers(declaration: Declaration, scope: Scope?) {
         if (STATIC in declaration.modifiers) {
             when (scope) {
-                is RecordScope -> (declaration as? ValueDeclaration)?.isStatic = true
+                is RecordScope -> declaration.isStatic = true
                 is GlobalScope,
                 is NamespaceScope -> declaration.visibility = Visibility.INTERNAL
                 else -> {} // a local `static` only affects storage duration, not resolution
