@@ -77,7 +77,7 @@ class ContextLengthLookupTest {
         }
     }
 
-    private fun config(baseUrl: String) =
+    private fun config(baseUrl: String, contextLengthOverride: Long? = null) =
         LlmProviderConfig(
             HttpClient(io.ktor.client.engine.cio.CIO) {
                 install(ContentNegotiation) { json(json) }
@@ -89,6 +89,7 @@ class ContextLengthLookupTest {
                     apiKey = null,
                     provider = ClientProvider.OPENAI_COMPATIBLE,
                     requiresApiKey = false,
+                    contextLengthOverride = contextLengthOverride,
                 )
             ),
         )
@@ -127,6 +128,23 @@ class ContextLengthLookupTest {
                     DEFAULT_CONTEXT_LENGTH,
                     providers.clientFor("vLLM", "m")?.model?.contextLength,
                 )
+            }
+
+            assertEquals(1, requests.get())
+            providers.close()
+        }
+    }
+
+    @Test
+    fun anOverrideWinsOverTheServersValueAndTheServerIsAskedOnce() {
+        val requests = AtomicInteger()
+        withModelsServer({ true }, requests) { baseUrl ->
+            val providers = config(baseUrl, contextLengthOverride = 8192L)
+
+            runBlocking {
+                repeat(2) {
+                    assertEquals(8192L, providers.clientFor("vLLM", "m")?.model?.contextLength)
+                }
             }
 
             assertEquals(1, requests.get())

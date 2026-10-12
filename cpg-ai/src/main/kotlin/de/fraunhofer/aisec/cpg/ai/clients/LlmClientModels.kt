@@ -56,7 +56,8 @@ data class ClientConfig(
     /**
      * Explicit override for the model's context window, in tokens. `null` (the default) lets
      * [LlmProviderConfig.clientFor] auto-detect it from the server, falling back to a generic
-     * default. When set, it is used as is, without asking the server.
+     * default. When set, it always wins over the server's value; a disagreement is logged as a
+     * warning.
      */
     val contextLengthOverride: Long? = null,
 )

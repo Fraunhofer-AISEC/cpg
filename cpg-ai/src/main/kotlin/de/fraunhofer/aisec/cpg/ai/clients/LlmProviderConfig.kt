@@ -99,7 +99,8 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
      * Resolves [clientName] and [model] to a [ChatLlm], or `null` if the client is unknown or its
      * required API key is missing. Built once per client and model, so the context length is too:
      * [ClientConfig.contextLengthOverride], else the server's value (see [contextLengthFor]), else
-     * [DEFAULT_CONTEXT_LENGTH].
+     * [DEFAULT_CONTEXT_LENGTH]. If an override differs with the server's value, a warning is logged
+     * and the override is used.
      */
     suspend fun clientFor(clientName: String, model: String): ChatLlm? {
         check(!closed) { "LlmProviderConfig is closed" }
@@ -131,10 +132,19 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     }
 
     private suspend fun createChatLlm(config: ClientConfig, model: String): OwnedChatLlm? {
-        val contextLength =
-            config.contextLengthOverride
-                ?: contextLengthFor(config, model)
-                ?: DEFAULT_CONTEXT_LENGTH
+        val detected = contextLengthFor(config, model)
+        val override = config.contextLengthOverride
+        if (override != null && detected != null && detected != override) {
+            log.warn(
+                "Configured context length ({}) for {}/{} differs from the server-reported " +
+                    "value ({}) - using the configured value.",
+                override,
+                config.name,
+                model,
+                detected,
+            )
+        }
+        val contextLength = override ?: detected ?: DEFAULT_CONTEXT_LENGTH
 
         return when (config.provider) {
             ClientProvider.GEMINI -> {
