@@ -43,12 +43,11 @@
         icon: '◆',
         word: overlayNames[0] + (overlayNames.length > 1 ? ` +${overlayNames.length - 1}` : ''),
         title: statement.overlays.map((o) => `${o.label ?? ''} ${o.name || o.type}`).join('\n'),
-        cls: 'bg-purple-50 text-purple-700'
+        cls: 'text-purple-600'
       },
-      statement.unresolved && { icon: '!', word: 'unresolved', cls: 'bg-red-50 text-red-700' },
-      statement.warning && { icon: '⚠', word: 'warning', cls: 'bg-red-50 text-red-700' },
-      statement.external &&
-        !stub && { icon: '↗', word: 'external', cls: 'bg-orange-50 text-orange-700' }
+      statement.unresolved && { icon: '!', word: 'unresolved', cls: 'text-amber-600' },
+      statement.warning && { icon: '⚠', word: 'warning', cls: 'text-amber-600' },
+      statement.external && !stub && { icon: '↗', word: 'external', cls: 'text-amber-600' }
     ].filter((b): b is { icon: string; word: string; title?: string; cls: string } => !!b)
   );
 </script>
@@ -64,7 +63,7 @@ graph. Expanding by double click is a shortcut, the button at the border does th
     : 'rounded-lg'} {card.selected
     ? 'border-2 border-blue-500 bg-blue-50 shadow-[0_0_0_3px_rgba(59,130,246,0.15)]'
     : overlay
-      ? 'border border-purple-300 bg-purple-50 shadow-sm'
+      ? 'border border-gray-300 bg-white shadow-sm'
       : stub
         ? 'border border-dashed border-gray-400 bg-gray-50'
         : branch
@@ -90,7 +89,7 @@ graph. Expanding by double click is a shortcut, the button at the border does th
       >
     {:else if overlay}
       <span class="text-purple-600 group-[.graph-far]/flow:text-4xl">◆</span>
-      <span class="truncate text-purple-700 group-[.graph-far]/flow:hidden"
+      <span class="truncate group-[.graph-far]/flow:hidden"
         >{statement.node.label ?? 'Overlay'} · L{statement.startLine}</span
       >
     {:else}

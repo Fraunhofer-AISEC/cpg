@@ -31,10 +31,10 @@
       <span class="shrink-0 rounded bg-gray-100 px-1 font-mono text-[10px] text-gray-600">{overlay ? ref.label : ref.type}</span>
       <span class="truncate text-xs font-medium text-gray-900">{ref.name || ref.code || '—'}</span>
       {#if ref.isInferred}
-        <span class="shrink-0 rounded bg-amber-100 px-1 text-[10px] text-amber-700" title="Inferred: not part of the analysed code">inferred</span>
+        <span class="shrink-0 rounded border border-amber-200 px-1 text-[10px] text-amber-700" title="Inferred: not part of the analysed code">inferred</span>
       {/if}
       {#if ref.label && !overlay}
-        <span class="shrink-0 rounded bg-blue-50 px-1 text-[10px] text-blue-700">{ref.label}</span>
+        <span class="shrink-0 rounded bg-gray-100 px-1 text-[10px] text-gray-600">{ref.label}</span>
       {/if}
     </span>
     <span class="flex min-w-0 gap-2 font-mono text-[10px] text-gray-400">
