@@ -116,19 +116,9 @@ data class GraphEdgeJSON(
     val to: String,
     val kind: GraphEdgeKind,
     val label: String?,
-    val fromPart: GraphPartJSON? = null,
-    val toPart: GraphPartJSON? = null,
+    val fromPart: NodeRefJSON? = null,
+    val toPart: NodeRefJSON? = null,
 )
-
-/**
- * A node of a statement at an end of a dependence, e.g. an argument of a call, and where it is in
- * the code of the statement ([GraphNodeJSON.code]). Of a named node only its name is meant, e.g.
- * the name of a declared variable.
- *
- * @property start The offset of the node in the code of the statement, or `null` if it is not part
- *   of it, e.g. because it is on a later line.
- */
-@Serializable data class GraphPartJSON(val node: NodeRefJSON, val start: Int?, val end: Int?)
 
 /**
  * A graph of statements: a slice (the statements that affect a statement or are affected by it in
@@ -207,28 +197,8 @@ internal val Node.isBranching: Boolean
     get() = this is IfElse || this is Loop || this is Switch || this is CatchClause
 
 /** This node as a part of [statement], or `null` if it is the statement itself. */
-internal fun Node.asPartOf(statement: Node): GraphPartJSON? {
-    if (this === statement) return null
-    val node = toRefJSON()
-    // The code of a statement is its first line, which starts at the column of the statement
-    val at = statement.location?.region
-    val region = location?.region
-    val text = (code ?: "").lineSequence().firstOrNull() ?: ""
-    val start =
-        if (at != null && region != null && region.startLine == at.startLine && text.isNotEmpty())
-            region.startColumn - at.startColumn
-        else -1
-    if (start < 0 || !statement.toRefJSON().code.startsWith(text, start)) {
-        return GraphPartJSON(node, null, null)
-    }
-    val name = name.localName
-    val inText =
-        if (name.isNotEmpty() && name != text)
-            Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").find(text)?.range?.first
-        else null
-    return if (inText != null) GraphPartJSON(node, start + inText, start + inText + name.length)
-    else GraphPartJSON(node, start, start + text.length)
-}
+internal fun Node.asPartOf(statement: Node): NodeRefJSON? =
+    if (this === statement) null else toRefJSON()
 
 /** Whether this is a concept or an operation, which a graph shows as an overlay. */
 internal val Node.isConceptOverlay: Boolean
