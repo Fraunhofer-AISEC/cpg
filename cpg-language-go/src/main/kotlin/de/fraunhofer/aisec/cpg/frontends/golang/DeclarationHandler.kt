@@ -209,6 +209,26 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleGenDecl(genDecl: GoStandardLibrary.Ast.GenDecl): DeclarationSequence {
+        // Declarations can be nested (e.g. in a function literal), so we restore the outer
+        // context afterward. Otherwise, a stale iota value would remain visible after the
+        // declaration.
+        val outerIotaValue = frontend.declCtx.iotaValue
+        val outerDecl = frontend.declCtx.currentDecl
+        val outerInitializers = frontend.declCtx.constInitializers.toMap()
+        val outerConstType = frontend.declCtx.constType
+
+        try {
+            return handleGenDeclSpecs(genDecl)
+        } finally {
+            frontend.declCtx.iotaValue = outerIotaValue
+            frontend.declCtx.currentDecl = outerDecl
+            frontend.declCtx.constInitializers.clear()
+            frontend.declCtx.constInitializers.putAll(outerInitializers)
+            frontend.declCtx.constType = outerConstType
+        }
+    }
+
+    private fun handleGenDeclSpecs(genDecl: GoStandardLibrary.Ast.GenDecl): DeclarationSequence {
         // Reset the iota value. We need to start with -1 because we immediately increment in
         // handleValueSpec
         frontend.declCtx.iotaValue = -1
