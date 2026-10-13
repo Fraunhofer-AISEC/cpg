@@ -153,11 +153,11 @@
 
     <!-- Analysis status -->
     {#if details.warnings.length > 0}
-      <div class="rounded-md border border-amber-200 bg-amber-50 p-2">
-        <p class="mb-1 text-[10px] font-semibold tracking-wide text-amber-800 uppercase">
+      <div class="border-l-2 border-amber-400 py-0.5 pl-2">
+        <p class="mb-1 text-[10px] font-semibold tracking-wide text-amber-700 uppercase">
           Analysis is uncertain here
         </p>
-        <ul class="list-disc space-y-0.5 pl-4 text-[11px] text-amber-900">
+        <ul class="list-disc space-y-0.5 pl-4 text-[11px] text-gray-700">
           {#each details.warnings as warning (warning)}
             <li>{warning}</li>
           {/each}
