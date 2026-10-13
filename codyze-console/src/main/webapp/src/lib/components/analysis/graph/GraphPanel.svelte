@@ -1,10 +1,12 @@
 <script lang="ts">
   import type { NodeRefJSON } from '$lib/types';
   import {
-    describeDependences,
+    dependencesOf,
+    getSliceCounts,
     locationOf,
     type DependenceGraph,
-    type GraphNode
+    type GraphNode,
+    type SliceCounts
   } from '$lib/graph';
   import type { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import { isTyping } from '$lib/utils/keyboard';
@@ -99,7 +101,15 @@
   }
 
   const notes = $derived(selected ? notesOf(selected) : []);
-  const dependences = $derived(slice && selected ? describeDependences(slice, selected.id) : '');
+  const dependences = $derived(
+    slice && selected ? dependencesOf(slice, selected.id) : { from: [], to: [] }
+  );
+
+  // Selects a statement of the dependences, like clicking its card
+  function selectStatement(node: GraphNode) {
+    panel.select(node.id);
+    onSelectNode?.(node);
+  }
   const canOpen = $derived(!!selected && selected.node.startLine >= 1);
 
   // Escape closes the panel, unless something else (e.g. an input or a popup) used it
@@ -110,6 +120,28 @@
   }
 
   const hopOptions = [1, 2, 3];
+
+  const directions = [
+    { direction: 'BACKWARD' as const, key: 'backward' as const, label: '← What affects it' },
+    { direction: 'FORWARD' as const, key: 'forward' as const, label: 'What it affects →' }
+  ];
+
+  // How many statements the slices of the selected statement have, for its buttons
+  let counts = $state.raw<SliceCounts | null>(null);
+  $effect(() => {
+    const id =
+      selected && selected.kind !== 'STUB' && selected.kind !== 'OVERLAY' ? selected.id : null;
+    const { hops, scope } = panel;
+    counts = null;
+    if (!id || paths) return;
+    let current = true;
+    getSliceCounts(id, hops, scope)
+      .then((c) => current && (counts = c))
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  });
 
   // The dependences a slice can follow, see [DependenceGraph]
   const graphOptions: { graph: DependenceGraph; title: string }[] = [
@@ -196,37 +228,19 @@
             </button>
           {/each}
         </div>
-        <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Direction">
-          {#each [{ direction: 'BACKWARD' as const, arrow: '←', title: 'Backward: what affects the statement' }, { direction: 'FORWARD' as const, arrow: '→', title: 'Forward: what the statement affects' }] as option (option.direction)}
-            <button
-              type="button"
-              class="h-6 w-6 rounded text-xs {panel.direction === option.direction
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-800'}"
-              aria-pressed={panel.direction === option.direction}
-              title={option.title}
-              onclick={() => panel.setDirection(option.direction)}
-            >
-              {option.arrow}
-            </button>
-          {/each}
-        </div>
-        <button
-          type="button"
-          class="h-6 rounded-md px-1.5 text-[11px] {panel.scope === 'intraprocedural'
-            ? 'bg-gray-200 text-gray-900'
-            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}"
-          aria-pressed={panel.scope === 'intraprocedural'}
-          title={panel.scope === 'intraprocedural'
-            ? 'Intraprocedural: only the function of the statement. Click to follow the dependences into other functions'
-            : 'Interprocedural: across functions. Click to stay in the function of the statement'}
-          onclick={() =>
-            panel.setScope(
-              panel.scope === 'intraprocedural' ? 'interprocedural' : 'intraprocedural'
-            )}
+        <label
+          class="flex h-6 cursor-pointer items-center gap-1 text-[11px] text-gray-600 select-none"
+          title="Follow the dependences into other functions, or stay in the function of the statement"
         >
-          {panel.scope}
-        </button>
+          <input
+            type="checkbox"
+            class="h-3 w-3 accent-blue-600"
+            checked={panel.scope === 'interprocedural'}
+            onchange={(e) =>
+              panel.setScope(e.currentTarget.checked ? 'interprocedural' : 'intraprocedural')}
+          />
+          Across functions
+        </label>
         <button
           type="button"
           class="h-6 rounded-md px-1.5 text-[11px] {panel.showOverlays
@@ -296,7 +310,38 @@
         >
       </div>
       <div class="font-mono text-[12.5px] break-words text-gray-900">{selected.code}</div>
-      <div class="text-xs text-gray-600">{dependences}</div>
+      <!-- The dependences of the statement, by direction and by what they are on. Each statement
+      can be selected -->
+      {#if dependences.from.length > 0 || dependences.to.length > 0}
+        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          {#each [{ title: 'From', groups: dependences.from }, { title: 'To', groups: dependences.to }] as row (row.title)}
+            {#if row.groups.length > 0}
+              <dt class="text-gray-500">{row.title}</dt>
+              <dd class="flex min-w-0 flex-wrap gap-x-3 gap-y-0.5">
+                {#each row.groups as group (group.kind + (group.label ?? ''))}
+                  <span class="whitespace-nowrap">
+                    {#if group.kind === 'DATA'}
+                      <span class="font-mono text-gray-800">{group.label ?? 'value'}</span>
+                    {:else}
+                      <span class="text-gray-500 italic"
+                        >{group.label ? `if ${group.label}` : 'control'}</span
+                      >
+                    {/if}
+                    {#each group.statements as s, i (s.node.id)}{#if i > 0},{/if}
+                      <button
+                        type="button"
+                        class="text-blue-700 hover:underline"
+                        onclick={() => selectStatement(s.node)}>{s.place}</button
+                      >{/each}
+                  </span>
+                {/each}
+              </dd>
+            {/if}
+          {/each}
+        </dl>
+      {:else}
+        <div class="text-xs text-gray-500">No dependences in this slice</div>
+      {/if}
       {#each notes as note (note.text)}
         <div class="rounded-md border px-2 py-1 text-xs {tones[note.tone]}">{note.text}</div>
       {/each}
@@ -312,13 +357,20 @@
             : 'Inspect'}
         </button>
         {#if selected.kind !== 'STUB' && !paths}
-          <button
-            type="button"
-            class="h-7 rounded-md border border-blue-200 bg-blue-50 px-2.5 text-xs text-blue-700 hover:bg-blue-100"
-            onclick={() => panel.reroot(selected.id, backward ? 'FORWARD' : 'BACKWARD')}
-          >
-            {backward ? 'Show what this affects →' : '← Show what affects this'}
-          </button>
+          <!-- A slice from the selected statement in either direction, with how many statements it
+          has. The slice that is shown is not offered again -->
+          {#each directions as option (option.direction)}
+            {@const count = counts?.[option.key]}
+            <button
+              type="button"
+              class="h-7 rounded-md border border-blue-200 bg-blue-50 px-2.5 text-xs text-blue-700 hover:bg-blue-100 disabled:border-gray-200 disabled:bg-white disabled:text-gray-400"
+              disabled={count === 0 ||
+                (selected.id === slice?.root && panel.direction === option.direction)}
+              onclick={() => panel.reroot(selected.id, option.direction)}
+            >
+              {option.label}{count != null ? ` · ${count}` : ''}
+            </button>
+          {/each}
         {/if}
         <button
           type="button"

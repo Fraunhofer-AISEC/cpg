@@ -172,12 +172,6 @@ export class GraphPanel {
     this.load(this.nodeId, graph, this.scope, this.direction, this.hops, this.selectedId);
   }
 
-  /** Changes which way the slice goes from its root, keeping what is selected. */
-  setDirection(direction: GraphDirection) {
-    if (!this.nodeId || this.paths || direction === this.direction) return;
-    this.load(this.nodeId, this.graph, this.scope, direction, this.hops, this.selectedId);
-  }
-
   /** Changes whether the slice follows dependences into other functions. */
   setScope(scope: SliceScope) {
     if (!this.nodeId || this.paths || scope === this.scope) return;
