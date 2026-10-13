@@ -114,104 +114,115 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <aside class="flex h-full min-h-0 w-full flex-col bg-gray-50" aria-label="Dependence graph">
-  <!-- Header: the question, how far to look and the buttons of the panel -->
-  <header class="flex h-13 shrink-0 items-center gap-2 border-b border-gray-200 bg-white pr-2 pl-3">
-    {#if panel.history.length > 0}
-      <button
-        type="button"
-        class="shrink-0 rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-        onclick={() => panel.back()}
-        aria-label="Back to the previous slice"
-        title="Back to the previous slice"
-      >
-        ←
-      </button>
-    {/if}
-    <div class="min-w-0 flex-1">
-      <div class="truncate text-[13px] font-semibold text-gray-900">{title}</div>
-      <div class="truncate font-mono text-[11px] text-gray-500" title={subtitle}>{subtitle}</div>
-    </div>
-    {#if !paths}
-      <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Graph">
-        {#each graphOptions as option (option.graph)}
-          <button
-            type="button"
-            class="h-6 rounded px-1.5 text-[11px] {panel.graph === option.graph
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-800'}"
-            aria-pressed={panel.graph === option.graph}
-            title={option.title}
-            onclick={() => panel.setGraph(option.graph)}
-          >
-            {option.graph}
-          </button>
-        {/each}
-      </div>
-      <button
-        type="button"
-        class="h-6 rounded-md px-1.5 text-[11px] {panel.scope === 'intraprocedural'
-          ? 'bg-gray-200 text-gray-900'
-          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}"
-        aria-pressed={panel.scope === 'intraprocedural'}
-        title={panel.scope === 'intraprocedural'
-          ? 'Intraprocedural: only the function of the statement. Click to follow the dependences into other functions'
-          : 'Interprocedural: across functions. Click to stay in the function of the statement'}
-        onclick={() =>
-          panel.setScope(panel.scope === 'intraprocedural' ? 'interprocedural' : 'intraprocedural')}
-      >
-        intraprocedural
-      </button>
-      <span class="text-[11px] text-gray-500">Hops</span>
-      <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Hops">
-        {#each hopOptions as hops (hops)}
-          <button
-            type="button"
-            class="h-6 w-6 rounded text-xs {panel.hops === hops
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-800'}"
-            aria-pressed={panel.hops === hops}
-            onclick={() => panel.setHops(hops)}
-          >
-            {hops}
-          </button>
-        {/each}
-      </div>
-      <button
-        type="button"
-        class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 {panel.pinned
-          ? 'bg-gray-200 text-gray-900'
-          : ''}"
-        aria-pressed={panel.pinned}
-        onclick={() => (panel.pinned = !panel.pinned)}
-        aria-label="Pin the graph"
-        title={panel.pinned
-          ? 'Pinned: the graph stays when another node is inspected'
-          : 'Pin the graph, so that it stays when another node is inspected'}
-      >
-        <svg
-          class="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill={panel.pinned ? 'currentColor' : 'none'}
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+  <!-- Header: the question with the buttons of the panel, below it how far to look. The controls
+  wrap in a narrow panel, the buttons of the panel always stay visible -->
+  <header class="shrink-0 border-b border-gray-200 bg-white">
+    <div class="flex h-11 items-center gap-2 pr-2 pl-3">
+      {#if panel.history.length > 0}
+        <button
+          type="button"
+          class="shrink-0 rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+          onclick={() => panel.back()}
+          aria-label="Back to the previous slice"
+          title="Back to the previous slice"
         >
-          <path d="M9 4h6l-1 6 4 3H6l4-3zM12 13v7" />
+          ←
+        </button>
+      {/if}
+      <div class="min-w-0 flex-1">
+        <div class="truncate text-[13px] font-semibold text-gray-900" {title}>{title}</div>
+        <div class="truncate font-mono text-[11px] text-gray-500" title={subtitle}>{subtitle}</div>
+      </div>
+      {#if !paths}
+        <button
+          type="button"
+          class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 {panel.pinned
+            ? 'bg-gray-200 text-gray-900'
+            : ''}"
+          aria-pressed={panel.pinned}
+          onclick={() => (panel.pinned = !panel.pinned)}
+          aria-label="Pin the graph"
+          title={panel.pinned
+            ? 'Pinned: the graph stays when another node is inspected'
+            : 'Pin the graph, so that it stays when another node is inspected'}
+        >
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill={panel.pinned ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 4h6l-1 6 4 3H6l4-3zM12 13v7" />
+          </svg>
+        </button>
+      {/if}
+      <button
+        type="button"
+        class="flex h-7 w-7 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+        onclick={() => panel.close()}
+        aria-label="Close the graph"
+        title="Close (Esc)"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
         </svg>
       </button>
+    </div>
+    {#if !paths}
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2">
+        <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Graph">
+          {#each graphOptions as option (option.graph)}
+            <button
+              type="button"
+              class="h-6 rounded px-1.5 text-[11px] {panel.graph === option.graph
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-800'}"
+              aria-pressed={panel.graph === option.graph}
+              title={option.title}
+              onclick={() => panel.setGraph(option.graph)}
+            >
+              {option.graph}
+            </button>
+          {/each}
+        </div>
+        <button
+          type="button"
+          class="h-6 rounded-md px-1.5 text-[11px] {panel.scope === 'intraprocedural'
+            ? 'bg-gray-200 text-gray-900'
+            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}"
+          aria-pressed={panel.scope === 'intraprocedural'}
+          title={panel.scope === 'intraprocedural'
+            ? 'Intraprocedural: only the function of the statement. Click to follow the dependences into other functions'
+            : 'Interprocedural: across functions. Click to stay in the function of the statement'}
+          onclick={() =>
+            panel.setScope(
+              panel.scope === 'intraprocedural' ? 'interprocedural' : 'intraprocedural'
+            )}
+        >
+          intraprocedural
+        </button>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] text-gray-500">Hops</span>
+          <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Hops">
+            {#each hopOptions as hops (hops)}
+              <button
+                type="button"
+                class="h-6 w-6 rounded text-xs {panel.hops === hops
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800'}"
+                aria-pressed={panel.hops === hops}
+                onclick={() => panel.setHops(hops)}
+              >
+                {hops}
+              </button>
+            {/each}
+          </div>
+        </div>
+      </div>
     {/if}
-    <button
-      type="button"
-      class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-      onclick={() => panel.close()}
-      aria-label="Close the graph"
-      title="Close (Esc)"
-    >
-      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
-      </svg>
-    </button>
   </header>
 
   <div class="relative min-h-0 flex-1">
