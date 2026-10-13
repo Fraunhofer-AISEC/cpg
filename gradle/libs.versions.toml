@@ -9,12 +9,12 @@ publish = "0.37.0"
 # JitPack git ref: a branch SNAPSHOT ("feature~positions-SNAPSHOT", '/' -> '~'),
 # a tag (e.g. "v3.0.1-pos1"), or a commit hash. Branch SNAPSHOTs are mutable and
 # rebuilt on new pushes; pin a tag/commit for a reproducible build.
-sootup = "feature~positions-SNAPSHOT"
+sootup = "3.0.0-alpha3"
 slf4j = "2.0.16"
 clikt = "5.1.0"
 kaml = "0.104.0"
-sarif4k = "0.7.0"
-ktor = "3.5.0"
+sarif4k = "0.8.0"
+ktor = "3.6.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
 
@@ -28,7 +28,7 @@ kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", versi
 kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-json" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.2"}
-kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version = "0.4.0"}
+kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version = "0.5.2"}
 
 reflections = { module = "org.reflections:reflections", version = "0.10.2"}
 
@@ -38,21 +38,21 @@ log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "lo
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j"}
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j"}
 
-apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.20.0"}
+apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.21.0"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
 classgraph = { module = "io.github.classgraph:classgraph", version = "4.8.179"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.28.1"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.22.1"}
 jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.22.1"}
-eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.34.100"}
+eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.35.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "77.1"}
 # io.joern re-publishes Eclipse CDT's core plugin as a normal Maven Central artifact (with a
 # valid groupId and correct EPL-2.0 license metadata), since the upstream Eclipse CDT downloads
 # repository is not a real Maven repository. See
 # https://repo1.maven.org/maven2/io/joern/eclipse-cdt-core/ for available/newer versions.
-eclipse-cdt-core = { module = "io.joern:eclipse-cdt-core", version = "9.2.100.202507101054+1"}
+eclipse-cdt-core = { module = "io.joern:eclipse-cdt-core", version = "9.3.200.202607131546+1"}
 picocli = { module = "info.picocli:picocli", version = "4.7.0"}
 picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
 jep = { module = "org.ninia:jep", version = "4.3.1" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes

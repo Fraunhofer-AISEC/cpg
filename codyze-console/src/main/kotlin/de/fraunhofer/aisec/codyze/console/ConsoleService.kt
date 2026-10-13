@@ -182,10 +182,13 @@ class ConsoleService {
 
     /**
      * Returns the translation unit with the given ID for the specified component as
-     * [TranslationUnitJSON].
+     * [TranslationUnitJSON], including its code.
      */
     fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
-        return getComponent(componentName)?.translationUnits?.find { it.id == Uuid.parse(id) }
+        return getComponent(componentName)
+            ?.translationUnits
+            ?.find { it.id == Uuid.parse(id) }
+            ?.let { it.copy(code = it.cpgTU?.code ?: "") }
     }
 
     /**
@@ -202,6 +205,18 @@ class ConsoleService {
             ?.find { it.id == Uuid.parse(id) }
             ?.cpgTU
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
+    }
+
+    /**
+     * Returns the nodes with the given IDs as [NodeJSON] (without DFG edges). IDs of nodes that do
+     * not exist (e.g., because an LLM made them up) are omitted.
+     */
+    fun getNodes(nodeIds: Collection<String>): List<NodeJSON> {
+        val wanted = nodeIds.toSet()
+        val result = analysisResult?.analysisResult?.translationResult
+        if (wanted.isEmpty() || result == null) return emptyList()
+
+        return result.nodes.filter { it.id.toString() in wanted }.map { it.toJSON(noEdges = true) }
     }
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */

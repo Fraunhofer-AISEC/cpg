@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { FlattenedNode } from '$lib/flatten';
   import type { NodeJSON } from '$lib/types';
+  import { ScrollViewport } from '$lib/scroll-viewport.svelte';
 
   interface Props {
     nodes: FlattenedNode[];
@@ -9,6 +10,17 @@
   }
 
   let { nodes, highlightedNode = $bindable(), nodeClick }: Props = $props();
+
+  // Rows have a fixed height (h-7), so only the visible ones need to be rendered
+  const ROW_HEIGHT = 28;
+
+  let listElement = $state<HTMLDivElement>();
+  const viewport = new ScrollViewport();
+  $effect(() => {
+    if (listElement) return viewport.track(listElement);
+  });
+  const visible = $derived(viewport.range(ROW_HEIGHT, nodes.length, 20));
+  const visibleNodes = $derived(nodes.slice(visible.start, visible.end));
 
   function typeColor(type: string): string {
     if (/Decl/i.test(type)) return 'bg-blue-100 text-blue-700';
@@ -20,15 +32,15 @@
   }
 </script>
 
-<div class="flex flex-col h-full text-xs">
+<div class="h-full overflow-y-auto text-xs" bind:this={listElement}>
   {#if nodes.length === 0}
     <p class="p-4 text-center text-gray-400 italic">No nodes</p>
   {:else}
-    <ul class="flex-1 overflow-y-auto py-1">
-      {#each nodes as node (node.id)}
-        <li>
+    <ul class="relative" style:height="{nodes.length * ROW_HEIGHT}px">
+      {#each visibleNodes as node, i (node.id)}
+        <li class="absolute right-0 left-0" style:top="{(visible.start + i) * ROW_HEIGHT}px">
           <button
-            class="flex w-full items-center gap-1.5 py-1.5 pr-3 mx-1 rounded cursor-pointer transition-colors min-w-0 text-left
+            class="flex h-7 w-full min-w-0 cursor-pointer items-center gap-1.5 rounded pr-3 text-left transition-colors
               {highlightedNode?.id === node.id ? 'bg-blue-50' : 'hover:bg-gray-100'}"
             style="padding-left: {node.depth * 10 + 8}px"
             onmouseenter={() => (highlightedNode = node)}
