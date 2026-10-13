@@ -247,6 +247,7 @@ class PointsToState(
             // There are some occasions were we need to compare both the generalState and the
             // DeclarationState (instead of only the DeclarationState), so let's do that
             val firstResult = this@Element.first.parallelCompare(other.first)
+            currentCoroutineContext().ensureActive()
             val secondResult = this@Element.second.parallelCompare(other.second)
             return compareMultiple(firstResult, secondResult)
         }
@@ -1450,6 +1451,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         val paramArgMatching = matchArgumentsToCallParameters(function, call)
 
+        /* Check if the functionSummary states that we will write to the derefPMV */
+        fun functionSummaryWritesToPMV(p: Parameter, destValueDepth: Int): Boolean =
+            function.functionSummary.entries
+                .filter { it.key == p }
+                .any {
+                    it.value.any { entry ->
+                        entry.destValueDepth == destValueDepth &&
+                            entry.properties.any { p -> p is FullDataflowGranularity }
+                    }
+                }
+
         call.arguments.forEach { arg ->
             if (arg.argumentIndex < function.parameters.size) {
                 // In C(++), the reference to an array is a pointer, leading to the situation that
@@ -1472,18 +1484,26 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     return@forEach
                 }
                 val derefPMVs =
-                    p.memoryValueEdges.mapFiltered({
-                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                            "derefvalue"
-                    }) {
-                        it.start
+                    /* If the PMV will be written to, we don't draw an incoming DFG-Edge */
+                    if (functionSummaryWritesToPMV(p, 2)) emptyList()
+                    else {
+                        p.memoryValueEdges.mapFiltered({
+                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                                "derefvalue"
+                        }) {
+                            it.start
+                        }
                     }
                 val derefderefPMVs =
-                    p.memoryValueEdges.mapFiltered({
-                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                            "derefderefvalue"
-                    }) {
-                        it.start
+                    /* If the PMV will be written to, we don't draw an incoming DFG-Edge */
+                    if (functionSummaryWritesToPMV(p, 3)) emptyList()
+                    else {
+                        p.memoryValueEdges.mapFiltered({
+                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                                "derefderefvalue"
+                        }) {
+                            it.start
+                        }
                     }
                 argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
                     doubleState =
@@ -1533,7 +1553,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToState.Element {
         var retDoubleState = doubleState
         val argDerefVals =
-            if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
+            // If the derefPMVs are empty, no need to search for the argDerefVals
+            if (derefPMVs.isEmpty()) equalLinkedHashSetOf()
+            else if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
                 equalLinkedHashSetOf<Node>(arg)
             else {
                 retDoubleState
@@ -1541,7 +1563,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .mapTo(equalLinkedHashSetOf()) { it.first }
             }
         val lastDerefWrites =
-            if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
+            // If the derefPMVs are empty, no need to search for the lastDerefWrites, b/c we won't
+            // draw a DFG edge
+            if (derefPMVs.isEmpty()) PowersetLattice.Element()
+            else if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
                 PowersetLattice.Element(
                     NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext, false))
                 )

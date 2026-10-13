@@ -1121,6 +1121,10 @@ class PointsToPassTest {
                 }
                 ?.start,
         )
+
+        // memcpy overwrites the memcpySrcDeref, so the only incoming DFG edge should be from the
+        // source deref
+        assertEquals(memcpySrcDeref, memcpyDstDeref.prevDFG.single())
     }
 
     @Test
