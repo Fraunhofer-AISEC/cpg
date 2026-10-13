@@ -17,6 +17,8 @@
    */
   interface Props {
     panel: GraphPanel;
+    /** The inspected node, whose edges are emphasized if it is a part of the selected statement */
+    inspectedId?: string | null;
     /** Inspects the node of a statement, opening its file if it is in another one */
     onInspect: (node: NodeRefJSON) => void;
     /** Asks the agent about the node of a statement */
@@ -25,7 +27,7 @@
     onSelectNode?: (node: GraphNode) => void;
   }
 
-  let { panel, onInspect, onAsk, onSelectNode }: Props = $props();
+  let { panel, inspectedId = null, onInspect, onAsk, onSelectNode }: Props = $props();
 
   const slice = $derived(panel.slice);
   const root = $derived(panel.root);
@@ -194,6 +196,21 @@
             </button>
           {/each}
         </div>
+        <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Direction">
+          {#each [{ direction: 'BACKWARD' as const, arrow: '←', title: 'Backward: what affects the statement' }, { direction: 'FORWARD' as const, arrow: '→', title: 'Forward: what the statement affects' }] as option (option.direction)}
+            <button
+              type="button"
+              class="h-6 w-6 rounded text-xs {panel.direction === option.direction
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-800'}"
+              aria-pressed={panel.direction === option.direction}
+              title={option.title}
+              onclick={() => panel.setDirection(option.direction)}
+            >
+              {option.arrow}
+            </button>
+          {/each}
+        </div>
         <button
           type="button"
           class="h-6 rounded-md px-1.5 text-[11px] {panel.scope === 'intraprocedural'
@@ -208,7 +225,7 @@
               panel.scope === 'intraprocedural' ? 'interprocedural' : 'intraprocedural'
             )}
         >
-          intraprocedural
+          {panel.scope}
         </button>
         <button
           type="button"
@@ -245,7 +262,7 @@
   </header>
 
   <div class="relative min-h-0 flex-1">
-    <GraphCanvas {panel} {onSelectNode} />
+    <GraphCanvas {panel} {inspectedId} {onSelectNode} />
   </div>
 
   <!-- The selected statement -->
