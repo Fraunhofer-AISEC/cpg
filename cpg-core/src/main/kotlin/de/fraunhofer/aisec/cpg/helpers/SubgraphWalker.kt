@@ -587,10 +587,7 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
                 } else {
                     false
                 }
-            is Return -> {
-                parent.returnValue = new
-                true
-            }
+            is Return -> parent.returnValueEdges.replace(old, new)
             is Subscription ->
                 if (parent.arrayExpression == old) {
                     parent.arrayExpression = new
