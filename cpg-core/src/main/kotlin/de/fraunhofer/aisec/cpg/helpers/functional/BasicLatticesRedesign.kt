@@ -1247,10 +1247,23 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
          * A shared set belongs to several states at once, so modifying it would silently change all
          * of them. This is always a programming error: the owner of the entry has to hand out a
          * private copy first, see [ConcurrentMapLattice.Element.getForUpdate].
+         *
+         * We can only detect this, not fix it: by the time [onMutate] runs, the caller is already
+         * holding a direct reference to *this* shared instance and is about to mutate it in place,
+         * and there is no way for this method to retroactively swap that reference for a private
+         * copy - only the owner that handed the reference out can do that (which is exactly what
+         * [ConcurrentMapLattice.Element.getForUpdate] is for). So unlike the analogous situation in
+         * [ConcurrentMapLattice.Element.put], this cannot self-heal. We log instead of throwing:
+         * one pass producing a locally corrupted result is still better than the whole analysis
+         * going down over it.
          */
         override fun onMutate() {
-            check(!isShared) {
-                "Tried to modify a points-to set which is shared between several states. Ask for a private copy (getForUpdate) before modifying it."
+            if (isShared) {
+                Pass.log.error(
+                    "Modifying a points-to set which is shared between several states. This is a " +
+                        "bug: ask for a private copy (getForUpdate) before modifying it. Continuing, " +
+                        "but the other states sharing this set may now silently see this change too."
+                )
             }
         }
 
@@ -1515,23 +1528,41 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
          */
         @Suppress("UNCHECKED_CAST")
         override fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
-            compute(key) { k, value ->
-                when {
-                    value == null -> mappingFunction(k)
-                    value.isShared -> value.duplicate() as V
-                    else -> value
+            checkNotNull(
+                compute(key) { k, value ->
+                    when {
+                        value == null -> mappingFunction(k)
+                        value.isShared -> value.duplicate() as V
+                        else -> value
+                    }
                 }
-            }!!
+            ) {
+                // The lambda above never returns null, so this can only fire if ConcurrentHashMap's
+                // compute() contract ever changes - a clearer failure than an unexplained NPE.
+                "computeIfAbsent for $key unexpectedly produced no value"
+            }
 
         /**
          * Stores [value] under [key]. The caller hands the value over: it must not keep a reference
          * to it and modify it later. Use [putShared] if it does.
+         *
+         * If [value] is already [shared][Lattice.Element.isShared] - which means the caller got it
+         * from somewhere else instead of constructing it fresh, and should have used [putShared] -
+         * we store a private copy instead of the shared instance itself, the same way
+         * [getForUpdate] and [computeIfAbsent] privatize a shared value they encounter. This is a
+         * caller bug either way, but one that is cheap to route around instead of taking the
+         * analysis of this translation unit down over it.
          */
+        @Suppress("UNCHECKED_CAST")
         override fun put(key: K, value: V): V? {
-            check(!value.isShared) {
-                "Tried to store a shared value in a state. Either hand over a private copy or use putShared."
+            if (value.isShared) {
+                Pass.log.warn(
+                    "put() was given a value which is already shared with another state; " +
+                        "storing a private copy instead of corrupting that other state. The " +
+                        "caller should have used putShared()."
+                )
             }
-            return super.put(key, value)
+            return super.put(key, if (value.isShared) value.duplicate() as V else value)
         }
 
         /**

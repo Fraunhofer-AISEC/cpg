@@ -786,10 +786,6 @@ class BasicLatticesRedesignTest {
             assertTrue(assertNotNull(copy[key]).isShared)
         }
 
-        // ... which is why neither side may modify them any more.
-        assertThrows<IllegalStateException> { assertNotNull(copy["a"]).add("blub") }
-        assertThrows<IllegalStateException> { assertNotNull(original["a"]).add("blub") }
-
         // Asking for a private copy of one entry gives us a modifiable one and leaves the other
         // owner - and the entries we did not ask for - alone.
         val shared = assertNotNull(original["b"])
@@ -801,6 +797,39 @@ class BasicLatticesRedesignTest {
         assertEquals(PowersetLattice.Element("bla", "blub"), copy["a"])
         assertEquals(PowersetLattice.Element("bla"), original["a"])
         assertSame(shared, copy["b"])
+
+        // Modifying a still-shared entry directly (bypassing getForUpdate) is a bug, but one we
+        // can only detect, not prevent: by the time the set's mutating method runs, the caller
+        // already holds the very same shared object every other owner holds, so there is no way
+        // to retroactively swap in a private copy. It is logged and applied anyway - crashing the
+        // whole analysis over one caller's bug would be worse - which is visible through every
+        // owner since they all share that one object.
+        assertNotNull(copy["b"]).add("blub")
+        assertEquals(PowersetLattice.Element("foo", "blub"), original["b"])
+    }
+
+    @Test
+    fun testPutPrivatizesAnAlreadySharedValue() {
+        val original = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val copy = original.duplicate()
+        val shared = assertNotNull(copy["a"])
+        assertTrue(shared.isShared)
+
+        // Storing an already-shared value with put() (instead of putShared()) is a caller bug -
+        // put()'s contract is that the caller hands the value over and does not keep using the
+        // reference - but unlike onMutate's case, put() can fix it: it has not stored the value
+        // anywhere yet, so it is free to store a private copy instead of the shared instance.
+        val other = ConcurrentMapLattice.Element<String, PowersetLattice.Element<String>>()
+        other.put("a", shared)
+
+        assertNotSame(shared, other["a"])
+        assertFalse(assertNotNull(other["a"]).isShared)
+        assertEquals(shared, other["a"])
+
+        // The value we handed over is unaffected, and so is everyone still sharing it.
+        assertNotNull(other["a"]).add("blub")
+        assertEquals(PowersetLattice.Element("bla"), shared)
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
     }
 
     @Test
@@ -815,13 +844,17 @@ class BasicLatticesRedesignTest {
         val result = runBlocking { lattice.lub(one, two) }
         assertSame(one["a"], result["a"])
         assertSame(two["b"], result["b"])
-        assertThrows<IllegalStateException> { assertNotNull(result["a"]).add("blub") }
+        // Modifying the shared value directly is a bug - see testDuplicateSharesEntries for why it
+        // is merely logged instead of rejected - and visibly corrupts `one`, which still shares it.
+        assertNotNull(result["a"]).add("blub")
+        assertEquals(PowersetLattice.Element("bla", "blub"), one["a"])
 
-        // The in-place variant may not modify the value it took from `two` either.
+        // The in-place variant shares the value it took from `two` the same way.
         val inPlace = runBlocking { lattice.lub(one, two, allowModify = true) }
         assertSame(one, inPlace)
         assertSame(two["b"], one["b"])
-        assertThrows<IllegalStateException> { assertNotNull(one["b"]).add("blub") }
+        assertNotNull(one["b"]).add("blub")
+        assertEquals(PowersetLattice.Element("foo", "blub"), two["b"])
     }
 
     @Test
