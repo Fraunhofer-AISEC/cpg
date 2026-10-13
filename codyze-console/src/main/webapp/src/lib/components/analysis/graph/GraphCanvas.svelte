@@ -27,8 +27,7 @@
    * The graph of a slice: a card for each statement and an edge for each dependence, laid out in
    * layers by ELK and shown with Svelte Flow. The selected statement and its edges are emphasized,
    * the others step back. If the inspected node is a part of the selected statement, e.g. an
-   * argument of a call, only its own edges are emphasized and the parts they connect are marked in
-   * the code of the cards.
+   * argument of a call, only its own edges are emphasized.
    */
   interface Props {
     panel: GraphPanel;
@@ -69,28 +68,11 @@
     if (!layout || !inspectedId || !selectedId) return [];
     return layout.slice.edges.filter(
       (e) =>
-        (e.to === selectedId && e.toPart?.node.id === inspectedId) ||
-        (e.from === selectedId && e.fromPart?.node.id === inspectedId)
+        (e.to === selectedId && e.toPart?.id === inspectedId) ||
+        (e.from === selectedId && e.fromPart?.id === inspectedId)
     );
   });
   const focused = $derived(new Set(focusEdges.map(edgeKey)));
-
-  // The parts the edges of the inspected node connect, by statement, to mark them on the cards
-  const marks = $derived.by(() => {
-    const byStatement = new Map<string, { start: number; end: number }[]>();
-    const add = (id: string, part: GraphEdge['fromPart']) => {
-      if (part?.start == null || part.end == null) return;
-      const list = byStatement.get(id) ?? [];
-      if (!list.some((m) => m.start === part.start))
-        list.push({ start: part.start, end: part.end });
-      byStatement.set(id, list);
-    };
-    for (const e of focusEdges) {
-      add(e.from, e.fromPart);
-      add(e.to, e.toPart);
-    }
-    return byStatement;
-  });
 
   const nodes = $derived.by((): Node[] => {
     if (!layout) return [];
@@ -117,7 +99,6 @@
             ? statement.node.fileName
             : null,
         overlaysShown: withOverlay.has(statement.id),
-        marks: marks.get(statement.id) ?? [],
         onExpand: (id) => panel.expand(id)
       };
       return [
