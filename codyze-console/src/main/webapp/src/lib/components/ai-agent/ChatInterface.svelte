@@ -1836,6 +1836,7 @@
     <div class="min-h-0 min-w-[18.75rem]" style:flex="0 1 {graphWidth}px">
       <GraphPanelView
         panel={graph}
+        inspectedId={focus.details?.node.id ?? null}
         onInspect={selectRef}
         onAsk={askAboutGraphNode}
         onSelectNode={selectGraphNode}

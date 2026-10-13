@@ -9,7 +9,7 @@
     type Node
   } from '@xyflow/svelte';
   import '@xyflow/svelte/dist/style.css';
-  import type { GraphNode, GraphSlice } from '$lib/graph';
+  import type { GraphEdge, GraphNode, GraphSlice } from '$lib/graph';
   import type { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import {
     cardHeight,
@@ -26,15 +26,19 @@
   /**
    * The graph of a slice: a card for each statement and an edge for each dependence, laid out in
    * layers by ELK and shown with Svelte Flow. The selected statement and its edges are emphasized,
-   * the others step back.
+   * the others step back. If the inspected node is a part of the selected statement, e.g. an
+   * argument of a call, only its own edges are emphasized and the parts they connect are marked in
+   * the code of the cards.
    */
   interface Props {
     panel: GraphPanel;
+    /** The inspected node, which may be a part of a statement */
+    inspectedId?: string | null;
     /** Called when a statement is clicked, after it was selected */
     onSelectNode?: (node: GraphNode) => void;
   }
 
-  let { panel, onSelectNode }: Props = $props();
+  let { panel, inspectedId = null, onSelectNode }: Props = $props();
 
   const nodeTypes = { card: GraphCard };
   const edgeTypes = { dependence: GraphEdgeLine };
@@ -60,11 +64,39 @@
 
   const selectedId = $derived(panel.selectedId);
 
+  // The edges of the inspected node, if it is a part of the selected statement
+  const focusEdges = $derived.by((): GraphEdge[] => {
+    if (!layout || !inspectedId || !selectedId) return [];
+    return layout.slice.edges.filter(
+      (e) =>
+        (e.to === selectedId && e.toPart?.node.id === inspectedId) ||
+        (e.from === selectedId && e.fromPart?.node.id === inspectedId)
+    );
+  });
+  const focused = $derived(new Set(focusEdges.map(edgeKey)));
+
+  // The parts the edges of the inspected node connect, by statement, to mark them on the cards
+  const marks = $derived.by(() => {
+    const byStatement = new Map<string, { start: number; end: number }[]>();
+    const add = (id: string, part: GraphEdge['fromPart']) => {
+      if (part?.start == null || part.end == null) return;
+      const list = byStatement.get(id) ?? [];
+      if (!list.some((m) => m.start === part.start))
+        list.push({ start: part.start, end: part.end });
+      byStatement.set(id, list);
+    };
+    for (const e of focusEdges) {
+      add(e.from, e.fromPart);
+      add(e.to, e.toPart);
+    }
+    return byStatement;
+  });
+
   const nodes = $derived.by((): Node[] => {
     if (!layout) return [];
     const { slice, laid } = layout;
     const connected = new Set<string>();
-    for (const e of slice.edges) {
+    for (const e of focusEdges.length > 0 ? focusEdges : slice.edges) {
       if (e.from === selectedId) connected.add(e.to);
       if (e.to === selectedId) connected.add(e.from);
     }
@@ -85,6 +117,7 @@
             ? statement.node.fileName
             : null,
         overlaysShown: withOverlay.has(statement.id),
+        marks: marks.get(statement.id) ?? [],
         onExpand: (id) => panel.expand(id)
       };
       return [
@@ -109,8 +142,11 @@
       const route = laid.edges.get(edgeKey(e));
       if (!route) return [];
       const overlay = e.kind === 'OVERLAY';
+      // With the edges of the inspected node, only they belong to the selection
       const active =
-        !overlay && selectedId !== null && (e.from === selectedId || e.to === selectedId);
+        !overlay &&
+        selectedId !== null &&
+        (focused.size > 0 ? focused.has(edgeKey(e)) : e.from === selectedId || e.to === selectedId);
       const marked = e.kind === 'DATA' && hoveredVariable !== null && e.label === hoveredVariable;
       const data: GraphEdgeData = {
         points: route.points,

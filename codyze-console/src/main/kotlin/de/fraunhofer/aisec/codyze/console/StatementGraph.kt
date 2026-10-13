@@ -105,6 +105,10 @@ data class GraphNodeJSON(
  *
  * @property label For data dependences the name of the variable, for control dependences `true` or
  *   `false` for the branch of the condition.
+ * @property fromPart The node of the [from] statement the dependence starts at, if it is not the
+ *   statement itself.
+ * @property toPart The node of the [to] statement the dependence ends at, if it is not the
+ *   statement itself.
  */
 @Serializable
 data class GraphEdgeJSON(
@@ -112,7 +116,19 @@ data class GraphEdgeJSON(
     val to: String,
     val kind: GraphEdgeKind,
     val label: String?,
+    val fromPart: GraphPartJSON? = null,
+    val toPart: GraphPartJSON? = null,
 )
+
+/**
+ * A node of a statement at an end of a dependence, e.g. an argument of a call, and where it is in
+ * the code of the statement ([GraphNodeJSON.code]). Of a named node only its name is meant, e.g.
+ * the name of a declared variable.
+ *
+ * @property start The offset of the node in the code of the statement, or `null` if it is not part
+ *   of it, e.g. because it is on a later line.
+ */
+@Serializable data class GraphPartJSON(val node: NodeRefJSON, val start: Int?, val end: Int?)
 
 /**
  * A graph of statements: a slice (the statements that affect a statement or are affected by it in
@@ -189,6 +205,30 @@ internal fun Node.statementMembers(): List<Node> {
 
 internal val Node.isBranching: Boolean
     get() = this is IfElse || this is Loop || this is Switch || this is CatchClause
+
+/** This node as a part of [statement], or `null` if it is the statement itself. */
+internal fun Node.asPartOf(statement: Node): GraphPartJSON? {
+    if (this === statement) return null
+    val node = toRefJSON()
+    // The code of a statement is its first line, which starts at the column of the statement
+    val at = statement.location?.region
+    val region = location?.region
+    val text = (code ?: "").lineSequence().firstOrNull() ?: ""
+    val start =
+        if (at != null && region != null && region.startLine == at.startLine && text.isNotEmpty())
+            region.startColumn - at.startColumn
+        else -1
+    if (start < 0 || !statement.toRefJSON().code.startsWith(text, start)) {
+        return GraphPartJSON(node, null, null)
+    }
+    val name = name.localName
+    val inText =
+        if (name.isNotEmpty() && name != text)
+            Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").find(text)?.range?.first
+        else null
+    return if (inText != null) GraphPartJSON(node, start + inText, start + inText + name.length)
+    else GraphPartJSON(node, start, start + text.length)
+}
 
 /** Whether this is a concept or an operation, which a graph shows as an overlay. */
 internal val Node.isConceptOverlay: Boolean
@@ -299,27 +339,32 @@ fun pathsGraph(paths: List<List<Node>>, kind: String): GraphSliceJSON {
     val depths = mutableMapOf<Uuid, Int>()
     val edges = linkedMapOf<Pair<Uuid, Uuid>, GraphEdgeJSON>()
     val edgeKind = if (kind == "dataflow") GraphEdgeKind.DATA else GraphEdgeKind.CONTROL
+    // A statement of a path with the nodes the path enters and leaves it with
+    class Step(val statement: Node, val entry: Node, var exit: Node)
     for (path in paths) {
-        // The statements of the path, each with the node the path enters it with
-        val steps = mutableListOf<Pair<Node, Node>>()
+        val steps = mutableListOf<Step>()
         for (node in path) {
             val statement = if (node.location == null) node else node.enclosingStatement()
-            if (steps.lastOrNull()?.first !== statement) steps += statement to node
+            val last = steps.lastOrNull()
+            if (last?.statement === statement) last.exit = node
+            else steps += Step(statement, node, node)
         }
-        steps.forEachIndexed { i, (statement, _) ->
-            statements.putIfAbsent(statement.id, statement)
+        steps.forEachIndexed { i, step ->
+            statements.putIfAbsent(step.statement.id, step.statement)
             val depth = steps.size - 1 - i
-            depths[statement.id] = minOf(depths[statement.id] ?: depth, depth)
+            depths[step.statement.id] = minOf(depths[step.statement.id] ?: depth, depth)
         }
         steps.zipWithNext().forEach { (from, to) ->
-            val key = from.first.id to to.first.id
+            val key = from.statement.id to to.statement.id
             edges.putIfAbsent(
                 key,
                 GraphEdgeJSON(
-                    from = from.first.id.toString(),
-                    to = to.first.id.toString(),
+                    from = from.statement.id.toString(),
+                    to = to.statement.id.toString(),
                     kind = edgeKind,
-                    label = if (edgeKind == GraphEdgeKind.DATA) valueName(to.second) else null,
+                    label = if (edgeKind == GraphEdgeKind.DATA) valueName(to.entry) else null,
+                    fromPart = from.exit.asPartOf(from.statement),
+                    toPart = to.entry.asPartOf(to.statement),
                 ),
             )
         }
