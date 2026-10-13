@@ -27,7 +27,8 @@
     glyphWidth: number;
     /** Inspects a node, revealing a section of the inspector if given */
     onInspect: (nodeId: string, section?: InspectorSection, filter?: CallFilter) => void;
-    /** Draws the annotations faintly, e.g. while a path is shown */
+    /** Draws the annotations faintly, e.g. while a path is shown. The concept icons stay, they
+     * are small enough not to compete with the path */
     dimmed?: boolean;
   }
 
@@ -120,15 +121,13 @@
   );
 </script>
 
-<div
-  class="pointer-events-none absolute top-0 left-0 h-full w-full transition-opacity"
-  class:opacity-35={dimmed}
->
+<div class="pointer-events-none absolute top-0 left-0 h-full w-full">
   <!-- Key figures at the end of the first line of each function, each part clickable -->
   {#each functions as fn (fn.function.id)}
     {#if isVisible(fn.function.startLine, fn.function.startLine)}
       <span
-        class="absolute z-[22] font-sans text-[11px] whitespace-nowrap text-gray-400 italic"
+        class="absolute z-[22] font-sans text-[11px] whitespace-nowrap text-gray-400 italic transition-opacity"
+        class:opacity-35={dimmed}
         style:top="{top(fn.function.startLine)}rem"
         style:line-height="{lineHeight}rem"
         style:left="{offsetLeft + charWidth * (lineColumns(fn.function.startLine) + 4)}rem"
@@ -159,7 +158,8 @@
   {#each markedCalls as call (call.id)}
     {#if isVisible(call.startLine, call.startLine)}
       <div
-        class="absolute z-[21] border-b-2 {call.status === 'EXTERNAL'
+        class:opacity-35={dimmed}
+        class="absolute z-[21] border-b-2 transition-opacity {call.status === 'EXTERNAL'
           ? 'border-dashed border-orange-500'
           : 'border-dotted border-red-500'}"
         style:top="{top(call.startLine)}rem"
