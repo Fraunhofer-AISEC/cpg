@@ -51,7 +51,22 @@ export class GraphPanel {
   error = $state<string | null>(null);
   /** Whether the slice stays when another node is inspected, instead of following it */
   pinned = $state(false);
+  /** Whether the concepts and operations of the statements are nodes of their own */
+  showOverlays = $state(false);
   history = $state.raw<GraphView[]>([]);
+
+  /** The slice as the graph shows it, without the overlays if they are hidden */
+  shown = $derived.by((): GraphSlice | null => {
+    const slice = this.slice;
+    if (!slice || this.showOverlays) return slice;
+    const hidden = new Set(slice.nodes.filter((n) => n.kind === 'OVERLAY').map((n) => n.id));
+    if (hidden.size === 0) return slice;
+    return {
+      ...slice,
+      nodes: slice.nodes.filter((n) => !hidden.has(n.id)),
+      edges: slice.edges.filter((e) => !hidden.has(e.from) && !hidden.has(e.to))
+    };
+  });
 
   // The node the slice was asked for, and a counter to discard answers that arrived too late
   private nodeId: string | null = null;

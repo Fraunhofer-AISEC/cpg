@@ -84,8 +84,14 @@
         text: 'A call in this statement goes to code that is not part of the analysis.'
       });
     }
-    if (node.concept) {
-      notes.push({ tone: 'purple', text: 'A concept or operation is attached to this statement.' });
+    if (node.kind === 'OVERLAY') {
+      notes.push({
+        tone: 'purple',
+        text: `${node.node.label === 'Concept' ? 'A concept' : 'An operation'} that is attached to the code of line ${node.startLine}. Inspecting it shows what it belongs to.`
+      });
+    } else if (node.overlays.length > 0) {
+      const names = node.overlays.map((o) => `${o.name || o.type} (${o.label?.toLowerCase()})`);
+      notes.push({ tone: 'purple', text: `Attached to this statement: ${names.join(', ')}.` });
     }
     return notes;
   }
@@ -203,6 +209,19 @@
             )}
         >
           intraprocedural
+        </button>
+        <button
+          type="button"
+          class="h-6 rounded-md px-1.5 text-[11px] {panel.showOverlays
+            ? 'bg-gray-200 text-gray-900'
+            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}"
+          aria-pressed={panel.showOverlays}
+          title={panel.showOverlays
+            ? 'Concepts and operations are shown as nodes of their own. Click to show them only as badges of their statements'
+            : 'Concepts and operations are shown as badges of their statements. Click to show them as nodes of their own'}
+          onclick={() => (panel.showOverlays = !panel.showOverlays)}
+        >
+          ◆ Concepts
         </button>
         <div class="flex items-center gap-1.5">
           <span class="text-[11px] text-gray-500">Hops</span>

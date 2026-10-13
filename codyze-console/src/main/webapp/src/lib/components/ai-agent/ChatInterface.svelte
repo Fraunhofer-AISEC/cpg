@@ -653,6 +653,7 @@
         .filter(
           (n) =>
             n.kind !== 'STUB' &&
+            n.kind !== 'OVERLAY' &&
             n.node.translationUnitId === node.translationUnitId &&
             n.startLine <= node.startLine &&
             node.startLine <= n.endLine

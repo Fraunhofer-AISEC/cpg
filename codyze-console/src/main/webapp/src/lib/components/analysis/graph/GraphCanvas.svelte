@@ -44,10 +44,10 @@
   let layout = $state.raw<{ slice: GraphSlice; laid: SliceLayout } | null>(null);
 
   $effect(() => {
-    const slice = panel.slice;
+    const slice = panel.shown;
     if (!slice) return;
     layoutSlice(slice).then((laid) => {
-      if (panel.slice === slice) layout = { slice, laid };
+      if (panel.shown === slice) layout = { slice, laid };
     });
   });
 
@@ -69,6 +69,8 @@
       if (e.to === selectedId) connected.add(e.from);
     }
     const rootFile = slice.nodes.find((n) => n.id === slice.root)?.node.fileName;
+    // The statements whose overlays are shown as nodes of their own
+    const withOverlay = new Set(slice.edges.filter((e) => e.kind === 'OVERLAY').map((e) => e.from));
     return slice.nodes.flatMap((statement) => {
       const position = laid.positions.get(statement.id);
       if (!position) return [];
@@ -82,6 +84,7 @@
           statement.node.fileName && statement.node.fileName !== rootFile
             ? statement.node.fileName
             : null,
+        overlaysShown: withOverlay.has(statement.id),
         onExpand: (id) => panel.expand(id)
       };
       return [
@@ -105,7 +108,9 @@
     return slice.edges.flatMap((e) => {
       const route = laid.edges.get(edgeKey(e));
       if (!route) return [];
-      const active = selectedId !== null && (e.from === selectedId || e.to === selectedId);
+      const overlay = e.kind === 'OVERLAY';
+      const active =
+        !overlay && selectedId !== null && (e.from === selectedId || e.to === selectedId);
       const marked = e.kind === 'DATA' && hoveredVariable !== null && e.label === hoveredVariable;
       const data: GraphEdgeData = {
         points: route.points,
@@ -125,13 +130,15 @@
           type: 'dependence',
           selectable: false,
           focusable: false,
-          // The tip has the color of the edge
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: edgeColor(e.kind, active, marked),
-            width: 14,
-            height: 14
-          },
+          // The tip has the color of the edge. The link of an overlay has no direction
+          markerEnd: overlay
+            ? undefined
+            : {
+                type: MarkerType.ArrowClosed,
+                color: edgeColor(e.kind, active, marked),
+                width: 14,
+                height: 14
+              },
           data
         }
       ];
@@ -141,6 +148,7 @@
   function nodeColor(node: Node): string {
     const statement = (node.data as GraphCardData).statement;
     if (statement.id === selectedId) return '#3b82f6';
+    if (statement.kind === 'OVERLAY') return '#c4b5fd';
     return statement.kind === 'STUB' ? '#d1d5db' : '#94a3b8';
   }
 </script>

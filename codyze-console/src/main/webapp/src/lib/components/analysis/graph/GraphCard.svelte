@@ -14,6 +14,8 @@
     root: boolean;
     /** The file of the statement, if it is another one than the file of the root */
     otherFile: string | null;
+    /** The overlays of the statement are nodes of their own in the graph */
+    overlaysShown: boolean;
     onExpand: (id: string) => void;
   }
 </script>
@@ -27,31 +29,47 @@
   const statement = $derived(card.statement);
   const stub = $derived(statement.kind === 'STUB');
   const branch = $derived(statement.kind === 'BRANCH');
+  const overlay = $derived(statement.kind === 'OVERLAY');
+
+  // The concepts and operations of the statement by name, unless they are nodes of their own
+  const overlayNames = $derived(
+    card.overlaysShown ? [] : [...new Set(statement.overlays.map((o) => o.name || o.type))]
+  );
 
   // The badges of the semantic colors. With a single one its word is shown as well
   const badges = $derived(
     [
-      statement.concept && { icon: '◆', word: 'concept', cls: 'bg-purple-50 text-purple-700' },
+      overlayNames.length > 0 && {
+        icon: '◆',
+        word: overlayNames[0] + (overlayNames.length > 1 ? ` +${overlayNames.length - 1}` : ''),
+        title: statement.overlays.map((o) => `${o.label ?? ''} ${o.name || o.type}`).join('\n'),
+        cls: 'bg-purple-50 text-purple-700'
+      },
       statement.unresolved && { icon: '!', word: 'unresolved', cls: 'bg-red-50 text-red-700' },
       statement.warning && { icon: '⚠', word: 'warning', cls: 'bg-red-50 text-red-700' },
       statement.external &&
         !stub && { icon: '↗', word: 'external', cls: 'bg-orange-50 text-orange-700' }
-    ].filter((b): b is { icon: string; word: string; cls: string } => !!b)
+    ].filter((b): b is { icon: string; word: string; title?: string; cls: string } => !!b)
   );
 </script>
 
 <!-- A statement: its line, the badges of the analysis and its code. Branches get a tag, stubs a
-dashed border. Far away only the line number is shown, see the zoom class of the graph. Expanding
-by double click is a shortcut, the button at the border does the same -->
+dashed border. A concept or operation is rounded and tinted, with its name instead of the code, so
+that it does not look like code. Far away only the line number is shown, see the zoom class of the
+graph. Expanding by double click is a shortcut, the button at the border does the same -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="relative h-14 w-39 rounded-lg px-2.5 py-1.5 text-left transition-opacity {card.selected
+  class="relative h-14 w-39 px-2.5 py-1.5 text-left transition-opacity {overlay
+    ? 'rounded-2xl'
+    : 'rounded-lg'} {card.selected
     ? 'border-2 border-blue-500 bg-blue-50 shadow-[0_0_0_3px_rgba(59,130,246,0.15)]'
-    : stub
-      ? 'border border-dashed border-gray-400 bg-gray-50'
-      : branch
-        ? 'border border-gray-300 bg-slate-50 shadow-sm'
-        : 'border border-gray-300 bg-white shadow-sm'} {card.hovered && !card.selected
+    : overlay
+      ? 'border border-purple-300 bg-purple-50 shadow-sm'
+      : stub
+        ? 'border border-dashed border-gray-400 bg-gray-50'
+        : branch
+          ? 'border border-gray-300 bg-slate-50 shadow-sm'
+          : 'border border-gray-300 bg-white shadow-sm'} {card.hovered && !card.selected
     ? 'ring-2 ring-blue-300'
     : ''} {card.faded && !card.selected ? 'opacity-60' : ''}"
   title="{statement.node.type} · {locationOf(statement)}"
@@ -69,6 +87,11 @@ by double click is a shortcut, the button at the border does the same -->
         >{statement.external
           ? 'outside the analysed code'
           : `${locationOf(statement)} · other file`}</span
+      >
+    {:else if overlay}
+      <span class="text-purple-600 group-[.graph-far]/flow:text-4xl">◆</span>
+      <span class="truncate text-purple-700 group-[.graph-far]/flow:hidden"
+        >{statement.node.label ?? 'Overlay'} · L{statement.startLine}</span
       >
     {:else}
       <span
@@ -88,16 +111,24 @@ by double click is a shortcut, the button at the border does the same -->
     {#each badges as badge (badge.word)}
       <span
         class="rounded px-1 text-[10px] group-[.graph-far]/flow:text-3xl {badge.cls}"
-        title={badge.word}
+        title={badge.title ?? badge.word}
         >{badge.icon}<span class="group-[.graph-far]/flow:hidden"
           >{badges.length === 1 ? ` ${badge.word}` : ''}</span
         ></span
       >
     {/each}
   </div>
-  <div class="mt-1 truncate font-mono text-[10.5px] text-gray-900 group-[.graph-far]/flow:hidden">
-    {statement.code}
-  </div>
+  {#if overlay}
+    <div
+      class="mt-1 truncate text-[12px] font-semibold text-gray-900 group-[.graph-far]/flow:hidden"
+    >
+      {statement.node.name || statement.node.type}
+    </div>
+  {:else}
+    <div class="mt-1 truncate font-mono text-[10.5px] text-gray-900 group-[.graph-far]/flow:hidden">
+      {statement.code}
+    </div>
+  {/if}
   {#if statement.more > 0}
     <!-- Statements beyond the border of the slice -->
     <button
