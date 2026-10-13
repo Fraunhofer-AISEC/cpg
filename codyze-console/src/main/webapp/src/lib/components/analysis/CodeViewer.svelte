@@ -130,7 +130,7 @@
     };
     /** Called on a right click in the code, with the node there and the place on the screen */
     onCodeContextMenu?: (target: { details: NodeDetailsJSON; x: number; y: number }) => void;
-    /** Buttons at the end of the row of the layers, e.g. to open a panel next to the code */
+    /** Buttons in the header next to the summary of the layers, e.g. to open a panel next to it */
     layerActions?: Snippet;
     /** Why asking is not possible right now, e.g. while the agent is busy */
     askDisabledReason?: string | null;
@@ -434,6 +434,11 @@
   }
 
   function handleWindowKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' && layersOpen) {
+      event.preventDefault();
+      layersOpen = false;
+      return;
+    }
     if (!onAsk) return;
     if (event.key === 'Escape' && ask && !askFocused) {
       // Other things that close with Escape (e.g. a panel) leave it to the input then
@@ -634,6 +639,14 @@
     }
   }
 
+  // The summary of the layers above the code and its menu to show or hide them
+  let layersOpen = $state(false);
+  let layersMenu = $state<HTMLElement | null>(null);
+
+  function closeLayersOutside(event: MouseEvent) {
+    if (layersOpen && !layersMenu?.contains(event.target as Node)) layersOpen = false;
+  }
+
   // The dataflow and agent layers need the lanes in the gutter, the findings layer its findings
   const shownLayers = $derived(
     layerInfos.filter(
@@ -642,6 +655,7 @@
         (l.id !== 'findings' || findings !== undefined)
     )
   );
+  const categoryLayers = $derived(shownLayers.filter((l) => l.category));
 
   // The lines of the findings, while their layer is shown (0-based, like the highlighted line)
   const findingLines = $derived(
@@ -865,7 +879,7 @@
 <div class="flex h-full w-full overflow-hidden rounded-[inherit]">
   <!-- Code display -->
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-    <!-- Header: where the file is, and below it the layer toggles -->
+    <!-- Header: where the file is, and at the right what the analysis found in it -->
     <div class="shrink-0 border-b border-gray-200 bg-white">
       <div
         class="flex min-h-[1.875rem] items-center justify-between gap-3 border-b border-gray-100 px-3 py-0.5"
@@ -881,8 +895,14 @@
             >
           {/if}
         </div>
-        {#if headerActions || onClose}
+        {#if annotations || layerActions || headerActions || onClose}
           <div class="flex shrink-0 items-center gap-2">
+            {#if annotations}
+              {@render layerSummaryButton()}
+            {/if}
+            {#if layerActions}
+              {@render layerActions()}
+            {/if}
             {#if headerActions}
               {@render headerActions()}
             {/if}
@@ -907,36 +927,6 @@
           </div>
         {/if}
       </div>
-      {#if annotations}
-        <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
-        <div
-          class="flex h-9 items-center gap-1.5 overflow-x-auto px-3 whitespace-nowrap"
-          role="group"
-          aria-label="Layers"
-        >
-          {#each shownLayers as layer (layer.id)}
-            {@const summary = layerSummary(layer.id)}
-            <button
-              type="button"
-              class="flex h-6 items-center gap-1 rounded-full border px-2 text-[11.5px] {layers
-                .visible[layer.id]
-                ? layer.activeClass
-                : 'border-gray-200 text-gray-400 hover:text-gray-600'}"
-              aria-pressed={layers.visible[layer.id]}
-              title="{summary.title}. Click to {layers.visible[layer.id] ? 'hide' : 'show'}."
-              onclick={() => layers.toggle(layer.id)}
-            >
-              <span>{layer.icon}</span>
-              {layer.label}
-              <span class="tabular-nums opacity-70">{summary.count}</span>
-            </button>
-          {/each}
-          {#if layerActions}
-            <span class="flex-1"></span>
-            {@render layerActions()}
-          {/if}
-        </div>
-      {/if}
     </div>
 
     <div class="relative flex min-h-0 flex-1" bind:this={codeAreaElement}>
@@ -1177,6 +1167,78 @@
   {/if}
 </div>
 
+<!-- What the analysis found in the file, one count per category with its icon in the color of its
+marks. It opens a menu to show or hide the layers, with what each of them shows -->
+{#snippet layerSummaryButton()}
+  <div class="relative" bind:this={layersMenu}>
+    <button
+      type="button"
+      class="flex h-6 items-center gap-2.5 rounded-md px-2 text-[11.5px] text-gray-600 tabular-nums hover:bg-gray-100 {layersOpen
+        ? 'bg-gray-100'
+        : ''}"
+      aria-haspopup="true"
+      aria-expanded={layersOpen}
+      title="What the analysis found in this file. Click to show or hide it in the code"
+      onclick={() => (layersOpen = !layersOpen)}
+    >
+      {#each categoryLayers as layer (layer.id)}
+        <span
+          class="flex items-center gap-1 {layers.visible[layer.id] ? '' : 'opacity-40'}"
+          title={layer.label}
+        >
+          <span class={layer.iconClass} aria-hidden="true">{layer.icon}</span>
+          <span class="sr-only">{layer.label}</span>
+          {layerSummary(layer.id).count}
+        </span>
+      {/each}
+    </button>
+    {#if layersOpen}
+      <div
+        class="absolute top-full right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+        role="group"
+        aria-label="Layers"
+      >
+        {#each shownLayers as layer, i (layer.id)}
+          {@const summary = layerSummary(layer.id)}
+          {@const on = layers.visible[layer.id]}
+          {#if i > 0 && !layer.category && shownLayers[i - 1].category}
+            <div class="mx-2 my-1 border-t border-gray-100"></div>
+          {/if}
+          <!-- A row is the switch of its layer; what the layer shows is its tooltip -->
+          <button
+            type="button"
+            role="switch"
+            aria-checked={on}
+            class="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs text-gray-800 hover:bg-gray-50"
+            title={summary.title}
+            onclick={() => layers.toggle(layer.id)}
+          >
+            <span class="w-3.5 text-center {layer.iconClass}" aria-hidden="true"
+              >{layer.icon}</span
+            >
+            <span class="flex-1">{layer.label}</span>
+            {#if layer.category || summary.count > 0}
+              <span class="text-gray-400 tabular-nums">{summary.count}</span>
+            {/if}
+            <span
+              class="relative h-4 w-7 shrink-0 rounded-full transition-colors {on
+                ? 'bg-blue-600'
+                : 'bg-gray-200'}"
+              aria-hidden="true"
+            >
+              <span
+                class="absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform {on
+                  ? 'translate-x-3'
+                  : ''}"
+              ></span>
+            </span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
 {#if showConceptDialog && conceptTarget}
   <AddConceptDialog
     bind:showDialog={showConceptDialog}
@@ -1187,6 +1249,9 @@
 
 <svelte:window
   onmouseup={handleWindowMouseUp}
-  onmousedown={() => (ask = null)}
+  onmousedown={(e) => {
+    ask = null;
+    closeLayersOutside(e);
+  }}
   onkeydown={handleWindowKeydown}
 />
