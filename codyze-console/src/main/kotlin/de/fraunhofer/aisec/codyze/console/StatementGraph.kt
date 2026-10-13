@@ -55,11 +55,18 @@ enum class GraphNodeKind {
     BRANCH,
     /** Code outside of the function of the slice, in another file or not analysed at all. */
     STUB,
+    /**
+     * A concept or operation that the dependences pass through. Its node is labelled like the
+     * overlays of [NodeDetailsJSON], its code and lines are those of the node it is attached to.
+     */
+    OVERLAY,
 }
 
 enum class GraphEdgeKind {
     DATA,
     CONTROL,
+    /** From the statement of the node an overlay is attached to, to the overlay. */
+    OVERLAY,
 }
 
 /**
@@ -70,7 +77,7 @@ enum class GraphEdgeKind {
  * @property depth The number of hops from the root of the slice.
  * @property more The number of statements further away that are not part of the slice because of
  *   the hop limit, so that the UI can offer to expand it.
- * @property concept Whether a concept or operation is attached to the statement.
+ * @property overlays The concepts and operations attached to the nodes of the statement.
  * @property unresolved Whether the statement has a call whose target is unknown.
  * @property external Whether the statement has a call to code that is not analysed. For a stub: the
  *   code is not part of the analysis at all.
@@ -86,7 +93,7 @@ data class GraphNodeJSON(
     val code: String,
     val depth: Int,
     val more: Int,
-    val concept: Boolean,
+    val overlays: List<NodeRefJSON>,
     val unresolved: Boolean,
     val external: Boolean,
     val warning: Boolean,
@@ -183,6 +190,54 @@ internal fun Node.statementMembers(): List<Node> {
 internal val Node.isBranching: Boolean
     get() = this is IfElse || this is Loop || this is Switch || this is CatchClause
 
+/** Whether this is a concept or an operation, which a graph shows as an overlay. */
+internal val Node.isConceptOverlay: Boolean
+    get() = this is Concept || this is Operation
+
+/**
+ * The concepts and operations attached to the nodes of [statements] that are not part of them, each
+ * with its statement. A graph shows all of them, not only those its dependences reach, so that it
+ * does not depend on the dataflows of an overlay whether it is shown.
+ */
+internal fun overlaysOf(statements: Collection<Node>): Map<Node, Node> {
+    val known = statements.map { it.id }.toSet()
+    val overlays = LinkedHashMap<Node, Node>()
+    for (statement in statements) {
+        if (statement.isConceptOverlay) continue
+        for (member in statement.statementMembers()) {
+            member.overlays
+                .filter { it.isConceptOverlay && it.id !in known }
+                .forEach { overlays.putIfAbsent(it, statement) }
+        }
+    }
+    return overlays
+}
+
+/**
+ * The [edges] of a graph with its overlays linked to the statement of the node they are attached
+ * to, if the statement is part of the graph. The dependences between an overlay and its statement
+ * are left out, the link already shows that they belong together.
+ */
+internal fun attachOverlays(
+    nodes: Collection<Node>,
+    edges: List<GraphEdgeJSON>,
+): List<GraphEdgeJSON> {
+    val ids = nodes.map { it.id.toString() }.toSet()
+    val links =
+        nodes
+            .filter { it.isConceptOverlay }
+            .mapNotNull { overlay ->
+                val statement =
+                    (overlay as OverlayNode).underlyingNode?.enclosingStatement()
+                        ?: return@mapNotNull null
+                val from = statement.id.toString()
+                if (from in ids) from to overlay.id.toString() else null
+            }
+    val linked = links.flatMap { (a, b) -> listOf(a to b, b to a) }.toSet()
+    return edges.filter { (it.from to it.to) !in linked } +
+        links.map { (from, to) -> GraphEdgeJSON(from, to, GraphEdgeKind.OVERLAY, null) }
+}
+
 internal fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON {
     // Stubs are shown as they are, without everything they contain
     val members = if (kind == GraphNodeKind.STUB) listOf(this) else statementMembers()
@@ -197,17 +252,24 @@ internal fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): Graph
             this is Function -> startLine
             else -> location?.region?.endLine ?: startLine
         }
+    val overlay = kind == GraphNodeKind.OVERLAY
     return GraphNodeJSON(
         id = id.toString(),
         kind = kind,
-        node = toRefJSON(),
+        node = if (overlay) toOverlayRefJSON() else toRefJSON(),
         startLine = startLine,
         endLine = maxOf(endLine, startLine),
         // Code that is not analysed, e.g. a function that is not declared, has no code but a name
         code = toRefJSON().code.ifEmpty { name.localName },
         depth = depth,
         more = more,
-        concept = members.any { m -> m.overlays.any { it is Concept || it is Operation } },
+        overlays =
+            if (overlay) emptyList()
+            else
+                members
+                    .flatMap { it.overlays }
+                    .filter { it.isConceptOverlay }
+                    .map { it.toOverlayRefJSON() },
         unresolved = statuses.any { it == CallStatus.UNRESOLVED },
         external =
             if (kind == GraphNodeKind.STUB) isInferred || location == null
@@ -264,6 +326,7 @@ fun pathsGraph(paths: List<List<Node>>, kind: String): GraphSliceJSON {
     }
     val root = paths.firstOrNull()?.lastOrNull()
     val rootStatement = root?.let { if (it.location == null) it else it.enclosingStatement() }
+    val overlays = overlaysOf(statements.values)
     return GraphSliceJSON(
         root = rootStatement?.id?.toString() ?: "",
         direction = SliceDirection.BACKWARD,
@@ -273,13 +336,17 @@ fun pathsGraph(paths: List<List<Node>>, kind: String): GraphSliceJSON {
             statements.values.map {
                 val nodeKind =
                     when {
+                        it.isConceptOverlay -> GraphNodeKind.OVERLAY
                         it.location == null || it.isInferred -> GraphNodeKind.STUB
                         it.isBranching -> GraphNodeKind.BRANCH
                         else -> GraphNodeKind.STATEMENT
                     }
                 it.toGraphNode(nodeKind, depths.getValue(it.id), 0)
-            },
-        edges = edges.values.toList(),
+            } +
+                overlays.map { (overlay, statement) ->
+                    overlay.toGraphNode(GraphNodeKind.OVERLAY, depths.getValue(statement.id), 0)
+                },
+        edges = attachOverlays(statements.values + overlays.keys, edges.values.toList()),
         truncated = false,
     )
 }

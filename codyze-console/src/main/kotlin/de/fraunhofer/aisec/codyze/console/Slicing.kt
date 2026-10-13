@@ -274,14 +274,27 @@ fun slice(
     interprocedural: Boolean = true,
 ): GraphSliceJSON {
     val collector = SliceCollector(root, direction, hops, graph, interprocedural)
+    val overlays = overlaysOf(collector.statements.values)
     val nodes =
         collector.statements.values.map {
             it.toGraphNode(
-                if (it.isBranching) GraphNodeKind.BRANCH else GraphNodeKind.STATEMENT,
+                when {
+                    it.isConceptOverlay -> GraphNodeKind.OVERLAY
+                    it.isBranching -> GraphNodeKind.BRANCH
+                    else -> GraphNodeKind.STATEMENT
+                },
                 collector.depths.getValue(it.id),
                 collector.more[it.id] ?: 0,
             )
-        } + collector.stubs.values.map { it.toGraphNode(GraphNodeKind.STUB, hops + 1, 0) }
+        } +
+            overlays.map { (overlay, statement) ->
+                overlay.toGraphNode(
+                    GraphNodeKind.OVERLAY,
+                    collector.depths.getValue(statement.id),
+                    0,
+                )
+            } +
+            collector.stubs.values.map { it.toGraphNode(GraphNodeKind.STUB, hops + 1, 0) }
     return GraphSliceJSON(
         root = collector.rootStatement.id.toString(),
         direction = direction,
@@ -289,9 +302,12 @@ fun slice(
         function = collector.function?.toRefJSON(),
         nodes = nodes,
         edges =
-            collector.dependences.values.map {
-                GraphEdgeJSON(it.from.id.toString(), it.to.id.toString(), it.kind, it.label)
-            },
+            attachOverlays(
+                collector.statements.values + overlays.keys + collector.stubs.values,
+                collector.dependences.values.map {
+                    GraphEdgeJSON(it.from.id.toString(), it.to.id.toString(), it.kind, it.label)
+                },
+            ),
         truncated = collector.truncated,
     )
 }
