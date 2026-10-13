@@ -17,13 +17,12 @@
 
   let { annotations, fileName, selectionLine, onSelect }: Props = $props();
 
-  type Column = 'callers' | 'external' | 'unresolved' | 'concepts';
+  type Column = 'callers' | 'external' | 'concepts';
   type SortKey = 'position' | 'name' | Column;
 
   const columns: { id: Column; label: string; title: string; bar: string }[] = [
     { id: 'callers', label: '←', title: 'Callers', bar: 'bg-gray-400' },
     { id: 'external', label: '↗', title: 'Calls to external code', bar: 'bg-orange-500' },
-    { id: 'unresolved', label: '⚠', title: 'Unresolved calls', bar: 'bg-red-500' },
     { id: 'concepts', label: '◆', title: 'Concepts and operations', bar: 'bg-purple-500' }
   ];
 
@@ -39,7 +38,6 @@
       values: {
         callers: fn.callers,
         external: fn.externalCalls,
-        unresolved: fn.unresolvedCalls,
         concepts: conceptsInFunction(fn, annotations)
       }
     }));
@@ -47,7 +45,7 @@
 
   // The largest value per column, which is a full bar
   const maxima = $derived.by(() => {
-    const max: Record<Column, number> = { callers: 0, external: 0, unresolved: 0, concepts: 0 };
+    const max: Record<Column, number> = { callers: 0, external: 0, concepts: 0 };
     for (const row of rows) {
       for (const column of columns)
         max[column.id] = Math.max(max[column.id], row.values[column.id]);

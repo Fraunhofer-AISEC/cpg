@@ -6,8 +6,8 @@
 
   /**
    * Draws the annotations of a file on top of the code: the key figures of each function at the end
-   * of its first line, and, depending on the visible layers, markers under external and unresolved
-   * calls and a purple ◆ for the concepts and operations of a line in the gutter.
+   * of its first line, and, depending on the visible layers, markers under calls to external code
+   * and a purple ◆ for the concepts and operations of a line in the gutter.
    */
   interface Props {
     annotations: FileAnnotationsJSON;
@@ -91,15 +91,6 @@
         title: `Show the calls in ${fn.function.name}, ${fn.externalCalls} of them to external code`
       });
     }
-    if (fn.unresolvedCalls > 0) {
-      parts.push({
-        label: `⚠ ${fn.unresolvedCalls} unresolved`,
-        count: fn.unresolvedCalls,
-        section: 'callees',
-        filter: 'UNRESOLVED',
-        title: `Show the calls in ${fn.function.name}, ${fn.unresolvedCalls} of them unresolved`
-      });
-    }
     return parts;
   }
 
@@ -113,10 +104,7 @@
 
   const markedCalls = $derived(
     annotations.calls.filter(
-      (c) =>
-        c.startLine === c.endLine &&
-        ((c.status === 'EXTERNAL' && layers.external) ||
-          (c.status === 'UNRESOLVED' && layers.uncertain))
+      (c) => c.startLine === c.endLine && c.status === 'EXTERNAL' && layers.external
     )
   );
 </script>
@@ -154,7 +142,7 @@
     {/if}
   {/each}
 
-  <!-- Markers under calls to external code (dashed) and unresolved calls (dotted) -->
+  <!-- Markers under calls to external code -->
   {#each markedCalls as call (call.id)}
     {#if isVisible(call.startLine, call.startLine)}
       <div

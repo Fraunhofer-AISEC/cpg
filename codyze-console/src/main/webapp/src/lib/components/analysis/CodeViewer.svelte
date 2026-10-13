@@ -597,7 +597,6 @@
       functions: annotations.functions.length,
       external: external.length,
       topExternal,
-      unresolved: annotations.calls.filter((c) => c.status === 'UNRESOLVED').length,
       concepts: annotations.concepts.length
     };
   });
@@ -616,8 +615,6 @@
             info.description +
             (fileSummary.topExternal.length ? ` (${fileSummary.topExternal.join(', ')})` : '')
         };
-      case 'uncertain':
-        return { count: fileSummary.unresolved, title: info.description };
       case 'dataflow': {
         const count = inspected ? inspected.dataflowFrom.length + inspected.dataflowTo.length : 0;
         return {
@@ -802,7 +799,7 @@
     const end = offsetLeft + charWidth * (lineColumns(line) + 3);
     const fn = annotations?.functions.find((f) => f.function.startLine === line);
     if (!fn) return end;
-    const lens = `${fn.callers} callers · calls ${fn.callees} · ${fn.externalCalls} external · ${fn.unresolvedCalls} unresolved`;
+    const lens = `${fn.callers} callers · calls ${fn.callees} · ${fn.externalCalls} external`;
     return end + charWidth + lens.length * 0.42;
   }
 
