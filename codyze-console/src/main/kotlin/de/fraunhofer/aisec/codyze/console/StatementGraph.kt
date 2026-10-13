@@ -137,7 +137,8 @@ private fun Node.isBodyOf(parent: Node): Boolean =
  * The statement a node belongs to: the outermost expression that is not part of another statement.
  * The header of an if or a loop (its condition, the initializer and iteration of a for loop)
  * belongs to it, while its body consists of statements of their own. Likewise, the parameters of a
- * function belong to its header.
+ * function belong to its header, and the variables of a declaration with their initializers belong
+ * to the declaration.
  */
 internal fun Node.enclosingStatement(): Node {
     if (this is Parameter)
@@ -147,10 +148,24 @@ internal fun Node.enclosingStatement(): Node {
     var current: Node = this
     while (true) {
         val parent = current.astParent ?: return current
+        if (parent.isDeclaredInStatement) {
+            current = parent
+            continue
+        }
         if (parent !is Expression || parent is Block || current.isBodyOf(parent)) return current
         current = parent
     }
 }
+
+/**
+ * Whether this is a variable declared by a statement, e.g. by a declaration statement. A variable
+ * is no expression, so it would otherwise end the search for the statement of its initializer.
+ */
+private val Node.isDeclaredInStatement: Boolean
+    get() =
+        this is ValueDeclaration &&
+            this !is Function &&
+            astParent.let { it is Expression && it !is Block }
 
 /** The nodes of a statement, without the statements in its body or in nested blocks. */
 internal fun Node.statementMembers(): List<Node> {
