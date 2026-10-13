@@ -73,16 +73,29 @@ private val Node.isOutsideOfAnalysis: Boolean
     get() = location == null || isInferred || sliceFunction?.isInferred == true
 
 /**
- * A dependence between two statements, before it is turned into JSON. Nodes are compared by their
- * ID, not structurally, see [key].
+ * A dependence between two statements, before it is turned into JSON, with the nodes of the
+ * statements it connects ([fromPart], [toPart]). Nodes are compared by their ID, not structurally,
+ * see [key].
  */
 private class StatementDependence(
     val from: Node,
     val to: Node,
     val kind: GraphEdgeKind,
     val label: String?,
+    val fromPart: Node,
+    val toPart: Node,
 ) {
     val key = listOf(from.id, to.id, kind, label)
+
+    fun toJSON() =
+        GraphEdgeJSON(
+            from.id.toString(),
+            to.id.toString(),
+            kind,
+            label,
+            fromPart.asPartOf(from),
+            toPart.asPartOf(to),
+        )
 }
 
 /** A statement of the slice with the context of the analysis it was reached in, e.g. its calls. */
@@ -189,7 +202,7 @@ private class SliceCollector(
         val from = start.enclosingStatement()
         val to = end.enclosingStatement()
         if (from === to || from is Block || to is Block) return null
-        return StatementDependence(from, to, kind, label)
+        return StatementDependence(from, to, kind, label, start, end)
     }
 
     private fun labelOf(edge: Edge<Node>): String? =
@@ -304,9 +317,7 @@ fun slice(
         edges =
             attachOverlays(
                 collector.statements.values + overlays.keys + collector.stubs.values,
-                collector.dependences.values.map {
-                    GraphEdgeJSON(it.from.id.toString(), it.to.id.toString(), it.kind, it.label)
-                },
+                collector.dependences.values.map { it.toJSON() },
             ),
         truncated = collector.truncated,
     )
