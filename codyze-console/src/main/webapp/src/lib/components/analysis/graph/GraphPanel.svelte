@@ -72,12 +72,6 @@
       );
       return notes;
     }
-    if (node.unresolved) {
-      notes.push({
-        tone: 'red',
-        text: 'A call in this statement could not be resolved: dependences through it may be incomplete.'
-      });
-    }
     if (node.warning) {
       notes.push({ tone: 'red', text: 'The analysis could not handle some of this code.' });
     }

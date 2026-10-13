@@ -45,7 +45,6 @@
         title: statement.overlays.map((o) => `${o.label ?? ''} ${o.name || o.type}`).join('\n'),
         cls: 'text-purple-600'
       },
-      statement.unresolved && { icon: '!', word: 'unresolved', cls: 'text-amber-600' },
       statement.warning && { icon: '⚠', word: 'warning', cls: 'text-amber-600' },
       statement.external && !stub && { icon: '↗', word: 'external', cls: 'text-amber-600' }
     ].filter((b): b is { icon: string; word: string; title?: string; cls: string } => !!b)
