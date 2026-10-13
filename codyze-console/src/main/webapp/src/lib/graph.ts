@@ -15,12 +15,14 @@ export type DependenceGraph = 'PDG' | 'DFG' | 'CDG';
 
 /** Whether a slice follows dependences into other functions (interprocedural) or not. */
 export type SliceScope = 'interprocedural' | 'intraprocedural';
-export type GraphNodeKind = 'STATEMENT' | 'BRANCH' | 'STUB';
+/** An overlay is a concept or operation the dependences pass through, see [GraphNode.node]. */
+export type GraphNodeKind = 'STATEMENT' | 'BRANCH' | 'STUB' | 'OVERLAY';
 
 export interface GraphNode {
   /** The ID of the statement, which is also its node ID */
   id: string;
   kind: GraphNodeKind;
+  /** For an overlay: the concept or operation, labelled `Concept` or `Operation` */
   node: NodeRefJSON;
   startLine: number;
   endLine: number;
@@ -29,7 +31,8 @@ export interface GraphNode {
   depth: number;
   /** The statements further away that are not part of the slice, to offer expanding it */
   more: number;
-  concept: boolean;
+  /** The concepts and operations attached to the nodes of the statement */
+  overlays: NodeRefJSON[];
   unresolved: boolean;
   /** A call to code that is not analysed; for a stub: the code is not part of the analysis */
   external: boolean;
@@ -39,7 +42,8 @@ export interface GraphNode {
 export interface GraphEdge {
   from: string;
   to: string;
-  kind: 'DATA' | 'CONTROL';
+  /** An overlay edge links an overlay to the statement of the node it is attached to */
+  kind: 'DATA' | 'CONTROL' | 'OVERLAY';
   /** The variable of a data dependence, or `true`/`false` for a control dependence */
   label: string | null;
 }

@@ -102,6 +102,17 @@ data class NodeDetailsJSON(
     val warnings: List<String>,
 )
 
+/** An overlay of a node as a reference, labelled `Operation` or `Concept` if it is one. */
+fun Node.toOverlayRefJSON(): NodeRefJSON =
+    toRefJSON(
+        label =
+            when (this) {
+                is Operation -> "Operation"
+                is Concept -> "Concept"
+                else -> null
+            }
+    )
+
 fun Node.toRefJSON(label: String? = null): NodeRefJSON {
     val firstLine = (code ?: "").lineSequence().firstOrNull()?.trim() ?: ""
     return NodeRefJSON(
@@ -161,17 +172,7 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
         value = constantValue(),
         isImplicit = isImplicit,
         enclosingFunction = (this as? Function ?: firstParentOrNull<Function>())?.toRefJSON(),
-        overlays =
-            overlays.map {
-                it.toRefJSON(
-                    label =
-                        when (it) {
-                            is Operation -> "Operation"
-                            is Concept -> "Concept"
-                            else -> null
-                        }
-                )
-            },
+        overlays = overlays.map { it.toOverlayRefJSON() },
         callTargets = callTargets.limited { it.toRefJSON() },
         callers = (this as? Function)?.calledBy.orEmpty().limited { it.toRefJSON() },
         callees = (this as? Function)?.body?.calls.orEmpty().limited { it.toRefJSON() },

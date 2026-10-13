@@ -6,7 +6,7 @@
     points: Point[];
     label: Point | null;
     text: string | null;
-    kind: 'DATA' | 'CONTROL';
+    kind: 'DATA' | 'CONTROL' | 'OVERLAY';
     /** Shown in the selection color, because it belongs to the selected statement */
     active: boolean;
     /** Shown in the background, because it does not belong to the selected statement */
@@ -26,18 +26,26 @@
   const path = $derived(roundedPath(edge.points));
 
   // Data dependences are solid and dark, control dependences dashed and light, and the selected
-  // statement's edges are blue and thicker
+  // statement's edges are blue and thicker. The link of an overlay to its statement is dotted
   const stroke = $derived(edgeColor(edge.kind, edge.active, edge.marked));
-  const width = $derived(edge.active || edge.marked ? 3 : 2);
+  const width = $derived(edge.active || edge.marked ? 3 : edge.kind === 'OVERLAY' ? 2.5 : 2);
+  const dashes: Record<GraphEdgeData['kind'], string> = {
+    DATA: '',
+    CONTROL: 'stroke-dasharray: 5 4;',
+    OVERLAY: 'stroke-dasharray: 0.5 5; stroke-linecap: round;'
+  };
+  // The link of an overlay stays visible in the background, it is short and thin anyway
+  const fadedOpacity = $derived(edge.kind === 'OVERLAY' ? 0.6 : 0.25);
 </script>
 
 <BaseEdge
   {id}
   {path}
   {markerEnd}
-  style="stroke: {stroke}; stroke-width: {width}px; {edge.kind === 'CONTROL'
-    ? 'stroke-dasharray: 5 4;'
-    : ''} opacity: {edge.faded && !edge.marked ? 0.25 : 1}; transition: opacity 150ms;"
+  style="stroke: {stroke}; stroke-width: {width}px; {dashes[edge.kind]} opacity: {edge.faded &&
+  !edge.marked
+    ? fadedOpacity
+    : 1}; transition: opacity 150ms;"
   interactionWidth={0}
 />
 {#if edge.text && edge.label}
