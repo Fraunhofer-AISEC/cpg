@@ -6,13 +6,12 @@
   import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
   import NodeInspector from './inspector/NodeInspector.svelte';
   import CodeAnnotations from './CodeAnnotations.svelte';
-  import OverviewRuler, { type RulerMark } from './OverviewRuler.svelte';
   import HoverCard from './HoverCard.svelte';
   import AskPopup from './AskPopup.svelte';
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
-  import { describeConcept, getAnnotations } from '$lib/annotations';
+  import { getAnnotations } from '$lib/annotations';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
@@ -120,8 +119,8 @@
      */
     onAsk?: (question: string, selection: CodeSelection) => void;
     /**
-     * A slice of the program dependence graph shown in the code, as tinted lines and marks in the
-     * ruler. [onHover] is called with the statement under the mouse
+     * A slice of the program dependence graph shown in the code, as tinted lines. [onHover] is
+     * called with the statement under the mouse
      */
     slice?: {
       ranges: { id: string; first: number; last: number; label: string }[];
@@ -659,89 +658,6 @@
       : []
   );
 
-  // The marks of the visible layers in the overview ruler, one lane per layer. The steps of the
-  // path and the dataflows of the inspected node share the last lane, with the steps on top
-  const rulerMarks = $derived.by((): RulerMark[] => {
-    if (!annotations) return [];
-    const color = (layer: Layer) => layerInfos.find((l) => l.id === layer)!.color;
-    const marks: RulerMark[] = [];
-    if (lanes) {
-      for (const step of agentMarkers) {
-        marks.push({
-          line: step.line,
-          lane: 4,
-          color: color('agent'),
-          label: `${step.index + 1}. ${step.title}`,
-          faded: step.faded
-        });
-      }
-      for (const step of pathMarkers) {
-        marks.push({ line: step.line, lane: 3, color: 'rgb(15, 23, 42)', label: step.title });
-      }
-      if (layers.visible.dataflow && inspected?.node.translationUnitId === translationUnit.id) {
-        const dataflows = [
-          ...inspected.dataflowFrom.map((ref) => ({ ref, label: 'comes from' })),
-          ...inspected.dataflowTo.map((ref) => ({ ref, label: 'goes to' }))
-        ];
-        for (const { ref, label } of dataflows) {
-          if (ref.translationUnitId !== translationUnit.id || ref.startLine < 1) continue;
-          marks.push({
-            line: ref.startLine,
-            lane: 3,
-            color: color('dataflow'),
-            label: `${label} ${ref.code || ref.name}`
-          });
-        }
-      }
-    }
-    for (const range of slice?.ranges ?? []) {
-      marks.push({
-        line: range.first,
-        lane: 6,
-        color: range.id === slice?.selectedId ? '#2563eb' : '#93b4ea',
-        label: range.label
-      });
-    }
-    // While a path or the agent's thread is shown, the other layers step back
-    const faded = pathActive || threadActive;
-    if (layers.visible.findings) {
-      for (const f of findings ?? []) {
-        marks.push({ line: f.startLine, lane: 5, color: color('findings'), label: f.label });
-      }
-    }
-    if (layers.visible.concepts) {
-      for (const c of annotations.concepts) {
-        marks.push({
-          line: c.line,
-          lane: 0,
-          color: color('concepts'),
-          label: describeConcept(c),
-          faded
-        });
-      }
-    }
-    for (const call of annotations.calls) {
-      if (call.status === 'EXTERNAL' && layers.visible.external) {
-        marks.push({
-          line: call.startLine,
-          lane: 1,
-          color: color('external'),
-          label: `external call ${call.name}()`,
-          faded
-        });
-      } else if (call.status === 'UNRESOLVED' && layers.visible.uncertain) {
-        marks.push({
-          line: call.startLine,
-          lane: 2,
-          color: color('uncertain'),
-          label: `unresolved call ${call.name}()`,
-          faded
-        });
-      }
-    }
-    return marks;
-  });
-
   // The lines of the inspected node, if it is in this file
   const selectedLines = $derived.by(() => {
     const node = inspected?.node;
@@ -850,7 +766,7 @@
   $effect(() => {
     if (codeContainerElement) return codeViewport.track(codeContainerElement);
   });
-  // The lines that are actually visible (1-based, inclusive), for the overview ruler
+  // The lines that are actually visible (1-based, inclusive)
   const viewportLines = $derived.by(() => {
     const rem = remInPx();
     const first = (codeViewport.scrollTop / rem - offsetTop) / lineHeight;
@@ -1207,18 +1123,6 @@
         </div>
       {/if}
 
-      {#if annotations}
-        <OverviewRuler
-          marks={rulerMarks}
-          {totalLines}
-          lanes={lanes ? (slice ? 7 : 6) : 3}
-          viewport={viewportLines}
-          selectionLine={inspected?.node.translationUnitId === translationUnit.id
-            ? inspected.node.startLine
-            : undefined}
-          onScrollTo={(line) => scrollToLine(line)}
-        />
-      {/if}
     </div>
   </div>
 
