@@ -102,7 +102,7 @@ data class NodeDetailsJSON(
     val warnings: List<String>,
 )
 
-/** An overlay of a node as a reference, labelled `Operation` or `Concept` if it is one. */
+/** A node as a reference, labelled `Operation` or `Concept` if it is one of them. */
 fun Node.toOverlayRefJSON(): NodeRefJSON =
     toRefJSON(
         label =
@@ -167,7 +167,7 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
     }
 
     return NodeDetailsJSON(
-        node = toRefJSON(),
+        node = toOverlayRefJSON(),
         typeName = (this as? HasType)?.type?.name?.toString(),
         value = constantValue(),
         isImplicit = isImplicit,
