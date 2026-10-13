@@ -7,37 +7,40 @@ export interface LayerInfo {
   label: string;
   /** What the layer shows, e.g. as a tooltip */
   description: string;
-  /** The color of the layer's marks, as a CSS color */
-  color: string;
-  /** The classes of the layer's toggle while it is shown */
-  activeClass: string;
+  /** The class of the icon, in the color of the layer's marks in the code */
+  iconClass: string;
+  /**
+   * What the analysis found in a file, counted in the summary above the code. The other layers
+   * show what was asked for, e.g. the dataflows of the selection
+   */
+  category: boolean;
 }
 
-/** The layers in the order of their toggles. Each one has its own semantic color. */
+/** The layers in the order of their toggles: first the categories, then the others. */
 export const layerInfos: LayerInfo[] = [
   {
     id: 'concepts',
     icon: '◆',
     label: 'Concepts',
     description: 'Concepts and operations, as icons in the gutter',
-    color: 'rgb(147, 51, 234)',
-    activeClass: 'border-purple-300 bg-purple-50 text-purple-700'
+    iconClass: 'text-purple-600',
+    category: true
   },
   {
     id: 'external',
     icon: '↗',
     label: 'External',
     description: 'Calls to code that is not part of the analysis, underlined in orange',
-    color: 'rgb(234, 88, 12)',
-    activeClass: 'border-orange-300 bg-orange-50 text-orange-700'
+    iconClass: 'text-orange-600',
+    category: true
   },
   {
     id: 'findings',
     icon: '▲',
     label: 'Findings',
     description: 'Places that violate a requirement of the project, as yellow lines',
-    color: 'rgb(217, 119, 6)',
-    activeClass: 'border-amber-300 bg-amber-50 text-amber-700'
+    iconClass: 'text-amber-600',
+    category: true
   },
   {
     id: 'dataflow',
@@ -45,8 +48,8 @@ export const layerInfos: LayerInfo[] = [
     label: 'Dataflow',
     description:
       'The direct dataflows of the selection, as arcs next to the line numbers: arrows point to where the value goes',
-    color: 'rgb(71, 85, 105)',
-    activeClass: 'border-slate-300 bg-slate-100 text-slate-700'
+    iconClass: 'text-slate-500',
+    category: false
   },
   {
     id: 'agent',
@@ -54,8 +57,8 @@ export const layerInfos: LayerInfo[] = [
     label: 'Agent',
     description:
       'The evidence of the active question to the agent, as numbered markers of its steps in the gutter: solid if a tool returned the node, dashed if the answer only cites it',
-    color: 'rgb(15, 23, 42)',
-    activeClass: 'border-slate-400 bg-slate-100 text-slate-800'
+    iconClass: 'text-slate-800',
+    category: false
   }
 ];
 
