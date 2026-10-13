@@ -16,8 +16,6 @@
     otherFile: string | null;
     /** The overlays of the statement are nodes of their own in the graph */
     overlaysShown: boolean;
-    /** Where the parts of the statement the inspected node has edges with are in its code */
-    marks: { start: number; end: number }[];
     onExpand: (id: string) => void;
   }
 </script>
@@ -32,25 +30,6 @@
   const stub = $derived(statement.kind === 'STUB');
   const branch = $derived(statement.kind === 'BRANCH');
   const overlay = $derived(statement.kind === 'OVERLAY');
-
-  // The code in pieces, with the marked parts. A card shows about the first 21 characters, so a
-  // long line starts shortly before its first mark
-  const visibleChars = 21;
-  const code = $derived.by(() => {
-    const text = statement.code;
-    const marks = [...card.marks].sort((a, b) => a.start - b.start);
-    const from = marks[0] && marks[0].end > visibleChars ? Math.max(marks[0].start - 4, 0) : 0;
-    const pieces: { text: string; marked: boolean }[] = [];
-    let at = from;
-    for (const mark of marks) {
-      if (mark.start < at) continue;
-      pieces.push({ text: text.slice(at, mark.start), marked: false });
-      pieces.push({ text: text.slice(mark.start, mark.end), marked: true });
-      at = mark.end;
-    }
-    pieces.push({ text: text.slice(at), marked: false });
-    return { cut: from > 0, pieces };
-  });
 
   // The concepts and operations of the statement by name, unless they are nodes of their own
   const overlayNames = $derived(
@@ -147,10 +126,7 @@ graph. Expanding by double click is a shortcut, the button at the border does th
     </div>
   {:else}
     <div class="mt-1 truncate font-mono text-[10.5px] text-gray-900 group-[.graph-far]/flow:hidden">
-      {#if code.cut}…{/if}{#each code.pieces as piece, i (i)}{#if piece.marked}<mark
-            class="rounded-sm bg-blue-100 px-px text-blue-900 ring-1 ring-blue-300"
-            >{piece.text}</mark
-          >{:else}{piece.text}{/if}{/each}
+      {statement.code}
     </div>
   {/if}
   {#if statement.more > 0}

@@ -47,20 +47,9 @@ export interface GraphEdge {
   /** The variable of a data dependence, or `true`/`false` for a control dependence */
   label: string | null;
   /** The node of the `from` statement the dependence starts at, if it is not the statement */
-  fromPart?: GraphPart | null;
+  fromPart?: NodeRefJSON | null;
   /** The node of the `to` statement the dependence ends at, if it is not the statement */
-  toPart?: GraphPart | null;
-}
-
-/**
- * A node of a statement at an end of a dependence, e.g. an argument of a call, with where it is in
- * the code of the statement. Of a named node only its name is meant.
- */
-export interface GraphPart {
-  node: NodeRefJSON;
-  /** The offset in the code of the statement, null if it is not part of it */
-  start: number | null;
-  end: number | null;
+  toPart?: NodeRefJSON | null;
 }
 
 export interface GraphSlice {
