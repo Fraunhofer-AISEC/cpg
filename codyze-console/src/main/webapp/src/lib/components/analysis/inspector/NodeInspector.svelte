@@ -106,7 +106,9 @@
       <div class="flex items-center gap-1.5">
         <span
           class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-gray-700"
-          >{details.node.type}</span
+          >{details.node.label === 'Concept' || details.node.label === 'Operation'
+            ? details.node.label
+            : details.node.type}</span
         >
         <span class="truncate text-sm font-semibold text-gray-900">{details.node.name || '—'}</span>
       </div>
