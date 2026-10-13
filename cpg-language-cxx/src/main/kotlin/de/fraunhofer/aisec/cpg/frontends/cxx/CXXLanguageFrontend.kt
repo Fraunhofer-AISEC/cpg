@@ -95,10 +95,16 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
     var dialect: AbstractCLikeLanguage? = null
 
     /**
-     * Implements an [IncludeFileContentProvider] which features an inclusion/exclusion list for
-     * header files.
+     * Creates an [IncludeFileContentProvider] which features an inclusion/exclusion list for header
+     * files.
+     *
+     * A new provider must be created for every [parse] call and must not be stored in a field: CDT
+     * remembers include-guarded inclusions (`fPragmaOnce`) in the provider, and these reference the
+     * whole CDT translation unit. Since frontends are kept alive until all files are parsed, a
+     * stored provider would keep the complete CDT AST (including all headers) of every file in
+     * memory.
      */
-    private val includeFileContentProvider: IncludeFileContentProvider =
+    private fun newIncludeFileContentProvider(): IncludeFileContentProvider =
         object : InternalFileContentProvider() {
             var cache = mutableMapOf<String, FileContent>()
 
@@ -255,7 +261,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                 this.dialect?.getASTTranslationUnit(
                     content,
                     scannerInfo,
-                    includeFileContentProvider,
+                    newIncludeFileContentProvider(),
                     null,
                     opts,
                     log,
