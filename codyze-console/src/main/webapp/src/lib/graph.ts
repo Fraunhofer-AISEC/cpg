@@ -99,11 +99,15 @@ export function getGraphSlice(
 }
 
 /** How many statements are in the slice of a node in each direction. */
-export function getSliceCounts(nodeId: string, hops: number): Promise<SliceCounts | null> {
-  const key = `${nodeId}/${hops}`;
+export function getSliceCounts(
+  nodeId: string,
+  hops: number,
+  scope: SliceScope = 'interprocedural'
+): Promise<SliceCounts | null> {
+  const key = `${nodeId}/${hops}/${scope}`;
   let request = countsCache.get(key);
   if (!request) {
-    request = fetchJson<SliceCounts>(`/api/node/${nodeId}/pdg-counts?hops=${hops}`);
+    request = fetchJson<SliceCounts>(`/api/node/${nodeId}/pdg-counts?hops=${hops}&scope=${scope}`);
     request.catch(() => countsCache.delete(key));
     countsCache.set(key, request);
   }
@@ -155,56 +159,62 @@ export function locationOf(node: GraphNode): string {
   return `${node.node.fileName ?? ''}:${node.startLine}`;
 }
 
+/** A dependence of a statement, grouped by what it is on, e.g. the variable `buf`. */
+export interface DependenceGroup {
+  kind: 'DATA' | 'CONTROL';
+  /** The variable of data dependences, or `true`/`false` of control dependences */
+  label: string | null;
+  /** The statements at the other end, with where they are, e.g. `L12` or `crypto.c:3` */
+  statements: { node: GraphNode; place: string }[];
+}
+
 /**
- * The dependences of a statement in words, e.g. `Data ← lines 10, 12 (buf) · line 14 (len)`.
- * Lines of the file of the root are given by their number, others by their file.
+ * The dependences of a statement in the slice: where it comes from (`from`) and what depends on it
+ * (`to`), each grouped by what it is on. Lines of the file of the root are given by their number,
+ * others with their file.
  */
-export function describeDependences(slice: GraphSlice, id: string): string {
+export function dependencesOf(
+  slice: GraphSlice,
+  id: string
+): { from: DependenceGroup[]; to: DependenceGroup[] } {
   const byId = new Map(slice.nodes.map((n) => [n.id, n]));
   const rootFile = byId.get(slice.root)?.node.fileName;
-  const where = (n: GraphNode) =>
+  const place = (n: GraphNode) =>
     n.kind === 'STUB' || n.node.fileName !== rootFile
       ? locationOf(n)
       : n.startLine > 0
-        ? `${n.startLine}`
+        ? `L${n.startLine}`
         : '?';
 
-  // Groups the statements by what the dependence is on, e.g. the variable
   const group = (edges: GraphEdge[], end: 'from' | 'to') => {
-    const groups = new Map<string, string[]>();
+    const groups = new Map<string, DependenceGroup>();
     for (const edge of edges) {
+      if (edge.kind === 'OVERLAY') continue;
       const node = byId.get(edge[end]);
       if (!node) continue;
-      const label = edge.label ?? '';
-      const lines = groups.get(label) ?? [];
-      if (!lines.includes(where(node))) lines.push(where(node));
-      groups.set(label, lines);
+      const key = `${edge.kind}:${edge.label ?? ''}`;
+      const entry = groups.get(key) ?? { kind: edge.kind, label: edge.label, statements: [] };
+      if (!entry.statements.some((s) => s.node.id === node.id)) {
+        entry.statements.push({ node, place: place(node) });
+      }
+      groups.set(key, entry);
     }
-    return [...groups].map(([label, lines]) => {
-      const numbers = lines.every((l) => /^\d+$/.test(l));
-      const text = `${numbers ? (lines.length === 1 ? 'line' : 'lines') : ''} ${lines.join(', ')}`;
-      return `${text.trim()}${label ? ` (${label})` : ''}`;
-    });
+    // Data before control
+    return [...groups.values()].sort((a, b) =>
+      a.kind === b.kind ? 0 : a.kind === 'DATA' ? -1 : 1
+    );
   };
 
-  const parts: string[] = [];
-  const kinds: [GraphEdge['kind'], string][] = [
-    ['DATA', 'Data'],
-    ['CONTROL', 'Control']
-  ];
-  for (const [kind, name] of kinds) {
-    const incoming = group(
-      slice.edges.filter((e) => e.kind === kind && e.to === id),
+  return {
+    from: group(
+      slice.edges.filter((e) => e.to === id),
       'from'
-    );
-    const outgoing = group(
-      slice.edges.filter((e) => e.kind === kind && e.from === id),
+    ),
+    to: group(
+      slice.edges.filter((e) => e.from === id),
       'to'
-    );
-    if (incoming.length) parts.push(`${name} ← ${incoming.join(' · ')}`);
-    if (outgoing.length) parts.push(`${name} → ${outgoing.join(' · ')}`);
-  }
-  return parts.join(' · ') || 'No dependences in this slice';
+    )
+  };
 }
 
 /**
