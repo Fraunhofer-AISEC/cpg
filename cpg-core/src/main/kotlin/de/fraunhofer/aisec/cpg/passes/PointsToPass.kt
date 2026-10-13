@@ -3752,21 +3752,23 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                         UnknownMemoryValue(newName)
                     }
                 val newPair = Pair(newEntry, false)
-                this.declarationsState.computeIfAbsent(node) {
-                    TripleLattice.Element(
-                        PowersetLattice.Element(node),
-                        PowersetLattice.Element(),
-                        PowersetLattice.Element(),
-                    )
-                }
-
-                val newElements = this.declarationsState[node]?.second
+                // Use computeIfAbsent's own result instead of a separate, subsequent lookup: it is
+                // the only reference guaranteed to be private (not shared with another state), and
+                // a second lookup could race with a concurrent duplicate() of this map.
+                val newElements =
+                    this.declarationsState
+                        .computeIfAbsent(node) {
+                            TripleLattice.Element(
+                                PowersetLattice.Element(node),
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                            )
+                        }
+                        .second
                 if (
-                    newElements?.none {
-                        it.first === newPair.first && it.second == newPair.second
-                    } != false
+                    newElements.none { it.first === newPair.first && it.second == newPair.second }
                 ) {
-                    newElements?.add(newPair)
+                    newElements.add(newPair)
                 }
                 ret.add(
                     FetchElementFromDeclarationStateEntry(
