@@ -202,7 +202,7 @@
       nodesConnectable={false}
       elementsSelectable={false}
       deleteKey={null}
-      attributionPosition="top-left"
+      proOptions={{ hideAttribution: true }}
       onnodeclick={({ node }) => {
         panel.select(node.id);
         const statement = layout?.slice.nodes.find((n) => n.id === node.id);
