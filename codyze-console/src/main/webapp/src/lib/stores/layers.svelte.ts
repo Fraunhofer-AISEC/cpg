@@ -1,5 +1,5 @@
 /** A layer of information that is drawn on top of the code and can be toggled. */
-export type Layer = 'concepts' | 'external' | 'uncertain' | 'findings' | 'dataflow' | 'agent';
+export type Layer = 'concepts' | 'external' | 'findings' | 'dataflow' | 'agent';
 
 export interface LayerInfo {
   id: Layer;
@@ -30,14 +30,6 @@ export const layerInfos: LayerInfo[] = [
     description: 'Calls to code that is not part of the analysis, underlined in orange',
     color: 'rgb(234, 88, 12)',
     activeClass: 'border-orange-300 bg-orange-50 text-orange-700'
-  },
-  {
-    id: 'uncertain',
-    icon: '⚠',
-    label: 'Uncertain',
-    description: 'Calls whose target the analysis could not determine, underlined in red',
-    color: 'rgb(220, 38, 38)',
-    activeClass: 'border-red-300 bg-red-50 text-red-700'
   },
   {
     id: 'findings',
@@ -73,7 +65,6 @@ function load(): Record<Layer, boolean> {
   const visible: Record<Layer, boolean> = {
     concepts: true,
     external: true,
-    uncertain: true,
     findings: true,
     dataflow: true,
     agent: true
