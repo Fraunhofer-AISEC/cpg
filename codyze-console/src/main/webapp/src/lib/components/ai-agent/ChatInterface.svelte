@@ -14,6 +14,7 @@
   import { CodeFocus, type CodeLocation } from '$lib/stores/codeFocus.svelte';
   import { hasModifier, isTyping, modifierLabel } from '$lib/utils/keyboard';
   import { layers, layerInfos } from '$lib/stores/layers.svelte';
+  import { navigation } from '$lib/stores/navigation.svelte';
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
@@ -661,6 +662,24 @@
         .sort((a, b) => a.endLine - a.startLine - (b.endLine - b.startLine))[0] ?? null
     );
   }
+
+  // The graph needs the width: while it is open, the navigation and the sidebar are collapsed. When
+  // it closes, what it collapsed is opened again, unless it was toggled in between
+  let collapsedForGraph = { navigation: false, sidebar: false };
+  $effect(() => {
+    const open = graph.open;
+    untrack(() => {
+      if (open) {
+        collapsedForGraph = { navigation: !navigation.collapsed, sidebar: sidebarOpen };
+        navigation.collapsed = true;
+        sidebarOpen = false;
+      } else {
+        if (collapsedForGraph.navigation && navigation.collapsed) navigation.collapsed = false;
+        if (collapsedForGraph.sidebar && !sidebarOpen) sidebarOpen = true;
+        collapsedForGraph = { navigation: false, sidebar: false };
+      }
+    });
+  });
 
   // The graph follows what is inspected: inside the slice it selects the statement, outside of it
   // the slice is re-rooted at the node, unless the graph is pinned
