@@ -227,7 +227,7 @@
     <!-- More of the slice, one hop further -->
     <button
       type="button"
-      class="absolute top-3 right-3 z-10 rounded-full border border-blue-200 bg-white px-3 py-1 text-[11.5px] text-blue-700 shadow-sm hover:bg-blue-50"
+      class="absolute top-3 right-3 z-10 rounded-full border border-blue-200 bg-white px-2 py-0.5 text-[11px] text-blue-700 shadow-sm hover:bg-blue-50"
       onclick={() => panel.setHops(panel.hops + 1)}
     >
       + {panel.more}

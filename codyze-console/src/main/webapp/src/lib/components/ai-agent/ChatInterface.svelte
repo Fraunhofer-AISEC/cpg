@@ -183,6 +183,11 @@
       label: 'Reachable from outside?',
       question: (where) =>
         `Can ${where} be reached from an entry point of the program? Show the call path.`
+    },
+    {
+      label: 'How does it depend on its function?',
+      question: (where) =>
+        `How does ${where} depend on the rest of its function? Look at its data and control dependences: what affects it, and what does it affect?`
     }
   ];
 
@@ -847,13 +852,6 @@
       }))
   );
 
-  function askAboutGraphNode(node: NodeRefJSON) {
-    showAgent();
-    onMessageChange(
-      `How does ${describeNode(node)} depend on the rest of its function? Look at its data and control dependences: what affects it, and what does it affect?`
-    );
-  }
-
   // The number of concepts per file of the selected component, shown in the file tree
   let conceptCounts = $state.raw<Map<string, number>>(new Map());
 
@@ -1130,6 +1128,27 @@
   type ContextTab = 'inspector' | 'agent';
   let contextTab = $state<ContextTab>('agent');
   let contextCollapsed = $state(false);
+
+  // Whether the questions to the agent below the inspector are collapsed, remembered per browser
+  const askCollapsedKey = 'codyze-inspector-ask-collapsed';
+  let askCollapsed = $state(readAskCollapsed());
+
+  function readAskCollapsed(): boolean {
+    try {
+      return localStorage.getItem(askCollapsedKey) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  function setAskCollapsed(collapsed: boolean) {
+    askCollapsed = collapsed;
+    try {
+      localStorage.setItem(askCollapsedKey, String(collapsed));
+    } catch {
+      // Storage is not available, e.g. in a private window
+    }
+  }
   // Whether the inspector shows a node that has not been seen because the agent tab stayed open
   let inspectorUnseen = $state(false);
   // The same while the column is collapsed. This is only shown on the collapsed strip and does not
@@ -1431,7 +1450,7 @@
   {#each nodeQuestions as q (q.label)}
     <button
       type="button"
-      class="rounded border border-purple-200 bg-purple-50 px-2 py-0.5 text-[11px] text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+      class="rounded border border-blue-200 bg-white px-2 py-0.5 text-[11px] text-blue-700 hover:bg-blue-50 disabled:border-gray-200 disabled:text-gray-400"
       disabled={isLoading || !selectedModel}
       title="Put this question into the agent's input"
       onclick={() => {
@@ -1857,7 +1876,6 @@
         panel={graph}
         inspectedId={focus.details?.node.id ?? null}
         onInspect={selectRef}
-        onAsk={askAboutGraphNode}
         onSelectNode={selectGraphNode}
       />
     </div>
@@ -1943,14 +1961,29 @@
             onClearCallFilter={() => (focus.callFilter = null)}
             onFollow={(chain, direction) => focus.follow(chain, direction)}
             onSelect={selectRef}
-          >
-            {#snippet actions()}
-              {#if focus.details}
-                {@render nodeActions(focus.details)}
-              {/if}
-            {/snippet}
-          </NodeInspector>
+          />
         </div>
+        {#if focus.details}
+          <!-- The questions to the agent about the inspected node, always at hand below its details.
+          They collapse to their title when the details need the room -->
+          <div class="shrink-0 border-t border-gray-200 bg-white px-3 py-2">
+            <button
+              type="button"
+              class="flex w-full items-center gap-1.5 text-[10px] font-semibold tracking-wide text-gray-500 uppercase hover:text-gray-800"
+              aria-expanded={!askCollapsed}
+              onclick={() => setAskCollapsed(!askCollapsed)}
+            >
+              <span class="text-[11px] text-blue-600" aria-hidden="true">✦</span>
+              Ask the agent
+              <span class="ml-auto text-gray-400" aria-hidden="true"
+                >{askCollapsed ? '▸' : '▾'}</span
+              >
+            </button>
+            {#if !askCollapsed}
+              <div class="mt-2 flex flex-wrap gap-1.5">{@render nodeActions(focus.details)}</div>
+            {/if}
+          </div>
+        {/if}
       {:else}
         <!-- Messages -->
         <div

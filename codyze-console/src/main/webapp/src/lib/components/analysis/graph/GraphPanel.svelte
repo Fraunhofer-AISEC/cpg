@@ -23,13 +23,11 @@
     inspectedId?: string | null;
     /** Inspects the node of a statement, opening its file if it is in another one */
     onInspect: (node: NodeRefJSON) => void;
-    /** Asks the agent about the node of a statement */
-    onAsk: (node: NodeRefJSON) => void;
     /** Called when a statement is clicked in the graph, to show it in the code */
     onSelectNode?: (node: GraphNode) => void;
   }
 
-  let { panel, inspectedId = null, onInspect, onAsk, onSelectNode }: Props = $props();
+  let { panel, inspectedId = null, onInspect, onSelectNode }: Props = $props();
 
   const slice = $derived(panel.slice);
   const root = $derived(panel.root);
@@ -52,12 +50,13 @@
         }`
   );
 
-  // The tones of the notes about a statement, in the colors of the analysis
+  // The notes about a statement: framed in the color of the analysis, with its icon. What limits
+  // the analysis is amber, concepts are purple
   const tones = {
-    red: 'border-red-200 bg-red-50 text-red-800',
-    purple: 'border-purple-200 bg-purple-50 text-purple-800',
-    orange: 'border-orange-200 bg-orange-50 text-orange-800',
-    gray: 'border-gray-200 bg-gray-50 text-gray-600'
+    red: { icon: '!', cls: 'text-amber-600', frame: 'border-amber-200' },
+    purple: { icon: '◆', cls: 'text-purple-600', frame: 'border-purple-200' },
+    orange: { icon: '↗', cls: 'text-amber-600', frame: 'border-amber-200' },
+    gray: { icon: '↪', cls: 'text-gray-400', frame: 'border-gray-200' }
   };
 
   function notesOf(node: GraphNode): { tone: keyof typeof tones; text: string }[] {
@@ -91,11 +90,16 @@
     if (node.kind === 'OVERLAY') {
       notes.push({
         tone: 'purple',
-        text: `${node.node.label === 'Concept' ? 'A concept' : 'An operation'} that is attached to the code of line ${node.startLine}. Inspecting it shows what it belongs to.`
+        text: `${node.node.label ?? 'Overlay'} ${node.node.name || node.node.type} is attached to line ${node.startLine}. Inspecting it shows what it belongs to.`
       });
     } else if (node.overlays.length > 0) {
-      const names = node.overlays.map((o) => `${o.name || o.type} (${o.label?.toLowerCase()})`);
-      notes.push({ tone: 'purple', text: `Attached to this statement: ${names.join(', ')}.` });
+      const names = node.overlays.map((o) => `${o.label ?? ''} ${o.name || o.type}`.trim());
+      const list =
+        names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+      notes.push({
+        tone: 'purple',
+        text: `${list} ${names.length > 1 ? 'are' : 'is'} attached to this statement.`
+      });
     }
     return notes;
   }
@@ -343,19 +347,27 @@
         <div class="text-xs text-gray-500">No dependences in this slice</div>
       {/if}
       {#each notes as note (note.text)}
-        <div class="rounded-md border px-2 py-1 text-xs {tones[note.tone]}">{note.text}</div>
+        <div
+          class="flex gap-1.5 rounded-md border px-2 py-1 text-xs text-gray-700 {tones[note.tone]
+            .frame}"
+        >
+          <span class="w-3 shrink-0 text-center {tones[note.tone].cls}"
+            >{tones[note.tone].icon}</span
+          >
+          <span>{note.text}</span>
+        </div>
       {/each}
       <div class="flex flex-wrap gap-1.5 pt-0.5">
-        <button
-          type="button"
-          class="h-7 rounded-md border border-gray-300 bg-white px-2.5 text-xs text-gray-700 hover:bg-gray-50 disabled:text-gray-300"
-          disabled={!canOpen}
-          onclick={() => onInspect(selected.node)}
-        >
-          {selected.kind === 'STUB' && canOpen
-            ? `Open ${selected.node.fileName ?? 'file'}`
-            : 'Inspect'}
-        </button>
+        <!-- Clicking a card inspects it, a statement of another file is opened there -->
+        {#if selected.kind === 'STUB' && canOpen}
+          <button
+            type="button"
+            class="h-7 rounded-md border border-gray-300 bg-white px-2.5 text-xs text-gray-700 hover:bg-gray-50"
+            onclick={() => onInspect(selected.node)}
+          >
+            Open {selected.node.fileName ?? 'file'}
+          </button>
+        {/if}
         {#if selected.kind !== 'STUB' && !paths}
           <!-- A slice from the selected statement in either direction, with how many statements it
           has. The slice that is shown is not offered again -->
@@ -372,14 +384,6 @@
             </button>
           {/each}
         {/if}
-        <button
-          type="button"
-          class="h-7 rounded-md border border-gray-300 bg-white px-2.5 text-xs text-gray-700 hover:bg-gray-50 disabled:text-gray-300"
-          disabled={!canOpen}
-          onclick={() => onAsk(selected.node)}
-        >
-          Ask agent about this
-        </button>
       </div>
     {:else}
       <div class="text-xs text-gray-400">Select a statement to see its details.</div>
