@@ -35,7 +35,8 @@ reliable. Everything except the agent (code, layers, PDG, ...) works without a m
 | `project.codyze.kts` | The project, two requirements, and the dependence graph passes |
 
 Calls to functions that are not declared anywhere (`get_key`, `printf`, `socket`, `send`) are
-**external**, the call through the function pointer `cfg.on_connect(key)` is **unresolved**.
+**external**, and so is the call through the function pointer `cfg.on_connect(key)`: the function
+is passed in at runtime.
 
 ## What to try
 
@@ -44,12 +45,11 @@ Calls to functions that are not declared anywhere (`get_key`, `printf`, `socket`
 - `Ctrl/Cmd+P` opens a file by name, `Ctrl/Cmd+Shift+P` shows all commands.
 
 **Code, layers and the code lens above `app_main`**
-- The layers *Concepts*, *External*, *Uncertain* show the results of the analysis in the code and in
-  the ruler. In the gutter, ◆ marks concepts and operations (hover for which): `key = get_key(&cfg)` has
+- The layers *Concepts* and *External* show the results of the analysis in the code. In the gutter, ◆ marks concepts and operations (hover for which): `key = get_key(&cfg)` has
   the secret and getting it, the call of `encrypt` the encryption, the function `encrypt` in
-  `crypto.c` the cipher. `get_key`, `send`, ... are external, `cfg.on_connect` is uncertain.
-- The code lens above a function (`calls 8 · 3 external · ⚠ 1 unresolved`) lists only the external or
-  unresolved calls in the inspector when clicked.
+  `crypto.c` the cipher. `get_key`, `send`, `cfg.on_connect`, ... are external.
+- The code lens above a function (`calls 11 · 2 external`) lists only the external calls in the
+  inspector when clicked.
 - Hover over a name for the hover card, click it for the inspector.
 
 **Outline and breadcrumb**
