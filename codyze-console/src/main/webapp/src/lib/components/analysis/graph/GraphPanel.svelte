@@ -42,12 +42,23 @@
     const where = root && root.startLine > 0 ? `line ${root.startLine}` : 'this statement';
     return backward ? `What affects ${where}?` : `What does ${where} affect?`;
   });
+  const evidence = $derived(panel.evidence);
+  // Whether all statements of the evidence show more than the ones the answer relies on
+  const evidenceNarrowed = $derived(
+    !!evidence?.path && evidence.path.size < evidence.all.nodes.length
+  );
   const subtitle = $derived(
-    paths
-      ? `${paths.count} ${paths.count === 1 ? 'path' : 'paths'} · ${paths.kind}`
-      : `${panel.graph} · ${backward ? 'backward' : 'forward'} · ${root?.code ?? ''}${
-          panel.scope === 'intraprocedural' && slice?.function ? ` · in ${slice.function.name}` : ''
-        }`
+    paths && evidence
+      ? evidenceNarrowed
+        ? `${evidence.path?.size} of ${evidence.all.nodes.length} statements`
+        : `${evidence.all.nodes.length} statements`
+      : paths
+        ? `${paths.count} ${paths.count === 1 ? 'path' : 'paths'} · ${paths.kind}`
+        : `${panel.graph} · ${backward ? 'backward' : 'forward'} · ${root?.code ?? ''}${
+            panel.scope === 'intraprocedural' && slice?.function
+              ? ` · in ${slice.function.name}`
+              : ''
+          }`
   );
 
   // The notes about a statement: framed in the color of the analysis, with its icon. What limits
@@ -171,6 +182,26 @@
         <div class="truncate text-[13px] font-semibold text-gray-900" {title}>{title}</div>
         <div class="truncate font-mono text-[11px] text-gray-500" title={subtitle}>{subtitle}</div>
       </div>
+      {#if evidence && evidenceNarrowed}
+        <!-- The path the answer leads along, or everything the steps of the agent found -->
+        <div class="flex shrink-0 rounded border border-gray-200 text-[11px]" role="group">
+          {#each [{ all: false, label: '✦ Answer', title: 'Only the statements the answer relies on' }, { all: true, label: 'All', title: 'All statements the steps of the agent found, what the answer relies on in teal' }] as option (option.label)}
+            <button
+              type="button"
+              class="px-1.5 py-0.5 {panel.evidenceAll === option.all
+                ? option.all
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'bg-teal-50 text-teal-700'
+                : 'text-gray-500 hover:text-gray-900'}"
+              aria-pressed={panel.evidenceAll === option.all}
+              title={option.title}
+              onclick={() => panel.setEvidenceAll(option.all)}
+            >
+              {option.label}
+            </button>
+          {/each}
+        </div>
+      {/if}
       {#if !paths}
         <button
           type="button"
@@ -287,7 +318,7 @@
           <span class="h-0.5 w-5.5 bg-slate-600"></span>data dependence
         </span>
       {/if}
-      {#if !paths && panel.graph !== 'DFG'}
+      {#if paths ? slice?.edges.some((e) => e.kind === 'CONTROL') : panel.graph !== 'DFG'}
         <span class="flex items-center gap-1.5">
           <span class="w-5.5 border-t-2 border-dashed border-slate-400"></span>control dependence
         </span>

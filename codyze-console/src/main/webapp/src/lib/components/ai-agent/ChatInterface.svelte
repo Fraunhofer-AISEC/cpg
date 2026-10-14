@@ -24,6 +24,7 @@
     extractCitations,
     extractNodeIds,
     extractToolPaths,
+    extractToolSlice,
     pathNodeIds,
     resolveNodes
   } from '$lib/agentEvidence';
@@ -33,8 +34,11 @@
   import { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import {
     clearGraphCache,
+    evidencePath,
+    getEvidenceGraph,
     getPathsGraph,
     getSliceCounts,
+    type EvidenceStep,
     type SliceCounts,
     type GraphNode
   } from '$lib/graph';
@@ -47,6 +51,7 @@
     FindingsJSON,
     NodeJSON,
     NodePathsJSON,
+    NodeSliceJSON,
     RequirementJSON,
     AnalysisResultJSON,
     TranslationUnitJSON,
@@ -905,8 +910,80 @@
 
   // Inspects a node cited by the agent and shows it in the code
   function openCitation(nodeId: string) {
+    citeHover = null;
     revealFromAgent(nodeId);
   }
+
+  // The citation under the mouse in an answer: its node is shown in a preview next to it, its
+  // lines are tinted in the code and its statement stands out in the graph, without changing what
+  // is selected. A citation is the only way the answer marks the code
+  let citeHover = $state.raw<{ ref: NodeRefJSON; chip: DOMRect } | null>(null);
+  let citeGraphHover = false;
+
+  function hoverCitation(nodeId: string | null, chip: HTMLElement | null) {
+    const ref = nodeId ? (citedRefs.get(nodeId) ?? evidenceRefs.get(nodeId)) : undefined;
+    citeHover = ref && chip ? { ref, chip: chip.getBoundingClientRect() } : null;
+    const statement = nodeId ? graph.evidence?.statementOf[nodeId] : undefined;
+    if (statement && graph.slice?.nodes.some((n) => n.id === statement)) {
+      graph.hoveredId = statement;
+      citeGraphHover = true;
+    } else if (citeGraphHover) {
+      graph.hoveredId = null;
+      citeGraphHover = false;
+    }
+  }
+
+  // The lines a citation refers to: a function only by its head, anything else by at most a few
+  // lines, so that a citation never tints a whole body
+  function citedRange(ref: NodeRefJSON): { first: number; last: number } {
+    const last = ref.type === 'Function' ? ref.startLine : Math.max(ref.endLine, ref.startLine);
+    return { first: ref.startLine, last: Math.min(last, ref.startLine + 2) };
+  }
+
+  // The lines of the hovered citation in the open file
+  const citedLines = $derived(
+    citeHover && openedUnit && citeHover.ref.translationUnitId === openedUnit.id
+      ? citedRange(citeHover.ref)
+      : null
+  );
+
+  // The code of the files cited in answers, for the previews of their citations
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
+  const previewCode = new Map<string, Promise<string[] | null>>();
+
+  function codeOf(ref: NodeRefJSON): Promise<string[] | null> {
+    const unitId = ref.translationUnitId;
+    const componentName = ref.componentName;
+    if (!unitId || !componentName) return Promise.resolve(null);
+    let code = previewCode.get(unitId);
+    if (!code) {
+      code = fetch(`/api/component/${componentName}/translation-unit/${unitId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((unit: TranslationUnitJSON | null) => unit?.code?.split('\n') ?? null)
+        .catch(() => null);
+      previewCode.set(unitId, code);
+    }
+    return code;
+  }
+
+  // The lines of the preview: the cited lines with one line around them, at most five
+  let previewLines = $state.raw<{ number: number; text: string; cited: boolean }[]>([]);
+  $effect(() => {
+    const ref = citeHover?.ref;
+    previewLines = [];
+    if (!ref || ref.startLine < 1) return;
+    codeOf(ref).then((lines) => {
+      if (!lines || citeHover?.ref !== ref) return;
+      const { last } = citedRange(ref);
+      const first = Math.max(1, ref.startLine - 1);
+      const end = Math.min(lines.length, last + 1, first + 4);
+      previewLines = lines.slice(first - 1, end).map((text, i) => ({
+        number: first + i,
+        text,
+        cited: first + i >= ref.startLine && first + i <= last
+      }));
+    });
+  });
 
   // The conversation as a timeline: one block per question, with the tool calls as numbered steps
   // (the evidence trail) and the answer last
@@ -980,20 +1057,27 @@
     return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
   }
 
-  // The tool calls of the active block that have evidence in the code, to step through them. Nodes
-  // only cited in the answer are no step: they are marked in the code and named in the trust notes
-  // under the answer
+  // The places the answer of the active block cites, in the order it cites them, to follow the
+  // answer through the code one place after the other
   const threadSteps = $derived.by(() => {
-    const evidence = blockEvidence[activeBlock];
     const block = timeline[activeBlock];
-    if (!evidence || !block || !layers.visible.agent) return [];
-    return evidence.steps.flatMap(({ step, ids }) => {
-      const nodes = stepNodes(ids);
-      const entry = block.entries.find((e) => e.step === step);
-      const tool = entry?.message.toolResult?.toolName ?? 'tool';
-      return nodes.length
-        ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
-        : [];
+    if (!block || !layers.visible.agent) return [];
+    const ids = new Set(
+      block.entries.flatMap((e) =>
+        e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+      )
+    );
+    return [...ids].flatMap((id) => {
+      const ref = citedRefs.get(id) ?? evidenceRefs.get(id);
+      if (!ref || ref.startLine < 1) return [];
+      const code = ref.code || ref.name;
+      return [
+        {
+          nodes: [ref],
+          label: code.length > 32 ? `${code.slice(0, 31)}…` : code,
+          title: `${code} · ${ref.fileName ?? ''}:${ref.startLine}`
+        }
+      ];
     });
   });
 
@@ -1020,19 +1104,79 @@
     if (end) revealFromAgent(end.node.id);
   }
 
-  // Once the agent has answered, the last paths a tool of the question found are shown
+  // Shows a slice a tool computed in the graph panel, like a slice asked for in the code
+  function showToolSlice(toolSlice: NodeSliceJSON) {
+    graph.show(
+      toolSlice.start.nodeId,
+      toolSlice.direction,
+      toolSlice.hops,
+      undefined,
+      toolSlice.graph,
+      toolSlice.interprocedural ? 'interprocedural' : 'intraprocedural'
+    );
+    revealFromAgent(toolSlice.start.nodeId);
+  }
+
+  // Shows what a tool call found as a path or a graph, if it found paths or a slice. Returns
+  // whether it did
+  function showToolGraph(content: unknown): boolean {
+    const toolSlice = extractToolSlice(content);
+    if (toolSlice) {
+      showToolSlice(toolSlice);
+      return true;
+    }
+    const toolPaths = extractToolPaths(content);
+    if (toolPaths) showToolPaths(toolPaths);
+    return !!toolPaths;
+  }
+
+  // The steps of a block that found paths or a slice, which make up its evidence graph
+  function graphSteps(block: (typeof timeline)[number]): EvidenceStep[] {
+    return block.entries.flatMap((e): EvidenceStep[] => {
+      const content = e.message.toolResult?.content;
+      if (!e.step) return [];
+      const slice = extractToolSlice(content);
+      if (slice) return [{ step: e.step, slice }];
+      const paths = extractToolPaths(content);
+      return paths ? [{ step: e.step, paths }] : [];
+    });
+  }
+
+  // Shows the evidence of a question as one graph next to the code: the paths and slices of all of
+  // its steps, with the statements its answer cites marked
+  async function showEvidence(b: number) {
+    const block = timeline[b];
+    if (!block) return;
+    const steps = graphSteps(block);
+    if (steps.length === 0) return;
+    const citations = [
+      ...new Set(
+        block.entries.flatMap((e) =>
+          e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+        )
+      )
+    ];
+    const evidence = await getEvidenceGraph(steps, citations).catch(() => null);
+    if (!evidence || evidence.graph.nodes.length === 0) return;
+    graph.showPaths(
+      { description: 'the evidence of the answer', kind: 'evidence', count: steps.length },
+      evidence.graph,
+      {
+        all: evidence.graph,
+        path: evidencePath(evidence.graph, new Set(evidence.cited)),
+        statementOf: evidence.statementOf
+      }
+    );
+    const first = evidence.graph.nodes.find((n) => evidence.cited.includes(n.id));
+    if (first) revealFromAgent(first.node.id);
+  }
+
+  // Once the agent has answered, the evidence of the question is shown as a graph
   let wasLoading = false;
   $effect(() => {
     const loading = isLoading;
     if (wasLoading && !loading) {
-      untrack(() => {
-        const block = timeline[timeline.length - 1];
-        const entry = block?.entries.findLast((e) =>
-          extractToolPaths(e.message.toolResult?.content)
-        );
-        const toolPaths = entry && extractToolPaths(entry.message.toolResult?.content);
-        if (toolPaths) showToolPaths(toolPaths);
-      });
+      untrack(() => showEvidence(timeline.length - 1));
     }
     wasLoading = loading;
   });
@@ -1470,13 +1614,19 @@
   {@const claimed = stepNodes(blockEvidence[b]?.claimed ?? [])}
   {@const shown = trustExpanded[b] ? issues : issues.slice(0, TRUST_PREVIEW)}
   {#if issues.length > 0 || claimed.length > 0}
-    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug text-red-700">
+    <!-- Where the evidence reaches the limits of the analysis: code outside of it is a note, what the
+    analysis could not resolve or the model claims without a tool is a warning -->
+    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug">
+      <li class="px-1 text-[10px] tracking-wide text-gray-400 uppercase">Limits of the evidence</li>
       {#each shown as issue (issue.kind + issue.location.id)}
         {@const subject = trustSubject(issue, b)}
+        {@const info = issue.kind === 'EXTERNAL_CODE'}
         <li>
           <button
             type="button"
-            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left hover:bg-red-50 disabled:hover:bg-transparent"
+            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left disabled:hover:bg-transparent {info
+              ? 'text-gray-600 hover:bg-gray-50'
+              : 'text-amber-700 hover:bg-amber-50'}"
             disabled={issue.location.startLine < 1}
             title={issue.location.code || issue.location.name}
             onclick={() => {
@@ -1484,11 +1634,11 @@
               revealFromAgent(issue.location.id);
             }}
           >
-            <span aria-hidden="true">⚠</span>
+            <span class={info ? 'text-orange-600' : ''} aria-hidden="true">{info ? '↗' : '⚠'}</span>
             <span class="min-w-0 flex-1"
               >{subject.text}
               {subject.plural ? 'rely' : 'relies'} on {issue.reason}
-              <span class="font-mono whitespace-nowrap text-red-800/80"
+              <span class="font-mono whitespace-nowrap opacity-80"
                 >· {trustLocation(issue.location)}</span
               ></span
             >
@@ -1508,7 +1658,7 @@
       {/if}
       {#if claimed.length > 0}
         <!-- Cited nodes no tool returned are claims of the model, not results of the analysis -->
-        <li class="flex flex-wrap items-center gap-1 px-1">
+        <li class="flex flex-wrap items-center gap-1 px-1 text-amber-700">
           <span aria-hidden="true">⚠</span>
           <span
             >The answer cites {claimed.length === 1 ? 'a node' : `${claimed.length} nodes`} no tool returned:</span
@@ -1776,13 +1926,12 @@
     <!-- One bar for the steps shown in the code: the path or the agent's thread -->
     {#if sequence === 'thread' && threadSteps.length > 0}
       <StepBar
-        title="Agent"
-        steps={threadSteps.map((s) => ({ label: s.label, title: s.title, number: s.step }))}
+        title="Answer"
+        steps={threadSteps.map((s) => ({ label: s.label, title: s.title }))}
         index={threadStepIndex}
         onSelect={goToThreadStep}
         onClose={() => layers.toggle('agent')}
-        closeTitle="Hide the agent's evidence (● Agent layer)"
-        shape="square"
+        closeTitle="Hide the places the answer cites"
         other={focus.path.length >= 2
           ? { label: 'Path', onSwitch: () => (focus.showing = 'path') }
           : undefined}
@@ -1796,7 +1945,7 @@
         onClose={() => focus.clearPath()}
         closeTitle="Close the dataflow path"
         other={threadSteps.length > 0
-          ? { label: 'Agent', onSwitch: () => (focus.showing = 'thread') }
+          ? { label: 'Answer', onSwitch: () => (focus.showing = 'thread') }
           : undefined}
       />
     {/if}
@@ -1823,6 +1972,7 @@
           {askDisabledReason}
           {askRequest}
           slice={graphSlice}
+          {citedLines}
           findings={openFindings}
           onCodeContextMenu={openCodeMenu}
         >
@@ -2048,9 +2198,24 @@
                         onclick={() => {
                           chosenBlock = b;
                           focus.showing = 'thread';
+                          if (!layers.visible.agent) layers.toggle('agent');
                         }}
                       >
                         {isActive && sequence === 'thread' ? '● in code' : '○ show in code'}
+                      </button>
+                    {/if}
+                    {#if graphSteps(block).length > 0}
+                      <button
+                        type="button"
+                        class="mt-0.5 shrink-0 rounded px-1 text-[11px] text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                        title="Show the paths and slices of all steps of this question as one graph, with the statements the answer cites"
+                        onclick={() => {
+                          chosenBlock = b;
+                          focus.showing = 'thread';
+                          showEvidence(b);
+                        }}
+                      >
+                        ◇ graph
                       </button>
                     {/if}
                   </div>
@@ -2074,9 +2239,11 @@
                       evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
                     )}
                     {@const toolPaths = extractToolPaths(message.toolResult.content)}
+                    {@const toolSlice = extractToolSlice(message.toolResult.content)}
                     <ToolStep
                       toolResult={message.toolResult}
                       paths={toolPaths}
+                      slice={toolSlice}
                       step={entry.step ?? 0}
                       {nodes}
                       selectedId={focus.details?.node.id}
@@ -2084,8 +2251,8 @@
                       onActivate={() => {
                         chosenBlock = b;
                         focus.showing = 'thread';
-                        if (toolPaths) showToolPaths(toolPaths);
-                        else if (nodes[0]) revealFromAgent(nodes[0].id);
+                        if (!showToolGraph(message.toolResult?.content) && nodes[0])
+                          revealFromAgent(nodes[0].id);
                       }}
                       onHover={(hovered) => {
                         // Only the steps of the thread in the code can stand out there
@@ -2104,11 +2271,12 @@
                     {/if}
                   {:else if message.content}
                     <!-- The answer (or an error) -->
-                    <div class="prose prose-sm max-w-none py-1.5 text-gray-800">
+                    <div class="prose prose-sm max-w-none min-w-0 py-1.5 text-gray-800">
                       <MarkdownRenderer
                         content={message.content}
                         citations={citedRefs}
                         onCite={openCitation}
+                        onCiteHover={hoverCitation}
                       />
                     </div>
                     {#if message.contentType === 'text' && extractCitations(message.content).length === 0}
@@ -2130,11 +2298,12 @@
                 {#if isLast && (isLoading || displayContent)}
                   <div class="py-1.5">
                     {#if displayContent}
-                      <div class="prose prose-sm max-w-none text-gray-800">
+                      <div class="prose prose-sm max-w-none min-w-0 text-gray-800">
                         <MarkdownRenderer
                           content={displayContent}
                           citations={citedRefs}
                           onCite={openCitation}
+                          onCiteHover={hoverCitation}
                         />
                       </div>
                     {:else}
@@ -2163,17 +2332,30 @@
             <!-- The selected node, which is sent along with the question -->
             <div class="mb-1.5 flex">
               <span
-                class="flex max-w-full min-w-0 items-center gap-1 rounded border border-gray-200 bg-gray-50 py-0.5 pr-0.5 pl-1.5 text-[11px] text-gray-600"
+                class="flex h-6 max-w-full min-w-0 items-center gap-1.5 rounded-full bg-slate-100 pr-0.5 pl-2 text-[11px] text-slate-700"
                 title="Sent as context: {describeNode(contextNode)}"
               >
-                <span class="min-w-0 truncate"
-                  >📎 <span class="font-mono">{contextNode.name || contextNode.code}</span
-                  >{#if contextNode.fileName}
-                    · {fileName(contextNode.fileName)}:{contextNode.startLine}{/if}</span
+                <svg
+                  class="h-3 w-3 shrink-0 text-slate-500"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5" /></svg
                 >
+                <span class="min-w-0 truncate font-mono font-medium"
+                  >{contextNode.name || contextNode.code}</span
+                >
+                {#if contextNode.fileName}
+                  <span class="shrink-0 text-slate-400"
+                    >{fileName(contextNode.fileName)}:{contextNode.startLine}</span
+                  >
+                {/if}
                 <button
                   type="button"
-                  class="shrink-0 rounded px-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-700"
                   onclick={() => (dismissedContextId = contextNode.id)}
                   aria-label="Do not send the selected node as context"
                   title="Remove"
@@ -2216,4 +2398,38 @@
     title="{codeMenu.details.node.type} {codeMenu.details.node.code}"
     onClose={() => (codeMenu = null)}
   />
+{/if}
+
+{#if citeHover}
+  <!-- The preview of the hovered citation: where it is and its code, the cited lines emphasized -->
+  {@const ref = citeHover.ref}
+  <div
+    class="pointer-events-none fixed z-[60] w-[22rem] overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg"
+    style:left="{Math.max(8, Math.min(citeHover.chip.left, window.innerWidth - 360))}px"
+    style:top="{citeHover.chip.bottom + 6}px"
+  >
+    <div class="flex items-center gap-2 border-b border-gray-100 px-2.5 py-1.5 text-[11px]">
+      <span class="font-mono text-gray-700"
+        >{ref.fileName ?? ref.name}{ref.startLine >= 1 ? `:${ref.startLine}` : ''}</span
+      >
+      <span class="text-gray-400">{ref.type}</span>
+      {#if ref.isInferred || !ref.translationUnitId}
+        <span class="ml-auto text-orange-600" title="Not part of the analysed code">↗ external</span
+        >
+      {/if}
+    </div>
+    {#if previewLines.length > 0}
+      <pre
+        class="m-0 overflow-hidden bg-gray-50 py-1 font-mono text-[11px] leading-[1.15rem]">{#each previewLines as line (line.number)}<div
+            class="flex px-2 {line.cited ? 'bg-blue-50 text-gray-900' : 'text-gray-500'}"><span
+              class="mr-2 w-6 shrink-0 text-right text-gray-400 select-none">{line.number}</span
+            ><span class="overflow-hidden text-ellipsis whitespace-pre">{line.text}</span
+            ></div>{/each}</pre>
+    {:else}
+      <div class="truncate px-2.5 py-1.5 font-mono text-[11px] text-gray-700">
+        {ref.code || ref.name}
+      </div>
+    {/if}
+    <div class="px-2.5 py-1 text-[10.5px] text-gray-400">Click to show it in the code</div>
+  </div>
 {/if}

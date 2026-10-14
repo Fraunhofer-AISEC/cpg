@@ -13,6 +13,8 @@
     faded: boolean;
     /** Emphasized, because it is dependence on the hovered variable */
     marked: boolean;
+    /** On the path the agent's answer leads along */
+    agent: boolean;
     onHoverVariable: (name: string | null) => void;
   }
 </script>
@@ -27,8 +29,10 @@
 
   // Data dependences are solid and dark, control dependences dashed and light, and the selected
   // statement's edges are blue and thicker. The link of an overlay to its statement is dotted
-  const stroke = $derived(edgeColor(edge.kind, edge.active, edge.marked));
-  const width = $derived(edge.active || edge.marked ? 3 : edge.kind === 'OVERLAY' ? 2.5 : 2);
+  const stroke = $derived(edgeColor(edge.kind, edge.active, edge.marked, edge.agent));
+  const width = $derived(
+    edge.active || edge.marked || edge.agent ? 3 : edge.kind === 'OVERLAY' ? 2.5 : 2
+  );
   const dashes: Record<GraphEdgeData['kind'], string> = {
     DATA: '',
     CONTROL: 'stroke-dasharray: 5 4;',
@@ -52,12 +56,17 @@
   <EdgeLabel x={edge.label.x} y={edge.label.y} transparent>
     <button
       type="button"
-      class="rounded-sm bg-gray-50 px-1 text-[10.5px] leading-4 group-[.graph-far]/flow:hidden {edge.kind ===
-      'DATA'
-        ? 'font-mono text-slate-600'
-        : 'text-gray-500 italic'} {edge.faded && !edge.marked ? 'opacity-40' : ''} {edge.active
+      class="rounded-sm px-1 text-[10.5px] leading-4 group-[.graph-far]/flow:hidden {edge.agent &&
+      !edge.active
+        ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-200'
+        : 'bg-gray-50'} {edge.kind === 'DATA' ? 'font-mono' : 'italic'} {edge.agent
+        ? ''
+        : edge.kind === 'DATA'
+          ? 'text-slate-600'
+          : 'text-gray-500'} {edge.faded && !edge.marked ? 'opacity-40' : ''} {edge.active
         ? 'text-blue-700'
         : ''}"
+      title={edge.agent ? "The agent's answer relies on this dependence" : undefined}
       onmouseenter={() => edge.kind === 'DATA' && edge.onHoverVariable(edge.text)}
       onmouseleave={() => edge.onHoverVariable(null)}
     >

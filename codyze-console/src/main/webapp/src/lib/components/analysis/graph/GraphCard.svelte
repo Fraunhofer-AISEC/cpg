@@ -16,6 +16,8 @@
     otherFile: string | null;
     /** The overlays of the statement are nodes of their own in the graph */
     overlaysShown: boolean;
+    /** The statement is not on the path of the agent's answer, which the graph shows */
+    offPath: boolean;
     onExpand: (id: string) => void;
   }
 </script>
@@ -69,7 +71,11 @@ graph. Expanding by double click is a shortcut, the button at the border does th
           ? 'border border-gray-300 bg-slate-50 shadow-sm'
           : 'border border-gray-300 bg-white shadow-sm'} {card.hovered && !card.selected
     ? 'ring-2 ring-blue-300'
-    : ''} {card.faded && !card.selected ? 'opacity-60' : ''}"
+    : ''} {card.offPath && !card.selected
+    ? 'opacity-35'
+    : card.faded && !card.selected
+      ? 'opacity-60'
+      : ''}"
   title="{statement.node.type} · {locationOf(statement)}"
   ondblclick={() => statement.more > 0 && card.onExpand(statement.id)}
 >

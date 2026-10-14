@@ -1,6 +1,7 @@
 import {
   getGraphSlice,
   mergeSlice,
+  onPath,
   type DependenceGraph,
   type SliceScope,
   type GraphDirection,
@@ -27,6 +28,16 @@ export interface GraphPaths extends Pick<NodePathsJSON, 'kind' | 'description'> 
   count: number;
 }
 
+/** The statements of the agent's evidence and the path its answer leads along. */
+export interface GraphEvidence {
+  /** All statements the steps of the agent found */
+  all: GraphSlice;
+  /** The statements the answer leads along (see [evidencePath]), if it cites enough of them */
+  path: Set<string> | null;
+  /** The statement of each node the answer cites, by the ID of the node */
+  statementOf: Record<string, string>;
+}
+
 /**
  * The state of the graph panel: which slice is shown, what is selected in it and where to go back
  * to. The slice is loaded from the backend whenever its root, graph, direction or hops change. Instead of
@@ -37,6 +48,10 @@ export class GraphPanel {
   open = $state(false);
   /** The paths shown instead of a slice, or null while a slice is shown */
   paths = $state.raw<GraphPaths | null>(null);
+  /** The agent's evidence about the statements of the paths, if they are its evidence graph */
+  evidence = $state.raw<GraphEvidence | null>(null);
+  /** Whether all statements of the evidence are shown, not only the path of the answer */
+  evidenceAll = $state(false);
   /** Which dependences the slice follows */
   graph = $state<DependenceGraph>('PDG');
   /** Whether the slice follows dependences into other functions */
@@ -86,18 +101,19 @@ export class GraphPanel {
   }
 
   /**
-   * Shows the slice around a node, in [graph] or else the graph shown before. A slice shown before
-   * can be returned to with [back].
+   * Shows the slice around a node, in [graph] and [scope] or else those shown before. A slice shown
+   * before can be returned to with [back].
    */
   async show(
     nodeId: string,
     direction: GraphDirection,
     hops = this.hops,
     selectedId?: string,
-    graph = this.graph
+    graph = this.graph,
+    scope = this.scope
   ) {
     if (this.open && this.slice && this.nodeId !== nodeId) this.remember();
-    await this.load(nodeId, graph, this.scope, direction, hops, selectedId ?? null);
+    await this.load(nodeId, graph, scope, direction, hops, selectedId ?? null);
   }
 
   private remember() {
@@ -113,16 +129,22 @@ export class GraphPanel {
     this.history = [...this.history.slice(-19), view];
   }
 
-  /** Shows the statements of paths, given as a graph in the format of a slice. */
-  showPaths(paths: GraphPaths, graph: GraphSlice) {
+  /**
+   * Shows the statements of paths, given as a graph in the format of a slice, with the agent's
+   * evidence about them if they are its evidence graph.
+   */
+  showPaths(paths: GraphPaths, graph: GraphSlice, evidence: GraphEvidence | null = null) {
     if (this.open && this.slice && !this.paths) this.remember();
     this.request++;
     this.open = true;
     this.loading = false;
     this.error = null;
     this.paths = paths;
-    this.slice = graph;
-    this.selectedId = graph.root || null;
+    this.evidence = evidence;
+    this.evidenceAll = false;
+    this.slice = evidence?.path ? onPath(graph, evidence.path) : graph;
+    // Selecting the root would fade the evidence that is not connected to it
+    this.selectedId = evidence ? null : graph.root || null;
   }
 
   private async load(
@@ -136,6 +158,7 @@ export class GraphPanel {
     const request = ++this.request;
     this.open = true;
     this.paths = null;
+    this.evidence = null;
     this.loading = true;
     this.error = null;
     try {
@@ -158,6 +181,14 @@ export class GraphPanel {
     } finally {
       if (request === this.request) this.loading = false;
     }
+  }
+
+  /** Shows all statements of the evidence, or only the path of the answer. */
+  setEvidenceAll(all: boolean) {
+    const evidence = this.evidence;
+    if (!evidence) return;
+    this.evidenceAll = all;
+    this.slice = all || !evidence.path ? evidence.all : onPath(evidence.all, evidence.path);
   }
 
   /** Changes how far the slice reaches, keeping what is selected. */
@@ -212,5 +243,6 @@ export class GraphPanel {
     this.hoveredId = null;
     this.history = [];
     this.paths = null;
+    this.evidence = null;
   }
 }
