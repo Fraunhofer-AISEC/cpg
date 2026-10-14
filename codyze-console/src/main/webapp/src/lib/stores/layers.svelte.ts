@@ -56,7 +56,7 @@ export const layerInfos: LayerInfo[] = [
     icon: '●',
     label: 'Agent',
     description:
-      'The evidence of the active question to the agent, as numbered markers of its steps in the gutter: solid if a tool returned the node, dashed if the answer only cites it',
+      'The steps of the active question to the agent in the bar above the code; its evidence is shown from its answer',
     iconClass: 'text-slate-800',
     category: false
   }

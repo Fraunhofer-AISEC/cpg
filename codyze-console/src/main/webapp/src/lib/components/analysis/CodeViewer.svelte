@@ -122,6 +122,8 @@
      * A slice of the program dependence graph shown in the code, as tinted lines. [onHover] is
      * called with the statement under the mouse
      */
+    /** The lines of a node the agent's answer cites, while its citation is hovered */
+    citedLines?: { first: number; last: number } | null;
     slice?: {
       ranges: { id: string; first: number; last: number; label: string }[];
       selectedId: string | null;
@@ -168,6 +170,7 @@
     lanes = false,
     onAsk,
     slice,
+    citedLines = null,
     onCodeContextMenu,
     layerActions,
     askDisabledReason = null,
@@ -626,7 +629,7 @@
         return { count: findings?.length ?? 0, title: info.description };
       case 'agent':
         return {
-          count: new Set(agentMarkers.map((m) => m.nodeId)).size,
+          count: threadActive ? new Set(focus.thread.map((n) => n.ref.id)).size : 0,
           title: focus.thread.length
             ? info.description
             : `${info.description} (the agent has not returned any nodes yet)`
@@ -638,7 +641,9 @@
   const shownLayers = $derived(
     layerInfos.filter(
       (l) =>
-        (lanes || (l.id !== 'dataflow' && l.id !== 'agent')) &&
+        // The agent's evidence is shown from its answers, not in the code
+        l.id !== 'agent' &&
+        (lanes || l.id !== 'dataflow') &&
         (l.id !== 'findings' || findings !== undefined)
     )
   );
@@ -830,29 +835,8 @@
     );
   });
 
-  // The evidence of the agent's active thread in this file, and whether it is shown at all
+  // Whether the agent's active thread is shown, rather than a path
   const threadActive = $derived(sequence === 'thread');
-  const agentMarkers = $derived.by((): StepMarker[] => {
-    if (!threadActive) return [];
-    return focus.thread.flatMap(({ ref, step, claimed }) =>
-      ref.translationUnitId === translationUnit.id && ref.startLine >= 1
-        ? [
-            {
-              index: step - 1,
-              line: ref.startLine,
-              title: `${claimed ? 'only cited in the answer, no tool returned it: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
-              current: ref.id === inspected?.node.id,
-              dashed: claimed,
-              // The nodes of the step the user points at stand out
-              faded: focus.highlightedStep !== null && focus.highlightedStep !== step,
-              // Nodes only cited in the answer are no step of the agent
-              label: claimed ? '?' : undefined,
-              nodeId: ref.id
-            }
-          ]
-        : []
-    );
-  });
 
   $effect(() => {
     if (highlightLine && codeContainerElement) {
@@ -956,7 +940,9 @@
                 sliceLines={slice?.ranges.flatMap((r) =>
                   Array.from({ length: r.last - r.first + 1 }, (_, i) => r.first + i)
                 )}
-                sliceHover={slice?.ranges.find((r) => r.id === slice.hoveredId) ?? null}
+                sliceHover={citedLines ??
+                  slice?.ranges.find((r) => r.id === slice.hoveredId) ??
+                  null}
               />
             </Highlight>
           </div>
@@ -1024,20 +1010,6 @@
                 onSelect={(marker) => selectRef(focus.path[marker.index])}
               />
             {/if}
-          {:else if agentMarkers.length > 0}
-            <StepMarkers
-              markers={agentMarkers}
-              startLine={visibleLines.start}
-              endLine={visibleLines.end}
-              {lineHeight}
-              {offsetTop}
-              left={(markerLaneWidth - 1) / 2}
-              shape="square"
-              onSelect={(marker) => {
-                const node = focus.thread.find((n) => n.ref.id === marker.nodeId);
-                if (node) selectRef(node.ref);
-              }}
-            />
           {/if}
 
           <!-- The selected node: a tint without a frame behind it, if it fits on one line. Larger nodes

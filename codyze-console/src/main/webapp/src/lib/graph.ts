@@ -1,4 +1,4 @@
-import type { NodePathsJSON, NodeRefJSON } from '$lib/types';
+import type { NodePathsJSON, NodeRefJSON, NodeSliceJSON } from '$lib/types';
 
 /**
  * Slices of the program dependence graph (PDG) of a function: the statements that affect a
@@ -215,6 +215,87 @@ export function dependencesOf(
       'to'
     )
   };
+}
+
+/**
+ * The evidence of a question to the agent as one graph: the paths and slices of its steps, which
+ * steps found each statement, and the statements of the nodes its answer cites.
+ */
+export interface EvidenceGraph {
+  graph: GraphSlice;
+  /** The steps that found each statement, by the ID of the statement */
+  steps: Record<string, number[]>;
+  /** The statements of the nodes the answer cites */
+  cited: string[];
+  /** The statement of each node the answer cites, by the ID of the node */
+  statementOf: Record<string, string>;
+}
+
+/**
+ * The statements of a graph the agent's answer leads along: the cited statements and those between
+ * them, i.e. that a cited statement leads to and that lead to a cited statement. `null` if fewer
+ * than two cited statements are part of the graph.
+ */
+export function evidencePath(graph: GraphSlice, cited: Set<string>): Set<string> | null {
+  const start = [...cited].filter((id) => graph.nodes.some((n) => n.id === id));
+  if (start.length < 2) return null;
+  const dependences = graph.edges.filter((e) => e.kind !== 'OVERLAY');
+  const reach = (forward: boolean) => {
+    const reached = new Set(start);
+    const queue = [...start];
+    while (queue.length > 0) {
+      const id = queue.pop()!;
+      for (const e of dependences) {
+        const [from, to] = forward ? [e.from, e.to] : [e.to, e.from];
+        if (from === id && !reached.has(to)) {
+          reached.add(to);
+          queue.push(to);
+        }
+      }
+    }
+    return reached;
+  };
+  const after = reach(true);
+  const before = reach(false);
+  return new Set([...after].filter((id) => before.has(id)));
+}
+
+/**
+ * The part of a graph on the path of the agent's answer (see [evidencePath]), with the overlays of
+ * its statements.
+ */
+export function onPath(graph: GraphSlice, path: Set<string>): GraphSlice {
+  const keep = new Set(path);
+  for (const e of graph.edges) {
+    if (e.kind === 'OVERLAY' && keep.has(e.from)) keep.add(e.to);
+  }
+  return {
+    ...graph,
+    root: keep.has(graph.root) ? graph.root : [...path][0],
+    nodes: graph.nodes.filter((n) => keep.has(n.id)),
+    edges: graph.edges.filter((e) => keep.has(e.from) && keep.has(e.to))
+  };
+}
+
+/** A step of the agent that found paths or a slice, with the result as the tool returned it. */
+export interface EvidenceStep {
+  step: number;
+  paths?: NodePathsJSON;
+  slice?: NodeSliceJSON;
+}
+
+/** The evidence graph of the steps of a question and the nodes cited in its answer. */
+export async function getEvidenceGraph(
+  steps: EvidenceStep[],
+  cited: string[]
+): Promise<EvidenceGraph> {
+  const res = await fetch('/api/graph/evidence', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ steps, cited })
+  });
+  if (!res.ok) throw new Error(`Failed to load the evidence: ${res.statusText}`);
+  return res.json();
 }
 
 /**
