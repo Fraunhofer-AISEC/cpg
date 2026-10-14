@@ -63,6 +63,24 @@ data class CpgDfgPathsPayload(
 )
 
 @Serializable
+@Description("The payload to compute a slice of the program dependence graph around a node.")
+data class CpgSlicePayload(
+    @Description("The id of the node whose slice is computed.") val id: String,
+    @Description(
+        "Which dependences to follow: PDG (data and control, default), DFG (only data) or CDG (only control)."
+    )
+    val graph: String = "PDG",
+    @Description("backward (default) for what affects the node, forward for what the node affects.")
+    val direction: String = "backward",
+    @Description(
+        "How many dependences away from the node the slice reaches (default 2, at most 5)."
+    )
+    val hops: Int = 2,
+    @Description("Whether to follow the dependences into other functions (default true).")
+    val interprocedural: Boolean = true,
+)
+
+@Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
     @Description("ID of the method/function call whose arguments should be listed.")
     val nodeId: String,
