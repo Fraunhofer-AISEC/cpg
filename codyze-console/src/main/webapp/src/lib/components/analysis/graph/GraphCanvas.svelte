@@ -62,6 +62,9 @@
   const far = $derived(zoom < 0.4);
 
   const selectedId = $derived(panel.selectedId);
+  // The evidence of the agent stays visible as a whole: there, what is not connected to the
+  // selection is not faded, only what the answer does not cite
+  const fadeBySelection = $derived(!panel.evidence);
 
   // The edges of the inspected node, if it is a part of the selected statement
   const focusEdges = $derived.by((): GraphEdge[] => {
@@ -85,6 +88,7 @@
     const rootFile = slice.nodes.find((n) => n.id === slice.root)?.node.fileName;
     // The statements whose overlays are shown as nodes of their own
     const withOverlay = new Set(slice.edges.filter((e) => e.kind === 'OVERLAY').map((e) => e.from));
+    const path = panel.evidence?.path;
     return slice.nodes.flatMap((statement) => {
       const position = laid.positions.get(statement.id);
       if (!position) return [];
@@ -92,13 +96,18 @@
         statement,
         selected: statement.id === selectedId,
         hovered: statement.id === panel.hoveredId,
-        faded: selectedId !== null && statement.id !== selectedId && !connected.has(statement.id),
+        faded:
+          fadeBySelection &&
+          selectedId !== null &&
+          statement.id !== selectedId &&
+          !connected.has(statement.id),
         root: statement.id === slice.root,
         otherFile:
           statement.node.fileName && statement.node.fileName !== rootFile
             ? statement.node.fileName
             : null,
         overlaysShown: withOverlay.has(statement.id),
+        offPath: !!path && !path.has(statement.id),
         onExpand: (id) => panel.expand(id)
       };
       return [
@@ -119,10 +128,13 @@
   const edges = $derived.by((): Edge[] => {
     if (!layout) return [];
     const { slice, laid } = layout;
+    const path = panel.evidence?.path;
     return slice.edges.flatMap((e) => {
       const route = laid.edges.get(edgeKey(e));
       if (!route) return [];
       const overlay = e.kind === 'OVERLAY';
+      // A dependence between two statements of the path the agent's answer leads along
+      const agent = !overlay && !!path && path.has(e.from) && path.has(e.to);
       // With the edges of the inspected node, only they belong to the selection
       const active =
         !overlay &&
@@ -135,8 +147,10 @@
         text: e.label,
         kind: e.kind,
         active,
-        faded: selectedId !== null && !active,
+        faded:
+          (fadeBySelection && selectedId !== null && !active) || (!!path && !agent && !overlay),
         marked,
+        agent,
         onHoverVariable: (name) => (hoveredVariable = name)
       };
       return [
@@ -152,7 +166,7 @@
             ? undefined
             : {
                 type: MarkerType.ArrowClosed,
-                color: edgeColor(e.kind, active, marked),
+                color: edgeColor(e.kind, active, marked, agent),
                 width: 14,
                 height: 14
               },

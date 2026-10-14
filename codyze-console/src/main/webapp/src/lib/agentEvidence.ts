@@ -3,6 +3,7 @@ import type {
   NodeJSON,
   NodePathsJSON,
   NodeRefJSON,
+  NodeSliceJSON,
   TrustIssueJSON
 } from '$lib/types';
 
@@ -42,14 +43,21 @@ export function pathNodeIds(paths: NodePathsJSON): string[][] {
   return paths.paths.map((path) => path.map((node) => node.nodeId));
 }
 
+/** Whether a value is a slice in the format of the tool that computes slices. */
+function isNodeSlice(value: unknown): value is NodeSliceJSON {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as NodeSliceJSON;
+  return v.kind === 'slice' && isNodeInfo(v.start) && Array.isArray(v.statements);
+}
+
 /**
- * The paths in the result of a tool call, if it returned paths. The result may be the JSON as text,
- * parsed, or the text contents of the tool.
+ * The value of a given format in the result of a tool call, if it returned one. The result may be
+ * the JSON as text, parsed, or the text contents of the tool.
  */
-export function extractToolPaths(content: unknown): NodePathsJSON | null {
+function extractToolValue<T>(content: unknown, is: (value: unknown) => value is T): T | null {
   if (typeof content === 'string') {
     try {
-      return extractToolPaths(JSON.parse(content));
+      return extractToolValue(JSON.parse(content), is);
     } catch {
       return null;
     }
@@ -57,12 +65,22 @@ export function extractToolPaths(content: unknown): NodePathsJSON | null {
   if (Array.isArray(content)) {
     for (const part of content) {
       const text = (part as { text?: unknown })?.text;
-      const paths = typeof text === 'string' ? extractToolPaths(text) : null;
-      if (paths) return paths;
+      const value = typeof text === 'string' ? extractToolValue(text, is) : null;
+      if (value) return value;
     }
     return null;
   }
-  return isNodePaths(content) ? content : null;
+  return is(content) ? content : null;
+}
+
+/** The paths in the result of a tool call, if it returned paths. */
+export function extractToolPaths(content: unknown): NodePathsJSON | null {
+  return extractToolValue(content, isNodePaths);
+}
+
+/** The slice in the result of a tool call, if it returned a slice. */
+export function extractToolSlice(content: unknown): NodeSliceJSON | null {
+  return extractToolValue(content, isNodeSlice);
 }
 
 /**
@@ -127,8 +145,13 @@ export async function resolveNodes(ids: string[]): Promise<Map<string, NodeRefJS
 
 /** A short label for a cited node, e.g. `encrypt · main.c:13`. */
 export function citationLabel(ref: NodeRefJSON): string {
-  const name = ref.name || (ref.code.length <= 24 ? ref.code : `${ref.code.slice(0, 23)}…`);
+  const name = citationName(ref);
   return ref.startLine >= 1 ? `${name} · ${ref.fileName ?? ''}:${ref.startLine}` : name;
+}
+
+/** How a cited node is named in its citation: by its name, or else by its (shortened) code. */
+export function citationName(ref: NodeRefJSON): string {
+  return ref.name || (ref.code.length <= 24 ? ref.code : `${ref.code.slice(0, 23)}…`);
 }
 
 // The trust issues of each set of evidence, by its sorted IDs
