@@ -434,11 +434,6 @@
   }
 
   function handleWindowKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape' && layersOpen) {
-      event.preventDefault();
-      layersOpen = false;
-      return;
-    }
     if (!onAsk) return;
     if (event.key === 'Escape' && ask && !askFocused) {
       // Other things that close with Escape (e.g. a panel) leave it to the input then
@@ -639,14 +634,6 @@
     }
   }
 
-  // The summary of the layers above the code and its menu to show or hide them
-  let layersOpen = $state(false);
-  let layersMenu = $state<HTMLElement | null>(null);
-
-  function closeLayersOutside(event: MouseEvent) {
-    if (layersOpen && !layersMenu?.contains(event.target as Node)) layersOpen = false;
-  }
-
   // The dataflow and agent layers need the lanes in the gutter, the findings layer its findings
   const shownLayers = $derived(
     layerInfos.filter(
@@ -655,7 +642,6 @@
         (l.id !== 'findings' || findings !== undefined)
     )
   );
-  const categoryLayers = $derived(shownLayers.filter((l) => l.category));
 
   // The lines of the findings, while their layer is shown (0-based, like the highlighted line)
   const findingLines = $derived(
@@ -1109,7 +1095,6 @@
           <HoverCard details={hover.details} />
         </div>
       {/if}
-
     </div>
   </div>
 
@@ -1167,75 +1152,37 @@
   {/if}
 </div>
 
-<!-- What the analysis found in the file, one count per category with its icon in the color of its
-marks. It opens a menu to show or hide the layers, with what each of them shows -->
+<!-- The layers as a row of toggles: first what the analysis found in the file, one count per
+category with its icon in the color of its marks, then the dataflows and the agent's evidence. What a
+layer shows is its tooltip -->
 {#snippet layerSummaryButton()}
-  <div class="relative" bind:this={layersMenu}>
-    <button
-      type="button"
-      class="flex h-6 items-center gap-2.5 rounded-md px-2 text-[11.5px] text-gray-600 tabular-nums hover:bg-gray-100 {layersOpen
-        ? 'bg-gray-100'
-        : ''}"
-      aria-haspopup="true"
-      aria-expanded={layersOpen}
-      title="What the analysis found in this file. Click to show or hide it in the code"
-      onclick={() => (layersOpen = !layersOpen)}
-    >
-      {#each categoryLayers as layer (layer.id)}
-        <span
-          class="flex items-center gap-1 {layers.visible[layer.id] ? '' : 'opacity-40'}"
-          title={layer.label}
-        >
-          <span class={layer.iconClass} aria-hidden="true">{layer.icon}</span>
-          <span class="sr-only">{layer.label}</span>
-          {layerSummary(layer.id).count}
-        </span>
-      {/each}
-    </button>
-    {#if layersOpen}
-      <div
-        class="absolute top-full right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
-        role="group"
-        aria-label="Layers"
+  <div
+    class="flex items-center gap-0.5 text-[11.5px] tabular-nums"
+    role="group"
+    aria-label="Layers"
+  >
+    {#each shownLayers as layer, i (layer.id)}
+      {@const summary = layerSummary(layer.id)}
+      {@const on = layers.visible[layer.id]}
+      {#if i > 0 && !layer.category && shownLayers[i - 1].category}
+        <span class="mx-1 h-3.5 border-l border-gray-200" aria-hidden="true"></span>
+      {/if}
+      <button
+        type="button"
+        class="flex h-6 items-center gap-1 rounded-md px-1.5 hover:bg-gray-100 {on
+          ? 'text-gray-600'
+          : 'text-gray-400'}"
+        aria-pressed={on}
+        title="{layer.label}: {summary.title}. Click to {on ? 'hide' : 'show'}."
+        onclick={() => layers.toggle(layer.id)}
       >
-        {#each shownLayers as layer, i (layer.id)}
-          {@const summary = layerSummary(layer.id)}
-          {@const on = layers.visible[layer.id]}
-          {#if i > 0 && !layer.category && shownLayers[i - 1].category}
-            <div class="mx-2 my-1 border-t border-gray-100"></div>
-          {/if}
-          <!-- A row is the switch of its layer; what the layer shows is its tooltip -->
-          <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            class="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs text-gray-800 hover:bg-gray-50"
-            title={summary.title}
-            onclick={() => layers.toggle(layer.id)}
-          >
-            <span class="w-3.5 text-center {layer.iconClass}" aria-hidden="true"
-              >{layer.icon}</span
-            >
-            <span class="flex-1">{layer.label}</span>
-            {#if layer.category || summary.count > 0}
-              <span class="text-gray-400 tabular-nums">{summary.count}</span>
-            {/if}
-            <span
-              class="relative h-4 w-7 shrink-0 rounded-full transition-colors {on
-                ? 'bg-blue-600'
-                : 'bg-gray-200'}"
-              aria-hidden="true"
-            >
-              <span
-                class="absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform {on
-                  ? 'translate-x-3'
-                  : ''}"
-              ></span>
-            </span>
-          </button>
-        {/each}
-      </div>
-    {/if}
+        <span class={on ? layer.iconClass : 'opacity-50'} aria-hidden="true">{layer.icon}</span>
+        <span class="sr-only">{layer.label}</span>
+        {#if layer.category || summary.count > 0}
+          <span class={on ? '' : 'line-through decoration-gray-300'}>{summary.count}</span>
+        {/if}
+      </button>
+    {/each}
   </div>
 {/snippet}
 
@@ -1249,9 +1196,6 @@ marks. It opens a menu to show or hide the layers, with what each of them shows 
 
 <svelte:window
   onmouseup={handleWindowMouseUp}
-  onmousedown={(e) => {
-    ask = null;
-    closeLayersOutside(e);
-  }}
+  onmousedown={() => (ask = null)}
   onkeydown={handleWindowKeydown}
 />
