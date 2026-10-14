@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
-import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -409,7 +408,16 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleUnaryExpr(unaryExpr: GoStandardLibrary.Ast.UnaryExpr): UnaryOperator {
+    private fun handleUnaryExpr(unaryExpr: GoStandardLibrary.Ast.UnaryExpr): Expression {
+        // Taking the address of an expression is a pointer reference, like in C/C++. This is what
+        // the passes, e.g., the PointsToPass, expect.
+        if (unaryExpr.opString == "&") {
+            val input = handle(unaryExpr.x)
+            return newPointerReference(input.name, unknownType(), rawNode = unaryExpr).apply {
+                this.input = input
+            }
+        }
+
         return newUnaryOperator(
             unaryExpr.opString,
             postfix = false,
