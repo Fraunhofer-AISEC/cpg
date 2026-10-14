@@ -46,12 +46,14 @@ import kotlin.collections.component2
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.ceil
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
@@ -128,6 +130,15 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
      * (see [FIRST_STATE_SAMPLE_AFTER_EDGES]) and for a few states only (see [STATES_PER_SAMPLE]).
      * [states] is therefore not a collection but a function: we do not even want to iterate the
      * states unless we are going to sample them.
+     *
+     * This is a known, accepted source of inaccuracy in the [maxStateEntries][Lattice.Configuration
+     * .maxStateEntries] safety net, not just in the diagnostic logging: between two samples (which
+     * grow exponentially farther apart) the estimate can be stale, and even a fresh sample only
+     * looks at up to [STATES_PER_SAMPLE] of however many states are actually live, so it can miss
+     * both a sudden blowup between samples and a large state that the sample did not happen to
+     * include. Making this precise would mean counting every live state's entries on every edge,
+     * which is exactly the O(total entries) cost per edge this sampling exists to avoid - the
+     * budget is a best-effort early warning, not a guarantee against ever exhausting the heap.
      */
     fun sample(liveStates: Int, states: () -> Iterable<Lattice.Element>): Long {
         processedEdges++
@@ -202,8 +213,12 @@ private fun Lattice.Element.entryCount(): Int =
         is TupleLattice.Element<*, *> -> first.entryCount() + second.entryCount()
         is TripleLattice.Element<*, *, *> ->
             first.entryCount() + second.entryCount() + third.entryCount()
-        is ConcurrentMapLattice.Element<*, *> -> size
-        is HashMapLattice.Element<*, *> -> size
+        // The values of a ConcurrentMapLattice/HashMapLattice element are themselves
+        // Lattice.Elements - for PointsToPass's state, a map of nodes to triples of powersets - so
+        // counting just the number of keys (as this used to) badly undercounts exactly the state
+        // shape this function exists to measure.
+        is ConcurrentMapLattice.Element<*, *> -> values.sumOf { it.entryCount() }
+        is HashMapLattice.Element<*, *> -> values.sumOf { it.entryCount() }
         is PowersetLattice.Element<*> -> size
         else -> 1
     }
@@ -418,11 +433,17 @@ fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
 @OptIn(ExperimentalAtomicApi::class)
 class TimeoutBudget(private val startMark: TimeMark, timeout: Duration) :
     AbstractCoroutineContextElement(Key) {
-    private val remainingTimeout = AtomicReference(timeout)
+    // Stored as a primitive Long of nanoseconds, not as an AtomicReference<Duration>: Duration is a
+    // value class, so an AtomicReference<Duration> boxes it, and compareAndSet on a boxed value
+    // class compares by reference, not by value - the box returned by a fresh load() is never
+    // reference-equal to another box holding the same value, so compareAndSet (and therefore
+    // credit(), below) could never succeed and would spin forever. A primitive Long has no such
+    // identity problem: compareAndSet on it compares the actual bits.
+    private val remainingNanos = AtomicLong(timeout.inWholeNanoseconds)
 
     /** The time left until this budget is exhausted. */
     val remaining: Duration
-        get() = remainingTimeout.load() - startMark.elapsedNow()
+        get() = remainingNanos.load().nanoseconds - startMark.elapsedNow()
 
     /**
      * Extends this budget by [elapsed], e.g. to exempt time spent in a nested analysis that is
@@ -430,8 +451,8 @@ class TimeoutBudget(private val startMark: TimeMark, timeout: Duration) :
      */
     fun credit(elapsed: Duration) {
         while (true) {
-            val current = remainingTimeout.load()
-            if (remainingTimeout.compareAndSet(current, current + elapsed)) break
+            val current = remainingNanos.load()
+            if (remainingNanos.compareAndSet(current, current + elapsed.inWholeNanoseconds)) break
         }
     }
 
@@ -798,7 +819,12 @@ interface Lattice<T : Lattice.Element> {
         ) {
             currentCoroutineContext().ensureActive()
             // Sample the retention before pruning: that high-water mark is what actually has to fit
-            // into the heap.
+            // into the heap. This is deliberate, not an oversight: the maxStateEntries check below
+            // uses this same pre-prune count, so a run that transiently spiked above budget aborts
+            // even if the very next prune would have brought it back down - the heap already had to
+            // accommodate that peak at some point, and a state that grows that large once can grow
+            // that large again, so we would rather stop a run that proved it can spike than let it
+            // through on the hope that this particular spike was a one-off.
             val liveEntries = statistics.sample(globalState.size) { globalState.values }
 
             // All edges which are still to be processed are in one of the worklists at this point,
@@ -1053,7 +1079,15 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         // We make the new element a bit bigger than the current size to avoid resizing
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
-            addAllWithoutCheck(set)
+            // set's static type is just Set<T>, so without this check Kotlin always resolves to
+            // the slow, key-recomputing addAllWithoutCheck(Iterable<T>) overload below, even when
+            // the runtime object is an Element and duplicate() - the hot path that calls this
+            // constructor via Element(this) - could have used the fast one.
+            if (set is Element<*>) {
+                @Suppress("UNCHECKED_CAST") addAllWithoutCheck(set as Element<T>)
+            } else {
+                addAllWithoutCheck(set)
+            }
         }
 
         // Points-to sets are tiny (usually a single element), and there are millions of them, so we

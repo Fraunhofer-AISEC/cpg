@@ -447,7 +447,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
-        /** The timeout after which we stop analyzing a function. Default 60 minutes */
+        /**
+         * The timeout after which we stop analyzing a function. Default 60 minutes.
+         *
+         * Analyzing a function can trigger a nested analysis of its own (e.g. to compute a callee's
+         * function summary), which gets its own, independent [timeout] - time already spent in such
+         * a callee is credited back to the caller's budget (see [TimeoutBudget.credit]), so the
+         * caller is not unfairly charged for it twice, but each nesting level can still *add* up to
+         * one more [timeout] of wall-clock time to the whole chain if its callee is slow for a
+         * reason unrelated to the caller. So the wall-clock bound for one top-level analysis is
+         * [timeout] times its call chain's nesting depth, not a flat [timeout].
+         */
         var timeout: Duration = 60.minutes,
 
         /**
@@ -460,6 +470,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * entry costs roughly 500 bytes, so a budget of 20 million entries corresponds to about 10
          * GB. Set this if analyzing a single huge function must not be able to take the whole
          * analysis down with an [OutOfMemoryError].
+         *
+         * Unlike [timeout], a nested analysis's memory use is not credited back to its caller at
+         * all: each nesting level enforces its own, fully independent [maxStateEntries], so the
+         * memory bound for one top-level analysis is [maxStateEntries] times its call chain's
+         * nesting depth.
          */
         var maxStateEntries: Long? = null,
 

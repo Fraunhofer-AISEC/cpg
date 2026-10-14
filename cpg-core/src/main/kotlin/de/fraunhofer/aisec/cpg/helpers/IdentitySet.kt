@@ -350,7 +350,7 @@ abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : Mutable
 open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) :
     AbstractConcurrentSet<T, PointsToPass.IdKey<T>>(expectedMaxSize) {
 
-    override fun keyFor(element: T): PointsToPass.IdKey<T> = PointsToPass.IdKey(element)
+    final override fun keyFor(element: T): PointsToPass.IdKey<T> = PointsToPass.IdKey(element)
 
     /**
      * Fast path for [addAllWithoutCheck]: since every [ConcurrentIdentitySet] computes its keys the

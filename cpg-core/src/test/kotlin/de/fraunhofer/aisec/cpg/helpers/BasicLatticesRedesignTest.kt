@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
@@ -38,6 +39,8 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TimeoutBudget
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -47,6 +50,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Timeout
@@ -649,6 +654,118 @@ class BasicLatticesRedesignTest {
             )
         }
         assertNull(currentCoroutineContext()[TimeoutBudget])
+    }
+
+    @Test
+    @Timeout(5)
+    fun testTimeoutBudgetCreditTerminatesAndExtendsRemaining() {
+        // This used to spin forever: kotlin.concurrent.atomics.AtomicReference<Duration> compares
+        // by reference, and Duration (a value class) is re-boxed on every load(), so the current
+        // value returned by load() was never reference-equal to what compareAndSet actually found
+        // in the field, and the retry loop in credit() could never succeed. If this regresses,
+        // @Timeout fails the test instead of the whole suite hanging.
+        val budget = TimeoutBudget(TimeSource.Monotonic.markNow(), 100.milliseconds)
+        val before = budget.remaining
+
+        budget.credit(500.milliseconds)
+
+        assertTrue(
+            budget.remaining > before,
+            "credit() has to extend the budget, not just leave it unchanged",
+        )
+    }
+
+    @Test
+    @Timeout(10)
+    fun testIterateEOGCreditsTimeSpentInNestedAnalysis() = runBlocking {
+        val lattice = PowersetLattice<String>()
+
+        val outerStart = Literal<Int>()
+        val outerEnd = Literal<Int>()
+        outerStart.nextEOGEdges += outerEnd
+
+        val innerStart = Literal<Int>()
+        val innerEnd = Literal<Int>()
+        innerStart.nextEOGEdges += innerEnd
+
+        // Simulates analyzing a function whose transformation triggers analysis of a callee (e.g.
+        // to compute its function summary) - a nested iterateEOG call with its own, independent
+        // timeout, which credits the time it took back to the enclosing budget. This is the
+        // scenario that reliably hung before the credit() fix above; @Timeout is the safety net in
+        // case it regresses.
+        val (_, timedOut) =
+            lattice.iterateEOG(
+                outerStart.nextEOGEdges.toList(),
+                lattice.bottom,
+                { innerLattice, _, state ->
+                    innerLattice.iterateEOG(
+                        innerStart.nextEOGEdges.toList(),
+                        innerLattice.bottom,
+                        { _, _, innerState -> innerState },
+                        timeout = 5.seconds,
+                    )
+                    state
+                },
+                timeout = 5.seconds,
+            )
+
+        assertFalse(timedOut)
+    }
+
+    @Test
+    fun testPowersetLatticeKeyForDedupesStructurally() {
+        val node = Literal<Int>()
+        val otherNode = Literal<Int>()
+
+        // Pair: structural equality on both components, not reference equality on the Pair itself.
+        val pairs =
+            PowersetLattice.Element(Pair(node, true), Pair(node, true), Pair(otherNode, true))
+        assertEquals(2, pairs.size)
+        assertTrue(pairs.contains(Pair(node, true)))
+        assertTrue(pairs.remove(Pair(node, true)))
+        assertEquals(1, pairs.size)
+        assertFalse(pairs.contains(Pair(node, true)))
+
+        // NodeWithPropertiesKey: node by reference, properties structurally - two separately
+        // constructed instances describing the same node and properties still count as one.
+        val propsA = equalLinkedHashSetOf<Any>("a")
+        val propsB = equalLinkedHashSetOf<Any>("a")
+        val keys =
+            PowersetLattice.Element(
+                PointsToPass.NodeWithPropertiesKey(node, propsA),
+                PointsToPass.NodeWithPropertiesKey(node, propsB),
+                PointsToPass.NodeWithPropertiesKey(otherNode, propsA),
+            )
+        assertEquals(2, keys.size)
+        assertTrue(keys.remove(PointsToPass.NodeWithPropertiesKey(node, propsB)))
+        assertEquals(1, keys.size)
+
+        // Everything else (plain nodes here) keeps reference-identity semantics.
+        val nodes = PowersetLattice.Element(node, node, otherNode)
+        assertEquals(2, nodes.size)
+
+        // null is a valid element and does not special-case into either of the above.
+        val withNull = PowersetLattice.Element<Node?>(null, null, node)
+        assertEquals(2, withNull.size)
+        assertTrue(withNull.contains(null))
+        assertTrue(withNull.remove(null))
+        assertEquals(1, withNull.size)
+        assertFalse(withNull.contains(null))
+    }
+
+    @Test
+    fun testAddAllWithoutCheckFastPathsPreserveContents() {
+        val original = concurrentIdentitySetOf("a", "b", "c")
+        val copy = ConcurrentIdentitySet<String>()
+        copy.addAllWithoutCheck(original)
+        assertEquals(original.toSet(), copy.toSet())
+
+        val originalElement = PowersetLattice.Element("a", "b", "c")
+        // Goes through the constructor's Set<T> overload, which has to detect that the argument is
+        // itself an Element and dispatch to the fast, map.putAll-based overload instead of silently
+        // falling back to recomputing every key.
+        val copiedElement = PowersetLattice.Element(originalElement as Set<String>)
+        assertEquals(originalElement.toSet(), copiedElement.toSet())
     }
 
     @Test
