@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze.console
+package de.fraunhofer.aisec.cpg.serialization
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -57,7 +57,8 @@ enum class GraphNodeKind {
     STUB,
     /**
      * A concept or operation that the dependences pass through. Its node is labelled like the
-     * overlays of [NodeDetailsJSON], its code and lines are those of the node it is attached to.
+     * overlays of a node ([toOverlayRefJSON]), its code and lines are those of the node it is
+     * attached to.
      */
     OVERLAY,
 }
@@ -153,7 +154,7 @@ private fun Node.isBodyOf(parent: Node): Boolean =
  * function belong to its header, and the variables of a declaration with their initializers belong
  * to the declaration.
  */
-internal fun Node.enclosingStatement(): Node {
+fun Node.enclosingStatement(): Node {
     if (this is Parameter)
         (astParent as? Function)?.let {
             return it
@@ -181,7 +182,7 @@ private val Node.isDeclaredInStatement: Boolean
             astParent.let { it is Expression && it !is Block }
 
 /** The nodes of a statement, without the statements in its body or in nested blocks. */
-internal fun Node.statementMembers(): List<Node> {
+fun Node.statementMembers(): List<Node> {
     val members = mutableListOf<Node>()
     fun visit(node: Node) {
         members += node
@@ -193,15 +194,14 @@ internal fun Node.statementMembers(): List<Node> {
     return members
 }
 
-internal val Node.isBranching: Boolean
+val Node.isBranching: Boolean
     get() = this is IfElse || this is Loop || this is Switch || this is CatchClause
 
 /** This node as a part of [statement], or `null` if it is the statement itself. */
-internal fun Node.asPartOf(statement: Node): NodeRefJSON? =
-    if (this === statement) null else toRefJSON()
+fun Node.asPartOf(statement: Node): NodeRefJSON? = if (this === statement) null else toRefJSON()
 
 /** Whether this is a concept or an operation, which a graph shows as an overlay. */
-internal val Node.isConceptOverlay: Boolean
+val Node.isConceptOverlay: Boolean
     get() = this is Concept || this is Operation
 
 /**
@@ -209,7 +209,7 @@ internal val Node.isConceptOverlay: Boolean
  * with its statement. A graph shows all of them, not only those its dependences reach, so that it
  * does not depend on the dataflows of an overlay whether it is shown.
  */
-internal fun overlaysOf(statements: Collection<Node>): Map<Node, Node> {
+fun overlaysOf(statements: Collection<Node>): Map<Node, Node> {
     val known = statements.map { it.id }.toSet()
     val overlays = LinkedHashMap<Node, Node>()
     for (statement in statements) {
@@ -228,10 +228,7 @@ internal fun overlaysOf(statements: Collection<Node>): Map<Node, Node> {
  * to, if the statement is part of the graph. The dependences between an overlay and its statement
  * are left out, the link already shows that they belong together.
  */
-internal fun attachOverlays(
-    nodes: Collection<Node>,
-    edges: List<GraphEdgeJSON>,
-): List<GraphEdgeJSON> {
+fun attachOverlays(nodes: Collection<Node>, edges: List<GraphEdgeJSON>): List<GraphEdgeJSON> {
     val ids = nodes.map { it.id.toString() }.toSet()
     val links =
         nodes
@@ -248,7 +245,7 @@ internal fun attachOverlays(
         links.map { (from, to) -> GraphEdgeJSON(from, to, GraphEdgeKind.OVERLAY, null) }
 }
 
-internal fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON {
+fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON {
     // Stubs are shown as they are, without everything they contain
     val members = if (kind == GraphNodeKind.STUB) listOf(this) else statementMembers()
     val calls = members.filterIsInstance<Call>()
@@ -363,5 +360,35 @@ fun pathsGraph(paths: List<List<Node>>, kind: String): GraphSliceJSON {
                 },
         edges = attachOverlays(statements.values + overlays.keys, edges.values.toList()),
         truncated = false,
+    )
+}
+
+/**
+ * The union of [graphs] of statements, e.g. of the slices and paths a question to the agent led to.
+ * A statement in several graphs keeps its depth from the first one; it offers more statements only
+ * if it does in each of them. The root is the root of the first graph.
+ */
+fun mergeGraphs(graphs: List<GraphSliceJSON>): GraphSliceJSON {
+    val nodes = LinkedHashMap<String, GraphNodeJSON>()
+    val edges = LinkedHashMap<List<Any?>, GraphEdgeJSON>()
+    for (graph in graphs) {
+        for (node in graph.nodes) {
+            nodes.merge(node.id, node) { known, other ->
+                known.copy(more = minOf(known.more, other.more))
+            }
+        }
+        for (edge in graph.edges) {
+            edges.putIfAbsent(listOf(edge.from, edge.to, edge.kind, edge.label), edge)
+        }
+    }
+    val first = graphs.firstOrNull()
+    return GraphSliceJSON(
+        root = first?.root ?: "",
+        direction = first?.direction ?: SliceDirection.BACKWARD,
+        hops = graphs.maxOfOrNull { it.hops } ?: 0,
+        function = null,
+        nodes = nodes.values.toList(),
+        edges = edges.values.toList(),
+        truncated = graphs.any { it.truncated },
     )
 }
