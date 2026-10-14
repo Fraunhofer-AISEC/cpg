@@ -97,12 +97,12 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
 
     open fun put(key: K, value: V): V? {
         val idKey = PointsToPass.IdKey(key)
-        return updateAndGetPrevious { it.put(idKey, value) }[idKey]
+        return updateAndGetPrevious { it.putting(idKey, value) }[idKey]
     }
 
     fun remove(key: K): V? {
         val idKey = PointsToPass.IdKey(key)
-        return updateAndGetPrevious { it.remove(idKey) }[idKey]
+        return updateAndGetPrevious { it.removing(idKey) }[idKey]
     }
 
     fun removeKeyIf(filter: Predicate<in K>): Boolean {
@@ -130,6 +130,9 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
 
     override fun isEmpty(): Boolean = backing.get().isEmpty()
 
+    /** Removes every entry. [ConcurrentIdentityHashMap], which this class replaces, had one too. */
+    fun clear() = restore(persistentHashMapOf())
+
     override val keys: Set<K>
         get() = KeySetView()
 
@@ -154,7 +157,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
             val existing = previous[idKey]
             if (existing != null) return existing
             val value = mappingFunction(key)
-            if (backing.compareAndSet(previous, previous.put(idKey, value))) return value
+            if (backing.compareAndSet(previous, previous.putting(idKey, value))) return value
         }
     }
 
@@ -171,7 +174,8 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
             val previous = backing.get()
             val newValue = remappingFunction(key, previous[idKey])
             val next =
-                if (newValue == null) previous.remove(idKey) else previous.put(idKey, newValue)
+                if (newValue == null) previous.removing(idKey)
+                else previous.putting(idKey, newValue)
             if (next === previous || backing.compareAndSet(previous, next)) return newValue
         }
     }
@@ -211,10 +215,37 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         }
     }
 
-    override fun toString(): String =
-        backing.get().entries.joinToString(prefix = "{", postfix = "}") { (key, value) ->
+    /** How many entries [toString] prints before summarizing the rest as "and N more". */
+    private val maxToStringEntries = 20
+
+    override fun toString(): String {
+        val entries = backing.get().entries
+        val omitted = entries.size - maxToStringEntries
+        return entries.asSequence().take(maxToStringEntries).joinToString(
+            prefix = "{",
+            postfix = if (omitted > 0) ", ... and $omitted more}" else "}",
+        ) { (key, value) ->
             "${key.ref}=$value"
         }
+    }
+
+    /**
+     * Delegates to the backing [PersistentMap]'s own content-based `hashCode()`/`equals()` (summing
+     * each entry's `IdKey.hashCode() xor value.hashCode()`, matching the [Map] contract), rather
+     * than falling back to identity via [Any]. [ConcurrentIdentityHashMap], which this class
+     * replaces, did the same via its backing `ConcurrentHashMap`; subclasses like
+     * [ConcurrentMapLattice.Element] rely on this for their own content-based `hashCode()`.
+     */
+    override fun hashCode(): Int = backing.get().hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as PersistentIdentityMap<*, *>
+
+        return backing.get() == other.backing.get()
+    }
 
     /**
      * A view of the keys. It reads the current contents on every access, so it observes
@@ -228,7 +259,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         override fun add(element: K): Boolean =
             throw UnsupportedOperationException("Cannot add a key without a value")
 
-        override fun clear() = restore(persistentHashMapOf())
+        override fun clear() = this@PersistentIdentityMap.clear()
 
         override fun contains(element: K): Boolean = containsKey(element)
 
@@ -240,15 +271,24 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
             val iterator = snapshot().keys.iterator()
             return object : MutableIterator<K> {
                 private var last: K? = null
+                private var hasLast = false
 
                 override fun hasNext(): Boolean = iterator.hasNext()
 
-                override fun next(): K = iterator.next().ref.also { last = it }
+                override fun next(): K =
+                    iterator.next().ref.also {
+                        last = it
+                        hasLast = true
+                    }
 
                 override fun remove() {
-                    this@PersistentIdentityMap.remove(
-                        last ?: throw IllegalStateException("next() has not been called yet")
-                    )
+                    // hasLast (not "last != null") so a legitimately null key is not mistaken for
+                    // next() never having been called, and is cleared so a second remove() for the
+                    // same element is rejected like a standard Iterator would, instead of silently
+                    // removing whatever now happens to be at that key.
+                    check(hasLast) { "next() has not been called yet" }
+                    hasLast = false
+                    @Suppress("UNCHECKED_CAST") this@PersistentIdentityMap.remove(last as K)
                 }
             }
         }
@@ -265,7 +305,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         override fun add(element: Map.Entry<K, V>): Boolean =
             throw UnsupportedOperationException("Cannot add an entry through the entry view")
 
-        override fun clear() = restore(persistentHashMapOf())
+        override fun clear() = this@PersistentIdentityMap.clear()
 
         override fun contains(element: Map.Entry<K, V>): Boolean {
             val current = snapshot()
@@ -284,19 +324,22 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
             val iterator = snapshot().entries.iterator()
             return object : MutableIterator<Map.Entry<K, V>> {
                 private var last: K? = null
+                private var hasLast = false
 
                 override fun hasNext(): Boolean = iterator.hasNext()
 
                 override fun next(): Map.Entry<K, V> {
                     val entry = iterator.next()
                     last = entry.key.ref
+                    hasLast = true
                     return IdentityEntry(entry.key.ref, entry.value)
                 }
 
                 override fun remove() {
-                    this@PersistentIdentityMap.remove(
-                        last ?: throw IllegalStateException("next() has not been called yet")
-                    )
+                    // See KeySetView's iterator for why this is hasLast, not "last != null".
+                    check(hasLast) { "next() has not been called yet" }
+                    hasLast = false
+                    @Suppress("UNCHECKED_CAST") this@PersistentIdentityMap.remove(last as K)
                 }
             }
         }
@@ -306,7 +349,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
             var removed = false
             updateAndGetPrevious { previous ->
                 removed = previous[idKey] == element.value
-                if (removed) previous.remove(idKey) else previous
+                if (removed) previous.removing(idKey) else previous
             }
             return removed
         }

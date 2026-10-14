@@ -31,8 +31,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class PersistentIdentityMapTest {
@@ -115,6 +118,88 @@ class PersistentIdentityMapTest {
         iterator.next()
         iterator.remove()
         assertEquals(1, map.size, "Removing through the key iterator has to reach the map")
+    }
+
+    @Test
+    fun testHashCodeAndEqualsAreContentBased() {
+        val keyA = Key("a")
+        val keyB = Key("b")
+
+        val map1 = PersistentIdentityMap<Key, Int>()
+        map1.put(keyA, 1)
+        map1.put(keyB, 2)
+
+        val map2 = PersistentIdentityMap<Key, Int>()
+        // Insert in a different order, to make sure that alone doesn't affect the result. Reuses
+        // keyA/keyB rather than fresh, merely-equal Key instances: this map compares keys by
+        // reference (testKeysAreComparedByIdentity), so two maps can only be equal if their keys
+        // are references to the very same objects - exactly like ConcurrentMapLattice.Element
+        // comparing two states that both refer to the same graph nodes.
+        map2.put(keyB, 2)
+        map2.put(keyA, 1)
+
+        // This is the actual regression this test guards against: PersistentIdentityMap used to
+        // inherit identity-based hashCode()/equals() from Any, which two separately-constructed but
+        // content-equal maps would fail - breaking the Map contract and anything that hashes a map
+        // (e.g. putting it in a HashSet, or a wrapper whose own hashCode() delegates to it, like
+        // ConcurrentMapLattice.Element does).
+        assertEquals(map1, map2)
+        assertEquals(map1.hashCode(), map2.hashCode())
+
+        map2.put(Key("c"), 3)
+        assertFalse(map1 == map2, "A map with an extra entry must not be equal")
+    }
+
+    /**
+     * A value which is `equals` to every other value with the same [content], but never the same
+     * instance.
+     */
+    private data class Box(val content: String)
+
+    @Test
+    fun testPutStoresAnEqualButNotIdenticalValue() {
+        // This pins an assumption the copy-on-write mechanism in ConcurrentMapLattice.Element
+        // relies on (see its getForUpdate): put()/compute() must not short-circuit and keep the old
+        // value just because the new one is `==` to it, or a caller which just replaced a value
+        // with a fresh, private, but content-equal copy would find the old (possibly still shared)
+        // instance still installed.
+        val key = Key("a")
+        val map = PersistentIdentityMap<Key, Box>()
+        val original = Box("x")
+        map.put(key, original)
+
+        val equalButNotSame = Box("x")
+        assertEquals(original, equalButNotSame)
+        assertNotSame(original, equalButNotSame)
+
+        map.put(key, equalButNotSame)
+        assertSame(equalButNotSame, map[key])
+    }
+
+    @Test
+    fun testKeyIteratorRemoveRejectsCallsWithoutAPrecedingNext() {
+        val map = PersistentIdentityMap<Key, Int>()
+        map.put(Key("a"), 1)
+
+        @Suppress("UNCHECKED_CAST") val iterator = (map.keys as MutableSet<Key>).iterator()
+        assertFailsWith<IllegalStateException> { iterator.remove() }
+
+        iterator.next()
+        iterator.remove()
+        // A second remove() for the same element - without an intervening next() - must also be
+        // rejected, not silently remove whatever key now happens to occupy the same slot.
+        assertFailsWith<IllegalStateException> { iterator.remove() }
+    }
+
+    @Test
+    fun testClearEmptiesTheMap() {
+        val map = PersistentIdentityMap<Key, Int>()
+        map.putAll(listOf(Key("a") to 1, Key("b") to 2))
+
+        map.clear()
+
+        assertTrue(map.isEmpty())
+        assertEquals(0, map.size)
     }
 
     /**

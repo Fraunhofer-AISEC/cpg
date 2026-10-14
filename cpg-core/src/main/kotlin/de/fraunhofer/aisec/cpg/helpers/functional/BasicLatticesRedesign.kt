@@ -1088,7 +1088,13 @@ internal fun <V : Lattice.Element> shareValue(value: V): V {
     if (!value.supportsSharing) {
         return value.duplicate() as V
     }
-    value.isShared = true
+    // Skip the write (and, for a Tuple/Triple, the cascade into its components) if the value
+    // already reports itself as shared - duplicate()/putAllTransformed call this for every value
+    // in a map, so on a map that is already mostly shared, writing the same `true` again and again
+    // is a lot of pointless cache-line bouncing between threads for no behavior change.
+    if (!value.isShared) {
+        value.isShared = true
+    }
     return value
 }
 
@@ -1574,8 +1580,8 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     }
                 }
             ) {
-                // The lambda above never returns null, so this can only fire if ConcurrentHashMap's
-                // compute() contract ever changes - a clearer failure than an unexplained NPE.
+                // The lambda above never returns null, so this can only fire if compute()'s
+                // contract ever changes - a clearer failure than an unexplained NPE.
                 "computeIfAbsent for $key unexpectedly produced no value"
             }
 
