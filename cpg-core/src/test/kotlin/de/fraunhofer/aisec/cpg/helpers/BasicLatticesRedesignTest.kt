@@ -786,6 +786,12 @@ class BasicLatticesRedesignTest {
             assertTrue(assertNotNull(copy[key]).isShared)
         }
 
+        // ... which is why modifying them directly (bypassing getForUpdate) is rejected: with no
+        // way to retroactively swap in a private copy once the caller already holds the shared
+        // object, letting the mutation through would silently corrupt every other owner.
+        assertThrows<AssertionError> { assertNotNull(copy["a"]).add("blub") }
+        assertThrows<AssertionError> { assertNotNull(original["a"]).add("blub") }
+
         // Asking for a private copy of one entry gives us a modifiable one and leaves the other
         // owner - and the entries we did not ask for - alone.
         val shared = assertNotNull(original["b"])
@@ -797,15 +803,6 @@ class BasicLatticesRedesignTest {
         assertEquals(PowersetLattice.Element("bla", "blub"), copy["a"])
         assertEquals(PowersetLattice.Element("bla"), original["a"])
         assertSame(shared, copy["b"])
-
-        // Modifying a still-shared entry directly (bypassing getForUpdate) is a bug, but one we
-        // can only detect, not prevent: by the time the set's mutating method runs, the caller
-        // already holds the very same shared object every other owner holds, so there is no way
-        // to retroactively swap in a private copy. It is logged and applied anyway - crashing the
-        // whole analysis over one caller's bug would be worse - which is visible through every
-        // owner since they all share that one object.
-        assertNotNull(copy["b"]).add("blub")
-        assertEquals(PowersetLattice.Element("foo", "blub"), original["b"])
     }
 
     @Test
@@ -844,17 +841,13 @@ class BasicLatticesRedesignTest {
         val result = runBlocking { lattice.lub(one, two) }
         assertSame(one["a"], result["a"])
         assertSame(two["b"], result["b"])
-        // Modifying the shared value directly is a bug - see testDuplicateSharesEntries for why it
-        // is merely logged instead of rejected - and visibly corrupts `one`, which still shares it.
-        assertNotNull(result["a"]).add("blub")
-        assertEquals(PowersetLattice.Element("bla", "blub"), one["a"])
+        assertThrows<AssertionError> { assertNotNull(result["a"]).add("blub") }
 
-        // The in-place variant shares the value it took from `two` the same way.
+        // The in-place variant may not modify the value it took from `two` either.
         val inPlace = runBlocking { lattice.lub(one, two, allowModify = true) }
         assertSame(one, inPlace)
         assertSame(two["b"], one["b"])
-        assertNotNull(one["b"]).add("blub")
-        assertEquals(PowersetLattice.Element("foo", "blub"), two["b"])
+        assertThrows<AssertionError> { assertNotNull(one["b"]).add("blub") }
     }
 
     @Test

@@ -589,6 +589,16 @@ interface Lattice<T : Lattice.Element> {
          *
          * Setting this to `true` on an element which does not [support sharing][supportsSharing]
          * has no effect, so a `false` result after setting it means "this one has to be copied".
+         *
+         * This is a plain, unsynchronized field on implementations (see e.g.
+         * [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element.isShared]), so its
+         * visibility across threads relies on the coroutine dispatcher providing a happens-before
+         * edge - which [kotlinx.coroutines.withContext] and structured concurrency generally do,
+         * but a caller holding a reference obtained from
+         * [ConcurrentMapLattice.Element.getForUpdate] should not assume it stays private beyond the
+         * next [de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice.Element.duplicate]
+         * or [de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice.Element.putShared] of
+         * the map it came from, which can share that same reference out again at any time.
          */
         var isShared: Boolean
             get() = false
@@ -1243,6 +1253,9 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         override var isShared: Boolean = false
 
+        /** Whether [onMutate] has already logged about this instance; see there. */
+        private var reportedSharedMutation = false
+
         /**
          * A shared set belongs to several states at once, so modifying it would silently change all
          * of them. This is always a programming error: the owner of the entry has to hand out a
@@ -1253,17 +1266,33 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
          * and there is no way for this method to retroactively swap that reference for a private
          * copy - only the owner that handed the reference out can do that (which is exactly what
          * [ConcurrentMapLattice.Element.getForUpdate] is for). So unlike the analogous situation in
-         * [ConcurrentMapLattice.Element.put], this cannot self-heal. We log instead of throwing:
-         * one pass producing a locally corrupted result is still better than the whole analysis
-         * going down over it.
+         * [ConcurrentMapLattice.Element.put], this cannot self-heal.
+         *
+         * This is *not* a merely local corruption: [PowersetLattice.Element.compare] takes a
+         * reference-equality fast path, so once two states hold the very same (now-mutated) object,
+         * [Lattice.iterateEOG] sees them as unchanged and stops propagating the update - the
+         * fixpoint it computes is silently wrong, with nothing but a log line to show for it. That
+         * is worse than crashing, so we [assert] (which - like every [assert] in this codebase - is
+         * enabled for our own test suite, where a silent wrong answer must fail loudly) in addition
+         * to logging. We still do not throw unconditionally in production: taking down a whole
+         * analysis run over one already-corrupted pass is its own tradeoff, and the log is at least
+         * a signal that assert-enabled testing does not have to rely on alone.
          */
         override fun onMutate() {
             if (isShared) {
-                Pass.log.error(
-                    "Modifying a points-to set which is shared between several states. This is a " +
-                        "bug: ask for a private copy (getForUpdate) before modifying it. Continuing, " +
-                        "but the other states sharing this set may now silently see this change too."
-                )
+                assert(false) {
+                    "Modifying a points-to set which is shared between several states. Ask for a " +
+                        "private copy (getForUpdate) before modifying it."
+                }
+                if (!reportedSharedMutation) {
+                    reportedSharedMutation = true
+                    Pass.log.error(
+                        "Modifying a points-to set which is shared between several states. This is " +
+                            "a bug: ask for a private copy (getForUpdate) before modifying it. " +
+                            "Continuing, but the other states sharing this set may now silently see " +
+                            "this change too."
+                    )
+                }
             }
         }
 
@@ -1912,6 +1941,10 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         // A freshly created tuple can still wrap components which are shared with somebody else, so
         // we have to ask them as well. Otherwise, we would hand out a tuple as private although
         // modifying its components is not allowed.
+        //
+        // @Transient: purely an in-memory bookkeeping flag for the copy-on-write mechanism, with no
+        // meaning once deserialized into a new, unshared object graph.
+        @Transient
         override var isShared: Boolean = false
             get() = field || first.isShared || second.isShared
             set(value) {
@@ -2048,9 +2081,12 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
             get() = first.supportsSharing && second.supportsSharing && third.supportsSharing
 
         // A freshly created triple can still wrap components which are shared with somebody else,
-        // so
-        // we have to ask them as well. Otherwise, we would hand out a triple as private although
+        // so we have to ask them as well. Otherwise, we would hand out a triple as private although
         // modifying its components is not allowed.
+        //
+        // @Transient: purely an in-memory bookkeeping flag for the copy-on-write mechanism, with no
+        // meaning once deserialized into a new, unshared object graph.
+        @Transient
         override var isShared: Boolean = false
             get() = field || first.isShared || second.isShared || third.isShared
             set(value) {

@@ -219,8 +219,16 @@ abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : Mutable
     protected abstract fun keyFor(element: T): K
 
     /**
-     * Called by every method which modifies this set, before it does so. Subclasses can use it to
-     * enforce invariants; the default implementation does nothing.
+     * Called by every *checked* mutating method of this class, before it does so. Subclasses can
+     * use it to enforce invariants; the default implementation does nothing.
+     *
+     * The fast-path `addAllWithoutCheck(same-type set)` overloads leaf classes provide (see
+     * [ConcurrentIdentitySet.addAllWithoutCheck] and
+     * [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element.addAllWithoutCheck]) do
+     * *not* call this: they exist specifically to copy another instance's backing map directly,
+     * which is only ever used to populate a set that was just constructed and cannot be shared yet.
+     * If that assumption ever stops holding - e.g. someone starts calling them on a set that is
+     * already visible to another owner - this barrier will not catch it.
      */
     protected open fun onMutate() {}
 
