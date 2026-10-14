@@ -197,8 +197,6 @@
     streamingReasoning = '';
     suggestions = [];
     isLoading = false;
-    selectedClient = null;
-    selectedModelName = null;
   }
 
   function makeStreamingCallbacks(): StreamingCallbacks {
@@ -347,15 +345,17 @@
     streamingReasoning = '';
 
     try {
-      const llmMessages: LLMMessage[] = chatMessages.map((msg) => ({
-        role: msg.role as 'user' | 'assistant',
-        content:
-          msg.contentType === 'tool-result' && msg.toolResult
-            ? `[Tool: ${msg.toolResult.toolName}]\n${typeof msg.toolResult.content === 'string' ? msg.toolResult.content : JSON.stringify(msg.toolResult.content)}`
-            : msg.context
-              ? `${msg.content}\n\n(This refers to the code selected by the user: ${msg.context})`
-              : msg.content
-      }));
+      // The earlier questions and answers, without the results of their tool calls: sent as text,
+      // the model takes them for its own words and writes tool calls as text instead of calling
+      // the tools. The answers cite the nodes they rely on
+      const llmMessages: LLMMessage[] = chatMessages
+        .filter((msg) => msg.contentType !== 'tool-result')
+        .map((msg) => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.context
+            ? `${msg.content}\n\n(This refers to the code selected by the user: ${msg.context})`
+            : msg.content
+        }));
 
       await llmAgent.chat(
         llmMessages,
