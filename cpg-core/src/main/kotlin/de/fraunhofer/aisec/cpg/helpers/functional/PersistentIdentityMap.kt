@@ -166,13 +166,36 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
      * the key and the current value (or `null` if there is none), and returns the new value.
      * Removes the entry if the function returns `null`.
      *
-     * [remappingFunction] must be free of side effects, see the note on the class.
+     * [remappingFunction] must be free of side effects, see the note on the class. Because of that
+     * same requirement - the same input can only ever produce the same output - a retry caused by a
+     * concurrent write to a *different* key does not re-invoke [remappingFunction]: the value at
+     * [key] has not changed, so neither can the result, and the previous attempt's result is reused
+     * instead. This matters because the [remappingFunction]s this is actually called with do real
+     * work: [ConcurrentMapLattice.Element.getForUpdate] and
+     * [ConcurrentMapLattice.Element.computeIfAbsent] both privatize a shared value by deep-copying
+     * it, and several coroutines calling either on *different* keys of the same map concurrently -
+     * exactly what [de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel] does - would otherwise
+     * retry each other's CAS and pay for a wasted copy on every retry, for a map that may have
+     * thousands of entries and dozens of concurrent writers.
      */
     fun compute(key: K, remappingFunction: (K, V?) -> V?): V? {
         val idKey = PointsToPass.IdKey(key)
+        var cachedInputIsValid = false
+        var cachedInput: V? = null
+        var cachedOutput: V? = null
         while (true) {
             val previous = backing.get()
-            val newValue = remappingFunction(key, previous[idKey])
+            val currentValue = previous[idKey]
+            val newValue =
+                if (cachedInputIsValid && cachedInput === currentValue) {
+                    cachedOutput
+                } else {
+                    remappingFunction(key, currentValue).also {
+                        cachedInput = currentValue
+                        cachedInputIsValid = true
+                        cachedOutput = it
+                    }
+                }
             val next =
                 if (newValue == null) previous.removing(idKey)
                 else previous.putting(idKey, newValue)
