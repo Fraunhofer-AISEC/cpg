@@ -34,8 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.serialization.GraphEdgeKind
+import de.fraunhofer.aisec.cpg.serialization.GraphNodeKind
+import de.fraunhofer.aisec.cpg.serialization.GraphSliceJSON
 import de.fraunhofer.aisec.cpg.serialization.NodeInfo
 import de.fraunhofer.aisec.cpg.serialization.NodePaths
+import de.fraunhofer.aisec.cpg.serialization.SliceCountsJSON
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*

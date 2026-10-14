@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze.console
+package de.fraunhofer.aisec.cpg.serialization
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -335,3 +335,127 @@ fun sliceCounts(root: Node, hops: Int, interprocedural: Boolean = true): SliceCo
                 .statements
                 .size - 1,
     )
+
+/**
+ * A statement of a [NodeSlice].
+ *
+ * @property depth The number of dependences between the statement and the start of the slice.
+ * @property kind Whether the statement is a plain statement, a branch or a stub (code that is not
+ *   analysed, or outside of the function for a slice that stays in its function).
+ * @property more The number of statements further away that the slice leaves out because of its
+ *   hops.
+ * @property concepts The concepts and operations attached to the statement.
+ * @property external Whether the statement calls code that is not part of the analysis.
+ * @property unresolved Whether the statement has a call whose target is unknown.
+ */
+@Serializable
+data class SliceStatement(
+    val nodeId: String,
+    val code: String,
+    val fileName: String?,
+    val startLine: Int,
+    val depth: Int,
+    val kind: GraphNodeKind,
+    val more: Int,
+    val concepts: List<String>,
+    val external: Boolean,
+    val unresolved: Boolean,
+)
+
+/**
+ * A dependence of a [NodeSlice], from the statement that is depended on to the one that depends on
+ * it.
+ *
+ * @property label For data dependences the name of the variable, for control dependences `true` or
+ *   `false` for the branch of the condition.
+ */
+@Serializable
+data class SliceDependence(
+    val from: String,
+    val to: String,
+    val kind: GraphEdgeKind,
+    val label: String?,
+)
+
+/**
+ * A slice of the program dependence graph in the format of the tools of the agent: compact for the
+ * LLM, and with the parameters of the slice, so that the console can show it like the slices it
+ * computes itself.
+ *
+ * @property kind Always `slice`, to tell it apart from other results of tools.
+ * @property description What the slice shows, e.g. "what affects `x`".
+ * @property start The node the slice was computed for.
+ * @property truncated Whether statements are missing because the slice reached its upper bound of
+ *   nodes.
+ */
+@Serializable
+data class NodeSlice(
+    val kind: String,
+    val description: String,
+    val start: NodeInfo,
+    val graph: DependenceGraph,
+    val direction: SliceDirection,
+    val hops: Int,
+    val interprocedural: Boolean,
+    val statements: List<SliceStatement>,
+    val dependences: List<SliceDependence>,
+    val truncated: Boolean,
+)
+
+/**
+ * The slice around [root] (see [slice]) as a [NodeSlice]. The concepts and operations are named at
+ * their statements instead of being statements of their own.
+ */
+fun nodeSlice(
+    root: Node,
+    direction: SliceDirection,
+    hops: Int,
+    graph: DependenceGraph = DependenceGraph.PDG,
+    interprocedural: Boolean = true,
+): NodeSlice {
+    val json = slice(root, direction, hops, graph, interprocedural)
+    val overlays = json.nodes.filter { it.kind == GraphNodeKind.OVERLAY }.map { it.id }.toSet()
+    val code = root.code?.lineSequence()?.firstOrNull()?.trim() ?: root.name.localName
+    val backward = direction == SliceDirection.BACKWARD
+    val description =
+        when (graph) {
+            DependenceGraph.PDG -> if (backward) "what affects `$code`" else "what `$code` affects"
+            DependenceGraph.DFG ->
+                if (backward) "where the data of `$code` comes from"
+                else "where the data of `$code` goes to"
+            DependenceGraph.CDG ->
+                if (backward) "which conditions decide whether `$code` runs"
+                else "what runs depending on `$code`"
+        }
+    return NodeSlice(
+        kind = "slice",
+        description = description,
+        start = NodeInfo(root),
+        graph = graph,
+        direction = direction,
+        hops = hops,
+        interprocedural = interprocedural,
+        statements =
+            json.nodes
+                .filter { it.id !in overlays }
+                .map {
+                    SliceStatement(
+                        nodeId = it.id,
+                        code = it.code,
+                        fileName = it.node.fileName,
+                        startLine = it.startLine,
+                        depth = it.depth,
+                        kind = it.kind,
+                        more = it.more,
+                        concepts = it.overlays.map { overlay -> overlay.type }.distinct(),
+                        external = it.external,
+                        unresolved = it.unresolved,
+                    )
+                },
+        dependences =
+            json.edges
+                .filter { it.from !in overlays && it.to !in overlays }
+                .map { SliceDependence(it.from, it.to, it.kind, it.label) },
+        truncated = json.truncated,
+    )
+}
