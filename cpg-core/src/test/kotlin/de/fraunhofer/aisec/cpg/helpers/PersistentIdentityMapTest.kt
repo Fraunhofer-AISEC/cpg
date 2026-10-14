@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PersistentIdentityMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -37,6 +38,8 @@ import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import org.junit.jupiter.api.Timeout
 
 class PersistentIdentityMapTest {
 
@@ -200,6 +203,70 @@ class PersistentIdentityMapTest {
 
         assertTrue(map.isEmpty())
         assertEquals(0, map.size)
+    }
+
+    /**
+     * A retry caused by a concurrent write to an *unrelated* key must not re-invoke
+     * [PersistentIdentityMap.compute]'s remapping function: the value at this call's own key never
+     * changes in this test, so every retry has to reuse the first attempt's result instead of
+     * recomputing (and for [ConcurrentMapLattice.Element.getForUpdate]'s real remapping function,
+     * re-deep-copying) it.
+     */
+    @Test
+    @Timeout(30)
+    fun testComputeReusesResultAcrossRetriesForAnUnrelatedConflict() {
+        val key = Key("target")
+        val other = Key("other")
+        val map = PersistentIdentityMap<Key, Int>()
+        map.put(key, 1)
+
+        val callCount = AtomicInteger(0)
+        val computeStarted = CountDownLatch(1)
+        // Bounded by a deadline, not an indefinite flag: an unthrottled writer that only stops once
+        // told to could otherwise starve the deliberately slowed-down compute() call below forever,
+        // which is a real risk of any lock-free CAS retry loop and not specific to (or fixed by)
+        // the
+        // change this test is about. Bounding it guarantees the writer eventually goes quiet, at
+        // which point compute()'s next attempt is uncontested and has to succeed.
+        val writerDeadline = System.nanoTime() + 300.milliseconds.inWholeNanoseconds
+
+        val writer = Executors.newSingleThreadExecutor()
+        try {
+            val writerDone =
+                writer.submit {
+                    computeStarted.await()
+                    var i = 0
+                    while (System.nanoTime() < writerDeadline) {
+                        map.put(other, i++)
+                    }
+                }
+
+            val result =
+                map.compute(key) { _, value ->
+                    callCount.incrementAndGet()
+                    computeStarted.countDown()
+                    // Give the writer thread a real window to land several conflicting writes
+                    // before we return and attempt our own CAS.
+                    Thread.sleep(50)
+                    // Actually change the value: compute() can short-circuit without any CAS at
+                    // all if the "new" value is the one already there (putting() returns the same
+                    // PersistentMap instance for a no-op update), which would make this test pass
+                    // trivially - without ever exercising a retry - regardless of the fix.
+                    (value ?: 0) + 1
+                }
+
+            writerDone.get(10, TimeUnit.SECONDS)
+            assertEquals(2, result)
+            assertEquals(
+                1,
+                callCount.get(),
+                "the remapping function must not be re-invoked when the observed value at " +
+                    "`key` has not changed, no matter how many times the CAS had to retry",
+            )
+        } finally {
+            writer.shutdown()
+            assertTrue(writer.awaitTermination(5, TimeUnit.SECONDS))
+        }
     }
 
     /**
