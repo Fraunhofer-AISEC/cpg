@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.analysis.similarity
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 
 /**
@@ -81,6 +83,83 @@ fun <T> collectConceptSequences(
     }
 
     starts.forEach { start -> dfs(start, 0, identitySetOf(start), mutableListOf()) }
+
+    return results
+}
+
+/**
+ * TEMPORARY, ISOLATED WORKAROUND -- do not generalize, and remove this function (switching its call
+ * site(s) back to [collectConceptSequences]) once it's no longer needed.
+ *
+ * Same contract as [collectConceptSequences], except it suppresses a specific degenerate case that
+ * breaks [compareSequenceSets]/[sequenceSimilarity]-based comparisons: whenever a node has more
+ * than one *not mutually exclusive* outgoing [de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow]
+ * PDG edge (i.e. a value with several independent downstream readers that *all* execute on every
+ * run, not alternative branches), a DFS branch that reaches a dead end without picking up a single
+ * further [predicate] hit after that point is dropped instead of being added to the result. Such a
+ * branch doesn't represent a real alternative execution -- every one of its sibling branches from
+ * the same fork happens too -- so keeping it around only adds a content-free, pure-prefix duplicate
+ * of whichever sibling branch *did* pick up more hits, and that duplicate is exactly what skews
+ * [compareSequenceSets]'s `min` aggregation (see `CryptoConceptSimilarityTest`).
+ *
+ * Genuine [de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence] forks (e.g. an early
+ * return) are never affected: a branch that stops short because of a real, mutually-exclusive
+ * control decision is always kept, regardless of length, since it reflects an execution that
+ * actually differs from its sibling branches.
+ */
+fun <T> collectMaximalConceptSequences(
+    starts: Set<Node>,
+    maxDepth: Int,
+    predicate: (Node) -> T?,
+): Set<List<T>> {
+    val results = mutableSetOf<List<T>>()
+
+    fun dfs(
+        node: Node,
+        depth: Int,
+        onBranch: MutableSet<Node>,
+        sequence: MutableList<T>,
+        droppableIn: Boolean,
+    ) {
+        val hit = predicate(node)
+        if (hit != null) sequence.add(hit)
+        // A hit always proves this branch carries information beyond its last fork; otherwise the
+        // incoming state (droppable or not) still applies.
+        val droppable = if (hit != null) false else droppableIn
+
+        val edges =
+            if (depth >= maxDepth) emptyList() else node.nextPDGEdges.filter { it.end !in onBranch }
+
+        if (edges.isEmpty()) {
+            if (!droppable) results.add(sequence.toList())
+        } else {
+            // Only a node with more than one live outgoing edge is an actual fork/choice; a single
+            // successor is a mandatory hop, not something to be "redundant" relative to.
+            val isRealFork = edges.size > 1
+            edges.forEach { edge ->
+                val next = edge.end
+                val childDroppable =
+                    when {
+                        // A real control alternative is never discarded, however short.
+                        edge is ControlDependence -> false
+                        // Re-arm: this child is one of several non-exclusive readers of the same
+                        // value, so it's only worth keeping if it goes on to add something new.
+                        edge is Dataflow && isRealFork -> true
+                        // No real choice was made reaching this child; inherit the current state.
+                        else -> droppable
+                    }
+                onBranch.add(next)
+                dfs(next, depth + 1, onBranch, sequence, childDroppable)
+                onBranch.remove(next)
+            }
+        }
+
+        if (hit != null) sequence.removeAt(sequence.lastIndex)
+    }
+
+    starts.forEach { start ->
+        dfs(start, 0, identitySetOf(start), mutableListOf(), droppableIn = false)
+    }
 
     return results
 }
