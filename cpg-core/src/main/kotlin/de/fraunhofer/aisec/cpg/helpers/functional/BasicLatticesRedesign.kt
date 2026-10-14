@@ -546,6 +546,17 @@ interface Lattice<T : Lattice.Element> {
                 return
             }
 
+            // Captured before pruning, not after: in loop-free code almost every entry is dead at
+            // every prune, so the post-prune size is ~1 regardless of how large the function is.
+            // Basing the next threshold on that would retrigger a prune every
+            // MIN_GLOBAL_STATE_PRUNE_SIZE edges for the rest of the function, and since a prune's
+            // cost is linear in the number of edges still reachable from the worklists - which
+            // shrinks only slowly over a long straight-line function - that adds up to quadratic
+            // total cost. Basing it on the pre-prune size instead makes the threshold (and so the
+            // interval between prunes) grow geometrically, the same amortization trick
+            // [IterationStatistics] uses for its sampling.
+            val sizeBeforePrune = globalState.size
+
             val live = IdentitySet<EvaluationOrder>(globalState.size)
             val stack = ArrayDeque<EvaluationOrder>()
             fun markLive(edge: EvaluationOrder) {
@@ -572,16 +583,7 @@ interface Lattice<T : Lattice.Element> {
 
             // Prune again once the state has grown considerably, so that the cost of a prune (which
             // is linear in the number of reachable edges) is amortized over the entries it removes.
-            nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, globalState.size * 2)
-        }
-
-        suspend fun cleanup(one: T, two: T, lattice: Lattice<T>): T {
-            Pass.log.info(
-                "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
-            )
-            finalState = lattice.lub(one, two, false)
-            Pass.log.info("Finished calculating final lub")
-            return finalState
+            nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, sizeBeforePrune * 2)
         }
 
         startEdges.forEach { nextBranchEdgesList.add(it) }
@@ -763,8 +765,6 @@ interface Lattice<T : Lattice.Element> {
                 Pass.log.info(
                     "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
                 )
-                // We are done, so we remove the current timeout
-                timeouts.removeLast()
                 finalState = this@Lattice.lub(finalState, newState, false)
                 Pass.log.info("Finished calculating final lub")
                 return Pair(finalState, true)
