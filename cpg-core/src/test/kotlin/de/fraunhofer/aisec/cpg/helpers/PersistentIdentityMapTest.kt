@@ -206,11 +206,12 @@ class PersistentIdentityMapTest {
     }
 
     /**
-     * A retry caused by a concurrent write to an *unrelated* key must not re-invoke
-     * [PersistentIdentityMap.compute]'s remapping function: the value at this call's own key never
-     * changes in this test, so every retry has to reuse the first attempt's result instead of
-     * recomputing (and for [ConcurrentMapLattice.Element.getForUpdate]'s real remapping function,
-     * re-deep-copying) it.
+     * [PersistentIdentityMap.compute]'s remapping function must be invoked exactly once, no matter
+     * how many concurrent writes to *other* keys land while it runs: writes are now serialized by a
+     * fair lock rather than retried via compare-and-set, so there is nothing to retry in the first
+     * place, and a concurrent writer can delay this call's own write but never cause its remapping
+     * function to run twice (or starve it indefinitely - the lock's fairness guarantees this
+     * eventually gets its turn).
      */
     @Test
     @Timeout(30)
@@ -222,12 +223,10 @@ class PersistentIdentityMapTest {
 
         val callCount = AtomicInteger(0)
         val computeStarted = CountDownLatch(1)
-        // Bounded by a deadline, not an indefinite flag: an unthrottled writer that only stops once
-        // told to could otherwise starve the deliberately slowed-down compute() call below forever,
-        // which is a real risk of any lock-free CAS retry loop and not specific to (or fixed by)
-        // the
-        // change this test is about. Bounding it guarantees the writer eventually goes quiet, at
-        // which point compute()'s next attempt is uncontested and has to succeed.
+        // Bounded by a deadline rather than an indefinite flag, purely so this test terminates in
+        // bounded time; it is no longer needed to avoid starving compute() (the fair lock already
+        // guarantees that), but there is no reason for the writer thread to keep spinning forever
+        // either.
         val writerDeadline = System.nanoTime() + 300.milliseconds.inWholeNanoseconds
 
         val writer = Executors.newSingleThreadExecutor()
@@ -260,8 +259,8 @@ class PersistentIdentityMapTest {
             assertEquals(
                 1,
                 callCount.get(),
-                "the remapping function must not be re-invoked when the observed value at " +
-                    "`key` has not changed, no matter how many times the CAS had to retry",
+                "the remapping function must be invoked exactly once, no matter how many " +
+                    "unrelated writes happened concurrently",
             )
         } finally {
             writer.shutdown()
