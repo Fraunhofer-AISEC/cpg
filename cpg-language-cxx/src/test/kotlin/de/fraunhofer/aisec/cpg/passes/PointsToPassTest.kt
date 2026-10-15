@@ -5172,7 +5172,7 @@ class PointsToPassTest {
 
     @Test
     fun testPMVDerefHandling() {
-        val file = File("src/test/resources/pointsToPass/RustTLSClient.cpp")
+        val file = File("src/test/resources/pointsToPass/pmvDerefHandling.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -5185,27 +5185,27 @@ class PointsToPassTest {
         val dlfreeFunc = tu.functions("dlfree").single()
         assertNotNull(dlfreeFunc)
 
-        val sgxInitEcallFunc = tu.functions("sgx_t_global_init_ecall").single()
-        assertNotNull(sgxInitEcallFunc)
+        val sgxieFunc = tu.functions("sgx_t_ie").single()
+        assertNotNull(sgxieFunc)
 
-        val initEcallFunc = sgxInitEcallFunc.calls("t_global_init_ecall").last().invokes.single()
+        val ieFunc = sgxieFunc.calls("t_ie").last().invokes.single()
 
         // Params and PMVs
         val dlfreeParam = dlfreeFunc.parameters.single()
         val dlfreePMV = dlfreeParam.memoryValues.single { it.name.localName == "derefvalue" }
         assertNotNull(dlfreePMV)
 
-        val initEcallParam2 = initEcallFunc.parameters[1]
+        val initEcallParam2 = ieFunc.parameters[1]
         val initEcallDerefPMV2 =
             initEcallParam2.memoryValues.single { it.name.localName == "derefvalue" }
 
         // Calls
-        val memcpyCall = sgxInitEcallFunc.calls("memcpy_s").single()
+        val memcpyCall = sgxieFunc.calls("memcpy_s").single()
 
-        val sgxInitEcallParam = sgxInitEcallFunc.parameters.singleOrNull()
-        val sgxInitEcallDerefDerefPMV =
-            sgxInitEcallParam?.memoryValues?.singleOrNull { it.name.localName == "derefderefvalue" }
-        assertNotNull(sgxInitEcallDerefDerefPMV)
+        val sgxieParam = sgxieFunc.parameters.singleOrNull()
+        val sgxieDerefDerefPMV =
+            sgxieParam?.memoryValues?.singleOrNull { it.name.localName == "derefderefvalue" }
+        assertNotNull(sgxieDerefDerefPMV)
 
         // First check: all memcpy_s deref-PMVs should have a prevDFG to the previous PMV
         // TODO: Actually, we should only have one memcpy_s
@@ -5238,7 +5238,7 @@ class PointsToPassTest {
                 it.name.localName == "derefvalue"
             }
         // 1)
-        assertEquals(sgxInitEcallDerefDerefPMV, memcpySrcDerefPMV.prevDFG.single())
+        assertEquals(sgxieDerefDerefPMV, memcpySrcDerefPMV.prevDFG.single())
         // 3)
         assertEquals(
             1,

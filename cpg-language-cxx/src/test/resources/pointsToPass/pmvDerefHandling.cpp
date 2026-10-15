@@ -12,6 +12,7 @@ undefined1 sgx_t_ie(u64 *param_1)
     }
     iVar2 = sgx_is_outside_enclave(uVar1);
     if (iVar2 != 0) {
+	  uVar1 = param_1[1];
       if (len == 0) {
         sgx_tstd::rt::t_ie(*param_1,(u8 *)0x0,0);
         return false;
