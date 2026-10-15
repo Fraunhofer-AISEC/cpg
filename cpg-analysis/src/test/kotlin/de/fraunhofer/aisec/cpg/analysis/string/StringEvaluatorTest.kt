@@ -921,6 +921,47 @@ class StringEvaluatorTest {
     }
 
     /**
+     * [StringEvaluator.clearCache] is the invalidation escape hatch `crossQueryCache`'s KDoc
+     * requires a caller to use after mutating the graph: without it, a `crossQueryCache = true`
+     * evaluator must keep returning a stale, pre-mutation result for a `(Node, Context)` pair
+     * forever, since [persistentCache] is otherwise never written to twice for the same key.
+     * Mutates the underlying [de.fraunhofer.aisec.cpg.graph.expressions.Literal.value] in place
+     * (simulating a real graph mutation between two top-level [StringEvaluator.evaluate] calls) and
+     * checks that only [StringEvaluator.clearCache] makes the second call observe the new value.
+     */
+    @Test
+    fun testClearCacheInvalidatesStaleCrossQueryResult() {
+        lateinit var literal: de.fraunhofer.aisec.cpg.graph.expressions.Literal<*>
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newLiteral("foo", objectType("string")).also { literal = it }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val evaluator = StringEvaluator(crossQueryCache = true)
+        assertEquals(const("foo"), evaluator.evaluate(ret.returnValue!!))
+
+        @Suppress("UNCHECKED_CAST")
+        (literal as de.fraunhofer.aisec.cpg.graph.expressions.Literal<Any?>).value = "bar"
+
+        // Without clearCache(), the stale "foo" result must still be served from persistentCache.
+        assertEquals(const("foo"), evaluator.evaluate(ret.returnValue!!))
+
+        evaluator.clearCache()
+        assertEquals(const("bar"), evaluator.evaluate(ret.returnValue!!))
+    }
+
+    /**
      * The reentrancy stress test: [StringEvaluator] deliberately re-visits the same node while it
      * is still being computed further up the current call stack (the loop-built-string cycle). With
      * `crossQueryCache = true`, the result-memoization cache is a shared, cross-thread
