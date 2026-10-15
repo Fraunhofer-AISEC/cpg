@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.string
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
@@ -980,5 +981,72 @@ class StringEvaluatorTest {
             executor.shutdown()
         }
         assertTrue(failures.isEmpty(), "concurrent evaluation raised: $failures")
+    }
+
+    /**
+     * Regression test for the `evaluateWithFixpoint` backstop (see its KDoc): if `dispatch()` keeps
+     * producing genuinely new content every round, so `widen(prior, result)` never reaches a
+     * fixpoint within `MAX_FIXPOINT_ITERATIONS`, the function must still return a widened, sound
+     * result - not the raw, un-widened `dispatch()` call of the last round.
+     * [NonConvergingDispatchEvaluator] forces this backstop path by recursing into `resolve` once
+     * (to trigger the real path/cyclic cycle-detection machinery, exactly like a genuine
+     * self-referential handler would) and then returning an ever-growing, never-repeating
+     * [StringPattern.Unknown] every round, so the loop is guaranteed to exhaust all 20 iterations
+     * without ever finding `widened == prior`.
+     */
+    @Test
+    fun testFixpointBackstopStillReturnsWidenedResult() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r -> r.returnValue = newReference("x") }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val evaluator = NonConvergingDispatchEvaluator()
+        val result = evaluator.evaluate(ret.returnValue!!)
+
+        // A sound widen must never drop a character already seen in an earlier round - unlike the
+        // un-widened last-round dispatch() value this backstop used to return before the fix.
+        assertTrue(
+            evaluator.observedChars.all { it in charSetOf(result) },
+            "expected the backstop result to retain every round's charSet, got $result " +
+                "for rounds ${evaluator.observedChars}",
+        )
+    }
+
+    /**
+     * A [StringEvaluator] whose [dispatch] never converges: every call returns a fresh
+     * [StringPattern.Unknown] with one new, never-before-seen character and a strictly growing
+     * exact length, which `widen` can never find equal to the prior round's assumption. The very
+     * first call additionally recurses into [resolve] on the same node (which is already on [path]
+     * at that point, having been pushed there by the enclosing [resolve] call from [evaluate])
+     * purely for its side effect of marking the node as [cyclic] - exactly what a genuine
+     * self-referential handler would trigger - so that [evaluateWithFixpoint] takes its
+     * widening-loop branch at all.
+     */
+    private class NonConvergingDispatchEvaluator : StringEvaluator() {
+        private var round = 0
+        val observedChars = mutableListOf<Char>()
+
+        override fun dispatch(node: Node, ctx: Context): StringPattern {
+            if (round == 0) {
+                resolve(node, ctx)
+            }
+            val c = 'a' + round
+            round++
+            observedChars.add(c)
+            return StringPattern.Unknown(
+                charSet = charsOf(c),
+                length = LatticeInterval.Bounded(round, round),
+                reason = StringPattern.Reason.PARAMETER,
+            )
+        }
     }
 }

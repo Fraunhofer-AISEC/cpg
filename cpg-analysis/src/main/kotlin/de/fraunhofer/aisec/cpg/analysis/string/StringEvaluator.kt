@@ -488,16 +488,27 @@ open class StringEvaluator(
         }
 
         var iterations = 0
+        var reachedFixpoint = false
         while (iterations < MAX_FIXPOINT_ITERATIONS) {
             val prior = assumed[node]
             val widened = if (prior == null) result else lattice.widen(prior, result)
             if (widened == prior) {
                 result = widened
+                reachedFixpoint = true
                 break
             }
             assumed[node] = widened
             result = dispatch(node, ctx)
             iterations++
+        }
+        if (!reachedFixpoint) {
+            // MAX_FIXPOINT_ITERATIONS was hit before two consecutive rounds agreed: `result` is
+            // still the raw, un-widened dispatch() of the last round, not widen(prior, result).
+            // Widening it once more against the last accumulated assumption ensures the returned
+            // value is never less than every round's accumulated assumption, preserving this
+            // function's documented "never under-approximates" guarantee even on this backstop
+            // exit.
+            assumed[node]?.let { result = lattice.widen(it, result) }
         }
         assumed.remove(node)
         cyclic.remove(node)
