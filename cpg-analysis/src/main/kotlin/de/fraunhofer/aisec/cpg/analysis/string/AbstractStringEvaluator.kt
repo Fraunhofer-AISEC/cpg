@@ -30,14 +30,18 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.GeneralState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.GeneralStateElement
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushSeed
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGenState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.valueOf
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
-import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlinx.coroutines.runBlocking
@@ -184,36 +188,24 @@ class AbstractStringEvaluator(
 
 /**
  * Pushes [pattern] for [start] into the declaration state lattice. Keyed by the raw [start] node
- * itself (not its [de.fraunhofer.aisec.cpg.passes.objectIdentifier]), exactly like
- * [de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator]'s private seeding
- * helper of the same name: this initial entry is never looked up by key match (lookups go through
- * [patternOf], which searches by `objectIdentifier`), it only needs to seed the map so the fixpoint
- * has a starting element.
+ * itself (not its [de.fraunhofer.aisec.cpg.passes.objectIdentifier]): this initial entry is never
+ * looked up by key match (lookups go through [patternOf], which searches by `objectIdentifier`), it
+ * only needs to seed the map so the fixpoint has a starting element. Thin wrapper around the shared
+ * generic [de.fraunhofer.aisec.cpg.analysis.abstracteval.pushSeed] - see its KDoc for why the
+ * actual logic lives there rather than being duplicated per `E`.
  */
 private fun <NodeId> DeclarationState<NodeId, StringPattern>.push(
     current: DeclarationState.DeclarationStateElement<NodeId, StringPattern>,
     start: NodeId,
     pattern: StringPattern,
-) {
-    runBlocking {
-        this@push.lub(
-            current,
-            DeclarationState.DeclarationStateElement(start to pattern),
-            allowModify = true,
-        )
-    }
-}
+) = pushSeed(current, start, pattern)
 
 /** Pushes [pattern] for [start] into the general state lattice. */
 private fun GeneralState<StringPattern>.push(
     current: GeneralStateElement<StringPattern>,
     start: Node,
     pattern: StringPattern,
-) {
-    runBlocking {
-        this@push.lub(current, GeneralStateElement(start to pattern), allowModify = true)
-    }
-}
+) = pushSeed(current, start, pattern)
 
 /**
  * Retrieves the [StringPattern] for the given [node] from this tuple state element's declaration
@@ -229,75 +221,45 @@ private fun GeneralState<StringPattern>.push(
  * = Any, length = TOP)`, see [StringPattern.Unknown]'s KDoc), an `Unknown()` with no origin is the
  * correct "we have not tracked this" default: sound (its language is everything), and it degrades
  * further joins gracefully (`lub(Unknown(), x) == Unknown()`-shaped, never a spurious narrowing to
- * less than what is truly possible).
+ * less than what is truly possible). Thin wrapper around the shared generic
+ * [de.fraunhofer.aisec.cpg.analysis.abstracteval.valueOf] - unlike
+ * [de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf], no unwrap is needed since
+ * [StringPattern] already implements [de.fraunhofer.aisec.cpg.helpers.functional.Lattice.Element]
+ * itself.
  */
-@Suppress("UNCHECKED_CAST")
-fun <NodeId> TupleStateElement<NodeId, StringPattern>.patternOf(node: Node): StringPattern {
-    val id =
-        node.objectIdentifier()?.let { tmpId ->
-            this.first.keys.singleOrNull { it == tmpId } ?: (tmpId as? NodeId)
-        } ?: node as? NodeId ?: TODO()
-    return this.first[id] ?: StringPattern.Unknown()
-}
+fun <NodeId> TupleStateElement<NodeId, StringPattern>.patternOf(node: Node): StringPattern =
+    valueOf(node, StringPattern.Unknown())
 
 /**
  * Updates the declaration state for [node] with the specified [pattern] in the current tuple state
- * element, overwriting any existing entry (no `lub` with the previous value). Mirrors
- * [de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclarationState].
+ * element, overwriting any existing entry (no `lub` with the previous value). Thin wrapper around
+ * the shared generic [de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclState] - see
+ * [patternOf]'s KDoc.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId, StringPattern>.changeDeclarationState(
     current: TupleStateElement<NodeId, StringPattern>,
     node: Node,
     pattern: StringPattern,
-): TupleStateElement<NodeId, StringPattern> {
-    val id =
-        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
-            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
-        } ?: node as NodeId ?: TODO()
-    current.first[id] = pattern
-    return current
-}
+): TupleStateElement<NodeId, StringPattern> = changeDeclState(current, node, pattern)
 
 /**
  * Pushes [pattern] for [node] into the declaration state, merging (`lub`) with any existing entry.
- * Mirrors [de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState].
+ * Thin wrapper around the shared generic
+ * [de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclState] - see [patternOf]'s KDoc.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId, StringPattern>.pushToDeclarationState(
     current: TupleStateElement<NodeId, StringPattern>,
     node: Node,
     pattern: StringPattern,
-): TupleStateElement<NodeId, StringPattern> {
-    val id =
-        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
-            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
-        } ?: node as NodeId ?: TODO()
-    runBlocking {
-        this@pushToDeclarationState.innerLattice1.lub(
-            current.first,
-            DeclarationState.DeclarationStateElement(id to pattern),
-            allowModify = true,
-        )
-    }
-    return current
-}
+): TupleStateElement<NodeId, StringPattern> = pushToDeclState(current, node, pattern)
 
 /**
  * Pushes [pattern] for [node] into the general (per-[Node]) state, merging (`lub`) with any
- * existing entry. Mirrors [de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState].
+ * existing entry. Thin wrapper around the shared generic
+ * [de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGenState] - see [patternOf]'s KDoc.
  */
 fun <NodeId> TupleState<NodeId, StringPattern>.pushToGeneralState(
     current: TupleStateElement<NodeId, StringPattern>,
     node: Node,
     pattern: StringPattern,
-): TupleStateElement<NodeId, StringPattern> {
-    runBlocking {
-        this@pushToGeneralState.innerLattice2.lub(
-            current.second,
-            GeneralStateElement(node to pattern),
-            allowModify = true,
-        )
-    }
-    return current
-}
+): TupleStateElement<NodeId, StringPattern> = pushToGenState(current, node, pattern)
