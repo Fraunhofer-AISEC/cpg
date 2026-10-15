@@ -50,6 +50,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 
 /**
@@ -84,15 +86,40 @@ class PythonStringOperationHandler : StringOperationHandler {
         return when {
             call.reconstructedImportName.toString() == "os.path.join" ->
                 handleOsPathJoin(call, evaluate)
-            call is MemberCall && call.name.localName == "format" -> handleFormat(call, evaluate)
-            call is MemberCall && call.name.localName == "join" -> handleJoin(call, evaluate)
-            call is MemberCall && call.name.localName == "replace" -> handleReplace(call, evaluate)
-            call is MemberCall && call.name.localName in STRIP_METHODS ->
-                handleStrip(call, evaluate)
-            call is MemberCall && call.name.localName in CASE_METHODS -> handleCase(call, evaluate)
+            call is MemberCall &&
+                call.name.localName == "format" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleFormat(call, evaluate)
+            call is MemberCall &&
+                call.name.localName == "join" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleJoin(call, evaluate)
+            call is MemberCall &&
+                call.name.localName == "replace" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleReplace(call, evaluate)
+            call is MemberCall &&
+                call.name.localName in STRIP_METHODS &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleStrip(call, evaluate)
+            call is MemberCall &&
+                call.name.localName in CASE_METHODS &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleCase(call, evaluate)
             else -> null
         }
     }
+
+    /**
+     * `true` iff [type] is a definitely-known, non-string type - i.e. this call should not be
+     * matched as one of this handler's string operations even though the method name alone matches,
+     * to rule out an unrelated user-defined method of the same name on an unrelated receiver type.
+     * Only rejects when a type is actually resolved to something else - an absent or [UnknownType]
+     * receiver type remains permitted, which for Python (no static type inference by default) is
+     * the common case: regressing precision whenever a type simply wasn't resolved would be worse
+     * than the occasional unrelated-type false match this handler already accepts as a documented,
+     * best-effort limitation (see the class KDoc).
+     */
+    private fun isDefinitelyNotStringType(type: Type?): Boolean =
+        type != null &&
+            type !is UnknownType &&
+            !type.name.localName.equals("str", ignoreCase = true) &&
+            !type.name.localName.equals("string", ignoreCase = true)
 
     /**
      * `"%s and %s" % (a, b)`, i.e. a [BinaryOperator] with operator code `%` whose [lhs][

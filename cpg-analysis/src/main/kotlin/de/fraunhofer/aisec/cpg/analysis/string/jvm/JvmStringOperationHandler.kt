@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 /**
  * Models a subset of the JVM/Java standard library's string-relevant operations (Phase 3 of the
@@ -81,22 +82,45 @@ class JvmStringOperationHandler : StringOperationHandler {
             call is MemberCall &&
                 call.name.localName == "toString" &&
                 isBuilderType(call.base?.type) -> call.base?.let { evaluate(it) }
-            call is MemberCall && !call.isStatic && call.name.localName == "concat" ->
-                handleConcat(call, evaluate)
+            call is MemberCall &&
+                !call.isStatic &&
+                call.name.localName == "concat" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleConcat(call, evaluate)
             call is MemberCall && call.isStatic && call.name.localName == "format" ->
                 handleFormat(call, evaluate)
             call is MemberCall && call.isStatic && call.name.localName == "join" ->
                 handleJoin(call, evaluate)
-            call is MemberCall && !call.isStatic && call.name.localName == "substring" ->
-                handleSubstring(call, evaluate)
-            call is MemberCall && !call.isStatic && call.name.localName == "replace" ->
-                handleReplace(call, evaluate)
+            call is MemberCall &&
+                !call.isStatic &&
+                call.name.localName == "substring" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleSubstring(call, evaluate)
+            call is MemberCall &&
+                !call.isStatic &&
+                call.name.localName == "replace" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleReplace(call, evaluate)
             else -> null
         }
     }
 
     private fun isBuilderType(type: Type?): Boolean =
         type != null && type.name.localName in BUILDER_TYPES
+
+    /**
+     * `true` iff [type] is a definitely-known, non-string-like type - i.e. a call to `concat`/
+     * `substring`/`replace` on this receiver should *not* be matched as one of this handler's
+     * string operations even though the method name alone matches, to rule out an unrelated
+     * user-defined method of the same name on an unrelated receiver type (e.g. a custom class's own
+     * `.replace()`). Only rejects when a type is actually resolved to something else - an absent or
+     * [UnknownType] receiver type remains permitted: regressing precision whenever type resolution
+     * simply did not run or could not determine a type would be worse than the occasional
+     * unrelated-type false match this handler already accepts as a documented limitation (see the
+     * class KDoc).
+     */
+    private fun isDefinitelyNotStringType(type: Type?): Boolean =
+        type != null &&
+            type !is UnknownType &&
+            !type.name.localName.equals("String", ignoreCase = true) &&
+            !type.name.localName.equals("CharSequence", ignoreCase = true)
 
     /**
      * `new StringBuilder(...)` / `new StringBuffer(...)`. The no-arg constructor seeds an empty

@@ -1123,4 +1123,48 @@ class PythonStringOperationHandlerTest {
         val pattern = ret.returnValue!!.evaluatePythonString()
         assertIs<StringPattern.Unknown>(pattern)
     }
+
+    /**
+     * `x.replace("a", "b")` where `x`'s *resolved* type is a confidently-known, unrelated type (not
+     * `str`) must not be matched as `str.replace` at all - an unrelated class's own `.replace()`
+     * method must fall through to the generic evaluator fallback, not be misinterpreted as a string
+     * operation.
+     *
+     * The receiver is a [de.fraunhofer.aisec.cpg.graph.expressions.Literal] so that it *would*
+     * evaluate to a known constant (`"hello"`) if [handleReplace] were (incorrectly) invoked -
+     * `"hello".replace("a", "b")` is exactly `"hello"` again, since `"a"` does not occur in it,
+     * which would make a false-positive match indistinguishable from the correct "not matched"
+     * outcome if the receiver were merely an unresolved parameter. Asserting `Unknown` here
+     * therefore specifically proves the call was *not* matched, not just that its args were
+     * unresolved.
+     */
+    @Test
+    fun testReplaceNotMatchedOnDefinitelyNonStringReceiver() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "replace",
+                                        newLiteral("hello", objectType("MyCustomType")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Unknown>(pattern)
+    }
 }
