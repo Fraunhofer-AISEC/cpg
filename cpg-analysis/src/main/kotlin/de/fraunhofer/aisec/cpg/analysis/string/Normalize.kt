@@ -130,7 +130,15 @@ private fun normalizeUnion(alts: List<StringPattern>, maxUnionSize: Int): String
     val noBottom = flat.filter { it !is StringPattern.Bottom }
     if (noBottom.isEmpty()) return StringPattern.Bottom
 
-    val sorted = noBottom.distinct().sortedWith(patternOrder)
+    // Precompute each element's sort key once (Schwartzian transform) rather than letting
+    // sortedWith(patternOrder) recompute toRegexString() - an O(size) traversal - on every one of
+    // the O(n log n) pairwise comparisons the sort performs.
+    val sorted =
+        noBottom
+            .distinct()
+            .map { it to patternSortKey(it) }
+            .sortedWith(compareBy(patternSortKeyOrder) { it.second })
+            .map { it.first }
 
     // Drop alternatives that are already subsumed by a kept one, and drop previously kept
     // alternatives that the new, more general candidate subsumes.
@@ -192,11 +200,33 @@ private fun normalizeStar(inner: StringPattern, min: Int, max: Int?): StringPatt
  * indistinguishable to begin with - only *which one* survives needs to be stable within a run, not
  * which one is "correct".
  */
-private val patternOrder: Comparator<StringPattern> =
-    compareBy<StringPattern> { it.toRegexString() }
-        .thenBy { (it as? StringPattern.Unknown)?.reason?.ordinal ?: -1 }
-        .thenBy { (it as? StringPattern.Unknown)?.origin?.location?.toString() ?: "" }
-        .thenBy { System.identityHashCode(it) }
+private data class PatternSortKey(
+    val regex: String,
+    val reasonOrdinal: Int,
+    val originLocation: String,
+    val identityHash: Int,
+)
+
+/** Computes a [PatternSortKey] once per element, see [patternSortKeyOrder]'s KDoc. */
+private fun patternSortKey(p: StringPattern): PatternSortKey =
+    PatternSortKey(
+        regex = p.toRegexString(),
+        reasonOrdinal = (p as? StringPattern.Unknown)?.reason?.ordinal ?: -1,
+        originLocation = (p as? StringPattern.Unknown)?.origin?.location?.toString() ?: "",
+        identityHash = System.identityHashCode(p),
+    )
+
+/**
+ * Orders by [PatternSortKey] fields exactly as the old `patternOrder` ordered by the equivalent
+ * [StringPattern] accessors - separated out so [normalizeUnion] can precompute each element's key
+ * once via [patternSortKey] rather than letting the sort recompute `toRegexString()` (an O(size)
+ * traversal) on every pairwise comparison.
+ */
+private val patternSortKeyOrder: Comparator<PatternSortKey> =
+    compareBy<PatternSortKey> { it.regex }
+        .thenBy { it.reasonOrdinal }
+        .thenBy { it.originLocation }
+        .thenBy { it.identityHash }
 
 /**
  * Factors a single common leading or trailing [StringPattern.Const] out of [alts], e.g. `{"ab",
