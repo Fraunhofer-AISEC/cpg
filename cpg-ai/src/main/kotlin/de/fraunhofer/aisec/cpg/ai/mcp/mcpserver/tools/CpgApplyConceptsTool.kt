@@ -119,7 +119,7 @@ fun Server.addCpgApplyConceptsTool() {
 
                 when (assignment.overlayType?.lowercase()) {
                     "concept" -> {
-                        result.conceptBuildHelper(
+                        result?.conceptBuildHelper(
                             name = assignment.overlay,
                             underlyingNode = node,
                             constructorArguments = /*assignment.arguments ?:*/
@@ -149,7 +149,7 @@ fun Server.addCpgApplyConceptsTool() {
                             return@forEach
                         }
 
-                        result.operationBuildHelper(
+                        result?.operationBuildHelper(
                             name = assignment.overlay,
                             underlyingNode = node,
                             concept = concept,

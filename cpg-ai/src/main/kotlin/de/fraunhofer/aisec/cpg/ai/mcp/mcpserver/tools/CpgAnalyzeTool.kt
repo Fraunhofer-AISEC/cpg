@@ -424,6 +424,13 @@ fun Server.addRunPass() {
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
     ) { session: CpgSession, payload: CpgRunPassPayload ->
+        val translationResult = session.translationResult
+        val translationContext = session.translationContext
+        if (translationResult == null || translationContext == null) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("No CPG available, so no passes could be executed."))
+            )
+        }
         val passClass =
             try {
                 (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
@@ -466,10 +473,10 @@ fun Server.addRunPass() {
                     val passResult =
                         runPassForNode(
                             session.nodeToPass,
-                            session.translationResult,
+                            translationResult,
                             node,
                             passToExecute,
-                            session.translationContext,
+                            translationContext,
                         )
                     if (passResult.success) {
                         executedPasses.add(TextContent(passResult.message))

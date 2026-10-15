@@ -337,7 +337,7 @@ private fun applyFixedValues(
  */
 private fun resolveProperties(
     properties: List<LLMProperty>,
-    result: TranslationResult,
+    result: TranslationResult?,
 ): Pair<GenericProperties, List<String>> {
     val failures = mutableListOf<String>()
     val resolved =
