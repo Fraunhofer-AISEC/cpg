@@ -269,7 +269,7 @@ enum class CpgSessionStatus {
  */
 open class CpgSession(
     var translationResult: TranslationResult?,
-    val translationContext: TranslationContext,
+    var translationContext: TranslationContext?,
     val nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>> = IdentityHashMap(),
     var status: CpgSessionStatus = CpgSessionStatus.ANALYSIS,
 )
