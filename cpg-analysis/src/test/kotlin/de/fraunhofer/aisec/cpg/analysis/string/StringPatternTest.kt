@@ -130,4 +130,14 @@ class StringPatternTest {
             "Expected an oversized union to collapse: $result",
         )
     }
+
+    /**
+     * Every production call site passes [DEFAULT_MAX_TERM_SIZE]/[DEFAULT_MAX_TERM_DEPTH]/
+     * [DEFAULT_MAX_UNION_SIZE] explicitly (via [concat]/[union]/[star]/[StringLattice.lub]), so
+     * [normalize]'s own default parameter values are otherwise never exercised directly.
+     */
+    @Test
+    fun testNormalizeWithDefaultBounds() {
+        assertEquals(const("ab"), normalize(StringPattern.Concat(listOf(const("a"), const("b")))))
+    }
 }

@@ -103,6 +103,23 @@ class StringLatticeTest {
     }
 
     @Test
+    fun testGlbOfConstAndNonAdmittingUnknownIsBottom() = runBlocking {
+        val unknown =
+            StringPattern.Unknown(charSet = charsOf('x'), reason = StringPattern.Reason.UNSUPPORTED)
+        assertEquals(StringPattern.Bottom, lattice.glb(const("foo"), unknown))
+        assertEquals(StringPattern.Bottom, lattice.glb(unknown, const("foo")))
+    }
+
+    @Test
+    fun testGlbOfIncomparableTermsIsBottom() = runBlocking {
+        // Neither a Concat vs. a Union, nor equal, nor a Const/Unknown pair: falls through to glb's
+        // final subsumes-based fallback, and neither side subsumes the other here.
+        val a = concat(const("a"), StringPattern.Unknown(reason = StringPattern.Reason.UNSUPPORTED))
+        val b = union(const("x"), const("y"))
+        assertEquals(StringPattern.Bottom, lattice.glb(a, b))
+    }
+
+    @Test
     fun testCompareConsistentWithLubAndGlb() = runBlocking {
         val a = const("foo")
         val b = union(const("foo"), const("bar"))

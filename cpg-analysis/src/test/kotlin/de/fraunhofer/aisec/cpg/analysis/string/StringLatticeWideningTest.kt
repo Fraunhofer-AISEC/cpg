@@ -289,4 +289,89 @@ class StringLatticeWideningTest {
         assertTrue(subsumes(widened, one), "widen must over-approximate one: $widened")
         assertTrue(subsumes(widened, two), "widen must over-approximate two: $widened")
     }
+
+    /**
+     * `growWiden` tries [de.fraunhofer.aisec.cpg.analysis.string.matchConcatPrefix] *before*
+     * checking whether the resulting Star-introduced candidate actually fits the size/depth
+     * budget - a match that is found but still too big must fall through to
+     * [de.fraunhofer.aisec.cpg.analysis.string.matchConcatSuffix] (which fails here, since [two]
+     * was built by appending, not prepending) and finally to `widenLeaves`, rather than returning
+     * the oversized candidate anyway. [one]/[two] are built with a generous lattice so [two] keeps
+     * its full `Concat(Const, Union)` shape (see [testWidenDetectsAppendShapeAndIntroducesStar]);
+     * only the `widen` call itself uses a tight lattice, so the plain join `j` *and* the Star
+     * candidate are both rejected by size.
+     */
+    @Test
+    fun testGrowWidenPrefixCandidateStillOversizedFallsThroughToWidenLeaves() = runBlocking {
+        val generous = StringLattice()
+        val one = const("a")
+        val two = generous.lub(one, concat(one, const("a")))
+
+        val tight = StringLattice(maxTermSize = 5, maxTermDepth = 4, maxUnionSize = 16)
+        val widened = tight.widen(one, two)
+
+        assertIs<StringPattern.Unknown>(widened)
+        assertTrue(charSetContains(widened.charSet, charsOf('a')))
+    }
+
+    /** The mirror image of the prefix case above, for the prepend shape. */
+    @Test
+    fun testGrowWidenSuffixCandidateStillOversizedFallsThroughToWidenLeaves() = runBlocking {
+        val generous = StringLattice()
+        val one = const("a")
+        val two = generous.lub(one, concat(const("x"), one))
+
+        val tight = StringLattice(maxTermSize = 5, maxTermDepth = 4, maxUnionSize = 16)
+        val widened = tight.widen(one, two)
+
+        assertIs<StringPattern.Unknown>(widened)
+        assertTrue(charSetContains(widened.charSet, charsOf('a')))
+    }
+
+    /**
+     * `alignUnions`' pairing (via `sameTopShape`) must also match same-arity [StringPattern.Concat]
+     * alternatives, not just `Const`/`Unknown`/`Star` ones - otherwise two `Concat`-shaped
+     * alternatives that should be widened pairwise would instead be carried over unchanged (or
+     * mismatched against an unrelated alternative), permanently diverging on every further widen
+     * round of a real ascending chain.
+     */
+    @Test
+    fun testWidenOfUnionsMatchesSameArityConcatAlternatives() {
+        val one =
+            union(
+                concat(
+                    const("a"),
+                    StringPattern.Unknown(
+                        charSet = charsOf('x'),
+                        reason = StringPattern.Reason.UNSUPPORTED,
+                    ),
+                ),
+                const("z"),
+            )
+        val two =
+            union(
+                concat(
+                    const("a"),
+                    StringPattern.Unknown(
+                        charSet = charsOf('y'),
+                        reason = StringPattern.Reason.UNSUPPORTED,
+                    ),
+                ),
+                const("w"),
+            )
+
+        val widened = lattice.widen(one, two)
+
+        assertIs<StringPattern.Union>(widened)
+        val concatAlt = widened.alternatives.filterIsInstance<StringPattern.Concat>().singleOrNull()
+        assertNotNull(
+            concatAlt,
+            "expected the two same-arity Concats to be widened into one: $widened",
+        )
+        assertEquals(const("a"), concatAlt.parts[0])
+        val widenedUnknown = concatAlt.parts[1]
+        assertIs<StringPattern.Unknown>(widenedUnknown)
+        assertTrue(charSetContains(widenedUnknown.charSet, charsOf('x')))
+        assertTrue(charSetContains(widenedUnknown.charSet, charsOf('y')))
+    }
 }
