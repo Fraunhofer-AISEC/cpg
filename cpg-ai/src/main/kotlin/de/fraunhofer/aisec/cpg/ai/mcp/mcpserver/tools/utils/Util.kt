@@ -268,7 +268,7 @@ enum class CpgSessionStatus {
  * which nodes. Sessions are kept in [analysisSessions].
  */
 open class CpgSession(
-    val translationResult: TranslationResult,
+    var translationResult: TranslationResult?,
     val translationContext: TranslationContext,
     val nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>> = IdentityHashMap(),
     var status: CpgSessionStatus = CpgSessionStatus.ANALYSIS,
