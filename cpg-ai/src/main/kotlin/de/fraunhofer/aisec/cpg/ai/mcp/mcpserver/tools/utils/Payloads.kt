@@ -53,6 +53,10 @@ data class CpgAnalyzePayload(
         "The path to a source file or a project directory (e.g., a repository checkout) on the local filesystem. For directories, the project structure is detected automatically, e.g., components based on Go modules or a C/C++ compilation database (compile_commands.json). Either 'path' or 'content' must be provided."
     )
     val path: String? = null,
+    @Description(
+        "If true, keeps the analyzed project's frontends and scope manager alive (at the cost of extra memory) instead of cleaning them up after analysis, so that cpg_add_code can later add code to this project. Required for cpg_add_code to work; leave false otherwise."
+    )
+    val keepLive: Boolean = false,
 )
 
 @Serializable
@@ -102,6 +106,10 @@ data class CpgAddCodePayload(
         "The file language of the programming language to use. Example options: [c, cpp, java, py, java, go, ini, ll, rb, rs, js, jsx, ts, tsx, class, jimple, jar, apk]."
     )
     val languageFileEnding: String,
+    @Description(
+        "The name of the Component the code should be added to, as returned in cpg_analyze's/cpg_translate's 'components' list. Required if the project has more than one component."
+    )
+    val component: String? = null,
     @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
 ) : HasProjectNamePayload
 

@@ -60,7 +60,10 @@ class AddCodeToolTest {
                     name = "cpg_analyze",
                     arguments =
                         mapOf(
-                            "path" to "src/integrationTest/resources/addCodeTool/simple_config.py"
+                            "path" to "src/integrationTest/resources/addCodeTool/simple_config.py",
+                            // cpg_add_code requires the analyzed project's frontends/scope
+                            // manager to still be alive.
+                            "keepLive" to true,
                         ),
                 )
 

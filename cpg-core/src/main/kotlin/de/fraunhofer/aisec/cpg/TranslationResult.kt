@@ -57,8 +57,12 @@ import kotlin.reflect.KClass
  * it and a [Pass] can extend it.
  */
 class TranslationResult(
-    /** A reference to our [TranslationManager]. */
-    private val translationManager: TranslationManager,
+    /**
+     * A reference to our [TranslationManager]. Exposed so that callers holding only a
+     * [TranslationResult] can still reach [TranslationManager.addSource] without separately keeping
+     * track of the [TranslationManager] that produced it.
+     */
+    val translationManager: TranslationManager,
     /**
      * The final [TranslationContext] of this translation result. Currently, for parallel
      * processing, we are creating one translation context for each parsed file (containing a

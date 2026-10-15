@@ -257,8 +257,8 @@ private inline fun <reified T : Node> resolveTargets(node: Node): List<T> {
  * incoming EOG edges, mirroring cpg-ai's `runPassForNode`'s handling of [EOGStarterPass].
  */
 private fun resolveEOGStarterTargets(node: Node): List<Node> {
-    ((node as? EOGStarterHolder) as? Node)?.let {
-        return listOf(it)
+    if (node is EOGStarterHolder && node.prevEOG.isEmpty()) {
+        return listOf(node)
     }
     node
         .firstParentOrNull<Node> { it is EOGStarterHolder && it.prevEOG.isEmpty() }

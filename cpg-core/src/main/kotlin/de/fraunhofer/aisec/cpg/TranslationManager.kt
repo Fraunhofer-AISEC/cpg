@@ -580,16 +580,8 @@ private constructor(
      *   [TranslationConfiguration.failOnError] is `true`.
      */
     @Throws(TranslationException::class)
-    fun addSource(result: TranslationResult, component: Component, file: File): TranslationUnit? {
-        checkLive(result)
-        requireComponent(result, component)
-
-        val ctx = result.finalCtx
-        // Mirrors parseSequentially, which also points the shared ctx at the component that is
-        // currently being parsed before invoking the frontend.
-        ctx.currentComponent = component
-
-        return try {
+    fun addSource(result: TranslationResult, component: Component, file: File): TranslationUnit? =
+        addSourceCommon(result, component, file.name) { ctx ->
             val frontend =
                 getFrontend(file, ctx, ctx)
                     ?: throw TranslationException("Found no parser frontend for ${file.name}")
@@ -600,28 +592,14 @@ private constructor(
             // the static JavaParserFacade.clearInstances()), which would affect other still-alive
             // frontend instances in the same JVM. The frontend created above is single-use and
             // about to go out of scope anyway, so we just let it be garbage collected.
-            val tu =
-                if (frontend is SupportsNewParse) {
-                    val path = file.toPath().absolute()
-                    val content = path.readText()
-                    val linesOfCode = content.linesOfCode
-                    val tu = frontend.parse(content, path)
-                    synchronized(result.stats) { result.stats.totalLinesOfCode += linesOfCode }
-                    tu
-                } else {
-                    frontend.parse(file)
-                }
-            component.addTranslationUnit(tu)
-            updateIncrementally(result, tu)
-            tu
-        } catch (ex: TranslationException) {
-            log.error("An error occurred during parsing of ${file.name}: ${ex.message}")
-            if (config.failOnError) {
-                throw ex
+            if (frontend is SupportsNewParse) {
+                val path = file.toPath().absolute()
+                val content = path.readText()
+                frontend.parse(content, path) to content.linesOfCode
+            } else {
+                frontend.parse(file) to null
             }
-            null
         }
-    }
 
     /**
      * Incrementally adds [content] (located at [path]) to [component] of an already completed
@@ -648,15 +626,9 @@ private constructor(
         component: Component,
         content: String,
         path: Path,
-    ): TranslationUnit? {
-        checkLive(result)
-        requireComponent(result, component)
-
-        val ctx = result.finalCtx
-        ctx.currentComponent = component
-        val file = path.toFile()
-
-        return try {
+    ): TranslationUnit? =
+        addSourceCommon(result, component, path.toString()) { ctx ->
+            val file = path.toFile()
             val frontend =
                 getFrontend(file, ctx, ctx)
                     ?: throw TranslationException("Found no parser frontend for $path")
@@ -667,19 +639,8 @@ private constructor(
             }
 
             // See addSource(File) for why we deliberately don't call frontend.cleanup() here.
-            val tu = frontend.parse(content, path)
-            synchronized(result.stats) { result.stats.totalLinesOfCode += content.linesOfCode }
-            component.addTranslationUnit(tu)
-            updateIncrementally(result, tu)
-            tu
-        } catch (ex: TranslationException) {
-            log.error("An error occurred during parsing of $path: ${ex.message}")
-            if (config.failOnError) {
-                throw ex
-            }
-            null
+            frontend.parse(content, path) to content.linesOfCode
         }
-    }
 
     /**
      * Incrementally adds [content] to [component] of an already completed [result], using
@@ -707,23 +668,18 @@ private constructor(
         content: String,
         language: Language<*>,
     ): TranslationUnit? {
-        checkLive(result)
-        requireComponent(result, component)
-
-        val ctx = result.finalCtx
         // Language is itself a graph Node, so an arbitrary caller-constructed instance would
         // become a duplicate node distinct from the one already used everywhere else in the
         // graph; require the canonical instance registered on this ctx (see
         // TranslationContext.availableLanguage). Note: Language.equals compares only by class, so
         // an identity check is required here -- a separately constructed instance of the same
         // Language class would otherwise incorrectly pass an "in" (equals-based) check.
-        require(ctx.availableLanguages.any { it === language }) {
+        require(result.finalCtx.availableLanguages.any { it === language }) {
             "language must be one of result.finalCtx.availableLanguages, e.g. obtained via " +
                 "ctx.availableLanguage<T>(), not a separately constructed instance"
         }
-        ctx.currentComponent = component
 
-        return try {
+        return addSourceCommon(result, component, "content for ${language.name}") { ctx ->
             val frontend =
                 newFrontendOrNull(language, ctx)
                     ?: throw TranslationException(
@@ -736,15 +692,41 @@ private constructor(
             }
 
             // See addSource(File) for why we deliberately don't call frontend.cleanup() here.
-            val tu = frontend.parse(content, path = null)
-            synchronized(result.stats) { result.stats.totalLinesOfCode += content.linesOfCode }
+            frontend.parse(content, path = null) to content.linesOfCode
+        }
+    }
+
+    /**
+     * Shared skeleton of the [addSource] overloads: validates [result]/[component] (see
+     * [checkLive]/[requireComponent]), points the shared context at [component], invokes [parse] to
+     * obtain the new [TranslationUnit] (and, if non-null, the line count to add to [result]'s
+     * stats), wires the unit into [component], and runs [updateIncrementally] bookkeeping.
+     * [TranslationException] thrown by [parse] is logged (annotated with [sourceDescription]) and
+     * either rethrown or swallowed depending on [TranslationConfiguration.failOnError], matching
+     * [addSource]'s documented behavior.
+     */
+    private fun addSourceCommon(
+        result: TranslationResult,
+        component: Component,
+        sourceDescription: String,
+        parse: (ctx: TranslationContext) -> Pair<TranslationUnit, Int?>,
+    ): TranslationUnit? {
+        checkLive(result)
+        requireComponent(result, component)
+
+        val ctx = result.finalCtx
+        // Mirrors parseSequentially, which also points the shared ctx at the component that is
+        // currently being parsed before invoking the frontend.
+        ctx.currentComponent = component
+
+        return try {
+            val (tu, linesOfCode) = parse(ctx)
+            linesOfCode?.let { synchronized(result.stats) { result.stats.totalLinesOfCode += it } }
             component.addTranslationUnit(tu)
             updateIncrementally(result, tu)
             tu
         } catch (ex: TranslationException) {
-            log.error(
-                "An error occurred during parsing of content for ${language.name}: ${ex.message}"
-            )
+            log.error("An error occurred during parsing of $sourceDescription: ${ex.message}")
             if (config.failOnError) {
                 throw ex
             }
