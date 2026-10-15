@@ -584,6 +584,9 @@ fun deserializeFromJson(json: String): TranslationResult {
             try {
                 val type = Class.forName(nodeJson.get("@class").asText())
                 when {
+                    // Reject anything that isn't actually a Node to avoid instantiating arbitrary
+                    // classes from untrusted JSON.
+                    !Node::class.java.isAssignableFrom(type) -> null
                     // Scopes are built in phase 1b, once their `astNode` exists.
                     Scope::class.java.isAssignableFrom(type) -> null
                     // Any other node type without a no-arg constructor cannot be built here.
@@ -611,7 +614,9 @@ fun deserializeFromJson(json: String): TranslationResult {
                 val type = Class.forName(nodeJson.get("@class").asText())
                 if (Scope::class.java.isAssignableFrom(type)) {
                     buildScope(type, nodeJson, registry, objectMapper)
-                } else null
+                } else {
+                    null
+                }
             } catch (e: Exception) {
                 log.warn("Skipping scope {} during deserialization: {}", id, e.message)
                 null

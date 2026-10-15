@@ -261,13 +261,13 @@ class Application : Callable<Int> {
     private var exportJsonFile: File? = null
 
     @CommandLine.Option(names = ["--serialize"], description = ["Serialize the cpg as json"])
-    private val serializeTo: File? = null
+    private var serializeTo: File? = null
 
     @CommandLine.Option(
         names = ["--deserialize"],
         description = ["Deserialize the cpg from json file"],
     )
-    private val deserializeFrom: File? = null
+    private var deserializeFrom: File? = null
 
     private var passClassList =
         listOf(
@@ -479,6 +479,7 @@ class Application : Callable<Int> {
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
+        val deserializeFrom = deserializeFrom
         val translationResult =
             if (deserializeFrom != null) {
                 deserializeFromJson(deserializeFrom.readText())
@@ -510,6 +511,7 @@ class Application : Callable<Int> {
             )
         }
 
+        val serializeTo = serializeTo
         if (serializeTo != null) {
             log.info("Serialize cpg to file: ${serializeTo.absolutePath}")
             serializeTo.writeText(serializeToJson(translationResult))

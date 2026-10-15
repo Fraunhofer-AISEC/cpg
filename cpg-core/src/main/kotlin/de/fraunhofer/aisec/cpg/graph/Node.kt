@@ -473,9 +473,8 @@ abstract class Node() :
      * [Node.hashCode]. In this sense, it is definitely deterministic and reproducible, however, in
      * theory it is not completely unique, as collisions within [Node.hashCode] could occur.
      */
-    @get:JsonProperty("id")
-    @set:JsonProperty("id")
-    var id: Uuid
+    @get:JsonProperty("id", access = JsonProperty.Access.READ_ONLY)
+    val id: Uuid
         get() {
             val parent =
                 astParent?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
@@ -483,7 +482,6 @@ abstract class Node() :
                 }
             return Uuid.fromLongs(parent ?: 0, hashCode().toLong())
         }
-        set(value) {}
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0

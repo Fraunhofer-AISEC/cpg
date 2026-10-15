@@ -106,7 +106,12 @@ class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
         ) {
             if (value != null && gen != null) {
                 gen.writeStartObject()
-                gen.writeStringField(ARTIFACT, value.artifactLocation.uri.toString())
+                val uri = value.artifactLocation.uri
+                if (uri != null) {
+                    gen.writeStringField(ARTIFACT, uri.toString())
+                } else {
+                    gen.writeNullField(ARTIFACT)
+                }
                 gen.writeNumberField(START_LINE, value.region.startLine)
                 gen.writeNumberField(END_LINE, value.region.endLine)
                 gen.writeNumberField(START_COLUMN, value.region.startColumn)
@@ -124,7 +129,9 @@ class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
                 val endLine = node.get(END_LINE)?.asInt() ?: return null
                 val startColumn = node.get(START_COLUMN)?.asInt() ?: return null
                 val endColumn = node.get(END_COLUMN)?.asInt() ?: return null
-                val uri = URI.create(node.get(ARTIFACT)?.asText() ?: "")
+                val artifact = node.get(ARTIFACT)
+                val uri =
+                    if (artifact == null || artifact.isNull) null else URI.create(artifact.asText())
                 return PhysicalLocation(uri, Region(startLine, startColumn, endLine, endColumn))
             }
             return null

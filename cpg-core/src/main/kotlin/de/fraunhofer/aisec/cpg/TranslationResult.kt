@@ -115,8 +115,9 @@ class TranslationResult() : AstNode(), StatisticsHolder, ContextProvider {
      */
     @get:JsonIgnore override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
 
+    @get:JsonIgnore
     val isCancelled: Boolean
-        get() = translationManager.isCancelled()
+        get() = ::translationManager.isInitialized && translationManager.isCancelled()
 
     @Convert(TranslationStatsConverter::class) var stats = TranslationStats()
 

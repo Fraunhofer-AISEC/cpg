@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -42,8 +43,12 @@ class Assignment(
     /** The target(s) of this assignment. */
     val target: HasType,
 
-    /** The holder of this assignment */
-    val holder: AssignmentHolder,
+    /**
+     * The holder of this assignment. Excluded from JSON serialization: it is a back-reference to
+     * the node that derived [AssignmentHolder.assignments] from its own state, so it is redundant
+     * (and not needed to reconstruct the graph) on the read path.
+     */
+    @get:JsonIgnore val holder: AssignmentHolder,
 ) : Edge<Node>(value, target as Node) {
     override var labels = setOf("ASSIGMENT")
 }
