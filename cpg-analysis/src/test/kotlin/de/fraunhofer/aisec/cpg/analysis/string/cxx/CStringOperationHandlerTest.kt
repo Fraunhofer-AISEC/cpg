@@ -539,4 +539,38 @@ class CStringOperationHandlerTest {
         val pattern = ret.returnValue!!.evaluateCString()
         assertEquals(const("12"), pattern)
     }
+
+    /**
+     * `snprintf(buf, size, "%*d-%s", 5, 42, "b")` regression test: a `*` width consumes the next
+     * positional argument (here `5`, the field width) without contributing to the output, so the
+     * following `%d`/`%s` must still resolve to `42`/`"b"`, not be shifted by one. Before the fix,
+     * `C_FORMAT_TOKEN` did not match `%*d` at all, so the `%` was treated as literal text and every
+     * later specifier read the wrong positional argument.
+     */
+    @Test
+    fun testSnprintfStarWidthDoesNotShiftArgumentIndex() {
+        lateinit var ret: de.fraunhofer.aisec.cpg.graph.expressions.Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("snprintf")) {
+                                    it.arguments += newReference("buf")
+                                    it.arguments += newLiteral(100, objectType("size_t"))
+                                    it.arguments += newLiteral("%*d-%s", objectType("char*"))
+                                    it.arguments += newLiteral(5, objectType("int"))
+                                    it.arguments += newLiteral(42, objectType("int"))
+                                    it.arguments += newLiteral("b", objectType("char*"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateCString()
+        assertEquals(const("42-b"), pattern)
+    }
 }

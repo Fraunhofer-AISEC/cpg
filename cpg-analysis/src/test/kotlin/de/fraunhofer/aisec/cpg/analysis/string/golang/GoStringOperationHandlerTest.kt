@@ -227,6 +227,40 @@ class GoStringOperationHandlerTest {
         assertEquals(const("-b"), (pattern as? StringPattern.Concat)?.parts?.last())
     }
 
+    /**
+     * `fmt.Sprintf("%*d-%s", 5, 42, "b")` regression test: a `*` width consumes the next positional
+     * argument (here `5`, the field width) without contributing to the output, so the following
+     * `%d`/`%s` must still resolve to `42`/`"b"`, not be shifted by one. Before the fix,
+     * `GO_FORMAT_TOKEN` did not match `%*d` at all, so the `%` was treated as literal text and
+     * every later verb read the wrong positional argument.
+     */
+    @Test
+    fun testSprintfStarWidthDoesNotShiftArgumentIndex() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("fmt.Sprintf")) {
+                                    it.arguments += newLiteral("%*d-%s", objectType("string"))
+                                    it.arguments += newLiteral(5, objectType("int"))
+                                    it.arguments += newLiteral(42, objectType("int"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateGoString()
+        assertEquals(const("42-b"), pattern)
+    }
+
     /** `strings.Replace("foobar", "bar", "baz", -1)` with constant operands: exact result. */
     @Test
     fun testReplaceUnboundedConstant() {

@@ -232,6 +232,14 @@ class CStringOperationHandler : StringOperationHandler {
             }
             val token = m.value
             val conversion = token.last()
+            // A `*` width/precision (`%*d`, `%.*f`, `%*.*f`) consumes one positional `int` argument
+            // per `*` *before* the conversion's own argument, without contributing any characters
+            // to
+            // the output - must be accounted for here or every later `%s`/`%d` reads the wrong
+            // positional argument (see C_FORMAT_TOKEN's KDoc).
+            if (token != "%%") {
+                argIndex += token.count { it == '*' }
+            }
             parts.add(
                 when {
                     token == "%%" -> const("%")
@@ -292,8 +300,13 @@ class CStringOperationHandler : StringOperationHandler {
          * `%1$s`-style explicit index, unlike Java's `String.format`). One regex, not two
          * independent passes, so that `%%` adjacent to a real specifier cannot be misparsed - same
          * reasoning as the Python/JVM handlers' escaping fixes.
+         *
+         * Width and precision may each be a literal digit sequence *or* a `*`, which takes its
+         * value from the next positional argument instead (`%*d`, `%.*f`, `%*.*f`) - accounted for
+         * where this is used, see the `argIndex` adjustment in [handleSnprintf].
          */
-        private val C_FORMAT_TOKEN = Regex("%%|%[-+ 0#]*\\d*(\\.\\d+)?(hh|h|ll|l|L|j|z|t)?[a-zA-Z]")
+        private val C_FORMAT_TOKEN =
+            Regex("%%|%[-+ 0#]*(?:\\*|\\d*)(?:\\.(?:\\*|\\d*))?(hh|h|ll|l|L|j|z|t)?[a-zA-Z]")
     }
 }
 

@@ -159,6 +159,14 @@ class GoStringOperationHandler : StringOperationHandler {
             }
             val token = m.value
             val conversion = token.last()
+            // A `*` width/precision (`%*d`, `%.*f`, `%*.*f`) consumes one positional `int` argument
+            // per `*` *before* the conversion's own argument, without contributing any characters
+            // to
+            // the output - must be accounted for here or every later `%s`/`%d` reads the wrong
+            // positional argument (see GO_FORMAT_TOKEN's KDoc).
+            if (token != "%%") {
+                valueIndex += token.count { it == '*' }
+            }
             parts.add(
                 if (token == "%%") {
                     const("%")
@@ -361,8 +369,12 @@ class GoStringOperationHandler : StringOperationHandler {
          * Tokenizes Go's `fmt` verb syntax: `%%` (an escaped literal `%`), or a
          * `%[flags][width][.precision]verb` specifier. One regex, not two independent passes, for
          * the same reason as the Python/Java handlers' escaping fixes - see [handleSprintf]'s KDoc.
+         *
+         * Width and precision may each be a literal digit sequence *or* a `*`, which takes its
+         * value from the next positional argument instead (`%*d`, `%.*f`, `%*.*f`) - accounted for
+         * where this is used, see the `valueIndex` adjustment in [handleSprintf].
          */
-        private val GO_FORMAT_TOKEN = Regex("%%|%[-+#0 ]*\\d*(\\.\\d+)?[a-zA-Z]")
+        private val GO_FORMAT_TOKEN = Regex("%%|%[-+#0 ]*(?:\\*|\\d*)(?:\\.(?:\\*|\\d*))?[a-zA-Z]")
     }
 }
 
