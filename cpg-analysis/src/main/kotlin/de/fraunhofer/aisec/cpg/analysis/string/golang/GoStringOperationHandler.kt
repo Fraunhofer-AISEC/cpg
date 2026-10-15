@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.lengthOf
 import de.fraunhofer.aisec.cpg.analysis.string.mapConstLeaves
+import de.fraunhofer.aisec.cpg.analysis.string.renderFormatString
 import de.fraunhofer.aisec.cpg.analysis.string.union
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
@@ -151,13 +152,8 @@ class GoStringOperationHandler : StringOperationHandler {
         val formatString = evaluate(formatArg).asConstantOrNull() ?: return null
         val values = args.drop(1)
 
-        val parts = mutableListOf<StringPattern>()
         var valueIndex = 0
-        var lastEnd = 0
-        for (m in GO_FORMAT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
+        return renderFormatString(formatString, GO_FORMAT_TOKEN) { m ->
             val token = m.value
             val conversion = token.last()
             // A `*` width/precision (`%*d`, `%.*f`, `%*.*f`) consumes one positional `int` argument
@@ -168,27 +164,20 @@ class GoStringOperationHandler : StringOperationHandler {
             if (token != "%%") {
                 valueIndex += token.count { it == '*' }
             }
-            parts.add(
-                if (token == "%%") {
-                    const("%")
-                } else if (conversion == 's' || conversion == 'd' || conversion == 'v') {
-                    val value = values.getOrNull(valueIndex++)
-                    value?.let { evaluate(it) }
-                        ?: StringPattern.Unknown(
-                            origin = call,
-                            reason = StringPattern.Reason.UNSUPPORTED,
-                        )
-                } else {
-                    valueIndex++
-                    StringPattern.Unknown(origin = call, reason = StringPattern.Reason.UNSUPPORTED)
-                }
-            )
-            lastEnd = m.range.last + 1
+            if (token == "%%") {
+                const("%")
+            } else if (conversion == 's' || conversion == 'd' || conversion == 'v') {
+                val value = values.getOrNull(valueIndex++)
+                value?.let { evaluate(it) }
+                    ?: StringPattern.Unknown(
+                        origin = call,
+                        reason = StringPattern.Reason.UNSUPPORTED,
+                    )
+            } else {
+                valueIndex++
+                StringPattern.Unknown(origin = call, reason = StringPattern.Reason.UNSUPPORTED)
+            }
         }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        return concat(parts)
     }
 
     /**

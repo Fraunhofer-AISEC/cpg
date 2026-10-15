@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
 import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.lengthOf
+import de.fraunhofer.aisec.cpg.analysis.string.renderFormatString
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
@@ -223,24 +224,18 @@ class CStringOperationHandler : StringOperationHandler {
         val formatString = evaluate(args[2]).asConstantOrNull() ?: return null
         val values = args.drop(3)
 
-        val parts = mutableListOf<StringPattern>()
         var argIndex = 0
-        var lastEnd = 0
-        for (m in C_FORMAT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
-            val token = m.value
-            val conversion = token.last()
-            // A `*` width/precision (`%*d`, `%.*f`, `%*.*f`) consumes one positional `int` argument
-            // per `*` *before* the conversion's own argument, without contributing any characters
-            // to
-            // the output - must be accounted for here or every later `%s`/`%d` reads the wrong
-            // positional argument (see C_FORMAT_TOKEN's KDoc).
-            if (token != "%%") {
-                argIndex += token.count { it == '*' }
-            }
-            parts.add(
+        val formatted =
+            renderFormatString(formatString, C_FORMAT_TOKEN) { m ->
+                val token = m.value
+                val conversion = token.last()
+                // A `*` width/precision (`%*d`, `%.*f`, `%*.*f`) consumes one positional `int`
+                // argument per `*` *before* the conversion's own argument, without contributing any
+                // characters to the output - must be accounted for here or every later `%s`/`%d`
+                // reads the wrong positional argument (see C_FORMAT_TOKEN's KDoc).
+                if (token != "%%") {
+                    argIndex += token.count { it == '*' }
+                }
                 when {
                     token == "%%" -> const("%")
                     conversion == 'n' -> {
@@ -265,13 +260,7 @@ class CStringOperationHandler : StringOperationHandler {
                         )
                     }
                 }
-            )
-            lastEnd = m.range.last + 1
-        }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        val formatted = concat(parts)
+            }
 
         if (sizeConst == null) return formatted
         val maxLen = (sizeConst - 1).coerceAtLeast(0)

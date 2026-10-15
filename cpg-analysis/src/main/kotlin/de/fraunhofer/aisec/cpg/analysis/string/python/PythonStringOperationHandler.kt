@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.lengthOf
 import de.fraunhofer.aisec.cpg.analysis.string.mapConstLeaves
+import de.fraunhofer.aisec.cpg.analysis.string.renderFormatString
 import de.fraunhofer.aisec.cpg.analysis.string.union
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
@@ -118,45 +119,27 @@ class PythonStringOperationHandler : StringOperationHandler {
         val formatString = evaluate(op.lhs).asConstantOrNull() ?: return null
         val values = (op.rhs as? InitializerList)?.initializers ?: listOf(op.rhs)
 
-        val parts = mutableListOf<StringPattern>()
         var valueIndex = 0
-        var lastEnd = 0
-        for (m in PERCENT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
+        return renderFormatString(formatString, PERCENT_TOKEN) { m ->
             val token = m.value
-            parts.add(
-                when {
-                    token == "%%" -> const("%")
-                    token.contains('(') ->
-                        StringPattern.Unknown(
+            when {
+                token == "%%" -> const("%")
+                token.contains('(') ->
+                    StringPattern.Unknown(origin = op, reason = StringPattern.Reason.UNSUPPORTED)
+                token.last() == 's' || token.last() == 'd' || token.last() == 'i' -> {
+                    val value = values.getOrNull(valueIndex++)
+                    value?.let { evaluate(it) }
+                        ?: StringPattern.Unknown(
                             origin = op,
                             reason = StringPattern.Reason.UNSUPPORTED,
                         )
-                    token.last() == 's' || token.last() == 'd' || token.last() == 'i' -> {
-                        val value = values.getOrNull(valueIndex++)
-                        value?.let { evaluate(it) }
-                            ?: StringPattern.Unknown(
-                                origin = op,
-                                reason = StringPattern.Reason.UNSUPPORTED,
-                            )
-                    }
-                    else -> {
-                        valueIndex++
-                        StringPattern.Unknown(
-                            origin = op,
-                            reason = StringPattern.Reason.UNSUPPORTED,
-                        )
-                    }
                 }
-            )
-            lastEnd = m.range.last + 1
+                else -> {
+                    valueIndex++
+                    StringPattern.Unknown(origin = op, reason = StringPattern.Reason.UNSUPPORTED)
+                }
+            }
         }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        return concat(parts)
     }
 
     /**
@@ -188,16 +171,11 @@ class PythonStringOperationHandler : StringOperationHandler {
         val base = call.base ?: return null
         val formatString = evaluate(base).asConstantOrNull() ?: return null
 
-        val parts = mutableListOf<StringPattern>()
         var autoIndex = 0
-        var lastEnd = 0
-        for (m in FORMAT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
+        return renderFormatString(formatString, FORMAT_TOKEN) { m ->
             when (m.value) {
-                "{{" -> parts.add(const("{"))
-                "}}" -> parts.add(const("}"))
+                "{{" -> const("{")
+                "}}" -> const("}")
                 else -> {
                     val field = m.value.substring(1, m.value.length - 1).substringBefore(':')
                     val replacement =
@@ -207,21 +185,14 @@ class PythonStringOperationHandler : StringOperationHandler {
                                 call.argumentByNameOrPosition(position = field.toInt())
                             else -> call.argumentByNameOrPosition(name = field)
                         }
-                    parts.add(
-                        replacement?.let { evaluate(it) }
-                            ?: StringPattern.Unknown(
-                                origin = call,
-                                reason = StringPattern.Reason.UNSUPPORTED,
-                            )
-                    )
+                    replacement?.let { evaluate(it) }
+                        ?: StringPattern.Unknown(
+                            origin = call,
+                            reason = StringPattern.Reason.UNSUPPORTED,
+                        )
                 }
             }
-            lastEnd = m.range.last + 1
         }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        return concat(parts)
     }
 
     /**
