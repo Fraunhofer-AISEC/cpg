@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringEvaluatorConfig
 import de.fraunhofer.aisec.cpg.analysis.string.StringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
+import de.fraunhofer.aisec.cpg.analysis.string.boundedReplace
 import de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
@@ -328,24 +329,6 @@ class PythonStringOperationHandler : StringOperationHandler {
      * [receiver] with [new], matching Python's `str.replace(old, new, count)`. Requires `old` to be
      * non-empty.
      */
-    private fun boundedReplace(receiver: String, old: String, new: String, count: Int): String {
-        if (count <= 0) return receiver
-        val sb = StringBuilder()
-        var i = 0
-        var remaining = count
-        while (i < receiver.length) {
-            if (remaining > 0 && receiver.startsWith(old, i)) {
-                sb.append(new)
-                i += old.length
-                remaining--
-            } else {
-                sb.append(receiver[i])
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
     /**
      * `s.strip()`/`s.lstrip()`/`s.rstrip()`, optionally with a `chars` argument selecting which
      * characters to strip (default: whitespace). Exact when the receiver is constant and, if

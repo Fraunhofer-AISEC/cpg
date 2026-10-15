@@ -43,3 +43,32 @@ internal fun cannotOccurWithinPrefix(prefix: String, old: String): Boolean {
     }
     return true
 }
+
+/**
+ * Replaces at most [count] non-overlapping occurrences of [old] in [receiver] with [new], left to
+ * right, leaving the rest of [receiver] untouched. `count <= 0` is a no-op (mirrors both Python's
+ * `str.replace(old, new, count)` and Go's `strings.Replace(s, old, new, n)`, which treat a
+ * non-positive bound as "replace nothing" - "replace all" is `n < 0`/no `count` argument in those
+ * APIs, handled by the caller passing `Int.MAX_VALUE` rather than by this function).
+ *
+ * Shared between [de.fraunhofer.aisec.cpg.analysis.string.python.PythonStringOperationHandler] and
+ * [de.fraunhofer.aisec.cpg.analysis.string.golang.GoStringOperationHandler], whose exact-replace
+ * logic is otherwise identical.
+ */
+internal fun boundedReplace(receiver: String, old: String, new: String, count: Int): String {
+    if (count <= 0) return receiver
+    val sb = StringBuilder()
+    var i = 0
+    var remaining = count
+    while (i < receiver.length) {
+        if (remaining > 0 && receiver.startsWith(old, i)) {
+            sb.append(new)
+            i += old.length
+            remaining--
+        } else {
+            sb.append(receiver[i])
+            i++
+        }
+    }
+    return sb.toString()
+}

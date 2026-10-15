@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringEvaluatorConfig
 import de.fraunhofer.aisec.cpg.analysis.string.StringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
+import de.fraunhofer.aisec.cpg.analysis.string.boundedReplace
 import de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
@@ -265,24 +266,6 @@ class GoStringOperationHandler : StringOperationHandler {
      * [receiver] with [new], matching Go's `strings.Replace(s, old, new, n)` for `n >= 0`. Requires
      * `old` to be non-empty.
      */
-    private fun boundedReplace(receiver: String, old: String, new: String, count: Int): String {
-        if (count <= 0) return receiver
-        val sb = StringBuilder()
-        var i = 0
-        var remaining = count
-        while (i < receiver.length) {
-            if (remaining > 0 && receiver.startsWith(old, i)) {
-                sb.append(new)
-                i += old.length
-                remaining--
-            } else {
-                sb.append(receiver[i])
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
     /**
      * `strings.ToUpper(s)`/`strings.ToLower(s)`. Exact when the argument is constant. Otherwise,
      * distributes the case mapping over every [StringPattern.Const] leaf of the term (see the
