@@ -58,14 +58,19 @@ class RunPassForNodeTest {
         val functionDecl = session.translationResult.functions["hello"]
         assertNotNull(functionDecl)
 
+        val translationResult = session.translationResult
+        assertNotNull(translationResult)
+        val translationContext = session.translationContext
+        assertNotNull(translationContext)
+
         // Use a concrete TU-related pass on the child
         val result =
             runPassForNode(
                 session.nodeToPass,
-                session.translationResult,
+                translationResult,
                 functionDecl,
                 SymbolResolver::class,
-                session.translationContext,
+                translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -87,14 +92,19 @@ class RunPassForNodeTest {
         val functionDecl = session.translationResult.functions["hello"]
         assertNotNull(functionDecl)
 
+        val translationResult = session.translationResult
+        assertNotNull(translationResult)
+        val translationContext = session.translationContext
+        assertNotNull(translationContext)
+
         // Use a concrete TU-related pass on the child
         val result =
             runPassForNode(
                 session.nodeToPass,
-                session.translationResult,
+                translationResult,
                 functionDecl,
                 ResolveMemberAmbiguityPass::class,
-                session.translationContext,
+                translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -112,14 +122,19 @@ class RunPassForNodeTest {
         val session = getSession(analysis.projectName)
         assertNotNull(session)
 
+        val translationResult = session.translationResult
+        assertNotNull(translationResult)
+        val translationContext = session.translationContext
+        assertNotNull(translationContext)
+
         // Use a concrete TU-related pass on the parent
         val result =
             runPassForNode(
                 session.nodeToPass,
-                session.translationResult,
-                session.translationResult,
+                translationResult,
+                translationResult,
                 ResolveMemberAmbiguityPass::class,
-                session.translationContext,
+                translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -137,14 +152,19 @@ class RunPassForNodeTest {
         val session = getSession(analysis.projectName)
         assertNotNull(session)
 
+        val translationResult = session.translationResult
+        assertNotNull(translationResult)
+        val translationContext = session.translationContext
+        assertNotNull(translationContext)
+
         // Use a concrete TU-related pass on the parent
         val result =
             runPassForNode(
                 session.nodeToPass,
-                session.translationResult,
-                session.translationResult,
+                translationResult,
+                translationResult,
                 ResolveMemberAmbiguityPass::class,
-                session.translationContext,
+                translationContext,
             )
         // No error expected
         assertTrue(result.success)
@@ -162,16 +182,21 @@ class RunPassForNodeTest {
         val session = getSession(analysis.projectName)
         assertNotNull(session)
 
+        val translationResult = session.translationResult
+        assertNotNull(translationResult)
+        val translationContext = session.translationContext
+        assertNotNull(translationContext)
+
         val someNode: Node = session.translationResult.nodes.first()
         // TranslationUnitPass is abstract; primary constructor call should fail with
         // IllegalArgumentException
         assertFailsWith<IllegalArgumentException> {
             runPassForNode(
                 session.nodeToPass,
-                session.translationResult,
+                translationResult,
                 someNode,
                 TranslationUnitPass::class,
-                session.translationContext,
+                translationContext,
             )
         }
     }
