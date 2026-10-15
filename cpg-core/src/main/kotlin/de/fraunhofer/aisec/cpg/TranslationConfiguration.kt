@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
+import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -199,7 +201,7 @@ private constructor(
      * A flattened list of [registeredPasses], mainly used for the JSON representation because
      * Jackson cannot deal with lists of lists very well.
      */
-    // @get:JsonSerialize(contentUsing = KClassSerializer::class)
+    @get:JsonSerialize(contentUsing = KClassSerializer::class)
     @get:JsonProperty("registeredPasses")
     val flatRegisteredPasses: List<KClass<out Pass<*>>>
         get() {
