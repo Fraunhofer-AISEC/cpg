@@ -418,7 +418,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * resolution-relevant inside a function — depends on *where* the declaration appears and is
      * therefore delegated to the language's
      * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the current scope
-     * and sets [Declaration.visibility] and [ValueDeclaration.isStatic] accordingly.
+     * and sets [Declaration.visibility] and [Declaration.isStatic] accordingly.
      */
     private fun handleStorageClass(
         declaration: ValueDeclaration,

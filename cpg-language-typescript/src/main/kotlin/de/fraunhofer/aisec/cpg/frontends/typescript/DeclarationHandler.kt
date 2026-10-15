@@ -88,9 +88,9 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
      * language project their canonical meaning onto [declaration].
      *
      * The raw keyword spellings are kept losslessly in [Declaration.modifiers]; turning them into
-     * canonical [Declaration.visibility] / [ValueDeclaration.isStatic] is delegated to the
-     * language's [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the
-     * current scope. Two shapes of modifier are recognized:
+     * canonical [Declaration.visibility] / [Declaration.isStatic] is delegated to the language's
+     * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the current scope.
+     * Two shapes of modifier are recognized:
      * - explicit modifier keywords such as `public`/`protected`/`private`/`static`, which the
      *   TypeScript parser emits as dedicated `*Keyword` child nodes in front of the member name,
      *   and

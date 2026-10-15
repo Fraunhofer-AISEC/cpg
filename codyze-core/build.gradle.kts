@@ -51,10 +51,14 @@ dependencies {
     // Scripting host
     api(libs.kotlin.scripting.jvm.host)
 
-    // We depend on the Python frontend for the integration tests, but the frontend is only
+    // We depend on several frontends for the integration tests, but the frontends are only
     // available if enabled.
-    // If it's not available, the integration tests fail (which is ok). But if we would directly
-    // reference the project here, the build system would fail any task since it will not find a
+    // If they are not available, the integration tests fail (which is ok). But if we would directly
+    // reference the projects here, the build system would fail any task since it will not find a
     // non-enabled project.
     findProject(":cpg-language-python")?.also { integrationTestApi(it) }
+    findProject(":cpg-language-cxx")?.also { integrationTestApi(it) }
+    findProject(":cpg-language-java")?.also { integrationTestApi(it) }
+    findProject(":cpg-language-go")?.also { integrationTestApi(it) }
+    findProject(":cpg-language-rust")?.also { integrationTestApi(it) }
 }

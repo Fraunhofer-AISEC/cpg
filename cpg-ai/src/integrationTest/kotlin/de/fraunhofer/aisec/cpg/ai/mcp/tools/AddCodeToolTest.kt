@@ -27,7 +27,8 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAddCodeTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.calls
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -37,8 +38,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.BeforeEach
 
 class AddCodeToolTest {
+    @BeforeEach
+    fun clearSessions() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
+    }
+
     @Test
     fun cpgAnalyzeToolIntegrationTest() =
         withClient(
@@ -56,14 +64,15 @@ class AddCodeToolTest {
                         ),
                 )
 
-            assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+            val session = getSession()
+            assertNotNull(session, "Result should be set after tool execution")
 
             val resultContent = result.content.firstOrNull()
             assertIs<TextContent>(resultContent)
             assertNotNull(resultContent.text, "Result content should not be null")
 
             var inferredCall =
-                globalAnalysisResult.calls.singleOrNull {
+                session.translationResult?.calls?.singleOrNull {
                     it.name.localName == "create_config_list"
                 }
             assertNotNull(inferredCall, "Inferred call should not be null")
@@ -86,7 +95,7 @@ class AddCodeToolTest {
             assertEquals("The source code has been added to the CPG.", content.text)
 
             inferredCall =
-                globalAnalysisResult.calls.singleOrNull {
+                session.translationResult?.calls?.singleOrNull {
                     it.name.localName == "create_config_list"
                 }
             assertNotNull(inferredCall, "Inferred call should not be null")
