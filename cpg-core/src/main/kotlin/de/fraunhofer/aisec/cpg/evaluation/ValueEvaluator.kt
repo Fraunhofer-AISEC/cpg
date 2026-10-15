@@ -70,8 +70,17 @@ open class ValueEvaluator(
     open val log: Logger
         get() = LoggerFactory.getLogger(ValueEvaluator::class.java)
 
-    /** This property contains the path of the latest execution of [evaluateInternal]. */
-    val path: MutableList<Node> = mutableListOf()
+    /**
+     * This property contains the path of the latest execution of [evaluateInternal]. Since a single
+     * [ValueEvaluator] instance (e.g. the one held by [de.fraunhofer.aisec.cpg.frontends.Language])
+     * can be shared and invoked concurrently from multiple threads (e.g. via parallel query
+     * evaluation), the underlying list is kept thread-local to avoid a
+     * [java.util.ConcurrentModificationException] when one thread mutates it while another is
+     * iterating over it.
+     */
+    private val threadLocalPath = ThreadLocal.withInitial { mutableListOf<Node>() }
+    val path: MutableList<Node>
+        get() = threadLocalPath.get()
 
     /** Cache calculated values so that we don't have to calculate them each time */
     companion object {
@@ -170,8 +179,9 @@ open class ValueEvaluator(
      * their value. If not, we can try to use [handlePrevDFG].
      */
     protected fun handleHasInitializer(node: HasInitializer, depth: Int): Any? {
-        // If we have an initializer, we can use it. Otherwise, we can fall back to the prevDFG
-        return if (node.initializer != null) {
+        // If we have an initializer and nothing else writes to it, we can use the initializer.
+        // Otherwise, we let handlePrevDFG decide.
+        return if (node is Node && node.initializer != null && node.prevFullDFG.size <= 1) {
             evaluateInternal(node.initializer, depth + 1)
         } else {
             handlePrevDFG(node as Node, depth)

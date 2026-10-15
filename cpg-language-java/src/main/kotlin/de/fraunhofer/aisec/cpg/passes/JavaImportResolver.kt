@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.helpers.filterFlatMappedTo
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -101,9 +102,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 // Add all the static methods implemented in the class "base" and its superclasses
                 staticImports.addAll(classes.flatMap { it.methods }.filter(Method::isStatic))
                 // Add all the static fields implemented in the class "base" and its superclasses
-                staticImports.addAll(
-                    classes.flatMap { it.fields }.filter { "static" in it.modifiers }
-                )
+                staticImports.addAll(classes.flatMap { it.fields }.filter(Field::isStatic))
             }
         }
         return staticImports
@@ -118,16 +117,14 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             base.methods.filterTo(mutableSetOf()) { it.name.localName.endsWith(name) }
 
         // add methods from superclasses
-        memberMethods.addAll(
-            base.superTypeDeclarations
-                .flatMap { it.methods }
-                .filter { it.name.localName.endsWith(name) }
-        )
-        val memberFields = base.fields.filter { it.name.localName == name }.toMutableSet()
+        base.superTypeDeclarations.filterFlatMappedTo(memberMethods, { it.methods }) {
+            it.name.localName.endsWith(name)
+        }
+        val memberFields = base.fields.filterTo(mutableSetOf()) { it.name.localName == name }
         // add fields from superclasses
-        memberFields.addAll(
-            base.superTypeDeclarations.flatMap { it.fields }.filter { it.name.localName == name }
-        )
+        base.superTypeDeclarations.filterFlatMappedTo(memberFields, { it.fields }) {
+            it.name.localName == name
+        }
 
         val memberEntries = mutableSetOf<EnumConstant>()
         if (base is Enumeration) {
@@ -144,7 +141,14 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                newField(name, UnknownType.getUnknownType(base.language), setOf(), null, false)
+                newField(
+                    name,
+                    UnknownType.getUnknownType(base.language),
+                    setOf(),
+                    initializer = null,
+                    implicitInitializerAllowed = false,
+                    isStatic = true,
+                )
             targetField.language = base.language
             targetField.isInferred = true
 

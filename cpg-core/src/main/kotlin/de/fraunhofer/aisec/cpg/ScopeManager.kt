@@ -562,8 +562,9 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         node: HasNameAndLocation,
         language: Language<*> = node.language,
         scope: Scope? = currentScope,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
     ): ScopeExtraction? {
-        return extractScope(node.name, language, node.location, scope)
+        return extractScope(node.name, language, node.location, scope, localSymbols)
     }
 
     /**
@@ -588,6 +589,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         language: Language<*>,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
     ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
@@ -603,7 +605,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
             }
 
             // We need to check, whether we have an alias for the name's parent in this file
-            val scope = lookupScopeByName(scopeName, language, scope)
+            val scope = lookupScopeByName(scopeName, language, scope, localSymbols)
 
             if (scope == null) {
                 Util.warnWithFileLocation(
@@ -635,7 +637,12 @@ class ScopeManager() : ScopeProvider, ContextProvider {
      * @param name the name to look up
      * @param startScope the scope to start the lookup in
      */
-    fun lookupScopeByName(name: Name, language: Language<*>?, startScope: Scope?): Scope? {
+    fun lookupScopeByName(
+        name: Name,
+        language: Language<*>?,
+        startScope: Scope?,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
+    ): Scope? {
         val parts = name.splitTo(mutableListOf())
         var part: Name? = name
         var scope = startScope
@@ -652,7 +659,11 @@ class ScopeManager() : ScopeProvider, ContextProvider {
             // namespace (in different files), but they all (should) point to the same scope.
             scope =
                 scope
-                    .lookupSymbol(part.localName, languageOnly = language) {
+                    .lookupSymbol(
+                        part.localName,
+                        languageOnly = language,
+                        localSymbols = localSymbols,
+                    ) {
                         it is Namespace || it is Record || it is Typedef
                     }
                     .mapTo(mutableSetOf()) {
@@ -795,6 +806,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         node: Node,
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(
@@ -803,6 +815,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
             node.location,
             scope,
             replaceImports = replaceImports,
+            localSymbols = localSymbols,
             predicate = predicate,
         )
     }
@@ -843,9 +856,10 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         replaceImports: Boolean = true,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        val extractedScope = extractScope(name, language, location, startScope)
+        val extractedScope = extractScope(name, language, location, startScope, localSymbols)
         val scope: Scope?
         val n: Name
         if (extractedScope == null) {
@@ -857,10 +871,12 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         }
 
         // A custom predicate is a per-call lambda and cannot be safely used as (or compared
-        // through)
-        // a cache key, so we only cache the common case where no predicate is given.
+        // through) a cache key, so we only cache the common case where neither it nor a
+        // localSymbols override is given. A localSymbols override answers differently depending
+        // on how much of the EOG has been traversed so far, so its results must never be cached
+        // across call sites either.
         val cacheKey =
-            if (predicate == null) {
+            if (predicate == null && localSymbols == null) {
                 SymbolLookupCacheKey(
                     scope = scope ?: startScope,
                     symbol = n.localName,
@@ -892,6 +908,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
                             languageOnly = language,
                             qualifiedLookup = true,
                             replaceImports = replaceImports,
+                            localSymbols = localSymbols,
                             predicate = predicate,
                         )
                         .toMutableList()
@@ -904,6 +921,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
                             n.localName,
                             languageOnly = language,
                             replaceImports = replaceImports,
+                            localSymbols = localSymbols,
                             predicate = predicate,
                         )
                         ?.toMutableList() ?: mutableListOf()

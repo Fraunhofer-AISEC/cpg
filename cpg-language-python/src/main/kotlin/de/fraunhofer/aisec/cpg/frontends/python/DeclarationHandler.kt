@@ -142,6 +142,14 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunction(name = s.name, rawNode = s)
             }
+
+        // Let the language turn the declaration's "modifiers" into semantics. For Python this
+        // projects the PEP 8 naming convention onto the visibility of record members (methods,
+        // constructors and operators); free functions keep the default [Visibility.UNKNOWN]. We
+        // have not entered the scope of `func` yet, so the current scope is still the scope
+        // surrounding the function, which is exactly what decides whether this is a member.
+        language.applyModifiers(func, frontend.scopeManager.currentScope)
+
         frontend.scopeManager.enterScope(func)
 
         frontend.statementHandler.addAsyncWarning(s, func)
@@ -166,7 +174,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         if (func is Constructor) {
             (func.body as? Block)?.let { block ->
-                block +=
+                block.statements +=
                     newReturn().apply {
                         this.isImplicit = true
                         this.returnValue =
@@ -228,27 +236,23 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         isKwoOnly: Boolean = false,
         defaultValue: Expression? = null,
     ): Parameter {
-        val arg =
-            newParameter(
-                name = node.arg,
-                type = dynamicType(),
-                variadic = isVariadic,
-                rawNode = node,
-            )
-        arg.assignedTypes += frontend.typeOf(node.annotation)
-        defaultValue?.let { arg.default = it }
-        if (isPosOnly) {
-            arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+        return newParameter(
+            name = node.arg,
+            type = dynamicType(),
+            variadic = isVariadic,
+            rawNode = node,
+            holder = func,
+        ) { arg ->
+            arg.assignedTypes += frontend.typeOf(node.annotation)
+            defaultValue?.let { arg.default = it }
+            if (isPosOnly) {
+                arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+            }
+
+            if (isKwoOnly) {
+                arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
+            }
         }
-
-        if (isKwoOnly) {
-            arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
-        }
-
-        frontend.scopeManager.addDeclaration(arg)
-        func.parameters += arg
-
-        return arg
     }
 
     /**

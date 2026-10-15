@@ -81,3 +81,18 @@ var jarTasks = tasks.withType<Jar>()
 jarTasks.forEach { it.dependsOn(pnpmBuild) }
 
 tasks.shadowJar { setProperty("zip64", true) }
+
+// The Shadow plugin - applied transitively by the Ktor plugin, since that also applies the
+// `application` plugin - registers `shadowRuntimeElements` as a variant of the `java` component, so
+// our publishing conventions upload the fat jar under the `all` classifier. That jar is >2 GB, most
+// of it the per-platform native binaries of `org.bytedeco:llvm-platform`, and building plus
+// uploading it took roughly 7 of the 9 minutes of the CI publish step. Nothing consumes it from
+// Maven Central (the docs run the console via `installDist`), so keep it out of the publication.
+// The Shadow plugin wires up the variant in an `afterEvaluate`, so we have to do the same.
+afterEvaluate {
+    (components["java"] as AdhocComponentWithVariants).withVariantsFromConfiguration(
+        configurations["shadowRuntimeElements"]
+    ) {
+        skip()
+    }
+}

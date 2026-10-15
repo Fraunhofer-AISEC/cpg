@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasModifiers
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -56,6 +57,31 @@ abstract class Declaration : AstNode(), HasModifiers {
     var declaringScope: Scope? = null
 
     override var modifiers: Set<String> = setOf()
+
+    /**
+     * The canonical, language-independent [Visibility] of this declaration. While [modifiers] keeps
+     * the raw, language-specific spelling (e.g. the strings `public` or `static`), this exposes the
+     * *interpreted* visibility that passes such as the
+     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] can reason about without knowing any
+     * language's concrete keywords. A language frontend maps the relevant [modifiers] onto this
+     * value (see [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]). The default
+     * [Visibility.UNKNOWN] must be treated as "no restriction", so languages that do not model
+     * visibility are unaffected.
+     */
+    var visibility: Visibility = Visibility.UNKNOWN
+
+    /**
+     * Whether this declaration is *static*, i.e., bound to its enclosing [Record] rather than to an
+     * instance of it. Common examples are static [Field]s and [Method]s, but also static nested
+     * [Record]s (e.g., `static class` in Java) or static imports (e.g., `import static` in Java).
+     *
+     * Like [visibility], this is the *interpreted* value: a language frontend maps the relevant
+     * [modifiers] onto it (see [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]), so
+     * that passes do not need to know the language-specific keywords. Note that the same keyword
+     * can mean different things depending on the language and scope, e.g., `static` at file scope
+     * in C/C++ denotes internal linkage, which is represented by [Visibility.INTERNAL] instead.
+     */
+    var isStatic = false
 
     override fun exitNextEOG(): Collection<Node> {
         return setOf()

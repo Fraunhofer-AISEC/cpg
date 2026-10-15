@@ -297,7 +297,15 @@ open class Function :
 /** This is a very basic implementation of Cyclomatic Complexity. */
 fun Expression.cyclomaticComplexity(depth: Int = 1): Long {
     var i: Long = 0
-    for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
+    val statements =
+        when (this) {
+            is Block -> this.statements
+            is Label -> this.statements
+            is ForEach -> this.statements
+            is For -> this.statements
+            else -> listOf(this)
+        }
+    for (stmt in statements) {
         when (stmt) {
             is ForEach,
             is For -> {
@@ -331,7 +339,8 @@ fun Expression.cyclomaticComplexity(depth: Int = 1): Long {
                 // add the depth
                 i += depth
             }
-            is StatementHolder -> {
+            is Block,
+            is Label -> {
                 i += depth + stmt.cyclomaticComplexity(depth + 1)
             }
         }

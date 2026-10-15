@@ -55,19 +55,18 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression = newConstruction(rawNode = ctx)
-        constructExpression.type =
-            (frontend.declaratorHandler.lastNode as? Variable)?.type ?: unknownType()
+        return newConstruction(rawNode = ctx) { constructExpression ->
+            constructExpression.type =
+                (frontend.declaratorHandler.lastNode as? Variable)?.type ?: unknownType()
 
-        for ((i, argument) in ctx.arguments.withIndex()) {
-            val arg = frontend.expressionHandler.handle(argument)
-            arg?.let {
-                it.argumentIndex = i
-                constructExpression.addArgument(it)
+            for ((i, argument) in ctx.arguments.withIndex()) {
+                val arg = frontend.expressionHandler.handle(argument)
+                arg?.let {
+                    it.argumentIndex = i
+                    constructExpression.addArgument(it)
+                }
             }
         }
-
-        return constructExpression
     }
 
     private fun handleInitializerList(ctx: IASTInitializerList): InitializerList {
@@ -77,13 +76,13 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         val targetType =
             (frontend.declaratorHandler.lastNode as? ValueDeclaration)?.type ?: unknownType()
 
-        val expression = newInitializerList(targetType, rawNode = ctx)
-
-        for (clause in ctx.clauses) {
-            frontend.expressionHandler.handle(clause)?.let { expression.initializerEdges.add(it) }
+        return newInitializerList(targetType, rawNode = ctx) { expression ->
+            for (clause in ctx.clauses) {
+                frontend.expressionHandler.handle(clause)?.let {
+                    expression.initializerEdges.add(it)
+                }
+            }
         }
-
-        return expression
     }
 
     private fun handleEqualsInitializer(ctx: IASTEqualsInitializer): Expression {

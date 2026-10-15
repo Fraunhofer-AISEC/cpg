@@ -43,7 +43,7 @@ class ExtensionTest {
         for (i in 0 until 5) {
             var ref = Reference()
             ref.name = Name("$i")
-            body += ref
+            body.statements += ref
         }
 
         func.body = body

@@ -1,0 +1,74 @@
+/*
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.graph.expressions
+
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
+import java.util.Objects
+
+/**
+ * Represents an "or-pattern": a set of [alternatives], any one of which may match the scrutinee.
+ * Alternatives are tried in order and the first one that matches determines the bindings that
+ * become active; all alternatives must bind the same set of identifiers, with the same types.
+ *
+ * In Rust, this models or-patterns such as
+ *
+ * ```rust
+ * match n {
+ *     1 | 2 | 3 => "small",
+ *     _ => "large",
+ * }
+ * ```
+ *
+ * where each of `1`, `2`, `3` becomes one entry in [alternatives], or nested inside a larger
+ * pattern, e.g. `Message::Hello { id: 1..=3 | 7..=9 }`.
+ */
+class AlternativeDeconstruction : Deconstruction(), HasType.TypeObserver {
+
+    @Relationship("ALTERNATIVES") var alternativeEdges = astEdgesOf<Expression>()
+    var alternatives by unwrapping(AlternativeDeconstruction::alternativeEdges)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AlternativeDeconstruction) return false
+        return super.equals(other) && alternatives == other.alternatives
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), alternatives)
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        val type = type
+        typeObservers.forEach { it.typeChanged(type, this) }
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        addAssignedTypes(assignedTypes)
+        typeObservers.forEach { it.assignedTypeChanged(assignedTypes, this) }
+    }
+}

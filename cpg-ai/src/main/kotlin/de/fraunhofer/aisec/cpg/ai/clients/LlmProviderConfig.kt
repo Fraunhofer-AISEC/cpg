@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai.clients
 
 import com.typesafe.config.Config
+import de.fraunhofer.aisec.cpg.helpers.filterMapped
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
@@ -125,8 +126,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
             .body<GeminiModelsResponse>()
             .models
             // Gemini returns names as "models/gemini-2.5-flash"
-            .map { it.name.removePrefix("models/") }
-            .filter { allowed.matches(it) }
+            .filterMapped({ it.name.removePrefix("models/") }) { allowed.matches(it) }
             .sorted()
     }
 }

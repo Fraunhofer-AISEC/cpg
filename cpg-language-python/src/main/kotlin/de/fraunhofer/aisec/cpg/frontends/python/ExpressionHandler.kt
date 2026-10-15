@@ -161,15 +161,14 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * As opposed to the Assign node, both target and value must be single nodes.
      */
     private fun handleNamedExpr(node: Python.AST.NamedExpr): Assign {
-        val assignExpression =
-            newAssign(
-                operatorCode = ":=",
-                lhs = listOf(handle(node.target)),
-                rhs = listOf(handle(node.value)),
-                rawNode = node,
-            )
-        assignExpression.usedAsExpression = true
-        return assignExpression
+        return newAssign(
+            operatorCode = ":=",
+            lhs = listOf(handle(node.target)),
+            rhs = listOf(handle(node.value)),
+            rawNode = node,
+        ) {
+            it.usedAsExpression = true
+        }
     }
 
     /**
@@ -316,24 +315,24 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleStarred(node: Python.AST.Starred): Expression {
-        val unaryOp = newUnaryOperator("*", postfix = false, prefix = false, rawNode = node)
-        unaryOp.input = handle(node.value)
-        return unaryOp
+        return newUnaryOperator("*", postfix = false, prefix = false, rawNode = node) {
+            it.input = handle(node.value)
+        }
     }
 
     private fun handleSlice(node: Python.AST.Slice): Expression {
-        val slice = newRange(rawNode = node)
-        slice.floor = node.lower?.let { handle(it) }
-        slice.ceiling = node.upper?.let { handle(it) }
-        slice.third = node.step?.let { handle(it) }
-        return slice
+        return newRange(rawNode = node) { slice ->
+            slice.floor = node.lower?.let { handle(it) }
+            slice.ceiling = node.upper?.let { handle(it) }
+            slice.third = node.step?.let { handle(it) }
+        }
     }
 
     private fun handleSubscript(node: Python.AST.Subscript): Expression {
-        val subscriptExpression = newSubscription(rawNode = node)
-        subscriptExpression.arrayExpression = handle(node.value)
-        subscriptExpression.subscriptExpression = handle(node.slice)
-        return subscriptExpression
+        return newSubscription(rawNode = node) { subscriptExpression ->
+            subscriptExpression.arrayExpression = handle(node.value)
+            subscriptExpression.subscriptExpression = handle(node.slice)
+        }
     }
 
     /**
@@ -373,10 +372,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         for (e in node.elts) {
             lst += handle(e)
         }
-        val ile = newInitializerList(rawNode = node)
-        ile.type = frontend.objectType("list")
-        ile.initializers = lst
-        return ile
+        return newInitializerList(rawNode = node) { ile ->
+            ile.type = frontend.objectType("list")
+            ile.initializers = lst
+        }
     }
 
     private fun handleSet(node: Python.AST.Set): Expression {
@@ -384,10 +383,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         for (e in node.elts) {
             lst += handle(e)
         }
-        val ile = newInitializerList(rawNode = node)
-        ile.type = frontend.objectType("set")
-        ile.initializers = lst
-        return ile
+        return newInitializerList(rawNode = node) { ile ->
+            ile.type = frontend.objectType("set")
+            ile.initializers = lst
+        }
     }
 
     private fun handleTuple(node: Python.AST.Tuple): Expression {
@@ -395,10 +394,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         for (e in node.elts) {
             lst += handle(e)
         }
-        val ile = newInitializerList(rawNode = node)
-        ile.type = frontend.objectType("tuple")
-        ile.initializers = lst
-        return ile
+        return newInitializerList(rawNode = node) { ile ->
+            ile.type = frontend.objectType("tuple")
+            ile.initializers = lst
+        }
     }
 
     private fun handleIfExp(node: Python.AST.IfExp): Expression {
@@ -422,10 +421,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     )
                     .codeAndLocationFromChildren(node, frontend.lineSeparator)
         }
-        val ile = newInitializerList(rawNode = node)
-        ile.type = frontend.objectType("dict")
-        ile.initializers = lst
-        return ile
+        return newInitializerList(rawNode = node) { ile ->
+            ile.type = frontend.objectType("dict")
+            ile.initializers = lst
+        }
     }
 
     private fun handleCompare(node: Python.AST.Compare): Expression {
@@ -445,26 +444,30 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 is Python.AST.In -> "in"
                 is Python.AST.NotIn -> "not in"
             }
-        val ret = newBinaryOperator(op, rawNode = node)
-        ret.lhs = handle(node.left)
-        ret.rhs = handle(node.comparators.first())
-        return ret
+        return newBinaryOperator(op, rawNode = node) {
+            it.lhs = handle(node.left)
+            it.rhs = handle(node.comparators.first())
+        }
     }
 
     private fun handleBinOp(node: Python.AST.BinOp): Expression {
         val op = frontend.operatorToString(node.op)
-        val ret = newBinaryOperator(operatorCode = op, rawNode = node)
-        ret.lhs = handle(node.left)
-        ret.rhs = handle(node.right)
-        return ret
+        return newBinaryOperator(operatorCode = op, rawNode = node) {
+            it.lhs = handle(node.left)
+            it.rhs = handle(node.right)
+        }
     }
 
     private fun handleUnaryOp(node: Python.AST.UnaryOp): Expression {
         val op = frontend.operatorUnaryToString(node.op)
-        val ret =
-            newUnaryOperator(operatorCode = op, postfix = false, prefix = false, rawNode = node)
-        ret.input = handle(node.operand)
-        return ret
+        return newUnaryOperator(
+            operatorCode = op,
+            postfix = false,
+            prefix = false,
+            rawNode = node,
+        ) {
+            it.input = handle(node.operand)
+        }
     }
 
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
@@ -539,21 +542,19 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleName(node: Python.AST.Name): Expression {
-        val r = newReference(name = node.id, rawNode = node)
-        return r
+        return newReference(name = node.id, rawNode = node)
     }
 
     private fun handleLambda(node: Python.AST.Lambda): Expression {
-        val lambda = newLambda(rawNode = node)
-        val function = newFunction(name = "", rawNode = node)
-        frontend.scopeManager.enterScope(function)
-        for (arg in node.args.args) {
-            this.frontend.declarationHandler.handleArgument(function, arg)
-        }
+        return newLambda(rawNode = node) { lambda ->
+            lambda.function =
+                newFunction(name = "", rawNode = node, enterScope = true) { function ->
+                    for (arg in node.args.args) {
+                        this.frontend.declarationHandler.handleArgument(function, arg)
+                    }
 
-        function.body = handle(node.body)
-        frontend.scopeManager.leaveScope(function)
-        lambda.function = function
-        return lambda
+                    function.body = handle(node.body)
+                }
+        }
     }
 }

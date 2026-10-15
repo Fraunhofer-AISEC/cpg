@@ -64,7 +64,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 valuesCache.getOrPut(node.hashCode()) { evaluateInternal(node as? Node, 0) }
             else evaluateInternal(node as? Node, 0)
         return if (result is Collection<*> && result.all { r -> r is Number }) {
-            ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
+            ConcreteNumberSet(result.mapTo(mutableSetOf()) { r -> (r as Number).toLong() })
         } else {
             result
         }

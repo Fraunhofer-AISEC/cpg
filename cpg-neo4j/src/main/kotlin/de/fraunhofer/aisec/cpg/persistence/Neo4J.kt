@@ -112,7 +112,7 @@ fun TranslationResult.persistNeo4j() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
     val astNodes = this@persistNeo4j.nodes
-    val connected = astNodes.flatMap { it.connectedNodes }.toSet()
+    val connected = astNodes.flatMapTo(mutableSetOf()) { it.connectedNodes }
     val nodes = (astNodes + connected).distinct()
 
     log.info(

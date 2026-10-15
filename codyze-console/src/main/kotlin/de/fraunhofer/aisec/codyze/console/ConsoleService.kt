@@ -31,11 +31,13 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -130,8 +132,10 @@ class ConsoleService {
 
         val result = project.analyze()
 
-        // Update the global analysis result in the MCP server
-        globalAnalysisResult = result.translationResult
+        // The console only works on one project at a time, so replace any previous session in the
+        // MCP server instead of keeping it alongside
+        analysisSessions.clear()
+        registerSession(project.name, result.translationResult)
 
         // Populate QueryTree cache for lazy loading
         populateQueryTreeCache(result.requirementsResults)
@@ -181,10 +185,13 @@ class ConsoleService {
 
     /**
      * Returns the translation unit with the given ID for the specified component as
-     * [TranslationUnitJSON].
+     * [TranslationUnitJSON], including its code.
      */
     fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
-        return getComponent(componentName)?.translationUnits?.find { it.id == Uuid.parse(id) }
+        return getComponent(componentName)
+            ?.translationUnits
+            ?.find { it.id == Uuid.parse(id) }
+            ?.let { it.copy(code = it.cpgTU?.code ?: "") }
     }
 
     /**
@@ -201,6 +208,18 @@ class ConsoleService {
             ?.find { it.id == Uuid.parse(id) }
             ?.cpgTU
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
+    }
+
+    /**
+     * Returns the nodes with the given IDs as [NodeJSON] (without DFG edges). IDs of nodes that do
+     * not exist (e.g., because an LLM made them up) are omitted.
+     */
+    fun getNodes(nodeIds: Collection<String>): List<NodeJSON> {
+        val wanted = nodeIds.toSet()
+        val result = analysisResult?.analysisResult?.translationResult
+        if (wanted.isEmpty() || result == null) return emptyList()
+
+        return result.nodes.filter { it.id.toString() in wanted }.map { it.toJSON(noEdges = true) }
     }
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */
@@ -358,7 +377,7 @@ class ConsoleService {
      */
     private fun extractNodes(tu: TranslationUnit, overlayNodes: Boolean): List<NodeJSON> {
         return if (overlayNodes) {
-            tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
+            tu.nodes.mapFlatMapped({ it.overlays }) { it.toJSON() }
         } else {
             tu.declarations.map { it.toJSON() } + tu.statements.map { it.toJSON() }
         }

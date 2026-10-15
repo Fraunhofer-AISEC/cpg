@@ -26,10 +26,11 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
@@ -37,8 +38,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.BeforeEach
 
 class CpgAnalyzeToolTest {
+
+    @BeforeEach
+    fun clearSessions() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
+    }
+
     @Test
     fun cpgAnalyzeToolIntegrationTest() =
         withClient(registerTools = { addCpgAnalyzeTool() }) { client ->
@@ -52,7 +61,7 @@ class CpgAnalyzeToolTest {
                         ),
                 )
 
-            assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+            assertNotNull(getSession(), "Result should be set after tool execution")
 
             val resultContent = result.content.firstOrNull()
             assertIs<TextContent>(resultContent)
@@ -68,7 +77,7 @@ class CpgAnalyzeToolTest {
         val payload =
             CpgAnalyzePayload(content = "def hello():\n    print('Hello World')", extension = "py")
         val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
-        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+        assertNotNull(getSession(), "Result should be set after tool execution")
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
     }

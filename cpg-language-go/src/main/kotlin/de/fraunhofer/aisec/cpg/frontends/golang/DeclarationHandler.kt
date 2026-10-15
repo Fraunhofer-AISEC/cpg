@@ -93,6 +93,13 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 newFunction(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
+        // Go has no visibility keywords: whether a function or method is exported (visible from
+        // other packages) or unexported (package-scoped) is derived from the casing of its
+        // identifier. We keep the raw name and let the language project the canonical visibility.
+        // Note that this has to happen before we enter the function scope below, so that the
+        // language sees the enclosing (package) scope.
+        language.applyModifiers(func, frontend.scopeManager.currentScope)
+
         frontend.scopeManager.enterScope(func)
 
         val receiver = (func as? Method)?.receiver
@@ -143,7 +150,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 if (last !is Return) {
                     val ret = newReturn()
                     ret.isImplicit = true
-                    body += ret
+                    body.statements += ret
                 }
             }
             func.body = body
@@ -194,10 +201,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // (and make it an array afterward)
                 val (type, variadic) = frontend.fieldTypeOf(param.type)
 
-                val p = newParameter(name, type, variadic, rawNode = param)
-
-                frontend.scopeManager.addDeclaration(p)
-                func.parameters += p
+                val p = newParameter(name, type, variadic, rawNode = param, holder = func)
 
                 frontend.setComment(p, param)
             }
@@ -205,6 +209,26 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleGenDecl(genDecl: GoStandardLibrary.Ast.GenDecl): DeclarationSequence {
+        // Declarations can be nested (e.g. in a function literal), so we restore the outer
+        // context afterward. Otherwise, a stale iota value would remain visible after the
+        // declaration.
+        val outerIotaValue = frontend.declCtx.iotaValue
+        val outerDecl = frontend.declCtx.currentDecl
+        val outerInitializers = frontend.declCtx.constInitializers.toMap()
+        val outerConstType = frontend.declCtx.constType
+
+        try {
+            return handleGenDeclSpecs(genDecl)
+        } finally {
+            frontend.declCtx.iotaValue = outerIotaValue
+            frontend.declCtx.currentDecl = outerDecl
+            frontend.declCtx.constInitializers.clear()
+            frontend.declCtx.constInitializers.putAll(outerInitializers)
+            frontend.declCtx.constType = outerConstType
+        }
+    }
+
+    private fun handleGenDeclSpecs(genDecl: GoStandardLibrary.Ast.GenDecl): DeclarationSequence {
         // Reset the iota value. We need to start with -1 because we immediately increment in
         // handleValueSpec
         frontend.declCtx.iotaValue = -1
