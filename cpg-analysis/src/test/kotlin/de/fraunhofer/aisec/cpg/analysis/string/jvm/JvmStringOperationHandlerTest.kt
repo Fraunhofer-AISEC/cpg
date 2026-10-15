@@ -123,6 +123,40 @@ class JvmStringOperationHandlerTest {
         )
     }
 
+    /**
+     * `new StringBuilder(x)` where `x`'s static type is neither clearly numeric (which would seed
+     * an empty string, per the `int capacity` overload) nor clearly a string/`CharSequence` (which
+     * would seed `x`'s content) must soundly admit both possibilities via `union`, rather than
+     * guessing one overload.
+     */
+    @Test
+    fun testBuilderConstructionWithAmbiguousArgumentTypeUnionsBothOverloads() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newConstruction("StringBuilder") {
+                                    it.type = objectType("StringBuilder")
+                                    it.arguments += newLiteral("foo", objectType("Object"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertEquals(
+            de.fraunhofer.aisec.cpg.analysis.string.union(const("foo"), const("")),
+            pattern,
+        )
+    }
+
     /** `"foo".concat("bar")` with constant operands resolves to `Const("foobar")`. */
     @Test
     fun testConcatConstant() {
@@ -328,6 +362,102 @@ class JvmStringOperationHandlerTest {
         assertEquals(const("\n"), pattern)
     }
 
+    /** `String.format("100%%-%s", "done")` - a literal `%%` contributes `"%"`, consuming no arg. */
+    @Test
+    fun testFormatPercentLiteralDoesNotConsumeArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("format", newReference("String")),
+                                    isStatic = true,
+                                ) {
+                                    it.arguments += newLiteral("100%%-%s", objectType("string"))
+                                    it.arguments += newLiteral("done", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertEquals(const("100%-done"), pattern)
+    }
+
+    /**
+     * `String.format("%f-%s", 1.5, "b")` regression test: `%f` is not one of the exactly-modelled
+     * conversions, but must still consume its positional argument conservatively rather than
+     * misaligning the following `%s`.
+     */
+    @Test
+    fun testFormatUnsupportedConversionStillConsumesArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("format", newReference("String")),
+                                    isStatic = true,
+                                ) {
+                                    it.arguments += newLiteral("%f-%s", objectType("string"))
+                                    it.arguments += newLiteral(1.5, objectType("double"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertEquals(const("-b"), pattern.parts.last())
+    }
+
+    /**
+     * `String.format("%s-%s", "a")` - more placeholders than varargs: the missing one is `Unknown`.
+     */
+    @Test
+    fun testFormatMissingArgumentBecomesUnknown() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("format", newReference("String")),
+                                    isStatic = true,
+                                ) {
+                                    it.arguments += newLiteral("%s-%s", objectType("string"))
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertIs<StringPattern.Unknown>(pattern.parts.last())
+    }
+
     /** `String.join(", ", "a", "b")` with constant operands resolves to `Const("a, b")`. */
     @Test
     fun testJoinConstant() {
@@ -381,6 +511,76 @@ class JvmStringOperationHandlerTest {
                                 ) {
                                     it.arguments += newLiteral(", ", objectType("string"))
                                     it.arguments += newReference(param.name)
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertIs<StringPattern.Unknown>(pattern)
+    }
+
+    /**
+     * `String.join(", ", new String[]{"a", "b"})` - the single-argument, [InitializerList] form (an
+     * array/collection literal rather than varargs) must be joined exactly, just like the varargs
+     * form [testJoinConstant] exercises.
+     */
+    @Test
+    fun testJoinWithInitializerListArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("join", newReference("String")),
+                                    isStatic = true,
+                                ) {
+                                    it.arguments += newLiteral(", ", objectType("string"))
+                                    it.arguments +=
+                                        newInitializerList(objectType("string")) { list ->
+                                            list.initializers +=
+                                                newLiteral("a", objectType("string"))
+                                            list.initializers +=
+                                                newLiteral("b", objectType("string"))
+                                        }
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertEquals(const("a, b"), pattern)
+    }
+
+    /**
+     * `String.join(", ")` with no elements at all: `Unknown`, not a crash on an empty argument
+     * list.
+     */
+    @Test
+    fun testJoinWithNoElementsIsUnknown() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("join", newReference("String")),
+                                    isStatic = true,
+                                ) {
+                                    it.arguments += newLiteral(", ", objectType("string"))
                                 }
                         }
                         block.statements += ret
@@ -452,6 +652,83 @@ class JvmStringOperationHandlerTest {
 
         val pattern = ret.returnValue!!.evaluateJvmString()
         assertIs<StringPattern.Unknown>(pattern)
+    }
+
+    /**
+     * `p.substring(1, 3)` where `p` is non-constant but `end == 3` is a known literal: the result's
+     * length bound must be tightened to `3`, not left fully unbounded - the known `end` is real,
+     * exploitable information even though the exact value can't be computed.
+     */
+    @Test
+    fun testSubstringBoundsLengthWhenEndIsKnownOnNonConstantReceiver() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                val param = newParameter("p", objectType("string"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess("substring", newReference(param.name))
+                                ) {
+                                    it.arguments += newLiteral(1, objectType("int"))
+                                    it.arguments += newLiteral(3, objectType("int"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertIs<StringPattern.Unknown>(pattern)
+        val length = de.fraunhofer.aisec.cpg.analysis.string.lengthOf(pattern)
+        assertIs<de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bounded>(length)
+        assertEquals(
+            de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.Value(3),
+            length.upper,
+        )
+    }
+
+    /**
+     * `((String) null).substring(1)`: the receiver evaluates to `Bottom` (no value flows here, see
+     * `StringEvaluator.handleLiteral`'s `null`-literal case), so
+     * [de.fraunhofer.aisec.cpg.analysis.string.lengthOf] is `LatticeInterval.BOTTOM`, not a
+     * `Bounded` interval - the upper-bound lookup must fall back to `INFINITE` rather than crash on
+     * the failed cast.
+     */
+    @Test
+    fun testSubstringUnboundedWhenReceiverIsBottom() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            val nullLiteral = newLiteral(null, objectType("string"))
+                            r.returnValue =
+                                newMemberCall(newMemberAccess("substring", nullLiteral)) {
+                                    it.arguments += newLiteral(1, objectType("int"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateJvmString()
+        assertIs<StringPattern.Unknown>(pattern)
+        val length = de.fraunhofer.aisec.cpg.analysis.string.lengthOf(pattern)
+        assertIs<de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bounded>(length)
+        assertEquals(
+            de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.INFINITE,
+            length.upper,
+        )
     }
 
     /** `"foobar".replace("bar", "baz")` with all-constant operands computes the exact result. */
