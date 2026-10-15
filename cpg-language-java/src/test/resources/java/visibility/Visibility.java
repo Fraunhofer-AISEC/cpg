@@ -36,6 +36,8 @@ public class Visibility {
 
     class PackageInner {}
 
+    public static class StaticNested {}
+
     public enum PublicEnum {
         A,
         B

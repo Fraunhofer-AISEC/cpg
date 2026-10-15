@@ -27,11 +27,14 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.*
@@ -83,5 +86,42 @@ internal class SubgraphWalkerTest : BaseTest() {
 
         // should contain 3 AST nodes, 1 field, 1 method, 1 constructor
         assertEquals(3, ast.size)
+    }
+
+    @Test
+    fun testReplaceInput() {
+        with(testFrontend { it.registerLanguage<TestLanguage>() }) {
+            val walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
+
+            fun assertReplacesInput(
+                parent: Expression,
+                getInput: () -> Expression,
+                setInput: (Expression) -> Unit,
+            ) {
+                val old = newReference("old")
+                setInput(old)
+                parent.access = AccessValues.WRITE
+
+                val new = newReference("new")
+                assertEquals(AccessValues.READ, new.access)
+                assertTrue(walker.replace(parent, old, new))
+                assertSame(new, getInput())
+                assertEquals(parent, new.astParent)
+                assertEquals(AccessValues.WRITE, new.access)
+
+                // Replacing a node that is not the input must fail
+                assertFalse(walker.replace(parent, old, newReference("other")))
+                assertSame(new, getInput())
+            }
+
+            val unary = newUnaryOperator("-", postfix = false, prefix = true)
+            assertReplacesInput(unary, { unary.input }, { unary.input = it })
+
+            val deref = newPointerDereference("*old")
+            assertReplacesInput(deref, { deref.input }, { deref.input = it })
+
+            val ref = newPointerReference("&old")
+            assertReplacesInput(ref, { ref.input }, { ref.input = it })
+        }
     }
 }

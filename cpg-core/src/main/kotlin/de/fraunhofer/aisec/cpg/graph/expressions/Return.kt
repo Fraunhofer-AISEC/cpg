@@ -84,7 +84,7 @@ class Return : Expression(false) {
     override fun hashCode() = Objects.hash(super.hashCode(), returnValues)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return this.returnValue?.getStartingPrevEOG() ?: this.prevEOG
+        return this.returnValues.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
     }
 
     override fun getExitNextEOG(): Collection<Node> {
