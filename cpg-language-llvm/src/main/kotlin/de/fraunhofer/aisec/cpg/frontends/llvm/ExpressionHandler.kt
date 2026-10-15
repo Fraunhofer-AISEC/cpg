@@ -391,8 +391,16 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             indices = LLVMGetIndices(instr)
         }
 
-        // the first operand is always type that is the basis for the calculation
-        var baseType = frontend.typeOf(LLVMGetOperand(instr, 0))
+        // The first operand is the pointer that is the basis for the calculation. Under opaque
+        // pointers, the pointer's LLVM type no longer carries its pointee type, so we instead
+        // use the GEP instruction's explicit source element type to seed the base type. This
+        // also works for typed pointers, since the source element type is always present.
+        var baseType =
+            if (isGetElementPtr) {
+                frontend.typeOf(LLVMGetGEPSourceElementType(instr)).pointer()
+            } else {
+                frontend.typeOf(LLVMGetOperand(instr, 0))
+            }
         var operand = frontend.getOperandValueAtIndex(instr, 0)
 
         // the start

@@ -70,9 +70,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleGlobal(valueRef: LLVMValueRef): Declaration {
         val name = LLVMGetValueName(valueRef).string
 
-        // beware, that globals are always pointers to the type they specify. This already returns
-        // the pointer type
-        val type = frontend.typeOf(valueRef)
+        // beware, that globals are always pointers to the type they specify. We use the
+        // global's explicit value type (rather than deriving it from the pointer's element
+        // type) since that also works with opaque pointers.
+        val type = frontend.typeOf(LLVMGlobalGetValueType(valueRef)).pointer()
 
         val variableDeclaration = newVariable(name, type, false, rawNode = valueRef)
 
@@ -99,9 +100,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         val functionDeclaration = newFunction(name.string, rawNode = func)
 
         // return types are a bit tricky, because the type of the function is a pointer to the
-        // function type, which then has the return type in it
-        val funcPtrType = LLVMTypeOf(func)
-        val funcType = LLVMGetElementType(funcPtrType)
+        // function type, which then has the return type in it. We use the function's explicit
+        // value type (rather than deriving it from the pointer's element type) since that also
+        // works with opaque pointers.
+        val funcType = LLVMGlobalGetValueType(func)
         val returnType = LLVMGetReturnType(funcType)
 
         functionDeclaration.type = frontend.typeOf(returnType)
