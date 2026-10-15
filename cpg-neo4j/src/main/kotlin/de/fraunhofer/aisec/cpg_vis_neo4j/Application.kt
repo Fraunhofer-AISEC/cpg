@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
+import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
@@ -293,96 +295,138 @@ class Application : Callable<Int> {
     }
 
     /**
-     * Parse the file paths to analyze and set up the translationConfiguration with these paths.
+     * Parse the file paths to analyze and set up the [Project] for these paths.
      *
-     * @throws IllegalArgumentException, if there were no arguments provided, or the path does not
-     *   point to a file, is a directory or point to a hidden file or the paths does not have the
-     *   same top level path.
+     * @throws IllegalArgumentException, if there were no arguments provided, no source files could
+     *   be resolved, or a path points to a non-existent or hidden file. A bare directory argument
+     *   is supported and triggers [Project] auto-detection instead of an error.
      */
-    fun setupTranslationConfiguration(): TranslationConfiguration {
-        val translationConfiguration =
-            TranslationConfiguration.builder()
-                .also { builder ->
-                    Project.defaultLanguages.forEach { builder.optionalLanguage(it) }
-                }
-                .loadIncludes(loadIncludes)
-                .exclusionPatterns(*exclusionPatterns.toTypedArray())
-                .addIncludesToGraph(loadIncludes)
-                .debugParser(DEBUG_PARSER)
-                .useUnityBuild(useUnityBuild)
+    fun setupProject(): Project {
+        val db = mutuallyExclusiveParameters.jsonCompilationDatabase?.let { fromFile(it) }
 
-        topLevel?.let { translationConfiguration.topLevel(it) }
-
-        if (maxComplexity != -1) {
-            translationConfiguration.configurePass<ControlFlowSensitiveDFGPass>(
-                ControlFlowSensitiveDFGPass.Configuration(maxComplexity = maxComplexity)
-            )
-        }
-
-        includePaths.forEach { translationConfiguration.includePath(it) }
-
-        if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
-            val components = mutableMapOf<String, List<File>>()
-            for (sc in mutuallyExclusiveParameters.softwareComponents) {
-                components[sc.key] = getFilesOfList(sc.value.split(","))
-            }
-            translationConfiguration.softwareComponents(components)
-        } else {
-            val filePaths = getFilesOfList(mutuallyExclusiveParameters.files)
-            translationConfiguration.sourceLocations(filePaths)
-        }
-
-        if (!noDefaultPasses) {
-            translationConfiguration.defaultPasses()
-            translationConfiguration.registerPass<ControlDependenceGraphPass>()
-            translationConfiguration.registerPass<ProgramDependenceGraphPass>()
-            translationConfiguration.registerPass<PythonFileConceptPass>()
-            // translationConfiguration.registerPass<PythonEncryptionPass>()
-        }
-        if (customPasses != "DEFAULT") {
-            val pieces = customPasses.split(",")
-            for (pass in pieces) {
-                if (pass.contains(".")) {
-                    translationConfiguration.registerPass(
-                        Class.forName(pass).kotlin as KClass<out Pass<*>>
-                    )
-                } else {
-                    if (pass !in passClassMap) {
-                        throw ConfigurationException("Asked to produce unknown pass: $pass")
+        // The named components to analyze, e.g. {"application": [file1, file2]} for a plain file
+        // list, or one entry per --softwareComponents value, or the compilation database's files.
+        val namedComponents: Map<String, List<File>> =
+            when {
+                db != null && db.isNotEmpty() -> mapOf(DEFAULT_APPLICATION_NAME to db.sourceFiles)
+                db != null -> emptyMap()
+                mutuallyExclusiveParameters.softwareComponents.isNotEmpty() ->
+                    mutuallyExclusiveParameters.softwareComponents.mapValues { (_, files) ->
+                        getFilesOfList(files.split(","))
                     }
-                    passClassMap[pass]?.let { translationConfiguration.registerPass(it) }
+
+                else ->
+                    mapOf(
+                        DEFAULT_APPLICATION_NAME to
+                            getFilesOfList(mutuallyExclusiveParameters.files)
+                    )
+            }
+
+        val allFiles = namedComponents.values.flatten()
+        require(allFiles.isNotEmpty()) {
+            "No source files to analyze. Either no paths were given, or " +
+                "--json-compilation-database resolved to an empty compilation database."
+        }
+
+        // If the user just points us at a single directory (and did not ask for an explicit
+        // top-level, software components or a compilation database), let Project auto-detect its
+        // structure (e.g. Go modules, a compilation database in a build/ folder) instead of
+        // treating it as one flat component.
+        val singleDirectory =
+            mutuallyExclusiveParameters.files.singleOrNull()?.let {
+                Paths.get(it).toAbsolutePath().normalize().toFile()
+            }
+        val autoDetect =
+            db == null &&
+                mutuallyExclusiveParameters.softwareComponents.isEmpty() &&
+                topLevel == null &&
+                singleDirectory?.isDirectory == true
+
+        val projectPath =
+            (topLevel
+                    ?: (if (autoDetect) singleDirectory
+                    else CommonPath.commonPath(allFiles) ?: allFiles.firstOrNull() ?: File(".")))
+                .toPath()
+
+        return Project.from(projectPath) {
+            if (!autoDetect) {
+                components {
+                    namedComponents.forEach { (name, files) ->
+                        val root =
+                            (topLevel ?: CommonPath.commonPath(files) ?: files.first()).toPath()
+                        component(name, root = root, sources = files.map(File::toPath))
+                    }
+                }
+            }
+
+            passes {
+                if (!noDefaultPasses) {
+                    default()
+                    use<ControlDependenceGraphPass>()
+                    use<ProgramDependenceGraphPass>()
+                    use<PythonFileConceptPass>()
+                }
+                if (customPasses != "DEFAULT") {
+                    for (pass in customPasses.split(",")) {
+                        if (pass.contains(".")) {
+                            @Suppress("UNCHECKED_CAST")
+                            use(Class.forName(pass).kotlin as KClass<out Pass<*>>)
+                        } else {
+                            val clazz =
+                                passClassMap[pass]
+                                    ?: throw ConfigurationException(
+                                        "Asked to produce unknown pass: $pass"
+                                    )
+                            use(clazz)
+                        }
+                    }
+                }
+                use<PrepareSerialization>()
+            }
+
+            exclude(*exclusionPatterns.toTypedArray())
+
+            translation { builder ->
+                builder.debugParser(DEBUG_PARSER)
+                builder.loadIncludes(loadIncludes)
+                builder.addIncludesToGraph(loadIncludes)
+                builder.useUnityBuild(useUnityBuild)
+
+                includePaths.forEach { builder.includePath(it) }
+
+                if (maxComplexity != -1) {
+                    builder.configurePass<ControlFlowSensitiveDFGPass>(
+                        ControlFlowSensitiveDFGPass.Configuration(maxComplexity = maxComplexity)
+                    )
+                }
+
+                db?.let { builder.useCompilationDatabase(it) }
+
+                includesFile?.let { theFile ->
+                    log.info("Load includes from file: $theFile")
+                    val baseDir = theFile.parentFile?.toString() ?: ""
+                    theFile.bufferedReader().useLines { lines ->
+                        lines
+                            .map(String::trim)
+                            .map {
+                                if (Paths.get(it).isAbsolute) it
+                                else Paths.get(baseDir, it).toString()
+                            }
+                            .forEach { builder.includePath(it) }
+                    }
+                }
+
+                if (inferNodes) {
+                    builder.inferenceConfiguration(
+                        InferenceConfiguration.builder().inferRecords(true).build()
+                    )
                 }
             }
         }
-        translationConfiguration.registerPass(PrepareSerialization::class)
-
-        mutuallyExclusiveParameters.jsonCompilationDatabase?.let {
-            val db = fromFile(it)
-            if (db.isNotEmpty()) {
-                translationConfiguration.useCompilationDatabase(db)
-                translationConfiguration.sourceLocations(db.sourceFiles)
-            }
-        }
-
-        includesFile?.let { theFile ->
-            log.info("Load includes from file: $theFile")
-            val baseDir = File(theFile.toString()).parentFile?.toString() ?: ""
-            theFile
-                .inputStream()
-                .bufferedReader()
-                .lines()
-                .map(String::trim)
-                .map { if (Paths.get(it).isAbsolute) it else Paths.get(baseDir, it).toString() }
-                .forEach { translationConfiguration.includePath(it) }
-        }
-
-        if (inferNodes) {
-            translationConfiguration.inferenceConfiguration(
-                InferenceConfiguration.builder().inferRecords(true).build()
-            )
-        }
-        return translationConfiguration.build()
     }
+
+    /** Builds the [TranslationConfiguration] derived from [setupProject]. */
+    fun setupTranslationConfiguration(): TranslationConfiguration = setupProject().config
 
     fun printSchema(filenames: Collection<String>, format: Schema.Format) {
         val schema = Schema()

@@ -14,4 +14,8 @@ int main() {
 
   char invalid = '\90';
   char invalid2 = '\90\90';
+
+  wchar_t wideChar1 = L'\0';
+  wchar_t wideChar2 = L'\x1F600';
+  wchar_t wideMulti = L'\1\2'; // 513
 }

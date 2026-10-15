@@ -25,12 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -51,17 +52,17 @@ fun Server.addDfgBackwardTool() {
             .trimIndent()
 
     this.addTool<CpgIdPayload>(name = "cpg_dfg_backward", description = toolDescription) {
-        result: TranslationResult,
+        session: CpgSession,
         payload: CpgIdPayload ->
         val startId = Uuid.parse(payload.id)
         val startNode =
-            result.nodes.find { it.id == startId }
+            session.translationResult.nodes.find { it.id == startId }
                 ?: return@addTool CallToolResult(
                     content = listOf(TextContent("No node found with ID ${payload.id}"))
                 )
 
         val paths = startNode.collectAllPrevDFGPaths()
-        val nodes = paths.flatMap { it.nodes }.map { NodeInfo(it) }
+        val nodes = paths.mapFlatMapped({ it.nodes }) { NodeInfo(it) }
 
         CallToolResult(content = listOf(TextContent(Json.encodeToString(nodes))))
     }

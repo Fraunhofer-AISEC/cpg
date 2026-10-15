@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
@@ -150,7 +150,7 @@ open class CLanguage :
      * - at file/namespace scope it grants *internal linkage*, confining the declaration to its own
      *   translation unit ([Visibility.INTERNAL]);
      * - on a record member it makes the member *static*, i.e. bound to the record itself rather
-     *   than to an instance ([ValueDeclaration.isStatic]);
+     *   than to an instance ([Declaration.isStatic]);
      * - inside a function body it only affects storage duration, which is irrelevant to symbol
      *   resolution, so it is ignored.
      *
@@ -161,13 +161,26 @@ open class CLanguage :
     override fun applyModifiers(declaration: Declaration, scope: Scope?) {
         if (STATIC in declaration.modifiers) {
             when (scope) {
-                is RecordScope -> (declaration as? ValueDeclaration)?.isStatic = true
+                is RecordScope -> declaration.isStatic = true
                 is GlobalScope,
                 is NamespaceScope -> declaration.visibility = Visibility.INTERNAL
                 else -> {} // a local `static` only affects storage duration, not resolution
             }
         }
     }
+
+    /**
+     * In C/C++, any scalar value can be used as a condition: the numeric value (or pointer) `0`/
+     * `NULL` is "false" and any other value is "true".
+     */
+    override fun isTruthy(value: Any?): Boolean? =
+        when {
+            value is CouldNotResolve -> null
+            value is Boolean -> value
+            value is Number -> value.toDouble() != 0.0
+            value == null -> false // a null pointer
+            else -> null
+        }
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
 
@@ -221,6 +234,12 @@ open class CLanguage :
             "uint16_t" to IntegerType("uint16_t", 16, this, NumericType.Modifier.UNSIGNED),
             "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
             "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
+
+            // Wide characters (wchar_t) are also defined in <stddef.h> and <wchar.h>. The size of
+            // wchar_t is platform-dependent, but we assume 32 bits here, which is the case on
+            // Linux. This is also the current implementation in CPPLanguage. TODO: On Windows,
+            // wchar_t is 16 bits, but it's not clear how we could model this properly.
+            "wchar_t" to IntegerType("wchar_t", 32, this, NumericType.Modifier.UNSIGNED),
 
             // Other commonly used extension types
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),

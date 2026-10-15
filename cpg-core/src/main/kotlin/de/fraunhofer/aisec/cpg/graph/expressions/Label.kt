@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -40,7 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * A label attached to a statement that is used to change control flow by labeled continue and
  * breaks (Java) or goto(C++).
  */
-class Label : Expression(false), StatementHolder {
+class Label : Expression(false) {
 
     @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Expression>()
 
@@ -58,7 +57,7 @@ class Label : Expression(false), StatementHolder {
             .toString()
     }
 
-    override var statementEdges: AstEdges<Expression, AstEdge<Expression>>
+    var statementEdges: AstEdges<Expression, AstEdge<Expression>>
         get() {
             var list = astEdgesOf<Expression>()
             subStatement?.let { list.resetTo(listOf(it)) }
@@ -68,7 +67,7 @@ class Label : Expression(false), StatementHolder {
             subStatement = value.toNodeCollection().firstOrNull()
         }
 
-    override var statements: MutableList<Expression>
+    var statements: MutableList<Expression>
         get() = unwrapping(Label::statementEdges)
         set(value) {}
 

@@ -73,26 +73,24 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                 frontend.typeOf(ctx.declarator, ctx.declSpecifier)
             }
 
-        val paramVariableDeclaration = newParameter(name, type, false, rawNode = ctx)
+        return newParameter(name, type, false, rawNode = ctx) { paramVariableDeclaration ->
+            // We cannot really model "const" as part of the type, but we can model it as part of
+            // the parameter, so we can use it later
+            if (ctx.declSpecifier.isConst) {
+                paramVariableDeclaration.modifiers += CONST
+            }
 
-        // We cannot really model "const" as part of the type, but we can model it as part of the
-        // parameter, so we can use it later
-        if (ctx.declSpecifier.isConst) {
-            paramVariableDeclaration.modifiers += CONST
+            // Add default values
+            if (ctx.declarator.initializer != null) {
+                paramVariableDeclaration.default =
+                    frontend.initializerHandler.handle(ctx.declarator.initializer)
+            }
+
+            // Add default values
+            if (ctx.declarator.initializer != null) {
+                paramVariableDeclaration.default =
+                    frontend.initializerHandler.handle(ctx.declarator.initializer)
+            }
         }
-
-        // Add default values
-        if (ctx.declarator.initializer != null) {
-            paramVariableDeclaration.default =
-                frontend.initializerHandler.handle(ctx.declarator.initializer)
-        }
-
-        // Add default values
-        if (ctx.declarator.initializer != null) {
-            paramVariableDeclaration.default =
-                frontend.initializerHandler.handle(ctx.declarator.initializer)
-        }
-
-        return paramVariableDeclaration
     }
 }

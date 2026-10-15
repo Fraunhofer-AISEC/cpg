@@ -26,6 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 
 /**
@@ -33,20 +38,46 @@ import java.util.Objects
  * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
  * broken out of.
  */
-class Break : Expression(false) {
+class Break : Expression(false), HasType.TypeObserver {
 
     /** Specifies the label of the loop in a nested structure that this statement will 'break' */
     var label: String? = null
 
+    @Relationship("EXPR")
+    var exprEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new -> exchangeTypeObserverWithAccessPropagation(old, new) }
+        )
+    /** The expression on which the operation is applied. */
+    var expr by unwrapping(Break::exprEdge)
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Break) return false
-        return super.equals(other) && label == other.label
+        return super.equals(other) && label == other.label && expr == other.expr
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), label)
+    override fun hashCode() = Objects.hash(super.hashCode(), label, expr)
 
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.prevEOG
+    }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        if (src != expr) {
+            return
+        }
+
+        this.type = newType
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Only accept type changes from out input
+        if (src != expr) {
+            return
+        }
+
+        // Apply our operator to all assigned types and forward them to us
+        this.addAssignedTypes(assignedTypes)
     }
 }

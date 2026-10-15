@@ -3311,7 +3311,7 @@ class PointsToPassTest {
         assertTrue(fsecallkeytoout2.entries.firstOrNull()?.key is Parameter)
         assertLocalName("outptr", fsecallkeytoout2.entries.firstOrNull()?.key)
         assertEquals(
-            2,
+            3,
             fsecallkeytoout2.entries
                 .singleOrNull()
                 ?.value
@@ -3354,13 +3354,13 @@ class PointsToPassTest {
             "pms",
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.key,
         )
-        // 5: 3 from the in_outptr, and 2 from the in_ucptr
+        // 6: 4 from the in_outptr, and 2 from the in_ucptr
         assertEquals(
-            5,
+            6,
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
         )
         assertEquals(
-            4,
+            5,
             fssgxecallkeytoout2
                 .filter { it.key !is Return }
                 .entries
@@ -4161,10 +4161,6 @@ class PointsToPassTest {
         val strlSrcDerefPMV =
             strlSrcParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
         assertNotNull(strlSrcDerefPMV)
-
-        val memsetDstParam = memsetFunc.parameters[0]
-        val memsetDstDerefPMV =
-            memsetDstParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
 
         val realCodeParam = testFunc.parameters.single()
         val realCodeDerefPMV =
@@ -5137,5 +5133,28 @@ class PointsToPassTest {
         // The second one is trickier b/c the call in Line 8 does not have any usable memory values
         // For this one, we rely on the DynamicInvokesResolver
         assertInvokes(funcPtrCall2, incpFunc)
+    }
+
+    @Test
+    fun testPMVDeref() {
+        val file = File("src/test/resources/pointsToPass/pmv_deref.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val fFunc = tu.functions("f").single()
+
+        // Params and PMVs
+        val dataParam = fFunc.parameters.single()
+        val dataDerefPMV = dataParam.memoryValues.single { it.name.localName == "derefvalue" }
+
+        // Actual test
+        // The PMV should have no prevDFG
+        assertTrue(dataDerefPMV.prevDFG.isEmpty())
     }
 }

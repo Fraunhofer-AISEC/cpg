@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.filterMapped
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 
 /**
@@ -85,11 +86,11 @@ inline fun <reified EdgeType : Edge<out Node>> Node.allEdges(
         val node = worklist.removeFirst()
         val toAdd = node.edges(predicate)
 
-        val newStart = toAdd.map { it.start }.filter { it !in alreadySeen }
+        val newStart = toAdd.filterMapped({ it.start }) { it !in alreadySeen }
         worklist += newStart
         alreadySeen += newStart
 
-        val newEnd = toAdd.map { it.end }.filter { it !in alreadySeen }
+        val newEnd = toAdd.filterMapped({ it.end }) { it !in alreadySeen }
         worklist += newEnd
         alreadySeen += newEnd
 

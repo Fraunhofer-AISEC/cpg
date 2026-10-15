@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
@@ -43,8 +42,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  *
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [Assign] MUST be used.
  */
-open class BinaryOperator :
-    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+open class BinaryOperator : Expression(), HasOverloadedOperation, HasType.TypeObserver {
 
     /** The left-hand expression. */
     @Relationship("LHS")
@@ -128,30 +126,6 @@ open class BinaryOperator :
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
-
-    override fun addArgument(expression: Expression) {
-        if (lhs is ProblemExpression) {
-            lhs = expression
-        } else {
-            rhs = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return if (lhs == old) {
-            lhs = new
-            true
-        } else if (rhs == old) {
-            rhs = new
-            true
-        } else {
-            false
-        }
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return lhs == expression || rhs == expression
-    }
 
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.lhs.getStartingPrevEOG()

@@ -102,7 +102,7 @@ object Util {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
                     if (Quantifier.ALL == quantifier && pe.any { predicate?.invoke(it) == false })
                         return false
-                    pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                    pe.mapFiltered({ predicate?.invoke(it) != false }) { it.start }
                 } else border.exits
             } else {
                 nodeSide.flatMap {
@@ -113,7 +113,7 @@ object Util {
                                 pe.any { predicate?.invoke(it) == false }
                         )
                             return false
-                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                        pe.mapFiltered({ predicate?.invoke(it) != false }) { it.start }
                     } else listOf(it)
                 }
             })
@@ -130,7 +130,7 @@ object Util {
                                 pe.any { predicate?.invoke(it) == false }
                         )
                             return false
-                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                        pe.mapFiltered({ predicate?.invoke(it) != false }) { it.start }
                     } else border.exits
                 }
             } else {
@@ -142,7 +142,7 @@ object Util {
                                 pe.any { predicate?.invoke(it) == false }
                         )
                             return false
-                        pe.filter { predicate?.invoke(it) != false }.map { it.start }
+                        pe.mapFiltered({ predicate?.invoke(it) != false }) { it.start }
                     } else listOf(node)
                 }
             })

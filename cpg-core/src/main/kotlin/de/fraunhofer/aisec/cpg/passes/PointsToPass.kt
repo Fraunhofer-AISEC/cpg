@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMappedTo
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -65,11 +66,34 @@ import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 import kotlin.text.ifEmpty
-import kotlin.time.DurationUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
-val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
+/**
+ * The key of [nodesCreatingUnknownValues]. The [node] is compared by identity, the [name] by
+ * equality.
+ *
+ * We cannot use a plain `Pair<Node, Name>` here: [Node.equals] compares name, code, location and
+ * class, so two *different* nodes which happen to originate from the same source location - e.g.
+ * the declarations of a header which is included by two translation units - would be considered the
+ * same key and would share one synthetic value node. [Name], in contrast, is a value type where two
+ * equal names must map to the same entry.
+ */
+private data class UnknownValueKey(val node: Node, val name: Name) {
+    override fun equals(other: Any?) =
+        other is UnknownValueKey && node === other.node && name == other.name
+
+    override fun hashCode() = 31 * System.identityHashCode(node) + name.hashCode()
+}
+
+/**
+ * Caches the synthetic [MemoryAddress]/[UnknownMemoryValue] nodes we create for a node whose value
+ * or field address we do not know, so that we create each of them only once. Cleared in
+ * [PointsToPass.finalCleanup].
+ */
+private val nodesCreatingUnknownValues = ConcurrentHashMap<UnknownValueKey, MemoryAddress>()
 var totalFunctionCount = 0
 var analyzedFunctionCount = 0
 private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
@@ -422,10 +446,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
-        /**
-         * The timeout after which we stop analyzing a function. Default one hour AKA 3,600,000ms
-         */
-        var timeout: Long = 3600000,
+        /** The timeout after which we stop analyzing a function. Default 60 minutes */
+        var timeout: Duration = 60.minutes,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
@@ -442,7 +464,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
     override fun cleanup() {
-        // Nothing to do
+        // Nothing to do. Note that the caches below are shared between all targets of one pass
+        // execution, so they must not be cleared here, only in [finalCleanup].
+    }
+
+    /**
+     * Clears the caches that are shared between all targets of this pass. They are only meaningful
+     * while the pass is running: afterwards, they keep every [Call] and every synthetic
+     * [MemoryAddress]/[UnknownMemoryValue] we ever created alive, including the ones which never
+     * made it into the graph because the state they were created for was discarded again.
+     */
+    override fun finalCleanup() {
+        nodesCreatingUnknownValues.clear()
+        CallToMemAddrMap.clear()
+        globalDerefs.clear()
+        totalFunctionCount = 0
+        analyzedFunctionCount = 0
     }
 
     override fun accept(node: Node) {
@@ -562,7 +599,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         node.nextEOGEdges,
                         startState,
                         ::transfer,
-                        timeout = passConfig<Configuration>()?.timeout,
+                        timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
                     )
                 // If we had a timeout, treat it as an empty Function but still
                 // include the results we got
@@ -883,9 +920,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Check if the value is influenced by a Parameter and if so, add this information
                 // to the functionSummary
                 val paths =
-                    value.followDFGEdgesUntilHit(
-                        collectFailedPaths = false,
-                        findAllPossiblePaths = false,
+                    value.followDFGEdgesUntilHitNodes(
                         direction = Backward(GraphToFollow.DFG),
                         sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
                         // We need to search interprocedural here.
@@ -912,40 +947,36 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 } || it in node.parameters
                         },
                     )
-                paths.fulfilled
-                    .mapTo(IdentitySet()) { it.nodes.last() }
-                    .forEach { sourceParamValue ->
-                        val matchingDeclarations =
-                            if (sourceParamValue is ParameterMemoryValue)
-                                node.parameters.singleOrNull {
-                                    it.name.localName == sourceParamValue.name.parent?.localName
-                                }
-                            else sourceParamValue as? Parameter
-                        if (matchingDeclarations != null) {
-                            node.functionSummary
-                                .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
-                                .add(
-                                    FSEntry(
-                                        dstValueDepth,
-                                        matchingDeclarations,
-                                        stringToDepth(sourceParamValue.name.localName),
-                                        subAccessName,
-                                        mutableSetOf(
-                                            NodeWithPropertiesKey(
-                                                matchingDeclarations,
-                                                // Add the parameter index to indicate to the
-                                                // calculatePrevDFGs function that we need to
-                                                // replace the value of the call argument
-                                                equalLinkedHashSetOf(
-                                                    matchingDeclarations.argumentIndex
-                                                ),
-                                            )
-                                        ),
-                                        equalLinkedHashSetOf(true),
-                                    )
+                paths.forEach { sourceParamValue ->
+                    val matchingDeclarations =
+                        if (sourceParamValue is ParameterMemoryValue)
+                            node.parameters.singleOrNull {
+                                it.name.localName == sourceParamValue.name.parent?.localName
+                            }
+                        else sourceParamValue as? Parameter
+                    if (matchingDeclarations != null) {
+                        node.functionSummary
+                            .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
+                            .add(
+                                FSEntry(
+                                    dstValueDepth,
+                                    matchingDeclarations,
+                                    stringToDepth(sourceParamValue.name.localName),
+                                    subAccessName,
+                                    mutableSetOf(
+                                        NodeWithPropertiesKey(
+                                            matchingDeclarations,
+                                            // Add the parameter index to indicate to the
+                                            // calculatePrevDFGs function that we need to
+                                            // replace the value of the call argument
+                                            equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
+                                        )
+                                    ),
+                                    equalLinkedHashSetOf(true),
                                 )
-                        }
+                            )
                     }
+                }
             }
         }
     }
@@ -1454,19 +1485,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     return@forEach
                 }
                 val derefPMVs =
-                    p.memoryValueEdges
-                        .filter {
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefvalue"
-                        }
-                        .map { it.start }
+                    p.memoryValueEdges.mapFiltered({
+                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                            "derefvalue"
+                    }) {
+                        it.start
+                    }
                 val derefderefPMVs =
-                    p.memoryValueEdges
-                        .filter {
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefderefvalue"
-                        }
-                        .map { it.start }
+                    p.memoryValueEdges.mapFiltered({
+                        (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                            "derefderefvalue"
+                    }) {
+                        it.start
+                    }
                 argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
                     doubleState =
                         innerCalculateIncomingCallingContexts(
@@ -2076,9 +2107,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             if (log.isTraceEnabled) {
                                 log.trace("Old last timeout: ${timeouts.last()}")
                             }
-                            timeouts[timeouts.size - 1] =
-                                timeouts.last() +
-                                    startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
+                            timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow()
                             if (log.isTraceEnabled) {
                                 log.trace(
                                     "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
@@ -2825,7 +2854,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
             }
 
-        /* For literals, we store the address and the lastWrite as "theirs" in the DeclarationState so that we know from where we have to draw DFGEdges in the future */
+        /* For literals, we store the address as "theirs" in the DeclarationState */
         // TODO: would this make sense for everything in the lhs?
         val l = currentNode.rhs.singleOrNull() as? Literal<*>
         l?.let {
@@ -2836,7 +2865,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(destinationsAddresses),
                         PowersetLattice.Element(),
-                        PowersetLattice.Element(lastWrites),
+                        PowersetLattice.Element(),
                     ),
                 )
         }
@@ -2987,11 +3016,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 node = value,
                                 excludeShortFSValues = true,
                             )
-                            .map { it.value }
-                            .filter { derefValue ->
-                                doubleState.hasDeclarationStateValueEntry(derefValue)
-                            }
-                            .forEach { derefValue ->
+                            .forEach { entry ->
+                                val derefValue = entry.value
+                                if (!doubleState.hasDeclarationStateValueEntry(derefValue)) {
+                                    return@forEach
+                                }
                                 doubleState
                                     .getLastWrites(derefValue)
                                     .filter { it.properties.none { it == true } }
@@ -3582,7 +3611,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
                         UnknownMemoryValue(newName, true)
                     }
                 // TODO: Check if the boolean should be true sometimes
@@ -3618,7 +3647,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
                         UnknownMemoryValue(newName)
                     }
                 val newPair = Pair(newEntry, false)
@@ -3794,7 +3823,9 @@ fun PointsToState.Element.getLastWrites(
                         val newName = Name(getNodeName(addr).localName + ".derefvalue")
                         ret.add(
                             NodeWithPropertiesKey(
-                                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
+                                nodesCreatingUnknownValues.computeIfAbsent(
+                                    UnknownValueKey(addr, newName)
+                                ) {
                                     UnknownMemoryValue(newName)
                                 },
                                 equalLinkedHashSetOf(),
@@ -3913,10 +3944,12 @@ fun PointsToState.Element.getValues(
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
-            node.memoryAddresses
-                .flatMap { fetchValueFromDeclarationState(it) }
-                .map { it.value }
-                .mapTo(PowersetLattice.Element()) { Pair(it, false) }
+            node.memoryAddresses.mapFlatMappedTo(
+                PowersetLattice.Element(),
+                { fetchValueFromDeclarationState(it) },
+            ) {
+                Pair(it.value, false)
+            }
         }
         is MemoryAddress,
         is Call -> {
@@ -3943,6 +3976,15 @@ fun PointsToState.Element.getValues(
                                 retVal.add(Pair(it.value, it.shortFS))
                             }
                         }
+                        // To indicate that there is another value than the one of the
+                        // base, we add an UnknownMemoryValue
+                        val umv =
+                            nodesCreatingUnknownValues.computeIfAbsent(
+                                UnknownValueKey(node, fieldName)
+                            ) {
+                                UnknownMemoryValue(fieldName)
+                            }
+                        retVal.add(Pair(umv, false))
                     }
                 }
                 retVal
@@ -3950,7 +3992,7 @@ fun PointsToState.Element.getValues(
                 val newName = Name(getNodeName(node).localName, base.name)
                 PowersetLattice.Element(
                     Pair(
-                        nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                        nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
                             UnknownMemoryValue(newName)
                         },
                         false,
@@ -4246,7 +4288,9 @@ fun PointsToState.Element.fetchFieldAddresses(
 
         if (!foundAnyFieldAddress) {
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, normalizedNodeName)) {
+                nodesCreatingUnknownValues.computeIfAbsent(
+                    UnknownValueKey(addr, normalizedNodeName)
+                ) {
                     MemoryAddress(normalizedNodeName, isGlobal(addr))
                 }
 
