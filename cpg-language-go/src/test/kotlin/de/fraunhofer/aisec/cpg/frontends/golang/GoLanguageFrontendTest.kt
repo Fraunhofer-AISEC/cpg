@@ -1154,7 +1154,12 @@ class GoLanguageFrontendTest : BaseTest() {
         // We should be able to resolve the call from our stored "do" function to funcy
         assertInvokes(funcy, result.functions["do"])
 
-        val refs = result.refs.filter { it.name.localName != language.anonymousIdentifier }
+        // The address of a composite literal (&T{...}) does not refer to a declaration
+        val refs =
+            result.refs.filter {
+                it.name.localName != language.anonymousIdentifier &&
+                    (it !is PointerReference || it.input is Reference)
+            }
         refs.forEach { assertNotNull(it.refersTo, "${it.name}'s referTo is empty") }
     }
 
