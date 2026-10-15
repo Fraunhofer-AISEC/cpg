@@ -62,7 +62,7 @@ class TranslationResult(
      * [TranslationResult] can still reach [TranslationManager.addSource] without separately keeping
      * track of the [TranslationManager] that produced it.
      */
-    val translationManager: TranslationManager,
+    @DoNotPersist val translationManager: TranslationManager,
     /**
      * The final [TranslationContext] of this translation result. Currently, for parallel
      * processing, we are creating one translation context for each parsed file (containing a
