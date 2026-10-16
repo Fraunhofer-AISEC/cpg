@@ -104,4 +104,138 @@ class CryptoConceptSimilarityTest {
                 "decryption Rust ($simDecrypt)",
         )
     }
+
+    /**
+     * DEMO ONLY -- walks through the same comparison as
+     * [rustSimilarityOrderingMatchesExpectedRanking] layer by layer (ElementSimilarity -> sequence
+     * collection -> SequenceSimilarity -> SetSimilarity) and prints each stage's output to the
+     * console. Not an assertion-bearing test; just run it and read stdout.
+     */
+    @Test
+    fun demoPrintSimilarityComputation() {
+        val cDir = Path("src/integrationTest/resources/similarity/crypto/c")
+        val rustDir = Path("src/integrationTest/resources/similarity/crypto/rust")
+
+        // Run every translation up front so the frontends'/passes' own (often noisy) log output
+        // all lands before the demo starts printing, instead of interleaving with it below.
+        val cResult = analyzeC(cDir, "encryption.c")
+        val sameResult = analyzeRust(rustDir, "encrypt_same.rs")
+        val asymmetricResult = analyzeRust(rustDir, "encrypt_asymmetric.rs")
+        val decryptResult = analyzeRust(rustDir, "decrypt.rs")
+
+        println()
+        println("=".repeat(90))
+        println(" DEMO: concept-based similarity scoring, layer by layer")
+        println("=".repeat(90))
+
+        println()
+        println("--- Layer 1: ElementSimilarity (lexicographicSimilarity) ---")
+        val elementSim = lexicographicSimilarity()
+        listOf(
+                "Cipher:AES-256-GCM" to "Cipher:AES-256-GCM",
+                "Cipher:AES-256-GCM" to "Cipher:RSA-2048",
+                "Encrypt" to "Decrypt",
+            )
+            .forEach { (a, b) ->
+                println("  sim(\"$a\", \"$b\") = ${"%.3f".format(elementSim(a, b))}")
+            }
+
+        println()
+        println("--- Layer 2: sequence collection ---")
+        val cSeq = printSequencesOf("encryption.c", cResult)
+        val sameSeq = printSequencesOf("encrypt_same.rs", sameResult)
+        val asymmetricSeq = printSequencesOf("encrypt_asymmetric.rs", asymmetricResult)
+        val decryptSeq = printSequencesOf("decrypt.rs", decryptResult)
+
+        println()
+        println("--- Layer 3: SequenceSimilarity example (Needleman-Wunsch alignment) ---")
+        val exampleA = listOf("Cipher:AES-256-GCM", "Encrypt", "Logging")
+        val exampleB = listOf("Cipher:RSA-2048", "Encrypt", "Logging")
+        println(
+            "  sequenceSimilarity($exampleA, $exampleB) = " +
+                "%.3f".format(sequenceSimilarity(exampleA, exampleB, elementSim))
+        )
+
+        println()
+        println("--- Layer 4: SetSimilarity (compareSequenceSets), all traces per comparison ---")
+        val simSame = printComparison("encryption.c", cSeq, "encrypt_same.rs", sameSeq)
+        val simAsymmetric =
+            printComparison("encryption.c", cSeq, "encrypt_asymmetric.rs", asymmetricSeq)
+        val simDecrypt = printComparison("encryption.c", cSeq, "decrypt.rs", decryptSeq)
+
+        println()
+        println("--- Verdict ---")
+        printVerdict("same-cipher Rust", simSame, "different-cipher Rust", simAsymmetric)
+        printVerdict("different-cipher Rust", simAsymmetric, "decryption Rust", simDecrypt)
+        println("=".repeat(90))
+    }
+
+    /**
+     * DEMO ONLY -- prints the raw (unpruned) vs. kept (via [collectMaximalConceptSequences])
+     * sequence sets for [result], labeled [name], and returns the kept set for further comparison.
+     */
+    private fun printSequencesOf(name: String, result: TranslationResult): Set<List<String>> {
+        val starts =
+            result.functions.filter(::isEntryPoint).mapNotNull { it.calls.firstOrNull() }.toSet()
+
+        val raw =
+            collectConceptSequences(starts, maxDepth = 20, predicate = ::conceptOrOperationOf)
+                .mapElements(::conceptLabel)
+        val kept =
+            collectMaximalConceptSequences(
+                    starts,
+                    maxDepth = 20,
+                    predicate = ::conceptOrOperationOf,
+                )
+                .mapElements(::conceptLabel)
+        val dropped = raw - kept
+
+        println("  $name: ${kept.size} traces")
+        kept.forEach { println("    trace:    $it") }
+
+        return kept
+    }
+
+    /**
+     * DEMO ONLY -- prints every trace in [a] alongside its best match in [b] and that pair's score,
+     * highlights the single weakest trace (the one driving [compareSequenceSets]'s `min`
+     * aggregate), prints the final aggregated score, and returns it.
+     */
+    private fun printComparison(
+        nameA: String,
+        a: Set<List<String>>,
+        nameB: String,
+        b: Set<List<String>>,
+    ): Double {
+        println()
+        println("  $nameA  vs  $nameB")
+
+        var worstLa: List<String>? = null
+        var worstLb: List<String>? = null
+        var worstScore = Double.POSITIVE_INFINITY
+        a.forEach { la ->
+            val bestLb = b.maxByOrNull { lb -> listSimilarity(la, lb) }
+            val score = bestLb?.let { listSimilarity(la, it) } ?: -1.0
+            println("    $la  ->  $bestLb  =  ${"%.3f".format(score)}")
+            if (score < worstScore) {
+                worstScore = score
+                worstLa = la
+                worstLb = bestLb
+            }
+        }
+
+        val result = compareSequenceSets(a, b, listSimilarity)
+        println("    weakest trace : $worstLa  ->  $worstLb  =  ${"%.3f".format(worstScore)}")
+        println("    SetSimilarity = ${"%.3f".format(result)}")
+        return result
+    }
+
+    /** DEMO ONLY -- prints whether `scoreA > scoreB` held, mirroring the real test's assertions. */
+    private fun printVerdict(nameA: String, scoreA: Double, nameB: String, scoreB: Double) {
+        val pass = scoreA > scoreB
+        println(
+            "  ${"%.3f".format(scoreA)} ($nameA) > ${"%.3f".format(scoreB)} ($nameB) ? " +
+                if (pass) "YES -- PASS" else "NO -- FAIL"
+        )
+    }
 }
