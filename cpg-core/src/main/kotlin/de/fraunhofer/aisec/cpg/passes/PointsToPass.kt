@@ -589,6 +589,33 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          */
         var maxStateEntries: Long? = null,
 
+        /**
+         * The number of write-sites ([FSEntry.lastWrites]) a single entry of a
+         * [Function.functionSummary] may record before we describe them in a coarser way. `null`
+         * means unlimited, matching [maxComplexity]'s convention.
+         *
+         * Every write-site becomes one `prevDFG` edge at every call site of the function, so this
+         * is what a summary actually costs: measured on wolfssh, `wolfSSH_connect` recorded 2,354
+         * relationships but **329,573** write-sites for them, up to 404 for a single relationship -
+         * and a summary that says "any of these 404 places may have written it" is barely more
+         * informative than saying "this function wrote it", while costing 404 times as much to
+         * apply.
+         *
+         * Going over the limit does not drop flows, it only describes them less precisely; see
+         * [coarsenLastWrites] for the two steps it takes.
+         */
+        var maxLastWritesPerSummaryEntry: Int? = 500,
+
+        /**
+         * The number of elements of an initializer list we analyze individually. `null` means
+         * unlimited, matching [maxComplexity]'s convention.
+         *
+         * Every element we look at adds a field address (and its value) to the state, so a large
+         * array literal costs state without usually telling us much that its first few elements did
+         * not already.
+         */
+        var maxArrayInitializers: Int? = 200,
+
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
 
@@ -631,10 +658,58 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * The index is keyed by [FSEntry] itself, using its `lastWrites`-excluding equals/hashCode, so
      * finding the existing entry (if any) is an O(1) lookup rather than a scan.
      */
+    /**
+     * Keeps [entry]'s write-sites within [Configuration.maxLastWritesPerSummaryEntry] by describing
+     * them more coarsely, in two steps, so that we lose precision rather than whole dataflows:
+     * 1. Forget *which field* each write targeted, i.e. record that the write went through `x`
+     *    rather than through `x.field`, and let the write-sites which only differed in that
+     *    collapse into one. A caller then draws one edge per write-site instead of one per
+     *    (write-site, field) pair.
+     * 2. If that is still not enough, replace the lot with the single statement that [owner] wrote
+     *    it. This is the same description [calculatePrevDFGs] already falls back to for an entry
+     *    with no write-sites at all, so callers need not learn anything new to handle it.
+     *
+     * A concurrent [mergeFSEntry] can add a write-site while we are replacing the set and have it
+     * dropped. That is the same kind of loss we are deliberately taking here anyway, and the next
+     * merge pushes the entry over the limit again and re-coarsens it, so the set stays bounded
+     * either way.
+     */
+    private fun coarsenLastWrites(entry: FSEntry, owner: Function) {
+        val limit = passConfig<Configuration>()?.maxLastWritesPerSummaryEntry ?: return
+        if (entry.lastWrites.size <= limit) return
+
+        synchronized(entry) {
+            if (entry.lastWrites.size <= limit) return
+
+            val withoutFields =
+                entry.lastWrites.mapTo(mutableSetOf()) { (node, properties) ->
+                    if (properties.none { it is PartialDataflowGranularity<*> }) {
+                        NodeWithPropertiesKey(node, properties)
+                    } else {
+                        NodeWithPropertiesKey(
+                            node,
+                            properties.filterNotTo(equalLinkedHashSetOf()) {
+                                it is PartialDataflowGranularity<*>
+                            },
+                        )
+                    }
+                }
+
+            val replacement =
+                if (withoutFields.size <= limit) withoutFields
+                else setOf(NodeWithPropertiesKey(owner, equalLinkedHashSetOf()))
+
+            entry.lastWrites.clear()
+            entry.lastWrites.addAll(replacement)
+        }
+    }
+
     private fun mergeFSEntry(
         functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>,
         key: Node,
         newEntry: FSEntry,
+        /** The [Function] whose summary this is; the coarsest description of any of its writes. */
+        owner: Function,
         // Whether newEntry.lastWrites is shared with other entries; if so, a new entry gets a copy
         // that later merges may modify
         copyLastWritesOnInsert: Boolean = false,
@@ -663,6 +738,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         } else {
             stored.lastWrites.addAll(newEntry.lastWrites)
         }
+        coarsenLastWrites(stored, owner)
     }
 
     override fun cleanup() {
@@ -1239,28 +1315,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         mergeFSEntry(
             node.functionSummary,
             param,
-            FSEntry(
-                dstValueDepth,
-                v,
-                srcValueDepth,
-                subAccessName,
-                filteredLastWrites,
-                equalLinkedHashSetOf(shortFS),
-            ),
+            owner = node,
+            newEntry =
+                FSEntry(
+                    dstValueDepth,
+                    v,
+                    srcValueDepth,
+                    subAccessName,
+                    filteredLastWrites,
+                    equalLinkedHashSetOf(shortFS),
+                ),
         )
         // Additionally, we store this as a shortFunctionSummary
         // where the function writes to the parameter
         mergeFSEntry(
             node.functionSummary,
             param,
-            FSEntry(
-                dstValueDepth,
-                node,
-                0,
-                subAccessName,
-                PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf())),
-                equalLinkedHashSetOf(true),
-            ),
+            owner = node,
+            newEntry =
+                FSEntry(
+                    dstValueDepth,
+                    node,
+                    0,
+                    subAccessName,
+                    PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf())),
+                    equalLinkedHashSetOf(true),
+                ),
         )
         val propertySet = identitySetOf<Any>(true)
         if (subAccessName != "") propertySet.add(Field().apply { name = Name(subAccessName) })
@@ -1315,27 +1395,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         mergeFSEntry(
                             node.functionSummary,
                             param,
-                            FSEntry(
-                                dstValueDepth,
-                                matchingDeclarations,
-                                stringToDepth(sourceParamValue.name.localName),
-                                subAccessName,
-                                // mergeFSEntry may fold this into an existing entry and then call
-                                // .addAll() on its lastWrites concurrently with other mergeFSEntry
-                                // calls for the same key, so this has to be a thread-safe set
-                                // rather
-                                // than a plain mutableSetOf().
-                                PowersetLattice.Element(
-                                    NodeWithPropertiesKey(
-                                        matchingDeclarations,
-                                        // Add the parameter index to indicate to the
-                                        // calculatePrevDFGs function that we need to
-                                        // replace the value of the call argument
-                                        equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
-                                    )
+                            owner = node,
+                            newEntry =
+                                FSEntry(
+                                    dstValueDepth,
+                                    matchingDeclarations,
+                                    stringToDepth(sourceParamValue.name.localName),
+                                    subAccessName,
+                                    // mergeFSEntry may fold this into an existing entry and then
+                                    // call
+                                    // .addAll() on its lastWrites concurrently with other
+                                    // mergeFSEntry
+                                    // calls for the same key, so this has to be a thread-safe set
+                                    // rather
+                                    // than a plain mutableSetOf().
+                                    PowersetLattice.Element(
+                                        NodeWithPropertiesKey(
+                                            matchingDeclarations,
+                                            // Add the parameter index to indicate to the
+                                            // calculatePrevDFGs function that we need to
+                                            // replace the value of the call argument
+                                            equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
+                                        )
+                                    ),
+                                    equalLinkedHashSetOf(true),
                                 ),
-                                equalLinkedHashSetOf(true),
-                            ),
                         )
                     }
                 }
@@ -1770,6 +1854,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 parentFD.functionSummary,
                                 currentNode,
                                 FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false)),
+                                owner = parentFD,
                                 copyLastWritesOnInsert = depthLastWrites != null,
                             )
                         }
@@ -3680,9 +3765,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // Create a field for every initializer, i.e. at offset 0 we store the first
                         // element, at offset 1 the second, etc...
                         val fieldAddresses = identitySetOf<Node>()
-                        // We only analyze the first 200 elements in order not to have a too large
-                        // state
-                        for (i in 0..<ini.initializers.size.coerceAtMost(200)) {
+                        // We only analyze the first elements in order not to have a too large state
+                        val analyzedInitializers =
+                            passConfig<Configuration>()?.maxArrayInitializers?.let {
+                                ini.initializers.size.coerceAtMost(it)
+                            } ?: ini.initializers.size
+                        for (i in 0..<analyzedInitializers) {
                             val fieldVal = ini.initializers[i]
                             val parentName = getNodeName(currentNode)
                             val newName = Name(i.toString(), parentName)
