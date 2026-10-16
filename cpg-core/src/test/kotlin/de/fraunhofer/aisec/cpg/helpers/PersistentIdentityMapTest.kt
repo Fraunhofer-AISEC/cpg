@@ -29,11 +29,17 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PersistentIdentityMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import org.junit.jupiter.api.Timeout
 
 class PersistentIdentityMapTest {
 
@@ -115,6 +121,151 @@ class PersistentIdentityMapTest {
         iterator.next()
         iterator.remove()
         assertEquals(1, map.size, "Removing through the key iterator has to reach the map")
+    }
+
+    @Test
+    fun testHashCodeAndEqualsAreContentBased() {
+        val keyA = Key("a")
+        val keyB = Key("b")
+
+        val map1 = PersistentIdentityMap<Key, Int>()
+        map1.put(keyA, 1)
+        map1.put(keyB, 2)
+
+        val map2 = PersistentIdentityMap<Key, Int>()
+        // Insert in a different order, to make sure that alone doesn't affect the result. Reuses
+        // keyA/keyB rather than fresh, merely-equal Key instances: this map compares keys by
+        // reference (testKeysAreComparedByIdentity), so two maps can only be equal if their keys
+        // are references to the very same objects - exactly like ConcurrentMapLattice.Element
+        // comparing two states that both refer to the same graph nodes.
+        map2.put(keyB, 2)
+        map2.put(keyA, 1)
+
+        // This is the actual regression this test guards against: PersistentIdentityMap used to
+        // inherit identity-based hashCode()/equals() from Any, which two separately-constructed but
+        // content-equal maps would fail - breaking the Map contract and anything that hashes a map
+        // (e.g. putting it in a HashSet, or a wrapper whose own hashCode() delegates to it, like
+        // ConcurrentMapLattice.Element does).
+        assertEquals(map1, map2)
+        assertEquals(map1.hashCode(), map2.hashCode())
+
+        map2.put(Key("c"), 3)
+        assertFalse(map1 == map2, "A map with an extra entry must not be equal")
+    }
+
+    /**
+     * A value which is `equals` to every other value with the same [content], but never the same
+     * instance.
+     */
+    private data class Box(val content: String)
+
+    @Test
+    fun testPutStoresAnEqualButNotIdenticalValue() {
+        // This pins an assumption the copy-on-write mechanism in ConcurrentMapLattice.Element
+        // relies on (see its getForUpdate): put()/compute() must not short-circuit and keep the old
+        // value just because the new one is `==` to it, or a caller which just replaced a value
+        // with a fresh, private, but content-equal copy would find the old (possibly still shared)
+        // instance still installed.
+        val key = Key("a")
+        val map = PersistentIdentityMap<Key, Box>()
+        val original = Box("x")
+        map.put(key, original)
+
+        val equalButNotSame = Box("x")
+        assertEquals(original, equalButNotSame)
+        assertNotSame(original, equalButNotSame)
+
+        map.put(key, equalButNotSame)
+        assertSame(equalButNotSame, map[key])
+    }
+
+    @Test
+    fun testKeyIteratorRemoveRejectsCallsWithoutAPrecedingNext() {
+        val map = PersistentIdentityMap<Key, Int>()
+        map.put(Key("a"), 1)
+
+        @Suppress("UNCHECKED_CAST") val iterator = (map.keys as MutableSet<Key>).iterator()
+        assertFailsWith<IllegalStateException> { iterator.remove() }
+
+        iterator.next()
+        iterator.remove()
+        // A second remove() for the same element - without an intervening next() - must also be
+        // rejected, not silently remove whatever key now happens to occupy the same slot.
+        assertFailsWith<IllegalStateException> { iterator.remove() }
+    }
+
+    @Test
+    fun testClearEmptiesTheMap() {
+        val map = PersistentIdentityMap<Key, Int>()
+        map.putAll(listOf(Key("a") to 1, Key("b") to 2))
+
+        map.clear()
+
+        assertTrue(map.isEmpty())
+        assertEquals(0, map.size)
+    }
+
+    /**
+     * [PersistentIdentityMap.compute]'s remapping function must be invoked exactly once, no matter
+     * how many concurrent writes to *other* keys land while it runs: writes are now serialized by a
+     * fair lock rather than retried via compare-and-set, so there is nothing to retry in the first
+     * place, and a concurrent writer can delay this call's own write but never cause its remapping
+     * function to run twice (or starve it indefinitely - the lock's fairness guarantees this
+     * eventually gets its turn).
+     */
+    @Test
+    @Timeout(30)
+    fun testComputeReusesResultAcrossRetriesForAnUnrelatedConflict() {
+        val key = Key("target")
+        val other = Key("other")
+        val map = PersistentIdentityMap<Key, Int>()
+        map.put(key, 1)
+
+        val callCount = AtomicInteger(0)
+        val computeStarted = CountDownLatch(1)
+        // Bounded by a deadline rather than an indefinite flag, purely so this test terminates in
+        // bounded time; it is no longer needed to avoid starving compute() (the fair lock already
+        // guarantees that), but there is no reason for the writer thread to keep spinning forever
+        // either.
+        val writerDeadline = System.nanoTime() + 300.milliseconds.inWholeNanoseconds
+
+        val writer = Executors.newSingleThreadExecutor()
+        try {
+            val writerDone =
+                writer.submit {
+                    computeStarted.await()
+                    var i = 0
+                    while (System.nanoTime() < writerDeadline) {
+                        map.put(other, i++)
+                    }
+                }
+
+            val result =
+                map.compute(key) { _, value ->
+                    callCount.incrementAndGet()
+                    computeStarted.countDown()
+                    // Give the writer thread a real window to land several conflicting writes
+                    // before we return and attempt our own CAS.
+                    Thread.sleep(50)
+                    // Actually change the value: compute() can short-circuit without any CAS at
+                    // all if the "new" value is the one already there (putting() returns the same
+                    // PersistentMap instance for a no-op update), which would make this test pass
+                    // trivially - without ever exercising a retry - regardless of the fix.
+                    (value ?: 0) + 1
+                }
+
+            writerDone.get(10, TimeUnit.SECONDS)
+            assertEquals(2, result)
+            assertEquals(
+                1,
+                callCount.get(),
+                "the remapping function must be invoked exactly once, no matter how many " +
+                    "unrelated writes happened concurrently",
+            )
+        } finally {
+            writer.shutdown()
+            assertTrue(writer.awaitTermination(5, TimeUnit.SECONDS))
+        }
     }
 
     /**

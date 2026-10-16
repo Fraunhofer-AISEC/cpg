@@ -177,8 +177,19 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
         throw UnsupportedOperationException()
     }
 
+    /**
+     * The sum of the identity hashes of the elements, which is consistent with [equals]: it only
+     * looks at the elements (by reference) and not at the order in which they were added.
+     *
+     * Note that we must not use the [hashCode] of the backing [map] here: an [IdentityHashMap]
+     * hashes its *values* by identity, too, and our values are the (boxed) insertion counters. Two
+     * sets with the same elements would then almost never have the same hash code, which silently
+     * breaks every hash-based lookup that uses an [IdentitySet] as (part of) its key.
+     */
     override fun hashCode(): Int {
-        return map?.hashCode() ?: 0
+        var h = 0
+        map?.keys?.forEach { h += System.identityHashCode(it) }
+        return h
     }
 
     override val size: Int
@@ -186,20 +197,22 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
 }
 
 /**
- * The concurrent sibling of [IdentitySet]: a [MutableSet] which compares its elements by reference
- * instead of by [Object.equals] and which is safe to use from multiple threads.
+ * Shared implementation behind [ConcurrentIdentitySet] and
+ * [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element]: a [MutableSet] backed by a
+ * single [ConcurrentHashMap], keyed by [keyFor] of the element. [K] is fixed per leaf class (see
+ * the two implementations), rather than a common [Any], since no caller ever needs to see both
+ * leaves through this shared base - everyone works with one of the two concrete classes directly.
  *
- * All elements live in a *single* [ConcurrentHashMap], keyed by [keyFor] of the element. The
- * default key is a reference-equality wrapper, so - as in [IdentitySet] - only the very same object
- * counts as already contained. Subclasses may override [keyFor] to index their elements
- * differently, for example [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element],
- * which uses structural keys for the element types whose reference identity is not meaningful.
+ * This is purely a code-sharing device between those two leaves, not a public extension point (it
+ * has to be `public`, not `internal`, only because Kotlin requires a class's supertypes to be at
+ * least as visible as the class itself): a third implementation should not be built by subclassing
+ * this, it should get its own [K] here instead.
  *
  * Keeping everything in one map is what makes this class cheap enough to allocate millions of times
  * during a points-to analysis: a set holding a single element costs the set itself, the map, its
  * table and one key wrapper, and nothing else.
  */
-open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
+abstract class AbstractConcurrentSet<T, K : Any>(expectedMaxSize: Int) : MutableSet<T> {
     /**
      * The backing map: the key is [keyFor] of the element, the value is the element itself (boxed
      * into [NullElement] if it is `null`, since a [ConcurrentHashMap] cannot hold `null` values).
@@ -208,19 +221,25 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * room for its load factor internally, so multiplying the size again doubles the table array of
      * every single set. There are millions of these sets in a points-to analysis, so this matters.
      */
-    private val map: ConcurrentHashMap<Any, Any> = ConcurrentHashMap(expectedMaxSize)
+    protected val map: ConcurrentHashMap<K, Any> = ConcurrentHashMap(expectedMaxSize)
 
     /**
      * Returns the key under which [element] is stored. Two elements are the same element for this
      * set if and only if their keys are equal, so this method defines the set's notion of equality.
-     *
-     * The default implementation wraps the element in a reference-equality key.
      */
-    protected open fun keyFor(element: T): Any = PointsToPass.IdKey(element)
+    protected abstract fun keyFor(element: T): K
 
     /**
-     * Called by every method which modifies this set, before it does so. Subclasses can use it to
-     * enforce invariants; the default implementation does nothing.
+     * Called by every *checked* mutating method of this class, before it does so. Subclasses can
+     * use it to enforce invariants; the default implementation does nothing.
+     *
+     * The fast-path `addAllWithoutCheck(same-type set)` overloads leaf classes provide (see
+     * [ConcurrentIdentitySet.addAllWithoutCheck] and
+     * [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element.addAllWithoutCheck]) do
+     * *not* call this: they exist specifically to copy another instance's backing map directly,
+     * which is only ever used to populate a set that was just constructed and cannot be shared yet.
+     * If that assumption ever stops holding - e.g. someone starts calling them on a set that is
+     * already visible to another owner - this barrier will not catch it.
      */
     protected open fun onMutate() {}
 
@@ -242,11 +261,13 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     }
 
     /**
-     * Adds all [elements] to this [ConcurrentIdentitySet] without checking if they are already
-     * present. This should only be used if this set is empty!
+     * Adds all [elements] to this set without checking if they are already present. This should
+     * only be used if this set is empty!
      *
      * Note that we still have to compute [keyFor] for every element: the keys of another set were
-     * computed by *its* [keyFor] and are not necessarily the keys this set would use.
+     * computed by *its* [keyFor] and are not necessarily the keys this set would use. Leaf classes
+     * provide a faster overload for the case where that other set is known to use the exact same
+     * [keyFor].
      */
     open fun addAllWithoutCheck(elements: Iterable<T>) {
         onMutate()
@@ -346,6 +367,32 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 
     @Suppress("UNCHECKED_CAST")
     private fun unbox(value: Any): T = if (value === NullElement) null as T else value as T
+}
+
+/**
+ * The concurrent sibling of [IdentitySet]: a [MutableSet] which compares its elements by reference
+ * instead of by [Object.equals] and which is safe to use from multiple threads.
+ *
+ * Every element is keyed by [PointsToPass.IdKey], a reference-equality wrapper, so - as in
+ * [IdentitySet] - only the very same object counts as already contained. Unlike before, there is no
+ * override point for a different key type any more: the one case that needed one,
+ * [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element], is its own class nowadays,
+ * sharing an implementation with this one via [AbstractConcurrentSet] instead of subclassing it, so
+ * that every [ConcurrentIdentitySet] is guaranteed to compute keys the same way.
+ */
+open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) :
+    AbstractConcurrentSet<T, PointsToPass.IdKey<T>>(expectedMaxSize) {
+
+    final override fun keyFor(element: T): PointsToPass.IdKey<T> = PointsToPass.IdKey(element)
+
+    /**
+     * Fast path for [addAllWithoutCheck]: since every [ConcurrentIdentitySet] computes its keys the
+     * same way, we can copy [elements]' backing map directly instead of recomputing a key for every
+     * element.
+     */
+    fun addAllWithoutCheck(elements: ConcurrentIdentitySet<T>) {
+        map.putAll(elements.map)
+    }
 }
 
 /** Marker for a `null` element, which a [ConcurrentHashMap] cannot store as a value. */

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
@@ -35,20 +36,25 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_GLOBAL_STATE_PRUNE_SIZE
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.TimeoutBudget
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.timeouts
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlin.time.measureTime
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Timeout
@@ -622,34 +628,35 @@ class BasicLatticesRedesignTest {
     }
 
     @Test
-    fun testIterateEOGRestoresTimeoutStack() {
+    fun testIterateEOGRestoresTimeoutStack() = runBlocking {
         val lattice = PowersetLattice<String>()
 
         val start = Literal<Int>()
         val end = Literal<Int>()
         start.nextEOGEdges += end
 
-        val depthBefore = timeouts.size
-
-        // A regular run has to leave the stack of timeout budgets exactly as it found it.
-        lattice.iterateEOG(
+        // A regular run must not leak its timeout budget into the ambient coroutine context, so
+        // that concurrent/unrelated analyses can never observe or corrupt it.
+        lattice.iterateEogInternal(
             start.nextEOGEdges.toList(),
             lattice.bottom,
             { _, _, state -> state },
-            timeout = 10.seconds,
+            Lattice.Strategy.PRECISE,
+            10000.milliseconds,
         )
-        assertEquals(depthBefore, timeouts.size)
+        assertNull(currentCoroutineContext()[TimeoutBudget])
 
-        // ... and so does a run whose transformation throws.
+        // ... and neither does a run whose transformation throws.
         assertThrows<IllegalStateException> {
-            lattice.iterateEOG(
+            lattice.iterateEogInternal(
                 start.nextEOGEdges.toList(),
                 lattice.bottom,
                 { _, _, _ -> throw IllegalStateException("transformation failed") },
-                timeout = 10.seconds,
+                Lattice.Strategy.PRECISE,
+                10000.milliseconds,
             )
         }
-        assertEquals(depthBefore, timeouts.size)
+        assertNull(currentCoroutineContext()[TimeoutBudget])
     }
 
     /**
@@ -696,6 +703,118 @@ class BasicLatticesRedesignTest {
     }
 
     @Test
+    @Timeout(5)
+    fun testTimeoutBudgetCreditTerminatesAndExtendsRemaining() {
+        // This used to spin forever: kotlin.concurrent.atomics.AtomicReference<Duration> compares
+        // by reference, and Duration (a value class) is re-boxed on every load(), so the current
+        // value returned by load() was never reference-equal to what compareAndSet actually found
+        // in the field, and the retry loop in credit() could never succeed. If this regresses,
+        // @Timeout fails the test instead of the whole suite hanging.
+        val budget = TimeoutBudget(TimeSource.Monotonic.markNow(), 100.milliseconds)
+        val before = budget.remaining
+
+        budget.credit(500.milliseconds)
+
+        assertTrue(
+            budget.remaining > before,
+            "credit() has to extend the budget, not just leave it unchanged",
+        )
+    }
+
+    @Test
+    @Timeout(10)
+    fun testIterateEOGCreditsTimeSpentInNestedAnalysis() = runBlocking {
+        val lattice = PowersetLattice<String>()
+
+        val outerStart = Literal<Int>()
+        val outerEnd = Literal<Int>()
+        outerStart.nextEOGEdges += outerEnd
+
+        val innerStart = Literal<Int>()
+        val innerEnd = Literal<Int>()
+        innerStart.nextEOGEdges += innerEnd
+
+        // Simulates analyzing a function whose transformation triggers analysis of a callee (e.g.
+        // to compute its function summary) - a nested iterateEOG call with its own, independent
+        // timeout, which credits the time it took back to the enclosing budget. This is the
+        // scenario that reliably hung before the credit() fix above; @Timeout is the safety net in
+        // case it regresses.
+        val (_, timedOut) =
+            lattice.iterateEOG(
+                outerStart.nextEOGEdges.toList(),
+                lattice.bottom,
+                { innerLattice, _, state ->
+                    innerLattice.iterateEOG(
+                        innerStart.nextEOGEdges.toList(),
+                        innerLattice.bottom,
+                        { _, _, innerState -> innerState },
+                        timeout = 5.seconds,
+                    )
+                    state
+                },
+                timeout = 5.seconds,
+            )
+
+        assertFalse(timedOut)
+    }
+
+    @Test
+    fun testPowersetLatticeKeyForDedupesStructurally() {
+        val node = Literal<Int>()
+        val otherNode = Literal<Int>()
+
+        // Pair: structural equality on both components, not reference equality on the Pair itself.
+        val pairs =
+            PowersetLattice.Element(Pair(node, true), Pair(node, true), Pair(otherNode, true))
+        assertEquals(2, pairs.size)
+        assertTrue(pairs.contains(Pair(node, true)))
+        assertTrue(pairs.remove(Pair(node, true)))
+        assertEquals(1, pairs.size)
+        assertFalse(pairs.contains(Pair(node, true)))
+
+        // NodeWithPropertiesKey: node by reference, properties structurally - two separately
+        // constructed instances describing the same node and properties still count as one.
+        val propsA = equalLinkedHashSetOf<Any>("a")
+        val propsB = equalLinkedHashSetOf<Any>("a")
+        val keys =
+            PowersetLattice.Element(
+                PointsToPass.NodeWithPropertiesKey(node, propsA),
+                PointsToPass.NodeWithPropertiesKey(node, propsB),
+                PointsToPass.NodeWithPropertiesKey(otherNode, propsA),
+            )
+        assertEquals(2, keys.size)
+        assertTrue(keys.remove(PointsToPass.NodeWithPropertiesKey(node, propsB)))
+        assertEquals(1, keys.size)
+
+        // Everything else (plain nodes here) keeps reference-identity semantics.
+        val nodes = PowersetLattice.Element(node, node, otherNode)
+        assertEquals(2, nodes.size)
+
+        // null is a valid element and does not special-case into either of the above.
+        val withNull = PowersetLattice.Element<Node?>(null, null, node)
+        assertEquals(2, withNull.size)
+        assertTrue(withNull.contains(null))
+        assertTrue(withNull.remove(null))
+        assertEquals(1, withNull.size)
+        assertFalse(withNull.contains(null))
+    }
+
+    @Test
+    fun testAddAllWithoutCheckFastPathsPreserveContents() {
+        val original = concurrentIdentitySetOf("a", "b", "c")
+        val copy = ConcurrentIdentitySet<String>()
+        copy.addAllWithoutCheck(original)
+        assertEquals(original.toSet(), copy.toSet())
+
+        val originalElement = PowersetLattice.Element("a", "b", "c")
+        // Goes through the constructor's Set<T> overload, which has to detect that the argument is
+        // itself an Element and dispatch to the fast, map.putAll-based overload instead of silently
+        // falling back to recomputing every key.
+        val copiedElement = PowersetLattice.Element(originalElement as Set<String>)
+        assertEquals(originalElement.toSet(), copiedElement.toSet())
+    }
+
+    @Test
     fun testDuplicateSharesEntries() {
         val original =
             ConcurrentMapLattice.Element(
@@ -712,9 +831,11 @@ class BasicLatticesRedesignTest {
             assertTrue(assertNotNull(copy[key]).isShared)
         }
 
-        // ... which is why neither side may modify them any more.
-        assertThrows<IllegalStateException> { assertNotNull(copy["a"]).add("blub") }
-        assertThrows<IllegalStateException> { assertNotNull(original["a"]).add("blub") }
+        // ... which is why modifying them directly (bypassing getForUpdate) is rejected: with no
+        // way to retroactively swap in a private copy once the caller already holds the shared
+        // object, letting the mutation through would silently corrupt every other owner.
+        assertThrows<AssertionError> { assertNotNull(copy["a"]).add("blub") }
+        assertThrows<AssertionError> { assertNotNull(original["a"]).add("blub") }
 
         // Asking for a private copy of one entry gives us a modifiable one and leaves the other
         // owner - and the entries we did not ask for - alone.
@@ -727,6 +848,30 @@ class BasicLatticesRedesignTest {
         assertEquals(PowersetLattice.Element("bla", "blub"), copy["a"])
         assertEquals(PowersetLattice.Element("bla"), original["a"])
         assertSame(shared, copy["b"])
+    }
+
+    @Test
+    fun testPutPrivatizesAnAlreadySharedValue() {
+        val original = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val copy = original.duplicate()
+        val shared = assertNotNull(copy["a"])
+        assertTrue(shared.isShared)
+
+        // Storing an already-shared value with put() (instead of putShared()) is a caller bug -
+        // put()'s contract is that the caller hands the value over and does not keep using the
+        // reference - but unlike onMutate's case, put() can fix it: it has not stored the value
+        // anywhere yet, so it is free to store a private copy instead of the shared instance.
+        val other = ConcurrentMapLattice.Element<String, PowersetLattice.Element<String>>()
+        other.put("a", shared)
+
+        assertNotSame(shared, other["a"])
+        assertFalse(assertNotNull(other["a"]).isShared)
+        assertEquals(shared, other["a"])
+
+        // The value we handed over is unaffected, and so is everyone still sharing it.
+        assertNotNull(other["a"]).add("blub")
+        assertEquals(PowersetLattice.Element("bla"), shared)
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
     }
 
     /**
@@ -763,13 +908,13 @@ class BasicLatticesRedesignTest {
         val result = runBlocking { lattice.lub(one, two) }
         assertSame(one["a"], result["a"])
         assertSame(two["b"], result["b"])
-        assertThrows<IllegalStateException> { assertNotNull(result["a"]).add("blub") }
+        assertThrows<AssertionError> { assertNotNull(result["a"]).add("blub") }
 
         // The in-place variant may not modify the value it took from `two` either.
         val inPlace = runBlocking { lattice.lub(one, two, allowModify = true) }
         assertSame(one, inPlace)
         assertSame(two["b"], one["b"])
-        assertThrows<IllegalStateException> { assertNotNull(one["b"]).add("blub") }
+        assertThrows<AssertionError> { assertNotNull(one["b"]).add("blub") }
     }
 
     @Test

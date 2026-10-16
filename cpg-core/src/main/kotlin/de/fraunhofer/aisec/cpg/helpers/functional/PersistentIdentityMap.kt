@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.lang.UnsupportedOperationException
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Predicate
+import kotlin.concurrent.withLock
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.mutate
 import kotlinx.collections.immutable.persistentHashMapOf
@@ -42,17 +44,20 @@ import kotlinx.collections.immutable.persistentHashMapOf
  * map. Copying is then just reading the current reference: the copy and the original share the
  * whole spine, and inserting into either of them rebuilds only the handful of nodes along one path.
  *
- * This is what makes it affordable to keep one state per live EOG edge in [Lattice.iterateEOG]:
- * where a copy used to cost one map slot per entry, it now costs a single object.
+ * This is what makes it affordable to keep one state per live EOG edge in [Lattice.iterateEOG].
  *
  * Note that the entries themselves are *not* copied and are therefore reachable from both maps. It
  * is up to the subclass to make sure that nobody modifies a shared entry in place; see
  * [ConcurrentMapLattice.Element] for how the lattices do it.
  *
- * The mutating operations are implemented as compare-and-set loops rather than under a lock. As a
- * consequence, the function passed to [compute] or [computeIfAbsent] may be invoked more than once
- * if another thread writes to the same map concurrently, and only the result of the winning attempt
- * is stored. Such a function must therefore be free of side effects.
+ * Reads never synchronize: [backing] is published through a plain [AtomicReference], so [get] and
+ * friends always see some consistent, complete snapshot without blocking. Writes, however, all go
+ * through a single fair [ReentrantLock] rather than a compare-and-set retry loop. A fair lock
+ * guarantees FIFO servicing, so no writer can be starved by others repeatedly winning a race - each
+ * waits at most for the writers already ahead of it, not for however many additional writers show
+ * up while it retries. One consequence is that the function passed to [compute] or
+ * [computeIfAbsent] is invoked exactly once per call, not "at most once per retry": there is no
+ * retry at all.
  */
 open class PersistentIdentityMap<K, V>() : Map<K, V> {
 
@@ -66,6 +71,9 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
     private val backing: AtomicReference<PersistentMap<PointsToPass.IdKey<K>, V>> =
         AtomicReference(persistentHashMapOf())
 
+    /** Serializes every mutating operation; see the class-level note on why it is fair. */
+    private val writeLock = ReentrantLock(true)
+
     /**
      * The entries of this map at this very moment. Since the map is persistent, the returned value
      * is an immutable snapshot which is unaffected by later modifications, and obtaining it is
@@ -75,40 +83,40 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
 
     /** Replaces the contents of this map by [newContents]. */
     protected fun restore(newContents: PersistentMap<PointsToPass.IdKey<K>, V>) {
-        backing.set(newContents)
+        writeLock.withLock { backing.set(newContents) }
     }
 
     /**
-     * Repeatedly applies [transformation] to the current contents until it can be installed without
-     * anybody else having written in the meantime, and returns the contents it was applied to.
+     * Applies [transformation] to the current contents under [writeLock] and installs the result,
+     * returning the contents it was applied to. Because the lock excludes every other writer, this
+     * runs [transformation] exactly once - there is nothing to retry.
      */
-    private inline fun updateAndGetPrevious(
+    private inline fun update(
         transformation:
             (PersistentMap<PointsToPass.IdKey<K>, V>) -> PersistentMap<PointsToPass.IdKey<K>, V>
-    ): PersistentMap<PointsToPass.IdKey<K>, V> {
-        while (true) {
+    ): PersistentMap<PointsToPass.IdKey<K>, V> =
+        writeLock.withLock {
             val previous = backing.get()
             val next = transformation(previous)
-            if (next === previous || backing.compareAndSet(previous, next)) return previous
+            if (next !== previous) backing.set(next)
+            previous
         }
-    }
 
     override operator fun get(key: K): V? = backing.get()[PointsToPass.IdKey(key)]
 
     open fun put(key: K, value: V): V? {
         val idKey = PointsToPass.IdKey(key)
-        return updateAndGetPrevious { it.put(idKey, value) }[idKey]
+        return update { it.putting(idKey, value) }[idKey]
     }
 
     fun remove(key: K): V? {
         val idKey = PointsToPass.IdKey(key)
-        return updateAndGetPrevious { it.remove(idKey) }[idKey]
+        return update { it.removing(idKey) }[idKey]
     }
 
     fun removeKeyIf(filter: Predicate<in K>): Boolean {
         var removed = false
-        updateAndGetPrevious { previous ->
-            removed = false
+        update { previous ->
             previous.mutate { draft ->
                 for (key in previous.keys) {
                     if (filter.test(key.ref)) {
@@ -130,6 +138,9 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
 
     override fun isEmpty(): Boolean = backing.get().isEmpty()
 
+    /** Removes every entry. [ConcurrentIdentityHashMap], which this class replaces, had one too. */
+    fun clear() = restore(persistentHashMapOf())
+
     override val keys: Set<K>
         get() = KeySetView()
 
@@ -142,19 +153,16 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
     /**
      * Stores the result of [mappingFunction] under [key] if there is no entry for it yet, and
      * returns the value which is stored afterwards.
-     *
-     * [mappingFunction] must be free of side effects, see the note on the class.
      */
     open fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V {
         val idKey = PointsToPass.IdKey(key)
-        // We do not use compute() here so that we do not even call the mapping function in the
-        // common case that the key is already there.
-        while (true) {
+        return writeLock.withLock {
             val previous = backing.get()
             val existing = previous[idKey]
-            if (existing != null) return existing
+            if (existing != null) return@withLock existing
             val value = mappingFunction(key)
-            if (backing.compareAndSet(previous, previous.put(idKey, value))) return value
+            backing.set(previous.putting(idKey, value))
+            value
         }
     }
 
@@ -163,18 +171,19 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
      * the key and the current value (or `null` if there is none), and returns the new value.
      * Removes the entry if the function returns `null`.
      *
-     * [remappingFunction] must be free of side effects, see the note on the class.
+     * [remappingFunction] is invoked exactly once, under [writeLock]: see the class-level note.
      */
-    fun compute(key: K, remappingFunction: (K, V?) -> V?): V? {
-        val idKey = PointsToPass.IdKey(key)
-        while (true) {
+    fun compute(key: K, remappingFunction: (K, V?) -> V?): V? =
+        writeLock.withLock {
+            val idKey = PointsToPass.IdKey(key)
             val previous = backing.get()
             val newValue = remappingFunction(key, previous[idKey])
             val next =
-                if (newValue == null) previous.remove(idKey) else previous.put(idKey, newValue)
-            if (next === previous || backing.compareAndSet(previous, next)) return newValue
+                if (newValue == null) previous.removing(idKey)
+                else previous.putting(idKey, newValue)
+            if (next !== previous) backing.set(next)
+            newValue
         }
-    }
 
     /**
      * Copies every entry of [other] into this map, storing [transform] of the value. This reuses
@@ -183,7 +192,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
      */
     protected fun putAllTransformed(other: PersistentIdentityMap<K, V>, transform: (V) -> V) {
         val source = other.backing.get()
-        updateAndGetPrevious { previous ->
+        update { previous ->
             previous.mutate { draft ->
                 for ((key, value) in source) {
                     draft[key] = transform(value)
@@ -202,7 +211,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
 
     /** Inserts all entries from the given [Iterable] of pairs. */
     fun putAll(pairs: Iterable<Pair<K, V>>) {
-        updateAndGetPrevious { previous ->
+        update { previous ->
             previous.mutate { draft ->
                 for ((key, value) in pairs) {
                     draft[PointsToPass.IdKey(key)] = value
@@ -211,10 +220,37 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         }
     }
 
-    override fun toString(): String =
-        backing.get().entries.joinToString(prefix = "{", postfix = "}") { (key, value) ->
+    /** How many entries [toString] prints before summarizing the rest as "and N more". */
+    private val maxToStringEntries = 20
+
+    override fun toString(): String {
+        val entries = backing.get().entries
+        val omitted = entries.size - maxToStringEntries
+        return entries.asSequence().take(maxToStringEntries).joinToString(
+            prefix = "{",
+            postfix = if (omitted > 0) ", ... and $omitted more}" else "}",
+        ) { (key, value) ->
             "${key.ref}=$value"
         }
+    }
+
+    /**
+     * Delegates to the backing [PersistentMap]'s own content-based `hashCode()`/`equals()` (summing
+     * each entry's `IdKey.hashCode() xor value.hashCode()`, matching the [Map] contract), rather
+     * than falling back to identity via [Any]. [ConcurrentIdentityHashMap], which this class
+     * replaces, did the same via its backing `ConcurrentHashMap`; subclasses like
+     * [ConcurrentMapLattice.Element] rely on this for their own content-based `hashCode()`.
+     */
+    override fun hashCode(): Int = backing.get().hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as PersistentIdentityMap<*, *>
+
+        return backing.get() == other.backing.get()
+    }
 
     /**
      * A view of the keys. It reads the current contents on every access, so it observes
@@ -228,7 +264,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         override fun add(element: K): Boolean =
             throw UnsupportedOperationException("Cannot add a key without a value")
 
-        override fun clear() = restore(persistentHashMapOf())
+        override fun clear() = this@PersistentIdentityMap.clear()
 
         override fun contains(element: K): Boolean = containsKey(element)
 
@@ -240,15 +276,24 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
             val iterator = snapshot().keys.iterator()
             return object : MutableIterator<K> {
                 private var last: K? = null
+                private var hasLast = false
 
                 override fun hasNext(): Boolean = iterator.hasNext()
 
-                override fun next(): K = iterator.next().ref.also { last = it }
+                override fun next(): K =
+                    iterator.next().ref.also {
+                        last = it
+                        hasLast = true
+                    }
 
                 override fun remove() {
-                    this@PersistentIdentityMap.remove(
-                        last ?: throw IllegalStateException("next() has not been called yet")
-                    )
+                    // hasLast (not "last != null") so a legitimately null key is not mistaken for
+                    // next() never having been called, and is cleared so a second remove() for the
+                    // same element is rejected like a standard Iterator would, instead of silently
+                    // removing whatever now happens to be at that key.
+                    check(hasLast) { "next() has not been called yet" }
+                    hasLast = false
+                    @Suppress("UNCHECKED_CAST") this@PersistentIdentityMap.remove(last as K)
                 }
             }
         }
@@ -265,7 +310,7 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         override fun add(element: Map.Entry<K, V>): Boolean =
             throw UnsupportedOperationException("Cannot add an entry through the entry view")
 
-        override fun clear() = restore(persistentHashMapOf())
+        override fun clear() = this@PersistentIdentityMap.clear()
 
         override fun contains(element: Map.Entry<K, V>): Boolean {
             val current = snapshot()
@@ -284,19 +329,22 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
             val iterator = snapshot().entries.iterator()
             return object : MutableIterator<Map.Entry<K, V>> {
                 private var last: K? = null
+                private var hasLast = false
 
                 override fun hasNext(): Boolean = iterator.hasNext()
 
                 override fun next(): Map.Entry<K, V> {
                     val entry = iterator.next()
                     last = entry.key.ref
+                    hasLast = true
                     return IdentityEntry(entry.key.ref, entry.value)
                 }
 
                 override fun remove() {
-                    this@PersistentIdentityMap.remove(
-                        last ?: throw IllegalStateException("next() has not been called yet")
-                    )
+                    // See KeySetView's iterator for why this is hasLast, not "last != null".
+                    check(hasLast) { "next() has not been called yet" }
+                    hasLast = false
+                    @Suppress("UNCHECKED_CAST") this@PersistentIdentityMap.remove(last as K)
                 }
             }
         }
@@ -304,9 +352,9 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         override fun remove(element: Map.Entry<K, V>): Boolean {
             val idKey = PointsToPass.IdKey(element.key)
             var removed = false
-            updateAndGetPrevious { previous ->
+            update { previous ->
                 removed = previous[idKey] == element.value
-                if (removed) previous.remove(idKey) else previous
+                if (removed) previous.removing(idKey) else previous
             }
             return removed
         }
