@@ -153,9 +153,8 @@ class IdentitySetTest {
     }
 
     /**
-     * Equal sets must have equal hash codes, regardless of the order in which their elements were
-     * added. The PointsToPass uses [IdentitySet]s as part of hash keys, and got stuck for hours
-     * inside a single Call because lookups of equal keys kept missing.
+     * Equal sets must have equal hash codes regardless of the order in which their elements were
+     * added, because [IdentitySet]s are used as part of hash keys.
      */
     @Test
     fun testHashCodeIsConsistentWithEquals() {
