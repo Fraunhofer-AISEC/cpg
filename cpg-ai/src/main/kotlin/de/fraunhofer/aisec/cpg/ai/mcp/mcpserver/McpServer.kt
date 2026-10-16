@@ -32,7 +32,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 
 fun configureServer(
-    configure: Server.() -> Server = {
+    configure: CpgMcpServer.() -> CpgMcpServer = {
         // TOOLS
         this.addCpgTranslate()
         this.addListPasses()
@@ -73,7 +73,7 @@ fun configureServer(
                 )
         )
 
-    return Server(info, options).configure()
+    return CpgMcpServer(info, options).configure()
 }
 
 /** Default configureServer constructor call to use via reflection (e.g. from codyze-console). */

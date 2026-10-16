@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
+import de.fraunhofer.aisec.cpg.ai.utils.testServer
 import java.nio.file.Path
 import kotlin.io.path.createDirectory
 import kotlin.io.path.writeText
@@ -44,15 +45,16 @@ class CpgAnalyzeToolTest {
         val project = tempDir.resolve("hello").createDirectory()
         project.resolve("main.py").writeText("def hello():\n    print('X')")
         val payload = CpgAnalyzePayload(path = project.toString())
+        val server = testServer()
 
         // Build a small CPG without passes
-        val first = runCpgAnalyze(payload, runPasses = false, cleanup = true)
+        val first = server.runCpgAnalyze(payload, runPasses = false, cleanup = true)
         val oldSession = getSession(first.projectName)
         assertNotNull(oldSession)
 
         // Build the CPG of the same project again; we expect its session to be replaced by one
         // with a new result and a new context
-        val second = runCpgAnalyze(payload, runPasses = false, cleanup = true)
+        val second = server.runCpgAnalyze(payload, runPasses = false, cleanup = true)
         assertEquals(first.projectName, second.projectName)
         val newSession = getSession(second.projectName)
         assertNotNull(newSession)
