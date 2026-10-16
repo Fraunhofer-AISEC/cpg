@@ -26,7 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -41,8 +47,12 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import java.io.IOException
+import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 
 /** The Java access modifier keywords, used to control member visibility. */
@@ -70,6 +80,66 @@ open class JavaLanguage :
     @DoNotPersist
     override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
     override val superClassKeyword = "super"
+
+    /**
+     * The JavaParser type solvers shared by all [JavaLanguageFrontend] instances of this language,
+     * keyed by the source roots and jars they resolve against. Since a frontend is created per
+     * file, sharing the solver lets JavaParser re-use its caches across files instead of parsing
+     * every referenced file over and over again.
+     */
+    @DoNotPersist
+    @JsonIgnore
+    private val typeSolvers = ConcurrentHashMap<Pair<List<Path>, List<Path>>, CombinedTypeSolver>()
+
+    /**
+     * Returns the (shared) JavaParser type solver for the [component] (by default, the current
+     * component of [ctx]). It resolves against the JDK, the top-level of the component as well as
+     * the additional source roots and jars of the [JavaFrontendConfiguration].
+     */
+    internal fun typeSolverFor(
+        ctx: TranslationContext,
+        component: Component? = ctx.currentComponent,
+    ): CombinedTypeSolver {
+        val config = ctx.config
+        var root = component?.let { config.topLevels[it.name.localName] }
+        if (root == null && config.softwareComponents.size == 1) {
+            root =
+                config.softwareComponents[config.softwareComponents.keys.first()]?.let {
+                    CommonPath.commonPath(it)
+                }
+        }
+        if (root == null) {
+            log.warn("Could not determine source root for {}", config.softwareComponents)
+        }
+
+        val frontendConfiguration =
+            config.frontendConfigurations[JavaLanguageFrontend::class] as? JavaFrontendConfiguration
+                ?: JavaFrontendConfiguration()
+        // We sort the paths, so that components whose top-level is already part of the configured
+        // source roots share the same type solver, regardless of the order
+        val sourceRoots =
+            (listOfNotNull(root?.toPath()) + frontendConfiguration.sourceRoots).distinct().sorted()
+        val classpath = frontendConfiguration.classpath.distinct().sorted()
+
+        return typeSolvers.computeIfAbsent(sourceRoots to classpath) {
+            log.info(
+                "Creating type solver for {} source root(s) and {} jar(s)",
+                sourceRoots.size,
+                classpath.size,
+            )
+            CombinedTypeSolver().apply {
+                add(ReflectionTypeSolver())
+                sourceRoots.forEach { add(JavaParserTypeSolver(it)) }
+                classpath.forEach {
+                    try {
+                        add(JarTypeSolver(it))
+                    } catch (e: IOException) {
+                        log.warn("Could not add {} to the type solver: {}", it, e.message)
+                    }
+                }
+            }
+        }
+    }
 
     override val qualifiers = listOf("final", "volatile")
     override val unknownTypeString = listOf("var")

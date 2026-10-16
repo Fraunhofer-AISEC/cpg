@@ -25,12 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
+import com.github.javaparser.StaticJavaParser
+import com.github.javaparser.ast.ArrayCreationLevel
+import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.body.Parameter as JPParameter
 import com.github.javaparser.ast.body.VariableDeclarator
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression as JPExpression
+import com.github.javaparser.ast.type.ArrayType as JPArrayType
+import com.github.javaparser.ast.type.ClassOrInterfaceType
+import com.github.javaparser.ast.type.PrimitiveType
+import com.github.javaparser.ast.type.Type as JPType
+import com.github.javaparser.ast.type.UnknownType as JPUnknownType
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
+import com.github.javaparser.resolution.logic.FunctionalInterfaceLogic
 import com.github.javaparser.resolution.types.ResolvedPrimitiveType
 import com.github.javaparser.resolution.types.ResolvedType
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
@@ -80,6 +90,139 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         lambda.function = anonymousFunction
 
         return lambda
+    }
+
+    /**
+     * Translates a method reference (e.g., `Foo::bar`, `obj::bar`, `Foo::new`) by desugaring it
+     * into the equivalent lambda expression in the JavaParser AST and then handling that lambda:
+     * - `Foo::staticMethod` becomes `(arg0, ...) -> Foo.staticMethod(arg0, ...)`
+     * - `Foo::instanceMethod` becomes `(arg0, arg1, ...) -> arg0.instanceMethod(arg1, ...)`
+     * - `expr::method` becomes `(arg0, ...) -> expr.method(arg0, ...)`
+     * - `Foo::new` becomes `(arg0, ...) -> new Foo(arg0, ...)` (or `new Foo[arg0]` for arrays)
+     *
+     * The number of parameters is derived from the resolved method or, if that is not possible,
+     * from the functional interface the method reference is assigned to.
+     */
+    private fun handleMethodReferenceExpr(expr: JPExpression): Expression {
+        val methodRef = expr.asMethodReferenceExpr()
+        val scope = methodRef.scope
+        val identifier = methodRef.identifier
+
+        val resolved =
+            try {
+                methodRef.resolve()
+            } catch (_: Exception) {
+                null
+            }
+        val functionalArity =
+            try {
+                FunctionalInterfaceLogic.getFunctionalMethod(methodRef.calculateResolvedType())
+                    .map { it.noParams }
+                    .getOrNull()
+            } catch (_: Exception) {
+                null
+            }
+
+        // JavaParser always parses the scope of `a.b::c` as a type, even if it is an expression,
+        // so we need to check whether it really is a type.
+        val scopeType = (scope as? TypeExpr)?.type
+        val isTypeScope = scopeType != null && isType(scopeType)
+        val args = { from: Int, count: Int ->
+            NodeList((from until from + count).map { NameExpr("arg$it") as JPExpression })
+        }
+
+        // The parameter types of the resolved method, so that the calls in our lambda match its
+        // signature. If we cannot resolve the method, we fall back to the functional interface.
+        val resolvedTypes =
+            resolved?.let {
+                (0 until it.numberOfParams).map { i -> astTypeOf(it.getParam(i).type) }
+            }
+        val fallbackTypes = List(functionalArity ?: 0) { JPUnknownType() }
+
+        val (parameterTypes, body) =
+            when {
+                identifier == "new" && scopeType is JPArrayType -> {
+                    listOf(PrimitiveType.intType()) to
+                        ArrayCreationExpr(
+                            scopeType.elementType.clone(),
+                            NodeList(ArrayCreationLevel(NameExpr("arg0"))),
+                            null,
+                        )
+                }
+                identifier == "new" && scopeType is ClassOrInterfaceType -> {
+                    fallbackTypes to
+                        ObjectCreationExpr(null, scopeType.clone(), args(0, fallbackTypes.size))
+                }
+                isTypeScope && resolvedTypes != null && resolved?.isStatic == false -> {
+                    // An unbound receiver, the first parameter is the object to call the method on
+                    listOf(scopeType.clone()) + resolvedTypes to
+                        MethodCallExpr(NameExpr("arg0"), identifier, args(1, resolvedTypes.size))
+                }
+                isTypeScope -> {
+                    val types = resolvedTypes ?: fallbackTypes
+                    val typeName =
+                        (scopeType as? ClassOrInterfaceType)?.nameWithScope ?: scopeType.toString()
+                    types to
+                        MethodCallExpr(
+                            StaticJavaParser.parseExpression(typeName),
+                            identifier,
+                            args(0, types.size),
+                        )
+                }
+                else -> {
+                    // A bound receiver, the scope is an expression (e.g., `this` or a variable)
+                    val receiver =
+                        if (scope is TypeExpr) StaticJavaParser.parseExpression(scope.toString())
+                        else scope.clone()
+                    val types = resolvedTypes ?: fallbackTypes
+                    types to MethodCallExpr(receiver, identifier, args(0, types.size))
+                }
+            }
+
+        val parameters =
+            NodeList(parameterTypes.mapIndexed { i, type -> JPParameter(type, "arg$i") })
+        val lambdaExpr = LambdaExpr(parameters, body)
+
+        // Our synthetic nodes should point to the location of the original method reference
+        lambdaExpr.walk { it.setRange(methodRef.range.getOrNull()) }
+        methodRef.tokenRange.ifPresent { lambdaExpr.setTokenRange(it) }
+
+        // Replace the method reference in the AST, so that symbol resolution in the lambda works
+        methodRef.replace(lambdaExpr)
+
+        return handleLambdaExpr(lambdaExpr)
+    }
+
+    /**
+     * Converts a [ResolvedType] back into a JavaParser AST type, so that we can use it for the
+     * parameters of a synthetic lambda. Type variables and wildcards cannot be expressed outside of
+     * their declaration, so we leave them unknown.
+     */
+    private fun astTypeOf(type: ResolvedType): JPType {
+        if (type.isTypeVariable || type.isWildcard) {
+            return JPUnknownType()
+        }
+
+        return try {
+            StaticJavaParser.parseType(type.describe())
+        } catch (_: Exception) {
+            JPUnknownType()
+        }
+    }
+
+    /** Checks whether [type], which is the scope of a method reference, really is a type. */
+    private fun isType(type: JPType): Boolean {
+        if (type !is ClassOrInterfaceType) {
+            return true
+        }
+
+        return try {
+            type.resolve()
+            true
+        } catch (_: Exception) {
+            // If we cannot resolve it, we fall back to the naming conventions of Java
+            type.nameAsString.firstOrNull()?.isUpperCase() == true
+        }
     }
 
     private fun handleCastExpr(expr: JPExpression): Expression {
@@ -222,7 +365,37 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
      * into a [MemberAccess].
      */
-    private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): MemberAccess {
+    private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): Expression {
+        // If the scope is the name of a type (e.g., `Errors` in `Errors.NOT_ALLOWED`), this is an
+        // access to a static field (or an enum constant). We model this as a reference with the
+        // fully qualified name of the field, so that we do not mistake the type for a field of the
+        // current class.
+        val symbol =
+            try {
+                fieldAccessExpr.resolve()
+            } catch (_: RuntimeException) {
+                null
+            }
+        val declaringType =
+            when {
+                symbol == null -> null
+                symbol.isField ->
+                    symbol.asField().takeIf { it.isStatic }?.declaringType()?.qualifiedName
+                symbol.isEnumConstant -> symbol.type.describe()
+                else -> null
+            }
+        if (symbol == null || declaringType != null) {
+            val typeName = staticScopeType(fieldAccessExpr.scope, declaringType)
+            if (typeName != null) {
+                return newReference(
+                        parseName(typeName).fqn(fieldAccessExpr.nameAsString),
+                        type = symbol?.let { frontend.typeOf(it.type) } ?: unknownType(),
+                        rawNode = fieldAccessExpr,
+                    )
+                    .apply { isStaticAccess = true }
+            }
+        }
+
         var baseType = unknownType()
         var fieldType = unknownType()
 
@@ -365,6 +538,18 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val symbol = nameExpr.resolve()
             if (symbol.isField) {
                 val field = symbol.asField()
+                if (field.isStatic) {
+                    // A static field (e.g., of the current class or from a static import) is a
+                    // static reference with the fully qualified name of the field
+                    val typeName = field.declaringType().qualifiedName
+                    return newReference(
+                            parseName(typeName).fqn(field.name),
+                            type = frontend.typeOf(field.type),
+                            rawNode = nameExpr,
+                        )
+                        .apply { isStaticAccess = true }
+                }
+
                 // handle it as a field expression
                 return handle(field.toFieldAccessExpr(nameExpr))
             }
@@ -460,6 +645,21 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             if (base is Reference && base.refersTo is Record) {
                 isStatic = true
             }
+
+            // If the scope is the name of a type (e.g., `Arrays` in `Arrays.asList()`), we set the
+            // type of the base to the (fully qualified) declaring type, so that the call can be
+            // resolved (or inferred) even if the type is not part of our graph.
+            val declaringType =
+                if (resolved != null && !resolved.isStatic) {
+                    null
+                } else {
+                    staticScopeType(scope, resolved?.declaringType()?.qualifiedName)
+                }
+            if (base is Reference && declaringType != null) {
+                isStatic = true
+                base.isStaticAccess = true
+                base.type = this.objectType(declaringType)
+            }
         } else {
             // If the call does not have any base, there are two possibilities:
             // a) The "this" could be omitted, making it a member call to the current class
@@ -503,6 +703,47 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             )
         }
         return callExpression
+    }
+
+    /**
+     * Returns the fully qualified name of the type that [scope] refers to, if [scope] is the name
+     * of a type rather than a value, e.g., `Arrays` in `Arrays.asList()` or `Errors` in
+     * `Errors.NOT_ALLOWED`. We use [declaringType], i.e., the declaring type of the member that
+     * JavaParser resolved, if available. Otherwise, we try the imports and the implicitly imported
+     * `java.lang` package.
+     */
+    private fun staticScopeType(scope: JPExpression, declaringType: String?): String? {
+        // If the name resolves to a value (e.g., a variable or a field), it is not a type
+        val isValue =
+            try {
+                when (scope) {
+                    is NameExpr -> scope.resolve()
+                    is FieldAccessExpr -> scope.resolve()
+                    else -> return null
+                }
+                true
+            } catch (_: RuntimeException) {
+                false
+            }
+        if (isValue) {
+            return null
+        }
+
+        if (declaringType != null) {
+            return declaringType
+        }
+
+        // Without a resolved member, we can only handle simple names
+        if (scope !is NameExpr) {
+            return null
+        }
+
+        return frontend.getQualifiedNameFromImports(scope.nameAsString)?.toString()
+            ?: frontend.nativeTypeResolver
+                .tryToSolveType("java.lang.${scope.nameAsString}")
+                .takeIf { it.isSolved }
+                ?.correspondingDeclaration
+                ?.qualifiedName
     }
 
     /**
@@ -616,6 +857,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         map[ArrayInitializerExpr::class.java] = HandlerInterface { handleArrayInitializerExpr(it) }
         map[CastExpr::class.java] = HandlerInterface { handleCastExpr(it) }
         map[LambdaExpr::class.java] = HandlerInterface { handleLambdaExpr(it) }
+        map[MethodReferenceExpr::class.java] = HandlerInterface { handleMethodReferenceExpr(it) }
     }
 }
 
