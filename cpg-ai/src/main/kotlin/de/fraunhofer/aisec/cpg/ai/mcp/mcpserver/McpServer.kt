@@ -40,7 +40,6 @@ fun configureServer(
         this.addCpgAnalyzeTool()
         this.addCpgApplyConceptsTool()
         this.addCpgDataflowTool()
-        this.addOverview()
         this.listFunctions()
         this.listRecords()
         this.listCalls()

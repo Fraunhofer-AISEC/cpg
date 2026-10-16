@@ -52,7 +52,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
             }
 
             ClientProvider.OPENAI_COMPATIBLE ->
-                OpenAiClient(httpClient, model, config.baseUrl, config.apiKey, config.stream)
+                OpenAiClient(httpClient, model, config.baseUrl, config.apiKey)
         }
     }
 
@@ -82,7 +82,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 ClientProvider.OPENAI_COMPATIBLE -> fetchOpenAiModels(cfg)
             }
         } catch (e: Exception) {
-            log.warn("Could not fetch models for client {}: {}", cfg.name, e.message)
+            log.debug("Could not fetch models for client {}: {}", cfg.name, e.message)
             emptyList()
         }
     }
@@ -163,7 +163,6 @@ fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
                         ClientProvider.OPENAI_COMPATIBLE
                     },
                 requiresApiKey = requiresApiKey,
-                stream = !client.hasPath("stream") || client.getBoolean("stream"),
             )
         }
     // Put local providers first, openai and gemini last.
