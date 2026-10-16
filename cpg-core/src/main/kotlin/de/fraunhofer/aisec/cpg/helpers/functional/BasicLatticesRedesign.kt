@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Predicate
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -1913,6 +1914,20 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
          */
         fun putShared(key: K, value: V): V? = super.put(key, shareValue(value))
 
+        /**
+         * Stores all [entries] with a single acquisition of the write lock, rather than the one per
+         * entry which a loop over [put] or [putShared] costs.
+         *
+         * Unlike [put], this does not privatize a value which reports itself as
+         * [shared][Lattice.Element.isShared]: the caller decides per entry whether it hands the
+         * value over - a freshly built one, the way [put] expects it - or shares it, having passed
+         * it through [shareValue] the way [putShared] does. [ConcurrentMapLattice.lub] knows which
+         * of the two every entry it produces is, and it is the reason this exists: the write lock
+         * is fair, so taking it once per key made merging two large states cost one lock handoff
+         * and one rebuild of the persistent spine per key.
+         */
+        fun putAllPrepared(entries: Collection<Pair<K, V>>) = putAll(entries)
+
         override fun hashCode(): Int {
             return super.hashCode()
         }
@@ -1965,28 +1980,39 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                         addAll(two.keys)
                     }
                 result = Element()
+                // The merged entries are collected here and inserted in one go below instead of
+                // one by one, see [Element.putAllPrepared].
+                val merged = ConcurrentLinkedQueue<Pair<K, V>>()
                 allKeys.forEachMaybeParallel { key ->
                     val otherValue = two[key]
                     val thisValue = one[key]
-                    if (thisValue != null && otherValue != null) {
-                        result.put(
-                            key,
-                            innerLattice.lub(
-                                one = thisValue,
-                                two = otherValue,
-                                allowModify = false,
-                                widen = widen,
-                                // We already run on $CPU_CORES coroutines, so we don't
-                                // need any additional ones
-                                1,
-                            ),
-                        )
-                    } else {
-                        // Only one of the two maps has this key, so its value carries over
-                        // unchanged. We share it with that map instead of copying it.
-                        (thisValue ?: otherValue)?.let { result.putShared(key, it) }
-                    }
+                    val mergedValue =
+                        when {
+                            // Only one of the two maps has this key, so its value carries over
+                            // unchanged. We share it with that map instead of copying it.
+                            thisValue == null -> otherValue?.let { shareValue(it) }
+                            otherValue == null -> shareValue(thisValue)
+                            // Both maps hold the very same object, and lub(x, x) is x, so there is
+                            // nothing to compute and nothing to copy. Note that sharing it does not
+                            // introduce an alias: the object is reachable from both maps already,
+                            // which is how it got here, so this only records a sharing which exists
+                            // either way - and which [duplicate] or [putShared] should have marked
+                            // when it handed the object to its second owner.
+                            thisValue === otherValue -> shareValue(thisValue)
+                            else ->
+                                innerLattice.lub(
+                                    one = thisValue,
+                                    two = otherValue,
+                                    allowModify = false,
+                                    widen = widen,
+                                    // We already run on $CPU_CORES coroutines, so we don't
+                                    // need any additional ones
+                                    1,
+                                )
+                        }
+                    mergedValue?.let { merged.add(key to it) }
                 }
+                result.putAllPrepared(merged)
             }
         }
         return@coroutineScope result
