@@ -93,7 +93,7 @@ pnpm run build
 Ktor backend (`codyze-console/src/main/kotlin/.../console/`) plus a Svelte 5 SPA (`src/main/webapp/src/`). The backend serves on port 8080 and starts the `cpg-ai` MCP server on port 8081.
 
 - `Router.kt` holds the REST API (`/api/*`), `ConsoleService.kt` the business logic (analysis, QueryTree caching, concepts), and `Nodes.kt` the JSON models.
-- The AI chat lives in **`cpg-ai`**, not codyze-console: `ChatService` (LLM config from HOCON, agentic tool-calling loop, max 50 iterations), `clients/` (OpenAI-compatible and Gemini), `skills/`, `mcp/`.
+- The AI chat lives in **`cpg-ai`**, not codyze-console: `ChatService` (LLM config from HOCON, agentic tool-calling loop on Koog's `AIAgent` with `ChatMemory`, up to 100 iterations by default), `clients/` (`LlmProviderConfig`: OpenAI-compatible and Gemini providers as Koog executors), `skills/` (Koog Agent Skills, file access jailed to the skills directory), `mcp/`.
 - Chat flow: frontend `POST /api/chat` (SSE). `ChatService` sends MCP tool definitions to the LLM, executes the returned tool calls against the local MCP server (`StreamableHttpClientTransport`), streams results back, and loops until the LLM answers with text.
 - After analysis, the `TranslationResult` is injected into the MCP server via `globalAnalysisResult` (`cpg.ai.mcp.mcpserver.tools`).
 - codyze-console depends on `cpg-ai` directly. Enabling codyze-console force-enables `cpg-ai` (`enableAIModule` in `settings.gradle.kts`).

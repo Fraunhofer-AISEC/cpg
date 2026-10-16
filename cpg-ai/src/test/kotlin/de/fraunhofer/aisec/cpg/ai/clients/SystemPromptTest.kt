@@ -25,24 +25,26 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
-import de.fraunhofer.aisec.cpg.ai.ChatMessageJSON
-import io.modelcontextprotocol.kotlin.sdk.types.Tool
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-/** Interface abstracting the underlying LLM provider (Gemini, OpenAI, Ollama, etc.). */
-interface LlmClient {
-    val modelName: String
+class SystemPromptTest {
 
-    /**
-     * Streaming prompt execution for the chat. Calls [onText] for normal content and [onReasoning]
-     * for thoughts/reasoning.
-     */
-    suspend fun sendPrompt(
-        userMessage: String,
-        systemPrompt: String,
-        conversationHistory: List<ChatMessageJSON> = emptyList(),
-        tools: List<Tool> = emptyList(),
-        toolCallHistory: List<List<ToolCallWithResult>>? = null,
-        onText: suspend (String) -> Unit,
-        onReasoning: suspend (String) -> Unit = {},
-    ): List<ToolCall>
+    @Test
+    fun aFailedToolCallWithABadArgumentMayBeCorrectedAndRetriedAFewTimes() {
+        assertTrue("correct that argument and call the tool again" in SYSTEM_PROMPT)
+        assertTrue("at most twice" in SYSTEM_PROMPT)
+        assertTrue("never with identical arguments" in SYSTEM_PROMPT)
+    }
+
+    @Test
+    fun otherFailuresAreNotRepeated() {
+        assertTrue("do not repeat the call" in SYSTEM_PROMPT)
+    }
+
+    @Test
+    fun theBlanketNoRetryRuleIsGone() {
+        assertFalse("do not retry it" in SYSTEM_PROMPT)
+    }
 }

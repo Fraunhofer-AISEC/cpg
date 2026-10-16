@@ -6,6 +6,11 @@ llm {
 
     vLLM {
           baseUrl = "http://localhost:8000"
+          # Optional. The model's context window in tokens; set it for servers that do not report
+          # it (vLLM does, via /v1/models). It drives history compression and result truncation.
+          # contextLength = 262144
+          # Optional. Request and socket timeout for LLM calls, in milliseconds.
+          # requestTimeoutMillis = 600000
         }
 
     mlx {
@@ -22,6 +27,17 @@ llm {
       apiKeyEnv = "CODYZE_GEMINI_API_KEY"
     }
   }
+  # Optional generation parameters, sent with every chat call. temperature and maxTokens apply to
+  # every client; the rest only to OpenAI-compatible ones.
+  # generation {
+  #   temperature = 0.2
+  #   maxTokens = 4096
+  #   reasoningEffort = "low"   # none, minimal, low, medium, high
+  #   frequencyPenalty = 0.0
+  #   presencePenalty = 0.0
+  #   topP = 0.95
+  #   stop = ["###"]
+  # }
 }
 
 mcp {

@@ -60,9 +60,11 @@ fun Server.addCpgDataflowTool() {
     """
             .trimIndent()
 
-    this.addTool<CpgDataflowPayload>(name = "cpg_dataflow", description = toolDescription) {
-        session: CpgSession,
-        payload: CpgDataflowPayload ->
+    this.addTool<CpgDataflowPayload>(
+        readOnly = true,
+        name = "cpg_dataflow",
+        description = toolDescription,
+    ) { session: CpgSession, payload: CpgDataflowPayload ->
         val allOverlayNodes = session.translationResult.allChildrenWithOverlays<OverlayNode>()
         val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
         val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }

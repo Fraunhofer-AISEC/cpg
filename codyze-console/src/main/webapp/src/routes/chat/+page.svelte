@@ -90,10 +90,10 @@
   // Load persisted state from sessionStorage
   function loadPersistedState() {
     if (typeof window === 'undefined') {
-      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
+      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null, sessionId: null };
     }
     const stored = sessionStorage.getItem('codyze-agent-state');
-    if (!stored) return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
+    if (!stored) return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null, sessionId: null };
     try {
       const parsed = JSON.parse(stored);
       const messages = parsed.messages.map((msg: any) => ({
@@ -104,10 +104,11 @@
         messages,
         showWelcome: parsed.showWelcome,
         selectedClient: parsed.selectedClient ?? null,
-        selectedModel: parsed.selectedModel ?? null
+        selectedModel: parsed.selectedModel ?? null,
+        sessionId: parsed.sessionId ?? null
       };
     } catch {
-      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
+      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null, sessionId: null };
     }
   }
 
@@ -121,6 +122,7 @@
   let showWelcome = $state(persisted.showWelcome);
   let selectedClient = $state<string | null>(persisted.selectedClient);
   let selectedModelName = $state<string | null>(persisted.selectedModel);
+  let sessionId = $state<string | null>(persisted.sessionId);
   let abortController: AbortController | null = null;
 
   const selectedModel = $derived.by((): Model | null => {
@@ -147,7 +149,8 @@
         messages: chatMessages,
         showWelcome,
         selectedClient,
-        selectedModel: selectedModelName
+        selectedModel: selectedModelName,
+        sessionId
       }));
     }
   });
@@ -168,6 +171,7 @@
       abortController.abort();
       abortController = null;
     }
+    sessionId = null;
     showWelcome = true;
     chatMessages = [];
     currentMessage = '';
@@ -197,7 +201,7 @@
                 role: 'assistant' as const,
                 content: '',
                 contentType: 'tool-result',
-                toolResult: { toolName: event.toolName, content: event.content },
+                toolResult: { toolName: event.toolName, args: event.args, content: event.content },
                 timestamp: new Date()
               }];
             }
@@ -280,6 +284,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks()
       );
     } catch (error) {
@@ -319,6 +324,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks()
       );
     } catch (error) {

@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.ai
 import de.fraunhofer.aisec.cpg.ai.clients.Events
 import de.fraunhofer.aisec.cpg.ai.clients.LlmProviderConfig
 import io.ktor.client.*
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.*
 import kotlinx.serialization.json.*
 
@@ -39,6 +41,55 @@ class ChatServiceTest {
             llmProviderConfig = LlmProviderConfig(HttpClient(), emptyList()),
             mcpServerUrl = "localhost",
         )
+    }
+
+    /** What Koog's `McpTool.encodeResult` hands to the event handlers for [result]. */
+    private fun asKoogEncodes(result: CallToolResult): JsonElement =
+        Json.encodeToJsonElement(CallToolResult.serializer(), result)
+
+    @Test
+    fun unwrapMcpToolResultParsesJsonText() {
+        val wrapped =
+            asKoogEncodes(CallToolResult(content = listOf(TextContent("""[{"id": "1"}]"""))))
+
+        val result = createChatService().unwrapMcpToolResult(wrapped)
+
+        assertEquals(Json.parseToJsonElement("""[{"id": "1"}]"""), result)
+    }
+
+    @Test
+    fun unwrapMcpToolResultKeepsPlainTextAsString() {
+        val wrapped = asKoogEncodes(CallToolResult(content = listOf(TextContent("No node found"))))
+
+        val result = createChatService().unwrapMcpToolResult(wrapped)
+
+        assertEquals(JsonPrimitive("No node found"), result)
+    }
+
+    @Test
+    fun unwrapMcpToolResultCollectsSeveralItemsIntoAnArray() {
+        val wrapped =
+            asKoogEncodes(
+                CallToolResult(
+                    content = listOf(TextContent("""{"a": 1}"""), TextContent("two items"))
+                )
+            )
+
+        val result = createChatService().unwrapMcpToolResult(wrapped)
+
+        assertEquals(
+            JsonArray(listOf(Json.parseToJsonElement("""{"a": 1}"""), JsonPrimitive("two items"))),
+            result,
+        )
+    }
+
+    @Test
+    fun unwrapMcpToolResultLeavesOtherShapesUnchanged() {
+        val service = createChatService()
+        val notMcp = Json.parseToJsonElement("""{"content": "file text", "size": 9}""")
+
+        assertEquals(notMcp, service.unwrapMcpToolResult(notMcp))
+        assertEquals(JsonPrimitive("plain"), service.unwrapMcpToolResult(JsonPrimitive("plain")))
     }
 
     @Test
@@ -117,21 +168,86 @@ class ChatServiceTest {
 
     @Test
     fun eventsToolResultTest() {
+        val args = buildJsonObject { put("nodeId", "42") }
         val content = buildJsonObject { put("result", "data") }
-        val event = Events.toolResult("my_tool", content)
+        val event = Events.toolResult("my_tool", args, content)
         val json = Json.parseToJsonElement(event).jsonObject
         assertEquals("tool_result", json["type"]?.jsonPrimitive?.content)
         assertEquals("my_tool", json["toolName"]?.jsonPrimitive?.content)
+        assertEquals("42", json["args"]?.jsonObject?.get("nodeId")?.jsonPrimitive?.content)
         assertEquals("data", json["content"]?.jsonObject?.get("result")?.jsonPrimitive?.content)
     }
 
     @Test
     fun eventsToolResultWithEmptyArrayTest() {
+        val args = buildJsonObject {}
         val content = JsonArray(emptyList())
-        val event = Events.toolResult("empty_tool", content)
+        val event = Events.toolResult("empty_tool", args, content)
         val json = Json.parseToJsonElement(event).jsonObject
         assertEquals("tool_result", json["type"]?.jsonPrimitive?.content)
         assertIs<JsonArray>(json["content"])
         assertEquals(0, json["content"]?.jsonArray?.size)
+    }
+
+    @Test
+    fun eventsUsageTest() {
+        val event = Events.usage("gpt-4", 100, 20, 120)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("usage", json["type"]?.jsonPrimitive?.content)
+        assertEquals("gpt-4", json["model"]?.jsonPrimitive?.content)
+        assertEquals(100, json["inputTokens"]?.jsonPrimitive?.int)
+        assertEquals(20, json["outputTokens"]?.jsonPrimitive?.int)
+        assertEquals(120, json["totalTokens"]?.jsonPrimitive?.int)
+    }
+
+    @Test
+    fun eventsUsageWithNullModelTest() {
+        val event = Events.usage(null, 0, 0, 0)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("usage", json["type"]?.jsonPrimitive?.content)
+        assertIs<JsonNull>(json["model"])
+    }
+
+    @Test
+    fun truncateForLlmLeavesSmallResultUnchangedTest() {
+        val service = createChatService()
+        val output = "a small tool result"
+
+        val result = service.truncateForLlm(output, "some_tool", contextLength = 128_000L)
+
+        assertEquals(output, result)
+    }
+
+    @Test
+    fun truncateForLlmUsesTheContextWindowOfTheRequestsModelTest() {
+        // One service, two requests on models with different windows: the budget follows the
+        // model, it is not fixed by whichever request came first.
+        val service = createChatService()
+        val output = "word ".repeat(20_000)
+
+        val onLargeModel = service.truncateForLlm(output, "some_tool", contextLength = 262_144L)
+        val onSmallModel = service.truncateForLlm(output, "some_tool", contextLength = 8_192L)
+        val onLargeAgain = service.truncateForLlm(output, "some_tool", contextLength = 262_144L)
+
+        assertEquals(output, onLargeModel)
+        assertTrue(onSmallModel.length < output.length, "Small window should truncate")
+        assertEquals(output, onLargeAgain)
+    }
+
+    @Test
+    fun truncateForLlmCapsOversizedResultTest() {
+        val service = createChatService()
+        // Comfortably over the single-result budget (half of a 128_000-token window) regardless of
+        // the tokenizer's exact per-word ratio.
+        val output = "word ".repeat(200_000)
+
+        val result = service.truncateForLlm(output, "some_tool", contextLength = 128_000L)
+
+        assertTrue(result.length < output.length, "Oversized result should have been shortened")
+        assertTrue(
+            result.endsWith(
+                "... [truncated: this tool result alone was too large for the model's context window]"
+            )
+        )
     }
 }

@@ -329,6 +329,8 @@ fun Route.chatRoutes(chatService: ChatService) {
             }
         }
 
+        post("/sessions") { call.respond(mapOf("sessionId" to chatService.createSession())) }
+
         get("/providers") { call.respond(chatService.listAvailableProviders()) }
 
         get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
