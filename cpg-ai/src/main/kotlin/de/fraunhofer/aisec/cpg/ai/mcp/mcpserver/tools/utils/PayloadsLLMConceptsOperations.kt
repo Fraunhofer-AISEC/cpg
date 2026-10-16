@@ -162,11 +162,24 @@ data class LLMConcept(
     val operations: List<LLMOperation>,
 )
 
+/**
+ * The payload of a single suggested [LLMConcept]. The [concept] is wrapped rather than carrying the
+ * [projectName] itself, since [LLMConcept] is also nested in [LLMConceptList], where a per-concept
+ * project name would be ignored.
+ */
+@Serializable
+data class LLMConceptSuggestion(
+    @Description("The concept to suggest, with the operations belonging to it.")
+    val concept: LLMConcept,
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
+
 @Serializable
 data class LLMConceptList(
     @Description("A list of concepts with their operations to apply to the graph.")
-    val concepts: List<LLMConcept>
-)
+    val concepts: List<LLMConcept>,
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
 
 @Serializable data class AppliedOperation(val operation: LLMOperation, val overlayNodeId: String)
 
