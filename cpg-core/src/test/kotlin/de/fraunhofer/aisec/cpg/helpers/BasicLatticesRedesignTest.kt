@@ -45,6 +45,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -766,6 +767,87 @@ class BasicLatticesRedesignTest {
         // falling back to recomputing every key.
         val copiedElement = PowersetLattice.Element(originalElement as Set<String>)
         assertEquals(originalElement.toSet(), copiedElement.toSet())
+    }
+
+    @Test
+    fun testDuplicateSharesEntries() {
+        val original =
+            ConcurrentMapLattice.Element(
+                "a" to PowersetLattice.Element("bla"),
+                "b" to PowersetLattice.Element("foo"),
+            )
+
+        val copy = original.duplicate()
+
+        // The copy holds the very same entries as the original ...
+        assertEquals(original.keys, copy.keys)
+        for (key in original.keys) {
+            assertSame(original[key], copy[key])
+            assertTrue(assertNotNull(copy[key]).isShared)
+        }
+
+        // ... which is why modifying them directly (bypassing getForUpdate) is rejected: with no
+        // way to retroactively swap in a private copy once the caller already holds the shared
+        // object, letting the mutation through would silently corrupt every other owner.
+        assertThrows<AssertionError> { assertNotNull(copy["a"]).add("blub") }
+        assertThrows<AssertionError> { assertNotNull(original["a"]).add("blub") }
+
+        // Asking for a private copy of one entry gives us a modifiable one and leaves the other
+        // owner - and the entries we did not ask for - alone.
+        val shared = assertNotNull(original["b"])
+        val private = assertNotNull(copy.getForUpdate("a"))
+        assertNotSame(original["a"], private)
+        assertFalse(private.isShared)
+        private.add("blub")
+
+        assertEquals(PowersetLattice.Element("bla", "blub"), copy["a"])
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
+        assertSame(shared, copy["b"])
+    }
+
+    @Test
+    fun testPutPrivatizesAnAlreadySharedValue() {
+        val original = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val copy = original.duplicate()
+        val shared = assertNotNull(copy["a"])
+        assertTrue(shared.isShared)
+
+        // Storing an already-shared value with put() (instead of putShared()) is a caller bug -
+        // put()'s contract is that the caller hands the value over and does not keep using the
+        // reference - but unlike onMutate's case, put() can fix it: it has not stored the value
+        // anywhere yet, so it is free to store a private copy instead of the shared instance.
+        val other = ConcurrentMapLattice.Element<String, PowersetLattice.Element<String>>()
+        other.put("a", shared)
+
+        assertNotSame(shared, other["a"])
+        assertFalse(assertNotNull(other["a"]).isShared)
+        assertEquals(shared, other["a"])
+
+        // The value we handed over is unaffected, and so is everyone still sharing it.
+        assertNotNull(other["a"]).add("blub")
+        assertEquals(PowersetLattice.Element("bla"), shared)
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
+    }
+
+    @Test
+    fun testLubSharesEntries() {
+        val lattice =
+            ConcurrentMapLattice<String, PowersetLattice.Element<String>>(PowersetLattice())
+        val one = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val two = ConcurrentMapLattice.Element("b" to PowersetLattice.Element("foo"))
+
+        // A key which only one of the two sides has carries its value over unchanged, so the
+        // result shares it instead of copying it.
+        val result = runBlocking { lattice.lub(one, two) }
+        assertSame(one["a"], result["a"])
+        assertSame(two["b"], result["b"])
+        assertThrows<AssertionError> { assertNotNull(result["a"]).add("blub") }
+
+        // The in-place variant may not modify the value it took from `two` either.
+        val inPlace = runBlocking { lattice.lub(one, two, allowModify = true) }
+        assertSame(one, inPlace)
+        assertSame(two["b"], one["b"])
+        assertThrows<AssertionError> { assertNotNull(one["b"]).add("blub") }
     }
 
     @Test

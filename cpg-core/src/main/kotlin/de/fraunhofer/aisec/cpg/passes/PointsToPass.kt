@@ -1253,9 +1253,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // be something new in the state.
         // To avoid this, we simply throw away the existing state for new
         val doubleState = doubleState
-        doubleState.declarationsState[currentNode]?.first?.clear()
-        doubleState.declarationsState[currentNode]?.second?.clear()
-        doubleState.declarationsState[currentNode]?.third?.clear()
+        if (doubleState.declarationsState[currentNode] != null) {
+            // A fresh, empty triple instead of getForUpdate(currentNode)'s privatized copy: we are
+            // about to discard all of its contents anyway, so there is nothing worth privatizing.
+            doubleState.declarationsState.put(
+                currentNode,
+                DeclarationStateEntryElement(
+                    PowersetLattice.Element(),
+                    PowersetLattice.Element(),
+                    PowersetLattice.Element(),
+                ),
+            )
+        }
         return doubleState
     }
 
@@ -3750,21 +3759,23 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                         UnknownMemoryValue(newName)
                     }
                 val newPair = Pair(newEntry, false)
-                this.declarationsState.computeIfAbsent(node) {
-                    TripleLattice.Element(
-                        PowersetLattice.Element(node),
-                        PowersetLattice.Element(),
-                        PowersetLattice.Element(),
-                    )
-                }
-
-                val newElements = this.declarationsState[node]?.second
+                // Use computeIfAbsent's own result instead of a separate, subsequent lookup: it is
+                // the only reference guaranteed to be private (not shared with another state), and
+                // a second lookup could race with a concurrent duplicate() of this map.
+                val newElements =
+                    this.declarationsState
+                        .computeIfAbsent(node) {
+                            TripleLattice.Element(
+                                PowersetLattice.Element(node),
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                            )
+                        }
+                        .second
                 if (
-                    newElements?.none {
-                        it.first === newPair.first && it.second == newPair.second
-                    } != false
+                    newElements.none { it.first === newPair.first && it.second == newPair.second }
                 ) {
-                    newElements?.add(newPair)
+                    newElements.add(newPair)
                 }
                 ret.add(
                     FetchElementFromDeclarationStateEntry(
@@ -3776,7 +3787,10 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                 )
             }
         } else {
-            val lastWrites = declarationEntry.third
+            // A defensive copy: declarationEntry.third is the live, state-owned set, and handing
+            // that out directly would let a caller mutate shared state without going through
+            // getForUpdate.
+            val lastWrites = PowersetLattice.Element(declarationEntry.third)
             values.forEach {
                 if (excludeShortFSValues && it.second) return@forEach
                 ret.add(FetchElementFromDeclarationStateEntry(it.first, it.second, "", lastWrites))
@@ -3796,7 +3810,10 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                                 it.first,
                                 it.second,
                                 field.name.localName,
-                                this.declarationsState[field]?.third ?: PowersetLattice.Element(),
+                                // Defensive copy, same reasoning as above.
+                                this.declarationsState[field]?.third?.let {
+                                    PowersetLattice.Element(it)
+                                } ?: PowersetLattice.Element(),
                             )
                         )
                 }
@@ -3976,7 +3993,9 @@ fun PointsToState.Element.getLastWrites(
             // its addresses
             // TODO: Unsure if this is consistent?
             val entries = this.declarationsState[node]?.third
-            if (!entries.isNullOrEmpty()) entries
+            // Defensive copy: entries is the live, state-owned set, and handing that out directly
+            // would let a caller mutate shared state without going through getForUpdate.
+            if (!entries.isNullOrEmpty()) PowersetLattice.Element(entries)
             else
                 node.memoryValues
                     .filter { it.name.localName == "deref" + node.name.localName }
@@ -4508,7 +4527,7 @@ suspend fun PointsToState.Element.updateValues(
                 // TODO: this should be fields, but for now we deal with the names
                 val writtenFields =
                     sources.mapNotNullTo(HashSet()) { (it.third as? Field)?.name?.localName }
-                doubleState.declarationsState[destAddr]?.third?.removeIf {
+                doubleState.declarationsState.getForUpdate(destAddr)?.third?.removeIf {
                     it.properties.any { p ->
                         ((p as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                             ?.name

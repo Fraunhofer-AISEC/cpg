@@ -359,8 +359,25 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
         return backing.isEmpty()
     }
 
-    fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
+    open fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
         backing.computeIfAbsent(PointsToPass.IdKey(key)) { mappingFunction(it.ref) }
+
+    /**
+     * Atomically replaces the value stored under [key] by the result of [remappingFunction], which
+     * receives the key and the current value (or `null` if there is none). Removes the entry if the
+     * function returns `null`.
+     */
+    fun compute(key: K, remappingFunction: (K, V?) -> V?): V? =
+        backing.compute(PointsToPass.IdKey(key)) { k, v -> remappingFunction(k.ref, v) }
+
+    /**
+     * Copies every entry of [other] into this map, storing [transform] of the value. This reuses
+     * the key wrappers of [other] and does not go through [put], so it is both cheaper than
+     * [putAll] and unaffected by whatever a subclass does in [put].
+     */
+    protected fun putAllTransformed(other: ConcurrentIdentityHashMap<K, V>, transform: (V) -> V) {
+        other.backing.forEach { (key, value) -> backing.put(key, transform(value)) }
+    }
 
     fun putAll(map: Map<out K, V>) {
         val wrapped = HashMap<PointsToPass.IdKey<K>, V>(map.size)
@@ -546,6 +563,46 @@ interface Lattice<T : Lattice.Element> {
 
         /** Duplicates this element, i.e., it creates a new object with equal contents. */
         fun duplicate(): Element
+
+        /**
+         * Whether this kind of element can be handed to more than one owner instead of being
+         * copied, see [isShared].
+         *
+         * Elements which cannot detect (and reject) a modification of themselves must not opt in;
+         * they are deep-copied instead, which is what every [Element] did before copy-on-write was
+         * introduced.
+         */
+        val supportsSharing: Boolean
+            get() = false
+
+        /**
+         * Whether this element is reachable from more than one owner and must therefore not be
+         * modified any more.
+         *
+         * Copies of a state - which the [Lattice.iterateEOG] worklist creates for every basic block
+         * - share their entries instead of deep-copying them, which is what keeps the memory
+         *   consumption of an analysis with many live states manageable. Whoever wants to modify a
+         *   shared entry has to ask its owner for a private copy first, see
+         *   [ConcurrentMapLattice.Element.getForUpdate]; a modification of a shared element is a
+         *   bug and the element is expected to say so rather than to silently corrupt the other
+         *   owners' states.
+         *
+         * Setting this to `true` on an element which does not [support sharing][supportsSharing]
+         * has no effect, so a `false` result after setting it means "this one has to be copied".
+         *
+         * This is a plain, unsynchronized field on implementations (see e.g.
+         * [de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element.isShared]), so its
+         * visibility across threads relies on the coroutine dispatcher providing a happens-before
+         * edge - which [kotlinx.coroutines.withContext] and structured concurrency generally do,
+         * but a caller holding a reference obtained from
+         * [ConcurrentMapLattice.Element.getForUpdate] should not assume it stays private beyond the
+         * next [de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice.Element.duplicate]
+         * or [de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice.Element.putShared] of
+         * the map it came from, which can share that same reference out again at any time.
+         */
+        var isShared: Boolean
+            get() = false
+            set(@Suppress("UNUSED_PARAMETER") value) {}
     }
 
     /** Allows storing all elements which are part of this lattice */
@@ -1021,6 +1078,20 @@ interface Lattice<T : Lattice.Element> {
     }
 }
 
+/**
+ * Prepares [value] to be handed to a second owner: if it [supports sharing][Lattice.Element
+ * .supportsSharing], it is marked as [shared][Lattice.Element.isShared] and returned as it is,
+ * otherwise the caller gets a private deep copy of it.
+ */
+@Suppress("UNCHECKED_CAST")
+internal fun <V : Lattice.Element> shareValue(value: V): V {
+    if (!value.supportsSharing) {
+        return value.duplicate() as V
+    }
+    value.isShared = true
+    return value
+}
+
 /** Implements a [Lattice] whose elements are the powerset of a given set of values. */
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<T>>
@@ -1177,6 +1248,54 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             return Element(this)
         }
 
+        override val supportsSharing: Boolean
+            get() = true
+
+        override var isShared: Boolean = false
+
+        /** Whether [onMutate] has already logged about this instance; see there. */
+        private var reportedSharedMutation = false
+
+        /**
+         * A shared set belongs to several states at once, so modifying it would silently change all
+         * of them. This is always a programming error: the owner of the entry has to hand out a
+         * private copy first, see [ConcurrentMapLattice.Element.getForUpdate].
+         *
+         * We can only detect this, not fix it: by the time [onMutate] runs, the caller is already
+         * holding a direct reference to *this* shared instance and is about to mutate it in place,
+         * and there is no way for this method to retroactively swap that reference for a private
+         * copy - only the owner that handed the reference out can do that (which is exactly what
+         * [ConcurrentMapLattice.Element.getForUpdate] is for). So unlike the analogous situation in
+         * [ConcurrentMapLattice.Element.put], this cannot self-heal.
+         *
+         * This is *not* a merely local corruption: [PowersetLattice.Element.compare] takes a
+         * reference-equality fast path, so once two states hold the very same (now-mutated) object,
+         * [Lattice.iterateEOG] sees them as unchanged and stops propagating the update - the
+         * fixpoint it computes is silently wrong, with nothing but a log line to show for it. That
+         * is worse than crashing, so we [assert] (which - like every [assert] in this codebase - is
+         * enabled for our own test suite, where a silent wrong answer must fail loudly) in addition
+         * to logging. We still do not throw unconditionally in production: taking down a whole
+         * analysis run over one already-corrupted pass is its own tradeoff, and the log is at least
+         * a signal that assert-enabled testing does not have to rely on alone.
+         */
+        override fun onMutate() {
+            if (isShared) {
+                assert(false) {
+                    "Modifying a points-to set which is shared between several states. Ask for a " +
+                        "private copy (getForUpdate) before modifying it."
+                }
+                if (!reportedSharedMutation) {
+                    reportedSharedMutation = true
+                    Pass.log.error(
+                        "Modifying a points-to set which is shared between several states. This is " +
+                            "a bug: ask for a private copy (getForUpdate) before modifying it. " +
+                            "Continuing, but the other states sharing this set may now silently see " +
+                            "this change too."
+                    )
+                }
+            }
+        }
+
         override fun hashCode(): Int {
             return super.hashCode()
         }
@@ -1229,8 +1348,18 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 
         constructor() : this(32)
 
+        /**
+         * Copies [m] into a new map. [m] keeps its values, so the two maps share them and everyone
+         * who wants to modify an entry has to ask for a private copy first, see [getForUpdate].
+         */
         constructor(m: Map<K, V>) : this(m.size) {
-            putAll(m)
+            if (m is ConcurrentIdentityHashMap<K, V>) {
+                putAllTransformed(m) { shareValue(it) }
+            } else {
+                for ((key, value) in m) {
+                    putShared(key, value)
+                }
+            }
         }
 
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
@@ -1392,9 +1521,84 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
             }
         }
 
+        /**
+         * Copy-on-write: the copy starts out with the very same values as this map, both sides
+         * marked as [shared][Lattice.Element.isShared]. Only the entries which are actually
+         * modified afterwards - via [getForUpdate] - are ever copied, and the analysis modifies
+         * only a handful of entries per state.
+         *
+         * Values which do not [support sharing][Lattice.Element.supportsSharing] are deep-copied as
+         * before.
+         */
         override fun duplicate(): Element<K, V> {
-            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
+            val copy = Element<K, V>(this.size)
+            copy.putAllTransformed(this) { shareValue(it) }
+            return copy
         }
+
+        /**
+         * Returns the value stored under [key], guaranteeing that it is not shared with any other
+         * [Element], so that the caller may modify it in place. If it currently is shared, this
+         * map's entry is atomically replaced by a private copy.
+         *
+         * Use this - and not [get] - whenever the returned value (or anything reachable from it) is
+         * going to be modified. Everything a plain [get] returns has to be treated as read-only.
+         */
+        @Suppress("UNCHECKED_CAST")
+        fun getForUpdate(key: K): V? =
+            compute(key) { _, value ->
+                if (value == null || !value.isShared) value else value.duplicate() as V
+            }
+
+        /**
+         * Like [getForUpdate], but stores (and returns) the result of [mappingFunction] if there is
+         * no entry for [key] yet. Callers of this one always intend to modify the entry, so it
+         * privatizes a shared value just like [getForUpdate] does.
+         */
+        @Suppress("UNCHECKED_CAST")
+        override fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
+            checkNotNull(
+                compute(key) { k, value ->
+                    when {
+                        value == null -> mappingFunction(k)
+                        value.isShared -> value.duplicate() as V
+                        else -> value
+                    }
+                }
+            ) {
+                // The lambda above never returns null, so this can only fire if ConcurrentHashMap's
+                // compute() contract ever changes - a clearer failure than an unexplained NPE.
+                "computeIfAbsent for $key unexpectedly produced no value"
+            }
+
+        /**
+         * Stores [value] under [key]. The caller hands the value over: it must not keep a reference
+         * to it and modify it later. Use [putShared] if it does.
+         *
+         * If [value] is already [shared][Lattice.Element.isShared] - which means the caller got it
+         * from somewhere else instead of constructing it fresh, and should have used [putShared] -
+         * we store a private copy instead of the shared instance itself, the same way
+         * [getForUpdate] and [computeIfAbsent] privatize a shared value they encounter. This is a
+         * caller bug either way, but one that is cheap to route around instead of taking the
+         * analysis of this translation unit down over it.
+         */
+        @Suppress("UNCHECKED_CAST")
+        override fun put(key: K, value: V): V? {
+            if (value.isShared) {
+                Pass.log.warn(
+                    "put() was given a value which is already shared with another state; " +
+                        "storing a private copy instead of corrupting that other state. The " +
+                        "caller should have used putShared()."
+                )
+            }
+            return super.put(key, if (value.isShared) value.duplicate() as V else value)
+        }
+
+        /**
+         * Stores [value] under [key] while the caller keeps its own reference to it. Both sides
+         * have to go through [getForUpdate] before they may modify the entry.
+         */
+        fun putShared(key: K, value: V): V? = super.put(key, shareValue(value))
 
         override fun hashCode(): Int {
             return super.hashCode()
@@ -1420,12 +1624,14 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     val entry = one[k]
                     if (entry == null) {
                         // This key is not in "one", so we add the value from "two"
-                        // to "one"
-                        one.put(k, v)
+                        // to "one". "two" keeps its own reference to it, so the two maps
+                        // share the entry from now on.
+                        one.putShared(k, v)
                     } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
                         // This key already exists in "one" and the values in one and
-                        // two are different, so we have to compute the lub of the values
-                        one[k]?.let { oneValue ->
+                        // two are different, so we have to compute the lub of the values.
+                        // We modify "one"'s value in place, so we need a private copy of it.
+                        one.getForUpdate(k)?.let { oneValue ->
                             innerLattice.lub(
                                 oneValue,
                                 v,
@@ -1449,8 +1655,9 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                 allKeys.forEachMaybeParallel { key ->
                     val otherValue = two[key]
                     val thisValue = one[key]
-                    val newValue =
-                        if (thisValue != null && otherValue != null) {
+                    if (thisValue != null && otherValue != null) {
+                        result.put(
+                            key,
                             innerLattice.lub(
                                 one = thisValue,
                                 two = otherValue,
@@ -1459,9 +1666,13 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                                 // We already run on $CPU_CORES coroutines, so we don't
                                 // need any additional ones
                                 1,
-                            )
-                        } else thisValue ?: otherValue
-                    newValue?.let { result.put(key, it) }
+                            ),
+                        )
+                    } else {
+                        // Only one of the two maps has this key, so its value carries over
+                        // unchanged. We share it with that map instead of copying it.
+                        (thisValue ?: otherValue)?.let { result.putShared(key, it) }
+                    }
                 }
             }
         }
@@ -1722,6 +1933,28 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
             return Element(first.duplicate() as S, second.duplicate() as T)
         }
 
+        // A tuple is immutable itself, so it can be shared whenever both of its components can:
+        // sharing it means sharing them.
+        override val supportsSharing: Boolean
+            get() = first.supportsSharing && second.supportsSharing
+
+        // A freshly created tuple can still wrap components which are shared with somebody else, so
+        // we have to ask them as well. Otherwise, we would hand out a tuple as private although
+        // modifying its components is not allowed.
+        //
+        // @Transient: purely an in-memory bookkeeping flag for the copy-on-write mechanism, with no
+        // meaning once deserialized into a new, unshared object graph.
+        @Transient
+        override var isShared: Boolean = false
+            get() = field || first.isShared || second.isShared
+            set(value) {
+                field = value
+                if (value) {
+                    first.isShared = true
+                    second.isShared = true
+                }
+            }
+
         override fun hashCode(): Int {
             return 31 * first.hashCode() + second.hashCode()
         }
@@ -1841,6 +2074,29 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         override fun duplicate(): Element<R, S, T> {
             return Element(first.duplicate() as R, second.duplicate() as S, third.duplicate() as T)
         }
+
+        // A triple is immutable itself, so it can be shared whenever all of its components can:
+        // sharing it means sharing them.
+        override val supportsSharing: Boolean
+            get() = first.supportsSharing && second.supportsSharing && third.supportsSharing
+
+        // A freshly created triple can still wrap components which are shared with somebody else,
+        // so we have to ask them as well. Otherwise, we would hand out a triple as private although
+        // modifying its components is not allowed.
+        //
+        // @Transient: purely an in-memory bookkeeping flag for the copy-on-write mechanism, with no
+        // meaning once deserialized into a new, unshared object graph.
+        @Transient
+        override var isShared: Boolean = false
+            get() = field || first.isShared || second.isShared || third.isShared
+            set(value) {
+                field = value
+                if (value) {
+                    first.isShared = true
+                    second.isShared = true
+                    third.isShared = true
+                }
+            }
 
         override fun hashCode(): Int {
             return 31 * (31 * first.hashCode() + second.hashCode()) + third.hashCode()
