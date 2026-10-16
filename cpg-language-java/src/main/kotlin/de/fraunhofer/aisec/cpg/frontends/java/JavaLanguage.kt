@@ -87,6 +87,9 @@ open class JavaLanguage :
      * keyed by the source roots and jars they resolve against. Since a frontend is created per
      * file, sharing the solver lets JavaParser re-use its caches across files instead of parsing
      * every referenced file over and over again.
+     *
+     * JavaParser's solvers are not thread-safe, which is why [JavaLanguageFrontend] does not
+     * support parallel parsing.
      */
     @DoNotPersist
     @JsonIgnore
