@@ -616,6 +616,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          */
         var maxArrayInitializers: Int? = 200,
 
+        /**
+         * The number of calls a [CallingContextOut] may name - the `k` of a k-CFA call-string
+         * abstraction. `null` means unlimited, matching [maxComplexity]'s convention, and is what
+         * this analysis did before the option existed.
+         *
+         * A calling context is part of a write-site's properties, and properties take part in
+         * [NodeWithPropertiesKey.equals], so **every distinct call-string stores its own copy of
+         * the same fact**. With no limit that is an unbounded context abstraction, and it is the
+         * dominant multiplier on state size: measured on wolfssh, states above 20k powerset members
+         * had 90% of their records carrying a context, averaging 2.9 calls, at 26 members per key -
+         * while states below 5k had 48%, averaging 1.1 calls, at 2.4 members per key.
+         *
+         * Truncating keeps the *innermost* `k` calls, i.e. the ones nearest the write, and is
+         * applied wherever a context is built, so pushes and pops are truncated alike and still
+         * match each other (see [de.fraunhofer.aisec.cpg.graph.IfdsReachingSources], which compares
+         * a whole call-string token for equality). Two contexts that differ only in the dropped
+         * outer calls become one, which lets a flow match a return it could not have taken - an
+         * over-approximation, so the result keeps every flow it had and may add some.
+         */
+        var maxCallStringLength: Int? = null,
+
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
 
@@ -1904,6 +1925,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * Add the data flows from the Call's arguments to the Function's ParameterMemoryValues to the
      * doubleState
      */
+    /**
+     * Shortens [calls] to the innermost [Configuration.maxCallStringLength] of them, the `k` of a
+     * k-CFA call-string abstraction. The innermost calls are the ones nearest the write, which are
+     * also the ones that distinguish the flows we care about; the outer ones mostly separate paths
+     * that reconverge anyway.
+     *
+     * Every site which builds a [CallingContextOut] goes through this, so a push and the pop it
+     * belongs to are shortened the same way and still match.
+     */
+    private fun truncateCallString(calls: MutableList<Call>): MutableList<Call> {
+        val limit = passConfig<Configuration>()?.maxCallStringLength ?: return calls
+        if (calls.size <= limit) return calls
+        // The list is built by appending the call we are handling to the ones the callee's summary
+        // already carried, so it runs innermost-first and the innermost calls are the ones to keep.
+        return calls.subList(0, limit).toMutableList()
+    }
+
     private suspend fun calculateIncomingCallingContexts(
         lattice: PointsToState,
         function: Function,
@@ -2773,33 +2811,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 if (value.propertySet.none { it == true }) {
                     val existingCallingContext =
                         lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
-                    if (existingCallingContext != null) {
-                        // Keep and canonicalize call context by identity, then append missing
-                        // calls.
-                        // This avoids context churn and duplicate growth across iterations.
-                        val mergedCalls = mutableListOf<Call>()
-                        val seenCalls = hashSetOf<IdKey<Call>>()
-                        existingCallingContext.calls.forEach { call ->
-                            if (seenCalls.add(IdKey(call))) {
-                                mergedCalls.add(call)
-                            }
+                    // Keep and canonicalize call context by identity, then append missing calls.
+                    // This avoids context churn and duplicate growth across iterations.
+                    val mergedCalls = mutableListOf<Call>()
+                    val seenCalls = hashSetOf<IdKey<Call>>()
+                    existingCallingContext?.calls?.forEach { call ->
+                        if (seenCalls.add(IdKey(call))) {
+                            mergedCalls.add(call)
                         }
-                        callingContext.calls.forEach { call ->
-                            if (seenCalls.add(IdKey(call))) {
-                                mergedCalls.add(call)
-                            }
-                        }
-                        lwPropertySet.add(CallingContextOut(mergedCalls))
-                    } else {
-                        val mergedCalls = mutableListOf<Call>()
-                        val seenCalls = hashSetOf<IdKey<Call>>()
-                        callingContext.calls.forEach { call ->
-                            if (seenCalls.add(IdKey(call))) {
-                                mergedCalls.add(call)
-                            }
-                        }
-                        lwPropertySet.add(CallingContextOut(mergedCalls))
                     }
+                    callingContext.calls.forEach { call ->
+                        if (seenCalls.add(IdKey(call))) {
+                            mergedCalls.add(call)
+                        }
+                    }
+                    lwPropertySet.add(CallingContextOut(truncateCallString(mergedCalls)))
                 }
                 // Add all other previous properties
                 lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
