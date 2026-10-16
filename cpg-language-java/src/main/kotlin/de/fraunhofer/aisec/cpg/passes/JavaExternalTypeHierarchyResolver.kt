@@ -25,17 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
@@ -47,8 +44,8 @@ import org.slf4j.LoggerFactory
 @Description(
     "Adds some java types and their hierarchy information that are not part of the analyzed code (e.g., from the standard library) to the CPG's type hierarchy."
 )
-class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    override fun accept(component: Component) {
+class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(result: TranslationResult) {
         val provider =
             object : ContextProvider, LanguageProvider, ScopeProvider {
                 override val language: Language<*>
@@ -58,43 +55,49 @@ class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass
                 override val scope: Scope?
                     get() = scopeManager.globalScope
             }
-        val resolver = CombinedTypeSolver()
+        val language = ctx.availableLanguage<JavaLanguage>() ?: return
 
-        resolver.add(ReflectionTypeSolver())
-        var root = ctx.currentComponent?.topLevel()
-        if (root == null && config.softwareComponents.size == 1) {
-            root =
-                config.softwareComponents[config.softwareComponents.keys.first()]?.let {
-                    CommonPath.commonPath(it)
+        // The types are global, so we only need to resolve them once. However, components with
+        // different source roots have different type solvers, so we try all of them.
+        val resolvers = result.components.map { language.typeSolverFor(ctx, it) }.distinct()
+
+        // Index the resolved types by their name, so that we do not need to look up each super
+        // type in all resolved types
+        val typesByName =
+            typeManager.resolvedTypes
+                .filter {
+                    it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED
                 }
-        }
-        if (root == null) {
-            log.warn("Could not determine source root for {}", config.softwareComponents)
-        } else {
-            log.info("Source file root used for type solver: {}", root)
-            resolver.add(JavaParserTypeSolver(root))
-        }
+                .groupBy { it.root.name.toString() }
+                .mapValuesTo(HashMap()) { it.value.first() }
+
+        // The same type name can occur multiple times (e.g., with different generics), so we cache
+        // the names of its ancestors
+        val ancestors = HashMap<String, List<String>>()
 
         // Iterate over all known types and add their (direct) supertypes.
-        var types = typeManager.resolvedTypes.toList()
+        val types = typeManager.resolvedTypes.toList()
         for (t in types) {
-            val symbol = resolver.tryToSolveType(t.typeName)
-            if (symbol.isSolved) {
-                val resolvedSuperTypes = symbol.correspondingDeclaration.getAncestors(true)
-                for (anc in resolvedSuperTypes) {
-                    // We need to try to resolve the type first in order to create weirdly
-                    // scoped types
-                    var superType = typeManager.lookupResolvedType(anc.qualifiedName)
+            val ancestorNames =
+                ancestors.getOrPut(t.typeName) {
+                    val symbol =
+                        resolvers.firstNotNullOfOrNull { resolver ->
+                            resolver.tryToSolveType(t.typeName).takeIf { it.isSolved }
+                        }
+                    symbol?.correspondingDeclaration?.getAncestors(true)?.map { it.qualifiedName }
+                        ?: listOf()
+                }
 
-                    // Otherwise, we can create this in the global scope
-                    if (superType == null) {
-                        superType = provider.objectType(anc.qualifiedName)
-                        superType.typeOrigin = Type.Origin.RESOLVED
+            for (name in ancestorNames) {
+                // We need to try to resolve the type first in order to create weirdly scoped
+                // types. Otherwise, we can create this in the global scope
+                val superType =
+                    typesByName.getOrPut(name) {
+                        provider.objectType(name).also { it.typeOrigin = Type.Origin.RESOLVED }
                     }
 
-                    // Add all resolved supertypes to the type.
-                    t.superTypes.add(superType)
-                }
+                // Add all resolved supertypes to the type.
+                t.superTypes.add(superType)
             }
         }
     }
