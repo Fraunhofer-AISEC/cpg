@@ -1002,6 +1002,17 @@ interface Lattice<T : Lattice.Element> {
                 return
             }
 
+            // Captured before pruning, not after: in loop-free code almost every entry is dead at
+            // every prune, so the post-prune size is ~1 regardless of how large the function is.
+            // Basing the next threshold on that would retrigger a prune every
+            // MIN_GLOBAL_STATE_PRUNE_SIZE edges for the rest of the function, and since a prune's
+            // cost is linear in the number of edges still reachable from the worklists - which
+            // shrinks only slowly over a long straight-line function - that adds up to quadratic
+            // total cost. Basing it on the pre-prune size instead makes the threshold (and so the
+            // interval between prunes) grow geometrically, the same amortization trick
+            // [IterationStatistics] uses for its sampling.
+            val sizeBeforePrune = globalState.size
+
             val live = IdentitySet<EvaluationOrder>(globalState.size)
             val stack = ArrayDeque<EvaluationOrder>()
             fun markLive(edge: EvaluationOrder) {
@@ -1028,7 +1039,7 @@ interface Lattice<T : Lattice.Element> {
 
             // Prune again once the state has grown considerably, so that the cost of a prune (which
             // is linear in the number of reachable edges) is amortized over the entries it removes.
-            nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, globalState.size * 2)
+            nextPruneSize = maxOf(MIN_GLOBAL_STATE_PRUNE_SIZE, sizeBeforePrune * 2)
         }
 
         startEdges.forEach { nextBranchEdgesList.add(it) }
@@ -1040,6 +1051,9 @@ interface Lattice<T : Lattice.Element> {
                 sccEdgesQueue.isNotEmpty()
         ) {
             currentCoroutineContext().ensureActive()
+            // All edges which are still to be processed are in one of the worklists at this point,
+            // so this is the only place where we can determine which states are still live.
+            pruneGlobalState()
 
             // Sample the retention before pruning: that high-water mark is what actually has to fit
             // into the heap.
@@ -1994,7 +2008,7 @@ open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) 
                 if (thisValue != null && otherValue != null) {
                     innerLattice.glb(thisValue, otherValue)
                 } else innerLattice.bottom
-            newMap.put(key, newValue)
+            newMap[key] = newValue
         }
         return Element(newMap)
     }

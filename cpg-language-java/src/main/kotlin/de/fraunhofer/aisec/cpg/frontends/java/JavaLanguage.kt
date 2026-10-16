@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -123,7 +122,7 @@ open class JavaLanguage :
      * Applies Java's declaration modifiers to [declaration]. Java has genuine member access
      * control, so the access modifiers `public`/`protected`/`private` map onto the corresponding
      * [Visibility]. The `static` modifier marks a class-level (rather than per-instance) member
-     * when it appears on a record member ([ValueDeclaration.isStatic]).
+     * when it appears on a record member, including nested types ([Declaration.isStatic]).
      *
      * The subtle case is Java's access-control *default*: a member or a (top-level or nested) type
      * without any of `public`/`protected`/`private` is package-private. Therefore, once all present
@@ -139,7 +138,7 @@ open class JavaLanguage :
         }
 
         if (STATIC in declaration.modifiers && scope is RecordScope) {
-            (declaration as? ValueDeclaration)?.isStatic = true
+            declaration.isStatic = true
         }
 
         if (

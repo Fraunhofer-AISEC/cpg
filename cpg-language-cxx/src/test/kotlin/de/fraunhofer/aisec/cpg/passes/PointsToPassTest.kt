@@ -610,9 +610,17 @@ class PointsToPassTest {
 
         // Line 75
         assertEquals(1, njLine75.memoryAddresses.size)
-        assertEquals(1, njLine75.fullMemoryValues.size)
-        assertTrue(njLine75.fullMemoryValues.first() is UnknownMemoryValue)
-        assertLocalName("j", njLine75.fullMemoryValues.first())
+        // We have 2 memory values here:
+        // The unkown one from n[j]. But since we overapproximate, we also have the value of the
+        // base, which is the same as the value of n[0], so the literal
+        assertEquals(2, njLine75.fullMemoryValues.size)
+        assertEquals(
+            1,
+            njLine75.fullMemoryValues
+                .filter { it is UnknownMemoryValue && it.name.localName == "j" }
+                .size,
+        )
+        assertContains(njLine75.fullMemoryValues, literal1)
         assertEquals(0, njLine75.prevFullDFG.size)
     }
 
@@ -1114,6 +1122,10 @@ class PointsToPassTest {
                 }
                 ?.start,
         )
+
+        // memcpy overwrites the memcpySrcDeref, so the only incoming DFG edge should be from the
+        // source deref
+        assertEquals(memcpySrcDeref, memcpyDstDeref.prevDFG.single())
     }
 
     @Test
@@ -3337,7 +3349,7 @@ class PointsToPassTest {
             .singleOrNull()
             ?.value
             ?.filter { it.properties.none { it == true } }
-            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "key" }
+            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.toString() == "key._8_8_" }
             ?.let { assertTrue(it) }
         fsecallkeytoout2.entries
             .singleOrNull()
@@ -3355,7 +3367,7 @@ class PointsToPassTest {
             "pms",
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.key,
         )
-        // 5: 3 from the in_outptr, and 2 from the in_ucptr
+        // 6: 4 from the in_outptr, and 2 from the in_ucptr
         assertEquals(
             5,
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
@@ -3399,7 +3411,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "key" }
+                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.toString() == "key._8_8_" }
                 ?.size,
         )
 
@@ -5157,6 +5169,99 @@ class PointsToPassTest {
         // Actual test
         // The PMV should have no prevDFG
         assertTrue(dataDerefPMV.prevDFG.isEmpty())
+    }
+
+    @Test
+    fun testPMVDerefHandling() {
+        val file = File("src/test/resources/pointsToPass/pmvDerefHandling.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val dlfreeFunc = tu.functions("dlfree").single()
+        assertNotNull(dlfreeFunc)
+
+        val sgxieFunc = tu.functions("sgx_t_ie").single()
+        assertNotNull(sgxieFunc)
+
+        val ieFunc = sgxieFunc.calls("t_ie").last().invokes.single()
+
+        // Params and PMVs
+        val dlfreeParam = dlfreeFunc.parameters.single()
+        val dlfreePMV = dlfreeParam.memoryValues.single { it.name.localName == "derefvalue" }
+        assertNotNull(dlfreePMV)
+
+        val initEcallParam2 = ieFunc.parameters[1]
+        val initEcallDerefPMV2 =
+            initEcallParam2.memoryValues.single { it.name.localName == "derefvalue" }
+
+        // Calls
+        val memcpyCall = sgxieFunc.calls("memcpy_s").single()
+
+        val sgxieParam = sgxieFunc.parameters.singleOrNull()
+        val sgxieDerefDerefPMV =
+            sgxieParam?.memoryValues?.singleOrNull { it.name.localName == "derefderefvalue" }
+        assertNotNull(sgxieDerefDerefPMV)
+
+        // First check: all memcpy_s deref-PMVs should have a prevDFG to the previous PMV
+        // TODO: Actually, we should only have one memcpy_s
+        tu.functions("memcpy_s").forEach { func ->
+            val dstParamDerefPMV =
+                func.parameters.first().memoryValues.singleOrNull {
+                    it.name.localName == "derefvalue"
+                }
+            assertNotNull(dstParamDerefPMV)
+            val srcParamDerefPMV =
+                dstParamDerefPMV.prevDFGEdges
+                    .singleOrNull {
+                        (it.start as? ParameterMemoryValue)?.name?.localName == "derefvalue"
+                    }
+                    ?.start
+            assertNotNull(srcParamDerefPMV)
+            // Ensure they are from the same function
+            assertEquals(dstParamDerefPMV.name.parent?.parent, srcParamDerefPMV.name.parent?.parent)
+        }
+
+        // We expect the following DF:
+        // 1) from sgx_t_global_init_ecall's param_1 derefderefPMV to the derefPMV of the memcpy_s
+        // src
+        // (the additional dereference comes from `uVar1 = param_1[1];` in Line 22, which
+        // dereferences param_1
+        // 2) the derefPMV of the memcpy_s src to the derefPMV dst (we already checked that one)
+        // 3) from the derefPMV dst to the derefPMV of the 2nd parameter of t_global_init_ecall
+        val memcpySrcDerefPMV =
+            memcpyCall.invokes.single().parameters[2].memoryValues.single {
+                it.name.localName == "derefvalue"
+            }
+        // 1)
+        assertEquals(sgxieDerefDerefPMV, memcpySrcDerefPMV.prevDFG.single())
+        // 3)
+        assertEquals(
+            1,
+            initEcallDerefPMV2.prevDFG
+                .filter {
+                    (it as? ParameterMemoryValue)?.name.toString() == "memcpy_s.u8Ptr0.derefvalue"
+                }
+                .size,
+        )
+
+        // The derefPMV of dlfree should have 2 prevDFG edges, to the 2 memcpy dst deref PMVs
+        assertEquals(
+            2,
+            dlfreePMV.prevDFGEdges
+                .filter {
+                    ((it as? ContextSensitiveDataflow)?.start as? ParameterMemoryValue)
+                        ?.name
+                        ?.localName == "derefvalue" &&
+                        it.start.name.toString().startsWith("memcpy_s")
+                }
+                .size,
+        )
     }
 
     /**

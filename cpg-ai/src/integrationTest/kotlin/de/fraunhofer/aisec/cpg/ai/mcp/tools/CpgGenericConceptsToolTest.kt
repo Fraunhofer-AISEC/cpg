@@ -27,13 +27,16 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addLLMConceptAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addOrUpdateConcept
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listLLMConceptsOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.suggestLLMConceptsAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConcept
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMOperation
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMProperty
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.literals
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -52,6 +55,8 @@ class CpgGenericConceptsToolTest {
 
     @BeforeEach
     fun setUp() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
         if (conceptsFile.exists()) conceptsFile.delete()
 
         val payload =
@@ -61,7 +66,7 @@ class CpgGenericConceptsToolTest {
                 extension = "py",
             )
         runCpgAnalyze(payload, runPasses = true, cleanup = true)
-        assertNotNull(globalAnalysisResult, "Result should be set after analyze")
+        assertNotNull(getSession(), "Result should be set after analyze")
     }
 
     @AfterEach
@@ -216,7 +221,7 @@ class CpgGenericConceptsToolTest {
             }
         ) { client ->
             val secretInitializer =
-                globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
+                getSession()?.translationResult?.literals?.singleOrNull { it.value == "0000" }
             assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
             val nodeId = secretInitializer.id.toString()
 
@@ -279,5 +284,92 @@ class CpgGenericConceptsToolTest {
             val text = (applyResult.content.single() as TextContent).text
             assertTrue("not found" in text)
             assertTrue(!conceptsFile.exists() || conceptsFile.readText().isBlank())
+        }
+
+    @Test
+    fun suggestLLMConceptsAndOperationsTest() =
+        withClient(registerTools = { suggestLLMConceptsAndOperations() }) { client ->
+            val secretInitializer =
+                getSession()?.translationResult?.literals?.singleOrNull { it.value == "0000" }
+            assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
+            val nodeId = secretInitializer.id.toString()
+
+            val result =
+                client.callTool(
+                    name = "cpg_suggest_llm_concepts_and_operations",
+                    arguments =
+                        mapOf(
+                            "concept" to
+                                mapOf(
+                                    "name" to "Secret",
+                                    "description" to "A hardcoded secret",
+                                    "nodeId" to nodeId,
+                                    "properties" to emptyList<LLMProperty>(),
+                                    "operations" to
+                                        listOf(
+                                            mapOf(
+                                                "name" to "ReadSecret",
+                                                "description" to "Reads the secret",
+                                                "nodeId" to nodeId,
+                                                "properties" to emptyList<LLMProperty>(),
+                                            )
+                                        ),
+                                )
+                        ),
+                )
+            assertNotNull(result)
+
+            // The bare concept is returned, not the wrapping suggestion payload
+            val concept =
+                Json.decodeFromString<LLMConcept>((result.content.single() as TextContent).text)
+            assertEquals("Secret", concept.name)
+            assertEquals(nodeId, concept.nodeId)
+            assertEquals("ReadSecret", concept.operations.single().name)
+        }
+
+    @Test
+    fun suggestLLMConceptsAndOperationsNoValidIdTest() =
+        withClient(registerTools = { suggestLLMConceptsAndOperations() }) { client ->
+            val invalidId = "00000000-0000-0000-0000-000000000000"
+            val secretInitializer =
+                getSession()?.translationResult?.literals?.singleOrNull { it.value == "0000" }
+            assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
+            val validId = secretInitializer.id.toString()
+
+            suspend fun suggest(conceptNodeId: String, operationNodeId: String): String {
+                val result =
+                    client.callTool(
+                        name = "cpg_suggest_llm_concepts_and_operations",
+                        arguments =
+                            mapOf(
+                                "concept" to
+                                    mapOf(
+                                        "name" to "Secret",
+                                        "description" to "A hardcoded secret",
+                                        "nodeId" to conceptNodeId,
+                                        "properties" to emptyList<LLMProperty>(),
+                                        "operations" to
+                                            listOf(
+                                                mapOf(
+                                                    "name" to "ReadSecret",
+                                                    "description" to "Reads the secret",
+                                                    "nodeId" to operationNodeId,
+                                                    "properties" to emptyList<LLMProperty>(),
+                                                )
+                                            ),
+                                    )
+                            ),
+                    )
+                return (result.content.single() as TextContent).text
+            }
+
+            assertEquals(
+                "Node $invalidId not found for concept Secret.",
+                suggest(invalidId, validId),
+            )
+            assertEquals(
+                "Node $invalidId not found for operation ReadSecret.",
+                suggest(validId, invalidId),
+            )
         }
 }
