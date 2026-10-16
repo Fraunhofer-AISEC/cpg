@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import java.io.File
 import kotlin.reflect.KClass
 
 /** The C++ language. */
@@ -65,7 +66,28 @@ open class CPPLanguage :
     HasOperatorOverloading,
     HasImplicitReceiver,
     HasVisibilityModifiers {
-    override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
+    override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh", "hxx", "h++")
+
+    /**
+     * In addition to the unambiguously-C++ extensions in [fileExtensions], C++ also handles plain
+     * `.h` headers, which it shares with [CLanguage]: whether such a header is C or C++ simply
+     * cannot be decided from its extension. Where both languages are in play the C++ reading is the
+     * right one - a `.h` in a project that also contains C++ is in practice a C++ header, and
+     * treating it as plain C robs it of the traits that separate the two (function overloading,
+     * templates, classes, implicit receivers, operator overloading, ...) even though
+     * [CXXLanguageFrontend.parse] hands it to the C++ parser dialect anyway, as it does for
+     * everything that is not a `.c` file. The language selection prefers the most derived language
+     * among those that claim a file (see `TranslationContext.language`), so this is exactly what
+     * happens, while a project in which C++ is not involved at all keeps reading its headers as C.
+     *
+     * This deliberately does not go into [fileExtensions], because that list also drives language
+     * auto-detection ([de.fraunhofer.aisec.cpg.project.Project]): listing `h` there would activate
+     * C++ for a pure-C project merely because it has headers.
+     */
+    override fun handlesFile(file: File): Boolean {
+        return super.handlesFile(file) || file.extension == "h"
+    }
+
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
