@@ -54,7 +54,7 @@ class PointsToPassConvergenceTest {
      */
     @Test
     fun testFieldChainInLoop() {
-        val file = File("src/test/resources/pointsToPass/field_chain_loop.c")
+        val file = File("src/test/resources/pointsToPass/field_address_walk.c")
         val timeout = 2.minutes
 
         val duration = measureTime {
@@ -65,7 +65,7 @@ class PointsToPassConvergenceTest {
                     it.configurePass<PointsToPass>(PointsToPass.Configuration(timeout = timeout))
                 }
             assertNotNull(tu)
-            assertNotNull(tu.functions["find_caps"])
+            assertNotNull(tu.functions["lookup"])
         }
 
         assertTrue(
