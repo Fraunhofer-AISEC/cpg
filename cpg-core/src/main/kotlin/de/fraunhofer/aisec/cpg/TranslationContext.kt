@@ -31,8 +31,12 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
+import java.util.IdentityHashMap
 
 /**
  * The translation context holds all necessary managers and configurations needed during the
@@ -62,6 +66,46 @@ open class TranslationContext(
      * (through individual contexts) and then finally merged into a final one.
      */
     val scopeManager: ScopeManager = ScopeManager(this)
+
+    /** Backing store of [callNameOccurrences], populated lazily, one entry per [Component]. */
+    private val componentCallNameOccurrences = IdentityHashMap<Component, Map<Name, Int>>()
+
+    /**
+     * How many [Call] nodes with the given [name] exist anywhere in [component]. Used by the
+     * inference heuristics (see [de.fraunhofer.aisec.cpg.passes.inference.tryMethodInference]) to
+     * answer "is this name called from more than one place?", which is a hint that it is a global
+     * function rather than a method invoked on an implicit receiver.
+     *
+     * The per-component histogram is computed on first access and then reused. This matters a great
+     * deal: the question is asked once per unresolved call, and answering it by walking the
+     * component's AST every time (which is what the callers used to do) is quadratic in the size of
+     * the program - on a large C/C++ code base, with its many unresolvable calls into headers that
+     * were never parsed, that single lookup dominated the entire
+     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] in both runtime and allocation.
+     *
+     * The histogram is a snapshot taken when the first question for [component] is asked, so [Call]
+     * nodes created *afterwards* (e.g. an [de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall]
+     * replacing an operator during symbol resolution) are not reflected in it. That is deliberate
+     * and harmless here: the heuristic only distinguishes "called from one place" from "called from
+     * several", and the calls synthesized during resolution carry operator names that this
+     * particular heuristic is never consulted for.
+     */
+    fun callNameOccurrences(component: Component?, name: Name): Int {
+        if (component == null) {
+            return 0
+        }
+
+        val occurrences =
+            componentCallNameOccurrences.getOrPut(component) {
+                val counts = mutableMapOf<Name, Int>()
+                for (call in component.calls) {
+                    counts[call.name] = (counts[call.name] ?: 0) + 1
+                }
+                counts
+            }
+
+        return occurrences[name] ?: 0
+    }
 
     /**
      * Set of files, that are available for additional analysis. They are not the primary subjects
