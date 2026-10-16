@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -108,6 +109,20 @@ open class CPPLanguage :
             BinaryOperator::class of "<<" to "operator<<",
             BinaryOperator::class of ">>" to "operator>>",
 
+            // Logical operators. See
+            // https://en.cppreference.com/w/cpp/language/operator_logical. Note that overloading
+            // `&&` and `||` loses their short-circuiting, which is why it is rare - but it is
+            // legal, and they do get overloaded (most prominently by expression-template
+            // libraries), so we have to model them.
+            UnaryOperator::class of "!" to "operator!",
+            BinaryOperator::class of "&&" to "operator&&",
+            BinaryOperator::class of "||" to "operator||",
+            // `&&` and `||` are normally not plain BinaryOperators but ShortCircuitOperators (a
+            // subclass), and overloadedOperatorNames is keyed by the *exact* node class, so the two
+            // entries above would never be found for them.
+            ShortCircuitOperator::class of "&&" to "operator&&",
+            ShortCircuitOperator::class of "||" to "operator||",
+
             // Increment/decrement operators. See
             // https://en.cppreference.com/w/cpp/language/operator_incdec
             UnaryOperator::class of "++" to "operator++",
@@ -120,7 +135,7 @@ open class CPPLanguage :
             BinaryOperator::class of "<" to "operator<",
             BinaryOperator::class of ">" to "operator>",
             BinaryOperator::class of "<=" to "operator<=",
-            BinaryOperator::class of "=>" to "operator=>",
+            BinaryOperator::class of ">=" to "operator>=",
 
             // MemberAccess access operators. See
             // https://en.cppreference.com/w/cpp/language/operator_member_access
