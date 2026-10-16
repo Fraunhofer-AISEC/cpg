@@ -164,12 +164,30 @@ open class TranslationContext(
     internal val File.language: Language<*>?
         get() {
             val languages = availableLanguages.filter { it.handlesFile(this) }
-            if (languages.size > 1) {
+
+            // Two languages can legitimately claim the same file extension when one of them *is*
+            // the other, extended: the prime example is C and C++, where CPPLanguage derives from
+            // CLanguage and `.h` is a valid header extension for both. Picking whichever happens to
+            // be registered first would be arbitrary, and in that particular case usually wrong:
+            // a `.h` file in a project that also contains C++ is in practice a C++ header, and
+            // treating it as plain C robs it of the traits that distinguish the two (function
+            // overloading, templates, classes, implicit receivers, ...) even though it is parsed
+            // with the C++ parser anyway. We therefore let the most specific (most derived)
+            // language win, which degrades gracefully: if only CLanguage is registered, a `.h`
+            // file still gets it.
+            val mostSpecific =
+                languages.filter { candidate ->
+                    languages.none { other ->
+                        other !== candidate && candidate.javaClass.isAssignableFrom(other.javaClass)
+                    }
+                }
+
+            if (mostSpecific.size > 1) {
                 log.warn(
-                    "Multiple languages match for file extension ${this.extension}, the first registered language will be used."
+                    "Multiple unrelated languages match for file extension ${this.extension}, the first registered language will be used."
                 )
             }
-            return languages.firstOrNull()
+            return mostSpecific.firstOrNull()
         }
 
     override val ctx: TranslationContext
