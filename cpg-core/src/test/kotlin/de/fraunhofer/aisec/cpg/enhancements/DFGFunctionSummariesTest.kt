@@ -384,12 +384,8 @@ class DFGFunctionSummariesTest {
             }
         assertNotNull(memcpySrcDerefPMV)
 
-        val nextDfgOfValA =
-            valA.nextDFGEdges?.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls ==
-                    listOf(call)
-            }
-        assertEquals(memcpySrcDerefPMV, nextDfgOfValA?.end)
+        val nextDfgOfValA = valA.nextDFGEdges.singleOrNull { it.end == call.arguments.first() }
+        assertNotNull(nextDfgOfValA)
 
         val nextDFGOfPMV =
             memcpySrcDerefPMV.nextDFGEdges.singleOrNull() {

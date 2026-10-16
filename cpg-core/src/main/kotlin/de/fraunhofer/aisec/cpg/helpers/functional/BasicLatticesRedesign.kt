@@ -1462,7 +1462,7 @@ open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) 
                 if (thisValue != null && otherValue != null) {
                     innerLattice.glb(thisValue, otherValue)
                 } else innerLattice.bottom
-            newMap.put(key, newValue)
+            newMap[key] = newValue
         }
         return Element(newMap)
     }
