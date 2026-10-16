@@ -423,14 +423,28 @@ sealed class Scope(
  * list.
  */
 private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
+    // This runs for every scope visited by every single symbol lookup, so the (by far dominant)
+    // case of a candidate list that contains no Import at all has to stay free: bail out before
+    // allocating anything. Languages without an import mechanism never get past this line.
+    if (this.none { it is Import }) {
+        return
+    }
+
     val imports = this.filterIsInstance<Import>()
+
+    // Remove the imports by identity. MutableList.remove(element) would compare with equals(),
+    // which for a Declaration is a structural comparison of name, code, comment and location -
+    // needlessly expensive over a long candidate list, and outright wrong when the list holds
+    // several structurally equal declarations (as it does when the same header was parsed once per
+    // translation unit), since it would then drop whichever equal declaration happens to come
+    // first rather than the import itself.
+    this.removeAll { it is Import }
+
     for (import in imports) {
         val set = import.importedSymbols[symbol]
         if (set != null) {
             this.addAll(set)
         }
-
-        this.remove(import)
     }
 }
 
