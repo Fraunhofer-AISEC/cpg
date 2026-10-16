@@ -32,7 +32,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import java.nio.file.Path
 
 /**
- * Configuration for the [JavaLanguageFrontend].
+ * Configuration for the [JavaLanguageFrontend], set with
+ * `TranslationConfiguration.Builder.configureFrontend<JavaLanguageFrontend>(...)`.
+ *
+ * All settings are optional and are not detected automatically. Without [sourceRoots] and
+ * [classpath], symbols are resolved against the JDK and the top-level of the current component
+ * only, so fewer types and calls of other modules or external libraries can be resolved. For a
+ * Maven module, the [classpath] can be obtained with `mvn dependency:build-classpath`.
  *
  * @param sourceRoots Additional source roots (e.g., the `src/main/java` folders of other modules in
  *   a multi-module project) that the JavaParser type solver uses to resolve symbols, in addition to
