@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.New
@@ -36,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.problems
+import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.io.File
 import kotlin.test.Test
@@ -105,6 +107,20 @@ class MethodReferenceTest {
         val constructorRef = result.variables["constructor"]?.initializer
         assertIs<Lambda>(constructorRef)
         assertIs<New>(constructorRef.function?.body)
+
+        // Point::new -> (arg0, arg1) -> new Point(arg0, arg1), with the constructor's parameters
+        val pointRef = result.variables["point"]?.initializer
+        assertIs<Lambda>(pointRef)
+        val pointFunction = pointRef.function
+        assertNotNull(pointFunction)
+        assertEquals(
+            listOf("int", "String"),
+            pointFunction.parameters.map { it.type.name.localName },
+        )
+        val construct = assertIs<New>(pointFunction.body).initializer
+        assertIs<Construction>(construct)
+        assertEquals(2, construct.arguments.size)
+        assertEquals(result.records["Point"]?.constructors?.singleOrNull(), construct.constructor)
 
         // int[]::new -> (arg0) -> new int[arg0]
         val arrayRef = result.variables["array"]?.initializer

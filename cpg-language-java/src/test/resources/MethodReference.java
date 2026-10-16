@@ -1,7 +1,12 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+class Point {
+    Point(int x, String label) {}
+}
 
 public class MethodReference {
     static int staticMethod(String s) {
@@ -24,5 +29,6 @@ public class MethodReference {
         // constructors
         Supplier<ArrayList<String>> constructor = ArrayList::new;
         Function<Integer, int[]> array = int[]::new;
+        BiFunction<Integer, String, Point> point = Point::new;
     }
 }

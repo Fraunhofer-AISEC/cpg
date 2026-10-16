@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.ArrayCreationLevel
 import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.body.Parameter as JPParameter
 import com.github.javaparser.ast.body.VariableDeclarator
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression as JPExpression
+import com.github.javaparser.ast.stmt.ReturnStmt
 import com.github.javaparser.ast.type.ArrayType as JPArrayType
 import com.github.javaparser.ast.type.ClassOrInterfaceType
 import com.github.javaparser.ast.type.PrimitiveType
@@ -100,8 +102,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * - `expr::method` becomes `(arg0, ...) -> expr.method(arg0, ...)`
      * - `Foo::new` becomes `(arg0, ...) -> new Foo(arg0, ...)` (or `new Foo[arg0]` for arrays)
      *
-     * The number of parameters is derived from the resolved method or, if that is not possible,
-     * from the functional interface the method reference is assigned to.
+     * The parameters are derived from the resolved method (or constructor) or, if that is not
+     * possible, from the functional interface the method reference is converted to.
      */
     private fun handleMethodReferenceExpr(expr: JPExpression): Expression {
         val methodRef = expr.asMethodReferenceExpr()
@@ -115,12 +117,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 null
             }
         val functionalArity =
-            try {
-                FunctionalInterfaceLogic.getFunctionalMethod(methodRef.calculateResolvedType())
-                    .map { it.noParams }
-                    .getOrNull()
-            } catch (_: Exception) {
-                null
+            targetTypeOf(methodRef)?.let {
+                try {
+                    FunctionalInterfaceLogic.getFunctionalMethod(it)
+                        .map { m -> m.noParams }
+                        .getOrNull()
+                } catch (_: Exception) {
+                    null
+                }
             }
 
         // JavaParser always parses the scope of `a.b::c` as a type, even if it is an expression,
@@ -128,7 +132,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val scopeType = (scope as? TypeExpr)?.type
         val isTypeScope = scopeType != null && isType(scopeType)
         val args = { from: Int, count: Int ->
-            NodeList((from until from + count).map { NameExpr("arg$it") as JPExpression })
+            NodeList<JPExpression>((from until from + count).map { NameExpr("arg$it") })
         }
 
         // The parameter types of the resolved method, so that the calls in our lambda match its
@@ -150,8 +154,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         )
                 }
                 identifier == "new" && scopeType is ClassOrInterfaceType -> {
-                    fallbackTypes to
-                        ObjectCreationExpr(null, scopeType.clone(), args(0, fallbackTypes.size))
+                    // JavaParser cannot resolve constructor references, so we look up the
+                    // constructor ourselves
+                    val types =
+                        constructorParameterTypes(scopeType, functionalArity) ?: fallbackTypes
+                    types to ObjectCreationExpr(null, scopeType.clone(), args(0, types.size))
                 }
                 isTypeScope && resolvedTypes != null && resolved?.isStatic == false -> {
                     // An unbound receiver, the first parameter is the object to call the method on
@@ -191,6 +198,51 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         methodRef.replace(lambdaExpr)
 
         return handleLambdaExpr(lambdaExpr)
+    }
+
+    /**
+     * The functional interface type that [methodRef] is converted to. JavaParser can only infer it
+     * if the method reference is an argument of a call, so for other positions we take it from the
+     * context: the declared type of a variable, the target of an assignment, or the return type of
+     * the enclosing method.
+     */
+    private fun targetTypeOf(methodRef: MethodReferenceExpr): ResolvedType? {
+        try {
+            return methodRef.calculateResolvedType()
+        } catch (_: Exception) {
+            // Not an argument of a call, see below
+        }
+
+        return try {
+            when (val parent = methodRef.parentNode.getOrNull()) {
+                is VariableDeclarator -> parent.type.resolve()
+                is AssignExpr -> parent.target.calculateResolvedType()
+                is ReturnStmt ->
+                    parent.findAncestor(MethodDeclaration::class.java).getOrNull()?.type?.resolve()
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * The parameter types of the constructor that `Foo::new` refers to, if there is exactly one
+     * constructor of [type] with [arity] parameters (or exactly one constructor at all, if the
+     * arity is unknown).
+     */
+    private fun constructorParameterTypes(type: ClassOrInterfaceType, arity: Int?): List<JPType>? {
+        return try {
+            val declaration =
+                type.resolve().asReferenceType().typeDeclaration.getOrNull() ?: return null
+            val constructor =
+                declaration.constructors
+                    .filter { arity == null || it.numberOfParams == arity }
+                    .singleOrNull() ?: return null
+            (0 until constructor.numberOfParams).map { astTypeOf(constructor.getParam(it).type) }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**
