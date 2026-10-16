@@ -44,7 +44,7 @@ import kotlin.test.assertEquals
 
 class MutableSetValueTest {
     private val lattice =
-        TupleState<Any>(
+        TupleState<Any, NewIntervalLattice.Element>(
             DeclarationState(NewIntervalLattice()),
             NewIntervalState(NewIntervalLattice()),
         )
@@ -52,7 +52,7 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -76,7 +76,7 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationFromListTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -121,7 +121,7 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationFromSetTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -166,7 +166,7 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationNoInitializerTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -182,7 +182,7 @@ class MutableSetValueTest {
     @Test
     fun applyAddTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -213,7 +213,7 @@ class MutableSetValueTest {
     @Test
     fun applyAddAllTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -245,7 +245,7 @@ class MutableSetValueTest {
     @Test
     fun applyClearTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -275,7 +275,7 @@ class MutableSetValueTest {
     @Test
     fun applyRemoveObjectTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -306,7 +306,7 @@ class MutableSetValueTest {
     @Test
     fun applyRemoveAllTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )

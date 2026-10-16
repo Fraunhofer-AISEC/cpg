@@ -65,7 +65,7 @@ class IntegerIntervalEvaluator : ValueEvaluator() {
 }
 
 /** This class implements the [Value] interface for Integer values. */
-class IntegerValue : Value<LatticeInterval> {
+class IntegerValue : Value<NewIntervalLattice.Element, LatticeInterval> {
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(IntegerValue::class.java)
@@ -75,9 +75,9 @@ class IntegerValue : Value<LatticeInterval> {
         lhs: Node,
         rhs: Node,
         operator: String?,
-        lattice: TupleState<Any>,
-        state: TupleStateElement<Any>,
-    ): TupleStateElement<Any> {
+        lattice: TupleState<Any, NewIntervalLattice.Element>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
+    ): TupleStateElement<Any, NewIntervalLattice.Element> {
         if (operator == "||" && lhs is BinaryOperator && rhs is BinaryOperator) {
             val lhsState = state.duplicate()
             simpleComparison(lhs.lhs, rhs.lhs, lhs.operatorCode, lattice, lhsState)
@@ -181,8 +181,8 @@ class IntegerValue : Value<LatticeInterval> {
     }
 
     override fun applyEffect(
-        lattice: TupleState<Any>,
-        state: TupleStateElement<Any>,
+        lattice: TupleState<Any, NewIntervalLattice.Element>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
         node: Node,
         edge: EvaluationOrder?,
         computeWithoutPush: Boolean,
