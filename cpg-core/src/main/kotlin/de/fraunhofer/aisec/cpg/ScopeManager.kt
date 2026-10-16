@@ -107,15 +107,52 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         symbolTableGeneration++
     }
 
-    /** The key identifying a cached [lookupSymbolByName] result in [symbolLookupCache]. */
-    private data class SymbolLookupCacheKey(
+    /**
+     * The key identifying a cached [lookupSymbolByName] result in [symbolLookupCache].
+     *
+     * [scope] and [fileScope] are compared and hashed by *identity*, deliberately not with
+     * [Scope.equals], which considers two scopes equal when their [Scope.astNode]s are structurally
+     * equal and their names match. Distinct scope objects can satisfy that without being
+     * interchangeable - most notably when the same header is parsed once per translation unit,
+     * which yields one separate scope object per unit for the very same record or namespace
+     * - and conflating them here would let a lookup starting in one of them answer from a result
+     *   computed for another. Identity is also what makes hashing the key O(1) instead of a
+     *   structural hash of the scope's AST node.
+     */
+    private class SymbolLookupCacheKey(
         val scope: Scope?,
         val symbol: Symbol,
         val language: Language<*>,
         val qualifiedLookup: Boolean,
         val replaceImports: Boolean,
         val fileScope: FileScope?,
-    )
+        val filter: SymbolFilter?,
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) {
+                return true
+            }
+            return other is SymbolLookupCacheKey &&
+                scope === other.scope &&
+                symbol == other.symbol &&
+                language == other.language &&
+                qualifiedLookup == other.qualifiedLookup &&
+                replaceImports == other.replaceImports &&
+                fileScope === other.fileScope &&
+                filter == other.filter
+        }
+
+        override fun hashCode(): Int {
+            var result = System.identityHashCode(scope)
+            result = 31 * result + symbol.hashCode()
+            result = 31 * result + language.hashCode()
+            result = 31 * result + qualifiedLookup.hashCode()
+            result = 31 * result + replaceImports.hashCode()
+            result = 31 * result + System.identityHashCode(fileScope)
+            result = 31 * result + filter.hashCode()
+            return result
+        }
+    }
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
@@ -653,16 +690,35 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             // alias. We need to map the declaration to a scope and then hope that its unique. We
             // need to do it in this order because there can be multiple declarations of the same
             // namespace (in different files), but they all (should) point to the same scope.
-            scope =
-                scope
-                    .lookupSymbol(
-                        part.localName,
-                        languageOnly = language,
+            //
+            // We go through lookupSymbolByName rather than calling Scope.lookupSymbol directly so
+            // that this lookup participates in symbolLookupCache - this runs once per part of every
+            // qualified name, which on a language like C++ means essentially every name there is.
+            // Passing the named SymbolFilter.DECLARES_SCOPE (instead of an equivalent lambda) is
+            // what makes the result cacheable at all; see [SymbolFilter]. An unqualified
+            // single-part name makes lookupSymbolByName's own extractScope a no-op, so this stays
+            // the same unqualified lookup it has always been, and cannot recurse back into here.
+            val declarations =
+                if (language != null) {
+                    lookupSymbolByName(
+                        name = Name(part.localName, delimiter = part.delimiter),
+                        language = language,
+                        startScope = scope,
                         localSymbols = localSymbols,
-                    ) {
-                        it is Namespace || it is Record || it is Typedef
-                    }
-                    .map {
+                        predicate = SymbolFilter.DECLARES_SCOPE,
+                    )
+                } else {
+                    scope.lookupSymbol(
+                        part.localName,
+                        languageOnly = null,
+                        localSymbols = localSymbols,
+                        predicate = SymbolFilter.DECLARES_SCOPE,
+                    )
+                }
+
+            scope =
+                declarations
+                    .mapTo(mutableSetOf()) {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
@@ -881,13 +937,15 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             n = extractedScope.adjustedName
         }
 
-        // A custom predicate is a per-call lambda and cannot be safely used as (or compared
-        // through) a cache key, so we only cache the common case where neither it nor a
-        // localSymbols override is given. A localSymbols override answers differently depending
-        // on how much of the EOG has been traversed so far, so its results must never be cached
-        // across call sites either.
+        // An arbitrary predicate is a per-call lambda and cannot be safely used as (or compared
+        // through) a cache key, so a lookup carrying one stays uncached - unless it is one of the
+        // named, stateless SymbolFilters, which can be part of the key (see [SymbolFilter] for why
+        // this has to be a separate cache entry rather than post-filtering a cached unfiltered
+        // lookup). A localSymbols override answers differently depending on how much of the EOG has
+        // been traversed so far, so its results must never be cached across call sites either.
+        val filter = predicate as? SymbolFilter
         val cacheKey =
-            if (predicate == null && localSymbols == null) {
+            if ((predicate == null || filter != null) && localSymbols == null) {
                 SymbolLookupCacheKey(
                     scope = scope ?: startScope,
                     symbol = n.localName,
@@ -895,6 +953,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     qualifiedLookup = scope != null,
                     replaceImports = replaceImports,
                     fileScope = fileScope,
+                    filter = filter,
                 )
             } else {
                 null
@@ -974,9 +1033,12 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         startScope: Scope?,
     ): DeclaresType? {
         var symbols =
-            lookupSymbolByName(name = name, language = language, startScope = startScope) {
-                    it is DeclaresType
-                }
+            lookupSymbolByName(
+                    name = name,
+                    language = language,
+                    startScope = startScope,
+                    predicate = SymbolFilter.DECLARES_TYPE,
+                )
                 .filterIsInstance<DeclaresType>()
 
         // We need to have a single match, otherwise we have an ambiguous type. We emit a warning
