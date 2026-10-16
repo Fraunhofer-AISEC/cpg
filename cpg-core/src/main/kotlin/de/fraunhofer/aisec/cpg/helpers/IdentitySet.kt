@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.lang.UnsupportedOperationException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 
 /**
@@ -71,7 +70,18 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
      * millions of these sets in a large graph.
      */
     private var map: IdentityHashMap<T, Int>? = null
-    private val counter = AtomicInteger()
+
+    /**
+     * Hands out the insertion index stored as each entry's value, which is what [toSortedList]
+     * reconstructs the insertion order from.
+     *
+     * A plain [Int] rather than an [java.util.concurrent.atomic.AtomicInteger]: the backing
+     * [IdentityHashMap] is not thread-safe either, so making just the counter atomic never bought
+     * this class anything, while costing an extra object in every single one of the millions of
+     * [IdentitySet]s a large graph holds. Use [ConcurrentIdentitySet] where concurrent access is
+     * actually needed.
+     */
+    private var counter = 0
 
     /** Returns the backing map, allocating it on first use. */
     private fun ensureMap(): IdentityHashMap<T, Int> {
@@ -93,7 +103,7 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
     override fun add(element: T): Boolean {
         // Since we are a Set, we only want to add elements that are not already there
         if (!contains(element)) {
-            ensureMap()[element] = counter.addAndGet(1)
+            ensureMap()[element] = ++counter
             return true
         }
 
@@ -112,7 +122,7 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
         // present.
         val backing = ensureMap()
         for (element in elements) {
-            backing[element] = counter.addAndGet(1)
+            backing[element] = ++counter
         }
     }
 
@@ -136,7 +146,46 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
      * according to their "closeness" to the root AST node.
      */
     open fun toSortedList(): List<T> {
-        return map?.entries?.sortedBy { it.value }?.map { it.key } ?: listOf()
+        val map = this.map ?: return listOf()
+        val size = map.size
+        if (size == 0) {
+            return listOf()
+        }
+
+        // The indices handed out by `counter` are consecutive unless something was removed from
+        // this set again, so in the overwhelmingly common case each element's position in the
+        // result is simply its index relative to the smallest one. Then we can place every element
+        // directly instead of sorting, which turns this from O(n log n) into O(n) and builds the
+        // one array we have to return anyway rather than a list of entries, a sorted copy of it
+        // and a list of keys mapped out of that.
+        //
+        // This is worth the two passes: a large graph runs this hundreds of thousands of times,
+        // and while most of those sets are tiny (where what is saved is the intermediate lists),
+        // a few are enormous - a `SubgraphWalker.flattenAST` over a whole component reaches a
+        // million nodes - and that is where the sort itself hurts.
+        var min = Int.MAX_VALUE
+        var max = Int.MIN_VALUE
+        for (index in map.values) {
+            if (index < min) {
+                min = index
+            }
+            if (index > max) {
+                max = index
+            }
+        }
+
+        if (max - min + 1 != size) {
+            // There are gaps, i.e. elements were removed: fall back to sorting.
+            return map.entries.sortedBy { it.value }.map { it.key }
+        }
+
+        val ordered = arrayOfNulls<Any?>(size)
+        for ((element, index) in map) {
+            ordered[index - min] = element
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        return (ordered as Array<T>).asList()
     }
 
     override fun addAll(elements: Collection<T>): Boolean {

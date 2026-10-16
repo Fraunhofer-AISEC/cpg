@@ -151,4 +151,48 @@ class IdentitySetTest {
         set.clear()
         assertTrue(set.isEmpty())
     }
+
+    /**
+     * [IdentitySet.toSortedList] has to hand back the elements in the order they were inserted,
+     * which the backing [java.util.IdentityHashMap] does not preserve by itself - it iterates in an
+     * order derived from identity hash codes, and therefore differs between JVM runs. Callers rely
+     * on this: `SubgraphWalker.flattenAST` inserts in pre-order from the root, so the first element
+     * is the root and nearer nodes come first.
+     */
+    @Test
+    fun testToSortedListKeepsInsertionOrder() {
+        val set = IdentitySet<String>()
+        // Deliberately more than a handful, so the result cannot be right by luck, and far enough
+        // apart in hash code that the map will not iterate them in insertion order on its own.
+        val inserted = (1..100).map { "element-$it" }
+        inserted.forEach { set.add(it) }
+
+        assertEquals(inserted, set.toSortedList())
+    }
+
+    /**
+     * Removing elements punches gaps into the insertion indices, which is the one case the
+     * direct-placement fast path cannot handle. The remaining elements must still come back in
+     * insertion order.
+     */
+    @Test
+    fun testToSortedListKeepsInsertionOrderWithGaps() {
+        val set = IdentitySet<String>()
+        val inserted = (1..20).map { "element-$it" }
+        inserted.forEach { set.add(it) }
+
+        val removed = inserted.filterIndexed { index, _ -> index % 3 == 0 }
+        removed.forEach { set.remove(it) }
+
+        assertEquals(inserted - removed.toSet(), set.toSortedList())
+
+        // Adding again after a removal continues the order at the end.
+        set.add("element-last")
+        assertEquals((inserted - removed.toSet()) + "element-last", set.toSortedList())
+    }
+
+    @Test
+    fun testToSortedListOfEmptySet() {
+        assertEquals(emptyList(), IdentitySet<String>().toSortedList())
+    }
 }
