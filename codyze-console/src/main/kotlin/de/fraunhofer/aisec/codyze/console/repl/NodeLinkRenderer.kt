@@ -104,6 +104,10 @@ enum class LinkScheme {
  *
  * If [color] is `false`, all ANSI escapes (including the OSC 8 hyperlink wrapper) are stripped so
  * the same renderer works in non-TTY/CI output.
+ *
+ * All text that originates from the evaluated values (names, query descriptions, map keys, string
+ * values, paths) passes through [TerminalText] first, so an analyzed project cannot inject its own
+ * escape sequences; only the escape sequences emitted by the renderer itself reach the terminal.
  */
 class NodeLinkRenderer(
     private val color: Boolean = true,
@@ -119,7 +123,7 @@ class NodeLinkRenderer(
             is Collection<*> -> renderCollection(value)
             is Map<*, *> -> renderMap(value)
             is Array<*> -> renderCollection(value.toList())
-            else -> value.toString()
+            else -> text(value.toString())
         }
 
     /**
@@ -165,7 +169,7 @@ class NodeLinkRenderer(
         out.append(' ')
             .append(dim())
             .append('[')
-            .append((tree.operator as? Enum<*>)?.name ?: tree.operator.toString())
+            .append(line((tree.operator as? Enum<*>)?.name ?: tree.operator.toString()))
             .append(']')
             .append(reset())
         // Condense stringRepresentation so auto-generated text that embeds a full Node
@@ -173,7 +177,7 @@ class NodeLinkRenderer(
         // instead of either a wall of class internals or being dropped outright — see
         // condenseRepr(). User-written strings like "overflow risk" / "ok" pass through
         // unchanged and add real context.
-        val repr = condenseRepr(tree.stringRepresentation)
+        val repr = line(condenseRepr(tree.stringRepresentation))
         if (repr.isNotEmpty()) {
             out.append(' ').append(repr.take(120))
         }
@@ -257,21 +261,21 @@ class NodeLinkRenderer(
                         out.append(dim()).append("calls: ").append(reset())
                         pathCalls.forEachIndexed { i, call ->
                             if (i > 0) out.append(dim()).append(" → ").append(reset())
-                            val callName = call.name.localName.ifEmpty { "Call" }
+                            val callName = line(call.name.localName.ifEmpty { "Call" })
                             out.append(callName).append("()")
                             val loc = formatLocation(call)
                             if (loc.isNotEmpty()) out.append(' ').append(loc)
                         }
                     }
                 } else {
-                    out.append(bold()).append(value.toString().take(120)).append(reset())
+                    out.append(bold()).append(line(value.toString()).take(120)).append(reset())
                 }
-            else -> out.append(bold()).append(value.toString().take(120)).append(reset())
+            else -> out.append(bold()).append(line(value.toString()).take(120)).append(reset())
         }
     }
 
     private fun renderNode(node: Node): String {
-        val name = node.name.localName.ifEmpty { node.javaClass.simpleName }
+        val name = line(node.name.localName.ifEmpty { node.javaClass.simpleName })
         val kind = node.javaClass.simpleName
         val location = formatLocation(node)
         val tags = nodeTags(node)
@@ -315,7 +319,11 @@ class NodeLinkRenderer(
         return buildString {
             append(dim()).append("{").append(reset()).append('\n')
             map.entries.take(MAX_ITEMS).forEach { (k, v) ->
-                append("  ").append(k).append(" -> ").append(render(v)).append('\n')
+                append("  ")
+                    .append(line(k.toString()))
+                    .append(" -> ")
+                    .append(render(v))
+                    .append('\n')
             }
             if (map.size > MAX_ITEMS) {
                 append(dim()).append("  … and ${map.size - MAX_ITEMS} more\n").append(reset())
@@ -440,21 +448,25 @@ class NodeLinkRenderer(
     private fun formatLocation(node: Node): String {
         val loc = node.location ?: return ""
         val uri = loc.artifactLocation.uri ?: return ""
-        val line = loc.region.startLine.takeIf { it > 0 } ?: return uri.toString()
+        val startLine = loc.region.startLine.takeIf { it > 0 } ?: return line(uri.toString())
         val column = loc.region.startColumn.takeIf { it > 0 } ?: 0
         // uri.path is percent-decoded, so a source file whose location came from a crafted,
         // attacker-controlled repository (e.g. a path containing an encoded %1B) could otherwise
         // smuggle raw escape sequences - including a forged OSC 8 hyperlink target - into the
-        // terminal when this node is rendered. Strip control characters before using the path in
-        // either the visible text or the OSC 8 link target.
-        val path = (uri.path ?: return uri.toString()).filterNot { it.isTerminalControlChar() }
+        // terminal when this node is rendered. Sanitize the path before using it in either the
+        // visible text or the OSC 8 link target.
+        val path = line(uri.path ?: return line(uri.toString()))
         val displayPath = path.substringAfterLast('/')
-        val display = "$displayPath:$line"
-        val target = linkScheme.urlFor(path, line, column) ?: return display
+        val display = "$displayPath:$startLine"
+        val target = linkScheme.urlFor(path, startLine, column) ?: return display
         return hyperlink(target, display)
     }
 
-    private fun Char.isTerminalControlChar(): Boolean = code in 0x00..0x1F || code == 0x7F
+    /** Untrusted, possibly multi-line text, made safe for the terminal. */
+    private fun text(value: String) = TerminalText.sanitize(value)
+
+    /** Untrusted text that is shown on a single line, made safe for the terminal. */
+    private fun line(value: String) = TerminalText.sanitize(value, allowNewlines = false)
 
     private fun hyperlink(target: String, display: String): String {
         if (!color) return display

@@ -70,7 +70,7 @@ object TerminalImageSupport {
  * by `OSC 1`, or together with the window title by `OSC 0`) as what's shown on the tab itself.
  */
 object TerminalTitle {
-    fun set(text: String): String = "\u001B]0;$text\u0007"
+    fun set(text: String): String = "\u001B]0;${TerminalText.sanitizeOsc(text)}\u0007"
 }
 
 /**
@@ -85,8 +85,11 @@ object TerminalTitle {
 object TabStatus {
     fun set(status: String? = null, indicatorColor: String? = null): String {
         val fields = buildList {
-            status?.let { add("status=$it") }
-            indicatorColor?.let { add("indicator=$it") }
+            // `;` separates the fields, so it must not appear inside a value either
+            status?.let { add("status=${TerminalText.sanitizeOsc(it).replace(';', ',')}") }
+            indicatorColor?.let {
+                add("indicator=${TerminalText.sanitizeOsc(it).replace(';', ',')}")
+            }
         }
         return "\u001B]21337;${fields.joinToString(";")}\u0007"
     }
@@ -97,7 +100,7 @@ object TabStatus {
  * by [ReplLoop]/[ReplCommand] for analyses slow enough that the user might have tabbed away.
  */
 object TerminalNotification {
-    fun show(message: String): String = "\u001B]9;$message\u0007"
+    fun show(message: String): String = "\u001B]9;${TerminalText.sanitizeOsc(message)}\u0007"
 }
 
 /**
