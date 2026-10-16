@@ -178,13 +178,12 @@ open class IdentitySet<T>(private val expectedMaxSize: Int = 4) : MutableSet<T> 
     }
 
     /**
-     * The sum of the identity hashes of the elements, which is consistent with [equals]: it only
-     * looks at the elements (by reference) and not at the order in which they were added.
+     * The sum of the identity hashes of the elements, which is consistent with [equals] because it
+     * ignores the insertion order.
      *
-     * Note that we must not use the [hashCode] of the backing [map] here: an [IdentityHashMap]
-     * hashes its *values* by identity, too, and our values are the (boxed) insertion counters. Two
-     * sets with the same elements would then almost never have the same hash code, which silently
-     * breaks every hash-based lookup that uses an [IdentitySet] as (part of) its key.
+     * It must not use the [hashCode] of [map]: an [IdentityHashMap] also hashes its values by
+     * identity, and ours are boxed insertion counters, so equal sets would get different hash
+     * codes.
      */
     override fun hashCode(): Int {
         var h = 0

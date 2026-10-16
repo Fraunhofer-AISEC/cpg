@@ -1081,20 +1081,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleEOG(node.statement)
         handleEOG(node.condition)
 
-        // A very common C/C++ idiom is to wrap a macro's body in `do { ... } while (0)`, so
-        // that it behaves like a single statement (e.g. requires a trailing semicolon) even
-        // when it consists of multiple statements. Such a loop can never execute its body a
-        // second time, because the condition is a constant literal which is always falsy. If we
-        // built the usual back edge to the loop start for it regardless, every later analysis
-        // that walks the EOG (in particular fixpoint iterations such as the PointsToPass) would
-        // treat it as a real loop: it becomes part of an SCC and gets routed through the
-        // worklist's merge-point handling, even though it is plain straight-line code. Crypto
-        // primitives which use this idiom for dozens of macro-unrolled rounds (e.g. mbedtls' hash
-        // and cipher `_process` functions) turn into pathological cases where thousands of
-        // spurious "loops" in a row blow up the number of states kept alive at the same time.
-        // We therefore only add the back edge if the condition is not a literal that is always
-        // falsy - the same case where a real second iteration could not happen anyway, so
-        // omitting the edge does not change what the EOG can reach.
+        // `do { ... } while (0)` is the usual macro idiom and never runs its body twice. Without a
+        // back edge it stays straight-line code, instead of a loop that EOG-based fixpoint analyses
+        // (e.g. the PointsToPass) would have to iterate.
         if (!node.condition.isAlwaysFalsyLiteral()) {
             nextEdgeBranch = true
             connectCurrentEOGToLoopStart(node)
@@ -1106,11 +1095,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * Returns `true` if this node is a [Literal] whose value is statically known to be "falsy" in
-     * this node's [Language], e.g. the literal `0` in C/C++. We deliberately only recognize a
-     * literal condition (as opposed to e.g. evaluating an arbitrary constant expression), so that
-     * we do not depend on any pass that has to run before [EvaluationOrderGraphPass] to fold
-     * constants - the common `do { ... } while (0)` idiom already uses a bare literal.
+     * Whether this is a [Literal] whose value is falsy in this node's [Language], e.g. `0` in
+     * C/C++. Only literals are recognized, so no constant folding has to run before this pass.
      */
     private fun Expression?.isAlwaysFalsyLiteral(): Boolean {
         val literal = this as? Literal<*> ?: return false

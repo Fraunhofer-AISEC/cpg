@@ -81,13 +81,9 @@ import kotlinx.coroutines.*
  * same key and would share one synthetic value node. [Name], in contrast, is a value type where two
  * equal names must map to the same entry.
  *
- * [Literal]s are the exception: they are keyed by their value instead of their identity. Two
- * literals with the same value denote the same thing, so dereferencing either of them has to lead
- * to the same synthetic node. Keying them by identity instead made every single `0` (e.g. every
- * `return 0;` whose value ends up in a pointer) create a field address and unknown value of its
- * own. Inside a loop, more and more of these literals flow into the state, one per iteration, so
- * that the state kept growing by one element per round and the fixpoint iteration of, e.g.,
- * mbedtls_ssl_read_record did not terminate.
+ * [Literal]s are the exception: they are keyed by their value, because two literals with the same
+ * value denote the same thing. Keying them by identity created a new synthetic node per literal, so
+ * a loop added one per iteration and never reached its fixpoint.
  */
 private data class UnknownValueKey(val node: Node, val name: Name) {
     /** What identifies [node] in this key: the value of a [Literal], the identity of all else. */
@@ -137,13 +133,12 @@ private const val MAX_SYNTHETIC_CHAIN_DEPTH = 6
  * the address of one of its fields or its unknown value, and creates it with [create] if there is
  * none yet.
  *
- * Every such node can in turn be the [base] of another one, e.g. in a loop like `p = &p->next;`,
- * which reaches a new field address in every iteration. Without a bound, the analysis of such a
- * loop never reaches its fixpoint and only ends with its timeout. We therefore count how many
- * synthetic nodes a chain consists of, and once it is longer than [MAX_SYNTHETIC_CHAIN_DEPTH], we
- * return one summary node per root of the chain and [name] instead of a new node (k-limiting). As a
- * summary node stands for many memory locations, writing to it must not replace its previous values
- * (see [isSummaryNode]).
+ * Every such node can be the [base] of another one, e.g. in a loop like `p = &p->next;`, which
+ * reaches a new field address in every iteration. To make such loops reach a fixpoint, we count how
+ * many synthetic nodes a chain consists of. Once it exceeds [MAX_SYNTHETIC_CHAIN_DEPTH], we return
+ * one summary node per chain root and [name] instead of a new node (k-limiting). A summary node
+ * stands for many memory locations, so writes to it must not replace its previous values (see
+ * [isSummaryNode]).
  */
 private fun syntheticNodeFor(
     base: Node,
@@ -640,8 +635,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>,
         key: Node,
         newEntry: FSEntry,
-        // Whether newEntry.lastWrites is shared with other entries, so that a new entry needs a
-        // copy of its own which later merges can modify
+        // Whether newEntry.lastWrites is shared with other entries; if so, a new entry gets a copy
+        // that later merges may modify
         copyLastWritesOnInsert: Boolean = false,
     ) {
         val index = fsEntryIndex.computeIfAbsent(key) { ConcurrentHashMap() }
@@ -1697,11 +1692,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // one entry's lastWrites, which is how a summary balloons to way more
                         // entries than there are actual relationships.
                         //
-                        // Beyond depth 1, the lastWrites are those of the addresses, i.e. the same
-                        // for every value, so we collect them only once per depth instead of once
-                        // per value. For the `return ret;` of the big mbedtls handshake functions,
-                        // `ret` has hundreds of values, and collecting the same lastWrites for
-                        // every single one of them kept a single edge busy for minutes.
+                        // Beyond depth 1, the lastWrites are those of the addresses and the same
+                        // for every value, so we collect them once per depth instead of once per
+                        // value.
                         val depthLastWrites =
                             if (depth == 1) null
                             else
@@ -2039,18 +2032,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val dst: IdentitySet<Node> = identitySetOf(),
     ) {
         /**
-         * The collections which have already been merged into [lastWrites], by identity. Merging
-         * one of them again cannot add anything, so [mergeLastWrites] skips it without looking at a
-         * single element.
+         * The collections already merged into [lastWrites], by identity. Merging one again cannot
+         * add anything, so [mergeLastWrites] skips it. Applying a large summary merges the same
+         * `prev` set into the same entry many times, and each merge would otherwise hash all its
+         * elements again.
          *
-         * This is what makes applying a large summary affordable: the same `prev` set of a summary
-         * entry is merged into the same map entry over and over (for mbedtls_ssl_read_record, 99%
-         * of about 11 million merges for a single call), and every one of these merges used to hash
-         * all of its elements again.
-         *
-         * Note that this is only sound as long as these collections are not modified after we have
-         * merged them. That holds for the `prev` sets of [handleCall], which are complete once
-         * [deduplicatePreprocessedFSEntries] is done, i.e. before the first merge.
+         * This is only sound while merged collections are not modified, which holds for the `prev`
+         * sets of [handleCall]: they are complete once [deduplicatePreprocessedFSEntries] is done.
          */
         private val mergedFrom = ConcurrentHashMap.newKeySet<IdKey<Any>>()
 
@@ -3503,11 +3491,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             )
                             .forEach { entry ->
                                 val derefValue = entry.value
-                                // What we add for a derefValue only depends on the derefValue
-                                // itself, not on the value we reached it through. Different
-                                // values mostly share their derefValues, though (for a
-                                // `ssl->...` in mbedtls_ssl_read_record, 17,000 visits went to
-                                // only 174 distinct derefValues), so we handle each one once.
+                                // What we add for a derefValue does not depend on the value we
+                                // reached it through, and different values mostly share their
+                                // derefValues, so we handle each one only once.
                                 if (!processedDerefValues.add(derefValue)) {
                                     return@forEach
                                 }
