@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
@@ -43,7 +44,9 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 import jep.python.PyObject
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
@@ -65,7 +68,7 @@ import kotlin.math.min
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
 @SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
 class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonLanguageFrontend>) :
-    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(ctx, language) {
+    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(ctx, language), SupportsNewParse {
     val lineSeparator = "\n" // TODO
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
@@ -83,10 +86,41 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     private var lastLineNumber: Int = -1
     private var lastColumnLength: Int = -1
 
+    companion object {
+        /**
+         * Used to give each parse call without a real [path] a unique synthetic filename, so that
+         * e.g. multiple in-memory snippets added via `addSource` in the same run do not collide on
+         * an identical [TranslationUnit] name/namespace/[PhysicalLocation.uri].
+         */
+        private val unknownPathCounter = AtomicLong()
+    }
+
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnit {
-        fileContent = file.readText(Charsets.UTF_8)
-        uri = file.toURI()
+        return parse(file.readText(Charsets.UTF_8), file.toPath(), hasRealFile = true)
+    }
+
+    /**
+     * Parses the given [content] as Python source code. The `filename` passed to CPython's
+     * `ast.parse` (derived from [path]) is only used for error messages/tracebacks -- it does not
+     * have to correspond to a real file on disk. If [path] is `null`, a unique synthetic
+     * placeholder is used instead.
+     *
+     * Note: if [de.fraunhofer.aisec.cpg.TranslationConfiguration.matchCommentsToNodes] is enabled,
+     * comment matching re-opens the file from disk via Python's `tokenize.open`, so that feature is
+     * skipped whenever there is no real backing file (i.e. no [path], or a [path] that does not
+     * exist on disk).
+     */
+    @Throws(TranslationException::class)
+    override fun parse(content: String, path: Path?): TranslationUnit {
+        return parse(content, path, hasRealFile = path != null && Files.exists(path))
+    }
+
+    private fun parse(content: String, path: Path?, hasRealFile: Boolean): TranslationUnit {
+        fileContent = content
+        val effectivePath =
+            path ?: Path.of(".", "unknown-${unknownPathCounter.incrementAndGet()}.py")
+        uri = effectivePath.toUri()
 
         // Extract the file length for later usage
         val fileAsLines = fileContent.lines()
@@ -95,30 +129,38 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
 
         jep.getInterp().use {
             it.set("content", fileContent)
-            it.set("filename", file.absolutePath)
+            it.set("filename", effectivePath.toAbsolutePath().toString())
             it.exec("import ast")
             it.exec("import sys")
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
 
-            val tud = pythonASTtoCPG(pyAST, file.toPath())
+            val tud = pythonASTtoCPG(pyAST, effectivePath)
             populateSystemInformation(config, tud)
 
             if (config.matchCommentsToNodes) {
-                it.exec("import tokenize")
-                it.exec("reader = tokenize.open(filename).readline")
-                it.exec("tokens = tokenize.generate_tokens(reader)")
-                it.exec("tokenList = list(tokens)")
-                // This constant has to be retrieved from the system as it was changed in different
-                // Python versions
-                it.exec("commentCode = tokenize.COMMENT")
+                if (!hasRealFile) {
+                    log.debug(
+                        "Skipping comment matching for '{}' because it has no backing file on disk (in-memory content).",
+                        effectivePath,
+                    )
+                } else {
+                    it.exec("import tokenize")
+                    it.exec("reader = tokenize.open(filename).readline")
+                    it.exec("tokens = tokenize.generate_tokens(reader)")
+                    it.exec("tokenList = list(tokens)")
+                    // This constant has to be retrieved from the system as it was changed in
+                    // different Python versions
+                    it.exec("commentCode = tokenize.COMMENT")
 
-                val pyCommentCode =
-                    (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
-                val pyTokens =
-                    (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
-                addCommentsToCPG(tud, pyTokens, pyCommentCode)
+                    val pyCommentCode =
+                        (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
+                    val pyTokens =
+                        (it.getValue("tokenList") as? ArrayList<*>)
+                            ?: TODO("Cannot get tokens of $it")
+                    addCommentsToCPG(tud, pyTokens, pyCommentCode)
+                }
             }
 
             return tud
@@ -313,7 +355,9 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     }
 
     private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnit {
-        val topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
+        // path.parent is null for a bare relative filename (e.g. as used by SupportsNewParse
+        // callers without a real file on disk); fall back to the current directory in that case.
+        val topLevel = ctx.currentComponent?.topLevel() ?: (path.parent?.toFile() ?: File("."))
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module

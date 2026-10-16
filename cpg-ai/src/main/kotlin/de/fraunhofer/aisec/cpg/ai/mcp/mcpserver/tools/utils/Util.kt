@@ -44,6 +44,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolAnnotations
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
+import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
@@ -266,11 +267,18 @@ enum class CpgSessionStatus {
  * Everything the MCP tools need to operate on one analyzed project: its [translationResult], the
  * [translationContext] to run further passes with, and which passes [nodeToPass] already ran on
  * which nodes. Sessions are kept in [analysisSessions].
+ *
+ * [nodeToPass] is wrapped with [Collections.synchronizedMap] because, unlike [analysisSessions], it
+ * is reachable from multiple concurrent MCP tool calls against the *same* session (e.g.
+ * `cpg_run_pass`/`cpg_add_code` requests running in parallel over streamable HTTP); callers must
+ * still synchronize on it for compound check-then-act sequences (see its usages in
+ * `CpgAnalyzeTool.kt`).
  */
 open class CpgSession(
     var translationResult: TranslationResult?,
     var translationContext: TranslationContext?,
-    val nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>> = IdentityHashMap(),
+    val nodeToPass: MutableMap<Node, MutableSet<KClass<out Pass<*>>>> =
+        Collections.synchronizedMap(IdentityHashMap()),
     var status: CpgSessionStatus = CpgSessionStatus.ANALYSIS,
 )
 
