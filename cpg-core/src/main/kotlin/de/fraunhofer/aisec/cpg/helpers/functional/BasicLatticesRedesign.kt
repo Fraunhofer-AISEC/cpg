@@ -2143,11 +2143,16 @@ open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) 
                     // Key only in `two` -> copy it across.
                     one.put(k, v)
                 } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                    // Key in both with different values -> lub them in-place.
+                    // Key in both with different values -> lub them in-place. `allowModify =
+                    // true` only *permits* the inner lattice to mutate `oneValue` and return it
+                    // unchanged; an immutable inner element (e.g. StringPattern) always returns a
+                    // fresh value instead, so we must write the result back here - otherwise such
+                    // a lattice's contribution (in particular a widen()'s result) is silently
+                    // dropped and `one[k]` never advances past its very first value.
                     one[k]?.let { oneValue ->
                         // The outer forEachMaybeParallel already spawns CPU_CORES coroutines;
                         // tell the inner lub not to spawn more.
-                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
+                        one[k] = innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
                     }
                 }
             }
