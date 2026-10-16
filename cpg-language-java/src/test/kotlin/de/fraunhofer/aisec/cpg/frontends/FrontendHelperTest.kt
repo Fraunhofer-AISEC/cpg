@@ -93,7 +93,7 @@ class FrontendHelperTest {
         assertTrue(constructorAssignment.comment?.contains(comment5) == true)
         assertNull(constructor.comment)
 
-        val mainMethod = classDeclaration.declarations[2] as Method
+        val mainMethod = classDeclaration.methods.single { it.name.localName == "main" }
         assertNull(mainMethod.comment)
         val forLoop = (mainMethod.body as Block).statements[0] as For
         forLoop.comment = null

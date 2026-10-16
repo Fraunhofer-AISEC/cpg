@@ -68,13 +68,11 @@ internal class StaticImportsTest : BaseTest() {
         assertNotNull(staticField)
         assertTrue(staticField.modifiers.contains("static"))
 
-        val memberExpressionExpressions = main.allChildren<MemberAccess>()
-        // we have two member expressions, one to the field and one to the method
-        assertEquals(2, memberExpressionExpressions.size)
-
-        // we want the one to the field
-        val usage = memberExpressionExpressions[{ it.type.name.localName == "int" }]
+        // The usage of the statically imported field is a static access to `single.A.test`
+        val usage =
+            main.refs.singleOrNull { it !is MemberAccess && it.name.toString() == "single.A.test" }
         assertNotNull(usage)
+        assertTrue(usage.isStaticAccess)
         assertEquals(staticField, usage.refersTo)
     }
 

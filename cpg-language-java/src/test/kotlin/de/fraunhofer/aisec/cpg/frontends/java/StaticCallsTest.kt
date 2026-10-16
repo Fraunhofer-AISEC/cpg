@@ -28,11 +28,15 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstant
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.fields
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.methods
+import de.fraunhofer.aisec.cpg.graph.records
+import de.fraunhofer.aisec.cpg.graph.variables
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -78,5 +82,54 @@ class StaticCallsTest {
 
         // we must not infer fields for the type names used as scope
         assertTrue(result.fields.none { it.name.localName in listOf("Arrays", "Util") })
+    }
+
+    @Test
+    fun testStaticFields() {
+        val config =
+            TranslationConfiguration.builder()
+                .sourceLocations(File("src/test/resources/StaticCalls.java"))
+                .defaultPasses()
+                .registerLanguage<JavaLanguage>()
+                .build()
+        val result = TranslationManager.builder().config(config).build().analyze().get()
+
+        // A static field of a type that we only know from its import is a static reference to
+        // the field, not a member access on a field with the name of the type
+        val constant = result.variables["constant"]?.initializer
+        assertIs<Reference>(constant)
+        assertEquals("com.example.Util.CONSTANT", constant.name.toString())
+        assertTrue(constant.isStaticAccess)
+
+        // The same is true for a type in java.lang, which JavaParser can resolve
+        val max = result.variables["max"]?.initializer
+        assertIs<Reference>(max)
+        assertEquals("java.lang.Integer.MAX_VALUE", max.name.toString())
+        assertTrue(max.isStaticAccess)
+        assertEquals("int", max.type.name.toString())
+        // The field is not part of our graph, so it is inferred, but with the known type
+        val maxField = max.refersTo
+        assertIs<Field>(maxField)
+        assertTrue(maxField.isInferred)
+        assertEquals("int", maxField.type.name.toString())
+
+        // A method reference to a static method in java.lang is a static call
+        val parseBoolean = result.calls["parseBoolean"]
+        assertIs<MemberCall>(parseBoolean)
+        assertTrue(parseBoolean.isStatic)
+        assertEquals("java.lang.Boolean", parseBoolean.base?.type?.name.toString())
+
+        // An enum constant is a static access to the existing enum constant, and the call on it
+        // is resolved on the enum type
+        val red = result.calls["name"]?.let { (it as? MemberCall)?.base }
+        assertIs<Reference>(red)
+        assertTrue(red.isStaticAccess)
+        assertIs<EnumConstant>(red.refersTo)
+        assertEquals("StaticCalls.Color", red.type.name.toString())
+
+        // We must not infer fields for any of the type names
+        val record = result.records["StaticCalls"]
+        assertNotNull(record)
+        assertTrue(record.fields.none { it.isInferred })
     }
 }
