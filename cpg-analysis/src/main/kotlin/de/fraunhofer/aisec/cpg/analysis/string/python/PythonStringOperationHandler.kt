@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringEvaluatorConfig
 import de.fraunhofer.aisec.cpg.analysis.string.StringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
+import de.fraunhofer.aisec.cpg.analysis.string.boundedReplace
 import de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
@@ -39,6 +40,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.lengthOf
 import de.fraunhofer.aisec.cpg.analysis.string.mapConstLeaves
+import de.fraunhofer.aisec.cpg.analysis.string.renderFormatString
 import de.fraunhofer.aisec.cpg.analysis.string.union
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
@@ -48,6 +50,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 
 /**
@@ -82,15 +86,40 @@ class PythonStringOperationHandler : StringOperationHandler {
         return when {
             call.reconstructedImportName.toString() == "os.path.join" ->
                 handleOsPathJoin(call, evaluate)
-            call is MemberCall && call.name.localName == "format" -> handleFormat(call, evaluate)
-            call is MemberCall && call.name.localName == "join" -> handleJoin(call, evaluate)
-            call is MemberCall && call.name.localName == "replace" -> handleReplace(call, evaluate)
-            call is MemberCall && call.name.localName in STRIP_METHODS ->
-                handleStrip(call, evaluate)
-            call is MemberCall && call.name.localName in CASE_METHODS -> handleCase(call, evaluate)
+            call is MemberCall &&
+                call.name.localName == "format" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleFormat(call, evaluate)
+            call is MemberCall &&
+                call.name.localName == "join" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleJoin(call, evaluate)
+            call is MemberCall &&
+                call.name.localName == "replace" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleReplace(call, evaluate)
+            call is MemberCall &&
+                call.name.localName in STRIP_METHODS &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleStrip(call, evaluate)
+            call is MemberCall &&
+                call.name.localName in CASE_METHODS &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleCase(call, evaluate)
             else -> null
         }
     }
+
+    /**
+     * `true` iff [type] is a definitely-known, non-string type - i.e. this call should not be
+     * matched as one of this handler's string operations even though the method name alone matches,
+     * to rule out an unrelated user-defined method of the same name on an unrelated receiver type.
+     * Only rejects when a type is actually resolved to something else - an absent or [UnknownType]
+     * receiver type remains permitted, which for Python (no static type inference by default) is
+     * the common case: regressing precision whenever a type simply wasn't resolved would be worse
+     * than the occasional unrelated-type false match this handler already accepts as a documented,
+     * best-effort limitation (see the class KDoc).
+     */
+    private fun isDefinitelyNotStringType(type: Type?): Boolean =
+        type != null &&
+            type !is UnknownType &&
+            !type.name.localName.equals("str", ignoreCase = true) &&
+            !type.name.localName.equals("string", ignoreCase = true)
 
     /**
      * `"%s and %s" % (a, b)`, i.e. a [BinaryOperator] with operator code `%` whose [lhs][
@@ -117,45 +146,27 @@ class PythonStringOperationHandler : StringOperationHandler {
         val formatString = evaluate(op.lhs).asConstantOrNull() ?: return null
         val values = (op.rhs as? InitializerList)?.initializers ?: listOf(op.rhs)
 
-        val parts = mutableListOf<StringPattern>()
         var valueIndex = 0
-        var lastEnd = 0
-        for (m in PERCENT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
+        return renderFormatString(formatString, PERCENT_TOKEN) { m ->
             val token = m.value
-            parts.add(
-                when {
-                    token == "%%" -> const("%")
-                    token.contains('(') ->
-                        StringPattern.Unknown(
+            when {
+                token == "%%" -> const("%")
+                token.contains('(') ->
+                    StringPattern.Unknown(origin = op, reason = StringPattern.Reason.UNSUPPORTED)
+                token.last() == 's' || token.last() == 'd' || token.last() == 'i' -> {
+                    val value = values.getOrNull(valueIndex++)
+                    value?.let { evaluate(it) }
+                        ?: StringPattern.Unknown(
                             origin = op,
                             reason = StringPattern.Reason.UNSUPPORTED,
                         )
-                    token.last() == 's' || token.last() == 'd' || token.last() == 'i' -> {
-                        val value = values.getOrNull(valueIndex++)
-                        value?.let { evaluate(it) }
-                            ?: StringPattern.Unknown(
-                                origin = op,
-                                reason = StringPattern.Reason.UNSUPPORTED,
-                            )
-                    }
-                    else -> {
-                        valueIndex++
-                        StringPattern.Unknown(
-                            origin = op,
-                            reason = StringPattern.Reason.UNSUPPORTED,
-                        )
-                    }
                 }
-            )
-            lastEnd = m.range.last + 1
+                else -> {
+                    valueIndex++
+                    StringPattern.Unknown(origin = op, reason = StringPattern.Reason.UNSUPPORTED)
+                }
+            }
         }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        return concat(parts)
     }
 
     /**
@@ -187,16 +198,11 @@ class PythonStringOperationHandler : StringOperationHandler {
         val base = call.base ?: return null
         val formatString = evaluate(base).asConstantOrNull() ?: return null
 
-        val parts = mutableListOf<StringPattern>()
         var autoIndex = 0
-        var lastEnd = 0
-        for (m in FORMAT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
+        return renderFormatString(formatString, FORMAT_TOKEN) { m ->
             when (m.value) {
-                "{{" -> parts.add(const("{"))
-                "}}" -> parts.add(const("}"))
+                "{{" -> const("{")
+                "}}" -> const("}")
                 else -> {
                     val field = m.value.substring(1, m.value.length - 1).substringBefore(':')
                     val replacement =
@@ -206,21 +212,14 @@ class PythonStringOperationHandler : StringOperationHandler {
                                 call.argumentByNameOrPosition(position = field.toInt())
                             else -> call.argumentByNameOrPosition(name = field)
                         }
-                    parts.add(
-                        replacement?.let { evaluate(it) }
-                            ?: StringPattern.Unknown(
-                                origin = call,
-                                reason = StringPattern.Reason.UNSUPPORTED,
-                            )
-                    )
+                    replacement?.let { evaluate(it) }
+                        ?: StringPattern.Unknown(
+                            origin = call,
+                            reason = StringPattern.Reason.UNSUPPORTED,
+                        )
                 }
             }
-            lastEnd = m.range.last + 1
         }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        return concat(parts)
     }
 
     /**
@@ -328,24 +327,6 @@ class PythonStringOperationHandler : StringOperationHandler {
      * [receiver] with [new], matching Python's `str.replace(old, new, count)`. Requires `old` to be
      * non-empty.
      */
-    private fun boundedReplace(receiver: String, old: String, new: String, count: Int): String {
-        if (count <= 0) return receiver
-        val sb = StringBuilder()
-        var i = 0
-        var remaining = count
-        while (i < receiver.length) {
-            if (remaining > 0 && receiver.startsWith(old, i)) {
-                sb.append(new)
-                i += old.length
-                remaining--
-            } else {
-                sb.append(receiver[i])
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
     /**
      * `s.strip()`/`s.lstrip()`/`s.rstrip()`, optionally with a `chars` argument selecting which
      * characters to strip (default: whitespace). Exact when the receiver is constant and, if

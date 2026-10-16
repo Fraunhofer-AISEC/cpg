@@ -167,12 +167,14 @@ open class StringEvaluator(
      *
      * Enabling this trades a soundness caveat for cross-query performance: results are memoized
      * assuming the graph does not change for the lifetime of this [StringEvaluator] instance. There
-     * is currently **no invalidation mechanism** - if the underlying CPG is mutated after a result
-     * for some `(Node, Context)` has been cached, [resolve] will keep returning the stale, pre-
-     * mutation result for that pair indefinitely. This is deliberately out of scope here (a future
-     * change may add invalidation); a caller that enables this flag is responsible for either never
-     * mutating the graph for the instance's lifetime, or discarding the instance (there is
-     * deliberately no `clearCache()` escape hatch yet either) after a mutation.
+     * is **no automatic invalidation** - if the underlying CPG is mutated after a result for some
+     * `(Node, Context)` has been cached, [resolve] will keep returning the stale, pre-mutation
+     * result for that pair until [clearCache] is called. A caller that enables this flag and then
+     * mutates the graph (e.g. a long-running host re-analyzing after an edit, such as
+     * codyze-console's `/api/reanalyze`) **must** call [clearCache] afterwards, or discard the
+     * instance entirely; there is still no size bound or automatic eviction, so a long-lived
+     * instance that is never cleared will retain strong references to every `(Node, Context)` it
+     * has ever seen.
      *
      * When `true`, the cross-thread, cross-call [persistentCache] is used instead of
      * [threadLocalCache] - see its KDoc for the cache structure and the "compute outside, insert
@@ -341,6 +343,16 @@ open class StringEvaluator(
         if (node is Node) evaluateInternal(node, 0) else StringPattern.Bottom
 
     /**
+     * Drops every entry from [persistentCache], the invalidation escape hatch [crossQueryCache]'s
+     * KDoc requires a caller to use after mutating the graph. A no-op when `crossQueryCache ==
+     * false` ([persistentCache] is `null` then, since [threadLocalCache] is already cleared per
+     * top-level [evaluate] call and needs no separate invalidation).
+     */
+    fun clearCache() {
+        persistentCache?.removeKeyIf { true }
+    }
+
+    /**
      * The override of `ValueEvaluator.evaluateInternal`. This - not [evaluate] - is where all the
      * per-top-level-call state resetting happens, because the inherited
      * `ValueEvaluator.evaluateAs<T>` is `inline` and therefore cannot be overridden: it calls
@@ -488,16 +500,27 @@ open class StringEvaluator(
         }
 
         var iterations = 0
+        var reachedFixpoint = false
         while (iterations < MAX_FIXPOINT_ITERATIONS) {
             val prior = assumed[node]
             val widened = if (prior == null) result else lattice.widen(prior, result)
             if (widened == prior) {
                 result = widened
+                reachedFixpoint = true
                 break
             }
             assumed[node] = widened
             result = dispatch(node, ctx)
             iterations++
+        }
+        if (!reachedFixpoint) {
+            // MAX_FIXPOINT_ITERATIONS was hit before two consecutive rounds agreed: `result` is
+            // still the raw, un-widened dispatch() of the last round, not widen(prior, result).
+            // Widening it once more against the last accumulated assumption ensures the returned
+            // value is never less than every round's accumulated assumption, preserving this
+            // function's documented "never under-approximates" guarantee even on this backstop
+            // exit.
+            assumed[node]?.let { result = lattice.widen(it, result) }
         }
         assumed.remove(node)
         cyclic.remove(node)

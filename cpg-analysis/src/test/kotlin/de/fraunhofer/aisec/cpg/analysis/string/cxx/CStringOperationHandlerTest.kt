@@ -177,6 +177,171 @@ class CStringOperationHandlerTest {
         )
     }
 
+    /** `strncat(dest, "hello", 3)` with both operands constant: the appended segment is exact. */
+    @Test
+    fun testStrncatExactConstant() {
+        lateinit var laterRead: Reference
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val destArgAtCall = newReference("destArg")
+                        destArgAtCall.prevDFG += newLiteral("old", objectType("char*"))
+
+                        val call =
+                            newCall(newReference("strncat")) {
+                                it.arguments += destArgAtCall
+                                it.arguments += newLiteral("hello", objectType("char*"))
+                                it.arguments += newLiteral(3, objectType("int"))
+                            }
+                        block.statements += call
+
+                        laterRead = newReference("dest")
+                        laterRead.prevDFG += call
+                        block.statements += newReturn { it.returnValue = laterRead }
+                    }
+            }
+        }
+
+        val pattern = laterRead.evaluateCString()
+        assertEquals(const("oldhel"), pattern)
+    }
+
+    /**
+     * `strncat(dest, src, n)` where *neither* `src` nor `n` is resolvable: the appended segment's
+     * length bound must fall back to fully unbounded (`INFINITE`), not crash or silently default to
+     * some arbitrary finite bound.
+     */
+    @Test
+    fun testStrncatUnboundedWhenBothSrcAndNNonConstant() {
+        lateinit var laterRead: Reference
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                val srcParam = newParameter("src", objectType("char*"), holder = func)
+                val nParam = newParameter("n", objectType("int"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val destArgAtCall = newReference("destArg")
+                        destArgAtCall.prevDFG += newLiteral("old", objectType("char*"))
+
+                        val call =
+                            newCall(newReference("strncat")) {
+                                it.arguments += destArgAtCall
+                                it.arguments += newReference(srcParam.name)
+                                it.arguments += newReference(nParam.name)
+                            }
+                        block.statements += call
+
+                        laterRead = newReference("dest")
+                        laterRead.prevDFG += call
+                        block.statements += newReturn { it.returnValue = laterRead }
+                    }
+            }
+        }
+
+        val pattern = laterRead.evaluateCString()
+        assertIs<StringPattern.Concat>(pattern)
+        val appended = pattern.parts.last()
+        assertIs<StringPattern.Unknown>(appended)
+        val length = de.fraunhofer.aisec.cpg.analysis.string.lengthOf(appended)
+        assertIs<de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bounded>(length)
+        assertEquals(
+            de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.INFINITE,
+            length.upper,
+        )
+    }
+
+    /** A call to an unrecognised function falls through to the generic evaluator fallback. */
+    @Test
+    fun testUnrecognizedCallFallsThroughToGenericHandling() {
+        lateinit var ret: de.fraunhofer.aisec.cpg.graph.expressions.Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue = newCall(newReference("some_unrelated_function")) {}
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateCString()
+        assertIs<StringPattern.Unknown>(pattern)
+    }
+
+    /**
+     * `snprintf(buf, size, "%f-%s", 1.5, "b")` regression test: `%f` is not one of the exactly
+     * modelled conversions, but must still consume its positional argument conservatively (as an
+     * `Unknown`) rather than crashing or misaligning the following `%s`.
+     */
+    @Test
+    fun testSnprintfUnsupportedConversionStillConsumesArgument() {
+        // A non-constant `size` is used deliberately: with a known size, snprintf's own
+        // size-bounding logic collapses any non-fully-constant result (one with an Unknown part, as
+        // here) into a single summarizing Unknown, which would hide the Concat structure this test
+        // means to check - see testSnprintfBoundsLengthWhenNonConstant for that collapsing
+        // behavior.
+        lateinit var ret: de.fraunhofer.aisec.cpg.graph.expressions.Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                val sizeParam = newParameter("size", objectType("size_t"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("snprintf")) {
+                                    it.arguments += newReference("buf")
+                                    it.arguments += newReference(sizeParam.name)
+                                    it.arguments += newLiteral("%f-%s", objectType("char*"))
+                                    it.arguments += newLiteral(1.5, objectType("double"))
+                                    it.arguments += newLiteral("b", objectType("char*"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateCString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertEquals(const("-b"), pattern.parts.last())
+    }
+
+    /**
+     * `snprintf(buf, size, "%s-%s", "a")` - more placeholders than varargs: the missing argument
+     * becomes a conservative `Unknown` rather than crashing on an out-of-range access. Uses a
+     * non-constant `size` for the same reason as
+     * [testSnprintfUnsupportedConversionStillConsumesArgument].
+     */
+    @Test
+    fun testSnprintfMissingArgumentBecomesUnknown() {
+        lateinit var ret: de.fraunhofer.aisec.cpg.graph.expressions.Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                val sizeParam = newParameter("size", objectType("size_t"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("snprintf")) {
+                                    it.arguments += newReference("buf")
+                                    it.arguments += newReference(sizeParam.name)
+                                    it.arguments += newLiteral("%s-%s", objectType("char*"))
+                                    it.arguments += newLiteral("a", objectType("char*"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateCString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertIs<StringPattern.Unknown>(pattern.parts.last())
+    }
+
     /**
      * `snprintf(buf, 10, "%s-%s", "a", "b")` where a *later read of `buf`* resolves back to the
      * `snprintf` call as its def-site - mirroring [testStrcpyOverwritesOldValue]'s/
@@ -538,5 +703,39 @@ class CStringOperationHandlerTest {
 
         val pattern = ret.returnValue!!.evaluateCString()
         assertEquals(const("12"), pattern)
+    }
+
+    /**
+     * `snprintf(buf, size, "%*d-%s", 5, 42, "b")` regression test: a `*` width consumes the next
+     * positional argument (here `5`, the field width) without contributing to the output, so the
+     * following `%d`/`%s` must still resolve to `42`/`"b"`, not be shifted by one. Before the fix,
+     * `C_FORMAT_TOKEN` did not match `%*d` at all, so the `%` was treated as literal text and every
+     * later specifier read the wrong positional argument.
+     */
+    @Test
+    fun testSnprintfStarWidthDoesNotShiftArgumentIndex() {
+        lateinit var ret: de.fraunhofer.aisec.cpg.graph.expressions.Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("snprintf")) {
+                                    it.arguments += newReference("buf")
+                                    it.arguments += newLiteral(100, objectType("size_t"))
+                                    it.arguments += newLiteral("%*d-%s", objectType("char*"))
+                                    it.arguments += newLiteral(5, objectType("int"))
+                                    it.arguments += newLiteral(42, objectType("int"))
+                                    it.arguments += newLiteral("b", objectType("char*"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateCString()
+        assertEquals(const("42-b"), pattern)
     }
 }

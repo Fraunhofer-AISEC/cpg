@@ -160,6 +160,59 @@ class GoStringOperationHandlerTest {
         assertEquals(const("a-1-b"), pattern)
     }
 
+    /** `fmt.Sprintf("100%%")` - a literal `%%` contributes `"%"` and consumes no argument. */
+    @Test
+    fun testSprintfPercentLiteralDoesNotConsumeArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("fmt.Sprintf")) {
+                                    it.arguments += newLiteral("100%%-%s", objectType("string"))
+                                    it.arguments += newLiteral("done", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateGoString()
+        assertEquals(const("100%-done"), pattern)
+    }
+
+    /** `fmt.Sprintf("%s-%s", "a")` - more verbs than varargs: the missing argument is `Unknown`. */
+    @Test
+    fun testSprintfMissingArgumentBecomesUnknown() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("fmt.Sprintf")) {
+                                    it.arguments += newLiteral("%s-%s", objectType("string"))
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateGoString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertIs<StringPattern.Unknown>(pattern.parts.last())
+    }
+
     /**
      * `fmt.Sprintf("%s%v%s", "a", "b", "c")` regression test for argument-index consumption: `%v`
      * (Go's "default format" verb) must consume exactly one positional argument, same as `%s`/`%d`,
@@ -225,6 +278,40 @@ class GoStringOperationHandlerTest {
 
         val pattern = ret.returnValue!!.evaluateGoString()
         assertEquals(const("-b"), (pattern as? StringPattern.Concat)?.parts?.last())
+    }
+
+    /**
+     * `fmt.Sprintf("%*d-%s", 5, 42, "b")` regression test: a `*` width consumes the next positional
+     * argument (here `5`, the field width) without contributing to the output, so the following
+     * `%d`/`%s` must still resolve to `42`/`"b"`, not be shifted by one. Before the fix,
+     * `GO_FORMAT_TOKEN` did not match `%*d` at all, so the `%` was treated as literal text and
+     * every later verb read the wrong positional argument.
+     */
+    @Test
+    fun testSprintfStarWidthDoesNotShiftArgumentIndex() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("fmt.Sprintf")) {
+                                    it.arguments += newLiteral("%*d-%s", objectType("string"))
+                                    it.arguments += newLiteral(5, objectType("int"))
+                                    it.arguments += newLiteral(42, objectType("int"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateGoString()
+        assertEquals(const("42-b"), pattern)
     }
 
     /** `strings.Replace("foobar", "bar", "baz", -1)` with constant operands: exact result. */
@@ -353,6 +440,53 @@ class GoStringOperationHandlerTest {
         )
     }
 
+    /**
+     * `strings.ReplaceAll(concat("cat", p), "xy", "ZZ")` where `p` is non-constant: `"xy"` provably
+     * cannot occur anywhere within the known `"cat"` prefix (no overlap at the boundary either), so
+     * the sound over-approximation must be exactly `Concat(Const("cat"), Unknown)`, not the
+     * coarser, unbounded fallback [testReplaceAllOldOverlappingPrefixFallsBackToCoarseUnknown]
+     * exercises.
+     */
+    @Test
+    fun testReplaceSoundPrefixWhenOldCannotOccurWithinPrefix() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                val param = newParameter("p", objectType("string"), holder = func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("strings.ReplaceAll")) {
+                                    it.arguments +=
+                                        newBinaryOperator("+") { op ->
+                                            op.lhs = newLiteral("cat", objectType("string"))
+                                            op.rhs = newReference(param.name)
+                                        }
+                                    it.arguments += newLiteral("xy", objectType("string"))
+                                    it.arguments += newLiteral("ZZ", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateGoString()
+        assertEquals(
+            de.fraunhofer.aisec.cpg.analysis.string.concat(
+                const("cat"),
+                StringPattern.Unknown(
+                    origin = (ret.returnValue as Call),
+                    reason = StringPattern.Reason.UNSUPPORTED,
+                ),
+            ),
+            pattern,
+        )
+    }
+
     /** `strings.ToUpper("foo")` with a constant operand resolves to `Const("FOO")`. */
     @Test
     fun testToUpperConstant() {
@@ -376,6 +510,53 @@ class GoStringOperationHandlerTest {
 
         val pattern = ret.returnValue!!.evaluateGoString()
         assertEquals(const("FOO"), pattern)
+    }
+
+    /** `strings.ToLower("FOO")` with a constant operand resolves to `Const("foo")`. */
+    @Test
+    fun testToLowerConstant() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newCall(newReference("strings.ToLower")) {
+                                    it.arguments += newLiteral("FOO", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateGoString()
+        assertEquals(const("foo"), pattern)
+    }
+
+    /** A call to an unrecognised function falls through to the generic evaluator fallback. */
+    @Test
+    fun testUnrecognizedCallFallsThroughToGenericHandling() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue = newCall(newReference("strconv.Itoa")) {}
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluateGoString()
+        assertIs<StringPattern.Unknown>(pattern)
     }
 
     /**

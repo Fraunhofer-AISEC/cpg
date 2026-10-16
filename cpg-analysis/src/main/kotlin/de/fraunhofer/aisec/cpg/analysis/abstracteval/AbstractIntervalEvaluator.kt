@@ -466,21 +466,134 @@ class AbstractIntervalEvaluator {
 }
 
 /**
+ * Retrieves the [E] for the given [node] from this tuple state element's declaration state,
+ * defaulting to [default] for an untracked entry.
+ *
+ * Shared, generic bookkeeping underlying both [intervalOf] (`E = `[NewIntervalLattice.Element]) and
+ * [de.fraunhofer.aisec.cpg.analysis.string.patternOf] (`E =
+ * `[de.fraunhofer.aisec.cpg.analysis.string.StringPattern], which - unlike
+ * [NewIntervalLattice.Element] for [LatticeInterval] - needs no wrapper, since `StringPattern`
+ * already implements [Lattice.Element] itself). This used to be hand-duplicated once per `E`;
+ * keeping a single generic implementation here means a fix to the node-identity resolution only has
+ * to be made once.
+ */
+@Suppress("UNCHECKED_CAST")
+internal fun <NodeId, E : Lattice.Element> TupleStateElement<NodeId, E>.valueOf(
+    node: Node,
+    default: E,
+): E {
+    val id =
+        node.objectIdentifier()?.let { tmpId ->
+            this.first.keys.singleOrNull { it == tmpId } ?: (tmpId as? NodeId)
+        } ?: node as? NodeId ?: TODO()
+    return this.first[id] ?: default
+}
+
+/**
+ * Updates the declaration state for [node] with [value] in the current tuple state element,
+ * overwriting any existing entry (no `lub` with the previous value). Shared generic implementation
+ * underlying both [changeDeclarationState] overloads - see [valueOf]'s KDoc.
+ */
+@Suppress("UNCHECKED_CAST")
+internal fun <NodeId, E : Lattice.Element> TupleState<NodeId, E>.changeDeclState(
+    current: TupleStateElement<NodeId, E>,
+    node: Node,
+    value: E,
+): TupleStateElement<NodeId, E> {
+    val id =
+        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
+            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
+        } ?: node as NodeId ?: TODO()
+    current.first[id] = value
+    return current
+}
+
+/**
+ * Pushes [value] for [node] into the declaration state, merging (`lub`) with any existing entry.
+ * Shared generic implementation underlying both [pushToDeclarationState] overloads - see
+ * [valueOf]'s KDoc.
+ */
+@Suppress("UNCHECKED_CAST")
+internal fun <NodeId, E : Lattice.Element> TupleState<NodeId, E>.pushToDeclState(
+    current: TupleStateElement<NodeId, E>,
+    node: Node,
+    value: E,
+): TupleStateElement<NodeId, E> {
+    val id =
+        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
+            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
+        } ?: node as NodeId ?: TODO()
+    runBlocking {
+        this@pushToDeclState.innerLattice1.lub(
+            current.first,
+            DeclarationState.DeclarationStateElement(id to value),
+            allowModify = true,
+        )
+    }
+    return current
+}
+
+/**
+ * Pushes [value] for [node] into the general (per-[Node]) state, merging (`lub`) with any existing
+ * entry. Shared generic implementation underlying both [pushToGeneralState] overloads - see
+ * [valueOf]'s KDoc.
+ */
+internal fun <NodeId, E : Lattice.Element> TupleState<NodeId, E>.pushToGenState(
+    current: TupleStateElement<NodeId, E>,
+    node: Node,
+    value: E,
+): TupleStateElement<NodeId, E> {
+    runBlocking {
+        this@pushToGenState.innerLattice2.lub(
+            current.second,
+            GeneralStateElement(node to value),
+            allowModify = true,
+        )
+    }
+    return current
+}
+
+/**
+ * Pushes [value] for [start] into the declaration state lattice. Shared generic implementation
+ * underlying both evaluators' private seeding helper of the same name - see [valueOf]'s KDoc.
+ */
+internal fun <NodeId, E : Lattice.Element> DeclarationState<NodeId, E>.pushSeed(
+    current: DeclarationState.DeclarationStateElement<NodeId, E>,
+    start: NodeId,
+    value: E,
+) {
+    runBlocking {
+        this@pushSeed.lub(
+            current,
+            DeclarationState.DeclarationStateElement(start to value),
+            allowModify = true,
+        )
+    }
+}
+
+/**
+ * Pushes [value] for [start] into the general state lattice. Shared generic implementation
+ * underlying both evaluators' private seeding helper of the same name - see [valueOf]'s KDoc.
+ */
+internal fun <E : Lattice.Element> GeneralState<E>.pushSeed(
+    current: GeneralStateElement<E>,
+    start: Node,
+    value: E,
+) {
+    runBlocking {
+        this@pushSeed.lub(current, GeneralStateElement(start to value), allowModify = true)
+    }
+}
+
+/**
  * Retrieves the interval value for the given [node] from this tuple state element.
  *
  * @param node The [Node] whose interval is to be fetched.
  * @return The [LatticeInterval] associated with the node, or [LatticeInterval.TOP] if not found.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleStateElement<NodeId, NewIntervalLattice.Element>.intervalOf(
     node: Node
-): LatticeInterval {
-    val id =
-        node.objectIdentifier()?.let { tmpId ->
-            this.first.keys.singleOrNull { it == tmpId } ?: (tmpId as? NodeId)
-        } ?: node as? NodeId ?: TODO()
-    return this.first[id]?.element ?: LatticeInterval.TOP
-}
+): LatticeInterval = valueOf(node, NewIntervalLattice.Element(LatticeInterval.TOP)).element
 
 /**
  * Updates the declaration state for [node] with the specified [interval] in the current tuple state
@@ -492,19 +605,12 @@ fun <NodeId> TupleStateElement<NodeId, NewIntervalLattice.Element>.intervalOf(
  * @param interval The new [LatticeInterval] to set.
  * @return The updated tuple state element.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId, NewIntervalLattice.Element>.changeDeclarationState(
     current: TupleStateElement<NodeId, NewIntervalLattice.Element>,
     node: Node,
     interval: LatticeInterval,
-): TupleStateElement<NodeId, NewIntervalLattice.Element> {
-    val id =
-        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
-            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
-        } ?: node as NodeId ?: TODO()
-    current.first[id] = NewIntervalLattice.Element(interval)
-    return current
-}
+): TupleStateElement<NodeId, NewIntervalLattice.Element> =
+    changeDeclState(current, node, NewIntervalLattice.Element(interval))
 
 /**
  * Pushes a new interval for [node] into the declaration state, merging with the existing state.
@@ -514,25 +620,12 @@ fun <NodeId> TupleState<NodeId, NewIntervalLattice.Element>.changeDeclarationSta
  * @param interval The [LatticeInterval] to push.
  * @return The updated tuple state element.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId, NewIntervalLattice.Element>.pushToDeclarationState(
     current: TupleStateElement<NodeId, NewIntervalLattice.Element>,
     node: Node,
     interval: LatticeInterval,
-): TupleStateElement<NodeId, NewIntervalLattice.Element> {
-    val id =
-        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
-            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
-        } ?: node as NodeId ?: TODO()
-    runBlocking {
-        this@pushToDeclarationState.innerLattice1.lub(
-            current.first,
-            DeclarationState.DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
-            allowModify = true,
-        )
-    }
-    return current
-}
+): TupleStateElement<NodeId, NewIntervalLattice.Element> =
+    pushToDeclState(current, node, NewIntervalLattice.Element(interval))
 
 /**
  * Pushes a new interval for [node] into the general state, merging with the existing state.
@@ -546,16 +639,8 @@ fun <NodeId> TupleState<NodeId, NewIntervalLattice.Element>.pushToGeneralState(
     current: TupleStateElement<NodeId, NewIntervalLattice.Element>,
     node: Node,
     interval: LatticeInterval,
-): TupleStateElement<NodeId, NewIntervalLattice.Element> {
-    runBlocking {
-        this@pushToGeneralState.innerLattice2.lub(
-            current.second,
-            NewIntervalStateElement(node to NewIntervalLattice.Element(interval)),
-            allowModify = true,
-        )
-    }
-    return current
-}
+): TupleStateElement<NodeId, NewIntervalLattice.Element> =
+    pushToGenState(current, node, NewIntervalLattice.Element(interval))
 
 /**
  * Pushes a new interval for [start] into the declaration state lattice.
@@ -568,15 +653,7 @@ private fun <NodeId> DeclarationState<NodeId, NewIntervalLattice.Element>.push(
     current: DeclarationState.DeclarationStateElement<NodeId, NewIntervalLattice.Element>,
     start: NodeId,
     interval: LatticeInterval,
-) {
-    runBlocking {
-        this@push.lub(
-            current,
-            DeclarationState.DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
-            allowModify = true,
-        )
-    }
-}
+) = pushSeed(current, start, NewIntervalLattice.Element(interval))
 
 /**
  * Pushes a new interval for [start] into the general interval state lattice.
@@ -589,12 +666,4 @@ private fun NewIntervalState.push(
     current: NewIntervalStateElement,
     start: Node,
     interval: LatticeInterval,
-) {
-    runBlocking {
-        this@push.lub(
-            current,
-            NewIntervalStateElement(start to NewIntervalLattice.Element(interval)),
-            allowModify = true,
-        )
-    }
-}
+) = pushSeed(current, start, NewIntervalLattice.Element(interval))

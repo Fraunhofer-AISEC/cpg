@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.concat
 import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.lengthOf
+import de.fraunhofer.aisec.cpg.analysis.string.renderFormatString
 import de.fraunhofer.aisec.cpg.analysis.string.union
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
@@ -46,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 /**
  * Models a subset of the JVM/Java standard library's string-relevant operations (Phase 3 of the
@@ -80,22 +82,45 @@ class JvmStringOperationHandler : StringOperationHandler {
             call is MemberCall &&
                 call.name.localName == "toString" &&
                 isBuilderType(call.base?.type) -> call.base?.let { evaluate(it) }
-            call is MemberCall && !call.isStatic && call.name.localName == "concat" ->
-                handleConcat(call, evaluate)
+            call is MemberCall &&
+                !call.isStatic &&
+                call.name.localName == "concat" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleConcat(call, evaluate)
             call is MemberCall && call.isStatic && call.name.localName == "format" ->
                 handleFormat(call, evaluate)
             call is MemberCall && call.isStatic && call.name.localName == "join" ->
                 handleJoin(call, evaluate)
-            call is MemberCall && !call.isStatic && call.name.localName == "substring" ->
-                handleSubstring(call, evaluate)
-            call is MemberCall && !call.isStatic && call.name.localName == "replace" ->
-                handleReplace(call, evaluate)
+            call is MemberCall &&
+                !call.isStatic &&
+                call.name.localName == "substring" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleSubstring(call, evaluate)
+            call is MemberCall &&
+                !call.isStatic &&
+                call.name.localName == "replace" &&
+                !isDefinitelyNotStringType(call.base?.type) -> handleReplace(call, evaluate)
             else -> null
         }
     }
 
     private fun isBuilderType(type: Type?): Boolean =
         type != null && type.name.localName in BUILDER_TYPES
+
+    /**
+     * `true` iff [type] is a definitely-known, non-string-like type - i.e. a call to `concat`/
+     * `substring`/`replace` on this receiver should *not* be matched as one of this handler's
+     * string operations even though the method name alone matches, to rule out an unrelated
+     * user-defined method of the same name on an unrelated receiver type (e.g. a custom class's own
+     * `.replace()`). Only rejects when a type is actually resolved to something else - an absent or
+     * [UnknownType] receiver type remains permitted: regressing precision whenever type resolution
+     * simply did not run or could not determine a type would be worse than the occasional
+     * unrelated-type false match this handler already accepts as a documented limitation (see the
+     * class KDoc).
+     */
+    private fun isDefinitelyNotStringType(type: Type?): Boolean =
+        type != null &&
+            type !is UnknownType &&
+            !type.name.localName.equals("String", ignoreCase = true) &&
+            !type.name.localName.equals("CharSequence", ignoreCase = true)
 
     /**
      * `new StringBuilder(...)` / `new StringBuffer(...)`. The no-arg constructor seeds an empty
@@ -162,45 +187,29 @@ class JvmStringOperationHandler : StringOperationHandler {
         val formatString = evaluate(formatArg).asConstantOrNull() ?: return null
         val values = args.drop(1)
 
-        val parts = mutableListOf<StringPattern>()
         var autoIndex = 0
-        var lastEnd = 0
-        for (m in JAVA_FORMAT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
+        return renderFormatString(formatString, JAVA_FORMAT_TOKEN) { m ->
             val token = m.value
             val conversion = token.last().lowercaseChar()
-            parts.add(
-                if (token == "%%") {
-                    const("%")
-                } else if (conversion == 'n') {
-                    const("\n")
-                } else {
-                    val explicitIndex =
-                        EXPLICIT_INDEX.find(token)?.groupValues?.get(1)?.toIntOrNull()
-                    val index = explicitIndex?.let { it - 1 } ?: autoIndex++
-                    val value = values.getOrNull(index)
-                    if (conversion == 's' || conversion == 'd' || conversion == 'i') {
-                        value?.let { evaluate(it) }
-                            ?: StringPattern.Unknown(
-                                origin = call,
-                                reason = StringPattern.Reason.UNSUPPORTED,
-                            )
-                    } else {
-                        StringPattern.Unknown(
+            if (token == "%%") {
+                const("%")
+            } else if (conversion == 'n') {
+                const("\n")
+            } else {
+                val explicitIndex = EXPLICIT_INDEX.find(token)?.groupValues?.get(1)?.toIntOrNull()
+                val index = explicitIndex?.let { it - 1 } ?: autoIndex++
+                val value = values.getOrNull(index)
+                if (conversion == 's' || conversion == 'd' || conversion == 'i') {
+                    value?.let { evaluate(it) }
+                        ?: StringPattern.Unknown(
                             origin = call,
                             reason = StringPattern.Reason.UNSUPPORTED,
                         )
-                    }
+                } else {
+                    StringPattern.Unknown(origin = call, reason = StringPattern.Reason.UNSUPPORTED)
                 }
-            )
-            lastEnd = m.range.last + 1
+            }
         }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        return concat(parts)
     }
 
     /**

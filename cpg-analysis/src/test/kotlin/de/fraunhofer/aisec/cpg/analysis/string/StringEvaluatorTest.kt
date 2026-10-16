@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.string
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
@@ -920,6 +921,47 @@ class StringEvaluatorTest {
     }
 
     /**
+     * [StringEvaluator.clearCache] is the invalidation escape hatch `crossQueryCache`'s KDoc
+     * requires a caller to use after mutating the graph: without it, a `crossQueryCache = true`
+     * evaluator must keep returning a stale, pre-mutation result for a `(Node, Context)` pair
+     * forever, since [persistentCache] is otherwise never written to twice for the same key.
+     * Mutates the underlying [de.fraunhofer.aisec.cpg.graph.expressions.Literal.value] in place
+     * (simulating a real graph mutation between two top-level [StringEvaluator.evaluate] calls) and
+     * checks that only [StringEvaluator.clearCache] makes the second call observe the new value.
+     */
+    @Test
+    fun testClearCacheInvalidatesStaleCrossQueryResult() {
+        lateinit var literal: de.fraunhofer.aisec.cpg.graph.expressions.Literal<*>
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newLiteral("foo", objectType("string")).also { literal = it }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val evaluator = StringEvaluator(crossQueryCache = true)
+        assertEquals(const("foo"), evaluator.evaluate(ret.returnValue!!))
+
+        @Suppress("UNCHECKED_CAST")
+        (literal as de.fraunhofer.aisec.cpg.graph.expressions.Literal<Any?>).value = "bar"
+
+        // Without clearCache(), the stale "foo" result must still be served from persistentCache.
+        assertEquals(const("foo"), evaluator.evaluate(ret.returnValue!!))
+
+        evaluator.clearCache()
+        assertEquals(const("bar"), evaluator.evaluate(ret.returnValue!!))
+    }
+
+    /**
      * The reentrancy stress test: [StringEvaluator] deliberately re-visits the same node while it
      * is still being computed further up the current call stack (the loop-built-string cycle). With
      * `crossQueryCache = true`, the result-memoization cache is a shared, cross-thread
@@ -980,5 +1022,72 @@ class StringEvaluatorTest {
             executor.shutdown()
         }
         assertTrue(failures.isEmpty(), "concurrent evaluation raised: $failures")
+    }
+
+    /**
+     * Regression test for the `evaluateWithFixpoint` backstop (see its KDoc): if `dispatch()` keeps
+     * producing genuinely new content every round, so `widen(prior, result)` never reaches a
+     * fixpoint within `MAX_FIXPOINT_ITERATIONS`, the function must still return a widened, sound
+     * result - not the raw, un-widened `dispatch()` call of the last round.
+     * [NonConvergingDispatchEvaluator] forces this backstop path by recursing into `resolve` once
+     * (to trigger the real path/cyclic cycle-detection machinery, exactly like a genuine
+     * self-referential handler would) and then returning an ever-growing, never-repeating
+     * [StringPattern.Unknown] every round, so the loop is guaranteed to exhaust all 20 iterations
+     * without ever finding `widened == prior`.
+     */
+    @Test
+    fun testFixpointBackstopStillReturnsWidenedResult() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r -> r.returnValue = newReference("x") }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val evaluator = NonConvergingDispatchEvaluator()
+        val result = evaluator.evaluate(ret.returnValue!!)
+
+        // A sound widen must never drop a character already seen in an earlier round - unlike the
+        // un-widened last-round dispatch() value this backstop used to return before the fix.
+        assertTrue(
+            evaluator.observedChars.all { it in charSetOf(result) },
+            "expected the backstop result to retain every round's charSet, got $result " +
+                "for rounds ${evaluator.observedChars}",
+        )
+    }
+
+    /**
+     * A [StringEvaluator] whose [dispatch] never converges: every call returns a fresh
+     * [StringPattern.Unknown] with one new, never-before-seen character and a strictly growing
+     * exact length, which `widen` can never find equal to the prior round's assumption. The very
+     * first call additionally recurses into [resolve] on the same node (which is already on [path]
+     * at that point, having been pushed there by the enclosing [resolve] call from [evaluate])
+     * purely for its side effect of marking the node as [cyclic] - exactly what a genuine
+     * self-referential handler would trigger - so that [evaluateWithFixpoint] takes its
+     * widening-loop branch at all.
+     */
+    private class NonConvergingDispatchEvaluator : StringEvaluator() {
+        private var round = 0
+        val observedChars = mutableListOf<Char>()
+
+        override fun dispatch(node: Node, ctx: Context): StringPattern {
+            if (round == 0) {
+                resolve(node, ctx)
+            }
+            val c = 'a' + round
+            round++
+            observedChars.add(c)
+            return StringPattern.Unknown(
+                charSet = charsOf(c),
+                length = LatticeInterval.Bounded(round, round),
+                reason = StringPattern.Reason.PARAMETER,
+            )
+        }
     }
 }

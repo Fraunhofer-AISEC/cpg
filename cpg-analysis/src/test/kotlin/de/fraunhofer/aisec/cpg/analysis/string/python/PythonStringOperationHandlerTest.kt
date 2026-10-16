@@ -966,4 +966,205 @@ class PythonStringOperationHandlerTest {
         val pattern = ret.returnValue!!.evaluatePythonString()
         assertEquals(const("100%"), pattern)
     }
+
+    /**
+     * `"%(name)s-%s" % (x,)` - a dict-style reference is not modelled (it indexes into a mapping,
+     * not the positional tuple), so it becomes `Unknown` *without* consuming a positional argument,
+     * unlike every other unmatched conversion - the following `%s` must still resolve to `x`.
+     */
+    @Test
+    fun testPercentFormatDictStyleReferenceDoesNotConsumeArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newBinaryOperator("%") { op ->
+                                    op.lhs = newLiteral("%(name)s-%s", objectType("string"))
+                                    op.rhs =
+                                        newInitializerList(objectType("tuple")) { list ->
+                                            list.initializers +=
+                                                newLiteral("x", objectType("string"))
+                                        }
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Concat>(pattern)
+        // The literal "-" between the two placeholders merges with the resolved "x" into a single
+        // Const("-x") leaf (adjacent Consts merge, see normalizeConcat) - this still proves the
+        // dict-style reference above did not consume "x" for itself.
+        assertEquals(const("-x"), pattern.parts.last())
+    }
+
+    /**
+     * `"%f-%s" % (1.5, "b")` regression test: `%f` is not one of the exactly-modelled conversions,
+     * but must still consume its positional argument conservatively rather than misaligning the
+     * following `%s`.
+     */
+    @Test
+    fun testPercentFormatUnsupportedConversionStillConsumesArgument() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newBinaryOperator("%") { op ->
+                                    op.lhs = newLiteral("%f-%s", objectType("string"))
+                                    op.rhs =
+                                        newInitializerList(objectType("tuple")) { list ->
+                                            list.initializers +=
+                                                newLiteral(1.5, objectType("double"))
+                                            list.initializers +=
+                                                newLiteral("b", objectType("string"))
+                                        }
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertEquals(const("-b"), pattern.parts.last())
+    }
+
+    /** `"%s-%s" % ("a",)` - more placeholders than values: the missing one becomes `Unknown`. */
+    @Test
+    fun testPercentFormatMissingArgumentBecomesUnknown() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newBinaryOperator("%") { op ->
+                                    op.lhs = newLiteral("%s-%s", objectType("string"))
+                                    op.rhs =
+                                        newInitializerList(objectType("tuple")) { list ->
+                                            list.initializers +=
+                                                newLiteral("a", objectType("string"))
+                                        }
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertIs<StringPattern.Unknown>(pattern.parts.last())
+    }
+
+    /** `"{}-{}".format("a")` - more placeholders than args: the missing one becomes `Unknown`. */
+    @Test
+    fun testFormatMissingArgumentBecomesUnknown() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "format",
+                                        newLiteral("{}-{}", objectType("string")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Concat>(pattern)
+        assertIs<StringPattern.Unknown>(pattern.parts.last())
+    }
+
+    /** A call to an unrecognised function falls through to the generic evaluator fallback. */
+    @Test
+    fun testUnrecognizedCallFallsThroughToGenericHandling() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r -> r.returnValue = newCall(newReference("len")) {} }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Unknown>(pattern)
+    }
+
+    /**
+     * `x.replace("a", "b")` where `x`'s *resolved* type is a confidently-known, unrelated type (not
+     * `str`) must not be matched as `str.replace` at all - an unrelated class's own `.replace()`
+     * method must fall through to the generic evaluator fallback, not be misinterpreted as a string
+     * operation.
+     *
+     * The receiver is a [de.fraunhofer.aisec.cpg.graph.expressions.Literal] so that it *would*
+     * evaluate to a known constant (`"hello"`) if [handleReplace] were (incorrectly) invoked -
+     * `"hello".replace("a", "b")` is exactly `"hello"` again, since `"a"` does not occur in it,
+     * which would make a false-positive match indistinguishable from the correct "not matched"
+     * outcome if the receiver were merely an unresolved parameter. Asserting `Unknown` here
+     * therefore specifically proves the call was *not* matched, not just that its args were
+     * unresolved.
+     */
+    @Test
+    fun testReplaceNotMatchedOnDefinitelyNonStringReceiver() {
+        lateinit var ret: Return
+        build { tu ->
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        ret = newReturn { r ->
+                            r.returnValue =
+                                newMemberCall(
+                                    newMemberAccess(
+                                        "replace",
+                                        newLiteral("hello", objectType("MyCustomType")),
+                                    )
+                                ) {
+                                    it.arguments += newLiteral("a", objectType("string"))
+                                    it.arguments += newLiteral("b", objectType("string"))
+                                }
+                        }
+                        block.statements += ret
+                    }
+            }
+        }
+
+        val pattern = ret.returnValue!!.evaluatePythonString()
+        assertIs<StringPattern.Unknown>(pattern)
+    }
 }

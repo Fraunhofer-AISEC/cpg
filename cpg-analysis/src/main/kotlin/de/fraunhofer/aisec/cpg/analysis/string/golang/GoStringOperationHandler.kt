@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.StringEvaluatorConfig
 import de.fraunhofer.aisec.cpg.analysis.string.StringOperationHandler
 import de.fraunhofer.aisec.cpg.analysis.string.StringPattern
 import de.fraunhofer.aisec.cpg.analysis.string.asConstantOrNull
+import de.fraunhofer.aisec.cpg.analysis.string.boundedReplace
 import de.fraunhofer.aisec.cpg.analysis.string.cannotOccurWithinPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.charSetOf
 import de.fraunhofer.aisec.cpg.analysis.string.concat
@@ -38,6 +39,7 @@ import de.fraunhofer.aisec.cpg.analysis.string.const
 import de.fraunhofer.aisec.cpg.analysis.string.constantPrefix
 import de.fraunhofer.aisec.cpg.analysis.string.lengthOf
 import de.fraunhofer.aisec.cpg.analysis.string.mapConstLeaves
+import de.fraunhofer.aisec.cpg.analysis.string.renderFormatString
 import de.fraunhofer.aisec.cpg.analysis.string.union
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
@@ -150,36 +152,32 @@ class GoStringOperationHandler : StringOperationHandler {
         val formatString = evaluate(formatArg).asConstantOrNull() ?: return null
         val values = args.drop(1)
 
-        val parts = mutableListOf<StringPattern>()
         var valueIndex = 0
-        var lastEnd = 0
-        for (m in GO_FORMAT_TOKEN.findAll(formatString)) {
-            if (m.range.first > lastEnd) {
-                parts.add(const(formatString.substring(lastEnd, m.range.first)))
-            }
+        return renderFormatString(formatString, GO_FORMAT_TOKEN) { m ->
             val token = m.value
             val conversion = token.last()
-            parts.add(
-                if (token == "%%") {
-                    const("%")
-                } else if (conversion == 's' || conversion == 'd' || conversion == 'v') {
-                    val value = values.getOrNull(valueIndex++)
-                    value?.let { evaluate(it) }
-                        ?: StringPattern.Unknown(
-                            origin = call,
-                            reason = StringPattern.Reason.UNSUPPORTED,
-                        )
-                } else {
-                    valueIndex++
-                    StringPattern.Unknown(origin = call, reason = StringPattern.Reason.UNSUPPORTED)
-                }
-            )
-            lastEnd = m.range.last + 1
+            // A `*` width/precision (`%*d`, `%.*f`, `%*.*f`) consumes one positional `int` argument
+            // per `*` *before* the conversion's own argument, without contributing any characters
+            // to
+            // the output - must be accounted for here or every later `%s`/`%d` reads the wrong
+            // positional argument (see GO_FORMAT_TOKEN's KDoc).
+            if (token != "%%") {
+                valueIndex += token.count { it == '*' }
+            }
+            if (token == "%%") {
+                const("%")
+            } else if (conversion == 's' || conversion == 'd' || conversion == 'v') {
+                val value = values.getOrNull(valueIndex++)
+                value?.let { evaluate(it) }
+                    ?: StringPattern.Unknown(
+                        origin = call,
+                        reason = StringPattern.Reason.UNSUPPORTED,
+                    )
+            } else {
+                valueIndex++
+                StringPattern.Unknown(origin = call, reason = StringPattern.Reason.UNSUPPORTED)
+            }
         }
-        if (lastEnd < formatString.length) {
-            parts.add(const(formatString.substring(lastEnd)))
-        }
-        return concat(parts)
     }
 
     /**
@@ -257,24 +255,6 @@ class GoStringOperationHandler : StringOperationHandler {
      * [receiver] with [new], matching Go's `strings.Replace(s, old, new, n)` for `n >= 0`. Requires
      * `old` to be non-empty.
      */
-    private fun boundedReplace(receiver: String, old: String, new: String, count: Int): String {
-        if (count <= 0) return receiver
-        val sb = StringBuilder()
-        var i = 0
-        var remaining = count
-        while (i < receiver.length) {
-            if (remaining > 0 && receiver.startsWith(old, i)) {
-                sb.append(new)
-                i += old.length
-                remaining--
-            } else {
-                sb.append(receiver[i])
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
     /**
      * `strings.ToUpper(s)`/`strings.ToLower(s)`. Exact when the argument is constant. Otherwise,
      * distributes the case mapping over every [StringPattern.Const] leaf of the term (see the
@@ -361,8 +341,12 @@ class GoStringOperationHandler : StringOperationHandler {
          * Tokenizes Go's `fmt` verb syntax: `%%` (an escaped literal `%`), or a
          * `%[flags][width][.precision]verb` specifier. One regex, not two independent passes, for
          * the same reason as the Python/Java handlers' escaping fixes - see [handleSprintf]'s KDoc.
+         *
+         * Width and precision may each be a literal digit sequence *or* a `*`, which takes its
+         * value from the next positional argument instead (`%*d`, `%.*f`, `%*.*f`) - accounted for
+         * where this is used, see the `valueIndex` adjustment in [handleSprintf].
          */
-        private val GO_FORMAT_TOKEN = Regex("%%|%[-+#0 ]*\\d*(\\.\\d+)?[a-zA-Z]")
+        private val GO_FORMAT_TOKEN = Regex("%%|%[-+#0 ]*(?:\\*|\\d*)(?:\\.(?:\\*|\\d*))?[a-zA-Z]")
     }
 }
 
