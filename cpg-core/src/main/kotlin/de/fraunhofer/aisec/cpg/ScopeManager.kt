@@ -554,6 +554,71 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
+     * Collapses entries of this candidate list that are not several declarations at all, but *one*
+     * declaration that the frontend parsed more than once, keeping the first of each group.
+     *
+     * Languages that include headers textually - C and C++ above all - parse an included file once
+     * per including translation unit, and each parse builds its own node for every declaration in
+     * it. A header included by 40 units therefore contributes 40 nodes for the same entity, all
+     * registered under the same symbol. Left alone, every lookup of such a symbol hands 40
+     * candidates to the caller, which is both wrong (they denote one entity) and expensive. It is
+     * also the single largest source of spurious ambiguity on real projects: C has no function
+     * overloading, so a call with several candidates comes out `PROBLEMATIC` and drags all of them
+     * into its `invokes` edge.
+     *
+     * Copies are recognized by their origin: the same kind of declaration, the same name and the
+     * same [PhysicalLocation] - same file, same region. Nothing but a repeated parse of one piece
+     * of source can produce that, since a genuine redeclaration, an overload or an ODR violation is
+     * by definition written somewhere *else*. Note that this deliberately does not touch
+     * [Scope.symbols] itself: the duplicates are real nodes in their own translation unit's AST and
+     * removing them from the symbol table (rather than from this particular lookup result) would
+     * leave them stranded there, resolvable by nothing and linked to nothing.
+     *
+     * Two kinds of declaration need separate treatment:
+     * - A [Typedef] carries no location of its own, so it is identified by what it declares, i.e.
+     *   its alias and aliased type. That is exactly the condition under which C and C++ permit a
+     *   typedef to be repeated at all (C11 §6.7p3, C++ [dcl.typedef]p2), and it matters
+     *   disproportionately in practice, the standard integer typedefs being the most widely
+     *   included declarations there are. The two are compared by *name* rather than with
+     *   [Type.equals], which additionally requires both types to share the very same scope object -
+     *   something copies originating from translation units parsed in parallel do not.
+     * - A declaration with internal linkage (a file-scope `static`) is never collapsed, even though
+     *   its copies do share a location: internal linkage means every translation unit gets its own,
+     *   genuinely distinct entity, which is why [de.fraunhofer.aisec.cpg.passes.SymbolResolver]
+     *   narrows such candidates by translation unit. Folding them into one would leave every unit
+     *   but the winner unable to resolve its own copy.
+     */
+    private fun MutableList<Declaration>.collapseDuplicateParses() {
+        if (size < 2) {
+            return
+        }
+
+        val seen = HashSet<Any>(size)
+        retainAll { declaration ->
+            val key = declaration.duplicateParseKey() ?: return@retainAll true
+            seen.add(key)
+        }
+    }
+
+    /**
+     * A key identifying the piece of source [this] was parsed from, or `null` if that cannot be
+     * determined (in which case the declaration must never be collapsed). See
+     * [collapseDuplicateParses].
+     */
+    private fun Declaration.duplicateParseKey(): Any? {
+        if (hasInternalLinkage) {
+            return null
+        }
+
+        if (this is Typedef) {
+            return listOf(Typedef::class, name, alias.name, type.name)
+        }
+
+        val location = location ?: return null
+        return listOf(this::class, name, location)
+    }
+
+    /**
      * This class represents the result of the [extractScope] operation. It contains a [scope]
      * object, if a scope was found and the [adjustedName] that is normalized if any aliases were
      * found during scope extraction.
@@ -981,6 +1046,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                 }
             }
         }
+
+        list.collapseDuplicateParses()
 
         if (cacheKey != null) {
             symbolLookupCache[cacheKey] = list
