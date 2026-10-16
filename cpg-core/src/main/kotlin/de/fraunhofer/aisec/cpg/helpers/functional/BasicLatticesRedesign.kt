@@ -740,9 +740,9 @@ class TimeoutBudget(private val startMark: TimeMark, timeout: Duration) :
      */
     fun creditUpTo(elapsed: Duration, max: Duration) {
         while (true) {
-            val current = remainingTimeout.load()
-            val next = minOf(current + elapsed, max)
-            if (remainingTimeout.compareAndSet(current, next)) break
+            val current = remainingNanos.load()
+            val next = minOf(current + elapsed.inWholeNanoseconds, max.inWholeNanoseconds)
+            if (remainingNanos.compareAndSet(current, next)) break
         }
     }
 
