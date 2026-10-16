@@ -56,10 +56,18 @@ fun Server.addOverview() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_overview", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(content = listOf(TextContent(Json.encodeToString(result.overview()))))
-        }
+    this.addTool<CpgProjectPayload>(name = "cpg_overview", description = toolDescription) {
+        session: CpgSession,
+        _ ->
+        CallToolResult(
+            content =
+                listOf(
+                    TextContent(
+                        session.translationResult?.let { Json.encodeToString(it.overview()) }
+                            ?: "No analysis result available yet."
+                    )
+                )
+        )
     }
 }
 

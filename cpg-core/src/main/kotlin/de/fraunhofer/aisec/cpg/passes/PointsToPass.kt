@@ -567,11 +567,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * it should have.
          *
          * Analyzing a function can also trigger a nested analysis of its own (e.g. to compute a
-         * callee's function summary), which gets its own, independent [timeout] - time already spent
-         * in such a callee is credited back to the caller's budget (see [TimeoutBudget.credit]), so
-         * the caller is not unfairly charged for it twice, but each nesting level can still *add* up
-         * to one more [timeout] of wall-clock time to the whole chain if its callee is slow for a
-         * reason unrelated to the caller, up to a multiple of it; see [calculateFunctionSummaries].
+         * callee's function summary), which gets its own, independent [timeout] - time already
+         * spent in such a callee is credited back to the caller's budget (see
+         * [TimeoutBudget.credit]), so the caller is not unfairly charged for it twice, but each
+         * nesting level can still *add* up to one more [timeout] of wall-clock time to the whole
+         * chain if its callee is slow for a reason unrelated to the caller, up to a multiple of it;
+         * see [calculateFunctionSummaries].
          */
         var timeout: Duration = 60.minutes,
 
