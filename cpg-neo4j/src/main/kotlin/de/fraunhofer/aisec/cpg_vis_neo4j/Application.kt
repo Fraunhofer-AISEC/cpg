@@ -32,8 +32,10 @@ import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
+import de.fraunhofer.aisec.cpg.persistence.deserializeFromJson
 import de.fraunhofer.aisec.cpg.persistence.persistJson
 import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
+import de.fraunhofer.aisec.cpg.persistence.serializeToJson
 import de.fraunhofer.aisec.cpg.project.Project
 import java.io.File
 import java.net.ConnectException
@@ -258,6 +260,15 @@ class Application : Callable<Int> {
     @CommandLine.Option(names = ["--export-json"], description = ["Export cpg as json"])
     private var exportJsonFile: File? = null
 
+    @CommandLine.Option(names = ["--serialize"], description = ["Serialize the cpg as json"])
+    private var serializeTo: File? = null
+
+    @CommandLine.Option(
+        names = ["--deserialize"],
+        description = ["Deserialize the cpg from json file"],
+    )
+    private var deserializeFrom: File? = null
+
     private var passClassList =
         listOf(
             TypeHierarchyResolver::class,
@@ -468,14 +479,26 @@ class Application : Callable<Int> {
         val translationConfiguration = setupTranslationConfiguration()
 
         val startTime = System.currentTimeMillis()
-
+        val deserializeFrom = deserializeFrom
         val translationResult =
-            TranslationManager.builder().config(translationConfiguration).build().analyze().get()
+            if (deserializeFrom != null) {
+                deserializeFromJson(deserializeFrom.readText())
+            } else {
+                val result =
+                    TranslationManager.builder()
+                        .config(translationConfiguration)
+                        .build()
+                        .analyze()
+                        .get()
 
-        val analyzingTime = System.currentTimeMillis()
-        log.info(
-            "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
-        )
+                val analyzingTime = System.currentTimeMillis()
+                log.info(
+                    "Benchmark: analyzing code in " +
+                        (analyzingTime - startTime) / S_TO_MS_FACTOR +
+                        " s."
+                )
+                result
+            }
 
         exportJsonFile?.let { translationResult.persistJson(it) }
         if (!noNeo4j) {
@@ -488,8 +511,11 @@ class Application : Callable<Int> {
             )
         }
 
-        val pushTime = System.currentTimeMillis()
-        log.info("Benchmark: push code in " + (pushTime - analyzingTime) / S_TO_MS_FACTOR + " s.")
+        val serializeTo = serializeTo
+        if (serializeTo != null) {
+            log.info("Serialize cpg to file: ${serializeTo.absolutePath}")
+            serializeTo.writeText(serializeToJson(translationResult))
+        }
 
         val benchmarkResult = translationResult.benchmarkResults
 

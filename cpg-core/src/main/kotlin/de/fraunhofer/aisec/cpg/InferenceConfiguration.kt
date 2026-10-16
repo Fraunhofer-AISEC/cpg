@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
@@ -32,6 +33,7 @@ import org.apache.commons.lang3.builder.ToStringStyle
  * This class holds configuration options for the inference of certain constructs and auto-guessing
  * when executing language frontends.
  */
+@JsonDeserialize(builder = InferenceConfiguration.Builder::class)
 class InferenceConfiguration
 private constructor(
     /** Enables or disables the inference system as a whole. */
@@ -72,7 +74,7 @@ private constructor(
         private var inferFunctions: Boolean = true,
         private var inferVariables: Boolean = true,
         private var inferReturnTypes: Boolean = false,
-        private var inferDfgForUnresolvedCalls: Boolean = true,
+        private var inferDfgForUnresolvedSymbols: Boolean = true,
     ) {
         fun enabled(infer: Boolean) = apply { this.enabled = infer }
 
@@ -89,7 +91,7 @@ private constructor(
         fun inferReturnTypes(infer: Boolean) = apply { this.inferReturnTypes = infer }
 
         fun inferDfgForUnresolvedCalls(infer: Boolean) = apply {
-            this.inferDfgForUnresolvedCalls = infer
+            this.inferDfgForUnresolvedSymbols = infer
         }
 
         fun build() =
@@ -101,7 +103,7 @@ private constructor(
                 inferFields,
                 inferVariables,
                 inferReturnTypes,
-                inferDfgForUnresolvedCalls,
+                inferDfgForUnresolvedSymbols,
             )
     }
 
@@ -115,7 +117,7 @@ private constructor(
     override fun toString(): String {
         return ToStringBuilder(this, ToStringStyle.JSON_STYLE)
             .append("inferRecords", inferRecords)
-            .append("inferDfgForUnresolvedCalls", inferDfgForUnresolvedSymbols)
+            .append("inferDfgForUnresolvedSymbols", inferDfgForUnresolvedSymbols)
             .toString()
     }
 }

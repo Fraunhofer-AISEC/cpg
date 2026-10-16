@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.function.Predicate
@@ -42,6 +44,7 @@ import java.util.function.Predicate
  * two elements directly in fields and only falls back to a real [HashSet] once a third distinct
  * element is added.
  */
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var thisRef: Node,
     override var init: (start: Node, end: NodeType) -> EdgeType,

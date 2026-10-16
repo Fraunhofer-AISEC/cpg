@@ -157,7 +157,7 @@ class UnaryOperator : Expression(), HasOverloadedOperation, HasType.TypeObserver
         const val OPERATOR_POSTFIX_DECREMENT = "--"
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.input.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.input.startingPrevEOG()
     }
 }

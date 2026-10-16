@@ -229,8 +229,8 @@ class ExtensionTest {
                     val ext = buildExtension("Extension", null, holder = tu)
 
                     // Test EOG methods return empty collections
-                    assertTrue(ext.getStartingPrevEOG().isEmpty())
-                    assertTrue(ext.getExitNextEOG().isEmpty())
+                    assertTrue(ext.startingPrevEOG().isEmpty())
+                    assertTrue(ext.exitNextEOG().isEmpty())
                 }
             }
         }

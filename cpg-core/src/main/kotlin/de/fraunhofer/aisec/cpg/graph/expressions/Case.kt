@@ -55,7 +55,7 @@ class Case : Expression(false) {
 
     override fun hashCode() = Objects.hash(super.hashCode(), caseExpression)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.caseExpression?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.caseExpression?.startingPrevEOG() ?: this.prevEOG
     }
 }

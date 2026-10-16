@@ -127,8 +127,8 @@ open class BinaryOperator : Expression(), HasOverloadedOperation, HasType.TypeOb
 
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.lhs.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.lhs.startingPrevEOG()
     }
 
     val base: Expression?

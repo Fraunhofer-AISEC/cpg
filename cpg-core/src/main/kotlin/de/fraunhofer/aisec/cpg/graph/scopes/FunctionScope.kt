@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 
@@ -34,4 +35,4 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
  * function (also the body) are inside the function scope. In other languages, such as C++, the
  * variables of the function body would be in a [LocalScope] of the [Function.body].
  */
-class FunctionScope(astNode: Function) : Scope(astNode)
+class FunctionScope(@JsonProperty("astNode") astNode: Function) : Scope(astNode)

@@ -174,11 +174,11 @@ open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
         return super.hashCode()
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
-        return this.initializer?.getExitNextEOG() ?: this.nextEOG
+    override fun exitNextEOG(): Collection<Node> {
+        return this.initializer?.exitNextEOG() ?: this.nextEOG
     }
 }

@@ -105,7 +105,7 @@ abstract class OverlayNode() : Node() {
         return Objects.hash(super.hashCode(), underlyingNode)
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return setOf()
     }
 }
