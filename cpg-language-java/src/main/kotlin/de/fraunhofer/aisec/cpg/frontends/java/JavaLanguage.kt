@@ -30,6 +30,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -88,17 +89,21 @@ open class JavaLanguage :
      * file, sharing the solver lets JavaParser re-use its caches across files instead of parsing
      * every referenced file over and over again.
      *
-     * JavaParser's solvers are not thread-safe, which is why [JavaLanguageFrontend] does not
-     * support parallel parsing.
+     * JavaParser's solvers are not thread-safe, so they are only shared if the frontends run
+     * sequentially (see [typeSolverFor]).
      */
     @DoNotPersist
     @JsonIgnore
     private val typeSolvers = ConcurrentHashMap<Pair<List<Path>, List<Path>>, CombinedTypeSolver>()
 
     /**
-     * Returns the (shared) JavaParser type solver for the [component] (by default, the current
-     * component of [ctx]). It resolves against the JDK, the top-level of the component as well as
-     * the additional source roots and jars of the [JavaFrontendConfiguration].
+     * Returns the JavaParser type solver for the [component] (by default, the current component of
+     * [ctx]). It resolves against the JDK, the top-level of the component as well as the additional
+     * source roots and jars of the [JavaFrontendConfiguration].
+     *
+     * The solver is shared between all callers with the same source roots and jars, unless the
+     * frontends run in parallel ([TranslationConfiguration.useParallelFrontends]): JavaParser's
+     * solvers and their caches are not thread-safe, so each caller then gets its own solver.
      */
     internal fun typeSolverFor(
         ctx: TranslationContext,
@@ -125,25 +130,32 @@ open class JavaLanguage :
             (listOfNotNull(root?.toPath()) + frontendConfiguration.sourceRoots).distinct().sorted()
         val classpath = frontendConfiguration.classpath.distinct().sorted()
 
+        if (config.useParallelFrontends) {
+            return createTypeSolver(sourceRoots, classpath)
+        }
+
         return typeSolvers.computeIfAbsent(sourceRoots to classpath) {
             log.info(
                 "Creating type solver for {} source root(s) and {} jar(s)",
                 sourceRoots.size,
                 classpath.size,
             )
-            CombinedTypeSolver().apply {
-                add(ReflectionTypeSolver())
-                sourceRoots.forEach { add(JavaParserTypeSolver(it)) }
-                classpath.forEach {
-                    try {
-                        add(JarTypeSolver(it))
-                    } catch (e: IOException) {
-                        log.warn("Could not add {} to the type solver: {}", it, e.message)
-                    }
+            createTypeSolver(sourceRoots, classpath)
+        }
+    }
+
+    private fun createTypeSolver(sourceRoots: List<Path>, classpath: List<Path>) =
+        CombinedTypeSolver().apply {
+            add(ReflectionTypeSolver())
+            sourceRoots.forEach { add(JavaParserTypeSolver(it)) }
+            classpath.forEach {
+                try {
+                    add(JarTypeSolver(it))
+                } catch (e: IOException) {
+                    log.warn("Could not add {} to the type solver: {}", it, e.message)
                 }
             }
         }
-    }
 
     override val qualifiers = listOf("final", "volatile")
     override val unknownTypeString = listOf("var")
