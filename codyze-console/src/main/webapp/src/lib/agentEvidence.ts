@@ -1,4 +1,10 @@
-import type { NodeJSON, NodeRefJSON, TrustIssueJSON } from '$lib/types';
+import type {
+  NodeInfoJSON,
+  NodeJSON,
+  NodePathsJSON,
+  NodeRefJSON,
+  TrustIssueJSON
+} from '$lib/types';
 
 /**
  * The evidence of the agent's answers: the nodes returned by its tool calls and the nodes it cites
@@ -13,6 +19,50 @@ export const citationPattern = new RegExp(`\\[\\[node:(${uuid})\\]\\]`, 'gi');
 /** The IDs of the nodes cited in [text], in the order of their first citation. */
 export function extractCitations(text: string): string[] {
   return [...new Set([...text.matchAll(citationPattern)].map((m) => m[1].toLowerCase()))];
+}
+
+function isNodeInfo(value: unknown): value is NodeInfoJSON {
+  return !!value && typeof (value as NodeInfoJSON).nodeId === 'string';
+}
+
+/** Whether a value is paths in the format of the tools that find paths. */
+function isNodePaths(value: unknown): value is NodePathsJSON {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as NodePathsJSON;
+  return (
+    typeof v.kind === 'string' &&
+    Array.isArray(v.paths) &&
+    v.paths.length > 0 &&
+    v.paths.every((path) => Array.isArray(path) && path.every(isNodeInfo))
+  );
+}
+
+/** The node IDs of each of the paths. */
+export function pathNodeIds(paths: NodePathsJSON): string[][] {
+  return paths.paths.map((path) => path.map((node) => node.nodeId));
+}
+
+/**
+ * The paths in the result of a tool call, if it returned paths. The result may be the JSON as text,
+ * parsed, or the text contents of the tool.
+ */
+export function extractToolPaths(content: unknown): NodePathsJSON | null {
+  if (typeof content === 'string') {
+    try {
+      return extractToolPaths(JSON.parse(content));
+    } catch {
+      return null;
+    }
+  }
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      const text = (part as { text?: unknown })?.text;
+      const paths = typeof text === 'string' ? extractToolPaths(text) : null;
+      if (paths) return paths;
+    }
+    return null;
+  }
+  return isNodePaths(content) ? content : null;
 }
 
 /**

@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.serialization.NodeInfo
+import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -103,23 +105,23 @@ class WorkbenchDemoIntegrationTest {
         val backward =
             client
                 .get("/api/node/${encrypt.node.id}/pdg?direction=backward&hops=2")
-                .body<PdgSliceJSON>()
+                .body<GraphSliceJSON>()
         val root = backward.nodes.first { it.id == backward.root }
         assertTrue("encrypt" in root.code, "root: ${root.code}")
         val getKey = backward.nodes.firstOrNull { "get_key" in it.code }
         assertNotNull(getKey, "nodes: ${backward.nodes.map { it.code }}")
         assertTrue(
             backward.edges.any {
-                it.kind == PdgEdgeKind.DATA && it.from == getKey.id && it.label == "key"
+                it.kind == GraphEdgeKind.DATA && it.from == getKey.id && it.label == "key"
             },
             "edges: ${backward.edges}",
         )
         val condition = backward.nodes.firstOrNull { "cfg.secure" in it.code }
         assertNotNull(condition, "nodes: ${backward.nodes.map { it.code }}")
-        assertEquals(PdgNodeKind.BRANCH, condition.kind)
+        assertEquals(GraphNodeKind.BRANCH, condition.kind)
         assertTrue(
             backward.edges.any {
-                it.kind == PdgEdgeKind.CONTROL && it.from == condition.id && it.label == "true"
+                it.kind == GraphEdgeKind.CONTROL && it.from == condition.id && it.label == "true"
             },
             "edges: ${backward.edges}",
         )
@@ -127,7 +129,7 @@ class WorkbenchDemoIntegrationTest {
 
         // What the key affects: the encryption, the plain copy and the log
         val forward =
-            client.get("/api/node/${getKey.id}/pdg?direction=forward&hops=3").body<PdgSliceJSON>()
+            client.get("/api/node/${getKey.id}/pdg?direction=forward&hops=3").body<GraphSliceJSON>()
         val affected = forward.nodes.map { it.code }
         assertTrue(affected.any { "encrypt" in it }, "affected: $affected")
         assertTrue(affected.any { "copy_plain" in it }, "affected: $affected")
@@ -135,7 +137,7 @@ class WorkbenchDemoIntegrationTest {
 
         // The counts of the context menu
         val counts =
-            client.get("/api/node/${encrypt.node.id}/pdg-counts?hops=2").body<PdgCountsJSON>()
+            client.get("/api/node/${encrypt.node.id}/pdg-counts?hops=2").body<SliceCountsJSON>()
         assertTrue(counts.backward > 0 && counts.forward >= 0, "counts: $counts")
 
         // The evidence of an answer relies on the unresolved call in the function
@@ -160,6 +162,106 @@ class WorkbenchDemoIntegrationTest {
                 )
                 .body<NodeDetailsJSON>()
         assertTrue("encrypt" in selection.node.code, "selection: ${selection.node.code}")
+    }
+
+    /** Paths of nodes become a graph of their statements, like a slice of the dependence graph. */
+    @Test
+    fun testPathsGraph() = testApplication {
+        application { configureWebconsole(ConsoleService()) }
+        val client = createClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        }
+        val result =
+            client
+                .post("/api/analyze") {
+                    contentType(ContentType.Application.Json)
+                    setBody(AnalyzeRequestJSON(sourceDir = demoDir, topLevel = demoDir))
+                }
+                .body<AnalysisResultJSON>()
+        val component = result.components.single()
+        val main = component.translationUnits.first { it.name.endsWith("main.c") }
+        val base = "/api/component/${component.name}/translation-unit/${main.id}"
+
+        val getKey = client.nodeAt(base, "get_key(&cfg)")
+        val encrypt = client.nodeAt(base, "encrypt(key, buf, len)")
+        val graph =
+            client
+                .post("/api/graph/from-paths") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        NodePaths(
+                            kind = "dataflow",
+                            description = "where the key goes to",
+                            start =
+                                NodeInfo(
+                                    getKey.node.id.toString(),
+                                    "get_key",
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                ),
+                            paths =
+                                listOf(
+                                    listOf(getKey.node, encrypt.node).map {
+                                        NodeInfo(
+                                            it.id.toString(),
+                                            it.name,
+                                            it.code,
+                                            it.type,
+                                            null,
+                                            null,
+                                            null,
+                                        )
+                                    }
+                                ),
+                            truncated = false,
+                        )
+                    )
+                }
+                .body<GraphSliceJSON>()
+        assertEquals(2, graph.nodes.size, "nodes: ${graph.nodes.map { it.code }}")
+        val root = graph.nodes.single { it.id == graph.root }
+        assertTrue("encrypt" in root.code, "root: ${root.code}")
+        val edge = graph.edges.single()
+        assertEquals(GraphEdgeKind.DATA, edge.kind)
+        assertEquals(root.id, edge.to)
+
+        // The data and the control dependences of the call of encrypt, each on their own
+        val dfg =
+            client
+                .get("/api/node/${encrypt.node.id}/dfg?direction=backward&hops=2")
+                .body<GraphSliceJSON>()
+        assertTrue(dfg.edges.isNotEmpty() && dfg.edges.all { it.kind == GraphEdgeKind.DATA })
+        assertTrue(dfg.nodes.any { "get_key" in it.code }, "nodes: ${dfg.nodes.map { it.code }}")
+        val cdg =
+            client
+                .get("/api/node/${encrypt.node.id}/cdg?direction=backward&hops=1")
+                .body<GraphSliceJSON>()
+        assertTrue(cdg.edges.isNotEmpty() && cdg.edges.all { it.kind == GraphEdgeKind.CONTROL })
+        assertTrue(cdg.nodes.any { "cfg.secure" in it.code }, "nodes: ${cdg.nodes.map { it.code }}")
+
+        // Interprocedural (the default), the key reaches the code of encrypt in crypto.c and only
+        // code that is not analysed is a stub; intraprocedural, it stays in app_main
+        fun GraphSliceJSON.inCrypto() =
+            nodes.filter { it.kind != GraphNodeKind.STUB && it.node.fileName == "crypto.c" }
+        val across =
+            client
+                .get("/api/node/${getKey.node.id}/pdg?direction=forward&hops=3")
+                .body<GraphSliceJSON>()
+        assertTrue(across.inCrypto().isNotEmpty(), "nodes: ${across.nodes.map { it.code }}")
+        assertTrue(
+            across.nodes.filter { it.kind == GraphNodeKind.STUB }.all { it.external },
+            "stubs: ${across.nodes.filter { it.kind == GraphNodeKind.STUB }.map { it.code }}",
+        )
+        val local =
+            client
+                .get(
+                    "/api/node/${getKey.node.id}/pdg?direction=forward&hops=3&scope=intraprocedural"
+                )
+                .body<GraphSliceJSON>()
+        assertTrue(local.inCrypto().isEmpty(), "nodes: ${local.nodes.map { it.code }}")
     }
 
     /**

@@ -2,7 +2,7 @@
   import type { Point } from './layout';
 
   /** What an edge of the graph needs to know besides its route. */
-  export interface PdgEdgeData extends Record<string, unknown> {
+  export interface GraphEdgeData extends Record<string, unknown> {
     points: Point[];
     label: Point | null;
     text: string | null;
@@ -22,7 +22,7 @@
   import { edgeColor, roundedPath } from './layout';
 
   let { id, data, markerEnd }: EdgeProps = $props();
-  const edge = $derived(data as PdgEdgeData);
+  const edge = $derived(data as GraphEdgeData);
   const path = $derived(roundedPath(edge.points));
 
   // Data dependences are solid and dark, control dependences dashed and light, and the selected
@@ -44,7 +44,7 @@
   <EdgeLabel x={edge.label.x} y={edge.label.y} transparent>
     <button
       type="button"
-      class="rounded-sm bg-gray-50 px-1 text-[10.5px] leading-4 group-[.pdg-far]/flow:hidden {edge.kind ===
+      class="rounded-sm bg-gray-50 px-1 text-[10.5px] leading-4 group-[.graph-far]/flow:hidden {edge.kind ===
       'DATA'
         ? 'font-mono text-slate-600'
         : 'text-gray-500 italic'} {edge.faded && !edge.marked ? 'opacity-40' : ''} {edge.active

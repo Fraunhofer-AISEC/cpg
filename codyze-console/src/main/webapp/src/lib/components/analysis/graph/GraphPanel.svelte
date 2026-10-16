@@ -1,9 +1,14 @@
 <script lang="ts">
   import type { NodeRefJSON } from '$lib/types';
-  import { describeDependences, locationOf, type PdgNode } from '$lib/pdg';
-  import type { PdgPanel } from '$lib/stores/pdgPanel.svelte';
+  import {
+    describeDependences,
+    locationOf,
+    type DependenceGraph,
+    type GraphNode
+  } from '$lib/graph';
+  import type { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import { isTyping } from '$lib/utils/keyboard';
-  import PdgGraph from './PdgGraph.svelte';
+  import GraphCanvas from './GraphCanvas.svelte';
 
   /**
    * The panel next to the code with the program dependence graph of a statement: what affects it
@@ -11,13 +16,13 @@
    * look, and the details of the selected statement under it.
    */
   interface Props {
-    panel: PdgPanel;
+    panel: GraphPanel;
     /** Inspects the node of a statement, opening its file if it is in another one */
     onInspect: (node: NodeRefJSON) => void;
     /** Asks the agent about the node of a statement */
     onAsk: (node: NodeRefJSON) => void;
     /** Called when a statement is clicked in the graph, to show it in the code */
-    onSelectNode?: (node: PdgNode) => void;
+    onSelectNode?: (node: GraphNode) => void;
   }
 
   let { panel, onInspect, onAsk, onSelectNode }: Props = $props();
@@ -27,14 +32,20 @@
   const selected = $derived(panel.selected);
   const backward = $derived(panel.direction === 'BACKWARD');
 
+  // Paths (e.g. found by the agent) are shown instead of a slice, without its controls
+  const paths = $derived(panel.paths);
+
   const title = $derived.by(() => {
+    if (paths) return `Agent: ${paths.description}`;
     const where = root && root.startLine > 0 ? `line ${root.startLine}` : 'this statement';
     return backward ? `What affects ${where}?` : `What does ${where} affect?`;
   });
   const subtitle = $derived(
-    `${backward ? 'Backward' : 'Forward'} slice · ${root?.code ?? ''}${
-      slice?.function ? ` · in ${slice.function.name}` : ''
-    }`
+    paths
+      ? `${paths.count} ${paths.count === 1 ? 'path' : 'paths'} · ${paths.kind}`
+      : `${panel.graph} · ${backward ? 'backward' : 'forward'} · ${root?.code ?? ''}${
+          panel.scope === 'intraprocedural' && slice?.function ? ` · in ${slice.function.name}` : ''
+        }`
   );
 
   // The tones of the notes about a statement, in the colors of the analysis
@@ -45,7 +56,7 @@
     gray: 'border-gray-200 bg-gray-50 text-gray-600'
   };
 
-  function notesOf(node: PdgNode): { tone: keyof typeof tones; text: string }[] {
+  function notesOf(node: GraphNode): { tone: keyof typeof tones; text: string }[] {
     const notes: { tone: keyof typeof tones; text: string }[] = [];
     if (node.kind === 'STUB') {
       notes.push(
@@ -91,11 +102,18 @@
   }
 
   const hopOptions = [1, 2, 3];
+
+  // The dependences a slice can follow, see [DependenceGraph]
+  const graphOptions: { graph: DependenceGraph; title: string }[] = [
+    { graph: 'PDG', title: 'Data and control dependences (program dependence graph)' },
+    { graph: 'DFG', title: 'Only data dependences: where values come from or go to' },
+    { graph: 'CDG', title: 'Only control dependences: which conditions decide whether code runs' }
+  ];
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
-<aside class="flex h-full min-h-0 w-full flex-col bg-gray-50" aria-label="Program dependence graph">
+<aside class="flex h-full min-h-0 w-full flex-col bg-gray-50" aria-label="Dependence graph">
   <!-- Header: the question, how far to look and the buttons of the panel -->
   <header class="flex h-13 shrink-0 items-center gap-2 border-b border-gray-200 bg-white pr-2 pl-3">
     {#if panel.history.length > 0}
@@ -113,45 +131,76 @@
       <div class="truncate text-[13px] font-semibold text-gray-900">{title}</div>
       <div class="truncate font-mono text-[11px] text-gray-500" title={subtitle}>{subtitle}</div>
     </div>
-    <span class="text-[11px] text-gray-500">Hops</span>
-    <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Hops">
-      {#each hopOptions as hops (hops)}
-        <button
-          type="button"
-          class="h-6 w-6 rounded text-xs {panel.hops === hops
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-800'}"
-          aria-pressed={panel.hops === hops}
-          onclick={() => panel.setHops(hops)}
-        >
-          {hops}
-        </button>
-      {/each}
-    </div>
-    <button
-      type="button"
-      class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 {panel.pinned
-        ? 'bg-gray-200 text-gray-900'
-        : ''}"
-      aria-pressed={panel.pinned}
-      onclick={() => (panel.pinned = !panel.pinned)}
-      aria-label="Pin the graph"
-      title={panel.pinned
-        ? 'Pinned: the graph stays when another node is inspected'
-        : 'Pin the graph, so that it stays when another node is inspected'}
-    >
-      <svg
-        class="h-4 w-4"
-        viewBox="0 0 24 24"
-        fill={panel.pinned ? 'currentColor' : 'none'}
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+    {#if !paths}
+      <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Graph">
+        {#each graphOptions as option (option.graph)}
+          <button
+            type="button"
+            class="h-6 rounded px-1.5 text-[11px] {panel.graph === option.graph
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-800'}"
+            aria-pressed={panel.graph === option.graph}
+            title={option.title}
+            onclick={() => panel.setGraph(option.graph)}
+          >
+            {option.graph}
+          </button>
+        {/each}
+      </div>
+      <button
+        type="button"
+        class="h-6 rounded-md px-1.5 text-[11px] {panel.scope === 'intraprocedural'
+          ? 'bg-gray-200 text-gray-900'
+          : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}"
+        aria-pressed={panel.scope === 'intraprocedural'}
+        title={panel.scope === 'intraprocedural'
+          ? 'Intraprocedural: only the function of the statement. Click to follow the dependences into other functions'
+          : 'Interprocedural: across functions. Click to stay in the function of the statement'}
+        onclick={() =>
+          panel.setScope(panel.scope === 'intraprocedural' ? 'interprocedural' : 'intraprocedural')}
       >
-        <path d="M9 4h6l-1 6 4 3H6l4-3zM12 13v7" />
-      </svg>
-    </button>
+        intraprocedural
+      </button>
+      <span class="text-[11px] text-gray-500">Hops</span>
+      <div class="flex gap-0.5 rounded-md bg-gray-100 p-0.5" role="group" aria-label="Hops">
+        {#each hopOptions as hops (hops)}
+          <button
+            type="button"
+            class="h-6 w-6 rounded text-xs {panel.hops === hops
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-800'}"
+            aria-pressed={panel.hops === hops}
+            onclick={() => panel.setHops(hops)}
+          >
+            {hops}
+          </button>
+        {/each}
+      </div>
+      <button
+        type="button"
+        class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 {panel.pinned
+          ? 'bg-gray-200 text-gray-900'
+          : ''}"
+        aria-pressed={panel.pinned}
+        onclick={() => (panel.pinned = !panel.pinned)}
+        aria-label="Pin the graph"
+        title={panel.pinned
+          ? 'Pinned: the graph stays when another node is inspected'
+          : 'Pin the graph, so that it stays when another node is inspected'}
+      >
+        <svg
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill={panel.pinned ? 'currentColor' : 'none'}
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M9 4h6l-1 6 4 3H6l4-3zM12 13v7" />
+        </svg>
+      </button>
+    {/if}
     <button
       type="button"
       class="flex h-7 w-7 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900"
@@ -166,7 +215,7 @@
   </header>
 
   <div class="relative min-h-0 flex-1">
-    <PdgGraph {panel} {onSelectNode} />
+    <GraphCanvas {panel} {onSelectNode} />
   </div>
 
   <!-- The selected statement -->
@@ -174,12 +223,16 @@
     class="max-h-[45%] shrink-0 space-y-2 overflow-y-auto border-t border-gray-200 bg-white px-3 py-2.5"
   >
     <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[11px] text-gray-500">
-      <span class="flex items-center gap-1.5">
-        <span class="h-0.5 w-5.5 bg-slate-600"></span>data dependence
-      </span>
-      <span class="flex items-center gap-1.5">
-        <span class="w-5.5 border-t-2 border-dashed border-slate-400"></span>control dependence
-      </span>
+      {#if paths || panel.graph !== 'CDG'}
+        <span class="flex items-center gap-1.5">
+          <span class="h-0.5 w-5.5 bg-slate-600"></span>data dependence
+        </span>
+      {/if}
+      {#if !paths && panel.graph !== 'DFG'}
+        <span class="flex items-center gap-1.5">
+          <span class="w-5.5 border-t-2 border-dashed border-slate-400"></span>control dependence
+        </span>
+      {/if}
       <span class="flex items-center gap-1.5">
         <span class="h-2.5 w-3.5 rounded-sm border border-dashed border-gray-400"></span>
         leaves the function
@@ -211,7 +264,7 @@
             ? `Open ${selected.node.fileName ?? 'file'}`
             : 'Inspect'}
         </button>
-        {#if selected.kind !== 'STUB'}
+        {#if selected.kind !== 'STUB' && !paths}
           <button
             type="button"
             class="h-7 rounded-md border border-blue-200 bg-blue-50 px-2.5 text-xs text-blue-700 hover:bg-blue-100"
