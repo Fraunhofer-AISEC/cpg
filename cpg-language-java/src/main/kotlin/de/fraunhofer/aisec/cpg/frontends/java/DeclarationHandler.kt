@@ -468,6 +468,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     frontend.scopeManager.addDeclaration(c)
                     recordDeclaration.constructors += c
                 }
+                // RecordDeclaration is not a ClassOrInterfaceDeclaration but a sibling of it (both
+                // are TypeDeclarations), so nested records need to be listed explicitly
                 is ClassOrInterfaceDeclaration,
                 is EnumDeclaration,
                 is RecordDeclaration -> {
