@@ -31,17 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
+import de.fraunhofer.aisec.cpg.serialization.CallStatus
+import de.fraunhofer.aisec.cpg.serialization.NodeRefJSON
+import de.fraunhofer.aisec.cpg.serialization.status
+import de.fraunhofer.aisec.cpg.serialization.toRefJSON
 import kotlinx.serialization.Serializable
-
-/** How well the analysis knows the target of a call. */
-enum class CallStatus {
-    /** The target is part of the analysed code. */
-    RESOLVED,
-    /** The target is not part of the analysed code, e.g. a library function. */
-    EXTERNAL,
-    /** The target could not be determined at all. */
-    UNRESOLVED,
-}
 
 /** Key figures of a function, shown next to it in the code viewer. */
 @Serializable
@@ -161,11 +155,3 @@ fun TranslationUnit.conceptAnnotations(
             )
         }
     }
-
-val Call.status: CallStatus
-    get() =
-        when {
-            invokes.isEmpty() -> CallStatus.UNRESOLVED
-            invokes.all { it.isInferred } -> CallStatus.EXTERNAL
-            else -> CallStatus.RESOLVED
-        }

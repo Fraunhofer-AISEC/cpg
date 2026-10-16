@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { NodePathsJSON, NodeRefJSON, ToolResult } from '$lib/types';
+  import type { NodePathsJSON, NodeRefJSON, NodeSliceJSON, ToolResult } from '$lib/types';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -14,6 +14,8 @@
     nodes: NodeRefJSON[];
     /** The paths the tool returned, if it searched for paths */
     paths?: NodePathsJSON | null;
+    /** The slice the tool computed, if it computed one */
+    slice?: NodeSliceJSON | null;
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
     onSelect: (ref: NodeRefJSON) => void;
@@ -22,7 +24,7 @@
     onHover: (hovered: boolean) => void;
   }
 
-  let { toolResult, step, nodes, paths, selectedId, onSelect, onActivate, onHover }: Props =
+  let { toolResult, step, nodes, paths, slice, selectedId, onSelect, onActivate, onHover }: Props =
     $props();
 
   let expanded = $state(false);
@@ -51,6 +53,10 @@
     if (skill) return skill;
     if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof content?.name === 'string')
       return `suggests ${content.name}`;
+    if (slice) {
+      const count = `${slice.statements.length}${slice.truncated ? '+' : ''}`;
+      return `${slice.graph} ${slice.direction.toLowerCase()} · ${count} ${slice.statements.length === 1 ? 'statement' : 'statements'}`;
+    }
     if (paths) {
       const count = `${paths.paths.length}${paths.truncated ? '+' : ''}`;
       return `${paths.kind} · ${count} ${paths.paths.length === 1 ? 'path' : 'paths'}`;
@@ -89,11 +95,13 @@
       class="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-0.5 text-[10px] leading-none font-semibold tabular-nums {nodes.length
         ? 'bg-slate-700 text-white hover:bg-slate-900'
         : 'bg-slate-200 text-slate-600'}"
-      title={paths
-        ? `Step ${step}: show its ${paths.paths.length === 1 ? 'path' : 'paths'} in the code`
-        : nodes.length
-          ? `Step ${step}: show its nodes in the code`
-          : `Step ${step} returned no nodes of the code`}
+      title={slice
+        ? `Step ${step}: show its slice in the graph`
+        : paths
+          ? `Step ${step}: show its ${paths.paths.length === 1 ? 'path' : 'paths'} in the code`
+          : nodes.length
+            ? `Step ${step}: show its nodes in the code`
+            : `Step ${step} returned no nodes of the code`}
       disabled={nodes.length === 0}
       onclick={onActivate}
     >

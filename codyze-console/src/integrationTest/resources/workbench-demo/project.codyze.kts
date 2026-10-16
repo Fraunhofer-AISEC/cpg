@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.query.and
 include { Tagging from "tagging.codyze.kts" }
 
 /**
- * A small WiFi application to try the features of the console: calls that cannot be resolved or
- * leave the analysed code, branches and loops, a key that flows into encryption, the network and
- * (in debug mode) the log, and concepts attached to some of the calls.
+ * A small WiFi application to try the features of the console: calls that leave the analysed code,
+ * branches and loops, a key that flows into encryption, the network and (in debug mode) the log,
+ * and concepts attached to some of the calls.
  */
 project {
     name = "Workbench Demo"

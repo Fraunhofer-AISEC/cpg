@@ -103,9 +103,22 @@ export function roundedPath(points: Point[], radius = 8): string {
   return `${path} L ${last.x} ${last.y}`;
 }
 
-/** The color of an edge: the selected statement's edges are blue, data is darker than control. */
-export function edgeColor(kind: 'DATA' | 'CONTROL', active: boolean, marked: boolean): string {
+/** The color of what the agent's answer relies on, in the graph and in the code. */
+export const AGENT_COLOR = '#0d9488';
+
+/**
+ * The color of an edge: the selected statement's edges are blue, the edges the agent's answer leads
+ * along teal, data is darker than control, and the link of an overlay has the color of the concepts.
+ */
+export function edgeColor(
+  kind: 'DATA' | 'CONTROL' | 'OVERLAY',
+  active: boolean,
+  marked: boolean,
+  agent = false
+): string {
   if (active) return '#3b82f6';
   if (marked) return '#0f172a';
+  if (agent) return AGENT_COLOR;
+  if (kind === 'OVERLAY') return '#a78bfa';
   return kind === 'DATA' ? '#475569' : '#94a3b8';
 }

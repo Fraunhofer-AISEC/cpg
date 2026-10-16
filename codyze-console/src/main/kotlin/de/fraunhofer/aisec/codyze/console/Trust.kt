@@ -29,6 +29,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
+import de.fraunhofer.aisec.cpg.serialization.CallStatus
+import de.fraunhofer.aisec.cpg.serialization.NodeRefJSON
+import de.fraunhofer.aisec.cpg.serialization.status
+import de.fraunhofer.aisec.cpg.serialization.toRefJSON
 import kotlinx.serialization.Serializable
 
 /** Upper bound for the issues returned for one set of evidence, the most severe ones first. */

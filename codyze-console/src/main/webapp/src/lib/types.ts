@@ -187,6 +187,23 @@ export interface NodePathsJSON {
   truncated: boolean;
 }
 
+/**
+ * A slice of the program dependence graph a tool computed (see NodeSlice in the backend), with the
+ * parameters to show it in the graph panel
+ */
+export interface NodeSliceJSON {
+  kind: 'slice';
+  /** What the slice shows, e.g. "what affects `x`" */
+  description: string;
+  start: NodeInfoJSON;
+  graph: 'PDG' | 'DFG' | 'CDG';
+  direction: 'BACKWARD' | 'FORWARD';
+  hops: number;
+  interprocedural: boolean;
+  statements: { nodeId: string }[];
+  truncated: boolean;
+}
+
 // MCP capabilities
 export interface McpToolInfo {
   name: string;

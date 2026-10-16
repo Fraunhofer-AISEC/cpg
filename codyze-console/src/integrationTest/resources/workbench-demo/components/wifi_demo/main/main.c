@@ -52,7 +52,7 @@ void app_main(void) {
         report_key(key);
     }
 
-    /* The target of a call through a function pointer cannot be resolved */
+    /* The function called through a pointer is passed in at runtime: external */
     cfg.on_connect(key);
 
     log_debug(describe(cfg.retries));
