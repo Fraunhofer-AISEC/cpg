@@ -39,6 +39,8 @@ import kotlin.test.assertTrue
 
 class CpgLockTest {
 
+    private val lock = CpgLock()
+
     private fun <T> withPool(threads: Int, body: (java.util.concurrent.ExecutorService) -> T): T {
         val pool = Executors.newFixedThreadPool(threads)
         try {
@@ -57,7 +59,7 @@ class CpgLockTest {
             val inside =
                 List(2) {
                     pool.submit<Boolean> {
-                        CpgLock.read {
+                        lock.read {
                             try {
                                 barrier.await(5, TimeUnit.SECONDS)
                                 true
@@ -79,13 +81,13 @@ class CpgLockTest {
 
             val writer =
                 pool.submit {
-                    CpgLock.write {
+                    lock.write {
                         writerInside.countDown()
                         releaseWriter.await(10, TimeUnit.SECONDS)
                     }
                 }
             assertTrue(writerInside.await(5, TimeUnit.SECONDS))
-            val reader = pool.submit { CpgLock.read { readerEntered.set(true) } }
+            val reader = pool.submit { lock.read { readerEntered.set(true) } }
 
             Thread.sleep(300)
             assertFalse(readerEntered.get(), "reader must wait for the running writer")
@@ -105,13 +107,13 @@ class CpgLockTest {
 
             val reader =
                 pool.submit {
-                    CpgLock.read {
+                    lock.read {
                         readerInside.countDown()
                         releaseReader.await(10, TimeUnit.SECONDS)
                     }
                 }
             assertTrue(readerInside.await(5, TimeUnit.SECONDS))
-            val writer = pool.submit { CpgLock.write { writerEntered.set(true) } }
+            val writer = pool.submit { lock.write { writerEntered.set(true) } }
 
             Thread.sleep(300)
             assertFalse(writerEntered.get(), "writer must wait for the running reader")
@@ -124,24 +126,21 @@ class CpgLockTest {
 
     @Test
     fun writeIsReentrantAndMayDowngradeToRead() {
-        val result = CpgLock.write { CpgLock.write { CpgLock.read { "ok" } } }
+        val result = lock.write { lock.write { lock.read { "ok" } } }
         assertEquals("ok", result)
     }
 
     @Test
     fun upgradingFromReadToWriteFailsInsteadOfDeadlocking() {
-        CpgLock.read { assertFailsWith<IllegalStateException> { CpgLock.write {} } }
+        lock.read { assertFailsWith<IllegalStateException> { lock.write {} } }
     }
 
     @Test
     fun lockIsReleasedWhenTheBlockThrows() =
         withPool(1) { pool ->
-            assertFailsWith<IllegalStateException> { CpgLock.write { error("boom") } }
-            assertFailsWith<IllegalStateException> { CpgLock.read { error("boom") } }
+            assertFailsWith<IllegalStateException> { lock.write { error("boom") } }
+            assertFailsWith<IllegalStateException> { lock.read { error("boom") } }
             // Another thread can take the exclusive lock, so neither failure leaked a hold.
-            assertEquals(
-                "ok",
-                pool.submit<String> { CpgLock.write { "ok" } }.get(5, TimeUnit.SECONDS),
-            )
+            assertEquals("ok", pool.submit<String> { lock.write { "ok" } }.get(5, TimeUnit.SECONDS))
         }
 }

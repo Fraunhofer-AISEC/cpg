@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgBackwardPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
@@ -62,17 +62,14 @@ fun Server.addDfgBackwardTool() {
         readOnly = true,
         name = "cpg_dfg_backward",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgDfgBackwardPayload ->
-        dfgBackward(result, payload)
+    ) { session: CpgSession, payload: CpgDfgBackwardPayload ->
+        dfgBackward(session, payload)
     }
 }
 
-internal fun dfgBackward(
-    result: TranslationResult,
-    payload: CpgDfgBackwardPayload,
-): CallToolResult {
+internal fun dfgBackward(session: CpgSession, payload: CpgDfgBackwardPayload): CallToolResult {
     val startNode =
-        result.findNodeById(Uuid.parse(payload.id).toString())
+        session.findNodeById(Uuid.parse(payload.id).toString())
             ?: return CallToolResult(
                 content = listOf(TextContent("No node found with ID ${payload.id}"))
             )

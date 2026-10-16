@@ -26,9 +26,12 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgProjectPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConcept
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptList
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.runOnSession
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -40,27 +43,23 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.io.path.writeText
 import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Drives tool-style calls through [runOnCpg] on a real graph, the way parallel MCP requests would:
- * writers attach concept overlays to a few "hot" nodes while readers traverse exactly those nodes'
- * overlay and data-flow collections. Without
+ * Drives tool-style calls through [runOnSession] on a real graph, the way parallel MCP requests
+ * would: writers attach concept overlays to a few "hot" nodes while readers traverse exactly those
+ * nodes' overlay and data-flow collections. Without
  * [de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgLock] this reliably produces
- * `ConcurrentModificationException`s (about a dozen per second here), which [runOnCpg] turns into
- * an "Error executing query" result - exactly what a model would be shown.
+ * `ConcurrentModificationException`s (about a dozen per second here), which [runOnSession] turns
+ * into an "Error executing query" result - exactly what a model would be shown.
  */
 class CpgGraphConcurrencyTest {
 
-    private val previousResult = globalAnalysisResult
-
-    @AfterTest
-    fun restoreGlobalState() {
-        globalAnalysisResult = previousResult
-    }
+    @BeforeTest @AfterTest fun clearSessions() = analysisSessions.clear()
 
     private fun isError(result: CallToolResult) =
         (result.content.firstOrNull() as? TextContent)?.text?.startsWith("Error") == true
@@ -76,7 +75,7 @@ class CpgGraphConcurrencyTest {
             analyze(listOf(dir.resolve("hot.c").toFile()), dir, true) {
                 it.registerLanguage<CLanguage>()
             }
-        globalAnalysisResult = result
+        registerSession("hot", result)
         val hot = result.functions.filter { it.name.localName.startsWith("helper") }.take(5)
         val schemaFile = dir.resolve("concepts.yaml").toFile()
 
@@ -104,11 +103,10 @@ class CpgGraphConcurrencyTest {
                                 )
                             )
                         val outcome =
-                            "write"
-                                .runOnCpg(mutating = true) { r: TranslationResult, _ ->
-                                    applyLLMConcepts(r, payload, schemaFile)
-                                    CallToolResult(content = emptyList())
-                                }
+                            payload.runOnSession(mutating = true) { session, _ ->
+                                applyLLMConcepts(session, payload, schemaFile)
+                                CallToolResult(content = emptyList())
+                            }
                         if (isError(outcome)) failures.incrementAndGet()
                         else writes.incrementAndGet()
                         i++
@@ -120,16 +118,15 @@ class CpgGraphConcurrencyTest {
                 thread {
                     while (!stop.get()) {
                         val outcome =
-                            "read"
-                                .runOnCpg { _: TranslationResult, _ ->
-                                    hot.forEach { f ->
-                                        f.overlays.forEach { it.name }
-                                        f.nextDFG.forEach { it.name }
-                                        f.prevDFG.forEach { it.name }
-                                        f.overlayEdges.toList()
-                                    }
-                                    CallToolResult(content = emptyList())
+                            CpgProjectPayload("hot").runOnSession { _, _ ->
+                                hot.forEach { f ->
+                                    f.overlays.forEach { it.name }
+                                    f.nextDFG.forEach { it.name }
+                                    f.prevDFG.forEach { it.name }
+                                    f.overlayEdges.toList()
                                 }
+                                CallToolResult(content = emptyList())
+                            }
                         if (isError(outcome)) failures.incrementAndGet()
                         else reads.incrementAndGet()
                     }
@@ -145,19 +142,49 @@ class CpgGraphConcurrencyTest {
     }
 
     @Test
-    fun missingAnalysisResultIsReportedNotThrown() {
-        globalAnalysisResult = null
-
+    fun missingSessionIsReportedNotThrown() {
         val outcome =
-            "x"
-                .runOnCpg { _: TranslationResult, _ ->
-                    error("the query must not run without an analysis result")
-                }
+            CpgProjectPayload().runOnSession { _, _ ->
+                error("the query must not run without a session")
+            }
 
         assertTrue(
             (outcome.content.single() as TextContent)
                 .text
-                .startsWith("No analysis result available")
+                .startsWith("No project has been analyzed")
         )
+    }
+
+    @Test
+    fun aMutatingCallOnOneProjectDoesNotBlockAnother(@TempDir dir: Path) {
+        dir.resolve("a.c").writeText("int a() { return 1; }")
+        val result =
+            analyze(listOf(dir.resolve("a.c").toFile()), dir, true) {
+                it.registerLanguage<CLanguage>()
+            }
+        registerSession("a", result)
+        registerSession("b", result)
+        val insideA = java.util.concurrent.CountDownLatch(1)
+        val releaseA = java.util.concurrent.CountDownLatch(1)
+        val holder = thread {
+            CpgProjectPayload("a").runOnSession(mutating = true) { _, _ ->
+                insideA.countDown()
+                releaseA.await(10, java.util.concurrent.TimeUnit.SECONDS)
+                CallToolResult(content = emptyList())
+            }
+        }
+        try {
+            assertTrue(insideA.await(5, java.util.concurrent.TimeUnit.SECONDS))
+
+            val outcome =
+                CpgProjectPayload("b").runOnSession { _, _ ->
+                    CallToolResult(content = emptyList())
+                }
+
+            assertTrue(outcome.content.isEmpty(), "project b must be readable while a is written")
+        } finally {
+            releaseA.countDown()
+            holder.join()
+        }
     }
 }

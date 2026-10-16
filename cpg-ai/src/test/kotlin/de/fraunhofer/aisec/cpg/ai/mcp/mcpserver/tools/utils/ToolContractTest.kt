@@ -94,10 +94,13 @@ class ToolContractTest {
     @Test
     fun theHintFollowsTheLockMode() {
         val server = server()
-        server.addTool<NoArguments>(readOnly = true, name = "reads", description = "d") { _, _ ->
+        server.addTool<CpgProjectPayload>(readOnly = true, name = "reads", description = "d") { _, _
+            ->
             ok()
         }
-        server.addTool<NoArguments>(name = "writes", description = "d", readOnly = false) { _, _ ->
+        server.addTool<CpgProjectPayload>(name = "writes", description = "d", readOnly = false) {
+            _,
+            _ ->
             ok()
         }
 

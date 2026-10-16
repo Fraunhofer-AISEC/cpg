@@ -58,12 +58,14 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgLock
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NoArguments
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeIndex
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addToolWithoutCpg
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -116,22 +118,6 @@ import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 
-/**
- * The graph every tool operates on. Tools read it under [CpgLock], and [runCpgAnalyze] replaces it
- * under the write lock, so concurrent MCP calls never see it change mid-query. An embedding host
- * that assigns it directly is not covered by that: do it before starting the server, or inside
- * `CpgLock.write { }`.
- */
-@Volatile var globalAnalysisResult: TranslationResult? = null
-
-/**
- * The context of the analysis [runCpgAnalyze] itself produced, so its frontends can be cleaned up
- * when the next analysis replaces it. Deliberately not derived from [globalAnalysisResult]: a host
- * that assigns that directly (e.g. codyze-console) still uses its own graph and its frontends, and
- * must not have them cleaned up behind its back. Passes use the context of the result they run on.
- */
-@Volatile private var analyzedContext: TranslationContext? = null
-
 val toolDescription =
     """
         Analyze source code using CPG (Code Property Graph).
@@ -145,6 +131,10 @@ val toolDescription =
         project directory on the local filesystem (using 'path'). For project directories,
         the project structure is detected automatically, e.g., components based on Go
         modules or a C/C++ compilation database (compile_commands.json).
+
+        The result contains the 'projectName' the project is identified by, i.e. the name of the
+        given file or directory. Several projects can be kept side by side; pass this name as
+        'projectName' to the other tools to choose which one they operate on.
 
         Example usage:
         - "Analyze this code: print('hello')"
@@ -182,11 +172,12 @@ fun runCpgAnalyze(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
     cleanup: Boolean,
-): CpgAnalysisResult = CpgLock.write { analyzeAndStore(payload, runPasses, cleanup) }
+): CpgAnalysisResult = analyzeAndStore(payload, runPasses, cleanup)
 
-// Holds the write lock for the whole analysis, not just the swap of the result: the previous
-// graph's frontends are cleaned up first (its memory is needed for the new one on large projects),
-// which leaves nothing useful for a reader to see in the meantime.
+// Holds the write lock of the project's previous session (if any) for the whole analysis, not just
+// the swap of the result: the previous graph's frontends are cleaned up first (its memory is needed
+// for the new one on large projects), which leaves nothing useful for a reader to see in the
+// meantime. Other projects are not affected.
 private fun analyzeAndStore(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
@@ -241,18 +232,22 @@ private fun analyzeAndStore(
         }
     project.config.disableCleanup = !cleanup
 
-    // If there has been another analysis before, clean up all its frontends. The pass bookkeeping
-    // is keyed by the old graph's nodes, so it goes too (it would otherwise keep that graph alive).
-    analyzedContext?.executedFrontends?.forEach { frontend -> frontend.cleanup() }
-    analyzedContext = null
-    nodeToPass.clear()
-    NodeIndex.invalidate()
+    // The project is identified by the last segment of the analyzed path (see ProjectBuilder.name)
+    val projectName = project.name
+    val previous = getSession(projectName)
 
-    val result = project.analyze()
-    analyzedContext = result.ctx
+    // If this project has been analyzed before, clean up the frontends it still holds on to; its
+    // session is replaced by the new one. The old session's write lock keeps tools from reading it
+    // meanwhile (see runOnSession).
+    val result =
+        (previous?.lock ?: CpgLock()).write {
+            previous?.translationContext?.executedFrontends?.forEach { frontend ->
+                frontend.cleanup()
+            }
+            previous?.nodeIndex?.invalidate()
 
-    // Store the result globally
-    globalAnalysisResult = result
+            project.analyze().also { registerSession(projectName, it) }
+        }
 
     val allNodes = result.nodes
     val functions = result.functions
@@ -260,6 +255,7 @@ private fun analyzeAndStore(
     val callExpressions = result.calls
 
     return CpgAnalysisResult(
+        projectName = projectName,
         totalNodes = allNodes.size,
         functions = functions.size,
         variables = variables.size,
@@ -296,6 +292,10 @@ fun Server.addCpgTranslate() {
         project directory on the local filesystem (using 'path'). For project directories,
         the project structure is detected automatically, e.g., components based on Go
         modules or a C/C++ compilation database (compile_commands.json).
+
+        The result contains the 'projectName' the project is identified by, i.e. the name of the
+        given file or directory. Several projects can be kept side by side; pass this name as
+        'projectName' to the other tools to choose which one they operate on.
 
         Example usage:
         - "Analyze this code: print('hello')"
@@ -422,13 +422,6 @@ fun Server.addListPasses() {
 }
 
 /**
- * Keeps track of which passes have been run on which nodes to avoid redundant executions. Cleared
- * whenever [runCpgAnalyze] replaces the graph; a host that swaps [globalAnalysisResult] itself
- * should clear it too, since its keys keep the old graph's nodes alive.
- */
-val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
-
-/**
  * Registers a tool which runs a [Pass] on a specified [Node] or the closest suitable node(s) for
  * the pass by first searching upwards and then (in case no suitable node was found) downwards the
  * AST. The tool further takes care of dependencies between the passes.
@@ -440,8 +433,8 @@ fun Server.addRunPass() {
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
-    ) { result: TranslationResult, payload: CpgRunPassPayload ->
-        runPass(result, payload)
+    ) { session: CpgSession, payload: CpgRunPassPayload ->
+        runPass(session, payload)
     }
 }
 
@@ -466,26 +459,33 @@ internal fun loadPassClass(name: String): KClass<out Pass<*>>? =
 
 /**
  * Runs the pass named by [payload] (plus any of its dependencies not yet run) on the node it names,
- * using the [TranslationContext] of [result] itself. Mutates the graph, so callers must hold
- * [CpgLock.write] - the tool registration does.
+ * using the [TranslationContext] of [session]. Mutates the graph, so callers must hold the
+ * session's [CpgLock.write] - the tool registration does.
  */
-internal fun runPass(result: TranslationResult, payload: CpgRunPassPayload): CallToolResult =
+internal fun runPass(session: CpgSession, payload: CpgRunPassPayload): CallToolResult =
     try {
-        runPassOnNodes(result, payload)
+        runPassOnNodes(session, payload)
     } finally {
         // A pass can add AST nodes (e.g. inferred declarations), so lookups by id must see them,
         // also when it failed half way.
-        NodeIndex.invalidate()
+        session.nodeIndex.invalidate()
     }
 
-private fun runPassOnNodes(result: TranslationResult, payload: CpgRunPassPayload): CallToolResult {
+private fun runPassOnNodes(session: CpgSession, payload: CpgRunPassPayload): CallToolResult {
+    val result = session.translationResult
+    val context = session.translationContext ?: result?.ctx
+    if (result == null || context == null) {
+        return CallToolResult(
+            content = listOf(TextContent("No CPG available, so no passes could be executed."))
+        )
+    }
     val passClass =
         loadPassClass(payload.passName)
             ?: return CallToolResult(
                 content = listOf(TextContent("Could not find the pass ${payload.passName}."))
             )
 
-    val nodes = listOfNotNull(result.findNodeById(payload.nodeId))
+    val nodes = listOfNotNull(session.findNodeById(payload.nodeId))
 
     if (nodes.isEmpty())
         return CallToolResult(
@@ -508,9 +508,10 @@ private fun runPassOnNodes(result: TranslationResult, payload: CpgRunPassPayload
     for (node in nodes) {
         for (passToExecute in orderedPassesToExecute) {
             // Check if pass has already been executed for the respective node
-            if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+            if (passToExecute !in session.nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
                 // Execute the pass for the node
-                val passResult = runPassForNode(nodeToPass, result, node, passToExecute, result.ctx)
+                val passResult =
+                    runPassForNode(session.nodeToPass, result, node, passToExecute, context)
                 if (passResult.success) {
                     executedPasses.add(TextContent(passResult.message))
                 } else {
@@ -521,7 +522,7 @@ private fun runPassOnNodes(result: TranslationResult, payload: CpgRunPassPayload
                     )
                 }
                 // Mark pass as executed
-                nodeToPass[node]?.add(passToExecute)
+                session.nodeToPass[node]?.add(passToExecute)
             }
         }
     }

@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NoArguments
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addToolWithoutCpg
@@ -113,15 +113,15 @@ fun Server.addCpgApplyConceptsTool() {
             .trimIndent()
 
     this.addTool<CpgApplyConceptsPayload>(
+        readOnly = false,
         name = "cpg_apply_concepts",
         description = toolDescription,
-        readOnly = false,
-    ) { result: TranslationResult, payload: CpgApplyConceptsPayload ->
+    ) { session: CpgSession, payload: CpgApplyConceptsPayload ->
         val applied = mutableListOf<String>()
 
         payload.assignments.forEach { assignment ->
             try {
-                val node = result.findNodeById(assignment.nodeId)
+                val node = session.findNodeById(assignment.nodeId)
                 if (node == null) {
                     applied.add("Node ${assignment.nodeId} not found")
                     return@forEach
@@ -129,7 +129,7 @@ fun Server.addCpgApplyConceptsTool() {
 
                 when (assignment.overlayType?.lowercase()) {
                     "concept" -> {
-                        result.conceptBuildHelper(
+                        session.translationResult?.conceptBuildHelper(
                             name = assignment.overlay,
                             underlyingNode = node,
                             constructorArguments = /*assignment.arguments ?:*/
@@ -149,7 +149,7 @@ fun Server.addCpgApplyConceptsTool() {
                             return@forEach
                         }
 
-                        val conceptNode = result.findNodeById(conceptNodeId)
+                        val conceptNode = session.findNodeById(conceptNodeId)
                         val concept =
                             conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
                         if (concept == null) {
@@ -159,7 +159,7 @@ fun Server.addCpgApplyConceptsTool() {
                             return@forEach
                         }
 
-                        result.operationBuildHelper(
+                        session.translationResult?.operationBuildHelper(
                             name = assignment.overlay,
                             underlyingNode = node,
                             concept = concept,

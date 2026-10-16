@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeIndex
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.functions
@@ -39,8 +38,6 @@ import java.util.concurrent.CyclicBarrier
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.writeText
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -50,74 +47,100 @@ import org.junit.jupiter.api.io.TempDir
 
 class NodeIndexTest {
 
-    @BeforeTest @AfterTest fun resetIndex() = NodeIndex.invalidate()
-
-    private fun analyzeSnippet(dir: Path, code: String): TranslationResult {
+    private fun analyzeSnippet(dir: Path, code: String): CpgSession {
         val source = dir.resolve("main.c")
         source.writeText(code)
-        return analyze(listOf(source.toFile()), dir, false) { it.registerLanguage<CLanguage>() }
+        val result =
+            analyze(listOf(source.toFile()), dir, false) { it.registerLanguage<CLanguage>() }
+        return CpgSession(result, result.ctx)
     }
 
     private val code = "int f(int a) { return a; } int main() { int x = f(1); return x; }"
 
     @Test
     fun findsEveryNodeTheSameAsALinearSearch(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir, code)
+        val session = analyzeSnippet(dir, code)
 
-        result.nodes.forEach { assertSame(it, result.findNodeById(it.id.toString())) }
+        session.translationResult.nodes.forEach {
+            assertSame(it, session.findNodeById(it.id.toString()))
+        }
     }
 
     @Test
     fun anUnknownIdIsNull(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir, code)
+        val session = analyzeSnippet(dir, code)
 
-        assertNull(result.findNodeById("00000000-0000-0000-0000-000000000000"))
-        assertNull(result.findNodeById("not an id"))
+        assertNull(session.findNodeById("00000000-0000-0000-0000-000000000000"))
+        assertNull(session.findNodeById("not an id"))
     }
 
     @Test
-    fun theIndexIsBuiltOncePerResult(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir, code)
-        val before = NodeIndex.buildCount
+    fun theIndexIsBuiltOncePerSession(@TempDir dir: Path) {
+        val session = analyzeSnippet(dir, code)
+        val before = session.nodeIndex.buildCount
 
-        repeat(3) { result.findNodeById(result.nodes.first().id.toString()) }
+        repeat(3) { session.findNodeById(session.translationResult.nodes.first().id.toString()) }
 
-        assertEquals(before + 1, NodeIndex.buildCount)
+        assertEquals(before + 1, session.nodeIndex.buildCount)
     }
 
     @Test
     fun invalidatingForcesARebuild(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir, code)
-        val id = result.nodes.first().id.toString()
-        result.findNodeById(id)
-        val before = NodeIndex.buildCount
+        val session = analyzeSnippet(dir, code)
+        val id = session.translationResult.nodes.first().id.toString()
+        session.findNodeById(id)
+        val before = session.nodeIndex.buildCount
 
-        NodeIndex.invalidate()
-        result.findNodeById(id)
+        session.nodeIndex.invalidate()
+        session.findNodeById(id)
 
-        assertEquals(before + 1, NodeIndex.buildCount)
+        assertEquals(before + 1, session.nodeIndex.buildCount)
     }
 
     @Test
-    fun aDifferentResultNeverSeesTheOldOnesNodes(@TempDir first: Path, @TempDir second: Path) {
-        val oldResult = analyzeSnippet(first, "int onlyInFirst() { return 1; }")
-        val newResult = analyzeSnippet(second, "int onlyInSecond() { return 2; }")
-        val oldFunction = oldResult.functions.single { it.name.localName == "onlyInFirst" }
-        val newFunction = newResult.functions.single { it.name.localName == "onlyInSecond" }
+    fun aDifferentSessionNeverSeesTheOtherOnesNodes(@TempDir first: Path, @TempDir second: Path) {
+        val oldSession = analyzeSnippet(first, "int onlyInFirst() { return 1; }")
+        val newSession = analyzeSnippet(second, "int onlyInSecond() { return 2; }")
+        val oldFunction =
+            oldSession.translationResult.functions.single { it.name.localName == "onlyInFirst" }
+        val newFunction =
+            newSession.translationResult.functions.single { it.name.localName == "onlyInSecond" }
         val oldId = oldFunction.id.toString()
         val newId = newFunction.id.toString()
 
-        assertSame(oldFunction, oldResult.findNodeById(oldId))
-        assertSame(newFunction, newResult.findNodeById(newId))
-        assertNull(newResult.findNodeById(oldId), "the index of the old graph must not be reused")
-        assertNull(oldResult.findNodeById(newId))
+        assertSame(oldFunction, oldSession.findNodeById(oldId))
+        assertSame(newFunction, newSession.findNodeById(newId))
+        assertNull(
+            newSession.findNodeById(oldId),
+            "the index of the other session must not be used",
+        )
+        assertNull(oldSession.findNodeById(newId))
+    }
+
+    @Test
+    fun replacingTheResultOfASessionNeverServesTheOldNodes(
+        @TempDir first: Path,
+        @TempDir second: Path,
+    ) {
+        val session = analyzeSnippet(first, "int onlyInFirst() { return 1; }")
+        val oldId =
+            session.translationResult.functions
+                .single { it.name.localName == "onlyInFirst" }
+                .id
+                .toString()
+        assertNotNull(session.findNodeById(oldId))
+
+        session.translationResult =
+            analyzeSnippet(second, "int onlyInSecond() { return 2; }").translationResult
+
+        assertNull(session.findNodeById(oldId), "the index of the old graph must not be reused")
     }
 
     @Test
     fun concurrentFirstLookupsBuildTheIndexOnce(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir, code)
-        val id = result.nodes.first().id.toString()
-        val before = NodeIndex.buildCount
+        val session = analyzeSnippet(dir, code)
+        val id = session.translationResult.nodes.first().id.toString()
+        val before = session.nodeIndex.buildCount
         val threads = 8
         val start = CyclicBarrier(threads)
         val pool = Executors.newFixedThreadPool(threads)
@@ -126,7 +149,7 @@ class NodeIndexTest {
                 List(threads) {
                     pool.submit<Any?> {
                         start.await(5, TimeUnit.SECONDS)
-                        result.findNodeById(id)
+                        session.findNodeById(id)
                     }
                 }
             found.forEach { assertNotNull(it.get(10, TimeUnit.SECONDS)) }
@@ -134,25 +157,25 @@ class NodeIndexTest {
             pool.shutdownNow()
         }
 
-        assertEquals(before + 1, NodeIndex.buildCount)
+        assertEquals(before + 1, session.nodeIndex.buildCount)
     }
 
     @Test
     fun runningAPassRefreshesTheIndex(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir, code)
-        val main = result.functions.single { it.name.localName == "main" }
-        result.findNodeById(main.id.toString())
-        val before = NodeIndex.buildCount
+        val session = analyzeSnippet(dir, code)
+        val main = session.translationResult.functions.single { it.name.localName == "main" }
+        session.findNodeById(main.id.toString())
+        val before = session.nodeIndex.buildCount
 
         runPass(
-            result,
+            session,
             CpgRunPassPayload(EvaluationOrderGraphPass::class.java.name, main.id.toString()),
         )
-        result.findNodeById(main.id.toString())
+        session.findNodeById(main.id.toString())
 
         assertEquals(
             before + 1,
-            NodeIndex.buildCount,
+            session.nodeIndex.buildCount,
             "a pass can add AST nodes, so the index must be rebuilt",
         )
     }

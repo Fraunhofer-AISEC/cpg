@@ -30,21 +30,23 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.nodes
 
 /**
- * Finds a node of this graph by its id, via an index that is built on first use.
+ * Finds a node of this session's graph by its id, via an index that is built on first use.
  *
  * `result.nodes.find { it.id.toString() == id }` walks the whole AST and allocates a string per
  * node for every lookup; on a 190,000-node graph (FLAC) that took 0.6 to 1.3 seconds each, against
  * about a second to build the index once and microseconds per lookup afterwards. Tools look nodes
- * up by id constantly, some of them while holding [CpgLock.write].
+ * up by id constantly, some of them while holding [CpgSession.lock].
  *
  * Only AST nodes are indexed, like `result.nodes`; overlay nodes are not. The index stays valid
  * while the AST does not change, which is true of everything that only attaches overlays and edges
  * (applying concepts). Whatever can add or remove AST nodes - running a pass, replacing the graph -
- * must call [NodeIndex.invalidate]; the tools in this module do.
+ * must call [NodeIndex.invalidate] (`session.nodeIndex`); the tools in this module do.
  */
-fun TranslationResult.findNodeById(id: String): AstNode? = NodeIndex.find(this, id)
+fun CpgSession.findNodeById(id: String): AstNode? =
+    translationResult?.let { nodeIndex.find(it, id) }
 
-object NodeIndex {
+/** The id index of one [CpgSession]; see [findNodeById]. */
+class NodeIndex {
     private class Snapshot(val result: TranslationResult, val byId: Map<String, AstNode>)
 
     @Volatile private var snapshot: Snapshot? = null

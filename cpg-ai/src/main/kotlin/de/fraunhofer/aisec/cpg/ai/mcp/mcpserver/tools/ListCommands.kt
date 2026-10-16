@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
@@ -66,10 +66,10 @@ fun Server.listFunctions() {
         readOnly = true,
         name = "cpg_list_functions",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgListFunctionsPayload ->
+    ) { session: CpgSession, payload: CpgListFunctionsPayload ->
         val pattern = compilePattern(payload.pattern)
         val matching =
-            result.functions.filter { function ->
+            session.translationResult.functions.filter { function ->
                 function.matches(pattern, payload.file) &&
                     (payload.calls == null ||
                         function.calls.any { it.name.localName == payload.calls })
@@ -100,9 +100,10 @@ fun Server.listRecords() {
         readOnly = true,
         name = "cpg_list_records",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgListNodesPayload ->
+    ) { session: CpgSession, payload: CpgListNodesPayload ->
         val pattern = compilePattern(payload.pattern)
-        val matching = result.records.filter { it.matches(pattern, payload.file) }
+        val matching =
+            session.translationResult.records.filter { it.matches(pattern, payload.file) }
         matching.toPagedResult(payload.limit, payload.offset) {
             if (payload.detail) Json.encodeToString(it.toInfo())
             else Json.encodeToString(it.toSignatureInfo())
@@ -119,9 +120,10 @@ fun Server.listConceptsAndOperations() {
         readOnly = true,
         name = "cpg_list_concepts_and_operations",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgListPayload ->
+    ) { session: CpgSession, payload: CpgListPayload ->
         val overlays: List<OverlayNode> =
-            result.allChildrenWithOverlays<Concept>() + result.allChildrenWithOverlays<Operation>()
+            session.translationResult.allChildrenWithOverlays<Concept>() +
+                session.translationResult.allChildrenWithOverlays<Operation>()
         overlays.toPagedResult(payload.limit, payload.offset) { it.toJson() }
     }
 }
@@ -147,9 +149,9 @@ fun Server.listCalls() {
         readOnly = true,
         name = "cpg_list_calls",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgListNodesPayload ->
+    ) { session: CpgSession, payload: CpgListNodesPayload ->
         val pattern = compilePattern(payload.pattern)
-        val matching = result.calls.filter { it.matches(pattern, payload.file) }
+        val matching = session.translationResult.calls.filter { it.matches(pattern, payload.file) }
         matching.toPagedResult(payload.limit, payload.offset) {
             if (payload.detail) Json.encodeToString(it.toInfo(includeCode = false))
             else Json.encodeToString(it.toSignatureInfo())
@@ -175,16 +177,16 @@ fun Server.listCallsTo() {
         readOnly = true,
         name = "cpg_list_calls_to",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgListCallsToPayload ->
-        listCallsTo(result, payload)
+    ) { session: CpgSession, payload: CpgListCallsToPayload ->
+        listCallsTo(session, payload)
     }
 }
 
-internal fun listCallsTo(
-    result: TranslationResult,
-    payload: CpgListCallsToPayload,
-): CallToolResult {
-    return result.calls(payload.name).toPagedResult(payload.limit, payload.offset) {
+internal fun listCallsTo(session: CpgSession, payload: CpgListCallsToPayload): CallToolResult {
+    return session.translationResult.calls(payload.name).toPagedResult(
+        payload.limit,
+        payload.offset,
+    ) {
         Json.encodeToString(it.toInfo(includeCode = false))
     }
 }
@@ -219,14 +221,14 @@ fun Server.getAllArgs() {
         readOnly = true,
         name = "cpg_list_call_args",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgIdPayload ->
-        listCallArgs(result, payload)
+    ) { session: CpgSession, payload: CpgIdPayload ->
+        listCallArgs(session, payload)
     }
 }
 
-internal fun listCallArgs(result: TranslationResult, payload: CpgIdPayload): CallToolResult {
+internal fun listCallArgs(session: CpgSession, payload: CpgIdPayload): CallToolResult {
     val call =
-        result.findNodeById(payload.id) as? Call
+        session.findNodeById(payload.id) as? Call
             ?: return CallToolResult(
                 content = listOf(TextContent("No call found with id ${payload.id}."))
             )
@@ -245,17 +247,17 @@ fun Server.getArgByIndexOrName() {
         readOnly = true,
         name = "cpg_list_call_arg_by_name_or_index",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgCallArgumentByNameOrIndexPayload ->
-        listCallArgByNameOrIndex(result, payload)
+    ) { session: CpgSession, payload: CpgCallArgumentByNameOrIndexPayload ->
+        listCallArgByNameOrIndex(session, payload)
     }
 }
 
 internal fun listCallArgByNameOrIndex(
-    result: TranslationResult,
+    session: CpgSession,
     payload: CpgCallArgumentByNameOrIndexPayload,
 ): CallToolResult {
     val call =
-        result.findNodeById(payload.nodeId) as? Call
+        session.findNodeById(payload.nodeId) as? Call
             ?: return CallToolResult(
                 content = listOf(TextContent("No call found with id ${payload.nodeId}."))
             )
@@ -281,8 +283,8 @@ fun Server.getNode() {
         readOnly = true,
         name = "cpg_get_node",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgIdPayload ->
-        val node = result.findNodeById(payload.id)
+    ) { session: CpgSession, payload: CpgIdPayload ->
+        val node = session.findNodeById(payload.id)
         if (node != null) {
             CallToolResult(content = listOf(TextContent(node.toJson())))
         } else {

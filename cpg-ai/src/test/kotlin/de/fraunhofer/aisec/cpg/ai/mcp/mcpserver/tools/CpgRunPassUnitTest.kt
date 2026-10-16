@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -36,6 +38,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -61,18 +64,14 @@ internal class Probe {
 
 class CpgRunPassUnitTest {
 
-    private val previousResult = globalAnalysisResult
+    @BeforeTest @AfterTest fun clearSessions() = analysisSessions.clear()
 
-    @AfterTest
-    fun restoreGlobalState() {
-        globalAnalysisResult = previousResult
-        nodeToPass.clear()
-    }
-
-    private fun analyzeSnippet(dir: Path): TranslationResult {
+    private fun analyzeSnippet(dir: Path): CpgSession {
         val source = dir.resolve("main.c")
         source.writeText("int main() { int x = 1; return x; }")
-        return analyze(listOf(source.toFile()), dir, false) { it.registerLanguage<CLanguage>() }
+        val result =
+            analyze(listOf(source.toFile()), dir, false) { it.registerLanguage<CLanguage>() }
+        return CpgSession(result, result.ctx)
     }
 
     @Test
@@ -102,12 +101,12 @@ class CpgRunPassUnitTest {
     fun runPassUsesTheContextOfTheResultItRunsOn(@TempDir dir: Path) {
         // A host such as codyze-console hands the server a finished result; there is no other
         // context to fall back on, and none must be needed.
-        val result = analyzeSnippet(dir)
-        val main = result.functions.single { it.name.localName == "main" }
+        val session = analyzeSnippet(dir)
+        val main = session.translationResult.functions.single { it.name.localName == "main" }
 
         val outcome =
             runPass(
-                result,
+                session,
                 CpgRunPassPayload(EvaluationOrderGraphPass::class.java.name, main.id.toString()),
             )
 
@@ -117,10 +116,10 @@ class CpgRunPassUnitTest {
 
     @Test
     fun runPassRejectsANameThatIsNotAPass(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir)
-        val main = result.functions.single { it.name.localName == "main" }
+        val session = analyzeSnippet(dir)
+        val main = session.translationResult.functions.single { it.name.localName == "main" }
 
-        val outcome = runPass(result, CpgRunPassPayload("java.lang.String", main.id.toString()))
+        val outcome = runPass(session, CpgRunPassPayload("java.lang.String", main.id.toString()))
 
         assertEquals(
             "Could not find the pass java.lang.String.",
@@ -129,15 +128,21 @@ class CpgRunPassUnitTest {
     }
 
     @Test
-    fun reanalysisDropsThePassBookkeepingOfTheOldGraph() {
-        val payload = CpgAnalyzePayload(content = "int main() { return 0; }", extension = "c")
+    fun reanalysisReplacesTheSessionAndItsPassBookkeeping(@TempDir dir: Path) {
+        // The project is identified by its path, so analyzing the same directory twice replaces the
+        // session instead of adding a second one.
+        dir.resolve("main.c").writeText("int main() { return 0; }")
+        val payload = CpgAnalyzePayload(path = dir.toString())
         runCpgAnalyze(payload, runPasses = false, cleanup = false)
-        val first = assertNotNull(globalAnalysisResult)
-        nodeToPass[first.functions.first()] = mutableSetOf(EvaluationOrderGraphPass::class)
+        val first = assertNotNull(getSession())
+        first.nodeToPass[first.translationResult.functions.first()] =
+            mutableSetOf(EvaluationOrderGraphPass::class)
 
         runCpgAnalyze(payload, runPasses = false, cleanup = false)
 
-        assertNotSame(first, globalAnalysisResult)
-        assertTrue(nodeToPass.isEmpty(), "pass bookkeeping must not outlive the graph it describes")
+        val second = assertNotNull(getSession())
+        assertNotSame(first, second)
+        assertEquals(1, analysisSessions.size)
+        assertTrue(second.nodeToPass.isEmpty(), "pass bookkeeping must not outlive the graph")
     }
 }

@@ -56,12 +56,19 @@ fun Server.addOverview() {
         """
             .trimIndent()
 
-    this.addTool<NoArguments>(
+    this.addTool<CpgProjectPayload>(
         readOnly = true,
         name = "cpg_overview",
         description = toolDescription,
-    ) { result: TranslationResult, _ ->
-        CallToolResult(content = listOf(TextContent(result.overview().toText())))
+    ) { session: CpgSession, _ ->
+        CallToolResult(
+            content =
+                listOf(
+                    TextContent(
+                        session.translationResult?.overview()?.toText() ?: "No CPG available yet."
+                    )
+                )
+        )
     }
 }
 

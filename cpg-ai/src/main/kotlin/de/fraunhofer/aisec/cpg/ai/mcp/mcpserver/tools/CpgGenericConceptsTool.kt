@@ -29,7 +29,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
@@ -122,23 +121,24 @@ fun Server.suggestLLMConceptsAndOperations() {
         """
             .trimIndent()
 
-    this.addTool<LLMConcept>(
+    this.addTool<LLMConceptSuggestion>(
         readOnly = true,
         name = "cpg_suggest_llm_concepts_and_operations",
         description = toolDescription,
-    ) { result: TranslationResult, payload: LLMConcept ->
-        val conceptNode = result.findNodeById(payload.nodeId)
+    ) { session: CpgSession, payload: LLMConceptSuggestion ->
+        val concept = payload.concept
+        val conceptNode = session.findNodeById(concept.nodeId)
         if (conceptNode == null) {
             return@addTool CallToolResult(
                 content =
                     listOf(
-                        TextContent("Node ${payload.nodeId} not found for concept ${payload.name}.")
+                        TextContent("Node ${concept.nodeId} not found for concept ${concept.name}.")
                     )
             )
         }
 
-        payload.operations.forEach { operation ->
-            val opNode = result.findNodeById(operation.nodeId)
+        concept.operations.forEach { operation ->
+            val opNode = session.findNodeById(operation.nodeId)
             if (opNode == null) {
                 return@addTool CallToolResult(
                     content =
@@ -151,7 +151,8 @@ fun Server.suggestLLMConceptsAndOperations() {
             }
         }
 
-        CallToolResult(content = listOf(TextContent(Json.encodeToString(payload))))
+        // Return the bare concept, which is what the console renders as a suggestion
+        CallToolResult(content = listOf(TextContent(Json.encodeToString(concept))))
     }
 }
 
@@ -169,20 +170,20 @@ fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
         name = "cpg_add_llm_concept_and_operations",
         description = toolDescription,
         readOnly = false,
-    ) { result: TranslationResult, payload: LLMConceptList ->
-        val response = applyLLMConcepts(result, payload, file)
+    ) { session: CpgSession, payload: LLMConceptList ->
+        val response = applyLLMConcepts(session, payload, file)
         CallToolResult(content = listOf(TextContent(Json.encodeToString(response))))
     }
 }
 
 /**
- * Applies every concept in [payload] (and its operations) to [result], resolving property schemas
- * (fixed values, description backfill) from [file] and persisting the applied concepts' schemas
- * back to it. Attaches nodes to the shared graph, so callers must hold [CpgLock.write] - the tool
- * registration does.
+ * Applies every concept in [payload] (and its operations) to the graph of [session], resolving
+ * property schemas (fixed values, description backfill) from [file] and persisting the applied
+ * concepts' schemas back to it. Attaches nodes to the shared graph, so callers must hold
+ * [CpgLock.write] - the tool registration does.
  */
 internal fun applyLLMConcepts(
-    result: TranslationResult,
+    session: CpgSession,
     payload: LLMConceptList,
     file: File,
 ): AddConceptsResult {
@@ -193,7 +194,7 @@ internal fun applyLLMConcepts(
     val persistedSchemas = loadPersistedConceptsAndOperations(file)
 
     payload.concepts.forEach { concept ->
-        val cpgConceptNode = result.findNodeById(concept.nodeId)
+        val cpgConceptNode = session.findNodeById(concept.nodeId)
         if (cpgConceptNode == null) {
             failed.add(
                 FailedConcept(
@@ -209,7 +210,7 @@ internal fun applyLLMConcepts(
         val (conceptProperties, conceptPropertyFailures) =
             resolveProperties(
                 applyFixedValues(concept.properties, conceptSchema?.properties.orEmpty()),
-                result,
+                session,
             )
         if (conceptPropertyFailures.isNotEmpty()) {
             failed.add(
@@ -245,7 +246,7 @@ internal fun applyLLMConcepts(
         val appliedOps = mutableListOf<AppliedOperation>()
         val failedOps = mutableListOf<FailedOperation>()
         concept.operations.forEach { operation ->
-            val cpgOperationNode = result.findNodeById(operation.nodeId)
+            val cpgOperationNode = session.findNodeById(operation.nodeId)
             if (cpgOperationNode == null) {
                 failedOps.add(
                     FailedOperation(
@@ -261,7 +262,7 @@ internal fun applyLLMConcepts(
             val (operationProperties, operationPropertyFailures) =
                 resolveProperties(
                     applyFixedValues(operation.properties, operationSchema?.properties.orEmpty()),
-                    result,
+                    session,
                 )
             if (operationPropertyFailures.isNotEmpty()) {
                 failedOps.add(
@@ -359,24 +360,24 @@ internal fun applyFixedValues(
 /**
  * Resolves a list of [LLMProperty] instances into a [GenericProperties] map, converting each
  * property's string representation into the [GenericPropertyValue] kind matching its declared
- * `type`. Properties whose `type` is [NODE_REFERENCE_TYPE] are resolved against [result]'s nodes
- * and stored as an actual [GenericPropertyValue.NodeReferenceValue] instead of a stringified id;
- * everything else is delegated to [GenericPropertyValue.of], which yields a typed scalar for a
- * recognized type name and a [GenericPropertyValue.StringValue] otherwise.
+ * `type`. Properties whose `type` is [NODE_REFERENCE_TYPE] are resolved against the nodes of
+ * [session] and stored as an actual [GenericPropertyValue.NodeReferenceValue] instead of a
+ * stringified id; everything else is delegated to [GenericPropertyValue.of], which yields a typed
+ * scalar for a recognized type name and a [GenericPropertyValue.StringValue] otherwise.
  *
  * Returns the resolved properties together with a list of failure reasons for any node reference
  * that could not be resolved and any value that does not parse as its declared type.
  */
 private fun resolveProperties(
     properties: List<LLMProperty>,
-    result: TranslationResult,
+    session: CpgSession,
 ): Pair<GenericProperties, List<String>> {
     val failures = mutableListOf<String>()
     val resolved =
         properties.associate { property ->
             val value =
                 if (property.type.equals(NODE_REFERENCE_TYPE, ignoreCase = true)) {
-                    val referencedNode = result.findNodeById(property.value)
+                    val referencedNode = session.findNodeById(property.value)
                     if (referencedNode == null) {
                         failures.add(
                             "Property \"${property.name}\" declares type $NODE_REFERENCE_TYPE but node ${property.value} was not found or ambiguous."

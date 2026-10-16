@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamesPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toInfo
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -55,10 +55,10 @@ fun Server.getFunctionsByName() {
         readOnly = true,
         name = "cpg_get_functions_by_name",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgNamesPayload ->
+    ) { session: CpgSession, payload: CpgNamesPayload ->
         val functionsByName: Map<String, List<Function>> =
             payload.names.associateWith { name ->
-                result.functions.filter { it.name.lastPartsMatch(name) }
+                session.translationResult.functions.filter { it.name.lastPartsMatch(name) }
             }
 
         val found =

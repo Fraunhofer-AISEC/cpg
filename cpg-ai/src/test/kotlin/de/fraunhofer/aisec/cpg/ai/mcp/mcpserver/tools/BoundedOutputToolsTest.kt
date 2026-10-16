@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgBackwardPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
@@ -51,42 +51,44 @@ class BoundedOutputToolsTest {
 
     private fun texts(content: List<TextContent>) = content.map { it.text }
 
-    private fun analyze(dir: Path, code: String, passes: Boolean): TranslationResult {
+    private fun analyze(dir: Path, code: String, passes: Boolean): CpgSession {
         val source = dir.resolve("main.c")
         source.writeText(code)
-        return analyze(listOf(source.toFile()), dir, passes) { it.registerLanguage<CLanguage>() }
+        val result =
+            analyze(listOf(source.toFile()), dir, passes) { it.registerLanguage<CLanguage>() }
+        return CpgSession(result, result.ctx)
     }
 
     @Test
     fun listCallsToIsPaginated(@TempDir dir: Path) {
-        val result =
+        val session =
             analyze(
                 dir,
                 "int f(int a) { return a; } int main() { f(1); f(2); f(3); return 0; }",
                 passes = false,
             )
 
-        val firstPage = listCallsTo(result, CpgListCallsToPayload("f", limit = 2)).content
+        val firstPage = listCallsTo(session, CpgListCallsToPayload("f", limit = 2)).content
         assertEquals(3, firstPage.size, "2 calls and the summary")
         assertTrue((firstPage.last() as TextContent).text.contains("offset=2"))
 
         val lastPage =
-            listCallsTo(result, CpgListCallsToPayload("f", limit = 2, offset = 2)).content
+            listCallsTo(session, CpgListCallsToPayload("f", limit = 2, offset = 2)).content
         assertEquals(1, lastPage.size, "1 remaining call and no summary")
 
-        assertEquals(3, listCallsTo(result, CpgListCallsToPayload("f")).content.size)
+        assertEquals(3, listCallsTo(session, CpgListCallsToPayload("f")).content.size)
     }
 
     @Test
     fun dfgBackwardKeepsOneJsonArrayAndCapsIt(@TempDir dir: Path) {
-        val result = analyze(dir, "int main() { int a = 1; int b = a; return b; }", passes = true)
-        val start = result.refs.last { it.name.localName == "b" }.id.toString()
+        val session = analyze(dir, "int main() { int a = 1; int b = a; return b; }", passes = true)
+        val start = session.translationResult.refs.last { it.name.localName == "b" }.id.toString()
 
-        val all = dfgBackward(result, CpgDfgBackwardPayload(start)).content.single() as TextContent
+        val all = dfgBackward(session, CpgDfgBackwardPayload(start)).content.single() as TextContent
         val total = Json.decodeFromString<List<NodeInfo>>(all.text).size
         assertTrue(total > 1, "the slice of b must contain more than one node")
 
-        val capped = dfgBackward(result, CpgDfgBackwardPayload(start, limit = 1)).content
+        val capped = dfgBackward(session, CpgDfgBackwardPayload(start, limit = 1)).content
         assertEquals(2, capped.size, "one JSON array and the summary")
         assertEquals(
             1,
@@ -97,10 +99,10 @@ class BoundedOutputToolsTest {
 
     @Test
     fun dfgBackwardStillReportsAnUnknownNode(@TempDir dir: Path) {
-        val result = analyze(dir, "int main() { return 0; }", passes = false)
+        val session = analyze(dir, "int main() { return 0; }", passes = false)
 
         val outcome =
-            dfgBackward(result, CpgDfgBackwardPayload("00000000-0000-0000-0000-000000000000"))
+            dfgBackward(session, CpgDfgBackwardPayload("00000000-0000-0000-0000-000000000000"))
 
         assertTrue((outcome.content.single() as TextContent).text.startsWith("No node found"))
     }

@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.passes.Description
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -44,7 +45,8 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolAnnotations
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
-import java.util.function.BiFunction
+import java.util.IdentityHashMap
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeParameter
@@ -141,22 +143,25 @@ internal fun withTypedArgumentsMarker(meta: JsonObject?): JsonObject =
 /**
  * Registers a [io.modelcontextprotocol.kotlin.sdk.types.Tool] to the MCP [Server]. The tool's input
  * schema is automatically generated from the reified type parameter [T] using reflection (use
- * [NoArguments] for a tool without any). The handler function receives the deserialized input of
- * type [T] and the current [TranslationResult], and must return a [CallToolResult] with the output
- * content. The [description] of the tool is automatically extended with parameter information from
- * the schema, so do NOT add this information to the description yourself. Arguments that do not
- * decode are answered with the list of problems, without calling [handler].
+ * [NoArguments] for a tool without any). The handler function receives the [CpgSession] and the
+ * deserialized input of type [T] (see [runOnSession]), and must return a [CallToolResult] with the
+ * output content. The session is the one of the project named by the payload's
+ * [HasProjectNamePayload.projectName]. The [description] of the tool is automatically extended with
+ * parameter information from the schema, so do NOT add this information to the description
+ * yourself. Arguments that do not decode are answered with the list of problems, without calling
+ * [handler].
  *
- * The handler runs under [CpgLock]. [readOnly] is required, so every tool has to decide: `true`
- * keeps it concurrent (shared lock), `false` is for tools that change the graph (or do a
- * read-modify-write on a file shared with other tools); they run exclusively. The tool is announced
- * to clients with the MCP annotation `readOnlyHint = readOnly`; the chat side runs only read-only
- * tools concurrently and everything else sequentially, in the order the model called them.
+ * The handler runs under the session's [CpgLock]. [readOnly] is required, so every tool has to
+ * decide: `true` keeps it concurrent (shared lock), `false` is for tools that change the graph (or
+ * do a read-modify-write on a file shared with other tools); they run exclusively. The tool is
+ * announced to clients with the MCP annotation `readOnlyHint = readOnly`; the chat side runs only
+ * read-only tools concurrently and everything else sequentially, in the order the model called
+ * them.
  *
  * Register every tool through this or [addToolWithoutCpg], never through the SDK's own `addTool`:
  * only these decode arguments the standard way, and [toolRegistrationProblems] flags the rest.
  */
-inline fun <reified T> Server.addTool(
+inline fun <reified T : HasProjectNamePayload> Server.addTool(
     name: String,
     description: String,
     readOnly: Boolean,
@@ -164,7 +169,7 @@ inline fun <reified T> Server.addTool(
     outputSchema: ToolSchema? = null,
     toolAnnotations: ToolAnnotations? = null,
     meta: JsonObject? = null,
-    noinline handler: (TranslationResult, T) -> CallToolResult,
+    noinline handler: (CpgSession, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
     this.addTool(
@@ -179,7 +184,7 @@ inline fun <reified T> Server.addTool(
         try {
             when (val decoded = decodeArguments<T>(name, request)) {
                 is DecodedArguments.Invalid -> decoded.result
-                is DecodedArguments.Valid -> decoded.payload.runOnCpg(!readOnly, handler)
+                is DecodedArguments.Valid -> decoded.payload.runOnSession(!readOnly, handler)
             }
         } catch (e: Exception) {
             CallToolResult(
@@ -438,6 +443,25 @@ inline fun <reified T> JsonObject.toObject() =
     lenientJson.decodeFromString<T>(Json.encodeToString(this))
 
 /**
+ * The status of a CPG session. The status can be one of the following:
+ * - ANALYSIS: The CPG is currently being analyzed.
+ * - METADATA_AVAILABLE: The CPG has been analyzed and metadata is available.
+ * - LOW_AVAILABLE: The CPG has been analyzed and low-level information is available.
+ * - MEDIUM_AVAILABLE: The CPG has been analyzed and medium-level information is available.
+ * - HIGH_AVAILABLE: The CPG has been analyzed and high-level information is available.
+ *
+ * Note: There is no existing logic for the analysis status. Depending on the different use cases or
+ * requirements there is an appropriate solution to be implemented.
+ */
+enum class CpgSessionStatus {
+    ANALYSIS,
+    METADATA_AVAILABLE,
+    LOW_AVAILABLE,
+    MEDIUM_AVAILABLE,
+    HIGH_AVAILABLE,
+}
+
+/**
  * Decodes the arguments of a tool call into [T]. A call without any `arguments` is treated like
  * `{}`: a payload whose fields are all optional falls back to its defaults, and one with required
  * fields fails with a [SerializationException] that names the missing field.
@@ -445,28 +469,92 @@ inline fun <reified T> JsonObject.toObject() =
 inline fun <reified T> JsonObject?.toPayload(): T = (this ?: JsonObject(emptyMap())).toObject<T>()
 
 /**
- * Runs [query] on the current analysis result under [CpgLock] - shared, or exclusive if [mutating].
- * The result is looked up inside the lock, so a concurrent re-analysis cannot swap the graph out
- * from under the query.
+ * Everything the MCP tools need to operate on one analyzed project: its [translationResult], the
+ * [translationContext] to run further passes with, and which passes [nodeToPass] already ran on
+ * which nodes. Sessions are kept in [analysisSessions].
+ *
+ * The [lock] guards the graph of this session, and [nodeIndex] looks nodes up by id (see
+ * [findNodeById]). Whatever replaces or changes the AST of the session must call
+ * [NodeIndex.invalidate]; [nodeToPass] is keyed by the session's nodes and so belongs to its graph.
  */
-inline fun <reified T> T.runOnCpg(
+open class CpgSession(
+    var translationResult: TranslationResult?,
+    var translationContext: TranslationContext?,
+    val nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>> = IdentityHashMap(),
+    var status: CpgSessionStatus = CpgSessionStatus.ANALYSIS,
+) {
+    val lock = CpgLock()
+    val nodeIndex = NodeIndex()
+}
+
+/**
+ * Holds one [CpgSession] per analyzed project, keyed by the project name it was analyzed under.
+ * Resolve a session through [getSession] rather than indexing into this map, so that a missing
+ * `projectName` is handled consistently.
+ */
+val analysisSessions = ConcurrentHashMap<String, CpgSession>()
+
+/**
+ * Implemented by a tool call payload that carries the name of the analyzed project the call should
+ * operate on. Every payload registered via [addTool] implements it, and code outside this module
+ * can extend it (e.g. with further context of its own) and hand such a payload to [runOnSession] to
+ * have the matching [CpgSession] resolved.
+ */
+interface HasProjectNamePayload {
+    val projectName: String?
+}
+
+/**
+ * Registers [result] as the [CpgSession] of the project [projectName], replacing any session
+ * previously registered under that name. This is the entry point for consumers that run their own
+ * analysis (e.g. codyze-console) instead of going through `cpg_analyze`.
+ */
+fun registerSession(projectName: String, result: TranslationResult) {
+    analysisSessions[projectName] = CpgSession(result, result.ctx)
+}
+
+/**
+ * Returns the [CpgSession] analyzed under [projectName]. If no name is given, the only analyzed
+ * session is returned, or `null` if there is none or more than one.
+ */
+fun getSession(projectName: String? = null): CpgSession? =
+    if (projectName != null) analysisSessions[projectName]
+    else analysisSessions.values.singleOrNull()
+
+/**
+ * Runs [query] on the CPG this payload addresses, i.e. on the [CpgSession] resolved for
+ * [HasProjectNamePayload.projectName] (see [getSession]), under the session's [CpgLock] - shared,
+ * or exclusive if [mutating]. If there is no such session, or [query] throws, an error result is
+ * returned instead.
+ */
+fun <T : HasProjectNamePayload> T.runOnSession(
     mutating: Boolean = false,
-    query: BiFunction<TranslationResult, T, CallToolResult>,
+    query: (CpgSession, T) -> CallToolResult,
 ): CallToolResult {
     return try {
-        CpgLock.withAccess(mutating) {
-            val result =
-                globalAnalysisResult
-                    ?: return@withAccess CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
-            query.apply(result, this)
+        var session = getSession(projectName)
+        var result: CallToolResult? = null
+        // A re-analysis of the project replaces its session while holding the old one's write lock,
+        // so a call that waited for that lock must not query the stale session but the new one.
+        while (session != null && result == null) {
+            val current = session
+            result =
+                current.lock.withAccess(mutating) {
+                    if (getSession(projectName) === current) query(current, this) else null
+                }
+            if (result == null) session = getSession(projectName)
         }
+        if (result != null) return result
+
+        val available = "Available projects: ${analysisSessions.keys.joinToString { "'$it'" }}."
+        val message =
+            when {
+                analysisSessions.isEmpty() ->
+                    "No project has been analyzed yet. Please analyze one first using cpg_analyze."
+                projectName != null -> "Unknown project '$projectName'. $available"
+                else -> "Several projects are analyzed, so 'projectName' is required. $available"
+            }
+        CallToolResult(content = listOf(TextContent(message)))
     } catch (e: Exception) {
         CallToolResult(
             content =

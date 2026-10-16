@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
@@ -64,9 +64,9 @@ private fun Granularity.toTag(): String =
  * [de.fraunhofer.aisec.cpg.graph.reachingWrites]. Kept as a plain function, separate from
  * [addGetLastWriteTool], so it's testable without going through the MCP [Server] transport.
  */
-fun getLastWrite(result: TranslationResult, payload: CpgIdPayload): CallToolResult {
+fun getLastWrite(session: CpgSession, payload: CpgIdPayload): CallToolResult {
     val startNode =
-        result.findNodeById(Uuid.parse(payload.id).toString())
+        session.findNodeById(Uuid.parse(payload.id).toString())
             ?: return CallToolResult(
                 content = listOf(TextContent("No node found with ID ${payload.id}"))
             )
@@ -108,7 +108,7 @@ fun Server.addGetLastWriteTool() {
         readOnly = true,
         name = "cpg_get_last_write",
         description = toolDescription,
-    ) { result: TranslationResult, payload: CpgIdPayload ->
-        getLastWrite(result, payload)
+    ) { session: CpgSession, payload: CpgIdPayload ->
+        getLastWrite(session, payload)
     }
 }

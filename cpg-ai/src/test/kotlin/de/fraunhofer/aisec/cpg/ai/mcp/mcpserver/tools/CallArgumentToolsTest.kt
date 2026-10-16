@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.functions
@@ -45,61 +45,66 @@ class CallArgumentToolsTest {
 
     private fun texts(result: CallToolResult) = result.content.map { (it as TextContent).text }
 
-    private fun analyzeCall(dir: Path): Pair<TranslationResult, String> {
+    private fun analyzeCall(dir: Path): Pair<CpgSession, String> {
         val source = dir.resolve("main.c")
         source.writeText("int f(int a, int b) { return a + b; } int main() { return f(1, 2); }")
         val result =
             analyze(listOf(source.toFile()), dir, false) { it.registerLanguage<CLanguage>() }
-        return result to result.calls.single { it.name.localName == "f" }.id.toString()
+        return CpgSession(result, result.ctx) to
+            result.calls.single { it.name.localName == "f" }.id.toString()
     }
 
     @Test
     fun listCallArgsReturnsOneEntryPerArgument(@TempDir dir: Path) {
-        val (result, callId) = analyzeCall(dir)
+        val (session, callId) = analyzeCall(dir)
 
-        assertEquals(2, listCallArgs(result, CpgIdPayload(callId)).content.size)
+        assertEquals(2, listCallArgs(session, CpgIdPayload(callId)).content.size)
     }
 
     @Test
     fun listCallArgsReportsAnUnknownCallInsteadOfThrowing(@TempDir dir: Path) {
-        val (result, _) = analyzeCall(dir)
+        val (session, _) = analyzeCall(dir)
 
         assertEquals(
             listOf("No call found with id nope."),
-            texts(listCallArgs(result, CpgIdPayload("nope"))),
+            texts(listCallArgs(session, CpgIdPayload("nope"))),
         )
     }
 
     @Test
     fun theIdOfANodeThatIsNoCallIsNoCall(@TempDir dir: Path) {
-        val (result, _) = analyzeCall(dir)
-        val functionId = result.functions.single { it.name.localName == "f" }.id.toString()
+        val (session, _) = analyzeCall(dir)
+        val functionId =
+            session.translationResult.functions.single { it.name.localName == "f" }.id.toString()
 
         assertEquals(
             listOf("No call found with id $functionId."),
-            texts(listCallArgs(result, CpgIdPayload(functionId))),
+            texts(listCallArgs(session, CpgIdPayload(functionId))),
         )
     }
 
     @Test
     fun listCallArgByIndexReturnsThatArgument(@TempDir dir: Path) {
-        val (result, callId) = analyzeCall(dir)
+        val (session, callId) = analyzeCall(dir)
 
         val outcome =
-            listCallArgByNameOrIndex(result, CpgCallArgumentByNameOrIndexPayload(callId, index = 1))
+            listCallArgByNameOrIndex(
+                session,
+                CpgCallArgumentByNameOrIndexPayload(callId, index = 1),
+            )
 
         assertTrue(texts(outcome).single().contains("2"), texts(outcome).toString())
     }
 
     @Test
     fun listCallArgByIndexReportsAnUnknownCallAndAnUnknownArgument(@TempDir dir: Path) {
-        val (result, callId) = analyzeCall(dir)
+        val (session, callId) = analyzeCall(dir)
 
         assertEquals(
             listOf("No call found with id nope."),
             texts(
                 listCallArgByNameOrIndex(
-                    result,
+                    session,
                     CpgCallArgumentByNameOrIndexPayload("nope", index = 0),
                 )
             ),
@@ -108,7 +113,7 @@ class CallArgumentToolsTest {
             listOf("No argument found with the given name or index."),
             texts(
                 listCallArgByNameOrIndex(
-                    result,
+                    session,
                     CpgCallArgumentByNameOrIndexPayload(callId, index = 9),
                 )
             ),

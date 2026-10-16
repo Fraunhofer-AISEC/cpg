@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConcept
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptList
@@ -57,10 +57,12 @@ class ConceptsSchemaFileTest {
 
     private val yaml = ObjectMapper(YAMLFactory()).registerKotlinModule()
 
-    private fun analyzeSnippet(dir: Path): TranslationResult {
+    private fun analyzeSnippet(dir: Path): CpgSession {
         val source = dir.resolve("main.c")
         source.writeText("int main() { int x = 1; return x; }")
-        return analyze(listOf(source.toFile()), dir, true) { it.registerLanguage<CLanguage>() }
+        val result =
+            analyze(listOf(source.toFile()), dir, true) { it.registerLanguage<CLanguage>() }
+        return CpgSession(result, result.ctx)
     }
 
     private fun schema(name: String, fixedValue: String? = null) =
@@ -81,14 +83,14 @@ class ConceptsSchemaFileTest {
 
     @Test
     fun appliedConceptUsesFixedValueFromTheGivenSchemaFile(@TempDir dir: Path) {
-        val result = analyzeSnippet(dir)
-        val main = result.functions.single { it.name.localName == "main" }
+        val session = analyzeSnippet(dir)
+        val main = session.translationResult.functions.single { it.name.localName == "main" }
         val schemaFile = dir.resolve("custom-concepts.yaml").toFile()
         yaml.writeValue(schemaFile, listOf(schema("Crypto", fixedValue = "AES-256")))
 
         val response =
             applyLLMConcepts(
-                result,
+                session,
                 LLMConceptList(
                     listOf(
                         LLMConcept(
@@ -104,7 +106,8 @@ class ConceptsSchemaFileTest {
             )
 
         assertEquals(emptyList(), response.failed)
-        val concept = result.allChildrenWithOverlays<GenericLLMConcept>().single()
+        val concept =
+            session.translationResult.allChildrenWithOverlays<GenericLLMConcept>().single()
         assertEquals("AES-256", concept.properties.properties["algo"]?.rawValue)
     }
 

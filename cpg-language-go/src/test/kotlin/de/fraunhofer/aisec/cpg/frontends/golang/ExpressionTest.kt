@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerReference
 import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
@@ -310,5 +312,40 @@ class ExpressionTest {
         assertNotNull(rhsNext)
         assertEquals(rhsNext.type, derefX.type)
         assertContains(derefX.assignedTypes, rhsNext.type)
+    }
+
+    @Test
+    fun testPointerReference() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("pointer.go").toFile()), topLevel, true) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val x = main.variables["x"]
+        assertNotNull(x)
+
+        // &x takes the address of x
+        val p = main.variables["p"]
+        assertNotNull(p)
+        val ref = assertIs<PointerReference>(p.initializer)
+        assertSame(x, (ref.input as? Reference)?.refersTo)
+        assertEquals(tu.primitiveType("int").pointer(), ref.type)
+
+        // *p dereferences p
+        val deref = main.allChildren<PointerDereference>().singleOrNull()
+        assertNotNull(deref)
+        assertSame(p, (deref.input as? Reference)?.refersTo)
+
+        // &T{...} takes the address of a composite literal
+        val t = main.variables["t"]
+        assertNotNull(t)
+        val literalRef = assertIs<PointerReference>(t.initializer)
+        assertIs<InitializerList>(literalRef.input)
+        assertLocalName("T*", literalRef.type)
     }
 }

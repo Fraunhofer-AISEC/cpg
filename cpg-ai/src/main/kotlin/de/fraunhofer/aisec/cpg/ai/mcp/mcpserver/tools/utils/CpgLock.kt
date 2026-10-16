@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 /**
- * Guards the shared CPG ([de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult])
- * against concurrent access from parallel MCP calls, e.g. from several chat sessions a host
- * application runs at once.
+ * Guards the CPG of one [CpgSession] against concurrent access from parallel MCP calls, e.g. from
+ * several chat sessions a host application runs at once. Every session has its own lock
+ * ([CpgSession.lock]), so calls on different projects do not block each other.
  *
  * The graph is not thread-safe: its edge collections are plain lists/sets, so a traversal running
  * while another thread attaches an overlay or edge can throw a `ConcurrentModificationException`
@@ -45,7 +45,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
  * and a [write] holder may call [read]. Taking [write] while the same thread holds only [read]
  * would deadlock, so it throws instead.
  */
-object CpgLock {
+class CpgLock {
     private val lock = ReentrantReadWriteLock()
 
     /** Runs [block] with shared access to the graph. */

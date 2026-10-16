@@ -28,9 +28,10 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgTranslate
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addRunPass
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.get
@@ -40,8 +41,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.BeforeEach
 
 class RunPassTest {
+
+    @BeforeEach
+    fun clearSessions() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
+    }
+
     private val payload =
         mapOf("content" to "def hello(x: int):\n    y = x\n    print(y)", "extension" to "py")
 
@@ -57,11 +66,11 @@ class RunPassTest {
             // Run translation to populate the CPG properly
             client.callTool(name = "cpg_translate", arguments = payload)
 
-            val globalAnalysisResult = globalAnalysisResult
-            assertNotNull(globalAnalysisResult)
+            val session = getSession()
+            assertNotNull(session)
 
             // Find the call expression node to run a pass on
-            val printCall = globalAnalysisResult.calls["print"]
+            val printCall = session.translationResult.calls["print"]
             assertNotNull(printCall)
             val nodeId = printCall.id.toString()
             assertNotNull(nodeId)
@@ -113,6 +122,42 @@ class RunPassTest {
         }
 
     @Test
+    fun testNoAnalysisResult() =
+        withClient(
+            registerTools = {
+                addCpgTranslate()
+                addListPasses()
+                addRunPass()
+            }
+        ) { client ->
+            // Run translation to populate the CPG properly
+            client.callTool(name = "cpg_translate", arguments = payload)
+
+            val session = getSession()
+            assertNotNull(session)
+
+            // Find the call expression node to run a pass on
+            val printCall = session.translationResult.calls["print"]
+            assertNotNull(printCall)
+            val nodeId = printCall.id.toString()
+            assertNotNull(nodeId)
+
+            // Execute a simple pass that should affect EOG/DFG, e.g., TypeResolver (safe) or EOG
+            val request =
+                mapOf(
+                    "passName" to "de.fraunhofer.aisec.cpg.passes.TypeResolver",
+                    "nodeId" to nodeId,
+                )
+            // Drop the sessions, so that the call cannot be routed to any of them. We expect an
+            // error message but no crash.
+            analysisSessions.clear()
+            val result = client.callTool(name = "cpg_run_pass", arguments = request)
+            val content = (result.content.firstOrNull() as? TextContent)?.text
+            assertNotNull(content)
+            assertTrue(content.contains("No project has been analyzed yet."))
+        }
+
+    @Test
     fun testInvalidNodeId() =
         withClient(
             registerTools = {
@@ -124,11 +169,11 @@ class RunPassTest {
             // Run translation to populate the CPG properly
             client.callTool(name = "cpg_translate", arguments = payload)
 
-            val globalAnalysisResult = globalAnalysisResult
-            assertNotNull(globalAnalysisResult)
+            val session = getSession()
+            assertNotNull(session)
 
             // Find the call expression node to run a pass on
-            val printCall = globalAnalysisResult.calls["print"]
+            val printCall = session.translationResult.calls["print"]
             assertNotNull(printCall)
             val nodeId = printCall.id.toString()
             assertNotNull(nodeId)
@@ -160,11 +205,11 @@ class RunPassTest {
             // Run translation to populate the CPG properly
             client.callTool(name = "cpg_translate", arguments = payload)
 
-            val globalAnalysisResult = globalAnalysisResult
-            assertNotNull(globalAnalysisResult)
+            val session = getSession()
+            assertNotNull(session)
 
             // Find the call expression node to run a pass on
-            val printCall = globalAnalysisResult.calls["print"]
+            val printCall = session.translationResult.calls["print"]
             assertNotNull(printCall)
             val nodeId = printCall.id.toString()
             assertNotNull(nodeId)
@@ -200,11 +245,11 @@ class RunPassTest {
             // Run translation to populate the CPG properly
             client.callTool(name = "cpg_translate", arguments = payload)
 
-            val globalAnalysisResult = globalAnalysisResult
-            assertNotNull(globalAnalysisResult)
+            val session = getSession()
+            assertNotNull(session)
 
             // Find the call expression node to run a pass on
-            val printCall = globalAnalysisResult.calls["print"]
+            val printCall = session.translationResult.calls["print"]
             assertNotNull(printCall)
             val nodeId = printCall.id.toString()
             assertNotNull(nodeId)
