@@ -675,7 +675,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // And now the prevDFGs. These are pairs, where the second item is a with a set of
             // properties for the edge
             value.third.forEach { (prev, properties) ->
-                var context: CallingContext? = null
+                var callingContexts = mutableListOf<CallingContext>()
                 var granularity = default()
                 var functionSummary = false
                 var derefDepth: PointerAccess? = null
@@ -687,18 +687,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     when (property) {
                         is PointerDataflowGranularity -> derefDepth = property.pointerTarget
                         is Granularity -> granularity = property
-                        is CallingContext -> context = property
+                        is CallingContext -> callingContexts.add(property)
                         is Boolean -> functionSummary = property
                     }
                 }
 
-                if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
+                if (
+                    callingContexts.isEmpty()
+                ) // TODO: add functionSummary flag for contextSensitive DFs
                  key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary, derefDepth)
                 else
                     key.prevDFGEdges.addContextSensitive(
                         prev,
                         granularity,
-                        context,
+                        callingContexts,
                         functionSummary,
                         derefDepth,
                     )

@@ -248,7 +248,7 @@ class CallingContextOut(
 
 /**
  * This edge class defines a flow of data between [start] and [end]. The flow must have a
- * [callingContext] which allows for a context-sensitive dataflow analysis. This edge can also have
+ * [callingContexts] which allows for a context-sensitive dataflow analysis. This edge can also have
  * a certain [granularity].
  */
 class ContextSensitiveDataflow(
@@ -256,7 +256,7 @@ class ContextSensitiveDataflow(
     end: Node,
     /** The granularity of this dataflow. */
     granularity: Granularity = default(),
-    val callingContext: CallingContext,
+    val callingContexts: List<CallingContext>,
     override val functionSummary: Boolean = false,
     override val derefDepth: PointerAccess? = null,
 ) : Dataflow(start, end, granularity) {
@@ -264,12 +264,12 @@ class ContextSensitiveDataflow(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ContextSensitiveDataflow) return false
-        return this.callingContext == other.callingContext && super.equals(other)
+        return this.callingContexts == other.callingContexts && super.equals(other)
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
-        result = 31 * result + callingContext.hashCode()
+        result = 31 * result + callingContexts.hashCode()
         return result
     }
 }
@@ -290,7 +290,7 @@ class Dataflows<T : Node>(
     fun addContextSensitive(
         node: T,
         granularity: Granularity = default(),
-        callingContext: CallingContext,
+        callingContexts: List<CallingContext>,
         functionSummary: Boolean = false,
         derefDepth: PointerAccess? = null,
     ) {
@@ -300,7 +300,7 @@ class Dataflows<T : Node>(
                     thisRef,
                     node,
                     granularity,
-                    callingContext,
+                    callingContexts,
                     functionSummary,
                     derefDepth,
                 )
@@ -309,7 +309,7 @@ class Dataflows<T : Node>(
                     node,
                     thisRef,
                     granularity,
-                    callingContext,
+                    callingContexts,
                     functionSummary,
                     derefDepth,
                 )

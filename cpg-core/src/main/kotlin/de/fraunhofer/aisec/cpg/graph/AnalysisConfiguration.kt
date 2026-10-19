@@ -445,7 +445,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
+                edge is ContextSensitiveDataflow &&
+                    edge.callingContexts.any { it is CallingContextIn }
             }
             GraphToFollow.EOG -> {
                 edge is Invoke && currentNode is Call
@@ -456,7 +457,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
     override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
+                edge is ContextSensitiveDataflow &&
+                    edge.callingContexts.any { it is CallingContextOut }
             }
 
             GraphToFollow.EOG -> {
@@ -563,7 +565,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
     override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
+                edge is ContextSensitiveDataflow &&
+                    edge.callingContexts.any { it is CallingContextOut }
             }
 
             GraphToFollow.EOG -> {
@@ -575,7 +578,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
     override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
+                edge is ContextSensitiveDataflow &&
+                    edge.callingContexts.any { it is CallingContextIn }
             }
 
             GraphToFollow.EOG -> {
@@ -673,9 +677,12 @@ object ContextSensitive : AnalysisSensitivity() {
             // This is for following DFG edges.
             val stack =
                 if (analysisDirection is Backward) {
-                    (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.reversed()
+                    (edge as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.flatMap { it.calls }
+                        ?.reversed()
                 } else {
-                    (edge as? ContextSensitiveDataflow)?.callingContext?.calls
+                    (edge as? ContextSensitiveDataflow)?.callingContexts?.flatMap { it.calls }
                 }
 
             stack?.forEach { ctx.callStack.push(it) }
@@ -687,9 +694,10 @@ object ContextSensitive : AnalysisSensitivity() {
             // We are only interested in outgoing edges from our current
             // "call-in", i.e., the call expression that is on the stack.
             ctx.callStack.isEmpty() ||
-                (edge as? ContextSensitiveDataflow)?.callingContext?.calls?.all {
-                    ctx.callStack.popIfOnTop(it)
-                } == true ||
+                (edge as? ContextSensitiveDataflow)
+                    ?.callingContexts
+                    ?.flatMap { it.calls }
+                    ?.all { ctx.callStack.popIfOnTop(it) } == true ||
                 ((edge as? Invoke)?.start as? Call)?.let { ctx.callStack.popIfOnTop(it) } == true
         } else {
             true

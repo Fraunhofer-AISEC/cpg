@@ -63,23 +63,23 @@ class IfdsReachingSourcesTest {
 
             q.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cG)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cG))),
             )
             h.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cF))),
             )
             h.prevDFGEdges.addContextSensitive(
                 r1,
-                callingContext = CallingContextIn(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(cF))),
             )
             r1.prevDFGEdges.addContextSensitive(
                 r2,
-                callingContext = CallingContextIn(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(cF))),
             )
             r2.prevDFGEdges.addContextSensitive(
                 s,
-                callingContext = CallingContextIn(mutableListOf(cG)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(cG))),
             )
 
             val predicate: (Node) -> Boolean = { it === s }
@@ -139,16 +139,16 @@ class IfdsReachingSourcesTest {
 
             q.prevDFGEdges.addContextSensitive(
                 retBody,
-                callingContext = CallingContextOut(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(c1))),
             )
             retBody.prevDFGEdges += param
             param.prevDFGEdges.addContextSensitive(
                 arg1,
-                callingContext = CallingContextIn(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c1))),
             )
             param.prevDFGEdges.addContextSensitive(
                 arg2,
-                callingContext = CallingContextIn(mutableListOf(c2)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c2))),
             )
 
             val predicate: (Node) -> Boolean = { it === arg1 || it === arg2 }
@@ -312,11 +312,11 @@ class IfdsReachingSourcesTest {
             // q <-out[cF]- h, and h recurses into itself via cF, with no matching return / source.
             q.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cF))),
             )
             h.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cF))),
             )
 
             val ifds =

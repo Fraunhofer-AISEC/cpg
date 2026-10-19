@@ -315,19 +315,22 @@ internal fun ifdsStepsOf(node: Node, backward: Boolean, graph: GraphToFollow): L
 
 private fun dfgSteps(node: Node, backward: Boolean): List<IfdsStep> {
     val edges = if (backward) node.prevDFGEdges else node.nextDFGEdges
-    return edges.map { edge ->
+    return edges.flatMap { edge ->
         val target = if (backward) edge.start else edge.end
         if (edge is ContextSensitiveDataflow) {
-            val cc = edge.callingContext
-            val isPush = if (backward) cc is CallingContextOut else cc is CallingContextIn
-            val isPop = if (backward) cc is CallingContextIn else cc is CallingContextOut
-            when {
-                isPush -> CallStep(node, target, cc.calls.toList())
-                isPop -> ReturnStep(cc.calls.toList(), listOf(target))
-                else -> IntraStep(target)
-            }
+            if (edge.callingContexts.isEmpty()) listOf(IntraStep(target))
+            else
+                edge.callingContexts.map { cc ->
+                    val isPush = if (backward) cc is CallingContextOut else cc is CallingContextIn
+                    val isPop = if (backward) cc is CallingContextIn else cc is CallingContextOut
+                    when {
+                        isPush -> CallStep(node, target, cc.calls.toList())
+                        isPop -> ReturnStep(cc.calls.toList(), listOf(target))
+                        else -> IntraStep(target)
+                    }
+                }
         } else {
-            IntraStep(target)
+            listOf(IntraStep(target))
         }
     }
 }
