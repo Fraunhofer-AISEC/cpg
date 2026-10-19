@@ -666,6 +666,10 @@ class BasicLatticesRedesignTest {
      * long - we saw a single edge run for twelve hours against a budget of thirty minutes.
      */
     @Test
+    // The assertion below bounds a *working* implementation, and a regression which waits for the
+    // transformation still ends after transformationDuration. A cancellation which deadlocks does
+    // not end at all, though, so @Timeout is what keeps that from hanging the suite - the same
+    // safety net the other cancellation tests in this file use.
     @Timeout(60)
     fun testIterateEOGTimesOutDuringASlowTransformation() {
         val lattice = PowersetLattice<String>()
