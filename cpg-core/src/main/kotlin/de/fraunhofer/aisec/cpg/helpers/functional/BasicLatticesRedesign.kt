@@ -180,6 +180,13 @@ private object EdgeStallWatchdog {
     @Synchronized
     fun register(name: String): Run {
         val run = Run(name)
+        // The watchdog exists to tell us what an analysis is stuck in, and it can only tell us by
+        // logging it, so there is nothing to gain from watching when nobody is listening. Checking
+        // here rather than inside the loop means a run which is not being debugged never starts a
+        // polling thread at all, and the per-edge enter/leave stay the two field writes they are.
+        if (!Pass.log.isDebugEnabled) {
+            return run
+        }
         runs.add(run)
         if (poller == null) {
             poller =
