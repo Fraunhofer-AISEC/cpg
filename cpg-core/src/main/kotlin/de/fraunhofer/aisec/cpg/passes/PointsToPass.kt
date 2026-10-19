@@ -736,6 +736,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     node.functionSummary.keys.any {
                         it in node.parameters ||
                             it in node.returns ||
+                            // A function without a return statement has its dummy summary keyed by
+                            // itself (see [addDummyFunctionSummary]), and only a dummy is ever
+                            // keyed that way - everything else keys by a parameter or a Return.
+                            // Without this, such a function counts as not-yet-analyzed and is
+                            // analyzed again at every call site, hitting the same timeout each
+                            // time, which is what the dummy exists to prevent.
+                            it === node ||
                             // We already analyzed the function, but it doesn't affect any
                             // parameters or return values
                             (it as? Literal<*>)?.value == "dummy"
@@ -783,102 +790,139 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
-        val lattice =
-            PointsToState(
-                SingleGeneralState(
-                    GeneralStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
-                ),
-                SingleDeclarationState(
-                    DeclarationStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
-                ),
-            )
-
-        var startState = lattice.bottom
-        val addresses = startState.getAddresses(node, node)
-        startState =
-            lattice.pushToDeclarationsState(
-                startState,
-                node,
-                DeclarationStateEntryElement(
-                    PowersetLattice.Element(addresses),
-                    PowersetLattice.Element(),
-                    PowersetLattice.Element(),
-                ),
-            )
-
-        startState = transferInternal(lattice, node, startState)
-
-        val finalState =
-            if (node is Function && node.body == null) {
-                handleEmptyFunction(lattice, startState, node)
-            } else {
-                var (result, aborted) =
-                    lattice.iterateEOG(
-                        node.nextEOGEdges,
-                        startState,
-                        ::transfer,
-                        timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
-                        maxStateEntries = passConfig<Configuration>()?.maxStateEntries,
-                    )
-                // If we ran out of time or memory, treat it as an empty Function but still
-                // include the results we got
-                if (aborted && node is Function) {
-                    analysisTimeout = true
-                    result = handleEmptyFunction(lattice, result as PointsToState.Element, node)
-                }
-                result as PointsToState.Element
-            }
-
-        // Turning the final state into graph edges and deriving the function summary from it is
-        // linear in the size of that state, and for a state with more than a hundred thousand
-        // entries that took over an hour - on top of whatever the fixpoint iteration above was
-        // allowed to take, because this phase had no budget at all. It gets one now, so the time we
-        // spend on a single function is bounded by twice the timeout instead of by nothing.
-        //
-        // Running out of the budget means we stop where we are, so the function ends up with fewer
-        // dataflow edges, and possibly a smaller function summary, than the state we computed would
-        // justify. That is a loss of completeness rather than of correctness, and it is the same
-        // kind of loss that configuring a timeout at all already accepts.
-        val postProcessingFinished =
-            withTimeoutOrNull(passConfig<Configuration>()?.timeout ?: Duration.INFINITE) {
-                drawDataflowEdges(finalState)
-
-                if (log.isTraceEnabled) {
-                    log.trace("Finished drawing DFG Edges")
-                }
-
-                /* Store function summary for this Function. */
-                if (node is Function && node.body != null && !analysisTimeout) {
-                    storeFunctionSummary(node, finalState)
-                }
-                true
-            }
-        if (postProcessingFinished == null) {
-            log.warn(
-                "Ran out of time while writing the analysis result of {} into the graph. Its " +
-                    "dataflows are incomplete and we fall back to a dummy function summary.",
-                node.name,
-            )
-            if (node is Function) {
-                // Whatever of the summary we got to write is derived from a graph we did not finish
-                // drawing, so it says less than it should. We throw it away and fall back to the
-                // over-approximation instead, which is both on the safe side and keeps the callers
-                // of this function from analyzing it again and hitting the same timeout once per
-                // call site. The edges we did draw stay: each of them is a flow we found, we only
-                // did not find all of them.
-                node.functionSummary.clear()
-                addDummyFunctionSummary(node)
-            }
-        }
-
-        if (node is Function) {
-            if (functionSummaryAnalysisChain.last() == node)
-                functionSummaryAnalysisChain.remove(node)
-            else
-                log.error(
-                    "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+        // From here on we can be cancelled: the enclosing analysis runs our transformation
+        // inside its own withTimeout, so its budget can run out while we are analyzing a callee
+        // for it. Everything that has to happen either way goes into the finally below.
+        var cancelled = false
+        try {
+            val lattice =
+                PointsToState(
+                    SingleGeneralState(
+                        GeneralStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
+                    ),
+                    SingleDeclarationState(
+                        DeclarationStateEntry(
+                            PowersetLattice(),
+                            PowersetLattice(),
+                            PowersetLattice(),
+                        )
+                    ),
                 )
+
+            var startState = lattice.bottom
+            val addresses = startState.getAddresses(node, node)
+            startState =
+                lattice.pushToDeclarationsState(
+                    startState,
+                    node,
+                    DeclarationStateEntryElement(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                    ),
+                )
+
+            startState = transferInternal(lattice, node, startState)
+
+            val finalState =
+                if (node is Function && node.body == null) {
+                    handleEmptyFunction(lattice, startState, node)
+                } else {
+                    var (result, aborted) =
+                        lattice.iterateEOG(
+                            node.nextEOGEdges,
+                            startState,
+                            ::transfer,
+                            timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
+                            maxStateEntries = passConfig<Configuration>()?.maxStateEntries,
+                        )
+                    // If we ran out of time or memory, treat it as an empty Function but still
+                    // include the results we got
+                    if (aborted && node is Function) {
+                        analysisTimeout = true
+                        result = handleEmptyFunction(lattice, result as PointsToState.Element, node)
+                    }
+                    result as PointsToState.Element
+                }
+
+            // Turning the final state into graph edges and deriving the function summary from it is
+            // linear in the size of that state, and for a state with more than a hundred thousand
+            // entries that took over an hour - on top of whatever the fixpoint iteration above was
+            // allowed to take, because this phase had no budget at all. It gets one now, so the
+            // time we
+            // spend on a single function is bounded by twice the timeout instead of by nothing.
+            //
+            // Running out of the budget means we stop where we are, so the function ends up with
+            // fewer
+            // dataflow edges, and possibly a smaller function summary, than the state we computed
+            // would
+            // justify. That is a loss of completeness rather than of correctness, and it is the
+            // same
+            // kind of loss that configuring a timeout at all already accepts.
+            val postProcessingFinished =
+                withTimeoutOrNull(passConfig<Configuration>()?.timeout ?: Duration.INFINITE) {
+                    drawDataflowEdges(finalState)
+
+                    if (log.isTraceEnabled) {
+                        log.trace("Finished drawing DFG Edges")
+                    }
+
+                    /* Store function summary for this Function. */
+                    if (node is Function && node.body != null && !analysisTimeout) {
+                        storeFunctionSummary(node, finalState)
+                    }
+                    true
+                }
+            if (postProcessingFinished == null) {
+                log.warn(
+                    "Ran out of time while writing the analysis result of {} into the graph. Its " +
+                        "dataflows are incomplete and we fall back to a dummy function summary.",
+                    node.name,
+                )
+                if (node is Function) {
+                    // Whatever of the summary we got to write is derived from a graph we did not
+                    // finish
+                    // drawing, so it says less than it should. We throw it away and fall back to
+                    // the
+                    // over-approximation instead, which is both on the safe side and keeps the
+                    // callers
+                    // of this function from analyzing it again and hitting the same timeout once
+                    // per
+                    // call site. The edges we did draw stay: each of them is a flow we found, we
+                    // only
+                    // did not find all of them.
+                    node.functionSummary.clear()
+                    addDummyFunctionSummary(node)
+                }
+            }
+        } catch (e: CancellationException) {
+            cancelled = true
+            throw e
+        } finally {
+            if (node is Function) {
+                // A cancelled analysis has already written part of a summary through
+                // [mergeFSEntry], and that summary lives on the Function, so every later target
+                // would reuse it and the "we already have a summary" check above would stop us
+                // from ever completing it. Throw the partial result away and fall back to the
+                // over-approximation, exactly as the post-processing timeout does.
+                if (cancelled && node.body != null) {
+                    node.functionSummary.clear()
+                    addDummyFunctionSummary(node)
+                }
+                // Taking ourselves off the chain has to happen even when we are cancelled:
+                // a stale entry makes every later call of this function look recursive. Being
+                // somewhere other than the end is only surprising if we got here normally; when
+                // we are unwinding a cancellation, a nested analysis simply has not finished
+                // taking itself off yet.
+                if (functionSummaryAnalysisChain.lastOrNull() !== node && !cancelled) {
+                    log.error(
+                        "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+                    )
+                }
+                functionSummaryAnalysisChain.remove(node)
+            }
         }
+
         if (log.isTraceEnabled) {
             log.trace("Finished with acceptInternal for ${node.name.localName}")
         }
