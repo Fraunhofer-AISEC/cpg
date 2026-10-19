@@ -1628,6 +1628,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lattice: PointsToState,
         derefderefPMVs: List<Node>,
     ): PointsToState.Element {
+        fun createNewProperties(key: NodeWithPropertiesKey): MutableSet<Any> {
+            val newProperties = mutableSetOf<Any>()
+            // First, add the new CallingContext
+            newProperties.add(callingContext)
+            // Then add old but still relevant properties (CallingContext and
+            // shortFS-Flag)
+            // Note: What is left is the granularity, we don't consider this one
+            // since other code knows better about that
+            newProperties.add(true in key.properties)
+            newProperties.addAll(key.properties.filterIsInstance<CallingContext>())
+            return newProperties
+        }
+
         var retDoubleState = doubleState
         val argDerefVals =
             // If the derefPMVs are empty, no need to search for the argDerefVals
@@ -1653,17 +1666,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // argVal from the declarationState and add the properties
                 // TODO: what if argVal is global?
                 retDoubleState.declarationsState[argVal]?.third?.mapTo(PowersetLattice.Element()) {
-                    NodeWithPropertiesKey(
-                        it.node,
-                        equalLinkedHashSetOf(callingContext, true in it.properties),
-                    )
+                    NodeWithPropertiesKey(it.node, createNewProperties(it))
                 }
                     ?: (arg as? PointerReference)?.let {
                         doubleState.getLastWrites(it.input).mapTo(PowersetLattice.Element()) {
-                            NodeWithPropertiesKey(
-                                it.node,
-                                equalLinkedHashSetOf(callingContext, true in it.properties),
-                            )
+                            NodeWithPropertiesKey(it.node, createNewProperties(it))
                         }
                     }
                     ?: PowersetLattice.Element()
@@ -1692,6 +1699,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             argDerefDerefVals.mapTo(PowersetLattice.Element()) { derefderefValue ->
                 NodeWithPropertiesKey(derefderefValue, equalLinkedHashSetOf())
             }
+
         val lastDerefDerefWrites =
             if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
                 argDerefVals.mapTo(PowersetLattice.Element()) { argDerefVal ->
@@ -1702,7 +1710,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // which we treat as the addresses, so we directly look up the
                 // lastWrites for those addresses in the declarationState
                 argDerefVals.flatMapTo(PowersetLattice.Element()) { argDerefVal ->
-                    retDoubleState.declarationsState[argDerefVal]?.third
+                    val stateEntry = retDoubleState.declarationsState[argDerefVal]?.third
+                    stateEntry?.map { NodeWithPropertiesKey(it.node, createNewProperties(it)) }
                         ?: PowersetLattice.Element()
                 }
             }

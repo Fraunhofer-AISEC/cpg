@@ -5243,13 +5243,17 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // Functions
-        val dlfreeFunc = tu.functions("dlfree").single()
+        val dlfreeFunc = tu.functions("dlfree").single { it.body != null }
         assertNotNull(dlfreeFunc)
 
         val sgxieFunc = tu.functions("sgx_t_ie").single()
         assertNotNull(sgxieFunc)
 
         val ieFunc = sgxieFunc.calls("t_ie").last().invokes.single()
+
+        val readFunc = tu.functions("read").single()
+
+        val sgxReadFunc = tu.functions("sgx_read").single()
 
         // Params and PMVs
         val dlfreeParam = dlfreeFunc.parameters.single()
@@ -5260,11 +5264,14 @@ class PointsToPassTest {
         val initEcallDerefPMV2 =
             initEcallParam2.memoryValues.single { it.name.localName == "derefvalue" }
 
-        val ieDerefPMV =
-            ieFunc.parameters[1].memoryValues.single { it.name.localName == "derefvalue" }
+        val readDerefPMV =
+            readFunc.parameters[0].memoryValues.single { it.name.localName == "derefvalue" }
 
         // Calls
         val memcpyCall = sgxieFunc.calls("memcpy_s").single()
+        val printlnCall = readFunc.calls("println").single()
+        val readCall = sgxReadFunc.calls("read").single()
+        val memcpyCall2 = sgxReadFunc.calls("memcpy_s").single()
 
         val sgxieParam = sgxieFunc.parameters.singleOrNull()
         val sgxieDerefDerefPMV =
@@ -5302,7 +5309,7 @@ class PointsToPassTest {
                 it.name.localName == "derefvalue"
             }
         // 1)
-        assertEquals(sgxieDerefDerefPMV, memcpySrcDerefPMV.prevDFG.single())
+        assertContains(memcpySrcDerefPMV.prevDFG, sgxieDerefDerefPMV)
         // 3)
         assertEquals(
             1,
@@ -5330,7 +5337,26 @@ class PointsToPassTest {
         // the derefPMV of the memcpy_s in Line 24
         // This one should be both a CallingContextIn (into the ieFunc) and a CallingContextOut
         // (from the memcpy_s)
-        val dfgEdge = ieDerefPMV.prevDFGEdges.single()
-        println(dfgEdge)
+        val dfgEdge = readDerefPMV.prevDFGEdges.single()
+        assertTrue(dfgEdge is ContextSensitiveDataflow)
+        assertEquals(
+            readCall,
+            dfgEdge.callingContexts.filterIsInstance<CallingContextIn>().single().calls.single(),
+        )
+        assertEquals(
+            memcpyCall2,
+            dfgEdge.callingContexts.filterIsInstance<CallingContextOut>().single().calls.single(),
+        )
+
+        // Sanity check: There should be no path to the sgxieDerefDerefPMV, so this should be false
+        assertTrue(
+            printlnCall.arguments
+                .single()
+                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
+                    it === sgxieDerefDerefPMV
+                }
+                .fulfilled
+                .isEmpty()
+        )
     }
 }
