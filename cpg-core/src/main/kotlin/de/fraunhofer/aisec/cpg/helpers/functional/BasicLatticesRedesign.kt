@@ -444,11 +444,11 @@ private fun describe(edge: EvaluationOrder): String {
  * how long it took. The two serve different purposes: [statistics] reports afterwards which edge
  * was the most expensive one, [watchdog] reports *while* an edge refuses to finish.
  */
-private suspend fun <R> measureAndRecord(
+private suspend inline fun <R> measureAndRecord(
     edge: EvaluationOrder,
     statistics: IterationStatistics,
     watchdog: EdgeStallWatchdog.Run,
-    block: suspend () -> R,
+    crossinline block: suspend () -> R,
 ): R {
     // One field read, as opposed to the two clock reads and four volatile writes below. The
     // watchdog only ever reports by logging, so it has nothing to do here either.
@@ -1031,6 +1031,10 @@ interface Lattice<T : Lattice.Element> {
         watchdog: EdgeStallWatchdog.Run,
     ): Pair<T, Boolean> {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
+        // Hoisted out of the worklist loop below: it captures globalState, so writing it inline
+        // would allocate one of these for every single edge, only for [IterationStatistics.sample]
+        // to drop it again when nobody is sampling.
+        val liveStatesForSampling: () -> Iterable<Lattice.Element> = { globalState.values }
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
             globalState.put(startEdge, startState)
@@ -1174,7 +1178,7 @@ interface Lattice<T : Lattice.Element> {
             // accommodate that peak at some point, and a state that grows that large once can grow
             // that large again, so we would rather stop a run that proved it can spike than let it
             // through on the hope that this particular spike was a one-off.
-            val liveEntries = statistics.sample(globalState.size) { globalState.values }
+            val liveEntries = statistics.sample(globalState.size, liveStatesForSampling)
 
             // All edges which are still to be processed are in one of the worklists at this point,
             // so this is the only place where we can determine which states are still live.
