@@ -168,6 +168,18 @@ open class Function :
         }
     }
 
+    /**
+     * What the analysis found out about this function's effect on its parameters and return values,
+     * keyed by the parameter or [de.fraunhofer.aisec.cpg.graph.statements.Return] it is about (or
+     * by the function itself, for the over-approximation used when we could not analyze it).
+     *
+     * **Add entries through `PointsToPass.mergeFSEntry`, not through `add` on the set.** [FSEntry]
+     * deliberately excludes `lastWrites` from its identity, so two entries which describe the same
+     * relationship discovered at different write-sites compare equal. A hash-based `Set.add` then
+     * *discards* the second one along with its write-sites, where the merge helper folds them into
+     * the entry that is already there. The sets built for a dummy summary get around this by being
+     * identity-based, because their per-parameter entries differ in nothing but `lastWrites`.
+     */
     var functionSummary = ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>()
 
     /** Returns true, if this function has a [body] statement. */
