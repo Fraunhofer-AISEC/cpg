@@ -628,11 +628,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * had 90% of their records carrying a context, averaging 2.9 calls, at 26 members per key -
          * while states below 5k had 48%, averaging 1.1 calls, at 2.4 members per key.
          *
-         * Truncating keeps the *innermost* `k` calls, i.e. the ones nearest the write, and is
-         * applied wherever a context is built, so pushes and pops are truncated alike and still
-         * match each other (see [de.fraunhofer.aisec.cpg.graph.IfdsReachingSources], which compares
-         * a whole call-string token for equality). Two contexts that differ only in the dropped
-         * outer calls become one, which lets a flow match a return it could not have taken - an
+         * Truncating keeps the *most recent* `k` calls, i.e. the ones nearest the program point the
+         * record belongs to, which is what makes records collapse: they tend to share the calls
+         * they came through last and to differ in the deeper chains they came from. It is applied
+         * wherever a context is built, so pushes and pops are truncated alike and still match each
+         * other (see [de.fraunhofer.aisec.cpg.graph.IfdsReachingSources], which compares a whole
+         * call-string token for equality). Two contexts that differ only in the dropped outer calls
+         * become one, which lets a flow match a return it could not have taken - an
          * over-approximation, so the result keeps every flow it had and may add some.
          */
         var maxCallStringLength: Int? = null,
@@ -1938,8 +1940,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val limit = passConfig<Configuration>()?.maxCallStringLength ?: return calls
         if (calls.size <= limit) return calls
         // The list is built by appending the call we are handling to the ones the callee's summary
-        // already carried, so it runs innermost-first and the innermost calls are the ones to keep.
-        return calls.subList(0, limit).toMutableList()
+        // already carried, so it ends with the call at the current program point and starts with
+        // the deepest one. k-CFA keeps the most recent calls, which are the ones at the end: two
+        // records of the same fact at the same point tend to share the calls they came through
+        // last and to differ in the deep chains they came from, so keeping the end is what lets
+        // them collapse into one. Keeping the start would retain exactly what tells them apart.
+        return calls.subList(calls.size - limit, calls.size).toMutableList()
     }
 
     private suspend fun calculateIncomingCallingContexts(
