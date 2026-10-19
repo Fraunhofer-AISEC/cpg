@@ -199,6 +199,13 @@ var analyzedFunctionCount = 0
  */
 private const val MAX_TIMEOUT_EXTENSION_FACTOR = 4
 
+/**
+ * The [PointsToPass.Configuration.maxArrayInitializers] a pass uses when it was never given a
+ * [PointsToPass.Configuration] at all. Shared with the property's own default so the two cannot
+ * drift apart.
+ */
+internal const val DEFAULT_MAX_ARRAY_INITIALIZERS = 200
+
 private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
 private const val FIELD_ACCESS_SUMMARY_SEGMENT = "<summary>"
 
@@ -614,7 +621,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * array literal costs state without usually telling us much that its first few elements did
          * not already.
          */
-        var maxArrayInitializers: Int? = 200,
+        var maxArrayInitializers: Int? = DEFAULT_MAX_ARRAY_INITIALIZERS,
 
         /**
          * The number of calls a [CallingContextOut] may name - the `k` of a k-CFA call-string
@@ -3798,10 +3805,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // element, at offset 1 the second, etc...
                         val fieldAddresses = identitySetOf<Node>()
                         // We only analyze the first elements in order not to have a too large state
+                        // A pass which was never given a [Configuration] still gets the default
+                        // cutoff rather than no cutoff: this one is not a new limit but one that
+                        // used to be hard-coded here, and dropping it for everybody who does not
+                        // configure the pass would make states bigger, not smaller.
+                        val configuration = passConfig<Configuration>()
+                        val limit =
+                            if (configuration != null) configuration.maxArrayInitializers
+                            else DEFAULT_MAX_ARRAY_INITIALIZERS
                         val analyzedInitializers =
-                            passConfig<Configuration>()?.maxArrayInitializers?.let {
-                                ini.initializers.size.coerceAtMost(it)
-                            } ?: ini.initializers.size
+                            limit?.let { ini.initializers.size.coerceAtMost(it) }
+                                ?: ini.initializers.size
                         for (i in 0..<analyzedInitializers) {
                             val fieldVal = ini.initializers[i]
                             val parentName = getNodeName(currentNode)
