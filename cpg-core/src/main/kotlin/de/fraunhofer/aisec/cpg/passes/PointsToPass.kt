@@ -126,7 +126,20 @@ private val summaryNodes = ConcurrentHashMap<SummaryKey, MemoryAddress>()
  * The number of synthetic nodes a chain may consist of before [syntheticNodeFor] summarizes the
  * rest of it.
  */
-private const val MAX_SYNTHETIC_CHAIN_DEPTH = 6
+/**
+ * The configuration of the [PointsToPass] currently running.
+ *
+ * [syntheticNodeFor] and [normalizeFieldAccessPath] need limits from it, but they are top-level
+ * helpers reached through a chain of [PointsToState.Element] extensions which never sees the pass,
+ * and threading a parameter through all of them would change a dozen public signatures for a value
+ * that is the same for a whole run. So it is kept here, next to the caches which are scoped the
+ * same way: set in [PointsToPass.accept], reset in [PointsToPass.finalCleanup].
+ *
+ * It defaults to a [PointsToPass.Configuration] with its declared defaults rather than to "no
+ * limits": these two limits are what stops a loop over a recursive data structure from producing a
+ * new name on every iteration, and a pass which was never handed a configuration still needs them.
+ */
+@Volatile internal var activePointsToConfiguration = PointsToPass.Configuration()
 
 /**
  * Returns the synthetic [MemoryAddress] or [UnknownMemoryValue] for [name] relative to [base], i.e.
@@ -135,10 +148,10 @@ private const val MAX_SYNTHETIC_CHAIN_DEPTH = 6
  *
  * Every such node can be the [base] of another one, e.g. in a loop like `p = &p->next;`, which
  * reaches a new field address in every iteration. To make such loops reach a fixpoint, we count how
- * many synthetic nodes a chain consists of. Once it exceeds [MAX_SYNTHETIC_CHAIN_DEPTH], we return
- * one summary node per chain root and [name] instead of a new node (k-limiting). A summary node
- * stands for many memory locations, so writes to it must not replace its previous values (see
- * [isSummaryNode]).
+ * many synthetic nodes a chain consists of. Once it exceeds
+ * [PointsToPass.Configuration.maxSyntheticChainDepth], we return one summary node per chain root
+ * and [name] instead of a new node (k-limiting). A summary node stands for many memory locations,
+ * so writes to it must not replace its previous values (see [isSummaryNode]).
  */
 private fun syntheticNodeFor(
     base: Node,
@@ -150,7 +163,8 @@ private fun syntheticNodeFor(
     val root = baseOrigin?.root ?: base
     val depth = (baseOrigin?.depth ?: 0) + 1
 
-    if (depth <= MAX_SYNTHETIC_CHAIN_DEPTH) {
+    val maxChainDepth = activePointsToConfiguration.maxSyntheticChainDepth
+    if (maxChainDepth == null || depth <= maxChainDepth) {
         return nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(base, name)) {
             create().also {
                 syntheticOrigins[PointsToPass.IdKey(it)] = SyntheticOrigin(root, depth, false)
@@ -161,8 +175,7 @@ private fun syntheticNodeFor(
     return summaryNodes.computeIfAbsent(SummaryKey(UnknownValueKey(root, name), isValue)) {
         create().also {
             // Everything derived from a summary node is summarized as well
-            syntheticOrigins[PointsToPass.IdKey(it)] =
-                SyntheticOrigin(root, MAX_SYNTHETIC_CHAIN_DEPTH, true)
+            syntheticOrigins[PointsToPass.IdKey(it)] = SyntheticOrigin(root, maxChainDepth, true)
         }
     }
 }
@@ -192,21 +205,6 @@ var totalFunctionCount = 0
  */
 var analyzedFunctionCount = 0
 
-/**
- * The multiple of the configured [PointsToPass.Configuration.timeout] which the analysis of a
- * single function may take in total, including the analyses of the callees it triggers. See
- * [PointsToPass.calculateFunctionSummaries] for why the budget grows at all.
- */
-private const val MAX_TIMEOUT_EXTENSION_FACTOR = 4
-
-/**
- * The [PointsToPass.Configuration.maxArrayInitializers] a pass uses when it was never given a
- * [PointsToPass.Configuration] at all. Shared with the property's own default so the two cannot
- * drift apart.
- */
-internal const val DEFAULT_MAX_ARRAY_INITIALIZERS = 200
-
-private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
 private const val FIELD_ACCESS_SUMMARY_SEGMENT = "<summary>"
 
 typealias GeneralStateEntry =
@@ -465,14 +463,15 @@ private fun Name.pathDepth(): Int {
 }
 
 private fun normalizeFieldAccessPath(name: Name): Name {
-    if (name.pathDepth() <= MAX_FIELD_ACCESS_PATH_DEPTH) {
+    val maxDepth = activePointsToConfiguration.maxFieldAccessPathDepth ?: return name
+    if (name.pathDepth() <= maxDepth) {
         return name
     }
 
     val segments = mutableListOf<Name>()
     name.splitTo(segments)
     val rootToLeaf = segments.asReversed()
-    val keep = (MAX_FIELD_ACCESS_PATH_DEPTH - 1).coerceAtLeast(1)
+    val keep = (maxDepth - 1).coerceAtLeast(1)
 
     var normalized: Name? = null
     for (i in 0 until minOf(keep, rootToLeaf.size)) {
@@ -611,7 +610,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * Going over the limit does not drop flows, it only describes them less precisely; see
          * [coarsenLastWrites] for the two steps it takes.
          */
-        var maxLastWritesPerSummaryEntry: Int? = 500,
+        var maxLastWritesPerSummaryEntry: Int? = null,
 
         /**
          * The number of elements of an initializer list we analyze individually. `null` means
@@ -621,7 +620,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * array literal costs state without usually telling us much that its first few elements did
          * not already.
          */
-        var maxArrayInitializers: Int? = DEFAULT_MAX_ARRAY_INITIALIZERS,
+        var maxArrayInitializers: Int? = null,
 
         /**
          * The number of calls a [CallingContextOut] may name - the `k` of a k-CFA call-string
@@ -645,6 +644,41 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * over-approximation, so the result keeps every flow it had and may add some.
          */
         var maxCallStringLength: Int? = null,
+
+        /**
+         * How deep a field access path may be before we widen it to a single summary segment.
+         * `null` means unlimited, matching [maxComplexity]'s convention.
+         *
+         * A loop like `p = p->next->next` reaches a new, longer path on every iteration, so without
+         * a bound the analysis keeps producing names it has never seen and never reaches its
+         * fixpoint. Beyond the limit every path collapses onto the same summary name, which is
+         * applied when the name is *looked up* as well as when it is written, so a read still finds
+         * what a sibling path wrote - an over-approximation rather than a lost flow.
+         */
+        var maxFieldAccessPathDepth: Int? = 6,
+
+        /**
+         * How many synthetic nodes a chain may consist of before we summarize the rest of it.
+         * `null` means unlimited, matching [maxComplexity]'s convention.
+         *
+         * Same problem as [maxFieldAccessPathDepth] one level down: a loop like `p = &p->next`
+         * reaches a new field address every iteration. Beyond the limit we hand out one summary
+         * node per root and name instead. A summary node stands for many memory locations, so
+         * writing to it must not replace its previous values - see `isSummaryNode`.
+         */
+        var maxSyntheticChainDepth: Int? = 6,
+
+        /**
+         * The multiple of [timeout] that the analysis of a single function may take in total,
+         * including the analyses of the callees it triggers. `null` means unlimited, matching
+         * [maxComplexity]'s convention.
+         *
+         * Analyzing a callee credits its time back to the caller's budget, so without a cap a
+         * function with many callees - each with callees of their own - extends its budget over and
+         * over and can run for an arbitrary multiple of [timeout]. This cap is what keeps the wall
+         * clock time of one analysis bounded.
+         */
+        var maxTimeoutExtensionFactor: Int? = 4,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
@@ -790,9 +824,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         globalDerefs.clear()
         totalFunctionCount = 0
         analyzedFunctionCount = 0
+        activePointsToConfiguration = Configuration()
     }
 
     override fun accept(node: Node) {
+        // The top-level helpers below cannot reach our configuration on their own; see
+        // [activePointsToConfiguration].
+        activePointsToConfiguration = passConfig<Configuration>() ?: Configuration()
         functionSummaryAnalysisChain.clear()
         if (node !is EOGStarterHolder || node.eogStarters.isEmpty()) {
             return
@@ -2720,7 +2758,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // the time it took back to our own (enclosing) budget, if any, so that we
                         // aren't unfairly penalized for time spent in a callee that has already
                         // been charged against its own budget. The credit is capped at
-                        // MAX_TIMEOUT_EXTENSION_FACTOR times the configured timeout: a function
+                        // maxTimeoutExtensionFactor times the configured timeout: a function
                         // with many callees, each of which has callees of its own, would otherwise
                         // extend its budget over and over and could run for an arbitrary multiple
                         // of the configured timeout. The cap is what makes the wall clock time of
@@ -2732,11 +2770,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 log.trace("Old remaining timeout: ${budget.remaining}")
                             }
                             val configuredTimeout = passConfig<Configuration>()?.timeout
-                            if (configuredTimeout != null) {
-                                budget.creditUpTo(
-                                    elapsed,
-                                    configuredTimeout * MAX_TIMEOUT_EXTENSION_FACTOR,
-                                )
+                            val extensionFactor =
+                                passConfig<Configuration>()?.maxTimeoutExtensionFactor
+                            if (configuredTimeout != null && extensionFactor != null) {
+                                budget.creditUpTo(elapsed, configuredTimeout * extensionFactor)
                             } else {
                                 budget.credit(elapsed)
                             }
@@ -3805,17 +3842,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // element, at offset 1 the second, etc...
                         val fieldAddresses = identitySetOf<Node>()
                         // We only analyze the first elements in order not to have a too large state
-                        // A pass which was never given a [Configuration] still gets the default
-                        // cutoff rather than no cutoff: this one is not a new limit but one that
-                        // used to be hard-coded here, and dropping it for everybody who does not
-                        // configure the pass would make states bigger, not smaller.
-                        val configuration = passConfig<Configuration>()
-                        val limit =
-                            if (configuration != null) configuration.maxArrayInitializers
-                            else DEFAULT_MAX_ARRAY_INITIALIZERS
                         val analyzedInitializers =
-                            limit?.let { ini.initializers.size.coerceAtMost(it) }
-                                ?: ini.initializers.size
+                            passConfig<Configuration>()?.maxArrayInitializers?.let {
+                                ini.initializers.size.coerceAtMost(it)
+                            } ?: ini.initializers.size
                         for (i in 0..<analyzedInitializers) {
                             val fieldVal = ini.initializers[i]
                             val parentName = getNodeName(currentNode)
