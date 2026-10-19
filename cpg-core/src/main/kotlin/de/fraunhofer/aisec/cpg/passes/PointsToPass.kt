@@ -614,13 +614,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         /**
          * The number of elements of an initializer list we analyze individually. `null` means
-         * unlimited, matching [maxComplexity]'s convention.
+         * unlimited, matching [maxComplexity]'s convention. The default is the cutoff that used to
+         * be hard-coded here, so a pass which is not configured keeps the limit it always had.
          *
          * Every element we look at adds a field address (and its value) to the state, so a large
          * array literal costs state without usually telling us much that its first few elements did
          * not already.
          */
-        var maxArrayInitializers: Int? = null,
+        var maxArrayInitializers: Int? = 200,
 
         /**
          * The number of calls a [CallingContextOut] may name - the `k` of a k-CFA call-string
@@ -2770,8 +2771,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 log.trace("Old remaining timeout: ${budget.remaining}")
                             }
                             val configuredTimeout = passConfig<Configuration>()?.timeout
+                            // A factor below 1 would cap the budget below the timeout the caller
+                            // was granted in the first place, and a factor of 0 would zero it and
+                            // abort the analysis on the first credit, so refuse to go under 1.
                             val extensionFactor =
-                                passConfig<Configuration>()?.maxTimeoutExtensionFactor
+                                activePointsToConfiguration.maxTimeoutExtensionFactor
+                                    ?.coerceAtLeast(1)
                             if (configuredTimeout != null && extensionFactor != null) {
                                 budget.creditUpTo(elapsed, configuredTimeout * extensionFactor)
                             } else {
@@ -3843,7 +3848,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         val fieldAddresses = identitySetOf<Node>()
                         // We only analyze the first elements in order not to have a too large state
                         val analyzedInitializers =
-                            passConfig<Configuration>()?.maxArrayInitializers?.let {
+                            activePointsToConfiguration.maxArrayInitializers?.let {
                                 ini.initializers.size.coerceAtMost(it)
                             } ?: ini.initializers.size
                         for (i in 0..<analyzedInitializers) {
