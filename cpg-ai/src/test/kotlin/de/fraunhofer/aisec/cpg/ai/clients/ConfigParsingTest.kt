@@ -36,6 +36,7 @@ import io.ktor.client.engine.cio.CIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -79,6 +80,15 @@ class ConfigParsingTest {
 
         assertNull(client.contextLengthOverride)
         assertNull(client.requestTimeoutMillis)
+        assertFalse(client.insecureTls)
+    }
+
+    @Test
+    fun clientInsecureTlsIsRead() {
+        val client =
+            clients("""llm.clients.vLLM { baseUrl = "https://x", insecureTls = true }""").single()
+
+        assertTrue(client.insecureTls)
     }
 
     @Test

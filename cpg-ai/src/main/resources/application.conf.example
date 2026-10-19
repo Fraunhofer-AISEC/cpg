@@ -11,6 +11,9 @@ llm {
           # contextLength = 262144
           # Optional. Request and socket timeout for LLM calls, in milliseconds.
           # requestTimeoutMillis = 600000
+          # Optional. Accept any TLS certificate chain from this server (e.g. an internal CA the
+          # JVM does not trust); the host name is still checked. Off by default.
+          # insecureTls = true
         }
 
     mlx {

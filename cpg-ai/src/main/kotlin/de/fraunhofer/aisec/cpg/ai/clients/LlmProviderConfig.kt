@@ -41,15 +41,21 @@ import de.fraunhofer.aisec.cpg.helpers.filterMapped
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.cio.CIOEngineConfig
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger as KtorLogger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.json
+import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
+import javax.net.ssl.X509TrustManager
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
@@ -74,6 +80,23 @@ private val transientFailureRetryConfig =
  */
 internal const val DEFAULT_CONTEXT_LENGTH = 128_000L
 
+/**
+ * Accepts every server certificate chain, for [ClientConfig.insecureTls]. Ktor's CIO engine still
+ * checks that the certificate matches the host name, so this only skips the check that the chain
+ * ends in a CA the JVM trusts.
+ */
+private object TrustAllCertificates : X509TrustManager {
+    override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+
+    override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+
+    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+}
+
+private fun HttpClientConfig<CIOEngineConfig>.trustAllCertificates() {
+    engine { https { trustManager = TrustAllCertificates } }
+}
+
 /** A [ChatLlm] built by [LlmProviderConfig], together with the HTTP clients it created for it. */
 private class OwnedChatLlm(val chatLlm: ChatLlm, val httpClients: List<HttpClient>) :
     AutoCloseable {
@@ -94,6 +117,21 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     private val chatLlms = ConcurrentHashMap<Pair<String, String>, OwnedChatLlm>()
 
     @Volatile private var closed = false
+
+    /**
+     * Used instead of [httpClient] for the `/v1/models` requests of a client with
+     * [ClientConfig.insecureTls], since [httpClient] belongs to the caller and checks certificates.
+     */
+    private val insecureMetadataClient = lazy {
+        HttpClient(CIO) {
+            trustAllCertificates()
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            install(HttpTimeout)
+        }
+    }
+
+    private fun metadataClientFor(config: ClientConfig): HttpClient =
+        if (config.insecureTls) insecureMetadataClient.value else httpClient
 
     /**
      * Resolves [clientName] and [model] to a [ChatLlm], or `null` if the client is unknown or its
@@ -129,6 +167,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     override fun close() {
         closed = true
         chatLlms.keys.toList().forEach { key -> chatLlms.remove(key)?.close() }
+        if (insecureMetadataClient.isInitialized()) insecureMetadataClient.value.close()
     }
 
     private suspend fun createChatLlm(config: ClientConfig, model: String): OwnedChatLlm? {
@@ -195,8 +234,17 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 // round trip, unconditional body logging (as opposed to Ktor's terser default
                 // LogLevel.INFO, which only logs the request line/status/duration) previously
                 // produced multi-tens-of-megabytes log files for a single skill run.
+                if (config.insecureTls) {
+                    log.warn(
+                        "TLS certificate chains are not checked for client {} ({}): any " +
+                            "certificate for that host is accepted.",
+                        config.name,
+                        config.baseUrl,
+                    )
+                }
                 val loggingKtorClient =
                     HttpClient(CIO) {
+                        if (config.insecureTls) trustAllCertificates()
                         install(Logging) {
                             logger =
                                 object : KtorLogger {
@@ -318,7 +366,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
         if (config.provider != ClientProvider.OPENAI_COMPATIBLE) return null
         return try {
             val response =
-                httpClient.get("${config.baseUrl}/v1/models") {
+                metadataClientFor(config).get("${config.baseUrl}/v1/models") {
                     timeout { requestTimeoutMillis = 2_000L }
                     config.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
                 }
@@ -349,7 +397,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
      */
     private suspend fun fetchOpenAiModels(clientConf: ClientConfig): List<String> {
         val response: HttpResponse =
-            httpClient.get("${clientConf.baseUrl}/v1/models") {
+            metadataClientFor(clientConf).get("${clientConf.baseUrl}/v1/models") {
                 timeout { requestTimeoutMillis = 2_000L }
                 clientConf.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
             }
@@ -425,6 +473,7 @@ fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
                     else null,
                 contextLengthOverride =
                     if (client.hasPath("contextLength")) client.getLong("contextLength") else null,
+                insecureTls = client.hasPath("insecureTls") && client.getBoolean("insecureTls"),
             )
         }
     // Put local providers first, openai and gemini last.

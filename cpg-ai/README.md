@@ -160,7 +160,9 @@ mcp.serverUrl = "http://localhost:8081/mcp"
   ones. An invalid `reasoningEffort` fails at startup, naming the accepted values. Embedders can
   also pass them as `ChatService` constructor arguments.
 - Optional per OpenAI-compatible client: `requestTimeoutMillis` (request and socket timeout of LLM
-  calls; not used for `gemini`).
+  calls; not used for `gemini`) and `insecureTls = true` (accept any certificate chain from that
+  server, e.g. one signed by an internal CA; the host name is still checked, and a warning is
+  logged).
 
 ### Using it
 
