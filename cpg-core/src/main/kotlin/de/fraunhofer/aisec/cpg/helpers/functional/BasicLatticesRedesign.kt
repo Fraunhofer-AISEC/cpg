@@ -257,7 +257,21 @@ private const val STALL_STACK_FRAMES = 25
  * reaches the end: without the intermediate reports, the log would name every function but the one
  * that actually caused the problem.
  */
-private class IterationStatistics(private val startEdges: List<EvaluationOrder>) {
+private class IterationStatistics(
+    private val startEdges: List<EvaluationOrder>,
+    /**
+     * Whether anything measured here is ever going to be looked at. Resolved once per run, because
+     * asking the logger is a filter-chain walk and the alternative would be asking it for every
+     * single edge.
+     */
+    val diagnosticsEnabled: Boolean,
+    /**
+     * Whether [sample] still has to count even with diagnostics off, because
+     * [Lattice.Configuration.maxStateEntries] is enforced from its result. That budget is a safety
+     * net rather than a diagnostic, so it may not be switched off with the logging.
+     */
+    private val budgetEnabled: Boolean,
+) {
     /** The number of edges we took off a worklist. */
     var processedEdges = 0
         private set
@@ -300,6 +314,7 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
      * from the outside.
      */
     fun recordTransformation(edge: EvaluationOrder, duration: Duration) {
+        if (!diagnosticsEnabled) return
         transformationTime += duration
         if (duration > slowestTransformation) {
             slowestTransformation = duration
@@ -326,6 +341,10 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
      * budget is a best-effort early warning, not a guarantee against ever exhausting the heap.
      */
     fun sample(liveStates: Int, states: () -> Iterable<Lattice.Element>): Long {
+        // Nobody is going to read the counters and no budget is being enforced, so there is
+        // nothing to count. Returning zero is right either way: the caller compares it against a
+        // budget which is null in that case.
+        if (!diagnosticsEnabled && !budgetEnabled) return 0
         processedEdges++
         if (liveStates > peakLiveStates) {
             peakLiveStates = liveStates
@@ -431,6 +450,11 @@ private suspend fun <R> measureAndRecord(
     watchdog: EdgeStallWatchdog.Run,
     block: suspend () -> R,
 ): R {
+    // One field read, as opposed to the two clock reads and four volatile writes below. The
+    // watchdog only ever reports by logging, so it has nothing to do here either.
+    if (!statistics.diagnosticsEnabled) {
+        return block()
+    }
     watchdog.enter(edge)
     val started = TimeSource.Monotonic.markNow()
     try {
@@ -954,7 +978,13 @@ interface Lattice<T : Lattice.Element> {
                 currentCoroutineContext()
             }
 
-        val statistics = IterationStatistics(startEdges)
+        // Resolved once here rather than per edge; see [IterationStatistics.diagnosticsEnabled].
+        val statistics =
+            IterationStatistics(
+                startEdges,
+                diagnosticsEnabled = Pass.log.isDebugEnabled,
+                budgetEnabled = maxStateEntries != null,
+            )
         val watchdog =
             EdgeStallWatchdog.register(
                 startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
@@ -973,7 +1003,10 @@ interface Lattice<T : Lattice.Element> {
                         statistics,
                         watchdog,
                     )
-                statistics.finalStateEntries = result.first.entryCount()
+                // entryCount() walks the whole state, and only report() ever reads this.
+                if (statistics.diagnosticsEnabled) {
+                    statistics.finalStateEntries = result.first.entryCount()
+                }
                 aborted = result.second
                 result
             } finally {
