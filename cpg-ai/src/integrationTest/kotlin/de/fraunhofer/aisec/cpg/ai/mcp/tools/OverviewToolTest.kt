@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addOverview
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
@@ -37,6 +38,8 @@ import org.junit.jupiter.api.BeforeEach
 class OverviewToolTest {
     @BeforeEach
     fun setAnalysisResult() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
         val payload =
             CpgAnalyzePayload(
                 content =
