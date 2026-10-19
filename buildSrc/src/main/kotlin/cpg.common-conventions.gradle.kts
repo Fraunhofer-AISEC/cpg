@@ -74,7 +74,8 @@ testing {
             targets {
                 all {
                     testTask.configure {
-                        maxHeapSize = "4048m"
+                        maxHeapSize =
+                            (project.findProperty("cpg.test.maxHeapSize") as String?) ?: "4048m"
                         reports {
                             junitXml.apply {
                                 isOutputPerTestCase = false
