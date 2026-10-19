@@ -1710,9 +1710,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // which we treat as the addresses, so we directly look up the
                 // lastWrites for those addresses in the declarationState
                 argDerefVals.flatMapTo(PowersetLattice.Element()) { argDerefVal ->
-                    val stateEntry = retDoubleState.declarationsState[argDerefVal]?.third
-                    stateEntry?.map { NodeWithPropertiesKey(it.node, createNewProperties(it)) }
-                        ?: PowersetLattice.Element()
+                    retDoubleState.declarationsState[argDerefVal]?.third?.map {
+                        NodeWithPropertiesKey(it.node, createNewProperties(it))
+                    } ?: PowersetLattice.Element()
                 }
             }
         derefPMVs.forEach { derefPMV ->
@@ -3252,7 +3252,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(),
-                        lastWrites,
+                        PowersetLattice.Element(),
                     )
                 }
             } else {
