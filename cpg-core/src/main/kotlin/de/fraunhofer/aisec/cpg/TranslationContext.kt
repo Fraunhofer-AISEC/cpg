@@ -95,13 +95,20 @@ open class TranslationContext(
             return 0
         }
 
+        // Guarded because this [TranslationContext] is shared: passes run sequentially today, but
+        // the pass infrastructure explicitly provides for running them in parallel, and a racing
+        // `getOrPut` on a plain [IdentityHashMap] does not merely return a stale count - it can
+        // corrupt the table. Building the histogram twice under contention would be wasteful but
+        // harmless, so holding the lock across it keeps this simple.
         val occurrences =
-            componentCallNameOccurrences.getOrPut(component) {
-                val counts = mutableMapOf<Name, Int>()
-                for (call in component.calls) {
-                    counts[call.name] = (counts[call.name] ?: 0) + 1
+            synchronized(componentCallNameOccurrences) {
+                componentCallNameOccurrences.getOrPut(component) {
+                    val counts = mutableMapOf<Name, Int>()
+                    for (call in component.calls) {
+                        counts[call.name] = (counts[call.name] ?: 0) + 1
+                    }
+                    counts
                 }
-                counts
             }
 
         return occurrences[name] ?: 0

@@ -579,10 +579,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * overloading, so a call with several candidates comes out `PROBLEMATIC` and drags all of them
      * into its `invokes` edge.
      *
-     * Copies are recognized by their origin: the same kind of declaration, the same name and the
-     * same [PhysicalLocation] - same file, same region. Nothing but a repeated parse of one piece
-     * of source can produce that, since a genuine redeclaration, an overload or an ODR violation is
-     * by definition written somewhere *else*. Note that this deliberately does not touch
+     * Copies are recognized by their origin: the same kind of declaration, the same name, the same
+     * declared type and the same [PhysicalLocation] - same file, same region. A genuine
+     * redeclaration, an overload or an ODR violation is by definition written somewhere *else*, so
+     * none of those can be collapsed by accident. Note that this deliberately does not touch
      * [Scope.symbols] itself: the duplicates are real nodes in their own translation unit's AST and
      * removing them from the symbol table (rather than from this particular lookup result) would
      * leave them stranded there, resolvable by nothing and linked to nothing.
@@ -628,7 +628,15 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         }
 
         val location = location ?: return null
-        return listOf(this::class, name, location)
+
+        // The declared type has to be part of the key, because a location does *not* by itself
+        // pin down what was declared there. C and C++ expand macros before parsing, so one
+        // declaration in a header can legitimately declare different things in different
+        // translation units: given `void f(MY_TYPE x);`, a unit defining `MY_TYPE` as `int` and one
+        // defining it as `double` both produce an `f` at the very same region of the very same
+        // file, and the two are genuinely different functions. Collapsing those would make one
+        // unit's calls resolve against the other unit's signature.
+        return listOf(this::class, name, location, (this as? ValueDeclaration)?.type?.name)
     }
 
     /**

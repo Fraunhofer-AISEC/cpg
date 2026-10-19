@@ -101,7 +101,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
         // If we already inferred this very function, hand that one out again instead of creating a
         // second, identical declaration.
-        existingInferredFunction(name?.toString(), signature)?.let {
+        existingInferredFunction(name, signature)?.let {
             return it
         }
 
@@ -208,10 +208,9 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         method.receiver = receiver
     }
 
-    /** This function creates a [Parameter] for each parameter in the [function]'s [signature]. */
     /**
      * Returns a [Function] that a previous call to [inferFunctionDeclaration] already inferred into
-     * [start] for the same [localName] and [signature], or `null` if there is none.
+     * [start] for the same [name] and [signature], or `null` if there is none.
      *
      * Inference is supposed to be idempotent: several calls to the same unknown function should all
      * end up invoking one inferred declaration, and for the ordinary case they already do - the
@@ -233,14 +232,32 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
      * happens to have the same name and signature must not be handed out here, since not reaching
      * inference at all is the resolver's job, and silently substituting a parsed declaration for an
      * inferred one would hide genuine resolution failures.
+     *
+     * [name] is whatever the caller passes to [inferFunctionDeclaration], and that is not
+     * consistently a local name: [TranslationUnit.inferFunction] passes `call.name.localName`,
+     * while [Namespace.inferFunction] passes the whole, possibly qualified `call.name`. Since a
+     * [Scope.symbols] entry is always keyed by the *local* name (see [Declaration.symbol]), we have
+     * to reduce it to that here - otherwise the lookup below simply never matches for the namespace
+     * case, and inference there keeps producing a declaration per call site.
+     *
+     * A caveat this cannot address: the namespace a call named the function in is already lost by
+     * the time we get here, because [de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference]
+     * falls back to the global scope and the local name when the qualifier does not resolve. Two
+     * calls `missing_a::foo(1)` and `missing_b::foo(1)`, neither namespace existing, therefore end
+     * up sharing one inferred `foo` rather than getting one each. Properly separating them means
+     * inferring the missing namespace (as the record/type path already does via
+     * [de.fraunhofer.aisec.cpg.passes.inference.tryScopeInference]) and placing the function there
+     * under its qualified name, which changes the shape of the graph and is left for its own
+     * change.
      */
-    private fun existingInferredFunction(localName: String?, signature: List<Type?>): Function? {
-        if (localName == null) {
+    private fun existingInferredFunction(name: CharSequence?, signature: List<Type?>): Function? {
+        if (name == null) {
             return null
         }
 
+        val symbol = name.toString().substringAfterLast(language.namespaceDelimiter)
         val scope = scopeManager.lookupScope(start) ?: return null
-        return scope.symbols[localName]?.firstOrNull { candidate ->
+        return scope.symbols[symbol]?.firstOrNull { candidate ->
             candidate is Function &&
                 candidate.isInferred &&
                 candidate.parameters.size == signature.size &&
@@ -250,6 +267,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         } as? Function
     }
 
+    /** This function creates a [Parameter] for each parameter in the [function]'s [signature]. */
     private fun createInferredParameters(function: Function, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters

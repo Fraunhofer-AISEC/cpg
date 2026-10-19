@@ -94,6 +94,46 @@ class CXXDeclarationTest {
         assertFalse(invoked.single().isInferred)
     }
 
+    /**
+     * The counterpart to [testDeclarationsFromSharedHeaderResolveToOne]: a shared location is *not*
+     * on its own enough to call two declarations the same one. C and C++ expand macros before
+     * parsing, so one line of a header can declare genuinely different things in different
+     * translation units - here `void macro_fn(MY_TYPE x)` with `MY_TYPE` defined as `int` in one
+     * unit and as `double` in the other. Both must survive, or one unit's calls resolve against the
+     * other unit's signature.
+     */
+    @Test
+    fun testMacroDependentHeaderDeclarationsAreKeptApart() {
+        val topLevel = File("src/test/resources/cxx/macro_dup")
+        val result =
+            analyze(
+                listOf(File(topLevel, "a.cpp"), File(topLevel, "b.cpp")),
+                topLevel.toPath(),
+                true,
+            ) {
+                it.registerLanguage<CPPLanguage>()
+                it.loadIncludes(true)
+                it.addIncludesToGraph(true)
+            }
+
+        val scopeManager = result.finalCtx.scopeManager
+        val language = assertNotNull(result.finalCtx.availableLanguage<CPPLanguage>())
+        val candidates =
+            scopeManager.lookupSymbolByName(
+                Name("macro_fn"),
+                language,
+                startScope = scopeManager.globalScope,
+            )
+
+        assertEquals(
+            setOf(listOf("int"), listOf("double")),
+            candidates.filterIsInstance<Function>().mapTo(mutableSetOf()) { function ->
+                function.parameters.map { it.type.name.toString() }
+            },
+            "both macro expansions of the declaration must remain resolvable",
+        )
+    }
+
     @Test
     fun testDefinitionDeclaration() {
         val file = File("src/test/resources/cxx/definition.cpp")
