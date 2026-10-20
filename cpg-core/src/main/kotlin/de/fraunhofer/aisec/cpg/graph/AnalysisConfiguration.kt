@@ -123,7 +123,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         // interprocedural edge or if we follow the shortFS edges or if we follow everything but the
         // short FS edges
 
-        if (analysisDirection.edgeRequiresCallPush(currentNode, edge) && currentNode is Call) {
+        if (currentNode is Call && analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
             // Check if the call expression is already in the call stack because this would indicate
             // a loop (recursion).
             if (currentNode in ctx.callStack) {
@@ -207,6 +207,17 @@ enum class GraphToFollow {
     EOG,
 }
 
+/** A single operation on the call stack which is required to follow an edge. */
+sealed interface CallStackOp {
+    val call: Call
+}
+
+/** Requires pushing [call] onto the call stack. */
+data class PushCall(override val call: Call) : CallStackOp
+
+/** Requires popping [call] from the call stack. */
+data class PopCall(override val call: Call) : CallStackOp
+
 /**
  * Determines in which direction we follow the edges. Must determine which sub-graph we want to
  * follow.
@@ -249,14 +260,22 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
     }
 
     /**
+     * Determines the [CallStackOp]s required to follow the [edge] starting at [currentNode]. The
+     * result is ordered: a single edge may require several pushes and pops in a defined sequence.
+     */
+    abstract fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp>
+
+    /**
      * Determines if the [edge] starting at [currentNode] requires to push a [Call] on the stack.
      */
-    abstract fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean
+    fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean =
+        callStackOps(currentNode, edge).any { it is PushCall }
 
     /**
      * Determines if the [edge] starting at [currentNode] requires to pop a [Call] from the stack.
      */
-    abstract fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean
+    fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean =
+        callStackOps(currentNode, edge).any { it is PopCall }
 
     /**
      * Filters all provided [edges] and checks if they are in [scope] and fulfill the provided
@@ -442,27 +461,24 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
         return edge.end
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow &&
-                    edge.callingContexts.any { it is CallingContextIn }
+                // The calling contexts are stored in flow order, so we can simply walk them.
+                (edge as? ContextSensitiveDataflow)?.callingContexts?.flatMap { context ->
+                    context.calls.map {
+                        if (context is CallingContextIn) PushCall(it) else PopCall(it)
+                    }
+                } ?: listOf()
             }
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is Call
-            }
-        }
-    }
-
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
-        return when (graphToFollow) {
-            GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow &&
-                    edge.callingContexts.any { it is CallingContextOut }
-            }
-
-            GraphToFollow.EOG -> {
-                edge is Invoke && (currentNode is Return || currentNode.nextEOG.isEmpty())
+                when {
+                    edge !is Invoke -> listOf()
+                    currentNode is Call -> listOf(PushCall(currentNode))
+                    currentNode is Return || currentNode.nextEOG.isEmpty() ->
+                        listOfNotNull((edge.start as? Call)?.let { PopCall(it) })
+                    else -> listOf()
+                }
             }
         }
     }
@@ -562,28 +578,27 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
         return if (edge is Invoke) edge.end else edge.start
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow &&
-                    edge.callingContexts.any { it is CallingContextOut }
+                // We walk the flow-ordered calling contexts in reverse and swap the roles of
+                // [CallingContextIn] and [CallingContextOut].
+                (edge as? ContextSensitiveDataflow)?.callingContexts?.reversed()?.flatMap { context
+                    ->
+                    context.calls.reversed().map {
+                        if (context is CallingContextOut) PushCall(it) else PopCall(it)
+                    }
+                } ?: listOf()
             }
 
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is Call
-            }
-        }
-    }
-
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
-        return when (graphToFollow) {
-            GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow &&
-                    edge.callingContexts.any { it is CallingContextIn }
-            }
-
-            GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is Function
+                when {
+                    edge !is Invoke -> listOf()
+                    currentNode is Call -> listOf(PushCall(currentNode))
+                    currentNode is Function ->
+                        listOfNotNull((edge.start as? Call)?.let { PopCall(it) })
+                    else -> listOf()
+                }
             }
         }
     }
@@ -606,11 +621,7 @@ class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFol
         TODO("Not yet implemented")
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp> {
         TODO("Not yet implemented")
     }
 }
@@ -672,36 +683,19 @@ object ContextSensitive : AnalysisSensitivity() {
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
     ): Boolean {
-        return if (analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
-            // Push the call of our calling context to the stack.
-            // This is for following DFG edges.
-            val stack =
-                if (analysisDirection is Backward) {
-                    (edge as? ContextSensitiveDataflow)
-                        ?.callingContexts
-                        ?.flatMap { it.calls }
-                        ?.reversed()
-                } else {
-                    (edge as? ContextSensitiveDataflow)?.callingContexts?.flatMap { it.calls }
-                }
-
-            stack?.forEach { ctx.callStack.push(it) }
-                ?:
-                // This is for following the EOG
-                (currentNode as? Call)?.let { ctx.callStack.push(it) }
-            true
-        } else if (analysisDirection.edgeRequiresCallPop(currentNode, edge)) {
-            // We are only interested in outgoing edges from our current
-            // "call-in", i.e., the call expression that is on the stack.
-            ctx.callStack.isEmpty() ||
-                (edge as? ContextSensitiveDataflow)
-                    ?.callingContexts
-                    ?.flatMap { it.calls }
-                    ?.all { ctx.callStack.popIfOnTop(it) } == true ||
-                ((edge as? Invoke)?.start as? Call)?.let { ctx.callStack.popIfOnTop(it) } == true
-        } else {
-            true
+        // A single edge may require several pushes and pops, so we apply them in order. The
+        // [Context] has already been cloned by [AnalysisDirection.filterEdges], so aborting in the
+        // middle of the sequence does not leak a half-applied call stack.
+        for (op in analysisDirection.callStackOps(currentNode, edge)) {
+            when (op) {
+                is PushCall -> ctx.callStack.push(op.call)
+                // An empty stack means that we started the analysis somewhere in the middle, so we
+                // do not know the context and have to be permissive.
+                is PopCall ->
+                    if (!ctx.callStack.isEmpty() && !ctx.callStack.popIfOnTop(op.call)) return false
+            }
         }
+        return true
     }
 }
 

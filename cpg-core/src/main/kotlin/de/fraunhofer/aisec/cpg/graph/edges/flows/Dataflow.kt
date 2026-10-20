@@ -198,7 +198,7 @@ open class Dataflow(
 }
 
 sealed interface CallingContext {
-    /** The call expression that affects this dataflow edge. */
+    /** The call expression that affects this dataflow edge. In flow order (outermost last). */
     val calls: MutableList<Call>
 }
 
@@ -247,9 +247,23 @@ class CallingContextOut(
 }
 
 /**
- * This edge class defines a flow of data between [start] and [end]. The flow must have a
- * [callingContexts] which allows for a context-sensitive dataflow analysis. This edge can also have
- * a certain [granularity].
+ * An ordered chain of [CallingContext]s belonging to a single dataflow, in flow order (i.e., from
+ * the start to the end of the flow). It is used as a single property so that the order is preserved
+ * even when the properties are kept in a set.
+ */
+class CallingContextChain(val contexts: List<CallingContext>) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        return other is CallingContextChain && this.contexts == other.contexts
+    }
+
+    override fun hashCode(): Int = contexts.hashCode()
+}
+
+/**
+ * This edge class defines a flow of data between [start] and [end]. The flow must have
+ * [callingContexts], in flow order (i.e., from [start] to [end]), which allow for a
+ * context-sensitive dataflow analysis. This edge can also have a certain [granularity].
  */
 class ContextSensitiveDataflow(
     start: Node,
