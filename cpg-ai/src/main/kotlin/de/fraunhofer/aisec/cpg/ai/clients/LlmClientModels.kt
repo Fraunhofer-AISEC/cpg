@@ -61,9 +61,9 @@ data class ClientConfig(
      */
     val contextLengthOverride: Long? = null,
     /**
-     * Accept any TLS certificate chain from this client's server, e.g. one signed by an internal CA
-     * the JVM does not trust. The host name is still checked. Only for OpenAI-compatible clients;
-     * off by default.
+     * Accepts any TLS certificate for any host from this client's server, e.g. one signed by an
+     * internal CA the JVM does not trust. No chain validation, no hostname check - intended only
+     * for trusted internal networks. Only for OpenAI-compatible clients; off by default.
      */
     val insecureTls: Boolean = false,
 )

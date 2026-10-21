@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.helpers.filterMapped
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.engine.cio.CIOEngineConfig
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
@@ -81,21 +80,17 @@ private val transientFailureRetryConfig =
 internal const val DEFAULT_CONTEXT_LENGTH = 128_000L
 
 /**
- * Accepts every server certificate chain, for [ClientConfig.insecureTls]. Ktor's CIO engine still
- * checks that the certificate matches the host name, so this only skips the check that the chain
- * ends in a CA the JVM trusts.
+ * Accepts every server certificate chain and host, for [ClientConfig.insecureTls]. No chain
+ * validation and no hostname check - intended only for trusted internal networks.
  */
-private object TrustAllCertificates : X509TrustManager {
-    override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+private val TRUST_ALL =
+    object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
 
-    override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
 
-    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-}
-
-private fun HttpClientConfig<CIOEngineConfig>.trustAllCertificates() {
-    engine { https { trustManager = TrustAllCertificates } }
-}
+        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+    }
 
 /** A [ChatLlm] built by [LlmProviderConfig], together with the HTTP clients it created for it. */
 private class OwnedChatLlm(val chatLlm: ChatLlm, val httpClients: List<HttpClient>) :
@@ -124,7 +119,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
      */
     private val insecureMetadataClient = lazy {
         HttpClient(CIO) {
-            trustAllCertificates()
+            engine { https { trustManager = TRUST_ALL } }
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             install(HttpTimeout)
         }
@@ -236,15 +231,15 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
                 // produced multi-tens-of-megabytes log files for a single skill run.
                 if (config.insecureTls) {
                     log.warn(
-                        "TLS certificate chains are not checked for client {} ({}): any " +
-                            "certificate for that host is accepted.",
+                        "TLS is fully disabled for client {} ({}): any certificate for any host " +
+                            "is accepted. Use only on trusted internal networks.",
                         config.name,
                         config.baseUrl,
                     )
                 }
                 val loggingKtorClient =
                     HttpClient(CIO) {
-                        if (config.insecureTls) trustAllCertificates()
+                        if (config.insecureTls) engine { https { trustManager = TRUST_ALL } }
                         install(Logging) {
                             logger =
                                 object : KtorLogger {
