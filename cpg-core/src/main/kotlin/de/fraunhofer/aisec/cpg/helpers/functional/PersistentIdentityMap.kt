@@ -201,6 +201,31 @@ open class PersistentIdentityMap<K, V>() : Map<K, V> {
         }
     }
 
+    /**
+     * Stores `key(entry)` to `value(entry)` for every entry of [entries], in a *single* acquisition
+     * of [writeLock] and a single rebuild of the affected trie paths.
+     *
+     * This exists so that a producer which computes many writes in parallel can apply them in one
+     * batch, instead of taking the map-wide lock once per write: unlike the
+     * [java.util.concurrent.ConcurrentHashMap] this class replaces, which could serve writes to
+     * different keys concurrently from different bins, every write here contends for the same lock.
+     *
+     * Like [putAll], this writes [value]'s result as it is. A subclass which attaches a meaning to
+     * *how* a value enters the map - as [ConcurrentMapLattice.Element] does with
+     * [ConcurrentMapLattice.Element.put] versus [ConcurrentMapLattice.Element.putShared] - has to
+     * apply that rule inside [value]; see [ConcurrentMapLattice.Element.putAllBatched].
+     */
+    protected fun <E> putAllMapped(entries: Collection<E>, key: (E) -> K, value: (E) -> V) {
+        if (entries.isEmpty()) return
+        update { previous ->
+            previous.mutate { draft ->
+                for (entry in entries) {
+                    draft[PointsToPass.IdKey(key(entry))] = value(entry)
+                }
+            }
+        }
+    }
+
     fun putAll(map: Map<out K, V>) = putAll(map.entries.map { (key, value) -> key to value })
 
     /** Inserts all entries from the given array of pairs. */
