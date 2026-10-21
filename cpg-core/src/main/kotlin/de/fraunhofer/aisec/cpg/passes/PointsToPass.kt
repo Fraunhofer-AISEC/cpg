@@ -675,30 +675,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // And now the prevDFGs. These are pairs, where the second item is a with a set of
             // properties for the edge
             value.third.forEach { (prev, properties) ->
-                var context: CallingContext? = null
+                var callingContexts = listOf<CallingContext>()
                 var granularity = default()
                 var functionSummary = false
                 var derefDepth: PointerAccess? = null
 
-                // the properties can contain a lot of things. A granularity, a
-                // callingcontext, or a boolean indicating if this is a functionSummary edge or
+                // the properties can contain a lot of things. A granularity, a chain of
+                // callingcontexts, or a boolean indicating if this is a functionSummary edge or
                 // not
                 properties.forEach { property ->
                     when (property) {
                         is PointerDataflowGranularity -> derefDepth = property.pointerTarget
                         is Granularity -> granularity = property
-                        is CallingContext -> context = property
+                        is CallingContextChain -> callingContexts = property.contexts
                         is Boolean -> functionSummary = property
                     }
                 }
 
-                if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
+                if (
+                    callingContexts.isEmpty()
+                ) // TODO: add functionSummary flag for contextSensitive DFs
                  key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary, derefDepth)
                 else
                     key.prevDFGEdges.addContextSensitive(
                         prev,
                         granularity,
-                        context,
+                        callingContexts,
                         functionSummary,
                         derefDepth,
                     )
@@ -1603,7 +1605,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 NodeWithPropertiesKey(arg, equalLinkedHashSetOf())
                             ),
                             PowersetLattice.Element(
-                                NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext))
+                                NodeWithPropertiesKey(
+                                    arg,
+                                    equalLinkedHashSetOf(
+                                        CallingContextChain(listOf(callingContext))
+                                    ),
+                                )
                             ),
                         ),
                     )
@@ -1626,6 +1633,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lattice: PointsToState,
         derefderefPMVs: List<Node>,
     ): PointsToState.Element {
+        fun createNewProperties(key: NodeWithPropertiesKey): MutableSet<Any> {
+            val newProperties = mutableSetOf<Any>()
+            // The chain is kept in flow order and the call we are entering here happens after
+            // everything the value went through before, so the new CallingContext comes last.
+            val inherited =
+                key.properties.filterIsInstance<CallingContextChain>().flatMap { it.contexts }
+            newProperties.add(
+                CallingContextChain(inherited.filter { it != callingContext } + callingContext)
+            )
+            // Then add old but still relevant properties (the shortFS-Flag)
+            // Note: What is left is the granularity, we don't consider this one
+            // since other code knows better about that
+            newProperties.add(true in key.properties)
+            return newProperties
+        }
+
         var retDoubleState = doubleState
         val argDerefVals =
             // If the derefPMVs are empty, no need to search for the argDerefVals
@@ -1643,7 +1666,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (derefPMVs.isEmpty()) PowersetLattice.Element()
             else if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
                 PowersetLattice.Element(
-                    NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext, false))
+                    NodeWithPropertiesKey(
+                        arg,
+                        equalLinkedHashSetOf(CallingContextChain(listOf(callingContext)), false),
+                    )
                 )
             else {
                 // Since we already have the argVal, AKA the memoryAddress
@@ -1651,17 +1677,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // argVal from the declarationState and add the properties
                 // TODO: what if argVal is global?
                 retDoubleState.declarationsState[argVal]?.third?.mapTo(PowersetLattice.Element()) {
-                    NodeWithPropertiesKey(
-                        it.node,
-                        equalLinkedHashSetOf(callingContext, true in it.properties),
-                    )
+                    NodeWithPropertiesKey(it.node, createNewProperties(it))
                 }
                     ?: (arg as? PointerReference)?.let {
                         doubleState.getLastWrites(it.input).mapTo(PowersetLattice.Element()) {
-                            NodeWithPropertiesKey(
-                                it.node,
-                                equalLinkedHashSetOf(callingContext, true in it.properties),
-                            )
+                            NodeWithPropertiesKey(it.node, createNewProperties(it))
                         }
                     }
                     ?: PowersetLattice.Element()
@@ -1690,18 +1710,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             argDerefDerefVals.mapTo(PowersetLattice.Element()) { derefderefValue ->
                 NodeWithPropertiesKey(derefderefValue, equalLinkedHashSetOf())
             }
+
         val lastDerefDerefWrites =
             if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
                 argDerefVals.mapTo(PowersetLattice.Element()) { argDerefVal ->
-                    NodeWithPropertiesKey(argDerefVal, equalLinkedHashSetOf(callingContext, false))
+                    NodeWithPropertiesKey(
+                        argDerefVal,
+                        equalLinkedHashSetOf(CallingContextChain(listOf(callingContext)), false),
+                    )
                 }
             else {
                 // As for the lastDerefWrites, we already have the ArgDerefVals
                 // which we treat as the addresses, so we directly look up the
                 // lastWrites for those addresses in the declarationState
                 argDerefVals.flatMapTo(PowersetLattice.Element()) { argDerefVal ->
-                    retDoubleState.declarationsState[argDerefVal]?.third
-                        ?: PowersetLattice.Element()
+                    retDoubleState.declarationsState[argDerefVal]?.third?.map {
+                        NodeWithPropertiesKey(it.node, createNewProperties(it))
+                    } ?: PowersetLattice.Element()
                 }
             }
         derefPMVs.forEach { derefPMV ->
@@ -2294,42 +2319,33 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // we don't add the callingContext
                 val lwPropertySet = EqualLinkedHashSet<Any>()
                 lwPropertySet.addAll(value.propertySet)
-                // If this is not a shortFS edge, we add the new callingcontext
-                // and have to check if
-                // we already have a list of callingcontexts in the properties
+                // If this is not a shortFS edge, we add the new callingcontext to the chain the
+                // value already went through. The chain is in flow order and leaving the current
+                // call happens last, so the new context goes to the end. Consecutive returns are
+                // merged into a single [CallingContextOut] holding the whole call string.
                 if (value.propertySet.none { it == true }) {
-                    val existingCallingContext =
-                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
-                    if (existingCallingContext != null) {
-                        // Keep and canonicalize call context by identity, then append missing
-                        // calls.
-                        // This avoids context churn and duplicate growth across iterations.
-                        val mergedCalls = mutableListOf<Call>()
-                        val seenCalls = hashSetOf<IdKey<Call>>()
-                        existingCallingContext.calls.forEach { call ->
-                            if (seenCalls.add(IdKey(call))) {
-                                mergedCalls.add(call)
-                            }
+                    val existingChain =
+                        lwProps.filterIsInstance<CallingContextChain>().flatMap { it.contexts }
+                    // Canonicalize the chain by call identity so that it does not grow with
+                    // duplicates across iterations.
+                    val seenCalls =
+                        existingChain.flatMapTo(hashSetOf<IdKey<Call>>()) { context ->
+                            context.calls.map { IdKey(it) }
                         }
-                        callingContext.calls.forEach { call ->
-                            if (seenCalls.add(IdKey(call))) {
-                                mergedCalls.add(call)
-                            }
+                    val newCalls = callingContext.calls.filter { seenCalls.add(IdKey(it)) }
+                    val last = existingChain.lastOrNull()
+                    val chain =
+                        when {
+                            newCalls.isEmpty() -> existingChain
+                            last is CallingContextOut ->
+                                existingChain.dropLast(1) +
+                                    CallingContextOut((last.calls + newCalls).toMutableList())
+                            else -> existingChain + CallingContextOut(newCalls.toMutableList())
                         }
-                        lwPropertySet.add(CallingContextOut(mergedCalls))
-                    } else {
-                        val mergedCalls = mutableListOf<Call>()
-                        val seenCalls = hashSetOf<IdKey<Call>>()
-                        callingContext.calls.forEach { call ->
-                            if (seenCalls.add(IdKey(call))) {
-                                mergedCalls.add(call)
-                            }
-                        }
-                        lwPropertySet.add(CallingContextOut(mergedCalls))
-                    }
+                    if (chain.isNotEmpty()) lwPropertySet.add(CallingContextChain(chain))
                 }
                 // Add all other previous properties
-                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
+                lwPropertySet.addAll(lwProps.filter { it !is CallingContextChain })
                 // Add them to the set of lastWrites if there is no same element
                 // in there yet
                 lastWrites.add(NodeWithPropertiesKey(lw, lwPropertySet))
@@ -3241,7 +3257,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(),
-                        lastWrites,
+                        PowersetLattice.Element(),
                     )
                 }
             } else {
