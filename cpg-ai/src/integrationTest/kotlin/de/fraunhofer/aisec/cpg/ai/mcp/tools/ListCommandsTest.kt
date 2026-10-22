@@ -51,6 +51,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
@@ -78,24 +79,28 @@ class ListCommandsTest {
 
             assertNotNull(result, "Result should not be null")
             assertEquals(2, result.content.size, "Should return two function declarations")
-            // Decoding strictly fails if an entry carries more than nodeId and signature.
-            val signatures =
+            // Decoding strictly fails if an entry carries more than nodeId, signature and location.
+            val entries =
                 result.content.map {
                     assertIs<TextContent>(it)
-                    Json.decodeFromString<SignatureInfo>(it.text).signature
+                    Json.decodeFromString<SignatureInfo>(it.text)
                 }
             val print =
                 assertNotNull(
-                    signatures.singleOrNull { it.startsWith("print") },
+                    entries.singleOrNull { it.signature.startsWith("print") },
                     "There is exactly one function declaration with name print",
                 )
-            assertFalse(print.contains(" @ "), "The inferred print has no location: $print")
+            assertNull(print.location, "The inferred print has no location: $print")
             val hello =
                 assertNotNull(
-                    signatures.singleOrNull { it.contains("hello") },
+                    entries.singleOrNull { it.signature.contains("hello") },
                     "There is exactly one function declaration with local name hello",
                 )
-            assertTrue(hello.endsWith(":3"), "hello is defined in line 3: $hello")
+            assertFalse(hello.signature.contains("@"), "No location in the signature: $hello")
+            assertTrue(
+                assertNotNull(hello.location).endsWith(":3"),
+                "hello is defined in line 3: $hello",
+            )
         }
 
     @Test
@@ -181,12 +186,14 @@ class ListCommandsTest {
         withClient(registerTools = { listCalls() }) { client ->
             val match =
                 client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "^print$"))
-            val signature =
+            val entry =
                 Json.decodeFromString<SignatureInfo>((match.content.single() as TextContent).text)
-                    .signature
             // The string literal has no name, so it is shown as _.
-            assertTrue(signature.startsWith("print(_) @ "), signature)
-            assertTrue(signature.endsWith(":4"), "print is called in line 4: $signature")
+            assertEquals("print(_)", entry.signature)
+            assertTrue(
+                assertNotNull(entry.location).endsWith(":4"),
+                "print is called in line 4: $entry",
+            )
 
             val detailed =
                 client.callTool(
@@ -213,11 +220,13 @@ class ListCommandsTest {
                 result.content.isNotEmpty(),
                 "There is a record declaration \"Foo\" in the test code",
             )
-            val signature =
+            val entry =
                 Json.decodeFromString<SignatureInfo>((result.content.single() as TextContent).text)
-                    .signature
-            assertTrue(signature.contains("Foo @ "), signature)
-            assertTrue(signature.endsWith(":1"), "Foo is defined in line 1: $signature")
+            assertTrue(entry.signature.endsWith("Foo"), entry.signature)
+            assertTrue(
+                assertNotNull(entry.location).endsWith(":1"),
+                "Foo is defined in line 1: $entry",
+            )
 
             val detailed =
                 client.callTool(name = "cpg_list_records", arguments = mapOf("detail" to true))

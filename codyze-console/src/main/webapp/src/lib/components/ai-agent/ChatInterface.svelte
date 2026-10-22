@@ -62,7 +62,7 @@
   }
 
   async function handleNodeClick(node: NodeJSON) {
-    // Compact tool results (nodeId + signature) carry no location, so look the node up by its ID
+    // Compact tool results (nodeId, signature, file:line) carry no translation unit, so look the node up by its ID
     if (!node.translationUnitId && !node.fileName) {
       const id = (node as any).nodeId ?? node.id;
       if (!id) return;

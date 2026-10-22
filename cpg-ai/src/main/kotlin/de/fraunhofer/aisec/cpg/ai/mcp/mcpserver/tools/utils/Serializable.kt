@@ -159,7 +159,12 @@ data class FunctionInfo(
     )
 }
 
-@Serializable data class SignatureInfo(val nodeId: String, val signature: String)
+/**
+ * The compact entry of a listing: a node's id, a one-line [signature] and its [location] as
+ * `file:line` (omitted from the JSON if unknown, e.g. for an inferred function).
+ */
+@Serializable
+data class SignatureInfo(val nodeId: String, val signature: String, val location: String? = null)
 
 @Serializable
 data class RecordInfo(
