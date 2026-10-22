@@ -32,6 +32,8 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConcept
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptList
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMOperation
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMOperationDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMProperty
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMPropertyDescription
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
@@ -146,5 +148,95 @@ class ConceptsSchemaFileTest {
         reader.join()
 
         assertEquals(0, bad.get(), "a reader saw an empty or unparsable concepts file")
+    }
+
+    private fun applied(name: String, nodeId: String, vararg operations: String) =
+        LLMConcept(
+            name = name,
+            description = "applied description",
+            nodeId = nodeId,
+            properties = emptyList(),
+            operations =
+                operations.map {
+                    LLMOperation(
+                        name = it,
+                        description = "applied $it",
+                        nodeId = nodeId,
+                        properties = emptyList(),
+                    )
+                },
+        )
+
+    /**
+     * Regression test for toystream run 3: applying a concept replaced its stored schema with the
+     * operations of that one call, so tag-library's open/write/... vanished from `Stream` and the
+     * model redefined the concept over and over; one call with an operation applied to many steps
+     * stored that operation once per step.
+     */
+    @Test
+    fun applyingExtendsTheStoredSchemaInsteadOfReplacingIt(@TempDir dir: Path) {
+        val session = analyzeSnippet(dir)
+        val main = session.translationResult.functions.single { it.name.localName == "main" }
+        val id = main.id.toString()
+        val schemaFile = dir.resolve("concepts.yaml").toFile()
+        yaml.writeValue(
+            schemaFile,
+            listOf(
+                schema("Stream", fixedValue = "AES-256")
+                    .copy(
+                        description = "stored description",
+                        operations =
+                            listOf(
+                                LLMOperationDescription("open", "Opens it"),
+                                LLMOperationDescription("write", "Writes to it"),
+                            ),
+                    )
+            ),
+        )
+
+        val response =
+            applyLLMConcepts(
+                session,
+                LLMConceptList(
+                    listOf(
+                        applied("Stream", id, "seek", "write"),
+                        applied("Stream", id, "close"),
+                        applied("Validation", id, "check", "check", "check"),
+                    )
+                ),
+                schemaFile,
+            )
+
+        assertEquals(emptyList(), response.failed)
+        val stored = loadPersistedConceptsAndOperations(schemaFile).associateBy { it.name }
+        val stream = stored.getValue("Stream")
+        assertEquals("stored description", stream.description)
+        assertEquals(listOf("open", "write", "seek", "close"), stream.operations.map { it.name })
+        assertEquals("Writes to it", stream.operations.single { it.name == "write" }.description)
+        assertEquals("AES-256", stream.properties.single { it.name == "algo" }.fixedValue)
+        assertEquals(listOf("check"), stored.getValue("Validation").operations.map { it.name })
+    }
+
+    @Test
+    fun mergeIntoSchemaWithoutStoredSchemaDeduplicates() {
+        val merged =
+            mergeIntoSchema(
+                null,
+                LLMConceptDescription(
+                    name = "Validation",
+                    description = "d",
+                    properties = emptyList(),
+                    operations =
+                        listOf(
+                            LLMOperationDescription("check", "first"),
+                            LLMOperationDescription("check", "second"),
+                        ),
+                ),
+            )
+
+        assertEquals(
+            listOf("check" to "first"),
+            merged.operations.map { it.name to it.description },
+        )
     }
 }

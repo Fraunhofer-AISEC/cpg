@@ -165,6 +165,9 @@ fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
         """
         This tool applies a concept and all its operations to the graph.
         It creates and attaches a concept node and all operation nodes using their nodeId to specific nodes in the graph.
+        Applying also records operations and properties the stored concept doesn't have yet, keeping
+        everything it already defines - no need to redefine a concept via
+        cpg_add_or_update_llm_concept just to add an operation.
         """
             .trimIndent()
     this.addTool<LLMConceptList>(
@@ -308,11 +311,11 @@ internal fun applyLLMConcepts(
                 failedOperations = failedOps,
             )
         )
-        schemasToPersist.add(mergeFixedValues(conceptSchema, LLMConceptDescription(concept)))
+        schemasToPersist.add(LLMConceptDescription(concept))
     }
 
     if (schemasToPersist.isNotEmpty()) {
-        persistConceptSchemas(schemasToPersist, file)
+        mergeConceptSchemas(schemasToPersist, file)
     }
 
     return AddConceptsResult(applied = applied, failed = failed)
@@ -406,36 +409,33 @@ private fun resolveProperties(
 }
 
 /**
- * Re-applying a concept re-derives its [LLMConceptDescription] from the applied instance via
- * [LLMConceptDescription]'s constructor, which does not know about
- * [LLMPropertyDescription.fixedValue] (that field only exists on the schema, not on an applied
- * [LLMProperty]). This merges any `fixedValue` already declared on [old] back into [derived] so
- * that persisting the schema after an apply never erases a previously declared fixed value.
+ * Merges [applied] - the schema re-derived from one applied concept via [LLMConceptDescription]'s
+ * constructor, so holding only that application's properties and operations - into the [stored]
+ * schema. Applying a concept extends its schema rather than redefining it: the stored description,
+ * properties and operations stay as they are (including a declared
+ * [LLMPropertyDescription.fixedValue], which an applied [LLMProperty] cannot carry), and only names
+ * not known yet are added. Every property and operation name appears once, also when an application
+ * carries several operations of the same name. Replacing a schema is
+ * `cpg_add_or_update_llm_concept`'s job.
  */
-private fun mergeFixedValues(
-    old: LLMConceptDescription?,
-    derived: LLMConceptDescription,
+internal fun mergeIntoSchema(
+    stored: LLMConceptDescription?,
+    applied: LLMConceptDescription,
 ): LLMConceptDescription {
-    if (old == null) return derived
-    fun mergeProperties(
-        oldProperties: List<LLMPropertyDescription>,
-        newProperties: List<LLMPropertyDescription>,
-    ) =
-        newProperties.map { property ->
-            val fixedValue =
-                property.fixedValue ?: oldProperties.find { it.name == property.name }?.fixedValue
-            if (fixedValue != null) property.copy(fixedValue = fixedValue) else property
-        }
-    return derived.copy(
-        properties = mergeProperties(old.properties, derived.properties),
+    val base = stored ?: applied.copy(properties = emptyList(), operations = emptyList())
+    return base.copy(
+        properties = (base.properties + applied.properties).distinctBy { it.name },
         operations =
-            derived.operations.map { operation ->
-                val oldOperation = old.operations.find { it.name == operation.name }
-                operation.copy(
-                    properties =
-                        mergeProperties(oldOperation?.properties.orEmpty(), operation.properties)
-                )
-            },
+            (base.operations + applied.operations)
+                .groupBy { it.name }
+                .values
+                .map { versions ->
+                    versions
+                        .first()
+                        .copy(
+                            properties = versions.flatMap { it.properties }.distinctBy { it.name }
+                        )
+                },
     )
 }
 
@@ -477,7 +477,7 @@ internal fun loadPersistedConceptsAndOperations(
 }
 
 /**
- * Serializes [persistConceptSchemas]'s read-modify-write of the concepts file. Deliberately not
+ * Serializes [updateConceptSchemas]'s read-modify-write of the concepts file. Deliberately not
  * [CpgLock]: `cpg_add_or_update_llm_concept` only touches this file, never the graph, and should
  * not block graph readers (or be blocked by them). Never held while taking [CpgLock], so the two
  * cannot deadlock.
@@ -491,16 +491,38 @@ private val conceptsFileLock = Any()
 internal fun persistConceptSchemas(
     schemas: List<LLMConceptDescription>,
     file: File = File(fileName),
+) = updateConceptSchemas(schemas, file) { _, schema -> schema }
+
+/**
+ * Merges the schemas of applied concepts into the persisted YAML store via [mergeIntoSchema]. The
+ * merge runs against the file's content at the time of writing, under [conceptsFileLock], not
+ * against a copy read before - so that concurrent applications (e.g. parallel batches) and several
+ * applications of one concept within a single call all add up instead of the last one winning.
+ */
+internal fun mergeConceptSchemas(applied: List<LLMConceptDescription>, file: File) =
+    updateConceptSchemas(applied, file, ::mergeIntoSchema)
+
+/**
+ * Writes [schemas] into [file], each combined with the stored schema of the same name (`null` if
+ * there is none) by [combine]; a concept not stored yet is appended.
+ */
+private fun updateConceptSchemas(
+    schemas: List<LLMConceptDescription>,
+    file: File,
+    combine:
+        (stored: LLMConceptDescription?, schema: LLMConceptDescription) -> LLMConceptDescription,
 ) {
     synchronized(conceptsFileLock) {
         val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         var updated = loadPersistedConceptsAndOperations(file)
         schemas.forEach { schema ->
+            val stored = updated.find { it.name == schema.name }
+            val combined = combine(stored, schema)
             updated =
-                if (updated.any { it.name == schema.name }) {
-                    updated.map { if (it.name == schema.name) schema else it }
+                if (stored != null) {
+                    updated.map { if (it.name == schema.name) combined else it }
                 } else {
-                    updated + schema
+                    updated + combined
                 }
         }
         writeAtomically(file) { mapper.writeValue(it, updated) }
