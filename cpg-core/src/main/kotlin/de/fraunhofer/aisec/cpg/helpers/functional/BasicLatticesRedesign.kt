@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.collectMaybeParallel
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel
@@ -1614,9 +1615,59 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
          */
         fun putShared(key: K, value: V): V? = super.put(key, shareValue(value))
 
+        /**
+         * Stores every entry of [writes] in one go, taking this map's write lock exactly once
+         * instead of once per entry. Each write keeps the meaning it would have had on its own:
+         * [PendingWrite.sharedWithProducer] picks [putShared]'s rule for an entry whose producer
+         * keeps its own reference, and [put]'s rule for one it hands over.
+         *
+         * Intended for a producer which computes its writes in a parallel phase - see
+         * [de.fraunhofer.aisec.cpg.graph.collectMaybeParallel] - and applies them afterwards, the
+         * way [ConcurrentMapLattice.lub] does. Note that batching delays every write until the
+         * batch is applied, so it must not be used where one element of the parallel phase has to
+         * observe another's write.
+         */
+        @Suppress("UNCHECKED_CAST")
+        fun putAllBatched(writes: Collection<PendingWrite<K, V>>) =
+            putAllMapped(
+                writes,
+                key = { it.key },
+                value = { write ->
+                    val value = write.value
+                    when {
+                        write.sharedWithProducer -> shareValue(value)
+                        // The same self-healing (and the same complaint) as in put(); see there.
+                        value.isShared -> {
+                            Pass.log.warn(
+                                "putAllBatched() was given a value which is already shared with " +
+                                    "another state; storing a private copy instead of corrupting " +
+                                    "that other state. The producer should have marked it as " +
+                                    "sharedWithProducer."
+                            )
+                            value.duplicate() as V
+                        }
+                        else -> value
+                    }
+                },
+            )
+
         override fun hashCode(): Int {
             return super.hashCode()
         }
+
+        /**
+         * One entry which [putAllBatched] is going to store.
+         *
+         * [sharedWithProducer] says whether whoever created this write keeps its own reference to
+         * [value] - in which case the value has to be marked as [shared][Lattice.Element.isShared],
+         * exactly like [putShared] does - or hands it over, in which case the map takes sole
+         * ownership of it, like [put].
+         */
+        class PendingWrite<K, V : Lattice.Element>(
+            val key: K,
+            val value: V,
+            val sharedWithProducer: Boolean,
+        )
     }
 
     override val bottom: Element<K, V>
@@ -1632,32 +1683,46 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         var result: Element<K, V>
         coroutineScope {
             if (allowModify) {
-                // TODO: Would it be more efficient here to clone two.entries and iterate over the
-                // clone? This would avoid concurrent-access checks
-                two.entries.forEachMaybeParallel(parallelism = concurrencyCounter) { (k, v) ->
-                    val entry = one[k]
-                    if (entry == null) {
-                        // This key is not in "one", so we add the value from "two"
-                        // to "one". "two" keeps its own reference to it, so the two maps
-                        // share the entry from now on.
-                        one.putShared(k, v)
-                    } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                        // This key already exists in "one" and the values in one and
-                        // two are different, so we have to compute the lub of the values.
-                        // We modify "one"'s value in place, so we need a private copy of it.
-                        one.getForUpdate(k)?.let { oneValue ->
-                            innerLattice.lub(
-                                oneValue,
-                                v,
-                                allowModify = true,
-                                widen = widen,
-                                // We already run on $CPU_CORES coroutines, so we
-                                // don't need any additional ones
-                                1,
-                            )
+                // The coroutines below only compute the writes; "one" is written once, at the
+                // end. Every write to a state takes that state's single map-wide lock, so doing
+                // them one by one here would serialize the whole parallel phase on it - the more
+                // coroutines, the longer the queue. See Element.putAllBatched.
+                val writes =
+                    two.entries.collectMaybeParallel(parallelism = concurrencyCounter) {
+                        (k, v),
+                        writes ->
+                        val entry = one[k]
+                        if (entry == null) {
+                            // This key is not in "one", so we add the value from "two"
+                            // to "one". "two" keeps its own reference to it, so the two maps
+                            // share the entry from now on.
+                            writes += Element.PendingWrite(k, v, sharedWithProducer = true)
+                        } else if (entry.compare(v) != Order.EQUAL) {
+                            // This key already exists in "one" and the values in one and
+                            // two are different, so we have to compute the lub of the values.
+                            // We modify "one"'s value in place, so we need a private copy of it.
+                            // Taking that copy here rather than via one.getForUpdate(k) keeps the
+                            // deep copy out of the map's write lock - and lets us skip the map
+                            // write altogether when the value is not shared to begin with, since
+                            // then the entry already points at the object we merge into.
+                            val target = if (entry.isShared) entry.duplicate() as V else entry
+                            val merged =
+                                innerLattice.lub(
+                                    target,
+                                    v,
+                                    allowModify = true,
+                                    widen = widen,
+                                    // We already run on $CPU_CORES coroutines, so we
+                                    // don't need any additional ones
+                                    1,
+                                )
+                            if (merged !== entry) {
+                                writes +=
+                                    Element.PendingWrite(k, merged, sharedWithProducer = false)
+                            }
                         }
                     }
-                }
+                one.putAllBatched(writes)
                 result = one
             } else {
                 val allKeys =
@@ -1666,28 +1731,37 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                         addAll(two.keys)
                     }
                 result = Element()
-                allKeys.forEachMaybeParallel { key ->
-                    val otherValue = two[key]
-                    val thisValue = one[key]
-                    if (thisValue != null && otherValue != null) {
-                        result.put(
-                            key,
-                            innerLattice.lub(
-                                one = thisValue,
-                                two = otherValue,
-                                allowModify = false,
-                                widen = widen,
-                                // We already run on $CPU_CORES coroutines, so we don't
-                                // need any additional ones
-                                1,
-                            ),
-                        )
-                    } else {
-                        // Only one of the two maps has this key, so its value carries over
-                        // unchanged. We share it with that map instead of copying it.
-                        (thisValue ?: otherValue)?.let { result.putShared(key, it) }
+                // As in the allowModify branch: compute in parallel, write once. This branch
+                // inserts the *whole* union rather than just what changed, so serializing it on
+                // the result map's lock is that much more expensive.
+                val writes =
+                    allKeys.collectMaybeParallel<K, Element.PendingWrite<K, V>> { key, writes ->
+                        val otherValue = two[key]
+                        val thisValue = one[key]
+                        if (thisValue != null && otherValue != null) {
+                            writes +=
+                                Element.PendingWrite(
+                                    key,
+                                    innerLattice.lub(
+                                        one = thisValue,
+                                        two = otherValue,
+                                        allowModify = false,
+                                        widen = widen,
+                                        // We already run on $CPU_CORES coroutines, so we don't
+                                        // need any additional ones
+                                        1,
+                                    ),
+                                    sharedWithProducer = false,
+                                )
+                        } else {
+                            // Only one of the two maps has this key, so its value carries over
+                            // unchanged. We share it with that map instead of copying it.
+                            (thisValue ?: otherValue)?.let {
+                                writes += Element.PendingWrite(key, it, sharedWithProducer = true)
+                            }
+                        }
                     }
-                }
+                result.putAllBatched(writes)
             }
         }
         return@coroutineScope result

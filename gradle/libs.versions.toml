@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.3.0"
+kotlin = "2.4.21"
 kotlinx-json = "1.10.0"
 neo4j5 = "5.28.10"
 log4j = "2.25.3"
