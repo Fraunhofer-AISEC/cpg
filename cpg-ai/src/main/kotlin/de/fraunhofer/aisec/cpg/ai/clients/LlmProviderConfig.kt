@@ -414,7 +414,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     /** Queries the Gemini `/models` endpoint and keeps only the `gemini-*` chat models. */
     private suspend fun fetchGeminiModels(cfg: ClientConfig): List<String> {
         val response: HttpResponse =
-            httpClient.get("${cfg.baseUrl}/models?key=${cfg.apiKey}") {
+            metadataClientFor(cfg).get("${cfg.baseUrl}/models?key=${cfg.apiKey}") {
                 timeout { requestTimeoutMillis = 2_000L }
             }
         if (!response.status.isSuccess()) return emptyList()

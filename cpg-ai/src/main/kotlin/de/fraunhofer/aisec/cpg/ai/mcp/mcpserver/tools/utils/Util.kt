@@ -172,6 +172,7 @@ inline fun <reified T : HasProjectNamePayload> Server.addTool(
     noinline handler: (CpgSession, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
+    checkSchemaMatchesSerialNames<T>(name, inputSchema)
     this.addTool(
         name,
         describeWithParameters(description, inputSchema),
@@ -190,7 +191,7 @@ inline fun <reified T : HasProjectNamePayload> Server.addTool(
             CallToolResult(
                 content =
                     listOf(
-                        TextContent("Error executing query: ${e.message ?: e::class.simpleName}")
+                        TextContent("Error executing $name: ${e.message ?: e::class.simpleName}")
                     )
             )
         }
@@ -214,6 +215,7 @@ inline fun <reified T> Server.addToolWithoutCpg(
     noinline handler: (T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
+    checkSchemaMatchesSerialNames<T>(name, inputSchema)
     this.addTool(
         name,
         describeWithParameters(description, inputSchema),
@@ -236,6 +238,28 @@ inline fun <reified T> Server.addToolWithoutCpg(
                     )
             )
         }
+    }
+}
+
+/**
+ * Asserts that the property names in [schema] (built from Kotlin reflection, see [toSchema]) match
+ * the serial names the decoder actually accepts (from [serializer]'s descriptor). A `@SerialName`
+ * on a payload property would make these diverge: the model sends the schema name, the decoder
+ * reports it as missing. Fails at server startup rather than silently desyncing the model.
+ */
+@PublishedApi
+internal inline fun <reified T> checkSchemaMatchesSerialNames(
+    toolName: String,
+    schema: ToolSchema,
+) {
+    val descriptor = serializer<T>().descriptor
+    val schemaNames = schema.properties.orEmpty().keys
+    val serialNames =
+        (0 until descriptor.elementsCount).map { descriptor.getElementName(it) }.toSet()
+    check(schemaNames == serialNames) {
+        "Schema property names for tool '$toolName' ($schemaNames) do not match the serial names " +
+            "of ${T::class.qualifiedName} ($serialNames). A @SerialName on a payload property " +
+            "would make the model send a name the decoder does not accept."
     }
 }
 

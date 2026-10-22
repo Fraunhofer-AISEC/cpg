@@ -25,31 +25,6 @@
  */
 @file:Suppress("UNCHECKED_CAST")
 
-/*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
- *
- */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
@@ -567,15 +542,16 @@ inline fun <reified T : Node> runPassForNodeInternal(
                 (language::class.findAnnotations<ReplacePass>().find { it.old == passClass }?.with
                     as? KClass<out Pass<T>>) ?: passClass
 
-            consumeTargets(
-                cls = actualClass,
-                ctx = ctx,
-                targets =
-                    nodes.filter {
-                        nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(actualClass)
-                    },
-                result = result,
-            )
+            // Select the nodes this pass has not run on yet. Marking them as done only after
+            // consumeTargets returns: if it throws, the nodes are not left recorded as having
+            // run actualClass, so a later cpg_run_pass can retry instead of silently skipping
+            // them.
+            val targets =
+                nodes.filter { actualClass !in nodeToPass.computeIfAbsent(it) { mutableSetOf() } }
+            if (targets.isNotEmpty()) {
+                consumeTargets(cls = actualClass, ctx = ctx, targets = targets, result = result)
+                targets.forEach { nodeToPass[it]!!.add(actualClass) }
+            }
             messages +=
                 "Ran pass ${actualClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}."
         }

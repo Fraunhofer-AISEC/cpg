@@ -194,19 +194,23 @@ class ChatService(
             options = ClientOptions(),
         )
 
-    private var tools: List<Tool> = emptyList()
+    // @Volatile: connect() writes these once, chat()/getMcpCapabilities() read them on every
+    // call. Marking volatile (rather than holding them in one immutable snapshot) is sufficient
+    // for the connect-once-at-startup contract; a re-connect publishes all fields individually,
+    // but each read sees a consistent reference for that one field.
+    @Volatile private var tools: List<Tool> = emptyList()
 
     /**
      * Names of the MCP tools that announce `readOnlyHint`: only these are run concurrently by
      * [chatStrategy] within one turn. A tool without the hint (e.g. from a host's own tools) stays
      * sequential, which is always safe, just not maximally fast.
      */
-    private var readOnlyToolNames: Set<String> = emptySet()
-    private var prompts: List<Prompt> = emptyList()
-    private var resources: List<Resource> = emptyList()
+    @Volatile private var readOnlyToolNames: Set<String> = emptySet()
+    @Volatile private var prompts: List<Prompt> = emptyList()
+    @Volatile private var resources: List<Resource> = emptyList()
 
     /** The MCP tools, wrapped as a Koog [ToolRegistry] for use by the agent in [chat]. */
-    private var mcpToolRegistry: ToolRegistry = ToolRegistry.EMPTY
+    @Volatile private var mcpToolRegistry: ToolRegistry = ToolRegistry.EMPTY
 
     /** Connect to the MCP server via streamable HTTP. */
     suspend fun connect() {
@@ -233,7 +237,7 @@ class ChatService(
     }
 
     /** Discovered by [connect] via Koog's native Agent Skills discovery. */
-    private var skills: List<Skill> = emptyList()
+    @Volatile private var skills: List<Skill> = emptyList()
 
     /**
      * The tool registry the model uses to "activate" a discovered skill (list + read its
@@ -241,7 +245,7 @@ class ChatService(
      * [skills]. See `SkillFileTools.kt` for why this uses Koog's generic file tools rather than a
      * dedicated activation tool.
      */
-    private var skillFileToolRegistry: ToolRegistry = ToolRegistry.EMPTY
+    @Volatile private var skillFileToolRegistry: ToolRegistry = ToolRegistry.EMPTY
 
     /**
      * Once the running prompt grows beyond this many messages, [chatStrategy] compresses the
@@ -437,21 +441,37 @@ class ChatService(
                     }
                 }
             // Not a plain nodeExecuteTools(): that node is all-or-nothing (every call in the
-            // turn parallel, or every call sequential). This splits a turn's tool calls into
-            // readOnlyToolNames (executed concurrently via environment.executeTools) and
-            // everything else (executed one at a time, in order, via environment.executeTool),
-            // so that tools that change something keep the order the model gave them.
+            // turn parallel, or every call sequential). This runs each maximal run of
+            // readOnlyToolNames calls concurrently (via environment.executeTools) and every
+            // other call one at a time, *in the order the model gave them*: a readOnly call that
+            // follows a mutating one runs after it, so it observes the mutation. Splitting the
+            // turn into parallel batches and sequential calls in place preserves the model's
+            // intended order across the read/write boundary, not only within the sequential part.
             val executeTool by
                 node<ToolCalls, ReceivedToolResults>("executeToolsPartiallyParallel") { toolCalls ->
                     val contextLength = llm.readSession { contextLengthOf(model) }
-                    val (parallelCalls, sequential) =
-                        toolCalls.toolCalls.partition { it.tool in readOnlyToolNames }
+                    val results = mutableListOf<ReceivedToolResult>()
+                    val parallelBatch = mutableListOf<MessagePart.Tool.Call>()
+
+                    suspend fun flushParallel() {
+                        if (parallelBatch.isEmpty()) return
+                        results += environment.executeTools(parallelBatch)
+                        parallelBatch.clear()
+                    }
+
+                    for (call in toolCalls.toolCalls) {
+                        if (call.tool in readOnlyToolNames) {
+                            parallelBatch.add(call)
+                        } else {
+                            flushParallel()
+                            results += environment.executeTool(call)
+                        }
+                    }
+                    flushParallel()
                     ReceivedToolResults(
-                        (environment.executeTools(parallelCalls) +
-                                sequential.map { environment.executeTool(it) })
-                            .map {
-                                it.copy(output = truncateForLlm(it.output, it.tool, contextLength))
-                            }
+                        results.map {
+                            it.copy(output = truncateForLlm(it.output, it.tool, contextLength))
+                        }
                     )
                 }
             val sendToolResultStream by nodeLLMSendToolResultsStreaming()

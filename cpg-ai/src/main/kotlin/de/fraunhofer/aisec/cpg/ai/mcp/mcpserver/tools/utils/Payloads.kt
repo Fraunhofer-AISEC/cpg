@@ -52,6 +52,14 @@ data class CpgAnalyzePayload(
     @Description(
         "The path to a source file or a project directory (e.g., a repository checkout) on the local filesystem. For directories, the project structure is detected automatically, e.g., components based on Go modules or a C/C++ compilation database (compile_commands.json). Either 'path' or 'content' must be provided."
     )
+    // NOTE: This is the one MCP tool that breaks the "the model only reasons via the CPG"
+    // invariant the rest of the tool set upholds: the model names a host path and the server reads
+    // it. There is no path allowlist or jail; the model can name any path the process can read,
+    // and the parsed source becomes reachable through cpg_get_node / cpg_list_functions. The MCP
+    // server itself has no authentication and defaults to loopback only (see Application.kt), but
+    // any non-loopback bind (allowed with a warning via --host) plus a prompt-injected or
+    // untrusted model turns this into arbitrary host-source exfiltration. Hosts that expose the
+    // server beyond loopback must treat cpg_analyze as an explicit, auditable trust decision.
     val path: String? = null,
 )
 

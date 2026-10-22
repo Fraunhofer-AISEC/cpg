@@ -68,10 +68,23 @@ fun Server.addDfgBackwardTool() {
 }
 
 internal fun dfgBackward(session: CpgSession, payload: CpgDfgBackwardPayload): CallToolResult {
+    val normalizedId =
+        try {
+            Uuid.parse(payload.id).toString()
+        } catch (_: IllegalArgumentException) {
+            return CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "No node found with id '${payload.id}'. Node ids are UUIDs returned by other tools (e.g. cpg_list_functions, cpg_get_node) — copy one exactly."
+                        )
+                    )
+            )
+        }
     val startNode =
-        session.findNodeById(Uuid.parse(payload.id).toString())
+        session.findNodeById(normalizedId)
             ?: return CallToolResult(
-                content = listOf(TextContent("No node found with ID ${payload.id}"))
+                content = listOf(TextContent("No node found with id '${payload.id}'."))
             )
 
     // One JSON array per call, sliced to a page, so that a node with a huge backward slice cannot

@@ -102,7 +102,9 @@ data class ParameterInfo(val name: String, val type: TypeInfo, val defaultValue:
     ) : this(
         name = parameterDeclaration.name.toString(),
         type = TypeInfo(parameterDeclaration.type),
-        defaultValue = parameterDeclaration.default.toString(),
+        // `.toString()` on a null default reports the literal string "null"; only emit a value when
+        // a default actually exists.
+        defaultValue = parameterDeclaration.default?.toString(),
     )
 }
 

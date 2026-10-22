@@ -65,10 +65,23 @@ private fun Granularity.toTag(): String =
  * [addGetLastWriteTool], so it's testable without going through the MCP [Server] transport.
  */
 fun getLastWrite(session: CpgSession, payload: CpgIdPayload): CallToolResult {
+    val normalizedId =
+        try {
+            Uuid.parse(payload.id).toString()
+        } catch (_: IllegalArgumentException) {
+            return CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "No node found with id '${payload.id}'. Node ids are UUIDs returned by other tools (e.g. cpg_list_functions, cpg_get_node) — copy one exactly."
+                        )
+                    )
+            )
+        }
     val startNode =
-        session.findNodeById(Uuid.parse(payload.id).toString())
+        session.findNodeById(normalizedId)
             ?: return CallToolResult(
-                content = listOf(TextContent("No node found with ID ${payload.id}"))
+                content = listOf(TextContent("No node found with id '${payload.id}'."))
             )
 
     val writes =

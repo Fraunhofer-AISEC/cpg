@@ -150,12 +150,28 @@ fun Server.addCpgApplyConceptsTool() {
                         }
 
                         val conceptNode = session.findNodeById(conceptNodeId)
+                        val conceptsOnNode = conceptNode?.overlays?.filterIsInstance<Concept>()
                         val concept =
-                            conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
+                            when (conceptsOnNode?.size) {
+                                null,
+                                0 -> null
+                                1 -> conceptsOnNode.first()
+                                else -> {
+                                    // Multiple concepts on one node: picking the first would
+                                    // silently attach the operation to the wrong concept. Fail
+                                    // explicitly so the caller can disambiguate.
+                                    applied.add(
+                                        "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: node $conceptNodeId carries multiple concepts (${conceptsOnNode.joinToString { it::class.simpleName ?: "?" }}); apply the operation to the concept's own node instead."
+                                    )
+                                    null
+                                }
+                            }
                         if (concept == null) {
-                            applied.add(
-                                "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node $conceptNodeId"
-                            )
+                            if (conceptsOnNode.isNullOrEmpty()) {
+                                applied.add(
+                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node $conceptNodeId"
+                                )
+                            }
                             return@forEach
                         }
 

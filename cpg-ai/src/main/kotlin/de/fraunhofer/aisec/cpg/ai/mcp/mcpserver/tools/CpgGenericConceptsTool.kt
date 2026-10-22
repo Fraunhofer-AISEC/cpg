@@ -75,7 +75,8 @@ fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
 /** One JSON entry per persisted concept schema in [file], paginated according to [payload]. */
 internal fun listConcepts(file: File, payload: CpgListPayload): CallToolResult {
     val jsonMapper = ObjectMapper().registerKotlinModule()
-    return loadPersistedConceptsAndOperations(file).toPagedResult(payload.limit, payload.offset) {
+    val schemas = synchronized(conceptsFileLock) { loadPersistedConceptsAndOperations(file) }
+    return schemas.toPagedResult(payload.limit, payload.offset) {
         jsonMapper.writeValueAsString(it)
     }
 }
@@ -191,7 +192,8 @@ internal fun applyLLMConcepts(
     val failed = mutableListOf<FailedConcept>()
     val schemasToPersist = mutableListOf<LLMConceptDescription>()
 
-    val persistedSchemas = loadPersistedConceptsAndOperations(file)
+    val persistedSchemas =
+        synchronized(conceptsFileLock) { loadPersistedConceptsAndOperations(file) }
 
     payload.concepts.forEach { concept ->
         val cpgConceptNode = session.findNodeById(concept.nodeId)
@@ -518,6 +520,13 @@ internal fun persistConceptSchemas(
  */
 private fun writeAtomically(file: File, write: (File) -> Unit) {
     val temp = file.resolveSibling("${file.name}.tmp")
-    write(temp)
-    Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE)
+    try {
+        write(temp)
+        Files.move(temp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE)
+    } catch (e: Throwable) {
+        // Delete the temp file if it still exists, so a failed write does not leave a stale
+        // .tmp behind on every retry. ATOMIC_MOVE either fully succeeds or leaves temp in place.
+        runCatching { temp.delete() }
+        throw e
+    }
 }
