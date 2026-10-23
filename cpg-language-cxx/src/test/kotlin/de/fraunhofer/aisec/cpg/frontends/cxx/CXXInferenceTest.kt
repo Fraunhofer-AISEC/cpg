@@ -221,4 +221,39 @@ class CXXInferenceTest {
         assertNotNull(funcBar)
         assertFalse(funcBar.isInferred)
     }
+
+    @Test
+    fun testVoidPointerArgumentResolvesInC() {
+        val file = File("src/test/resources/c/void_pointer.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val calls = tu.calls("take_pointer")
+        assertEquals(3, calls.size)
+        for (call in calls) {
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.none { it.isInferred },
+                "${call.code} invokes an inferred function",
+            )
+        }
+    }
+
+    @Test
+    fun testVoidPointerArgumentDoesNotResolveInCpp() {
+        val file = File("src/test/resources/cxx/inference/void_pointer.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        val call = tu.calls["take_pointer"]
+        assertNotNull(call)
+        assertTrue(call.invokes.isNotEmpty())
+        assertTrue(call.invokes.all { it.isInferred })
+    }
 }

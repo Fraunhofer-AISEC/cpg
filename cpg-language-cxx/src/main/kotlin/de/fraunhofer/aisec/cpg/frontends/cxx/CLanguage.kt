@@ -276,6 +276,18 @@ open class CLanguage :
             return ImplicitCast
         }
 
+        // In C (but not in C++, see CPPLanguage.tryCast), void* can also be implicitly cast to any
+        // other pointer, e.g. the result of malloc or NULL
+        if (isVoidPointerToOtherPointer(type, targetType)) {
+            return ImplicitCast
+        }
+
         return CastNotPossible
     }
+
+    protected fun isVoidPointerToOtherPointer(type: Type, targetType: Type): Boolean =
+        type is PointerType &&
+            type.elementType is IncompleteType &&
+            targetType is PointerType &&
+            targetType.elementType !is IncompleteType
 }
