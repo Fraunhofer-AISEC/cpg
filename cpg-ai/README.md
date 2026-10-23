@@ -240,7 +240,7 @@ Run the server inside your own process:
 
 ```kotlin
 val server = configureServer()                          // all default tools and the prompt
-val http = runHttpMcpServerUsingKtorPlugin(port = 8081, host = "127.0.0.1", server = server)
+val http = runHttpMcpServerUsingKtorPlugin(port = 8081, host = DEFAULT_MCP_HOST, server = server, wait = false)
 globalAnalysisResult = translationResult                // the graph every tool will operate on
 ```
 
