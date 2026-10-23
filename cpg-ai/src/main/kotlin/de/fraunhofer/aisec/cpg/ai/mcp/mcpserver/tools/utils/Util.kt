@@ -171,39 +171,16 @@ inline fun <reified T : HasProjectNamePayload> Server.addTool(
     toolAnnotations: ToolAnnotations? = null,
     meta: JsonObject? = null,
     noinline handler: (CpgSession, T) -> CallToolResult,
-) {
-    val inputSchema = T::class.toSchema()
-    checkSchemaMatchesSerialNames<T>(name, inputSchema)
-    this.addTool(
-        name,
-        describeWithParameters(description, inputSchema),
-        inputSchema = inputSchema,
-        title = title,
-        outputSchema = outputSchema,
-        toolAnnotations = toolAnnotations ?: ToolAnnotations(readOnlyHint = readOnly),
-        meta = withTypedArgumentsMarker(meta),
-    ) { request ->
-        try {
-            when (val decoded = decodeArguments<T>(name, request)) {
-                is DecodedArguments.Invalid -> decoded.result
-                is DecodedArguments.Valid -> decoded.payload.runOnSession(!readOnly, handler)
-            }
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent("Error executing $name: ${e.message ?: e::class.simpleName}")
-                    )
-            )
-        }
+) =
+    addTypedTool<T>(name, description, readOnly, title, outputSchema, toolAnnotations, meta) {
+        it.runOnSession(!readOnly, handler)
     }
-}
 
 /**
  * Like [addTool], for tools that do not work on the shared CPG - they only touch files, or take
  * [CpgLock] themselves (e.g. `cpg_analyze`, which replaces the graph): [handler] gets just the
- * decoded arguments and runs without the lock. Unlike in [addTool], [readOnly] is required: say
- * `false` if the tool changes the graph or a file (see [addTool]).
+ * decoded arguments and runs without the lock. As in [addTool], [readOnly] is required: say `false`
+ * if the tool changes the graph or a file.
  */
 inline fun <reified T> Server.addToolWithoutCpg(
     name: String,
@@ -214,6 +191,35 @@ inline fun <reified T> Server.addToolWithoutCpg(
     toolAnnotations: ToolAnnotations? = null,
     meta: JsonObject? = null,
     noinline handler: (T) -> CallToolResult,
+) =
+    addTypedTool<T>(
+        name,
+        description,
+        readOnly,
+        title,
+        outputSchema,
+        toolAnnotations,
+        meta,
+        handler,
+    )
+
+/**
+ * What [addTool] and [addToolWithoutCpg] share: registers [name] with the input schema generated
+ * from [T] (its parameters' descriptions appended to [description]), `readOnlyHint = readOnly`
+ * unless [toolAnnotations] are given, and the marker `toolRegistrationProblems` checks for. A call
+ * whose arguments decode is handed to [run], one whose arguments don't is answered with the list of
+ * problems; an exception becomes an error result.
+ */
+@PublishedApi
+internal inline fun <reified T> Server.addTypedTool(
+    name: String,
+    description: String,
+    readOnly: Boolean,
+    title: String?,
+    outputSchema: ToolSchema?,
+    toolAnnotations: ToolAnnotations?,
+    meta: JsonObject?,
+    noinline run: (T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
     checkSchemaMatchesSerialNames<T>(name, inputSchema)
@@ -229,7 +235,7 @@ inline fun <reified T> Server.addToolWithoutCpg(
         try {
             when (val decoded = decodeArguments<T>(name, request)) {
                 is DecodedArguments.Invalid -> decoded.result
-                is DecodedArguments.Valid -> handler(decoded.payload)
+                is DecodedArguments.Valid -> run(decoded.payload)
             }
         } catch (e: Exception) {
             CallToolResult(
