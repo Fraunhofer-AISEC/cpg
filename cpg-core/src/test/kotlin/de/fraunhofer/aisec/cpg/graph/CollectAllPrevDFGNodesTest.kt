@@ -23,35 +23,37 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
+package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Timeout
 
-class DfgBackwardSliceTest {
+class CollectAllPrevDFGNodesTest {
 
     /**
      * `diamonds` diamonds in a row: every diamond doubles the number of backward paths (2^diamonds
-     * in total) but only adds three nodes.
+     * in total) but only adds three nodes. Returns the start node and every node with its distance
+     * from it.
      */
-    private fun diamondChain(diamonds: Int): Pair<Node, Set<Node>> {
-        val all = mutableSetOf<Node>()
+    private fun diamondChain(diamonds: Int): Pair<Node, Map<Node, Int>> {
+        val all = mutableMapOf<Node, Int>()
+        var depth = 0
         // Distinct names: nodes compare structurally, and unnamed References would all be equal.
         fun node() =
             Reference().also {
                 it.name = Name("n${all.size}")
-                all += it
+                all[it] = depth
             }
         var join = node()
         val start = join
         repeat(diamonds) {
+            depth++
             val left = node()
             val right = node()
+            depth++
             val next = node()
             join.prevDFGEdges.add(left)
             join.prevDFGEdges.add(right)
@@ -66,11 +68,20 @@ class DfgBackwardSliceTest {
     fun theSliceContainsEveryNodeOnABackwardPath() {
         val (start, all) = diamondChain(3)
 
-        val slice = backwardSliceNodes(start)
+        val slice = start.collectAllPrevDFGNodes()
 
-        assertEquals(all, slice.toSet())
+        assertEquals(all.keys, slice.toSet())
         assertEquals(slice.size, slice.toSet().size, "no node twice")
         assertEquals(start, slice.first())
+    }
+
+    @Test
+    fun nearerNodesComeFirst() {
+        val (start, all) = diamondChain(3)
+
+        val depths = start.collectAllPrevDFGNodes().map { all.getValue(it) }
+
+        assertEquals(depths.sorted(), depths, "breadth-first: $depths")
     }
 
     @Test
@@ -79,6 +90,6 @@ class DfgBackwardSliceTest {
         // ~10^9 backward paths, 91 nodes: enumerating every path never finishes.
         val (start, all) = diamondChain(30)
 
-        assertEquals(all, backwardSliceNodes(start).toSet())
+        assertEquals(all.keys, start.collectAllPrevDFGNodes().toSet())
     }
 }
