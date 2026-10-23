@@ -241,7 +241,7 @@ Run the server inside your own process:
 ```kotlin
 val server = configureServer()                          // all default tools and the prompt
 val http = runHttpMcpServerUsingKtorPlugin(port = 8081, host = DEFAULT_MCP_HOST, server = server, wait = false)
-globalAnalysisResult = translationResult                // the graph every tool will operate on
+registerSession("my-project", translationResult)        // a graph the tools operate on
 ```
 
 `configureServer { ... }` takes a lambda (a `Server.() -> Server`, so end it with `this`) that
@@ -252,7 +252,7 @@ tool gets its JSON schema generated from a Kotlin payload class (non-nullable pr
 ```kotlin
 fun Server.myTool() =
     addTool<MyPayload>(name = "my_tool", description = "...", readOnly = true) {
-        result: TranslationResult, payload ->
+        session: CpgSession, payload ->
         CallToolResult(content = listOf(TextContent("...")))
     }
 ```
@@ -262,7 +262,8 @@ on the graph: it gets only the payload and runs without `CpgLock`), never throug
 `addTool`; use `NoArguments` as the payload of a tool that takes none. Only these helpers decode
 arguments the standard way: a call whose arguments do not fit the payload is answered with every
 problem at once (missing fields, wrong JSON types, nulls) and the expected shape, without running
-the handler, so the model can fix them in one retry. A host can check its whole tool set in a test:
+the handler, so the model can fix them in one retry. A host can check its whole tool set in a test,
+with `toolRegistrationProblems()` from cpg-ai's test fixtures (the `test-fixtures` jar):
 
 ```kotlin
 assertEquals(emptyList(), server.toolRegistrationProblems())
@@ -277,31 +278,38 @@ appended to the tool description automatically, so do not repeat it. `readOnly` 
 the graph or does a read-modify-write on a file shared with other tools (see
 [Concurrency](#concurrency)); such a tool runs exclusively and, within one chat turn, sequentially
 in the order the model called it. Both announce it to clients as the MCP annotation
-`readOnlyHint`, and the chat runs only tools that announce `true` concurrently. A host only needs to set `globalAnalysisResult`:
-`cpg_run_pass` runs passes with the context of that result itself. Its bookkeeping of which pass ran
-on which node (`nodeToPass`) is cleared when `cpg_analyze`/`cpg_translate` replace the graph; a host
-that swaps `globalAnalysisResult` on its own should call `nodeToPass.clear()` too.
+`readOnlyHint`, and the chat runs only tools that announce `true` concurrently.
 
-Tools find nodes by id through `result.findNodeById(id)`, which uses an index of the graph's AST
-nodes built on first use (a plain search walks the whole AST per lookup: about a second on a
-190,000-node graph). The index is dropped when `cpg_run_pass` or a re-analysis may have changed the
-AST; a host that adds or removes AST nodes itself, e.g. by running passes directly on the served
-graph, must call `NodeIndex.invalidate()` afterwards. Attaching overlays does not change the AST and
+A `addTool` handler gets the `CpgSession` the call is for (see [Concurrency](#concurrency)): its
+`translationResult`, the `translationContext` that `cpg_run_pass` runs further passes with, and
+`nodeToPass`, the bookkeeping of which pass ran on which node. A host only needs to register its
+graph with `registerSession(name, result)`; registering again under the same name replaces the
+session, bookkeeping included, as `cpg_analyze`/`cpg_translate` do.
+
+Tools find nodes by id through `session.findNodeById(id)`, which uses the session's index of the
+graph's AST nodes (`nodeIndex`), built on first use (a plain search walks the whole AST per lookup:
+about a second on a 190,000-node graph). The index is dropped when `cpg_run_pass` may have changed
+the AST; a host that adds or removes AST nodes itself, e.g. by running passes directly on the served
+graph, must call `session.nodeIndex.invalidate()` afterwards. Attaching overlays does not change the AST and
 needs nothing.
 
 ## Concurrency
 
-The server holds **one CPG per process** in `globalAnalysisResult`; every tool operates on it. Keep
-that in mind before sharing a server between independent users or runs.
+The server keeps **one `CpgSession` per analyzed project** in `analysisSessions`, keyed by the
+project name: `cpg_analyze` and `cpg_translate` return it, and `registerSession` takes it. Every CPG
+tool takes a `projectName`, which may be omitted while only one project is analyzed. All sessions
+live in one process; keep that in mind before sharing a server between independent users or runs.
 
-The graph is not thread-safe, so tool calls go through `CpgLock`, a read/write lock:
+A graph is not thread-safe, so tool calls go through its session's `CpgLock`, a read/write lock:
 
 - Tools registered through `addTool` run under the **read** lock by default, so any number of
   queries run in parallel.
 - Tools registered with `readOnly = false` run under the **write** lock, alone: `cpg_apply_concepts`,
   `cpg_run_pass` and `cpg_add_llm_concept_and_operations`. `cpg_analyze` and `cpg_translate` take it
   for the whole analysis, since they replace the graph. These are the tools marked *graph* in the
-  *Writes* column above. While one runs, every other call waits.
+  *Writes* column above. While one runs, every other call on that project waits. A re-analysis
+  replaces the project's session while holding the old one's write lock; a call that waited for it
+  then runs on the new session.
 - Tools registered with `addToolWithoutCpg` run without `CpgLock` and never wait for graph readers:
   `cpg_list_passes`, `cpg_list_available_concepts`, `cpg_list_available_operations` and
   `cpg_list_llm_concepts_operations` do not touch the graph, and `cpg_add_or_update_llm_concept`
@@ -310,9 +318,8 @@ The graph is not thread-safe, so tool calls go through `CpgLock`, a read/write l
 
 Both sides are reentrant, and a write holder may read. A tool that already holds the read lock cannot
 take the write lock (it would deadlock), so `CpgLock.write` throws instead - register such a tool with
-`readOnly = false`. Code that touches the graph outside an MCP call, e.g. a host assigning
-`globalAnalysisResult` while the server is running, can use `CpgLock.read { }` / `CpgLock.write { }`
-itself.
+`readOnly = false`. Code that touches a session's graph outside an MCP call can use
+`session.lock.read { }` / `session.lock.write { }` itself.
 
 ## Development
 
