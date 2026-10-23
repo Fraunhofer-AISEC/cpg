@@ -41,11 +41,11 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.io.TempDir
 
 /**
- * Frontmatter parsing/discovery-edge-case coverage now lives upstream (Koog's own
- * `SkillsDiscoveryTest`) since [ai.koog.skills.discovery.discoverSkills] replaced our hand-rolled
- * parser. What's left to test here is our own code: that discovery is wired up correctly against
- * the real fixtures, and - the security-relevant part - that [jailedSkillsFileSystem] actually
- * rejects paths outside the skills directory, including normalized `..` escapes.
+ * Tests our own skill code on top of Koog's [ai.koog.skills.discovery.discoverSkills], whose
+ * frontmatter parsing Koog's `SkillsDiscoveryTest` covers: that skills are discovered from the real
+ * fixtures, that the catalog for the system prompt carries their location for the file tools, and -
+ * the security-relevant part - that [jailedSkillsFileSystem] rejects every path outside the skills
+ * directory, including `..` escapes and symlinks pointing outside it.
  */
 class SkillFileToolsTest {
 
