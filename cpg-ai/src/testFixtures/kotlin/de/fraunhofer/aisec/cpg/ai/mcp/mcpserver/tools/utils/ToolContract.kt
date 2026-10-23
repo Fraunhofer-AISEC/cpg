@@ -41,7 +41,8 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * For tests of a host's tool set: every registered tool that breaks the conventions of [addTool] /
- * [addToolWithoutCpg], as "<tool>: <what is wrong>". Empty means fine.
+ * [addToolWithoutCpg], as "<tool>: <what is wrong>". Empty means fine. A project that registers its
+ * own tools next to cpg-ai's gets this from cpg-ai's `test-fixtures` artifact (classifier).
  *
  * Checks that each tool carries the [TYPED_ARGUMENTS_META_KEY] marker (i.e. was not registered
  * through the SDK's own `addTool`) and declares `readOnlyHint` (the chat runs only read-only tools

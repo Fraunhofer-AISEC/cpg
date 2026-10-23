@@ -71,8 +71,8 @@ import kotlinx.serialization.serializer
 
 /**
  * Key in a tool's `_meta` that marks it as registered through [addTool] or [addToolWithoutCpg], so
- * its arguments are decoded and reported the standard way. [toolRegistrationProblems] reports every
- * tool without it.
+ * its arguments are decoded and reported the standard way. `toolRegistrationProblems` (in cpg-ai's
+ * test fixtures) reports every tool without it.
  */
 const val TYPED_ARGUMENTS_META_KEY = "de.fraunhofer.aisec.cpg.ai/typedArguments"
 
@@ -159,7 +159,8 @@ internal fun withTypedArgumentsMarker(meta: JsonObject?): JsonObject =
  * them.
  *
  * Register every tool through this or [addToolWithoutCpg], never through the SDK's own `addTool`:
- * only these decode arguments the standard way, and [toolRegistrationProblems] flags the rest.
+ * only these decode arguments the standard way, and `toolRegistrationProblems` (in cpg-ai's test
+ * fixtures) flags the rest.
  */
 inline fun <reified T : HasProjectNamePayload> Server.addTool(
     name: String,

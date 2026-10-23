@@ -30,6 +30,8 @@ plugins {
     id("cpg.application-conventions")
     id("cpg.frontend-dependency-conventions")
     kotlin("plugin.serialization")
+    // ToolContract.kt: checks for tests of hosts that register their own tools (e.g. DUST)
+    `java-test-fixtures`
 }
 
 application {
@@ -91,6 +93,7 @@ dependencies {
     implementation(libs.bundles.ktor.client)
     implementation(libs.ktor.client.logging)
     implementation(libs.kotlinx.serialization.json)
+    testFixturesImplementation(libs.kotlinx.serialization.json)
 
     // Test dependencies
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
