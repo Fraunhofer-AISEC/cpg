@@ -21,69 +21,18 @@ on:
   merge_group:
   pull_request:
     types: [opened, synchronize, reopened]
+    # Keep in sync with build-skip.yml, which reports the required "build" check for these paths
+    paths-ignore:
+      - "docs/**"
+      - ".github/**"
+      - "!.github/workflows/build.yml"
 
 permissions:
   id-token: write
   contents: write
 
 jobs:
-  # Decides whether the (expensive) build needs to run at all. We cannot use `paths-ignore` for this
-  # on pull requests: the `build` job is a required status check, and a workflow which is skipped
-  # by a path filter never reports one, which would block the PR forever. A job which is skipped
-  # through `if` does report (as skipped), which satisfies the required check.
-  changes:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    outputs:
-      code: ${{ steps.filter.outputs.code }}
-    steps:
-      - id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Everything but pull requests (pushes to main, tags, merge queue) always builds
-          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          code=false
-          files=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --jq '.[].filename')
-          while IFS= read -r file; do
-            case "$file" in
-              # Only the build workflow itself can influence the build
-              .github/workflows/build.yml) code=true ;;
-              docs/*|.github/*) ;;
-              *) code=true ;;
-            esac
-          done <<< "$files"
-          echo "Needs a build: $code"
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-
-  # The single job to mark as required in the branch protection. It fails if the decision whether to
-  # build failed (a skipped `build` would otherwise look like success), and if `build` failed or was
-  # cancelled. It passes if `build` succeeded or was skipped because nothing relevant changed.
-  ci:
-    needs: [changes, build]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - env:
-          CHANGES: ${{ needs.changes.result }}
-          BUILD: ${{ needs.build.result }}
-          NEEDS_BUILD: ${{ needs.changes.outputs.code }}
-        run: |
-          echo "changes=$CHANGES, build=$BUILD, needs build=$NEEDS_BUILD"
-          [[ "$CHANGES" == "success" ]] || exit 1
-          if [[ "$NEEDS_BUILD" == "true" ]]; then
-            [[ "$BUILD" == "success" ]] || exit 1
-          else
-            [[ "$BUILD" == "skipped" ]] || exit 1
-          fi
-
   build:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
     timeout-minutes: 15
     runs-on: [self-hosted, Linux, ARM64]
     steps:
