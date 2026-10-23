@@ -27,18 +27,30 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasImportsFromRecords
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.newImport
 import de.fraunhofer.aisec.cpg.graph.newNamespace
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ImportResolverTest {
     @Test
@@ -115,4 +127,166 @@ class ImportResolverTest {
         assertEquals(2, b.value.size)
         assertEquals(setOf(a.key, c.key), b.value)
     }
+
+    /**
+     * Builds two files: `file.a` declares a record `a.C` with a static and a non-static method and
+     * `file.b` imports from it, both a single symbol and all symbols (like Java's static imports).
+     */
+    private fun buildRecordImports(language: TestLanguage): TranslationResult {
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(TranslationConfiguration.builder().defaultPasses().build()),
+                language = language,
+            )
+        return frontend.build {
+            val tuB = newTranslationUnit("file.b")
+            scopeManager.resetToGlobal(tuB)
+            newNamespace("b", holder = tuB, enterScope = true) { pkgB ->
+                newImport(
+                    parseName("a.C.staticMethod"),
+                    style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                    holder = pkgB,
+                ) {
+                    it.isStatic = true
+                }
+                newImport(
+                    parseName("a.C"),
+                    style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    holder = pkgB,
+                ) {
+                    it.isStatic = true
+                }
+            }
+
+            val tuA = newTranslationUnit("file.a")
+            scopeManager.resetToGlobal(tuA)
+            newNamespace("a", holder = tuA, enterScope = true) { pkgA ->
+                newRecord("C", "class", holder = pkgA, enterScope = true) { record ->
+                    newMethod(
+                        "staticMethod",
+                        isStatic = true,
+                        recordDeclaration = record,
+                        holder = record,
+                    )
+                    newMethod("instanceMethod", recordDeclaration = record, holder = record)
+                }
+            }
+
+            translationResult {
+                val app = components.firstOrNull()
+                app?.translationUnits?.add(tuB)
+                app?.translationUnits?.add(tuA)
+            }
+        }
+    }
+
+    @Test
+    fun testImportFromRecord() {
+        val result = buildRecordImports(RecordImportTestLanguage())
+
+        val record = result.records["a.C"]
+        assertNotNull(record)
+        val staticMethod = result.methods["a.C.staticMethod"]
+        assertNotNull(staticMethod)
+        val instanceMethod = result.methods["a.C.instanceMethod"]
+        assertNotNull(instanceMethod)
+
+        // Both imports point to the scope of the record
+        val pkgB = result.namespaces["b"]
+        assertNotNull(pkgB)
+        val recordScope = result.finalCtx.scopeManager.lookupScope(record)
+        assertIs<RecordScope>(recordScope)
+        assertEquals<Set<Scope>?>(
+            setOf(recordScope),
+            result.finalCtx.scopeManager.lookupScope(pkgB)?.importedScopes?.toSet(),
+        )
+
+        // Only the static method is imported, both as a single symbol and with the wildcard
+        val (single, wildcard) =
+            result.imports.partition { it.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE }
+        assertEquals(
+            listOf<Declaration>(staticMethod),
+            single.single().importedSymbols.values.flatten(),
+        )
+        val wildcardSymbols = wildcard.single().importedSymbols.values.flatten()
+        assertContains(wildcardSymbols, staticMethod)
+        assertFalse(instanceMethod in wildcardSymbols)
+
+        // The record is the source of the import, so file.b depends on file.a
+        val app = result.components.firstOrNull()
+        assertNotNull(app)
+        val b =
+            app.translationUnitDependencies?.entries?.firstOrNull {
+                it.key.name.toString() == "file.b"
+            }
+        assertNotNull(b)
+        assertEquals(setOf("file.a"), b.value.map { it.name.toString() }.toSet())
+    }
+
+    @Test
+    fun testImportFromRecordWithoutTrait() {
+        val result = buildRecordImports(TestLanguage())
+
+        // A language without the trait cannot import from a record
+        val pkgB = result.namespaces["b"]
+        assertNotNull(pkgB)
+        assertTrue(
+            result.finalCtx.scopeManager.lookupScope(pkgB)?.importedScopes?.none {
+                it is RecordScope
+            } == true
+        )
+    }
+
+    @Test
+    fun testInferImportTarget() {
+        // The target of a static import, both of a single symbol (`import static a.D.something`)
+        // and of all symbols (`import static a.D.*`), is the record `a.D`, which is not part of our
+        // graph
+        val imports =
+            mapOf(
+                ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE to "a.D.something",
+                ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE to "a.D",
+            )
+        for ((style, import) in imports) {
+            val frontend =
+                TestLanguageFrontend(
+                    ctx =
+                        TranslationContext(
+                            TranslationConfiguration.builder().defaultPasses().build()
+                        ),
+                    language = RecordImportTestLanguage(),
+                )
+            val result =
+                frontend.build {
+                    val tu = newTranslationUnit("file.b")
+                    scopeManager.resetToGlobal(tu)
+                    newNamespace("b", holder = tu, enterScope = true) { pkgB ->
+                        newImport(parseName(import), style = style, holder = pkgB) {
+                            it.isStatic = true
+                        }
+                    }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+                }
+
+            // Since this is a static import, we need to infer a record instead of a namespace
+            val record = result.records["a.D"]
+            assertNotNull(record, "expected an inferred record for $style")
+            assertTrue(record.isInferred)
+            assertNull(result.namespaces["a.D"])
+
+            val pkgB = result.namespaces["b"]
+            assertNotNull(pkgB)
+            val recordScope = result.finalCtx.scopeManager.lookupScope(record)
+            assertNotNull(recordScope)
+            assertEquals<Set<Scope>?>(
+                setOf(recordScope),
+                result.finalCtx.scopeManager.lookupScope(pkgB)?.importedScopes?.toSet(),
+            )
+        }
+    }
 }
+
+/** A [TestLanguage] that supports imports from records, similar to Java's static imports. */
+class RecordImportTestLanguage : TestLanguage(), HasClasses, HasImportsFromRecords
