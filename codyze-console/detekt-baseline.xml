@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:Router.kt$fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean)</ID>
+    <ID>LongMethod:Router.kt$fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean)</ID>
+    <ID>MagicNumber:Main.kt$8081</ID>
+    <ID>MatchingDeclarationName:Command.kt$ConsoleCommand : CliktCommand</ID>
+    <ID>MaxLineLength:ApplicationTest.kt$ApplicationTest$" \"error\": \"There is no argument with name \\\"path\\\" which is specified to generate the concept File\"\n"</ID>
+    <ID>SwallowedException:Router.kt$e: CancellationException</ID>
+    <ID>TooGenericExceptionCaught:ConsoleService.kt$ConsoleService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Main.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Router.kt$e: Exception</ID>
+    <ID>TooManyFunctions:ConsoleService.kt$ConsoleService</ID>
+    <ID>TooManyFunctions:Nodes.kt$de.fraunhofer.aisec.codyze.console.Nodes.kt</ID>
+    <ID>UseCheckOrError:ConsoleService.kt$ConsoleService$throw IllegalStateException("No analysis result found.")</ID>
+  </CurrentIssues>
+</SmellBaseline>

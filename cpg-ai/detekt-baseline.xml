@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:CpgAnalyzeTool.kt$fun Server.addListPasses()</ID>
+    <ID>ExplicitItLambdaParameter:CpgAnalyzeTool.kt${ old, it -> old + when (it.classifier) { EOGStarterPass::class -> EOGStarterHolder::class.qualifiedName.toString() TranslationUnitPass::class -> TranslationUnit::class.qualifiedName.toString() TranslationResultPass::class -> TranslationResult::class.qualifiedName.toString() ComponentPass::class -> Component::class.qualifiedName.toString() else -> "" } }</ID>
+    <ID>ForbiddenComment:CpgApplyConceptsTool.kt$// TODO: handle arguments</ID>
+    <ID>ForbiddenComment:Util.kt$// TODO: The concept/operation build helper are explicitly checking against underlying</ID>
+    <ID>LongMethod:CpgAnalyzeTool.kt$fun Server.addListPasses()</ID>
+    <ID>LongMethod:CpgAnalyzeTool.kt$fun Server.addRunPass()</ID>
+    <ID>LongMethod:CpgAnalyzeTool.kt$fun runCpgAnalyze( payload: CpgAnalyzePayload?, runPasses: Boolean, cleanup: Boolean, ): CpgAnalysisResult</ID>
+    <ID>LongMethod:CpgApplyConceptsTool.kt$fun Server.addCpgApplyConceptsTool()</ID>
+    <ID>LongMethod:CpgGenericConceptsTool.kt$fun Server.addLLMConceptAndOperations()</ID>
+    <ID>LongMethod:CpgSuggestConceptsPrompt.kt$fun Server.addSuggestConceptsPrompt()</ID>
+    <ID>LongMethod:GeminiClient.kt$GeminiClient$override suspend fun sendPrompt( userMessage: String, systemPrompt: String, conversationHistory: List&lt;ChatMessageJSON>, tools: List&lt;Tool>, toolCallHistory: List&lt;List&lt;ToolCallWithResult>>?, onText: suspend (String) -> Unit, onReasoning: suspend (String) -> Unit, ): List&lt;ToolCall></ID>
+    <ID>LongMethod:JsonSchemaGeneratorTest.kt$JsonSchemaGeneratorTest$@Test fun testComplexSchema()</ID>
+    <ID>LongParameterList:CpgAnalyzeTool.kt$( nodeToPass: IdentityHashMap&lt;Node, MutableSet&lt;KClass&lt;out Pass&lt;*>>>>, result: TranslationResult, node: Node, passClass: KClass&lt;out Pass&lt;T>>, ctx: TranslationContext, preList: List&lt;T>? = null, )</ID>
+    <ID>LongParameterList:LlmClient.kt$LlmClient$( userMessage: String, systemPrompt: String, conversationHistory: List&lt;ChatMessageJSON> = emptyList(), tools: List&lt;Tool> = emptyList(), toolCallHistory: List&lt;List&lt;ToolCallWithResult>>? = null, onText: suspend (String) -> Unit, onReasoning: suspend (String) -> Unit = {}, )</ID>
+    <ID>LongParameterList:Util.kt$( name: String, description: String, title: String? = null, outputSchema: ToolSchema? = null, toolAnnotations: ToolAnnotations? = null, meta: JsonObject? = null, noinline handler: (CpgSession, T) -> CallToolResult, )</ID>
+    <ID>LoopWithTooManyJumpStatements:SkillLoader.kt$SkillLoader$for</ID>
+    <ID>LoopWithTooManyJumpStatements:Util.kt$while</ID>
+    <ID>MagicNumber:ChatService.kt$ChatService$50</ID>
+    <ID>MagicNumber:ChatService.kt$ChatService.Companion$30_000</ID>
+    <ID>MagicNumber:ChatService.kt$ChatService.Companion$600_000</ID>
+    <ID>MagicNumber:GeminiClient.kt$GeminiClient$400</ID>
+    <ID>MagicNumber:LlmProviderConfig.kt$LlmProviderConfig$2_000L</ID>
+    <ID>MagicNumber:SkillLoader.kt$SkillLoader$3</ID>
+    <ID>MatchingDeclarationName:CpgGetLastWriteTool.kt$LastWriteInfo</ID>
+    <ID>MaxLineLength:CpgAnalyzeTool.kt$"""Provides a list of all available passes that can be applied to the CPG. It also lists dependencies and what kind of node the pass expects."""</ID>
+    <ID>MaxLineLength:CpgAnalyzeTool.kt$"""Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""</ID>
+    <ID>MaxLineLength:CpgAnalyzeTool.kt$"Expected node of type ${typeOf&lt;T>()} for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"</ID>
+    <ID>MaxLineLength:CpgApplyConceptsTool.kt$"Applied concept ${assignment.overlay} to node ${assignment.nodeId} (${node::class.simpleName})"</ID>
+    <ID>MaxLineLength:CpgApplyConceptsTool.kt$"Applied operation ${assignment.overlay} to node ${assignment.nodeId} with concept ${concept::class.simpleName}"</ID>
+    <ID>MaxLineLength:CpgApplyConceptsTool.kt$"Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node $conceptNodeId"</ID>
+    <ID>MaxLineLength:CpgApplyConceptsTool.kt$"Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: conceptNodeId is required for operations"</ID>
+    <ID>MaxLineLength:CpgApplyConceptsTool.kt$"Failed to create ${assignment.overlayType} ${assignment.overlay} for node ${assignment.nodeId}: ${e.message}"</ID>
+    <ID>MaxLineLength:CpgGenericConceptsTool.kt$"Property \"${property.name}\" declares type $NODE_REFERENCE_TYPE but node ${property.value} was not found or ambiguous."</ID>
+    <ID>MaxLineLength:CpgGenericConceptsTool.kt$"Property \"${property.name}\" declares type ${property.type} but its value \"${property.value}\" cannot be parsed as that type."</ID>
+    <ID>MaxLineLength:CpgGenericConceptsTool.kt$"Underlying CPG node ${operation.nodeId} not found for operation \"${operation.name}\"."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"**IMPORTANT**: After providing your suggestions, WAIT for user approval before applying anything. Do not automatically call `cpg_apply_concepts`."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"- Examples: requests.post() → HttpRequest, file.write() → FileWrite, encrypt() → Encryption"</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"1. **Domain consistency**: Operations must match their Concept's domain (e.g., GetSecret needs Secret, HttpRequest needs HttpClient)"</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"2. **Operations always need Concepts**: Every Operation MUST have a conceptNodeId pointing to an existing Concept node. Concepts can stand alone."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"3. **Use only existing overlays**: Only use the concepts and operations listed below."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"Generates a prompt that guides the LLM to suggest CPG concepts and operations for the analyzed code. Use this before applying concepts with cpg_apply_concepts."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"Identify nodes in the CPG that represent security-relevant data or operations, and suggest appropriate concept/operation overlays for them."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"Optional additional context or focus area for the analysis, e.g. 'focus on authentication handling' or 'look for encryption handling'."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"The listing tools e.g., `cpg_list_functions` or `cpg_list_records`, provide a summary of functions or classes with the name, parameters and code."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"This allows us to analyze how sensitive data flows through the code and discover security-relevant patterns."</ID>
+    <ID>MaxLineLength:CpgSuggestConceptsPrompt.kt$"To inspect interesting nodes in more detail use `cpg_get_node`. This retrieves the complete details of a specific node filtered by its ID."</ID>
+    <ID>MaxLineLength:ListCommands.kt$"This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph."</ID>
+    <ID>MaxLineLength:Payloads.kt$"The name of the analyzed project this tool should operate on, as returned by cpg_analyze or cpg_translate. Can be omitted if only one project is analyzed."</ID>
+    <ID>MaxLineLength:Payloads.kt$CpgAnalyzePayload$"The contents of the file which should be analyzed. Alternatively, 'path' can be used to analyze files or whole projects on the local filesystem."</ID>
+    <ID>MaxLineLength:Payloads.kt$CpgAnalyzePayload$"The file extension. This is required to identify the programming language when providing 'content' and should resemble the typical file ending (e.g. '.py' for python, '.c' for C code)."</ID>
+    <ID>MaxLineLength:Payloads.kt$CpgAnalyzePayload$"The path to a source file or a project directory (e.g., a repository checkout) on the local filesystem. For directories, the project structure is detected automatically, e.g., components based on Go modules or a C/C++ compilation database (compile_commands.json). Either 'path' or 'content' must be provided."</ID>
+    <ID>MaxLineLength:Payloads.kt$CpgCallArgumentByNameOrIndexPayload$"The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here."</ID>
+    <ID>MaxLineLength:Payloads.kt$PassInfo$"A list of passes whose results are required for this pass to run correctly. These are hard requirements. Note that it may be sufficient to run these passes for the same nodes that this pass should run on and may not require analyzing the whole CPG."</ID>
+    <ID>MaxLineLength:Payloads.kt$PassInfo$"A list of passes whose results can enhance the analysis of this pass but are not strictly necessary. These are soft requirements. However, if the passes in this list may be run on the node, this should happen before this pass."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMConcept$"The description of the concept. It should explain the concept in more detail and provide guidance on when to apply it."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMConcept$"The properties to set for the concept. Each property should have a name and a value. The name should match the name of a parameter defined in the concept description, and the value should be the corresponding value for this specific application of the concept."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMConceptDescription$"The description of the concept. It should explain the concept in more detail and provide guidance on when to apply it."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMConceptDescription$"The operations that can be applied to this concept. Each operation should have a name, a description, and a list of parameters."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMOperation$"The description of the operation. It should explain what the operation does and provide guidance on when to apply it."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMOperation$"The properties to set for the operation. Each property should have a name and a value. The name should match the name of a parameter defined in the operation description, and the value should be the corresponding value for this specific application of the operation."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMOperationDescription$"The description of the operation. It should explain what the operation does and provide guidance on when to apply it."</ID>
+    <ID>MaxLineLength:PayloadsLLMConceptsOperations.kt$LLMProperty$"If `type` is \"NodeReference\", this must be the CPG id of an existing node from the current translation "</ID>
+    <ID>MaxLineLength:SkillTool.kt$*</ID>
+    <ID>NestedBlockDepth:SkillLoader.kt$SkillLoader$fun discoverSkills(): List&lt;Skill></ID>
+    <ID>ReturnCount:CpgGenericConceptsTool.kt$internal fun loadPersistedConceptsAndOperations(): List&lt;LLMConceptDescription></ID>
+    <ID>ReturnCount:LlmProviderConfig.kt$LlmProviderConfig$fun clientFor(clientName: String, model: String): LlmClient?</ID>
+    <ID>ReturnCount:SkillLoader.kt$SkillLoader$fun parseSkill(skillMd: Path): Skill?</ID>
+    <ID>SpreadOperator:CpgAnalyzeTool.kt$( TextContent("Successfully ran ${payload.passName} on node ${payload.nodeId}."), *executedPasses.toTypedArray(), )</ID>
+    <ID>SpreadOperator:CpgAnalyzeTool.kt$( TextContent(passResult.message), *executedPasses.toTypedArray(), )</ID>
+    <ID>SwallowedException:Util.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ChatService.kt$ChatService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CpgAnalyzeTool.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CpgApplyConceptsTool.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LlmProviderConfig.kt$LlmProviderConfig$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Util.kt$e: Exception</ID>
+    <ID>TooManyFunctions:ChatService.kt$ChatService</ID>
+    <ID>TooManyFunctions:Util.kt$de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.Util.kt</ID>
+    <ID>TopLevelPropertyNaming:CpgGenericConceptsTool.kt$private const val fileName = "concepts.yaml"</ID>
+    <ID>TopLevelPropertyNaming:McpServer.kt$const val cpgDescription = """ This server provides tools to analyze the Fraunhofer AISEC CPG (Code Property Graph) and allows to perform various operations on it. A CPG is a supergraph which consists of several subgraphs: The AST (Abstract Syntax Tree) represents the code's structure and allows to navigate between the children and parents of individual nodes. The DFG (Data Flow Graph) indicates that there are dataflows between two nodes. The EOG (Evaluation Order Graph) represents the order in which nodes are evaluated on runtime of the program. The CDG (Control Dependence Graph) indicates conditional executions of nodes, i.e., an edge in the CDG indicates that the target node is executed only if the source node is executed. The PDG (Program Dependence Graph) combines the DFG and CDG to represent both data and control dependencies. Each edge in the DFG, EOG, CDG and PDG works as follows: There is a source node and a target node and the source flows into target during a forward analysis, which is indicated by nextDFG, nextEOG, nextCDG or nextPDG. Each edge is mirrored in the reverse direction, i.e., there is a prevDFG, prevEOG, prevCDG or prevPDG edge. For the edges in the AST, the children are the target node of the ast edge, the opposite direction is called astParent. Further edges are the invokes edges which represent (potential) function and method calls between a Call and a Function or Method. The DFG is inter-procedural, meaning that it can also represent data flows between different functions or methods. Each node in the CPG has a unique ID, a name, a location in the file, and potentially one or multiple OverlayNodes which associate a node with additional information. Examples of an OverlayNode are Concept and Operation, which are connected to their underlyingNode via the overlay/underlyingNode edge and are also connected with DFG and EOG edges. """</ID>
+    <ID>UseRequire:CpgAnalyzeTool.kt$throw IllegalArgumentException( "Extension is required when providing content" )</ID>
+  </CurrentIssues>
+</SmellBaseline>

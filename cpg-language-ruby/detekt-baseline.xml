@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: Ruby returns the last expression, if there is no explicit return</ID>
+    <ID>MagicNumber:RubyLanguage.kt$RubyLanguage$64</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleClassNode(node: ClassNode): Record</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : RubyHandler</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -1,0 +1,312 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:DeclarationHandler.kt$DeclarationHandler$fun handleEnum(enum: RsEnum): Declaration</ID>
+    <ID>CyclomaticComplexMethod:DeclarationHandler.kt$DeclarationHandler$private fun handleFunctionDeclaration(fn: RsFn): Function</ID>
+    <ID>CyclomaticComplexMethod:DeclarationHandler.kt$DeclarationHandler$private fun handleImpl(impl: RsImpl): Declaration</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$fun buildIntType(literal: String, raw: Any): Literal&lt;*></ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$fun handleLiteral(literal: RsLiteral): Expression</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$fun handleNode(node: RsExpr): Expression</ID>
+    <ID>CyclomaticComplexMethod:PatternHandler.kt$PatternHandler$fun handleNode(node: RsPat): Expression</ID>
+    <ID>CyclomaticComplexMethod:Rust.kt$fun RsExpr.astNode(): RsNode</ID>
+    <ID>CyclomaticComplexMethod:Rust.kt$fun RsItem.astNode(): RsNode</ID>
+    <ID>CyclomaticComplexMethod:Rust.kt$fun RsPat.astNode(): RsNode</ID>
+    <ID>CyclomaticComplexMethod:Rust.kt$fun RsType.astNode(): RsNode</ID>
+    <ID>CyclomaticComplexMethod:RustLanguageFrontend.kt$RustLanguageFrontend$override fun typeOf(type: RsType): Type</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$fun handleLetStmt(letStmt: RsLetStmt): Expression</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSExpr$override fun allocationSize(value: RsExpr)</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSExpr$override fun read(buf: ByteBuffer): RsExpr</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSExpr$override fun write(value: RsExpr, buf: ByteBuffer)</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSItem$override fun allocationSize(value: RsItem)</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSItem$override fun read(buf: ByteBuffer): RsItem</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSItem$override fun write(value: RsItem, buf: ByteBuffer)</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSPat$override fun allocationSize(value: RsPat)</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSPat$override fun read(buf: ByteBuffer): RsPat</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSPat$override fun write(value: RsPat, buf: ByteBuffer)</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSType$override fun allocationSize(value: RsType)</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSType$override fun read(buf: ByteBuffer): RsType</ID>
+    <ID>CyclomaticComplexMethod:rustast.kt$FfiConverterTypeRSType$override fun write(value: RsType, buf: ByteBuffer)</ID>
+    <ID>EmptyClassBlock:RustLanguage.kt$RustLanguage.Companion${}</ID>
+    <ID>FunctionNaming:rustast.kt$IntegrityCheckingUniffiLib$external fun ffi_rustast_uniffi_contract_version(): Int</ID>
+    <ID>FunctionNaming:rustast.kt$IntegrityCheckingUniffiLib$external fun uniffi_rustast_checksum_func_parse_rust_code(): Short</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_f32(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_f64(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_i16(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_i32(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_i64(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_i8(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_rust_buffer(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_u16(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_u32(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_u64(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_u8(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_cancel_void(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_f32( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Float</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_f64( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Double</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_i16( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Short</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_i32( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Int</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_i64( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Long</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_i8( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Byte</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_rust_buffer( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): RustBuffer.ByValue</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_u16( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Short</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_u32( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Int</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_u64( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Long</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_u8( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Byte</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_complete_void( `handle`: Long, uniffi_out_err: UniffiRustCallStatus, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_f32(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_f64(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_i16(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_i32(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_i64(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_i8(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_rust_buffer(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_u16(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_u32(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_u64(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_u8(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_free_void(`handle`: Long): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_f32( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_f64( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_i16( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_i32( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_i64( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_i8( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_rust_buffer( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_u16( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_u32( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_u64( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_u8( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rust_future_poll_void( `handle`: Long, `callback`: UniffiRustFutureContinuationCallback, `callbackData`: Long, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rustbuffer_alloc( `size`: Long, uniffi_out_err: UniffiRustCallStatus, ): RustBuffer.ByValue</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rustbuffer_free( `buf`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus, ): Unit</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rustbuffer_from_bytes( `bytes`: ForeignBytes.ByValue, uniffi_out_err: UniffiRustCallStatus, ): RustBuffer.ByValue</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun ffi_rustast_rustbuffer_reserve( `buf`: RustBuffer.ByValue, `additional`: Long, uniffi_out_err: UniffiRustCallStatus, ): RustBuffer.ByValue</ID>
+    <ID>FunctionNaming:rustast.kt$UniffiLib$external fun uniffi_rustast_fn_func_parse_rust_code( `source`: RustBuffer.ByValue, uniffi_out_err: UniffiRustCallStatus, ): RustBuffer.ByValue</ID>
+    <ID>FunctionNaming:rustast.kt$fun `parseRustCode`(`source`: String): RsSourceFile?</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiCallbackInterfaceClone$`handle`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiCallbackInterfaceFree$`handle`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteF32$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteF32$`result`: UniffiForeignFutureResultF32.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteF64$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteF64$`result`: UniffiForeignFutureResultF64.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI16$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI16$`result`: UniffiForeignFutureResultI16.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI32$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI32$`result`: UniffiForeignFutureResultI32.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI64$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI64$`result`: UniffiForeignFutureResultI64.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI8$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteI8$`result`: UniffiForeignFutureResultI8.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteRustBuffer$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteRustBuffer$`result`: UniffiForeignFutureResultRustBuffer.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU16$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU16$`result`: UniffiForeignFutureResultU16.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU32$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU32$`result`: UniffiForeignFutureResultU32.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU64$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU64$`result`: UniffiForeignFutureResultU64.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU8$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteU8$`result`: UniffiForeignFutureResultU8.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteVoid$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureCompleteVoid$`result`: UniffiForeignFutureResultVoid.UniffiByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiForeignFutureDroppedCallback$`handle`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`additional`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`buf`: RustBuffer.ByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`bytes`: ForeignBytes.ByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`callbackData`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`callback`: UniffiRustFutureContinuationCallback</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`handle`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`size`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$`source`: RustBuffer.ByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiLib$uniffi_out_err: UniffiRustCallStatus</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiRustCallStatusErrorHandler$error_buf: RustBuffer.ByValue</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiRustFutureContinuationCallback$`data`: Long</ID>
+    <ID>FunctionParameterNaming:rustast.kt$UniffiRustFutureContinuationCallback$`pollResult`: Byte</ID>
+    <ID>FunctionParameterNaming:rustast.kt$`source`: String</ID>
+    <ID>InstanceOfCheckForException:rustast.kt$e is E</ID>
+    <ID>InvalidPackageDeclaration:rustast.kt$package uniffi.rustast</ID>
+    <ID>LargeClass:ExpressionHandler.kt$ExpressionHandler : RustHandler</ID>
+    <ID>LongMethod:ControlFlowTest.kt$ControlFlowTest$@Test fun testMatch()</ID>
+    <ID>LongMethod:DeclarationsTest.kt$DeclarationsTest$@Test fun testEnumExpression()</ID>
+    <ID>LongMethod:ExpressionHandler.kt$ExpressionHandler$fun handleTryExpr(tryExpr: RsTryExpr): Expression</ID>
+    <ID>LongMethod:ExpressionsTest.kt$ExpressionsTest$@Test fun testIndexExpression()</ID>
+    <ID>LongMethod:ExpressionsTest.kt$ExpressionsTest$@Test fun testRecordExpression()</ID>
+    <ID>LongMethod:RustLanguageFrontendTest.kt$RustLanguageFrontendTest$@Test fun testFunctionResolutionWithUse()</ID>
+    <ID>LongMethod:rustast.kt$FfiConverterTypeRSExpr$override fun allocationSize(value: RsExpr)</ID>
+    <ID>LongMethod:rustast.kt$FfiConverterTypeRSExpr$override fun write(value: RsExpr, buf: ByteBuffer)</ID>
+    <ID>LongMethod:rustast.kt$FfiConverterTypeRSItem$override fun write(value: RsItem, buf: ByteBuffer)</ID>
+    <ID>LongMethod:rustast.kt$FfiConverterTypeRSPat$override fun write(value: RsPat, buf: ByteBuffer)</ID>
+    <ID>LongMethod:rustast.kt$FfiConverterTypeRSType$override fun write(value: RsType, buf: ByteBuffer)</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$10</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$127</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$16</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$8</ID>
+    <ID>MagicNumber:RustLanguage.kt$RustLanguage$128</ID>
+    <ID>MagicNumber:RustLanguage.kt$RustLanguage$16</ID>
+    <ID>MagicNumber:RustLanguage.kt$RustLanguage$32</ID>
+    <ID>MagicNumber:RustLanguage.kt$RustLanguage$64</ID>
+    <ID>MagicNumber:RustLanguage.kt$RustLanguage$8</ID>
+    <ID>MagicNumber:rustast.kt$30</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAdt$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAsmOperand$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAsmOperand$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAsmPiece$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAssocItem$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAssocItem$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAst$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAst$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAst$5</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAst$6</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAst$7</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAst$8</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSAst$9</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$10</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$11</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$12</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$13</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$14</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$15</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$16</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$17</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$18</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$19</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$20</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$21</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$22</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$23</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$24</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$25</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$26</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$27</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$28</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$29</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$30</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$31</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$32</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$33</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$34</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$35</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$36</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$37</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$38</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$39</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$40</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$41</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$5</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$6</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$7</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$8</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExpr$9</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExternItem$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSExternItem$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSGenericArg$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSGenericArg$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSGenericParam$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$10</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$11</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$12</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$13</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$14</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$15</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$16</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$17</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$18</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$19</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$5</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$6</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$7</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$8</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSItem$9</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$10</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$11</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$12</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$13</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$14</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$15</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$16</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$17</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$5</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$6</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$7</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$8</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSPat$9</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSStmt$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$10</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$11</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$12</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$13</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$14</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$3</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$4</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$5</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$6</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$7</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$8</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSType$9</ID>
+    <ID>MagicNumber:rustast.kt$FfiConverterTypeRSVariantDef$3</ID>
+    <ID>MaxLineLength:ExpressionHandler.kt$ExpressionHandler$"Modeling match as a switch leads to an overapproximation of EOG paths as switch fallthrough can lead to guards being evaluated that would fail at the pattern matching, i.e. case expression."</ID>
+    <ID>MaxLineLength:ExpressionHandler.kt$ExpressionHandler$*</ID>
+    <ID>MaxLineLength:RustLanguage.kt$RustLanguage$"Argument type of call to {} ({}) does not match type annotation on the function parameter ({}), we ignore this"</ID>
+    <ID>MaxLineLength:RustLanguageFrontendTest.kt$RustLanguageFrontendTest$"Function '$functionName' should have at least ${matchIndex + 1} match statement(s). Found: ${switchStatements.size}"</ID>
+    <ID>MaxLineLength:RustLanguageFrontendTest.kt$RustLanguageFrontendTest$"Match #$matchIndex in function '$functionName' should have DFG path to literal '$expectedLiteral'. Found: $reachableLiterals"</ID>
+    <ID>MaxLineLength:RustLanguageFrontendTest.kt$RustLanguageFrontendTest$"Variable '$variableName' should have DFG path to literal '$expectedLiteral'. Found: $reachableLiterals"</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$fun handleEnum(enum: RsEnum): Declaration</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleFunctionDeclaration(fn: RsFn): Function</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleImpl(impl: RsImpl): Declaration</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleStruct(struct: RsStruct): Declaration</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleTrait(trait: RsTrait): Declaration</ID>
+    <ID>NestedBlockDepth:StatementHandler.kt$StatementHandler$fun handleLetStmt(letStmt: RsLetStmt): Expression</ID>
+    <ID>NestedBlockDepth:rustast.kt$Disposable.Companion$fun destroy(vararg args: Any?)</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$fun handleBinExpr(binExpr: RsBinExpr): Expression</ID>
+    <ID>ReturnCount:PatternHandler.kt$PatternHandler$fun handleIdentPat(identPat: RsIdentPat): Expression</ID>
+    <ID>ReturnCount:RustLanguageFrontend.kt$RustLanguageFrontend$fun typeFromPath(typePath: RsType.PathType): Type</ID>
+    <ID>ReturnCount:StatementHandler.kt$StatementHandler$fun handleLetStmt(letStmt: RsLetStmt): Expression</ID>
+    <ID>SwallowedException:rustast.kt$e: Throwable</ID>
+    <ID>ThrowsCount:rustast.kt$private fun &lt;E : Exception> uniffiCheckCallStatus( errorHandler: UniffiRustCallStatusErrorHandler&lt;E>, status: UniffiRustCallStatus, )</ID>
+    <ID>TooGenericExceptionCaught:rustast.kt$FfiConverter$e: Throwable</ID>
+    <ID>TooGenericExceptionCaught:rustast.kt$FfiConverterTypeRSLiteralType$e: IndexOutOfBoundsException</ID>
+    <ID>TooGenericExceptionCaught:rustast.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:rustast.kt$e: Throwable</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverter$throw RuntimeException( "junk remaining in buffer after lifting, something is very wrong!!" )</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSAdt$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSAsmOperand$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSAsmPiece$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSAssocItem$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSAst$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSExpr$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSExternItem$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSFieldList$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSGenericArg$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSGenericParam$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSItem$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSLiteralType$throw RuntimeException("invalid enum value, something is very wrong!!", e)</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSPat$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSStmt$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSType$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSUseBoundGenericArg$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$FfiConverterTypeRSVariantDef$throw RuntimeException("invalid enum value, something is very wrong!!")</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$RustBuffer.Companion$throw RuntimeException( "RustBuffer.alloc() returned null data pointer (size=${size})" )</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$throw RuntimeException( "UniFFI API checksum mismatch: try cleaning and rebuilding your project" )</ID>
+    <ID>TooGenericExceptionThrown:rustast.kt$throw RuntimeException( "UniFFI contract version mismatch: try cleaning and rebuilding your project" )</ID>
+    <ID>TooManyFunctions:DeclarationHandler.kt$DeclarationHandler : RustHandler</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : RustHandler</ID>
+    <ID>TooManyFunctions:PatternHandler.kt$PatternHandler : RustHandler</ID>
+    <ID>TooManyFunctions:rustast.kt$UniffiLib</ID>
+    <ID>TooManyFunctions:rustast.kt$uniffi.rustast.rustast.kt</ID>
+    <ID>UnusedPrivateProperty:ExpressionsTest.kt$ExpressionsTest$val firstArg = pointConstruction.arguments.first()</ID>
+    <ID>UnusedPrivateProperty:RustLanguageFrontend.kt$RustLanguageFrontend$private val tokenTypeIndex = 0</ID>
+    <ID>VariableNaming:ExpressionsTest.kt$ExpressionsTest$val literal_in_expression = tu.functions["literal_in_expression"]</ID>
+    <ID>VariableNaming:ExpressionsTest.kt$ExpressionsTest$val z_values = z.collectAllPrevDFGPaths() .flatMap { it.nodes } .filterIsInstance&lt;Literal&lt;*>>() .map { it.value.toString() } .toSet()</ID>
+    <ID>VariableNaming:rustast.kt$UniffiRustCallStatus$@JvmField var error_buf: RustBuffer.ByValue = RustBuffer.ByValue()</ID>
+    <ID>VariableNaming:rustast.kt$val bindings_contract_version = 30</ID>
+    <ID>VariableNaming:rustast.kt$val return_value = callback(status)</ID>
+    <ID>VariableNaming:rustast.kt$val scaffolding_contract_version = lib.ffi_rustast_uniffi_contract_version()</ID>
+  </CurrentIssues>
+</SmellBaseline>

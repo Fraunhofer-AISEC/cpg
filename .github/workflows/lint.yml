@@ -1,0 +1,51 @@
+name: lint
+
+# Static analysis that doesn't need the full test/integration toolchain (Neo4j, JEP, Go, Node).
+# Runs independently of and in parallel with `build`, so Kotlin-quality feedback shows up without
+# waiting for the full ~15 minute build+test job.
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - "docs/**"
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  detekt:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: cp gradle.properties.example gradle.properties
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "corretto"
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Run detekt
+        run: ./gradlew --parallel detekt
+      - name: Collect detekt SARIF reports
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p detekt-sarif
+          find . -path '*/build/reports/detekt/detekt.sarif' -print0 |
+            xargs -0 -I{} sh -c 'cp "{}" "detekt-sarif/$(echo "{}" | tr "/" "_")"'
+      - name: Upload SARIF results
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: detekt-sarif
+          category: detekt

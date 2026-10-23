@@ -1,0 +1,179 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:CPPLanguage.kt$CPPLanguage$expr is UnaryOperator &amp;&amp; (expr.operatorCode == "++" || expr.operatorCode == "--") &amp;&amp; expr.isPostfix</ID>
+    <ID>ComplexCondition:CXXLanguageFrontend.kt$CXXLanguageFrontend$specifier is CASTSimpleDeclSpecifier &amp;&amp; specifier.type == IASTSimpleDeclSpecifier.t_unspecified &amp;&amp; !isImplicitModifiedBaseType(specifier) &amp;&amp; it.declarator.name.toString() != ""</ID>
+    <ID>ComplexCondition:DeclaratorHandler.kt$DeclaratorHandler$name.isNotEmpty() &amp;&amp; ctx.parent is CPPASTDeclarator &amp;&amp; declaration.body == null &amp;&amp; frontend.scopeManager.currentFunction != null</ID>
+    <ID>ComplexCondition:ParameterDeclarationHandler.kt$ParameterDeclarationHandler$specifier is CASTSimpleDeclSpecifier &amp;&amp; specifier.type == IASTSimpleDeclSpecifier.t_unspecified &amp;&amp; !frontend.isImplicitModifiedBaseType(specifier) &amp;&amp; ctx.declarator.name.toString() != ""</ID>
+    <ID>CyclomaticComplexMethod:CXXLanguageFrontend.kt$CXXLanguageFrontend$private fun adjustType(declarator: IASTDeclarator, incoming: Type): Type</ID>
+    <ID>CyclomaticComplexMethod:CXXLanguageFrontend.kt$CXXLanguageFrontend$private fun typeOf(specifier: IASTSimpleDeclSpecifier, hint: Declaration? = null): Type</ID>
+    <ID>CyclomaticComplexMethod:DeclarationHandler.kt$DeclarationHandler$private fun addIncludes( translationUnit: IASTTranslationUnit, problematicIncludes: Map&lt;String?, Set&lt;ProblemDeclaration>>, node: TranslationUnit, )</ID>
+    <ID>CyclomaticComplexMethod:DeclarationHandler.kt$DeclarationHandler$private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration</ID>
+    <ID>CyclomaticComplexMethod:DeclaratorHandler.kt$DeclaratorHandler$@ResolveInFrontend("lookupScope") private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$override fun handleNode(node: IASTNode): Expression</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleUnaryExpression(ctx: IASTUnaryExpression): Expression</ID>
+    <ID>CyclomaticComplexMethod:FunctionPointerTest.kt$FunctionPointerTest$@Throws(Exception::class) fun test(language: String, configModifier: Consumer&lt;TranslationConfiguration.Builder>? = null)</ID>
+    <ID>CyclomaticComplexMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testCallingContexts()</ID>
+    <ID>CyclomaticComplexMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testFunctionSummaries()</ID>
+    <ID>CyclomaticComplexMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testGhidraCode()</ID>
+    <ID>CyclomaticComplexMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testMemcpy()</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$override fun handleNode(node: IASTStatement): Expression</ID>
+    <ID>ForbiddenComment:CLanguage.kt$CLanguage$// Linux. This is also the current implementation in CPPLanguage. TODO: On Windows,</ID>
+    <ID>ForbiddenComment:CXXLanguageFrontend.kt$CXXLanguageFrontend$// TODO: We should actually report this as a "problem" somehow</ID>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: A problem with cpp functions is that we cannot know if they may throw an exception</ID>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.</ID>
+    <ID>ForbiddenComment:EOGTest.kt$EOGTest$// TODO: until explicitly added Return Statements are either removed again or code and</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$// TODO: The scope manager isn't able to resolve this correctly.</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$// TODO: handle this? convert the declared reference expression into a member expression?</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: (not sure where the prevDFG to the member is coming from)</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: Actually, we should only have one memcpy_s</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: If we are being picky, since the partial edge points to "i", should we really have</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: This could also be the original value since there is an if</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: We could also check for the partial DFG Edges</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: We have deref(deref)value edges to the strlcpy PMV, not sure if this makes sense</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: shouldn't b also have partial edges to other previous writes such as the other</ID>
+    <ID>ForbiddenComment:PointsToPassTest.kt$PointsToPassTest$// TODO: the partial writes should have a partial Granularity</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: Specify the contained language through a language node and find a way to run a</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: can also be an 'unnamed' parameter. In this case we should not declare a</ID>
+    <ID>InvalidPackageDeclaration:SlowAsHellTest.kt$package de.fraunhofer.aisec.cpg.frontends.cxx</ID>
+    <ID>InvalidPackageDeclaration:StronglyConnectedComponentTest.kt$package de.fraunhofer.aisec.cpg.frontends.cxx</ID>
+    <ID>LargeClass:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest : BaseTest</ID>
+    <ID>LargeClass:CallResolverTest.kt$CallResolverTest : BaseTest</ID>
+    <ID>LargeClass:EOGTest.kt$EOGTest : BaseTest</ID>
+    <ID>LargeClass:ExpressionHandler.kt$ExpressionHandler : CXXHandler</ID>
+    <ID>LargeClass:PointsToPassTest.kt$PointsToPassTest</ID>
+    <ID>LongMethod:CPPLanguage.kt$CPPLanguage$override fun handleTemplateFunctionCalls( curClass: Record?, templateCall: Call, applyInference: Boolean, ctx: TranslationContext, currentTU: TranslationUnit?, needsExactMatch: Boolean, ): Pair&lt;Boolean, List&lt;Function>></ID>
+    <ID>LongMethod:CXXLanguageFrontend.kt$CXXLanguageFrontend$@Throws(TranslationException::class) override fun parse(file: File): TranslationUnit</ID>
+    <ID>LongMethod:CXXLanguageFrontend.kt$CXXLanguageFrontend$private fun adjustType(declarator: IASTDeclarator, incoming: Type): Type</ID>
+    <ID>LongMethod:CXXLanguageFrontend.kt$CXXLanguageFrontend$private fun typeOf(specifier: IASTSimpleDeclSpecifier, hint: Declaration? = null): Type</ID>
+    <ID>LongMethod:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest$@Test @Throws(Exception::class) fun testCPPDesignatedInitializer()</ID>
+    <ID>LongMethod:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest$@Test @Throws(Exception::class) fun testDeclarationStatement()</ID>
+    <ID>LongMethod:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest$@Test @Throws(Exception::class) fun testPointerDereference()</ID>
+    <ID>LongMethod:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest$@Test @Throws(Exception::class) fun testRecordDeclaration()</ID>
+    <ID>LongMethod:CallResolverTest.kt$CallResolverTest$@Test @Throws(Exception::class) fun testDefaultArgumentsInDeclaration()</ID>
+    <ID>LongMethod:CallResolverTest.kt$CallResolverTest$@Test @Throws(Exception::class) fun testPartialDefaultArguments()</ID>
+    <ID>LongMethod:ConstructorsTest.kt$ConstructorsTest$@Test @Throws(Exception::class) fun testCPP()</ID>
+    <ID>LongMethod:DeclarationHandler.kt$DeclarationHandler$private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration</ID>
+    <ID>LongMethod:DeclaratorHandler.kt$DeclaratorHandler$@ResolveInFrontend("lookupScope") private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Test @Throws(Exception::class) fun testCPPFor()</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testBreakContinue(relPath: String, refNodeString: String)</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testIf(relPath: String, refNodeString: String)</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testLoops(relPath: String, refNodeString: String?)</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testSwitch(relPath: String, refNodeString: String)</ID>
+    <ID>LongMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression</ID>
+    <ID>LongMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression</ID>
+    <ID>LongMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleUnaryExpression(ctx: IASTUnaryExpression): Expression</ID>
+    <ID>LongMethod:FunctionPointerTest.kt$FunctionPointerTest$@Throws(Exception::class) fun test(language: String, configModifier: Consumer&lt;TranslationConfiguration.Builder>? = null)</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testBasics()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testCallingContexts()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testConditions()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testFunctionSummaries()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testFunctionSummaryDerefs()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testGhidra2()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testGhidraCode()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testGlobalVariables()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testMemberArguments()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testMemberWriteDFG()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testMemcpy()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testPMVDerefHandling()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testPointerToPointer()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testPointerToPointerFunctionSummaries()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testRealCode()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testReturnedDerefs()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testShortFS()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testStackedCallingContexts()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testStructReference()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testStructs()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testSubstructs()</ID>
+    <ID>LongParameterList:ClassTemplateTest.kt$ClassTemplateTest$( pairConstructorDeclaration: Constructor?, constructExpression: Construction, pair: Record?, pairType: ObjectType, template: RecordTemplate?, point1: Variable, )</ID>
+    <ID>LongParameterList:TypeTests.kt$TypeTests$( root: Type, level0: Type, level1: Type, level1b: Type, level2: Type, unrelated: Type, )</ID>
+    <ID>LoopWithTooManyJumpStatements:CodeInterningTest.kt$CodeInterningTest$for</ID>
+    <ID>LoopWithTooManyJumpStatements:ExpressionHandler.kt$ExpressionHandler$while</ID>
+    <ID>MagicNumber:CLanguage.kt$CLanguage$128</ID>
+    <ID>MagicNumber:CLanguage.kt$CLanguage$16</ID>
+    <ID>MagicNumber:CLanguage.kt$CLanguage$32</ID>
+    <ID>MagicNumber:CLanguage.kt$CLanguage$64</ID>
+    <ID>MagicNumber:CLanguage.kt$CLanguage$8</ID>
+    <ID>MagicNumber:CPPLanguage.kt$CPPLanguage$128</ID>
+    <ID>MagicNumber:CPPLanguage.kt$CPPLanguage$16</ID>
+    <ID>MagicNumber:CPPLanguage.kt$CPPLanguage$32</ID>
+    <ID>MagicNumber:CPPLanguage.kt$CPPLanguage$64</ID>
+    <ID>MagicNumber:CPPLanguage.kt$CPPLanguage$8</ID>
+    <ID>MagicNumber:CXXLanguageFrontend.kt$CXXLanguageFrontend$130</ID>
+    <ID>MagicNumber:CXXLanguageFrontend.kt$CXXLanguageFrontend$50</ID>
+    <ID>MagicNumber:CXXLanguageFrontend.kt$CXXLanguageFrontend$6</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x07</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x08</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x09</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x0a</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x0b</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x0c</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x22</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x27</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x3f</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$0x5c</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$10</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$16</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$3</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$4</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$8</ID>
+    <ID>MatchingDeclarationName:LambdaTest.kt$CPPLambdaTest</ID>
+    <ID>MatchingDeclarationName:ScopeManagerCXXTest.kt$ScopeManagerTest : BaseTest</ID>
+    <ID>MaxLineLength:CXXDynamicLoadingPass.kt$CXXDynamicLoadingPass$"Identifies dynamic loading operations (e.g., dlopen, dlsym, LoadLibrary) in C/C++ code and represents them as DynamicLoading concepts in the CPG."</ID>
+    <ID>MaxLineLength:CXXExtraPass.kt$CXXExtraPass$"This Pass executes certain C/C++ specific conversions on initializers, that are only possible once we know all the types."</ID>
+    <ID>MaxLineLength:CXXLanguageFrontend.kt$CXXLanguageFrontend$"Reflective retrieval of AST node source failed. Cannot reliably determine content of the file that contains the node"</ID>
+    <ID>MaxLineLength:DeclaratorHandler.kt$DeclaratorHandler$"CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."</ID>
+    <ID>MaxLineLength:ExpressionHandler.kt$ExpressionHandler$"Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned."</ID>
+    <ID>NestedBlockDepth:CXXDynamicLoadingPass.kt$CXXDynamicLoadingPass$private fun handleLoadFunction( call: Call, concept: DynamicLoading, ): List&lt;LoadSymbol&lt;out ValueDeclaration>></ID>
+    <ID>NestedBlockDepth:CXXLanguageFrontend.kt$CXXLanguageFrontend$@Throws(TranslationException::class) override fun parse(file: File): TranslationUnit</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun addTemplateParameters( ctx: CPPASTTemplateDeclaration, templateDeclaration: Template, )</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun extractTemplateParams( ctx: IASTSimpleDeclaration, declSpecifier: IASTDeclSpecifier, ): MutableList&lt;AstNode>?</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleDeclarationSpecifier( declSpecifier: IASTDeclSpecifier?, ctx: IASTSimpleDeclaration, sequence: DeclarationSequence, ): Pair&lt;Declaration?, Boolean></ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration</ID>
+    <ID>NestedBlockDepth:DeclaratorHandler.kt$DeclaratorHandler$@ResolveInFrontend("lookupScope") private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration</ID>
+    <ID>NestedBlockDepth:ExpressionHandler.kt$ExpressionHandler$private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression</ID>
+    <ID>NestedBlockDepth:ExpressionHandler.kt$ExpressionHandler$private fun handleLambda(node: CPPASTLambdaExpression): Expression</ID>
+    <ID>PackageNaming:VariableResolverCppTest.kt$package de.fraunhofer.aisec.cpg.enhancements.variable_resolution</ID>
+    <ID>ReturnCount:CLanguage.kt$CLanguage$override fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean</ID>
+    <ID>ReturnCount:CLanguage.kt$CLanguage$override fun tryCast( type: Type, targetType: Type, hint: HasType?, targetHint: HasType?, ): CastResult</ID>
+    <ID>ReturnCount:CPPLanguage.kt$CPPLanguage$override fun handleTemplateFunctionCalls( curClass: Record?, templateCall: Call, applyInference: Boolean, ctx: TranslationContext, currentTU: TranslationUnit?, needsExactMatch: Boolean, ): Pair&lt;Boolean, List&lt;Function>></ID>
+    <ID>ReturnCount:CPPLanguage.kt$CPPLanguage$override fun tryCast( type: Type, targetType: Type, hint: HasType?, targetHint: HasType?, ): CastResult</ID>
+    <ID>ReturnCount:CXXLanguageFrontend.kt$CXXLanguageFrontend$fun typeOf(name: IASTName, prefix: String? = null, doFqn: Boolean = false): Type</ID>
+    <ID>ReturnCount:CXXLanguageFrontend.kt$CXXLanguageFrontend$private fun regionOf(fLocation: IASTFileLocation?): Region?</ID>
+    <ID>ReturnCount:CXXLanguageFrontend.kt$CXXLanguageFrontend.&lt;no name provided>$private fun absoluteOrRelativePathIsInList(path: Path, list: List&lt;Path>?): Boolean</ID>
+    <ID>ReturnCount:CXXLanguageFrontend.kt$CXXLanguageFrontend.&lt;no name provided>$private fun getContentUncached(path: String): InternalFileContent?</ID>
+    <ID>ReturnCount:CXXMemoryAllocationPass.kt$CXXMemoryAllocationPass$private fun handleCall(call: Call)</ID>
+    <ID>ReturnCount:CXXProjectDetection.kt$internal fun detectCxxProject(root: Path): DetectionResult?</ID>
+    <ID>ReturnCount:DeclarationHandler.kt$DeclarationHandler$private fun addParameterizedTypesToType( type: Type, parameterizedTypes: List&lt;ParameterizedType>, ): Type</ID>
+    <ID>ReturnCount:DeclaratorHandler.kt$DeclaratorHandler$@ResolveInFrontend("lookupScope") private fun handleFunctionDeclarator(ctx: IASTStandardFunctionDeclarator): ValueDeclaration</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleIdExpression(ctx: IASTIdExpression): Expression</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleUnaryExpression(ctx: IASTUnaryExpression): Expression</ID>
+    <ID>SpreadOperator:CXXExtraPass.kt$CXXExtraPass$(*arguments.toTypedArray())</ID>
+    <ID>SwallowedException:CXXLanguageFrontend.kt$CXXLanguageFrontend$e: ClassCastException</ID>
+    <ID>SwallowedException:CXXLanguageFrontend.kt$CXXLanguageFrontend$e: NullPointerException</ID>
+    <ID>SwallowedException:CXXLanguageFrontend.kt$CXXLanguageFrontend$e: ReflectiveOperationException</ID>
+    <ID>SwallowedException:CXXLanguageFrontend.kt$CXXLanguageFrontend.&lt;no name provided>$e: IllegalArgumentException</ID>
+    <ID>TooGenericExceptionCaught:CXXLanguageFrontend.kt$CXXLanguageFrontend$e: NullPointerException</ID>
+    <ID>TooGenericExceptionCaught:CXXProjectDetection.kt$e: Exception</ID>
+    <ID>TooManyFunctions:CXXLanguageFrontend.kt$CXXLanguageFrontend : LanguageFrontend</ID>
+    <ID>TooManyFunctions:DeclarationHandler.kt$DeclarationHandler : CXXHandler</ID>
+    <ID>TooManyFunctions:DeclaratorHandler.kt$DeclaratorHandler : CXXHandler</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : CXXHandler</ID>
+    <ID>TooManyFunctions:StatementHandler.kt$StatementHandler : CXXHandler</ID>
+    <ID>UnusedPrivateProperty:CDataflowTest.kt$CDataflowTest$val k = assertNotNull(tu.fields["tls_context::k"])</ID>
+    <ID>UnusedPrivateProperty:CXXDynamicLoadingPass.kt$CXXDynamicLoadingPass$val ops = when (call.name.toString()) { "dlopen" -> handleLibraryLoad(call, concept, os = tu.getConceptOrCreate&lt;POSIX>()) "LoadLibraryA", "LoadLibraryW", "LoadLibraryExA", "LoadLibraryExW" -> handleLibraryLoad(call, concept, os = tu.getConceptOrCreate&lt;Win32>()) "dlsym" -> handleLoadFunction(call, concept) else -> return }</ID>
+    <ID>UnusedPrivateProperty:CXXLanguageFrontend.kt$CXXLanguageFrontend$mod</ID>
+    <ID>UnusedPrivateProperty:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest$val cDecl = statements[++line] as DeclarationStatement</ID>
+    <ID>VariableNaming:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest$val duration_ms = tu.variables["duration_ms"]</ID>
+    <ID>VariableNaming:CXXLanguageFrontendTest.kt$CXXLanguageFrontendTest$val duration_s = tu.variables["duration_s"]</ID>
+    <ID>VariableNaming:FunctionTemplateTest.kt$FunctionTemplateTest$val N = findByUniqueName(result.parameters, "N")</ID>
+    <ID>VariableNaming:FunctionTemplateTest.kt$FunctionTemplateTest$val `val` = fixedMultiply.parameters[0]</ID>
+    <ID>VariableNaming:PointsToPassTest.kt$PointsToPassTest$val IindexLine23 = testFunc.refs("i")[0]</ID>
+    <ID>VariableNaming:PointsToPassTest.kt$PointsToPassTest$val IindexLine24 = testFunc.refs("i")[1]</ID>
+    <ID>VariableNaming:StatementHandler.kt$StatementHandler$val `var` = newDeclarationStatement()</ID>
+  </CurrentIssues>
+</SmellBaseline>

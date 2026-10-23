@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:JavaLanguage.kt$JavaLanguage$declaration.visibility == Visibility.UNKNOWN &amp;&amp; (scope is RecordScope || scope is NamespaceScope || scope is GlobalScope)</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleMethodCall(expr: JPExpression): Call</ID>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: This call resolution in the frontend might fail, in particular if we</ID>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: support other kinds, such as interfaces</ID>
+    <ID>ForbiddenComment:EOGTest.kt$EOGTest$// TODO: until explicitly added Return Statements are either removed again or code and</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$// TODO: We cannot easily identify the signature of the lambda</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$// TODO: what to do with it?</ID>
+    <ID>ForbiddenComment:FrontendHelperTest.kt$FrontendHelperTest$// TODO: Doesn't work yet. I don't get this method</ID>
+    <ID>ForbiddenComment:FrontendHelperTest.kt$FrontendHelperTest$// TODO: The methods FrontendUtils.matchCommentToNode and</ID>
+    <ID>ForbiddenComment:JavaLanguageFrontend.kt$JavaLanguageFrontend$// TODO: Return a Name instead of a String</ID>
+    <ID>ForbiddenComment:JavaLanguageFrontend.kt$JavaLanguageFrontend$// TODO: Somehow we cannot use scopeManager.currentNamespace. not sure why</ID>
+    <ID>ForbiddenComment:JavaLanguageFrontend.kt$JavaLanguageFrontend$// TODO: handle type parameters</ID>
+    <ID>ForbiddenComment:LambdaTest.kt$JavaLambdaTest$// TODO: We only get "BiFunction" here.</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$/* TODO: not sure if this is really necessary, it seems to be the same location as parentLocation, except that column starts 1 character later and I am not sure if this is correct anyway */</ID>
+    <ID>LargeClass:EOGTest.kt$EOGTest : BaseTest</ID>
+    <ID>LargeClass:JavaLanguageFrontendTest.kt$JavaLanguageFrontendTest : BaseTest</ID>
+    <ID>LongMethod:CommentMatcherTest.kt$CommentMatcherTest$@Test fun testCommentMatcher()</ID>
+    <ID>LongMethod:DeclarationHandler.kt$DeclarationHandler$fun handleCompactConstructor( constructorDeclaration: CompactConstructorDeclaration ): Constructor</ID>
+    <ID>LongMethod:DeclarationHandler.kt$DeclarationHandler$private fun &lt;T : TypeDeclaration&lt;T>> processRecordMembers( typeDecl: T, recordDeclaration: Record, )</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Test @Throws(Exception::class) fun testJavaFor()</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testBreakContinue(relPath: String, refNodeString: String)</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testIf(relPath: String, refNodeString: String)</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testLoops(relPath: String, refNodeString: String?)</ID>
+    <ID>LongMethod:EOGTest.kt$EOGTest$@Throws(Exception::class) fun testSwitch(relPath: String, refNodeString: String)</ID>
+    <ID>LongMethod:FrontendHelperTest.kt$FrontendHelperTest$@Test fun testCommentMatcher()</ID>
+    <ID>LongMethod:PointsToPassTest.kt$PointsToPassTest$@Test fun testFunctionSummaryToBaseWrite()</ID>
+    <ID>LongParameterList:TypeTests.kt$TypeTests$( root: Type, level0: Type, level1: Type, level1b: Type, level2: Type, unrelated: Type, )</ID>
+    <ID>LoopWithTooManyJumpStatements:CodeInterningTest.kt$CodeInterningTest$for</ID>
+    <ID>MagicNumber:JavaLanguage.kt$JavaLanguage$16</ID>
+    <ID>MagicNumber:JavaLanguage.kt$JavaLanguage$32</ID>
+    <ID>MagicNumber:JavaLanguage.kt$JavaLanguage$64</ID>
+    <ID>MagicNumber:JavaLanguage.kt$JavaLanguage$8</ID>
+    <ID>MatchingDeclarationName:LambdaTest.kt$JavaLambdaTest</ID>
+    <ID>MaxLineLength:JavaExternalTypeHierarchyResolver.kt$JavaExternalTypeHierarchyResolver$"Adds some java types and their hierarchy information that are not part of the analyzed code (e.g., from the standard library) to the CPG's type hierarchy."</ID>
+    <ID>MaxLineLength:JavaExtraPass.kt$JavaExtraPass$"This pass is responsible for handling Java-specific cases that are not covered by the general CPG logic. For example, Java has static member access, which is not modeled as a member expression, but as a reference with an FQN. This pass will convert such member expressions to references with FQNs."</ID>
+    <ID>MaxLineLength:TypeTests.kt$TypeTests$"${t.typeName} and ${unrelated.typeName} do not have a common type (java.lang.Object) which they should"</ID>
+    <ID>NestedBlockDepth:JavaExternalTypeHierarchyResolver.kt$JavaExternalTypeHierarchyResolver$override fun accept(component: Component)</ID>
+    <ID>NestedBlockDepth:JavaLanguageFrontend.kt$JavaLanguageFrontend$fun getQualifiedMethodNameAsGoodAsPossible(callExpr: MethodCallExpr): String</ID>
+    <ID>NestedBlockDepth:StatementHandler.kt$StatementHandler$private fun handleTry(stmt: Statement): Try</ID>
+    <ID>PackageNaming:VariableResolverJavaTest.kt$package de.fraunhofer.aisec.cpg.enhancements.variable_resolution</ID>
+    <ID>ReturnCount:JavaCallResolverHelper.kt$fun SymbolResolver.handleSpecificSupertype(callee: MemberAccess, curClass: Record): Record?</ID>
+    <ID>ReturnCount:JavaLanguageFrontend.kt$JavaLanguageFrontend$fun getQualifiedMethodNameAsGoodAsPossible(callExpr: MethodCallExpr): String</ID>
+    <ID>ReturnCount:JavaLanguageFrontend.kt$JavaLanguageFrontend$fun recoverTypeFromUnsolvedException(ex: Throwable): String?</ID>
+    <ID>ReturnCount:JavaLanguageFrontend.kt$JavaLanguageFrontend$override fun locationOf(astNode: Node): PhysicalLocation?</ID>
+    <ID>ReturnCount:JavaLanguageFrontend.kt$JavaLanguageFrontend$private fun getTypeFromImportIfPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type</ID>
+    <ID>ReturnCount:StatementHandler.kt$StatementHandler$fun getLocationsFromTokens( parentLocation: PhysicalLocation?, startToken: JavaToken?, endToken: JavaToken?, ): PhysicalLocation?</ID>
+    <ID>SpreadOperator:JavaImportResolver.kt$JavaImportResolver$(base, *base.superTypeDeclarations.toTypedArray())</ID>
+    <ID>TooGenericExceptionCaught:ExpressionHandler.kt$ExpressionHandler$e: RuntimeException</ID>
+    <ID>TooManyFunctions:DeclarationHandler.kt$DeclarationHandler : Handler</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : Handler</ID>
+    <ID>TooManyFunctions:JavaLanguageFrontend.kt$JavaLanguageFrontend : LanguageFrontend</ID>
+    <ID>TooManyFunctions:StatementHandler.kt$StatementHandler : Handler</ID>
+    <ID>UnusedParameter:DeclarationHandler.kt$DeclarationHandler$annotationConstDecl: AnnotationDeclaration?</ID>
+    <ID>UnusedParameter:DeclarationHandler.kt$DeclarationHandler$annotationMemberDecl: AnnotationMemberDeclaration?</ID>
+    <ID>UnusedPrivateProperty:JavaExternalTypeHierarchyResolver.kt$JavaExternalTypeHierarchyResolver.Companion$private val LOGGER = LoggerFactory.getLogger(JavaExternalTypeHierarchyResolver::class.java)</ID>
+  </CurrentIssues>
+</SmellBaseline>

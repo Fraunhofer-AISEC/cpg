@@ -1,0 +1,163 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:DFAOrderEvaluator.kt$DFAOrderEvaluator$baseAndOp != null &amp;&amp; (!stopOnWrongBase || wrongBases.none { wb -> wb.endsWith(baseAndOp.first.split("|")[1]) &amp;&amp; baseAndOp.first.startsWith(wb.split("|")[0]) })</ID>
+    <ID>ComplexCondition:DFAOrderEvaluator.kt$DFAOrderEvaluator$node is MemberCall &amp;&amp; node.base is Reference &amp;&amp; (node.base as Reference).refersTo != null &amp;&amp; consideredBases.contains((node.base as Reference).refersTo!!)</ID>
+    <ID>ComplexCondition:IntegerValue.kt$IntegerValue$lhsValue.lower &lt;= LatticeInterval.Bound.Value(0L) &amp;&amp; lhsValue.upper >= LatticeInterval.Bound.Value(0L) || rhsValue.lower &lt;= LatticeInterval.Bound.Value(0L) &amp;&amp; rhsValue.upper >= LatticeInterval.Bound.Value(0L)</ID>
+    <ID>ComplexCondition:IntegerValue.kt$IntegerValue$lhsValue.lower == LatticeInterval.Bound.Value(0L) &amp;&amp; lhsValue.upper == LatticeInterval.Bound.Value(0L) &amp;&amp; rhsValue.lower == LatticeInterval.Bound.Value(0L) &amp;&amp; rhsValue.upper == LatticeInterval.Bound.Value(0L)</ID>
+    <ID>ComplexCondition:IntegerValue.kt$IntegerValue$lhsValue.lower == LatticeInterval.Bound.Value(0L) &amp;&amp; lhsValue.upper == LatticeInterval.Bound.Value(0L) || rhsValue.lower == LatticeInterval.Bound.Value(0L) &amp;&amp; rhsValue.upper == LatticeInterval.Bound.Value(0L)</ID>
+    <ID>ComplexCondition:IntegerValue.kt$IntegerValue$lhsValue.lower > LatticeInterval.Bound.Value(0L) || rhsValue.lower > LatticeInterval.Bound.Value(0L) || lhsValue.upper &lt; LatticeInterval.Bound.Value(0L) || rhsValue.upper &lt; LatticeInterval.Bound.Value(0L)</ID>
+    <ID>ComplexCondition:IntegerValue.kt$IntegerValue$operator == "&amp;&amp;" &amp;&amp; lhs is BinaryOperator &amp;&amp; rhs is BinaryOperator</ID>
+    <ID>ComplexCondition:IntegerValue.kt$IntegerValue$operator == "||" &amp;&amp; lhs is BinaryOperator &amp;&amp; rhs is BinaryOperator</ID>
+    <ID>ComplexCondition:LatticeInterval.kt$LatticeInterval$(this.lower as? Bound.Value)?.value?.let { it >= 0 } == true &amp;&amp; (other.lower as? Bound.Value)?.value?.let { it >= 0 } == true &amp;&amp; minUpper is Bound.Value &amp;&amp; minUpper.value > 0</ID>
+    <ID>ComplexCondition:LatticeInterval.kt$LatticeInterval$thisLower is Bound.Value &amp;&amp; thisUpper is Bound.Value &amp;&amp; otherLower is Bound.Value &amp;&amp; otherUpper is Bound.Value</ID>
+    <ID>CyclomaticComplexMethod:AbstractIntervalEvaluator.kt$NewIntervalLattice$override suspend fun lub( one: Element, two: Element, allowModify: Boolean, widen: Boolean, concurrencyCounter: Int, ): Element</ID>
+    <ID>CyclomaticComplexMethod:AbstractIntervalEvaluator.kt$NewIntervalLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>CyclomaticComplexMethod:BinaryOperationResult.kt$BinaryOperationResult$override fun calculateConfidence(): AcceptanceStatus</ID>
+    <ID>CyclomaticComplexMethod:DFAOrderEvaluator.kt$DFAOrderEvaluator$fun evaluateOrder(startNode: Node, stopOnWrongBase: Boolean = true): Boolean</ID>
+    <ID>CyclomaticComplexMethod:DataflowQueriesTest.kt$DataflowQueriesTest$@Test fun testIntraproceduralBackwardDFG()</ID>
+    <ID>CyclomaticComplexMethod:FSMEquality.kt$internal fun acceptsSameLanguage( fsm: FSM, otherFsm: FSM, compareCurrentState: Boolean = true, ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:FlowQueries.kt$fun Node.generatesNewData(): NodeCollectionWithAssumption</ID>
+    <ID>CyclomaticComplexMethod:FlowQueries.kt$internal fun Node.alwaysFlowsToInternal( allowOverwritingValue: Boolean = false, noSinkIsGood: Boolean = false, earlyTermination: ((Node) -> Boolean)? = null, identifyCopies: Boolean = true, stopIfImpossible: Boolean = true, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity = ContextSensitive + FieldSensitive + FilterUnreachableEOG, predicate: (Node) -> Boolean, ): QueryTree&lt;Boolean></ID>
+    <ID>CyclomaticComplexMethod:IntegerValue.kt$IntegerValue$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>CyclomaticComplexMethod:IntegerValue.kt$IntegerValue$private fun simpleComparison( lhs: Node, rhs: Node, operator: String?, lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, ): TupleStateElement&lt;Any></ID>
+    <ID>CyclomaticComplexMethod:LatticeInterval.kt$LatticeInterval$fun shl(other: LatticeInterval, maxBits: Int): LatticeInterval</ID>
+    <ID>CyclomaticComplexMethod:LatticeInterval.kt$LatticeInterval$fun shr(other: LatticeInterval, maxBits: Int): LatticeInterval</ID>
+    <ID>CyclomaticComplexMethod:LatticeInterval.kt$LatticeInterval$private fun addBounds(a: Bound, b: Bound, type: BoundType): Bound</ID>
+    <ID>CyclomaticComplexMethod:LatticeInterval.kt$LatticeInterval$private fun divideBounds(a: Bound, b: Bound): Bound</ID>
+    <ID>CyclomaticComplexMethod:LatticeInterval.kt$LatticeInterval$private fun multiplyBounds(a: Bound, b: Bound): Bound</ID>
+    <ID>CyclomaticComplexMethod:MutableListSize.kt$MutableListSize$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>CyclomaticComplexMethod:MutableSetSize.kt$MutableSetSize$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>EmptyDefaultConstructor:AbstractIntervalEvaluator.kt$NewIntervalLattice$()</ID>
+    <ID>EmptyDefaultConstructor:MutableListSize.kt$MutableListSize$()</ID>
+    <ID>EmptyDefaultConstructor:MutableSetSize.kt$MutableSetSize$()</ID>
+    <ID>EmptyDefaultConstructor:UnreachableEOGPass.kt$ReachabilityLattice$()</ID>
+    <ID>EqualsNullCall:LatticeIntervalTest.kt$LatticeIntervalTest$equals(null)</ID>
+    <ID>EqualsWithHashCodeExist:LatticeInterval.kt$IntervalLattice : LatticeElement</ID>
+    <ID>ForbiddenComment:AbstractIntervalEvaluator.kt$AbstractIntervalEvaluator$// TODO: Maybe should be top?</ID>
+    <ID>ForbiddenComment:AbstractIntervalEvaluator.kt$NewIntervalLattice.Element$// TODO: Implement a deep copy!</ID>
+    <ID>ForbiddenComment:BinaryOperationResult.kt$BinaryOperationResult$// TODO: The lhs must be accepted and the element matching lhs in the rhs</ID>
+    <ID>ForbiddenComment:DFAOrderEvaluator.kt$DFAOrderEvaluator$* Get the first next DFG node. First, the options are filtered by some "interesting" types of * statements * * TODO: The idea of returning only one of multiple elements looks quite dangerous! Why are * exactly those expressions "interesting"?</ID>
+    <ID>ForbiddenComment:ExecutionOrderQueriesTest.kt$ExecutionOrderQueriesTest$// TODO: I'm not sure if this actually makes sense (i.e., if we need such a thing). It is</ID>
+    <ID>ForbiddenComment:FlowQueries.kt$// TODO: This should be replaced with some check if the memory location/whatever</ID>
+    <ID>ForbiddenComment:FlowQueries.kt$// TODO: We cannot set this (yet) but it might be useful to</ID>
+    <ID>ForbiddenComment:IntegerValue.kt$IntegerValue$// TODO: Configure this better, e.g. based on the platform if we have</ID>
+    <ID>ForbiddenComment:IntegerValue.kt$IntegerValue$// TODO: Handle the new state</ID>
+    <ID>ForbiddenComment:IntegerValue.kt$IntegerValue$// TODO: We can do better here, but for now we just return TOP</ID>
+    <ID>ForbiddenComment:MutableCollectionSize.kt$MutableCollectionSize$// TODO: Do we want infinite or zero as upper bound or return bottom if we have bottom for</ID>
+    <ID>ForbiddenComment:MutableListSize.kt$MutableListSize$// TODO: Push stuff, modify state.</ID>
+    <ID>ForbiddenComment:MutableListSize.kt$MutableListSize$// TODO: check the function name</ID>
+    <ID>ForbiddenComment:MutableSetSize.kt$MutableSetSize$// TODO: Push stuff, modify state.</ID>
+    <ID>ForbiddenComment:MutableSetSize.kt$MutableSetSize$// TODO: check the function name</ID>
+    <ID>ForbiddenComment:Query.kt$* Determines the maximal value. Only works for a couple of types! TODO: This method needs * improvement! It only works for Java types!</ID>
+    <ID>ForbiddenComment:Query.kt$* Determines the minimal value. Only works for a couple of types! TODO: This method needs * improvement! It only works for Java types!</ID>
+    <ID>ForbiddenComment:Query.kt$Query.Companion$// TODO: There was a commented-out line. No idea what to do with it:</ID>
+    <ID>ForbiddenComment:Query.kt$Query.Companion$// TODO: this field is static. How do we model this?</ID>
+    <ID>ForbiddenComment:QueryTest.kt$QueryTest$/* TODO: This test will not work anymore because we cannot put it into a QueryTree val queryTreeResult2 = result.allExtended&lt;AssignmentHolder>( { it.assignments.all { assign -> assign.target.type.isPrimitive } }, { QueryTree(it.assignments.any { (max(it.value) le maxSizeOfType(it.target.type)) and (min(it.value) ge minSizeOfType(it.target.type)) }) } ) println(queryTreeResult2.printNicely()) assertFalse(queryTreeResult2.value)*/</ID>
+    <ID>ForbiddenComment:QueryTree.kt$// TODO: Use the SinglePathResult instead?</ID>
+    <ID>ForbiddenComment:UnreachableEOGPass.kt$UnreachableEOGPass$// TODO: Add handling of Switch once we have a good way to follow the EOG edges</ID>
+    <ID>FunctionNaming:QueryTree.kt$infix fun &lt;T, S> T.IN(other: S): BinaryOperationResult&lt;T, S></ID>
+    <ID>FunctionNaming:QueryTree.kt$infix fun &lt;T, S> T.IS(other: S): BinaryOperationResult&lt;T, S></ID>
+    <ID>LargeClass:DataflowQueriesTest.kt$DataflowQueriesTest</ID>
+    <ID>LargeClass:FlowQueriesTest.kt$FlowQueriesTest$Companion</ID>
+    <ID>LargeClass:OrderingTests.kt$GraphExamples$Companion</ID>
+    <ID>LargeClass:Passes.kt$Passes$Companion</ID>
+    <ID>LargeClass:Query.kt$Query$Companion</ID>
+    <ID>LongMethod:AbstractEvaluationTests.kt$AbstractEvaluationTests.Companion$fun getIntegerExample( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .registerPass&lt;UnreachableEOGPass>() .build() )</ID>
+    <ID>LongMethod:BinaryOperationResult.kt$BinaryOperationResult$override fun calculateConfidence(): AcceptanceStatus</ID>
+    <ID>LongMethod:DFAOrderEvaluator.kt$DFAOrderEvaluator$fun evaluateOrder(startNode: Node, stopOnWrongBase: Boolean = true): Boolean</ID>
+    <ID>LongMethod:DataflowQueriesTest.kt$DataflowQueriesTest$@Test fun testIntraproceduralBackwardDFG()</ID>
+    <ID>LongMethod:DataflowQueriesTest.kt$DataflowQueriesTest$@Test fun testIntraproceduralBidirectionalDFG()</ID>
+    <ID>LongMethod:DataflowQueriesTest.kt$DataflowQueriesTest$@Test fun testIntraproceduralForwardDFG()</ID>
+    <ID>LongMethod:ExecutionOrderQueriesTest.kt$ExecutionOrderQueriesTest$@Test fun testIntraproceduralExecutionOrderBidirectional()</ID>
+    <ID>LongMethod:FlowQueries.kt$internal fun Node.alwaysFlowsToInternal( allowOverwritingValue: Boolean = false, noSinkIsGood: Boolean = false, earlyTermination: ((Node) -> Boolean)? = null, identifyCopies: Boolean = true, stopIfImpossible: Boolean = true, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity = ContextSensitive + FieldSensitive + FilterUnreachableEOG, predicate: (Node) -> Boolean, ): QueryTree&lt;Boolean></ID>
+    <ID>LongMethod:FlowQueriesTest.kt$FlowQueriesTest.Companion$fun loopDetection( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:FlowQueriesTest.kt$FlowQueriesTest.Companion$fun validatorDataflowIf( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:FlowQueriesTest.kt$FlowQueriesTest.Companion$fun validatorDataflowIfElse( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:FlowQueriesTest.kt$FlowQueriesTest.Companion$fun validatorDataflowIfElseWithCall( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:FlowQueriesTest.kt$FlowQueriesTest.Companion$fun validatorDataflowIfWithCall( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:FlowQueriesTest.kt$FlowQueriesTest.Companion$fun verySimpleDataflow( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerPass&lt;ControlDependenceGraphPass>() .registerPass&lt;ProgramDependenceGraphPass>() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:IntegerValue.kt$IntegerValue$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>LongMethod:IntegerValue.kt$IntegerValue$private fun simpleComparison( lhs: Node, rhs: Node, operator: String?, lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, ): TupleStateElement&lt;Any></ID>
+    <ID>LongMethod:MutableListSize.kt$MutableListSize$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>LongMethod:MutableSetSize.kt$MutableSetSize$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>LongMethod:OrderingTests.kt$GraphExamples.Companion$fun getComplexOrder( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .registerPass&lt;UnreachableEOGPass>() .build() )</ID>
+    <ID>LongMethod:OrderingTests.kt$GraphExamples.Companion$fun getSimpleOrder( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .registerPass&lt;UnreachableEOGPass>() .build() )</ID>
+    <ID>LongMethod:Passes.kt$Passes.Companion$fun getUnreachability( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerPass&lt;UnreachableEOGPass>() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:Query.kt$Query.Companion$fun getArray( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:Query.kt$Query.Companion$fun getArray3( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:Query.kt$Query.Companion$fun getComplexDataflow( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build()) .build() )</ID>
+    <ID>LongMethod:Query.kt$Query.Companion$fun getComplexDataflow2( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .inferenceConfiguration( InferenceConfiguration.builder().inferFunctions(false).build() ) .build() )</ID>
+    <ID>LongMethod:Query.kt$Query.Companion$fun getComplexDataflow3( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:Query.kt$Query.Companion$fun getDataflow( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:Query.kt$Query.Companion$fun getVulnerable( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongParameterList:FlowQueries.kt$( allowOverwritingValue: Boolean = false, earlyTermination: ((Node) -> Boolean)? = null, identifyCopies: Boolean = true, stopIfImpossible: Boolean = true, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity = ContextSensitive + FieldSensitive + FilterUnreachableEOG, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:FlowQueries.kt$( allowOverwritingValue: Boolean = false, noSinkIsGood: Boolean = false, earlyTermination: ((Node) -> Boolean)? = null, identifyCopies: Boolean = true, stopIfImpossible: Boolean = true, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity = ContextSensitive + FieldSensitive + FilterUnreachableEOG, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:FlowQueries.kt$( startNode: Node, direction: AnalysisDirection = Forward(GraphToFollow.DFG), type: AnalysisType = May, vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive, scope: AnalysisScope = Interprocedural(), ctx: Context = Context(steps = 0), earlyTermination: ((Node) -> Boolean)? = null, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:FlowQueries.kt$( startNode: Node, direction: AnalysisDirection = Forward(GraphToFollow.EOG), type: AnalysisType = May, scope: AnalysisScope = Interprocedural(), earlyTermination: ((Node) -> Boolean)? = null, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:QueryTree.kt$QueryTree$( value: T, var children: List&lt;QueryTree&lt;*>> = emptyList(), /** * A human-readable string representation of the query tree element. This should contain info * about the (syntactic) meaning or interpretation of this query tree. */ stringRepresentation: String = "", /** * The node, to which this current element of the query tree is associated with. This is useful * to access detailed information about the node that is otherwise only contained in string form * in [stringRepresentation]. */ node: Node? = null, override var assumptions: MutableSet&lt;Assumption> = mutableSetOf(), /** * Indicates whether this [QueryTree] is suppressed by the user. The query tree itself will * still hold the original value, but it is wrapped in a new [QueryTree] with the suppressed * value as the only child. * * See [checkForSuppression] for more information. */ var suppressed: Boolean = false, val operator: QueryTreeOperators, val collectCallerInfo: Boolean = true, )</ID>
+    <ID>MagicNumber:AbstractIntervalEvaluator.kt$DeclarationState.DeclarationStateElement$32</ID>
+    <ID>MatchingDeclarationName:OrderingTests.kt$GraphExamples</ID>
+    <ID>MatchingDeclarationName:QueryTreeCaller.kt$CallerInfo</ID>
+    <ID>MaxLineLength:ComplexDFAOrderEvaluationTest.kt$ComplexDFAOrderEvaluationTest.DummyDFAOrderEvaluator$"There was a failure in the order of statements at node: $node interproceduralFlow = $interproceduralFlow"</ID>
+    <ID>MaxLineLength:DFA.kt$DFA$"To perform an order evaluation on a DFA, the DFA must have a start state. This DFA does not have a start state."</ID>
+    <ID>MaxLineLength:DataflowQueriesTest.kt$DataflowQueriesTest$"For the MAY analysis, we can ignore the direct route which violates that reaches the \"5\" but we cannot get through the function call on the path."</ID>
+    <ID>MaxLineLength:DataflowQueriesTest.kt$DataflowQueriesTest$"For the MAY analysis, we can ignore the else statement which violates that the value in \"b\" arrives in baz."</ID>
+    <ID>MaxLineLength:DataflowQueriesTest.kt$DataflowQueriesTest$"For the MAY analysis, we can ignore the then statement which would violate that the \"5\" would arrive in baz."</ID>
+    <ID>MaxLineLength:DataflowQueriesTest.kt$DataflowQueriesTest$"For the MAY analysis, we can ignore the then statement which would violate that the data would arrive in baz."</ID>
+    <ID>MaxLineLength:DataflowQueriesTest.kt$DataflowQueriesTest$"For the MUST analysis, we cannot ignore the direct route which violates that reaches the \"5\" and we cannot get through the function call on the path."</ID>
+    <ID>MaxLineLength:DataflowQueriesTest.kt$DataflowQueriesTest$"For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz and in addition, there's the path which won't reach the \"5\"."</ID>
+    <ID>MaxLineLength:DataflowQueriesTest.kt$DataflowQueriesTest$"For the MUST analysis, we cannot ignore the else statement which violates that the value in \"b\" arrives in baz."</ID>
+    <ID>MaxLineLength:ExecutionOrderQueriesTest.kt$ExecutionOrderQueriesTest$"Theres a backward EOG path between the call to baz and the 10. For the may-analysis, we can ignore the failing path."</ID>
+    <ID>MaxLineLength:ExecutionOrderQueriesTest.kt$ExecutionOrderQueriesTest$"Theres a backward EOG path between the call to baz and the 10. For the must-analysis, we cannot ignore the failing path."</ID>
+    <ID>MaxLineLength:ExecutionOrderQueriesTest.kt$ExecutionOrderQueriesTest$"Theres an EOG path between the 10 and the 5. For the must-analysis, we cannot ignore the failing forward path."</ID>
+    <ID>MaxLineLength:ExecutionOrderQueriesTest.kt$ExecutionOrderQueriesTest$"Theres an EOG path between the 10 and the call to baz. For the may-analysis, we can ignore the failing path."</ID>
+    <ID>MaxLineLength:ExecutionOrderQueriesTest.kt$ExecutionOrderQueriesTest$"Theres an EOG path between the 10 and the call to baz. For the must-analysis, we cannot ignore the failing backward path."</ID>
+    <ID>MaxLineLength:FSMEquality.kt$*</ID>
+    <ID>MaxLineLength:FlowQueries.kt$"$queryType from ${startNode.compactToString()} to ${it.nodes.last().compactToString()} fulfills the requirement"</ID>
+    <ID>MaxLineLength:FlowQueries.kt$"1. The list of mutable and immutable types is complete and sound for each programming language used in the analyzed project.\n"</ID>
+    <ID>MaxLineLength:FlowQueries.kt$"2.a) Constructing a new object where our data flow to by a constructor invocation or by a collection comprehension: We should track this object and the target of the operation separately."</ID>
+    <ID>MaxLineLength:FlowQueries.kt$"2.b) Operating on immutable objects (via BinaryOperators): We should track this object and the target of the operation separately."</ID>
+    <ID>MaxLineLength:FlowQueries.kt$"2.c) Modifying an object via an operator (e.g. `+=`) and the \"object\" is the rhs of the assignment: We should track both, this object and the target of the assignment."</ID>
+    <ID>MaxLineLength:FlowQueries.kt$"2.d) Assigning an immutable object to a new variable: We should track this object and the target of the assignment separately."</ID>
+    <ID>MaxLineLength:FlowQueries.kt$"We assume that the node $this generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n"</ID>
+    <ID>MaxLineLength:FlowQueries.kt$/* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */</ID>
+    <ID>MaxLineLength:FlowQueries.kt$May$"$queryType from ${startNode.compactToString()} to ${evalRes.fulfilled.map { it.nodes.last().compactToString() }}"</ID>
+    <ID>MaxLineLength:FlowQueries.kt$Must$"$queryType from ${startNode.compactToString()} to ${(evalRes.fulfilled.map { it.nodes.last().compactToString() })}"</ID>
+    <ID>MaxLineLength:QueryTree.kt$QueryTree$"$stringRepresentation (==> ${if (value is List&lt;*>) (value as List&lt;*>).joinToString("\n","[", "]") else value.toString()})\n"</ID>
+    <ID>NestedBlockDepth:ArrayValueTest.kt$ArrayValueTest$@Test fun testArrayConstructionWithInitializer()</ID>
+    <ID>NestedBlockDepth:BinaryOperationResult.kt$BinaryOperationResult$override fun calculateConfidence(): AcceptanceStatus</ID>
+    <ID>NestedBlockDepth:DFAOrderEvaluator.kt$DFAOrderEvaluator$fun evaluateOrder(startNode: Node, stopOnWrongBase: Boolean = true): Boolean</ID>
+    <ID>NestedBlockDepth:IntegerValue.kt$IntegerValue$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>NestedBlockDepth:IntegerValue.kt$IntegerValue$private fun simpleComparison( lhs: Node, rhs: Node, operator: String?, lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, ): TupleStateElement&lt;Any></ID>
+    <ID>NestedBlockDepth:LatticeInterval.kt$LatticeInterval$fun shl(other: LatticeInterval, maxBits: Int): LatticeInterval</ID>
+    <ID>NestedBlockDepth:MutableSetSize.kt$MutableSetSize$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>NestedBlockDepth:MutableSetValueTest.kt$MutableSetValueTest$@Test fun applyDeclarationFromListTest()</ID>
+    <ID>NestedBlockDepth:MutableSetValueTest.kt$MutableSetValueTest$@Test fun applyDeclarationFromSetTest()</ID>
+    <ID>NestedBlockDepth:NFA.kt$NFA$fun toDfa(): DFA</ID>
+    <ID>ReturnCount:FSM.kt$FSM$fun changeStateProperty( state: State, name: Int? = null, isStart: Boolean? = null, isAcceptingState: Boolean? = null, ): Boolean</ID>
+    <ID>ReturnCount:FSMEquality.kt$internal fun acceptsSameLanguage( fsm: FSM, otherFsm: FSM, compareCurrentState: Boolean = true, ): Boolean</ID>
+    <ID>ReturnCount:IntegerValue.kt$IntegerValue$override fun applyEffect( lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, node: Node, edge: EvaluationOrder?, computeWithoutPush: Boolean, ): LatticeInterval</ID>
+    <ID>ReturnCount:IntegerValue.kt$IntegerValue$private fun simpleComparison( lhs: Node, rhs: Node, operator: String?, lattice: TupleState&lt;Any>, state: TupleStateElement&lt;Any>, ): TupleStateElement&lt;Any></ID>
+    <ID>ReturnCount:LatticeInterval.kt$IntervalState$override fun push( newNode: de.fraunhofer.aisec.cpg.graph.Node, newLatticeElement: LatticeElement&lt;LatticeInterval>?, ): Boolean</ID>
+    <ID>ReturnCount:LatticeInterval.kt$LatticeInterval$fun shl(other: LatticeInterval, maxBits: Int): LatticeInterval</ID>
+    <ID>ReturnCount:LatticeInterval.kt$LatticeInterval$fun shr(other: LatticeInterval, maxBits: Int): LatticeInterval</ID>
+    <ID>ReturnCount:LatticeInterval.kt$LatticeInterval$fun widen(other: LatticeInterval): LatticeInterval</ID>
+    <ID>ReturnCount:Query.kt$fun max(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree&lt;Number></ID>
+    <ID>ReturnCount:Query.kt$fun min(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree&lt;Number></ID>
+    <ID>TooManyFunctions:DFAOrderEvaluator.kt$DFAOrderEvaluator</ID>
+    <ID>TooManyFunctions:FSM.kt$FSM</ID>
+    <ID>TooManyFunctions:LatticeInterval.kt$LatticeInterval : Comparable</ID>
+    <ID>TooManyFunctions:MutableCollectionSize.kt$MutableCollectionSize : Value</ID>
+    <ID>TooManyFunctions:Query.kt$de.fraunhofer.aisec.cpg.query.Query.kt</ID>
+    <ID>TooManyFunctions:QueryTree.kt$de.fraunhofer.aisec.cpg.query.QueryTree.kt</ID>
+    <ID>UnusedParameter:MutableCollectionSize.kt$MutableCollectionSize$state: TupleStateElement&lt;Any></ID>
+    <ID>UseRequire:AbstractIntervalEvaluator.kt$NewIntervalLattice.Element$throw IllegalArgumentException("Cannot compare IntervalLattice.Element with $other")</ID>
+    <ID>UtilityClassWithPublicConstructor:AbstractEvaluationTests.kt$AbstractEvaluationTests</ID>
+    <ID>UtilityClassWithPublicConstructor:FlowQueriesTest.kt$FlowQueriesTest</ID>
+    <ID>UtilityClassWithPublicConstructor:OrderingTests.kt$GraphExamples</ID>
+    <ID>UtilityClassWithPublicConstructor:Passes.kt$Passes</ID>
+    <ID>UtilityClassWithPublicConstructor:Query.kt$Query</ID>
+  </CurrentIssues>
+</SmellBaseline>
