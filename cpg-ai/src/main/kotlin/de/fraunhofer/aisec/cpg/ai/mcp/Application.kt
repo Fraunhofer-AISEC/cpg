@@ -131,16 +131,16 @@ fun runMcpServerUsingStdio() {
  * @param port The port number on which the SSE MCP server will listen for client connections.
  * @param wait If true the thread is blocked until the server stops. This flag is needed when the
  *   server runs in the background alongside another server (e.g. in codyze-console).
- * @param host The host/IP address on which the server will bind, [DEFAULT_MCP_HOST] (loopback) by
- *   default.
+ * @param host The host/IP address on which the server will bind. The server has no authentication,
+ *   so this is usually [DEFAULT_MCP_HOST] (loopback).
  * @param server The MCP server instance that will handle incoming requests and provide responses to
  *   clients.
  */
 fun runSseMcpServerUsingKtorPlugin(
     port: Int,
     server: Server,
-    wait: Boolean = false,
-    host: String = DEFAULT_MCP_HOST,
+    wait: Boolean,
+    host: String,
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     return embeddedServer(CIO, host = host, port = port) { mcp { server } }
         .apply { start(wait = wait) }
@@ -150,16 +150,18 @@ fun runSseMcpServerUsingKtorPlugin(
  * Starts a streamable HTTP MCP server using the Ktor framework and the specified port.
  *
  * @param port The port number on which the HTTP MCP server will listen for client connections.
- * @param host The host/IP address on which the server will bind, [DEFAULT_MCP_HOST] (loopback) by
- *   default.
+ * @param host The host/IP address on which the server will bind. The server has no authentication,
+ *   so this is usually [DEFAULT_MCP_HOST] (loopback).
  * @param server The MCP server instance that will handle incoming requests and provide responses to
  *   clients.
+ * @param wait If true the thread is blocked until the server stops, see
+ *   [runSseMcpServerUsingKtorPlugin].
  */
 fun runHttpMcpServerUsingKtorPlugin(
     port: Int,
-    host: String = DEFAULT_MCP_HOST,
+    host: String,
     server: Server,
-    wait: Boolean = false,
+    wait: Boolean,
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     return embeddedServer(factory = CIO, host = host, port = port) { mcpStreamableHttp { server } }
         .apply { start(wait = wait) }

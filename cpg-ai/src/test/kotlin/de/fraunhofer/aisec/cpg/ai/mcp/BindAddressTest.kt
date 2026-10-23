@@ -52,8 +52,14 @@ class BindAddressTest {
     }
 
     @Test
-    fun httpServerBindsToLoopbackUnlessToldOtherwise() {
-        val server = runHttpMcpServerUsingKtorPlugin(port = freePort(), server = newServer())
+    fun httpServerBindsToTheDefaultLoopbackHost() {
+        val server =
+            runHttpMcpServerUsingKtorPlugin(
+                port = freePort(),
+                host = DEFAULT_MCP_HOST,
+                server = newServer(),
+                wait = false,
+            )
         try {
             assertEquals(listOf("127.0.0.1"), boundHosts(server))
         } finally {
@@ -62,8 +68,14 @@ class BindAddressTest {
     }
 
     @Test
-    fun sseServerBindsToLoopbackUnlessToldOtherwise() {
-        val server = runSseMcpServerUsingKtorPlugin(port = freePort(), server = newServer())
+    fun sseServerBindsToTheDefaultLoopbackHost() {
+        val server =
+            runSseMcpServerUsingKtorPlugin(
+                port = freePort(),
+                server = newServer(),
+                wait = false,
+                host = DEFAULT_MCP_HOST,
+            )
         try {
             assertEquals(listOf("127.0.0.1"), boundHosts(server))
         } finally {
