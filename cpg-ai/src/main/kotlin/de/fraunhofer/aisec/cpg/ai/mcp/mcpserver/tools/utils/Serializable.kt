@@ -251,12 +251,16 @@ data class QueryTreeNode(
 )
 
 /** A compact, fixed-size overview of a [de.fraunhofer.aisec.cpg.TranslationResult]. */
+@Serializable
 data class CpgOverview(
     val components: List<ComponentOverview>,
     /** Functions with a body, i.e., functions defined in the analyzed code. */
     val definedFunctions: Int,
-    /** Functions without a body, i.e., which are only declared. */
-    val declaredOnlyFunctions: Int,
+    /**
+     * Functions without a body in the analyzed code, e.g. declared in a header or called from a
+     * library - the same notion of "external" as in [externalFunctionsCalled].
+     */
+    val externalFunctions: Int,
     val records: Int,
     val calls: Int,
     /** Files by the number of functions defined in them. */
@@ -270,6 +274,6 @@ data class CpgOverview(
     val entryPointCandidatesTotal: Int,
 )
 
-data class ComponentOverview(val name: String, val translationUnits: Int)
+@Serializable data class ComponentOverview(val name: String, val translationUnits: Int)
 
-data class NamedCount(val name: String, val count: Int)
+@Serializable data class NamedCount(val name: String, val count: Int)

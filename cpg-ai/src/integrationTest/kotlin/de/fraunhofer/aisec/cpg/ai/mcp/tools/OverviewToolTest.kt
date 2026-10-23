@@ -28,11 +28,13 @@ package de.fraunhofer.aisec.cpg.ai.mcp.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addOverview
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgOverview
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 
 class OverviewToolTest {
@@ -53,9 +55,16 @@ class OverviewToolTest {
     fun overviewTest() =
         withClient(registerTools = { addOverview() }) { client ->
             val result = client.callTool(name = "cpg_overview", arguments = emptyMap())
-            val text = (result.content.single() as TextContent).text
+            val overview =
+                Json.decodeFromString<CpgOverview>((result.content.single() as TextContent).text)
 
-            assertTrue("print" in text, "print is called, but not defined in the code: $text")
-            assertTrue("hello" in text, "hello is defined in the code: $text")
+            assertTrue(
+                overview.externalFunctionsCalled.any { it.name == "print" },
+                "print is called, but not defined in the code: $overview",
+            )
+            assertTrue(
+                overview.entryPointCandidates.any { it.name.endsWith("hello") },
+                "hello is defined in the code and never called: $overview",
+            )
         }
 }

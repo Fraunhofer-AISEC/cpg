@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import kotlinx.serialization.json.Json
 
 /** The maximum number of entries of each ranked list in the [CpgOverview]. */
 const val OVERVIEW_LIST_LIMIT = 25
@@ -40,15 +41,17 @@ fun Server.addOverview() {
         """
         This tool gives a compact, fixed-size overview of the analyzed code. Call it first to get
         oriented before listing or inspecting individual nodes. It contains:
-        - the number of functions, records and calls, and the analyzed components,
+        - the number of functions defined in the code and of external functions (declared, e.g. in
+          a header, or called, but without a body in the analyzed code), of records and of calls,
+          and the analyzed components,
         - the files containing the most functions,
         - the most-called functions defined in the code,
         - the external functions called by the code, i.e., functions without a body in the graph,
           such as memcpy or recv in C.
         - candidate entry points, i.e., functions defined in the code which are never called.
-        Each ranked list is limited to the top $OVERVIEW_LIST_LIMIT entries. The overview is plain text and names
-        functions without node ids: look a function up by its name with cpg_list_functions (e.g.,
-        with 'pattern', 'calls' or 'file') to get its id, then use cpg_get_node to dig deeper.
+        Each ranked list is limited to the top $OVERVIEW_LIST_LIMIT entries. The overview is JSON and names functions
+        without node ids: look a function up by its name with cpg_list_functions (e.g., with
+        'pattern', 'calls' or 'file') to get its id, then use cpg_get_node to dig deeper.
 
         Example prompts:
         - "What is this code about?"
@@ -65,7 +68,8 @@ fun Server.addOverview() {
             content =
                 listOf(
                     TextContent(
-                        session.translationResult?.overview()?.toText() ?: "No CPG available yet."
+                        session.translationResult?.overview()?.let { Json.encodeToString(it) }
+                            ?: "No CPG available yet."
                     )
                 )
         )
@@ -75,7 +79,7 @@ fun Server.addOverview() {
 /** Computes the [CpgOverview] of this [TranslationResult]. */
 fun TranslationResult.overview(): CpgOverview {
     val functions = functions.filter { !it.isImplicit }
-    val (defined, declaredOnly) = functions.partition { it.body != null }
+    val (defined, external) = functions.partition { it.body != null }
     val calls = calls
 
     // Calls that do not reach any function with a body, grouped by the name of the callee
@@ -89,7 +93,7 @@ fun TranslationResult.overview(): CpgOverview {
         components =
             components.map { ComponentOverview(it.name.toString(), it.translationUnits.size) },
         definedFunctions = defined.size,
-        declaredOnlyFunctions = declaredOnly.size,
+        externalFunctions = external.size,
         records = records.size,
         calls = calls.size,
         filesWithMostFunctions =
@@ -120,35 +124,3 @@ private fun Map<String, Int>.toRanked(): List<NamedCount> =
         .sortedByDescending { it.value }
         .take(OVERVIEW_LIST_LIMIT)
         .map { NamedCount(it.key, it.value) }
-
-/**
- * The overview as compact text, which is cheaper for the model to read than JSON: no repeated keys,
- * and no node ids - a function is looked up by its name with the filters of `cpg_list_functions`.
- */
-fun CpgOverview.toText(): String = buildString {
-    appendLine(
-        "Components: " +
-            components.joinToString(", ") {
-                "${it.name} (${it.translationUnits} translation units)"
-            }
-    )
-    appendLine(
-        "Functions: $definedFunctions defined in the code, $declaredOnlyFunctions declared only. " +
-            "Records: $records. Calls: $calls."
-    )
-    section("Files with the most functions", filesWithMostFunctions)
-    section("Most called functions defined in the code (calls to them)", mostCalledFunctions)
-    section("External functions called (calls)", externalFunctionsCalled)
-    section(
-        "Entry point candidates: $entryPointCandidatesTotal defined functions are never called, " +
-            "the top ones by the number of calls they make",
-        entryPointCandidates,
-    )
-    append("Next: cpg_list_functions with pattern, file or calls; cpg_get_node with an id.")
-}
-
-private fun StringBuilder.section(title: String, entries: List<NamedCount>) {
-    if (entries.isEmpty()) return
-    appendLine("$title:")
-    appendLine(entries.joinToString(" · ") { "${it.name} ${it.count}" })
-}
