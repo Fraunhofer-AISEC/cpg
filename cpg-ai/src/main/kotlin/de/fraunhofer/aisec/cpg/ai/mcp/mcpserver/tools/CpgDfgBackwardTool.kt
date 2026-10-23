@@ -25,13 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgBackwardPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
-import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
-import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.paginate
+import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGNodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -46,24 +47,48 @@ fun Server.addDfgBackwardTool() {
         Uses the CPG's built-in dataflow analysis with backward direction to trace data sources.
         The analysis follows prevDFG edges and stops at nodes that have no further incoming data flows.
 
+        Results are capped at $DEFAULT_LIST_LIMIT nodes by default; use the limit/offset parameters to paginate through more.
+
         Example usage:
         - "Where does this value come from?"
     """
             .trimIndent()
 
-    this.addTool<CpgIdPayload>(name = "cpg_dfg_backward", description = toolDescription) {
-        session: CpgSession,
-        payload: CpgIdPayload ->
-        val startId = Uuid.parse(payload.id)
-        val startNode =
-            session.translationResult.nodes.find { it.id == startId }
-                ?: return@addTool CallToolResult(
-                    content = listOf(TextContent("No node found with ID ${payload.id}"))
-                )
+    this.addTool<CpgDfgBackwardPayload>(
+        readOnly = true,
+        name = "cpg_dfg_backward",
+        description = toolDescription,
+        handler = ::dfgBackward,
+    )
+}
 
-        val paths = startNode.collectAllPrevDFGPaths()
-        val nodes = paths.mapFlatMapped({ it.nodes }) { NodeInfo(it) }
+internal fun dfgBackward(session: CpgSession, payload: CpgDfgBackwardPayload): CallToolResult {
+    val normalizedId =
+        try {
+            Uuid.parse(payload.id).toString()
+        } catch (_: IllegalArgumentException) {
+            return CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "No node found with id '${payload.id}'. Node ids are UUIDs returned by other tools (e.g. cpg_list_functions, cpg_get_node) — copy one exactly."
+                        )
+                    )
+            )
+        }
+    val startNode =
+        session.findNodeById(normalizedId)
+            ?: return CallToolResult(
+                content = listOf(TextContent("No node found with id '${payload.id}'."))
+            )
 
-        CallToolResult(content = listOf(TextContent(Json.encodeToString(nodes))))
-    }
+    // One JSON array per call, sliced to a page, so that a node with a huge backward slice cannot
+    // flood the context by itself; the summary says how to fetch the rest. Only the nodes of the
+    // page are converted.
+    val page = paginate(startNode.collectAllPrevDFGNodes(), payload.limit, payload.offset)
+    return CallToolResult(
+        content =
+            listOf(TextContent(Json.encodeToString(page.items.map { NodeInfo(it) }))) +
+                listOfNotNull(page.summary?.let { TextContent(it) })
+    )
 }

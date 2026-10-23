@@ -102,7 +102,9 @@ data class ParameterInfo(val name: String, val type: TypeInfo, val defaultValue:
     ) : this(
         name = parameterDeclaration.name.toString(),
         type = TypeInfo(parameterDeclaration.type),
-        defaultValue = parameterDeclaration.default.toString(),
+        // `.toString()` on a null default reports the literal string "null"; only emit a value when
+        // a default actually exists.
+        defaultValue = parameterDeclaration.default?.toString(),
     )
 }
 
@@ -156,6 +158,13 @@ data class FunctionInfo(
         translationUnitId = functionDeclaration.translationUnit?.id?.toString(),
     )
 }
+
+/**
+ * The compact entry of a listing: a node's id, a one-line [signature] and its [location] as
+ * `file:line` (omitted from the JSON if unknown, e.g. for an inferred function).
+ */
+@Serializable
+data class SignatureInfo(val nodeId: String, val signature: String, val location: String? = null)
 
 @Serializable
 data class RecordInfo(
@@ -240,3 +249,31 @@ data class QueryTreeNode(
     val node: NodeJSON?,
     val children: List<QueryTreeNode> = emptyList(),
 )
+
+/** A compact, fixed-size overview of a [de.fraunhofer.aisec.cpg.TranslationResult]. */
+@Serializable
+data class CpgOverview(
+    val components: List<ComponentOverview>,
+    /** Functions with a body, i.e., functions defined in the analyzed code. */
+    val definedFunctions: Int,
+    /**
+     * Functions without a body in the analyzed code, e.g. declared in a header or called from a
+     * library - the same notion of "external" as in [externalFunctionsCalled].
+     */
+    val externalFunctions: Int,
+    val records: Int,
+    val calls: Int,
+    /** Files by the number of functions defined in them. */
+    val filesWithMostFunctions: List<NamedCount>,
+    /** Defined functions by the number of calls to them. */
+    val mostCalledFunctions: List<NamedCount>,
+    /** Callees without a body by the number of calls to them. */
+    val externalFunctionsCalled: List<NamedCount>,
+    /** Defined functions which are never called, by the number of calls they make. */
+    val entryPointCandidates: List<NamedCount>,
+    val entryPointCandidatesTotal: Int,
+)
+
+@Serializable data class ComponentOverview(val name: String, val translationUnits: Int)
+
+@Serializable data class NamedCount(val name: String, val count: Int)

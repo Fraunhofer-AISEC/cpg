@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.reachingWrites
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -65,11 +65,23 @@ private fun Granularity.toTag(): String =
  * [addGetLastWriteTool], so it's testable without going through the MCP [Server] transport.
  */
 fun getLastWrite(session: CpgSession, payload: CpgIdPayload): CallToolResult {
-    val startId = Uuid.parse(payload.id)
+    val normalizedId =
+        try {
+            Uuid.parse(payload.id).toString()
+        } catch (_: IllegalArgumentException) {
+            return CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "No node found with id '${payload.id}'. Node ids are UUIDs returned by other tools (e.g. cpg_list_functions, cpg_get_node) — copy one exactly."
+                        )
+                    )
+            )
+        }
     val startNode =
-        session.translationResult.nodes.find { it.id == startId }
+        session.findNodeById(normalizedId)
             ?: return CallToolResult(
-                content = listOf(TextContent("No node found with ID ${payload.id}"))
+                content = listOf(TextContent("No node found with id '${payload.id}'."))
             )
 
     val writes =
@@ -105,9 +117,10 @@ fun Server.addGetLastWriteTool() {
   """
             .trimIndent()
 
-    this.addTool<CpgIdPayload>(name = "cpg_get_last_write", description = toolDescription) {
-        session: CpgSession,
-        payload: CpgIdPayload ->
-        getLastWrite(session, payload)
-    }
+    this.addTool<CpgIdPayload>(
+        readOnly = true,
+        name = "cpg_get_last_write",
+        description = toolDescription,
+        handler = ::getLastWrite,
+    )
 }

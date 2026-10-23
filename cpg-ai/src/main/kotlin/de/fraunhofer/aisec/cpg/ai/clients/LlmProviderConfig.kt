@@ -25,34 +25,142 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
+import ai.koog.prompt.executor.clients.retry.RetryConfig
 import com.typesafe.config.Config
 import de.fraunhofer.aisec.cpg.helpers.filterMapped
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.json
+import java.security.cert.X509Certificate
+import java.util.concurrent.ConcurrentHashMap
+import javax.net.ssl.X509TrustManager
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
 
-class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
+/**
+ * Retries only well-known transient failures ([RetryConfig.DEFAULT_PATTERNS]: 429/5xx,
+ * rate-limit/timeout-ish keywords) - independent of, and unrelated to, the bounded retry of failed
+ * *tool* calls described in [SYSTEM_PROMPT], which is about the model's own tool-call behavior, not
+ * transport/provider failures. Deliberately much tighter than [RetryConfig.PRODUCTION] (3 attempts,
+ * up to 20s max delay each): a host application may bound a call with its own timeout, so retry
+ * backoff here must stay a small addition to that budget, not something that can itself balloon
+ * into multiples of it. With these settings, the two backoff waits between 3 attempts are at most
+ * ~1s and ~2s (before jitter); each attempt is bounded by the client's own request/socket timeout.
+ */
+internal val transientFailureRetryConfig =
+    RetryConfig(maxAttempts = 3, initialDelay = 1.seconds, maxDelay = 5.seconds)
+
+/**
+ * Context length used when neither [ClientConfig.contextLengthOverride] nor the server
+ * ([LlmProviderConfig.contextLengthFor]) provides one. Deliberately conservative: too small only
+ * makes history compression start earlier, too large risks a context-overflow error.
+ */
+internal const val DEFAULT_CONTEXT_LENGTH = 128_000L
+
+/**
+ * Accepts every server certificate chain and host, for [ClientConfig.insecureTls]. No chain
+ * validation and no hostname check - intended only for trusted internal networks.
+ */
+internal val TRUST_ALL =
+    object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+
+        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+
+        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+    }
+
+/**
+ * Resolves configured LLM providers to Koog executors. Owns every executor it creates: one per
+ * client and model, reused by all chat calls, and closed by [close].
+ */
+class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) :
+    AutoCloseable {
+    /** Executors already built, per client and model (see [clientFor]). */
+    private val chatLlms = ConcurrentHashMap<Pair<String, String>, OwnedChatLlm>()
+
+    @Volatile private var closed = false
+
     /**
-     * Resolves the [ClientProvider] name with the chosen model to a [LlmClient]. Returns `null` if
-     * the provider is unknown, or if a required API key is missing.
+     * Used instead of [httpClient] for the `/v1/models` requests of a client with
+     * [ClientConfig.insecureTls], since [httpClient] belongs to the caller and checks certificates.
      */
-    fun clientFor(clientName: String, model: String): LlmClient? {
+    private val insecureMetadataClient = lazy {
+        HttpClient(CIO) {
+            engine { https { trustManager = TRUST_ALL } }
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            install(HttpTimeout)
+        }
+    }
+
+    private fun metadataClientFor(config: ClientConfig): HttpClient =
+        if (config.insecureTls) insecureMetadataClient.value else httpClient
+
+    /**
+     * Resolves [clientName] and [model] to a [ChatLlm], or `null` if the client is unknown or its
+     * required API key is missing. Built once per client and model, so the context length is too:
+     * [ClientConfig.contextLengthOverride], else the server's value (see [contextLengthFor]), else
+     * [DEFAULT_CONTEXT_LENGTH]. If an override differs with the server's value, a warning is logged
+     * and the override is used.
+     */
+    suspend fun clientFor(clientName: String, model: String): ChatLlm? {
+        check(!closed) { "LlmProviderConfig is closed" }
+        val key = clientName to model
+        chatLlms[key]?.let {
+            return it.chatLlm
+        }
         val config = clients.firstOrNull { it.name == clientName } ?: return null
+        // Built outside any lock; if a concurrent call built one for the same key first, ours is
+        // closed and theirs is used.
+        val created = createChatLlm(config, model) ?: return null
+        val winner = chatLlms.putIfAbsent(key, created)
+        if (winner != null) {
+            created.close()
+            return winner.chatLlm
+        }
+        if (closed) {
+            // close() ran while we were building: it may not have seen this entry.
+            chatLlms.remove(key)?.close()
+            error("LlmProviderConfig is closed")
+        }
+        return created.chatLlm
+    }
+
+    /** Closes every executor built by [clientFor], and the HTTP clients created for them. */
+    override fun close() {
+        closed = true
+        chatLlms.keys.toList().forEach { key -> chatLlms.remove(key)?.close() }
+        if (insecureMetadataClient.isInitialized()) insecureMetadataClient.value.close()
+    }
+
+    private suspend fun createChatLlm(config: ClientConfig, model: String): OwnedChatLlm? {
+        val detected = contextLengthFor(config, model)
+        val override = config.contextLengthOverride
+        if (override != null && detected != null && detected != override) {
+            log.warn(
+                "Configured context length ({}) for {}/{} differs from the server-reported " +
+                    "value ({}) - using the configured value.",
+                override,
+                config.name,
+                model,
+                detected,
+            )
+        }
+        val contextLength = override ?: detected ?: DEFAULT_CONTEXT_LENGTH
 
         return when (config.provider) {
-            ClientProvider.GEMINI -> {
-                val apiKey = config.apiKey ?: return null
-                GeminiClient(httpClient, model, apiKey, config.baseUrl)
-            }
-
+            ClientProvider.GEMINI -> config.apiKey?.let { GeminiChatLlm(it, model, contextLength) }
             ClientProvider.OPENAI_COMPATIBLE ->
-                OpenAiClient(httpClient, model, config.baseUrl, config.apiKey)
+                OpenAiCompatibleChatLlm(config, model, contextLength)
         }
     }
 
@@ -74,6 +182,27 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
         return result
     }
 
+    /**
+     * The context window (in tokens) [config]'s server reports for [model], or `null` if it does
+     * not: only OpenAI-compatible servers are asked, and only some report it - `max_model_len`, a
+     * vLLM extension field of `/v1/models` (see [OpenAiModel]).
+     */
+    private suspend fun contextLengthFor(config: ClientConfig, model: String): Long? {
+        if (config.provider != ClientProvider.OPENAI_COMPATIBLE) return null
+        return try {
+            val response =
+                metadataClientFor(config).get("${config.baseUrl}/v1/models") {
+                    timeout { requestTimeoutMillis = 2_000L }
+                    config.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
+                }
+            if (!response.status.isSuccess()) return null
+            response.body<OpenAiModelsResponse>().data.firstOrNull { it.id == model }?.maxModelLen
+        } catch (e: Exception) {
+            log.debug("Could not fetch context length for {}/{}: {}", config.name, model, e.message)
+            null
+        }
+    }
+
     /** Fetches the provider-specific models. */
     private suspend fun fetchModels(cfg: ClientConfig): List<String> {
         return try {
@@ -93,7 +222,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
      */
     private suspend fun fetchOpenAiModels(clientConf: ClientConfig): List<String> {
         val response: HttpResponse =
-            httpClient.get("${clientConf.baseUrl}/v1/models") {
+            metadataClientFor(clientConf).get("${clientConf.baseUrl}/v1/models") {
                 timeout { requestTimeoutMillis = 2_000L }
                 clientConf.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
             }
@@ -115,7 +244,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     /** Queries the Gemini `/models` endpoint and keeps only the `gemini-*` chat models. */
     private suspend fun fetchGeminiModels(cfg: ClientConfig): List<String> {
         val response: HttpResponse =
-            httpClient.get("${cfg.baseUrl}/models?key=${cfg.apiKey}") {
+            metadataClientFor(cfg).get("${cfg.baseUrl}/models?key=${cfg.apiKey}") {
                 timeout { requestTimeoutMillis = 2_000L }
             }
         if (!response.status.isSuccess()) return emptyList()
@@ -163,6 +292,13 @@ fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
                         ClientProvider.OPENAI_COMPATIBLE
                     },
                 requiresApiKey = requiresApiKey,
+                requestTimeoutMillis =
+                    if (client.hasPath("requestTimeoutMillis"))
+                        client.getLong("requestTimeoutMillis")
+                    else null,
+                contextLengthOverride =
+                    if (client.hasPath("contextLength")) client.getLong("contextLength") else null,
+                insecureTls = client.hasPath("insecureTls") && client.getBoolean("insecureTls"),
             )
         }
     // Put local providers first, openai and gemini last.
