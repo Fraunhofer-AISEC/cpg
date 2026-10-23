@@ -408,9 +408,8 @@ fun Server.addRunPass() {
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
-    ) { session: CpgSession, payload: CpgRunPassPayload ->
-        runPass(session, payload)
-    }
+        handler = ::runPass,
+    )
 }
 
 /** Marker for the class loader that loads pass classes by name, see [loadPassClass]. */

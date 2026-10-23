@@ -58,9 +58,8 @@ fun Server.addDfgBackwardTool() {
         readOnly = true,
         name = "cpg_dfg_backward",
         description = toolDescription,
-    ) { session: CpgSession, payload: CpgDfgBackwardPayload ->
-        dfgBackward(session, payload)
-    }
+        handler = ::dfgBackward,
+    )
 }
 
 internal fun dfgBackward(session: CpgSession, payload: CpgDfgBackwardPayload): CallToolResult {
