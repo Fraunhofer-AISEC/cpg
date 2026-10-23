@@ -248,6 +248,39 @@ class CXXInferenceTest {
     }
 
     @Test
+    fun testInferredRecordParameterTypeResolvesInC() {
+        val file = File("src/test/resources/c/unknown_parameter_type.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val mystery = tu.records["mystery_t"]
+        assertNotNull(mystery)
+        assertTrue(mystery.isInferred)
+
+        // We only guessed that mystery_t is a struct, so it must not make the real function
+        // incompatible, neither directly nor behind a pointer
+        for (name in listOf("take", "take_pointer")) {
+            val calls = tu.calls(name)
+            assertEquals(2, calls.size)
+            for (call in calls) {
+                assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+                assertTrue(
+                    call.invokes.none { it.isInferred },
+                    "${call.code} invokes an inferred function",
+                )
+            }
+        }
+
+        // A declared record is known, so an incompatible argument still is incompatible
+        val takeKnown = tu.calls["take_known"]
+        assertNotNull(takeKnown)
+        assertTrue(takeKnown.invokes.all { it.isInferred })
+    }
+
+    @Test
     fun testUnknownArgumentTypeDoesNotPickAnOverloadInCpp() {
         val file = File("src/test/resources/cxx/inference/unknown_argument_type.cpp")
         val tu =

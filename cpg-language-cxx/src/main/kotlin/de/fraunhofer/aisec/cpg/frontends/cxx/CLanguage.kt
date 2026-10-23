@@ -281,10 +281,30 @@ open class CLanguage :
         // the only function with this name is the right target; rejecting it would make the call
         // resolver infer a duplicate, body-less function instead. Languages with overloading (C++)
         // keep rejecting unknown types, because an unknown type would fit every overload.
-        if (this !is HasFunctionOverloading && (type is UnknownType || targetType is UnknownType)) {
+        if (this !is HasFunctionOverloading && isUnknownBehindPointers(type, targetType)) {
             return ImplicitCast
         }
 
         return CastNotPossible
     }
+
+    /**
+     * Strips the pointer levels [type] and [targetType] have in common and checks whether either of
+     * the remaining types is unknown: an [UnknownType], or an [ObjectType] whose record we
+     * inferred. An inferred record is only our guess that an undeclared type name (e.g. a typedef
+     * from a missing header) is a struct; it may as well be an integer or an enum.
+     */
+    private fun isUnknownBehindPointers(type: Type, targetType: Type): Boolean {
+        var current = type
+        var target = targetType
+        while (current is PointerType && target is PointerType) {
+            current = current.elementType
+            target = target.elementType
+        }
+
+        return current.isUnknown() || target.isUnknown()
+    }
+
+    private fun Type.isUnknown(): Boolean =
+        this is UnknownType || (this is ObjectType && recordDeclaration?.isInferred == true)
 }
