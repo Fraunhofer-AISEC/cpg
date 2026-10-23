@@ -225,6 +225,13 @@ sealed class Scope(
      *   [Scope] kind so its (non-flow-sensitive) symbols are read the usual, cheap way. Every other
      *   part of this algorithm (shadowing, [predefinedLookupScopes], wildcard imports, the
      *   [HasBuiltins] fallback) stays identical.
+     * @param fileScope The [FileScope] of the file in which the lookup takes place. If it is set,
+     *   an unqualified lookup also considers the symbols (e.g., the imports) of this file scope,
+     *   right before it leaves the file-level code, i.e., before the first [NamespaceScope] or the
+     *   [GlobalScope]. This is needed because a [NamespaceScope] (e.g., a Java or Go package) is
+     *   shared between all files that declare it, but has only one parent. Therefore, the file
+     *   scope of the current file is not necessarily part of its parent chain. Any other
+     *   [FileScope] in the parent chain is skipped, since it belongs to a different file.
      * @param predicate An optional predicate which should be used in the lookup. Kept as the last
      *   parameter (after [localSymbols]) so existing trailing-lambda call sites keep binding to
      *   this one.
@@ -236,6 +243,7 @@ sealed class Scope(
         qualifiedLookup: Boolean = false,
         replaceImports: Boolean = true,
         localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
+        fileScope: FileScope? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val languageOnlyClass = languageOnly?.javaClass
@@ -246,6 +254,17 @@ sealed class Scope(
         var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
+
+        // If we have a file scope, we need to visit it once before we leave the file-level code
+        // (see [fileScope]). We then resume with the scope that we would have visited instead.
+        val visitFileScope = fileScope != null && !qualifiedLookup && modifiedScoped == null
+        var fileScopeVisited = !visitFileScope
+        var resume: Scope? = null
+        if (visitFileScope && (scope is NamespaceScope || scope is GlobalScope)) {
+            resume = scope
+            scope = fileScope
+            fileScopeVisited = true
+        }
 
         while (scope != null) {
             list = (localSymbols?.invoke(scope, symbol) ?: scope.symbols[symbol])?.toMutableList()
@@ -285,9 +304,13 @@ sealed class Scope(
             // If we do not have a hit, we can go up one scope, unless [qualifiedLookup] is set to
             // true
             // (or we had a modified scope)
-            scope =
+            var next =
                 if (qualifiedLookup || modifiedScoped != null) {
                     break
+                } else if (scope == fileScope && resume != null) {
+                    // We visited the file scope of the current file, now we can resume where we
+                    // left off
+                    resume.also { resume = null }
                 } else {
                     // If our language needs explicit lookup for fields (and other class members),
                     // we need to skip record scopes unless we are in a qualified lookup
@@ -298,6 +321,24 @@ sealed class Scope(
                         scope.parent
                     }
                 }
+
+            if (visitFileScope) {
+                // File scopes of other files are not visible in the current file
+                while (next is FileScope && next != fileScope) {
+                    next = next.parent
+                }
+
+                // Visit the file scope of the current file before we leave the file-level code
+                if (!fileScopeVisited && (next is NamespaceScope || next is GlobalScope)) {
+                    resume = next
+                    next = fileScope
+                }
+                if (next == fileScope) {
+                    fileScopeVisited = true
+                }
+            }
+
+            scope = next
         }
 
         // If the symbol was still not resolved, and we are performing an unqualified resolution, we
