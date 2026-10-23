@@ -29,10 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlinx.coroutines.runBlocking
 
 class ExtensionTest {
     @Test
@@ -74,6 +76,33 @@ class ExtensionTest {
             tu.declarations += func
 
             assertEquals(listOf(record, func, tu), tu.allUniqueEOGStartersOrSingles)
+        }
+    }
+
+    /**
+     * [collectMaybeParallel] has to return every element its action collected, no matter whether
+     * the collection was small enough to be processed sequentially or was split into chunks - the
+     * batched writes in [de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice.lub]
+     * silently lose updates otherwise.
+     */
+    @Test
+    fun testCollectMaybeParallel() = runBlocking {
+        for (size in listOf(0, 1, MIN_CHUNK_SIZE - 1, MIN_CHUNK_SIZE, MIN_CHUNK_SIZE * 7 + 3)) {
+            val input = (0 until size).toList()
+            for (parallelism in listOf(1, 4, 8)) {
+                val collected =
+                    input.collectMaybeParallel<Int, Int>(parallelism = parallelism) { item, into ->
+                        // Collect a varying number of results per item, including none at all, so
+                        // that a chunk's output size is not simply its input size.
+                        repeat(item % 3) { into += item }
+                    }
+
+                assertEquals(
+                    input.flatMap { item -> List(item % 3) { item } },
+                    collected,
+                    "size=$size, parallelism=$parallelism",
+                )
+            }
         }
     }
 }
