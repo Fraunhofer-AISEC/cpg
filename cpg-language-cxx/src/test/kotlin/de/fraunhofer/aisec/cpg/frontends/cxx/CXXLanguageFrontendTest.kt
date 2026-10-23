@@ -1310,7 +1310,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         var cast = count.initializer
         assertIs<Cast>(cast)
-        assertLocalName("int", cast.castType)
+        assertLocalName("size_t", cast.castType)
         assertLiteralValue(42, cast.expression)
 
         val addr = tu.variables["addr"]
