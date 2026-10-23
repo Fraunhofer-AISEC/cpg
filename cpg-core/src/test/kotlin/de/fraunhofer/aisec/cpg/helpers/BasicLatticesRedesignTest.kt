@@ -900,4 +900,119 @@ class BasicLatticesRedesignTest {
         assertTrue(aborted)
         assertTrue(result.isNotEmpty())
     }
+
+    /**
+     * [ConcurrentMapLattice.Element.putAllBatched] exists so that [ConcurrentMapLattice.lub] can
+     * take the map's write lock once instead of once per entry. It must still apply the very rules
+     * [ConcurrentMapLattice.Element.put] and [ConcurrentMapLattice.Element.putShared] do, which is
+     * what this checks - a batched write which forgets to share or to privatize is exactly the bug
+     * that makes a fixpoint silently wrong.
+     */
+    @Test
+    fun testPutAllBatchedKeepsTheSharingRules() {
+        val handedOver = PowersetLattice.Element<String>("handedOver")
+        val keptByProducer = PowersetLattice.Element<String>("keptByProducer")
+        val alreadyShared =
+            PowersetLattice.Element<String>("alreadyShared").also { it.isShared = true }
+
+        val keyHandedOver = Literal<Int>()
+        val keyKept = Literal<Int>()
+        val keyShared = Literal<Int>()
+
+        val map = ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>()
+        map.putAllBatched(
+            listOf(
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyHandedOver,
+                    handedOver,
+                    sharedWithProducer = false,
+                ),
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyKept,
+                    keptByProducer,
+                    sharedWithProducer = true,
+                ),
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyShared,
+                    alreadyShared,
+                    sharedWithProducer = false,
+                ),
+            )
+        )
+
+        // A value the producer handed over is stored as it is and stays private.
+        assertSame(handedOver, map[keyHandedOver])
+        assertFalse(handedOver.isShared)
+
+        // A value the producer keeps a reference to is stored as it is, but marked as shared, so
+        // that the next getForUpdate privatizes it instead of modifying the producer's copy too.
+        assertSame(keptByProducer, map[keyKept])
+        assertTrue(keptByProducer.isShared)
+
+        // A value which was already shared although the producer claimed to hand it over is a
+        // caller bug. Like put(), we route around it by storing a private copy rather than letting
+        // the other owner of that value be corrupted.
+        val stored = assertNotNull(map[keyShared])
+        assertNotSame(alreadyShared, stored)
+        assertEquals(alreadyShared.toSet(), stored.toSet())
+        assertFalse(stored.isShared)
+    }
+
+    /**
+     * The batched [ConcurrentMapLattice.lub] has to produce what the entry-by-entry one did, on
+     * both of its branches, for states which overlap the way two real states at a merge point do:
+     * some keys only in one of them, some in both, some with differing values.
+     */
+    @Test
+    fun testLubIsUnaffectedByBatching() = runBlocking {
+        val lattice = ConcurrentMapLattice<Node, PowersetLattice.Element<String>>(PowersetLattice())
+        val keys = List(250) { Literal<Int>() }
+
+        // The two maps overlap the way two states meeting at a merge point do: every third key is
+        // only in one of them, the rest are in both - half of those with a differing value.
+        fun buildOne() =
+            ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>().apply {
+                keys.forEachIndexed { index, key ->
+                    if (index % 3 != 1) putShared(key, PowersetLattice.Element<String>("a$index"))
+                }
+            }
+
+        fun buildTwo() =
+            ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>().apply {
+                keys.forEachIndexed { index, key ->
+                    when {
+                        index % 3 == 0 -> {}
+                        index % 3 == 1 -> putShared(key, PowersetLattice.Element<String>("b$index"))
+                        index % 2 == 0 -> putShared(key, PowersetLattice.Element<String>("a$index"))
+                        else ->
+                            putShared(key, PowersetLattice.Element<String>("a$index", "b$index"))
+                    }
+                }
+            }
+
+        // What the union has to look like, computed without any of the machinery under test.
+        val reference = buildOne()
+        val referenceTwo = buildTwo()
+        val expected =
+            keys.associateWith { key ->
+                (reference[key]?.toSet() ?: emptySet()) + (referenceTwo[key]?.toSet() ?: emptySet())
+            }
+
+        // Both branches, and both the sequential and the chunked path through the parallel phase.
+        for (allowModify in listOf(true, false)) {
+            for (parallelism in listOf(1, 4)) {
+                val where = "allowModify=$allowModify, parallelism=$parallelism"
+                val merged = lattice.lub(buildOne(), buildTwo(), allowModify, false, parallelism)
+
+                assertEquals(keys.size, merged.size, where)
+                keys.forEachIndexed { index, key ->
+                    assertEquals(
+                        expected[key],
+                        assertNotNull(merged[key]).toSet(),
+                        "$index, $where",
+                    )
+                }
+            }
+        }
+    }
 }
