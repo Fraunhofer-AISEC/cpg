@@ -106,7 +106,9 @@
       <div class="flex items-center gap-1.5">
         <span
           class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-gray-700"
-          >{details.node.type}</span
+          >{details.node.label === 'Concept' || details.node.label === 'Operation'
+            ? details.node.label
+            : details.node.type}</span
         >
         <span class="truncate text-sm font-semibold text-gray-900">{details.node.name || '—'}</span>
       </div>
@@ -151,11 +153,9 @@
 
     <!-- Analysis status -->
     {#if details.warnings.length > 0}
-      <div class="rounded-md border border-amber-200 bg-amber-50 p-2">
-        <p class="mb-1 text-[10px] font-semibold tracking-wide text-amber-800 uppercase">
-          Analysis is uncertain here
-        </p>
-        <ul class="list-disc space-y-0.5 pl-4 text-[11px] text-amber-900">
+      <div class="border-l-2 border-amber-400 py-0.5 pl-2">
+        <p class="mb-1 text-[10px] font-semibold tracking-wide text-amber-700 uppercase">Note</p>
+        <ul class="list-disc space-y-0.5 pl-4 text-[11px] text-gray-700">
           {#each details.warnings as warning (warning)}
             <li>{warning}</li>
           {/each}

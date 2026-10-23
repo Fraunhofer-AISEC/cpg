@@ -1,4 +1,4 @@
-import type { NodePathsJSON, NodeRefJSON } from '$lib/types';
+import type { NodePathsJSON, NodeRefJSON, NodeSliceJSON } from '$lib/types';
 
 /**
  * Slices of the program dependence graph (PDG) of a function: the statements that affect a
@@ -15,12 +15,14 @@ export type DependenceGraph = 'PDG' | 'DFG' | 'CDG';
 
 /** Whether a slice follows dependences into other functions (interprocedural) or not. */
 export type SliceScope = 'interprocedural' | 'intraprocedural';
-export type GraphNodeKind = 'STATEMENT' | 'BRANCH' | 'STUB';
+/** An overlay is a concept or operation the dependences pass through, see [GraphNode.node]. */
+export type GraphNodeKind = 'STATEMENT' | 'BRANCH' | 'STUB' | 'OVERLAY';
 
 export interface GraphNode {
   /** The ID of the statement, which is also its node ID */
   id: string;
   kind: GraphNodeKind;
+  /** For an overlay: the concept or operation, labelled `Concept` or `Operation` */
   node: NodeRefJSON;
   startLine: number;
   endLine: number;
@@ -29,7 +31,8 @@ export interface GraphNode {
   depth: number;
   /** The statements further away that are not part of the slice, to offer expanding it */
   more: number;
-  concept: boolean;
+  /** The concepts and operations attached to the nodes of the statement */
+  overlays: NodeRefJSON[];
   unresolved: boolean;
   /** A call to code that is not analysed; for a stub: the code is not part of the analysis */
   external: boolean;
@@ -39,9 +42,14 @@ export interface GraphNode {
 export interface GraphEdge {
   from: string;
   to: string;
-  kind: 'DATA' | 'CONTROL';
+  /** An overlay edge links an overlay to the statement of the node it is attached to */
+  kind: 'DATA' | 'CONTROL' | 'OVERLAY';
   /** The variable of a data dependence, or `true`/`false` for a control dependence */
   label: string | null;
+  /** The node of the `from` statement the dependence starts at, if it is not the statement */
+  fromPart?: NodeRefJSON | null;
+  /** The node of the `to` statement the dependence ends at, if it is not the statement */
+  toPart?: NodeRefJSON | null;
 }
 
 export interface GraphSlice {
@@ -91,11 +99,15 @@ export function getGraphSlice(
 }
 
 /** How many statements are in the slice of a node in each direction. */
-export function getSliceCounts(nodeId: string, hops: number): Promise<SliceCounts | null> {
-  const key = `${nodeId}/${hops}`;
+export function getSliceCounts(
+  nodeId: string,
+  hops: number,
+  scope: SliceScope = 'interprocedural'
+): Promise<SliceCounts | null> {
+  const key = `${nodeId}/${hops}/${scope}`;
   let request = countsCache.get(key);
   if (!request) {
-    request = fetchJson<SliceCounts>(`/api/node/${nodeId}/pdg-counts?hops=${hops}`);
+    request = fetchJson<SliceCounts>(`/api/node/${nodeId}/pdg-counts?hops=${hops}&scope=${scope}`);
     request.catch(() => countsCache.delete(key));
     countsCache.set(key, request);
   }
@@ -147,56 +159,143 @@ export function locationOf(node: GraphNode): string {
   return `${node.node.fileName ?? ''}:${node.startLine}`;
 }
 
+/** A dependence of a statement, grouped by what it is on, e.g. the variable `buf`. */
+export interface DependenceGroup {
+  kind: 'DATA' | 'CONTROL';
+  /** The variable of data dependences, or `true`/`false` of control dependences */
+  label: string | null;
+  /** The statements at the other end, with where they are, e.g. `L12` or `crypto.c:3` */
+  statements: { node: GraphNode; place: string }[];
+}
+
 /**
- * The dependences of a statement in words, e.g. `Data ← lines 10, 12 (buf) · line 14 (len)`.
- * Lines of the file of the root are given by their number, others by their file.
+ * The dependences of a statement in the slice: where it comes from (`from`) and what depends on it
+ * (`to`), each grouped by what it is on. Lines of the file of the root are given by their number,
+ * others with their file.
  */
-export function describeDependences(slice: GraphSlice, id: string): string {
+export function dependencesOf(
+  slice: GraphSlice,
+  id: string
+): { from: DependenceGroup[]; to: DependenceGroup[] } {
   const byId = new Map(slice.nodes.map((n) => [n.id, n]));
   const rootFile = byId.get(slice.root)?.node.fileName;
-  const where = (n: GraphNode) =>
+  const place = (n: GraphNode) =>
     n.kind === 'STUB' || n.node.fileName !== rootFile
       ? locationOf(n)
       : n.startLine > 0
-        ? `${n.startLine}`
+        ? `L${n.startLine}`
         : '?';
 
-  // Groups the statements by what the dependence is on, e.g. the variable
   const group = (edges: GraphEdge[], end: 'from' | 'to') => {
-    const groups = new Map<string, string[]>();
+    const groups = new Map<string, DependenceGroup>();
     for (const edge of edges) {
+      if (edge.kind === 'OVERLAY') continue;
       const node = byId.get(edge[end]);
       if (!node) continue;
-      const label = edge.label ?? '';
-      const lines = groups.get(label) ?? [];
-      if (!lines.includes(where(node))) lines.push(where(node));
-      groups.set(label, lines);
+      const key = `${edge.kind}:${edge.label ?? ''}`;
+      const entry = groups.get(key) ?? { kind: edge.kind, label: edge.label, statements: [] };
+      if (!entry.statements.some((s) => s.node.id === node.id)) {
+        entry.statements.push({ node, place: place(node) });
+      }
+      groups.set(key, entry);
     }
-    return [...groups].map(([label, lines]) => {
-      const numbers = lines.every((l) => /^\d+$/.test(l));
-      const text = `${numbers ? (lines.length === 1 ? 'line' : 'lines') : ''} ${lines.join(', ')}`;
-      return `${text.trim()}${label ? ` (${label})` : ''}`;
-    });
+    // Data before control
+    return [...groups.values()].sort((a, b) =>
+      a.kind === b.kind ? 0 : a.kind === 'DATA' ? -1 : 1
+    );
   };
 
-  const parts: string[] = [];
-  const kinds: [GraphEdge['kind'], string][] = [
-    ['DATA', 'Data'],
-    ['CONTROL', 'Control']
-  ];
-  for (const [kind, name] of kinds) {
-    const incoming = group(
-      slice.edges.filter((e) => e.kind === kind && e.to === id),
+  return {
+    from: group(
+      slice.edges.filter((e) => e.to === id),
       'from'
-    );
-    const outgoing = group(
-      slice.edges.filter((e) => e.kind === kind && e.from === id),
+    ),
+    to: group(
+      slice.edges.filter((e) => e.from === id),
       'to'
-    );
-    if (incoming.length) parts.push(`${name} ← ${incoming.join(' · ')}`);
-    if (outgoing.length) parts.push(`${name} → ${outgoing.join(' · ')}`);
+    )
+  };
+}
+
+/**
+ * The evidence of a question to the agent as one graph: the paths and slices of its steps, which
+ * steps found each statement, and the statements of the nodes its answer cites.
+ */
+export interface EvidenceGraph {
+  graph: GraphSlice;
+  /** The steps that found each statement, by the ID of the statement */
+  steps: Record<string, number[]>;
+  /** The statements of the nodes the answer cites */
+  cited: string[];
+  /** The statement of each node the answer cites, by the ID of the node */
+  statementOf: Record<string, string>;
+}
+
+/**
+ * The statements of a graph the agent's answer leads along: the cited statements and those between
+ * them, i.e. that a cited statement leads to and that lead to a cited statement. `null` if fewer
+ * than two cited statements are part of the graph.
+ */
+export function evidencePath(graph: GraphSlice, cited: Set<string>): Set<string> | null {
+  const start = [...cited].filter((id) => graph.nodes.some((n) => n.id === id));
+  if (start.length < 2) return null;
+  const dependences = graph.edges.filter((e) => e.kind !== 'OVERLAY');
+  const reach = (forward: boolean) => {
+    const reached = new Set(start);
+    const queue = [...start];
+    while (queue.length > 0) {
+      const id = queue.pop()!;
+      for (const e of dependences) {
+        const [from, to] = forward ? [e.from, e.to] : [e.to, e.from];
+        if (from === id && !reached.has(to)) {
+          reached.add(to);
+          queue.push(to);
+        }
+      }
+    }
+    return reached;
+  };
+  const after = reach(true);
+  const before = reach(false);
+  return new Set([...after].filter((id) => before.has(id)));
+}
+
+/**
+ * The part of a graph on the path of the agent's answer (see [evidencePath]), with the overlays of
+ * its statements.
+ */
+export function onPath(graph: GraphSlice, path: Set<string>): GraphSlice {
+  const keep = new Set(path);
+  for (const e of graph.edges) {
+    if (e.kind === 'OVERLAY' && keep.has(e.from)) keep.add(e.to);
   }
-  return parts.join(' · ') || 'No dependences in this slice';
+  return {
+    ...graph,
+    root: keep.has(graph.root) ? graph.root : [...path][0],
+    nodes: graph.nodes.filter((n) => keep.has(n.id)),
+    edges: graph.edges.filter((e) => keep.has(e.from) && keep.has(e.to))
+  };
+}
+
+/** A step of the agent that found paths or a slice, with the result as the tool returned it. */
+export interface EvidenceStep {
+  step: number;
+  paths?: NodePathsJSON;
+  slice?: NodeSliceJSON;
+}
+
+/** The evidence graph of the steps of a question and the nodes cited in its answer. */
+export async function getEvidenceGraph(
+  steps: EvidenceStep[],
+  cited: string[]
+): Promise<EvidenceGraph> {
+  const res = await fetch('/api/graph/evidence', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ steps, cited })
+  });
+  if (!res.ok) throw new Error(`Failed to load the evidence: ${res.statusText}`);
+  return res.json();
 }
 
 /**

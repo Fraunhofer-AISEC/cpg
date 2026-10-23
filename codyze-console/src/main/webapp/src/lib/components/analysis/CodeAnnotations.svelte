@@ -6,8 +6,8 @@
 
   /**
    * Draws the annotations of a file on top of the code: the key figures of each function at the end
-   * of its first line, and, depending on the visible layers, markers under external and unresolved
-   * calls and a purple ◆ for the concepts and operations of a line in the gutter.
+   * of its first line, and, depending on the visible layers, markers under calls to external code
+   * and a purple ◆ for the concepts and operations of a line in the gutter.
    */
   interface Props {
     annotations: FileAnnotationsJSON;
@@ -27,7 +27,8 @@
     glyphWidth: number;
     /** Inspects a node, revealing a section of the inspector if given */
     onInspect: (nodeId: string, section?: InspectorSection, filter?: CallFilter) => void;
-    /** Draws the annotations faintly, e.g. while a path is shown */
+    /** Draws the annotations faintly, e.g. while a path is shown. The concept icons stay, they
+     * are small enough not to compete with the path */
     dimmed?: boolean;
   }
 
@@ -90,15 +91,6 @@
         title: `Show the calls in ${fn.function.name}, ${fn.externalCalls} of them to external code`
       });
     }
-    if (fn.unresolvedCalls > 0) {
-      parts.push({
-        label: `⚠ ${fn.unresolvedCalls} unresolved`,
-        count: fn.unresolvedCalls,
-        section: 'callees',
-        filter: 'UNRESOLVED',
-        title: `Show the calls in ${fn.function.name}, ${fn.unresolvedCalls} of them unresolved`
-      });
-    }
     return parts;
   }
 
@@ -112,23 +104,18 @@
 
   const markedCalls = $derived(
     annotations.calls.filter(
-      (c) =>
-        c.startLine === c.endLine &&
-        ((c.status === 'EXTERNAL' && layers.external) ||
-          (c.status === 'UNRESOLVED' && layers.uncertain))
+      (c) => c.startLine === c.endLine && c.status === 'EXTERNAL' && layers.external
     )
   );
 </script>
 
-<div
-  class="pointer-events-none absolute top-0 left-0 h-full w-full transition-opacity"
-  class:opacity-35={dimmed}
->
+<div class="pointer-events-none absolute top-0 left-0 h-full w-full">
   <!-- Key figures at the end of the first line of each function, each part clickable -->
   {#each functions as fn (fn.function.id)}
     {#if isVisible(fn.function.startLine, fn.function.startLine)}
       <span
-        class="absolute z-[22] font-sans text-[11px] whitespace-nowrap text-gray-400 italic"
+        class="absolute z-[22] font-sans text-[11px] whitespace-nowrap text-gray-400 italic transition-opacity"
+        class:opacity-35={dimmed}
         style:top="{top(fn.function.startLine)}rem"
         style:line-height="{lineHeight}rem"
         style:left="{offsetLeft + charWidth * (lineColumns(fn.function.startLine) + 4)}rem"
@@ -155,11 +142,12 @@
     {/if}
   {/each}
 
-  <!-- Markers under calls to external code (dashed) and unresolved calls (dotted) -->
+  <!-- Markers under calls to external code -->
   {#each markedCalls as call (call.id)}
     {#if isVisible(call.startLine, call.startLine)}
       <div
-        class="absolute z-[21] border-b-2 {call.status === 'EXTERNAL'
+        class:opacity-35={dimmed}
+        class="absolute z-[21] border-b-2 transition-opacity {call.status === 'EXTERNAL'
           ? 'border-dashed border-orange-500'
           : 'border-dotted border-red-500'}"
         style:top="{top(call.startLine)}rem"

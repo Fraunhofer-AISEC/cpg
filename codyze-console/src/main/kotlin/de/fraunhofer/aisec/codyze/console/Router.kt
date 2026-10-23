@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
+import de.fraunhofer.aisec.cpg.serialization.DependenceGraph
 import de.fraunhofer.aisec.cpg.serialization.NodePaths
+import de.fraunhofer.aisec.cpg.serialization.SliceDirection
 import io.ktor.http.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
@@ -80,6 +82,8 @@ import kotlinx.serialization.json.JsonObject
  *   size of the slice in each direction.
  * - POST `/api/graph/from-paths`: Retrieves the paths a tool found (e.g. dataflows found by the
  *   agent) as a graph of their statements in the format of a PDG slice.
+ * - POST `/api/graph/evidence`: Retrieves the paths and slices of the steps of a question to the
+ *   agent as one graph of statements, with the statements its answer cites.
  * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
  *   calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
@@ -334,6 +338,20 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
             }
+        }
+
+        // The endpoint to get the evidence of a question to the agent as one graph of statements
+        post("/graph/evidence") {
+            val request =
+                try {
+                    call.receive<EvidenceRequestJSON>()
+                } catch (e: Exception) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Invalid request format: ${e.message}"),
+                    )
+                }
+            call.respond(service.getEvidenceGraph(request))
         }
 
         // The endpoint to get the paths a tool found as a graph of their statements

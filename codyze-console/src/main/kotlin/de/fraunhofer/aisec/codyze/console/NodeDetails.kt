@@ -26,8 +26,6 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
@@ -39,40 +37,15 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.sarif.Region
-import kotlin.uuid.Uuid
+import de.fraunhofer.aisec.cpg.serialization.NodeRefJSON
+import de.fraunhofer.aisec.cpg.serialization.toOverlayRefJSON
+import de.fraunhofer.aisec.cpg.serialization.toRefJSON
 import kotlinx.serialization.Serializable
 
 /**
  * Upper bound for each list in [NodeDetailsJSON], so that hub nodes do not blow up the response.
  */
 private const val MAX_RELATED_NODES = 200
-
-/** Upper bound for the code snippet of a [NodeRefJSON]. */
-private const val MAX_SNIPPET_LENGTH = 120
-
-/**
- * A compact reference to a node, with enough information to show it in a list and to navigate to it
- * (also across files).
- *
- * @property label An optional label describing how the node is related to the node it was listed
- *   for, e.g., the granularity of a dataflow.
- */
-@Serializable
-data class NodeRefJSON(
-    val id: Uuid,
-    val type: String,
-    val name: String,
-    val code: String,
-    val fileName: String?,
-    val startLine: Int,
-    val startColumn: Int,
-    val endLine: Int,
-    val endColumn: Int,
-    val translationUnitId: Uuid?,
-    val componentName: String?,
-    val isInferred: Boolean,
-    val label: String? = null,
-)
 
 /**
  * Everything the console knows about a single node that is relevant when inspecting it: its calls,
@@ -102,33 +75,6 @@ data class NodeDetailsJSON(
     val warnings: List<String>,
 )
 
-fun Node.toRefJSON(label: String? = null): NodeRefJSON {
-    val firstLine = (code ?: "").lineSequence().firstOrNull()?.trim() ?: ""
-    return NodeRefJSON(
-        id = id,
-        type = javaClass.simpleName,
-        name = name.toString(),
-        code =
-            if (firstLine.length > MAX_SNIPPET_LENGTH) firstLine.take(MAX_SNIPPET_LENGTH) + "…"
-            else firstLine,
-        fileName =
-            location
-                ?.artifactLocation
-                ?.uri
-                ?.toString()
-                ?.substringAfterLast('/')
-                ?.substringAfterLast('\\'),
-        startLine = location?.region?.startLine ?: -1,
-        startColumn = location?.region?.startColumn ?: -1,
-        endLine = location?.region?.endLine ?: -1,
-        endColumn = location?.region?.endColumn ?: -1,
-        translationUnitId = translationUnit?.id,
-        componentName = component?.name?.toString(),
-        isInferred = isInferred,
-        label = label,
-    )
-}
-
 fun Node.toDetailsJSON(): NodeDetailsJSON {
     val warnings = mutableListOf<String>()
     if (isInferred) {
@@ -156,22 +102,12 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
     }
 
     return NodeDetailsJSON(
-        node = toRefJSON(),
+        node = toOverlayRefJSON(),
         typeName = (this as? HasType)?.type?.name?.toString(),
         value = constantValue(),
         isImplicit = isImplicit,
         enclosingFunction = (this as? Function ?: firstParentOrNull<Function>())?.toRefJSON(),
-        overlays =
-            overlays.map {
-                it.toRefJSON(
-                    label =
-                        when (it) {
-                            is Operation -> "Operation"
-                            is Concept -> "Concept"
-                            else -> null
-                        }
-                )
-            },
+        overlays = overlays.map { it.toOverlayRefJSON() },
         callTargets = callTargets.limited { it.toRefJSON() },
         callers = (this as? Function)?.calledBy.orEmpty().limited { it.toRefJSON() },
         callees = (this as? Function)?.body?.calls.orEmpty().limited { it.toRefJSON() },
