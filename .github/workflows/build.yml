@@ -21,8 +21,11 @@ on:
   merge_group:
   pull_request:
     types: [opened, synchronize, reopened]
+    # Keep in sync with build-skip.yml, which reports the required "build" check for these paths
     paths-ignore:
       - "docs/**"
+      - ".github/**"
+      - "!.github/workflows/build.yml"
 
 permissions:
   id-token: write
