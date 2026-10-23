@@ -83,9 +83,9 @@ class CollectionComprehension : Expression() {
 
     override fun hashCode() = Objects.hash(super.hashCode(), statement, comprehensionExpressions)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         val allChildren = this.allChildren<Node> { true }
-        return comprehensionExpressions.firstOrNull()?.getStartingPrevEOG()?.filter {
+        return comprehensionExpressions.firstOrNull()?.startingPrevEOG()?.filter {
             it !in allChildren
         } ?: setOf()
     }

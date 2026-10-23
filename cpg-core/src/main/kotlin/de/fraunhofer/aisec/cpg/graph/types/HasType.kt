@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
@@ -116,7 +117,7 @@ interface HasType : LanguageProvider {
      * A list of [TypeObserver] objects that will be informed about type changes, usually by
      * [informObservers].
      */
-    val typeObservers: MutableSet<TypeObserver>
+    @get:JsonBackReference val typeObservers: MutableSet<TypeObserver>
 
     /**
      * A [TypeObserver] can be used by its implementing class to observe changes to the

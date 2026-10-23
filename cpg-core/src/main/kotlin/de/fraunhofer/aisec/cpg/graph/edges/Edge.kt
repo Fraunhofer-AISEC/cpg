@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges
 
-import com.fasterxml.jackson.annotation.JsonBackReference
-import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIdentityReference
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -50,12 +51,14 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * foo("bar", a = 2)
  * ```
  */
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
+@JsonIdentityReference(alwaysAsId = true)
 abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     // Node where the edge is outgoing
-    @JsonIgnore var start: Node
+    @JsonIdentityReference(alwaysAsId = true) var start: Node
 
     // Node where the edge is ingoing
-    @JsonBackReference var end: NodeType
+    @JsonIdentityReference(alwaysAsId = true) var end: NodeType
 
     /** Lazy backing field for [assumptions]. */
     private var _assumptions: MutableSet<Assumption>? = null

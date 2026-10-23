@@ -50,8 +50,8 @@ class Assert : Expression(false) {
 
     override fun hashCode() = Objects.hash(super.hashCode(), condition, message)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.condition?.getStartingPrevEOG()
-            ?: (this.prevEOG + (this.message?.getStartingPrevEOG() ?: setOf()))
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.condition?.startingPrevEOG()
+            ?: (this.prevEOG + (this.message?.startingPrevEOG() ?: setOf()))
     }
 }

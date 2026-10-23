@@ -84,4 +84,9 @@ dependencies {
     findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(project(":cpg-concepts"))
     implementation(project(":cpg-concepts"))
+
+    // Gives the unit tests access to the `GraphExamples` and the `testFrontend`/`build {}` DSL,
+    // which we use to build small, self-contained graphs for the (de)serialization round-trip
+    // tests.
+    testImplementation(testFixtures(projects.cpgCore))
 }

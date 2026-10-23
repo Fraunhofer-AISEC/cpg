@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -108,7 +108,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** The namespace delimiter used by the language. Often, this is "." */
     open val namespaceDelimiter: String = "."
 
-    @get:JsonSerialize(using = KClassSerializer::class)
+    // @get:JsonSerialize(using = KClassSerializer::class)
+    @get:JsonIgnore
     /** The class of the frontend which is used to parse files of this language. */
     abstract val frontend: KClass<out T>
 
@@ -118,7 +119,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         get() = builtInTypes.keys
 
     /** The built-in types of this language. */
-    @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
+    abstract val builtInTypes: Map<String, Type>
 
     /** The access modifiers of this programming language */
     open val accessModifiers: Set<String> = setOf("public", "protected", "private")
@@ -137,6 +138,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * access, so that concurrent evaluations (e.g. from parallel query evaluation) never share
      * mutable evaluator state such as [ValueEvaluator.path].
      */
+    @get:JsonIgnore
     @DoNotPersist
     open val evaluator: ValueEvaluator
         get() = ValueEvaluator()
@@ -625,6 +627,15 @@ internal class KClassSerializer : JsonSerializer<KClass<*>>() {
     override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
         // Write the fully qualified name as a string
         gen.writeString(value.qualifiedName)
+    }
+
+    override fun serializeWithType(
+        value: KClass<*>,
+        gen: JsonGenerator,
+        serializers: SerializerProvider,
+        typeSer: TypeSerializer,
+    ) {
+        serialize(value, gen, serializers)
     }
 }
 

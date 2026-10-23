@@ -83,11 +83,11 @@ class Return : Expression(false) {
 
     override fun hashCode() = Objects.hash(super.hashCode(), returnValues)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.returnValues.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.returnValues.firstOrNull()?.startingPrevEOG() ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return setOf()
     }
 }

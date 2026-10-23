@@ -87,7 +87,7 @@ open class DeclarationStatement : Expression(false), DeclarationHolder {
 
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.declarations.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.declarations.firstOrNull()?.startingPrevEOG() ?: this.prevEOG
     }
 }

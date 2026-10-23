@@ -265,10 +265,10 @@ class Assign :
         findTargets(src).forEach { it.addAssignedTypes(assignedTypes) }
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.declarations.firstOrNull()?.getStartingPrevEOG()
-            ?: this.lhs.firstOrNull()?.getStartingPrevEOG()
-            ?: this.rhs.firstOrNull()?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.declarations.firstOrNull()?.startingPrevEOG()
+            ?: this.lhs.firstOrNull()?.startingPrevEOG()
+            ?: this.rhs.firstOrNull()?.startingPrevEOG()
             ?: this.prevEOG
     }
 }

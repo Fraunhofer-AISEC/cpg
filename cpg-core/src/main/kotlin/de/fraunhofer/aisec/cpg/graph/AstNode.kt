@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
@@ -67,6 +68,7 @@ abstract class AstNode : Node() {
      * overwhelming majority of nodes, and [astEdgesOf] eagerly allocates a backing array.
      */
     @Relationship("ANNOTATIONS")
+    @get:JsonMerge
     var annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>
         get() = _annotationEdges ?: astEdgesOf<Annotation>().also { _annotationEdges = it }
         set(value) {
@@ -75,6 +77,7 @@ abstract class AstNode : Node() {
 
     /** Virtual property for accessing [annotationEdges] as plain nodes. */
     @DoNotPersist
+    @get:JsonIgnore
     var annotations: MutableList<Annotation>
         get() = annotationEdges.unwrap()
         set(value) {

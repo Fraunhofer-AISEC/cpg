@@ -54,7 +54,7 @@ class Goto : Expression(false) {
             .toString()
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
 }

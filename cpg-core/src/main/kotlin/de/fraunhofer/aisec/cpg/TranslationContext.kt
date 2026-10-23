@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.log
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -39,29 +43,30 @@ import java.io.File
  * translation process.
  */
 @DoNotPersist
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 open class TranslationContext(
+
     /** The configuration for this translation. */
-    val config: TranslationConfiguration = TranslationConfiguration.builder().build(),
+    @JsonMerge val config: TranslationConfiguration = TranslationConfiguration.builder().build(),
 
     /**
      * The type manager is responsible for managing type information. Currently, we have one
      * instance of a [TypeManager] for the overall [TranslationResult].
      */
     val typeManager: TypeManager = TypeManager(),
-
+) : ContextProvider {
     /**
      * Some frontends need access to the current [Component] we are currently processing. Note: for
      * the [TranslationResult.finalCtx] this may either be null or the last component analyzed.
      */
-    var currentComponent: Component? = null,
-) : ContextProvider {
+    var currentComponent: Component? = null
     /**
      * The scope manager which comprises the complete translation result. In case of sequential
      * parsing, this scope manager is passed to the individual frontends one after another. In case
      * of sequential parsing, individual scope managers will be passed to each language frontend
      * (through individual contexts) and then finally merged into a final one.
      */
-    val scopeManager: ScopeManager = ScopeManager(this)
+    var scopeManager: ScopeManager = ScopeManager(this)
 
     /**
      * Set of files, that are available for additional analysis. They are not the primary subjects
@@ -128,6 +133,7 @@ open class TranslationContext(
             return languages.firstOrNull()
         }
 
+    @get:JsonIgnore
     override val ctx: TranslationContext
         get() = this
 

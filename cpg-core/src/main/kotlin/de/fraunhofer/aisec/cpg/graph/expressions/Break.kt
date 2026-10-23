@@ -59,7 +59,7 @@ class Break : Expression(false), HasType.TypeObserver {
 
     override fun hashCode() = Objects.hash(super.hashCode(), label, expr)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
 
