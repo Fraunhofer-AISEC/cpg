@@ -75,6 +75,20 @@ To replace an existing runner of the same name, remove it first (`./config.sh re
 Run **one** runner per VM. Two concurrent builds on 8 vCPUs compete for CPU and memory and are
 slower than running them one after the other.
 
+## Moving an existing runner to a new VM
+
+Instead of registering a new runner, you can move one, as long as the old one is **stopped for
+good** (never run both with the same identity):
+
+1. On the old VM: `sudo ./svc.sh stop` (and wait for running jobs to finish).
+2. Copy `.runner`, `.credentials` and `.credentials_rsaparams` (secrets!) from the old to the new
+   runner directory, e.g. `tar c ... | tar x` through `az ssh vm`. Keep the new `.env`.
+3. `config.sh` never ran on the new VM, so `svc.sh` does not exist. Create the service by hand:
+   `cp bin/runsvc.sh runsvc.sh`, write a systemd unit running `runsvc.sh` as the runner user (see
+   `/etc/systemd/system/actions.runner.*.service` on any runner for a template), then
+   `sudo systemctl enable --now <unit>`.
+4. Deallocate or delete the old VM.
+
 ## Why `AGENT_TOOLSDIRECTORY`
 
 `actions/setup-python` builds are relocated and still reference `/opt/hostedtoolcache`. If the tool
