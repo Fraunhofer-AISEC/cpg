@@ -114,3 +114,47 @@ fun Edge<*>.toJSON(): EdgeJSON {
         end = this.end.id,
     )
 }
+
+/** A compact reference to a [Node] with its location, e.g. for the results of the MCP tools. */
+@Serializable
+data class NodeInfo(
+    val nodeId: String,
+    val name: String,
+    val code: String?,
+    val type: String?,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+) {
+    constructor(
+        node: Node
+    ) : this(
+        nodeId = node.id.toString(),
+        name = node.name.localName,
+        code = node.code,
+        type = node::class.simpleName,
+        fileName = node.location?.artifactLocation?.fileName,
+        startLine = node.location?.region?.startLine,
+        endLine = node.location?.region?.endLine,
+    )
+}
+
+/**
+ * Paths through the graph, e.g. the dataflows from or to a node. Tools that find paths return this
+ * format, so that the LLM gets their structure and the console can show them as a path or a graph.
+ *
+ * @property kind What the paths follow, e.g. `dataflow`.
+ * @property description What the paths show, e.g. "where the value of `key` comes from".
+ * @property start The node the paths were searched from.
+ * @property paths The paths, each from its first to its last node in the direction of the flow
+ *   (from the source to the sink, also when the search went backwards).
+ * @property truncated Whether paths are missing because of the limits of the search.
+ */
+@Serializable
+data class NodePaths(
+    val kind: String,
+    val description: String,
+    val start: NodeInfo,
+    val paths: List<List<NodeInfo>>,
+    val truncated: Boolean,
+)
