@@ -48,8 +48,6 @@ import com.github.javaparser.resolution.types.ResolvedVoidType
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -62,7 +60,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.JavaExtraPass
 import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
@@ -86,7 +83,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
-    val nativeTypeResolver = CombinedTypeSolver()
+    val nativeTypeResolver: CombinedTypeSolver
 
     lateinit var expressionHandler: ExpressionHandler
     lateinit var statementHandler: StatementHandler
@@ -108,6 +105,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
         return try {
             val parserConfiguration = ParserConfiguration()
             parserConfiguration.setSymbolResolver(javaSymbolResolver)
+            parserConfiguration.languageLevel = frontendConfiguration.languageLevel
             val parser = JavaParser(parserConfiguration)
 
             // parse the file
@@ -531,23 +529,13 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
         const val ANNOTATION_MEMBER_VALUE = "value"
     }
 
+    override val frontendConfiguration: JavaFrontendConfiguration by lazy {
+        (this.ctx.config.frontendConfigurations[this::class] as? JavaFrontendConfiguration)
+            ?: JavaFrontendConfiguration()
+    }
+
     init {
-        val reflectionTypeSolver = ReflectionTypeSolver()
-        nativeTypeResolver.add(reflectionTypeSolver)
-        var root = ctx.currentComponent?.topLevel()
-        if (root == null && config.softwareComponents.size == 1) {
-            root =
-                config.softwareComponents[config.softwareComponents.keys.first()]?.let {
-                    CommonPath.commonPath(it)
-                }
-        }
-        if (root == null) {
-            log.warn("Could not determine source root for {}", config.softwareComponents)
-        } else {
-            log.info("Source file root used for type solver: {}", root)
-            val javaParserTypeSolver = JavaParserTypeSolver(root)
-            nativeTypeResolver.add(javaParserTypeSolver)
-        }
+        nativeTypeResolver = (language as JavaLanguage).typeSolverFor(ctx)
         javaSymbolResolver = JavaSymbolSolver(nativeTypeResolver)
     }
 }
