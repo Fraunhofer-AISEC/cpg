@@ -158,6 +158,7 @@ open class CPPLanguage :
             BinaryOperator::class of ">" to "operator>",
             BinaryOperator::class of "<=" to "operator<=",
             BinaryOperator::class of ">=" to "operator>=",
+            BinaryOperator::class of "<=>" to "operator<=>",
 
             // MemberAccess access operators. See
             // https://en.cppreference.com/w/cpp/language/operator_member_access
