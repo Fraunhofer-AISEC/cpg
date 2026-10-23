@@ -249,16 +249,16 @@ class IfdsSummaryCacheTest {
 
             q.prevDFGEdges.addContextSensitive(
                 retBody,
-                callingContext = CallingContextOut(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(c1))),
             )
             retBody.prevDFGEdges += param
             param.prevDFGEdges.addContextSensitive(
                 arg1,
-                callingContext = CallingContextIn(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c1))),
             )
             param.prevDFGEdges.addContextSensitive(
                 arg2,
-                callingContext = CallingContextIn(mutableListOf(c2)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c2))),
             )
 
             val direction = Backward(GraphToFollow.DFG)
@@ -318,22 +318,22 @@ class IfdsSummaryCacheTest {
             // paramF <-[in c1]- arg1
             q.prevDFGEdges.addContextSensitive(
                 retF,
-                callingContext = CallingContextOut(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(c1))),
             )
             retF.prevDFGEdges += callSiteInF
             callSiteInF.prevDFGEdges.addContextSensitive(
                 retG,
-                callingContext = CallingContextOut(mutableListOf(c2)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(c2))),
             )
             retG.prevDFGEdges += paramG
             paramG.prevDFGEdges.addContextSensitive(
                 resumeInF,
-                callingContext = CallingContextIn(mutableListOf(c2)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c2))),
             )
             resumeInF.prevDFGEdges += paramF
             paramF.prevDFGEdges.addContextSensitive(
                 arg1,
-                callingContext = CallingContextIn(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c1))),
             )
 
             val direction = Backward(GraphToFollow.DFG)

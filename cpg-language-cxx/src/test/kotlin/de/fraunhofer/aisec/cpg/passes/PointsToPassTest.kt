@@ -609,9 +609,17 @@ class PointsToPassTest {
 
         // Line 75
         assertEquals(1, njLine75.memoryAddresses.size)
-        assertEquals(1, njLine75.fullMemoryValues.size)
-        assertTrue(njLine75.fullMemoryValues.first() is UnknownMemoryValue)
-        assertLocalName("j", njLine75.fullMemoryValues.first())
+        // We have 2 memory values here:
+        // The unkown one from n[j]. But since we overapproximate, we also have the value of the
+        // base, which is the same as the value of n[0], so the literal
+        assertEquals(2, njLine75.fullMemoryValues.size)
+        assertEquals(
+            1,
+            njLine75.fullMemoryValues
+                .filter { it is UnknownMemoryValue && it.name.localName == "j" }
+                .size,
+        )
+        assertContains(njLine75.fullMemoryValues, literal1)
         assertEquals(0, njLine75.prevFullDFG.size)
     }
 
@@ -920,7 +928,7 @@ class PointsToPassTest {
             aDecl.nextDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
-                        (it.callingContext as? CallingContextIn)?.calls ==
+                        (it.callingContexts.singleOrNull() as? CallingContextIn)?.calls ==
                             mutableListOf(ceLine112) &&
                         it.end == memcpySrcDeref
                 }
@@ -931,7 +939,7 @@ class PointsToPassTest {
             aDecl.nextDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
-                        (it.callingContext as? CallingContextIn)?.calls ==
+                        (it.callingContexts.singleOrNull() as? CallingContextIn)?.calls ==
                             mutableListOf(ceLine115) &&
                         it.end == memcpySrcDeref
                 }
@@ -942,7 +950,7 @@ class PointsToPassTest {
             aDecl.nextDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
-                        (it.callingContext as? CallingContextIn)?.calls ==
+                        (it.callingContexts.singleOrNull() as? CallingContextIn)?.calls ==
                             mutableListOf(ceLine118) &&
                         it.end == memcpySrcDeref
                 }
@@ -953,7 +961,7 @@ class PointsToPassTest {
             aDecl.nextDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
-                        (it.callingContext as? CallingContextIn)?.calls ==
+                        (it.callingContexts.singleOrNull() as? CallingContextIn)?.calls ==
                             mutableListOf(ceLine121) &&
                         it.end == memcpySrcDeref
                 }
@@ -963,7 +971,8 @@ class PointsToPassTest {
             paDecl,
             (memcpySrcDeref.prevDFGEdges.singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        (it.callingContext as? CallingContextIn)?.calls == mutableListOf(ceLine125)
+                        (it.callingContexts.singleOrNull() as? CallingContextIn)?.calls ==
+                            mutableListOf(ceLine125)
                 } as ContextSensitiveDataflow)
                 .start,
         )
@@ -981,7 +990,7 @@ class PointsToPassTest {
             bRef.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine112)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine112)
                 }
                 ?.start,
         )
@@ -995,7 +1004,7 @@ class PointsToPassTest {
             pbPointerDeref.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine112)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine112)
                 }
                 ?.start,
         )
@@ -1011,7 +1020,7 @@ class PointsToPassTest {
             cRef.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine115)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine115)
                 }
                 ?.start,
         )
@@ -1025,7 +1034,7 @@ class PointsToPassTest {
             pcPointerDeref.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine115)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine115)
                 }
                 ?.start,
         )
@@ -1040,7 +1049,7 @@ class PointsToPassTest {
             dRef.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine118)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine118)
                 }
                 ?.start,
         )
@@ -1054,7 +1063,7 @@ class PointsToPassTest {
             pdPointerDeref.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine118)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine118)
                 }
                 ?.start,
         )
@@ -1069,7 +1078,7 @@ class PointsToPassTest {
             eRef.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine121)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine121)
                 }
                 ?.start,
         )
@@ -1083,7 +1092,7 @@ class PointsToPassTest {
             pePointerDeref.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine121)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine121)
                 }
                 ?.start,
         )
@@ -1109,10 +1118,14 @@ class PointsToPassTest {
             pfRef.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine125)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine125)
                 }
                 ?.start,
         )
+
+        // memcpy overwrites the memcpySrcDeref, so the only incoming DFG edge should be from the
+        // source deref
+        assertEquals(memcpySrcDeref, memcpyDstDeref.prevDFG.single())
     }
 
     @Test
@@ -1576,7 +1589,7 @@ class PointsToPassTest {
                 .nextDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine177)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine177)
                 }
                 ?.end,
         )
@@ -1631,7 +1644,7 @@ class PointsToPassTest {
             local28DerefLine179.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine177)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine177)
                 }
                 ?.start,
         )
@@ -1684,7 +1697,7 @@ class PointsToPassTest {
             local28DerefLine181.prevDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine180) &&
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine180) &&
                         it.start == param1DerefLine201
                 }
                 .size,
@@ -1695,7 +1708,7 @@ class PointsToPassTest {
             local28DerefLine181.prevDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine180) &&
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine180) &&
                         it.start == param1SSELine202 &&
                         it.granularity is PartialDataflowGranularity<*>
                 }
@@ -1750,7 +1763,7 @@ class PointsToPassTest {
             sseLine181.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine180) &&
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine180) &&
                         it.granularity == FullDataflowGranularity &&
                         !it.functionSummary
                 }
@@ -1825,7 +1838,7 @@ class PointsToPassTest {
                 .singleOrNull {
                     it.granularity !is PointerDataflowGranularity &&
                         it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine183)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine183)
                 }
                 ?.start,
         )
@@ -1882,7 +1895,7 @@ class PointsToPassTest {
             param1DerefDerefLine190.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine183)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine183)
                 }
                 ?.start,
         )
@@ -2782,8 +2795,9 @@ class PointsToPassTest {
         assertEquals(incFD.parameters.first(), iArgLine380.nextDFGEdges.first().end)
         assertEquals(
             mutableListOf(ceLine380),
-            ((iArgLine380.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
-                    as CallingContextIn)
+            ((iArgLine380.nextDFGEdges.first() as ContextSensitiveDataflow)
+                    .callingContexts
+                    .singleOrNull() as CallingContextIn)
                 .calls,
         )
 
@@ -2792,8 +2806,9 @@ class PointsToPassTest {
         assertEquals(incFD, ceLine380.prevDFGEdges.singleOrNull()?.start)
         assertEquals(
             mutableListOf(ceLine380),
-            ((ceLine380.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
-                    as CallingContextOut)
+            ((ceLine380.prevDFGEdges.first() as ContextSensitiveDataflow)
+                    .callingContexts
+                    .singleOrNull() as CallingContextOut)
                 .calls,
         )
 
@@ -2807,8 +2822,9 @@ class PointsToPassTest {
         assertEquals(incFD.parameters.first(), iArgLine384.nextDFGEdges.first().end)
         assertEquals(
             mutableListOf(ceLine384),
-            ((iArgLine384.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
-                    as CallingContextIn)
+            ((iArgLine384.nextDFGEdges.first() as ContextSensitiveDataflow)
+                    .callingContexts
+                    .singleOrNull() as CallingContextIn)
                 .calls,
         )
 
@@ -2817,8 +2833,9 @@ class PointsToPassTest {
         assertEquals(incFD, ceLine384.prevDFGEdges.singleOrNull()?.start)
         assertEquals(
             mutableListOf(ceLine384),
-            ((ceLine384.prevDFGEdges.first() as ContextSensitiveDataflow).callingContext
-                    as CallingContextOut)
+            ((ceLine384.prevDFGEdges.first() as ContextSensitiveDataflow)
+                    .callingContexts
+                    .singleOrNull() as CallingContextOut)
                 .calls,
         )
 
@@ -2834,7 +2851,8 @@ class PointsToPassTest {
             mutableListOf(ceLine386),
             ((pArgLine386.nextDFGEdges.singleOrNull { !it.functionSummary }
                         as? ContextSensitiveDataflow)
-                    ?.callingContext as CallingContextIn)
+                    ?.callingContexts
+                    ?.singleOrNull() as CallingContextIn)
                 .calls,
         )
         assertEquals(
@@ -2847,7 +2865,7 @@ class PointsToPassTest {
             incpDerefValue.prevDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(ceLine386)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(ceLine386)
                 }
                 ?.start,
         )
@@ -2859,7 +2877,8 @@ class PointsToPassTest {
             ((jLine388.prevDFGEdges.singleOrNull {
                         !it.functionSummary && it is ContextSensitiveDataflow
                     } as ContextSensitiveDataflow)
-                    .callingContext as? CallingContextOut)
+                    .callingContexts
+                    .singleOrNull() as? CallingContextOut)
                 ?.calls,
         )
         assertEquals(setOf(ceLine386, pArgLine386), jLine388.prevFunctionSummaryDFG.toSet())
@@ -2872,7 +2891,8 @@ class PointsToPassTest {
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
                         !it.functionSummary &&
-                        (it.callingContext as? CallingContextOut)?.calls == mutableListOf(ceLine386)
+                        (it.callingContexts.singleOrNull() as? CallingContextOut)?.calls ==
+                            mutableListOf(ceLine386)
                 }
                 ?.start,
         )
@@ -3192,7 +3212,7 @@ class PointsToPassTest {
                 ?.nextDFGEdges
                 ?.singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(outerFuncCE)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(outerFuncCE)
                 }
                 ?.end
         assertNotNull(pOuterDerefPMV)
@@ -3201,7 +3221,7 @@ class PointsToPassTest {
             pOuterDerefPMV.nextDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(innerFuncCE)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(innerFuncCE)
                 }
                 ?.end
         assertNotNull(pInnerDerefPMV)
@@ -3210,7 +3230,7 @@ class PointsToPassTest {
             pInnerDerefPMV.nextDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(veryInnerFuncCE)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(veryInnerFuncCE)
                 }
                 ?.end
         assertNotNull(pVeryInnerDerefPMV)
@@ -3221,7 +3241,7 @@ class PointsToPassTest {
                 .nextDFGEdges
                 .singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(outerFuncCE)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(outerFuncCE)
                 }
                 ?.end
         assertNotNull(pOuterPMV)
@@ -3232,7 +3252,7 @@ class PointsToPassTest {
                 ?.nextDFGEdges
                 ?.singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(innerFuncCE)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(innerFuncCE)
                 }
                 ?.end
         assertNotNull(pInnerPMV)
@@ -3243,7 +3263,7 @@ class PointsToPassTest {
                 ?.nextDFGEdges
                 ?.singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        it.callingContext.calls == mutableListOf(veryInnerFuncCE)
+                        it.callingContexts.singleOrNull()?.calls == mutableListOf(veryInnerFuncCE)
                 }
                 ?.end
         assertNotNull(pVeryInnerPMV)
@@ -3258,7 +3278,7 @@ class PointsToPassTest {
                     it.granularity is FullDataflowGranularity &&
                         it.derefDepth == null &&
                         it is ContextSensitiveDataflow &&
-                        it.callingContext.calls ==
+                        it.callingContexts.singleOrNull()?.calls ==
                             mutableListOf(veryInnerFuncCE, innerFuncCE, outerFuncCE)
                 }
                 .map { it.end }
@@ -3311,7 +3331,7 @@ class PointsToPassTest {
         assertTrue(fsecallkeytoout2.entries.firstOrNull()?.key is Parameter)
         assertLocalName("outptr", fsecallkeytoout2.entries.firstOrNull()?.key)
         assertEquals(
-            3,
+            2,
             fsecallkeytoout2.entries
                 .singleOrNull()
                 ?.value
@@ -3336,7 +3356,7 @@ class PointsToPassTest {
             .singleOrNull()
             ?.value
             ?.filter { it.properties.none { it == true } }
-            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "key" }
+            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.toString() == "key._8_8_" }
             ?.let { assertTrue(it) }
         fsecallkeytoout2.entries
             .singleOrNull()
@@ -3356,11 +3376,11 @@ class PointsToPassTest {
         )
         // 6: 4 from the in_outptr, and 2 from the in_ucptr
         assertEquals(
-            6,
+            5,
             fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
         )
         assertEquals(
-            5,
+            4,
             fssgxecallkeytoout2
                 .filter { it.key !is Return }
                 .entries
@@ -3398,7 +3418,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "key" }
+                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.toString() == "key._8_8_" }
                 ?.size,
         )
 
@@ -3951,8 +3971,11 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg1.prevDFGEdges
                 .single {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        strlcpyCall && it.granularity is FullDataflowGranularity
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == strlcpyCall && it.granularity is FullDataflowGranularity
                 }
                 .start,
         )
@@ -3960,8 +3983,11 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg1.prevDFGEdges
                 .single {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        strlcpyCall &&
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == strlcpyCall &&
                         ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
                                 as? Field)
                             ?.name
@@ -3973,8 +3999,11 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg1.prevDFGEdges
                 .single {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        strlcpyCall &&
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == strlcpyCall &&
                         ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
                                 as? Field)
                             ?.name
@@ -4000,8 +4029,11 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg2.prevDFGEdges
                 .single {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        strlcpyCall && it.granularity is FullDataflowGranularity
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == strlcpyCall && it.granularity is FullDataflowGranularity
                 }
                 .start,
         )
@@ -4009,8 +4041,11 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg2.prevDFGEdges
                 .single {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        strlcpyCall &&
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == strlcpyCall &&
                         ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
                                 as? Field)
                             ?.name
@@ -4022,8 +4057,11 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg2.prevDFGEdges
                 .single {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        strlcpyCall &&
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == strlcpyCall &&
                         ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
                                 as? Field)
                             ?.name
@@ -4230,8 +4268,11 @@ class PointsToPassTest {
             b1.prevDFGEdges
                 .single {
                     it.granularity is FullDataflowGranularity &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpy2Call
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == strlcpy2Call
                 }
                 .start,
         )
@@ -4242,8 +4283,11 @@ class PointsToPassTest {
                     ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                         ?.name
                         ?.localName == "d" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpy2Call
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == strlcpy2Call
                 }
                 .start,
         )
@@ -4254,8 +4298,11 @@ class PointsToPassTest {
                     ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                         ?.name
                         ?.localName == "d.f" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpy2Call
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == strlcpy2Call
                 }
                 .start,
         )
@@ -4271,8 +4318,11 @@ class PointsToPassTest {
             bd1.prevDFGEdges
                 .single {
                     it.granularity is FullDataflowGranularity &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpy2Call
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == strlcpy2Call
                 }
                 .start,
         )
@@ -4284,8 +4334,11 @@ class PointsToPassTest {
                     ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                         ?.name
                         ?.localName == "d" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpy2Call
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == strlcpy2Call
                 }
                 .start,
         )
@@ -4298,8 +4351,11 @@ class PointsToPassTest {
                     ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                         ?.name
                         ?.localName == "d.f" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpy2Call
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == strlcpy2Call
                 }
                 .start,
         )
@@ -4480,8 +4536,11 @@ class PointsToPassTest {
             freeDerefPMV,
             printStructLineArgBase.prevDFGEdges
                 .singleOrNull {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        freeCall && it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == freeCall && it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
@@ -4513,7 +4572,11 @@ class PointsToPassTest {
             freeDerefPMV,
             printStructLineArg.prevDFGEdges
                 .singleOrNull {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() == freeCall
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == freeCall
                 }
                 ?.start,
         )
@@ -4786,9 +4849,12 @@ class PointsToPassTest {
             (printfCall2.arguments[1]
                     .prevDFGEdges
                     .singleOrNull {
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.any {
-                            it === testCall2
-                        } == true && it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.any { it === testCall2 } == true &&
+                            it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
                     }
                     ?.start as? ParameterMemoryValue)
                 ?.name
@@ -4948,8 +5014,11 @@ class PointsToPassTest {
             ppxWrite,
             pxArg2.prevDFGEdges
                 .singleOrNull {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        setPointXCall
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.single() == setPointXCall
                 }
                 ?.start,
         )
@@ -4999,7 +5068,8 @@ class PointsToPassTest {
                             ?.localName == "x" &&
                             !it.functionSummary &&
                             (it as? ContextSensitiveDataflow)
-                                ?.callingContext
+                                ?.callingContexts
+                                ?.singleOrNull()
                                 ?.calls
                                 ?.singleOrNull() == setPointXCall
                     } as ContextSensitiveDataflow)
@@ -5085,8 +5155,11 @@ class PointsToPassTest {
             variable,
             printfDerefPMV.prevDFGEdges
                 .singleOrNull {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.singleOrNull() ==
-                        printfCall
+                    (it as? ContextSensitiveDataflow)
+                        ?.callingContexts
+                        ?.singleOrNull()
+                        ?.calls
+                        ?.singleOrNull() == printfCall
                 }
                 ?.start,
         )
@@ -5156,5 +5229,134 @@ class PointsToPassTest {
         // Actual test
         // The PMV should have no prevDFG
         assertTrue(dataDerefPMV.prevDFG.isEmpty())
+    }
+
+    @Test
+    fun testPMVDerefHandling() {
+        val file = File("src/test/resources/pointsToPass/pmvDerefHandling.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val dlfreeFunc = tu.functions("dlfree").single { it.body != null }
+        assertNotNull(dlfreeFunc)
+
+        val sgxieFunc = tu.functions("sgx_t_ie").single()
+        assertNotNull(sgxieFunc)
+
+        val ieFunc = sgxieFunc.calls("t_ie").last().invokes.single()
+
+        val readFunc = tu.functions("read").single()
+
+        val sgxReadFunc = tu.functions("sgx_read").single()
+
+        // Params and PMVs
+        val dlfreeParam = dlfreeFunc.parameters.single()
+        val dlfreePMV = dlfreeParam.memoryValues.single { it.name.localName == "derefvalue" }
+        assertNotNull(dlfreePMV)
+
+        val initEcallParam2 = ieFunc.parameters[1]
+        val initEcallDerefPMV2 =
+            initEcallParam2.memoryValues.single { it.name.localName == "derefvalue" }
+
+        val readDerefPMV =
+            readFunc.parameters[0].memoryValues.single { it.name.localName == "derefvalue" }
+
+        // Calls
+        val memcpyCall = sgxieFunc.calls("memcpy_s").single()
+        val printlnCall = readFunc.calls("println").single()
+        val readCall = sgxReadFunc.calls("read").single()
+        val memcpyCall2 = sgxReadFunc.calls("memcpy_s").single()
+
+        val sgxieParam = sgxieFunc.parameters.singleOrNull()
+        val sgxieDerefDerefPMV =
+            sgxieParam?.memoryValues?.singleOrNull { it.name.localName == "derefderefvalue" }
+        assertNotNull(sgxieDerefDerefPMV)
+
+        // First check: all memcpy_s deref-PMVs should have a prevDFG to the previous PMV
+        // TODO: Actually, we should only have one memcpy_s
+        tu.functions("memcpy_s").forEach { func ->
+            val dstParamDerefPMV =
+                func.parameters.first().memoryValues.singleOrNull {
+                    it.name.localName == "derefvalue"
+                }
+            assertNotNull(dstParamDerefPMV)
+            val srcParamDerefPMV =
+                dstParamDerefPMV.prevDFGEdges
+                    .singleOrNull {
+                        (it.start as? ParameterMemoryValue)?.name?.localName == "derefvalue"
+                    }
+                    ?.start
+            assertNotNull(srcParamDerefPMV)
+            // Ensure they are from the same function
+            assertEquals(dstParamDerefPMV.name.parent?.parent, srcParamDerefPMV.name.parent?.parent)
+        }
+
+        // We expect the following DF:
+        // 1) from sgx_t_global_init_ecall's param_1 derefderefPMV to the derefPMV of the memcpy_s
+        // src
+        // (the additional dereference comes from `uVar1 = param_1[1];` in Line 22, which
+        // dereferences param_1
+        // 2) the derefPMV of the memcpy_s src to the derefPMV dst (we already checked that one)
+        // 3) from the derefPMV dst to the derefPMV of the 2nd parameter of t_global_init_ecall
+        val memcpySrcDerefPMV =
+            memcpyCall.invokes.single().parameters[2].memoryValues.single {
+                it.name.localName == "derefvalue"
+            }
+        // 1)
+        assertContains(memcpySrcDerefPMV.prevDFG, sgxieDerefDerefPMV)
+        // 3)
+        assertEquals(
+            1,
+            initEcallDerefPMV2.prevDFG
+                .filter {
+                    (it as? ParameterMemoryValue)?.name.toString() == "memcpy_s.u8Ptr0.derefvalue"
+                }
+                .size,
+        )
+
+        // The derefPMV of dlfree should have 2 prevDFG edges, to the 2 memcpy dst deref PMVs
+        assertEquals(
+            2,
+            dlfreePMV.prevDFGEdges
+                .filter {
+                    ((it as? ContextSensitiveDataflow)?.start as? ParameterMemoryValue)
+                        ?.name
+                        ?.localName == "derefvalue" &&
+                        it.start.name.toString().startsWith("memcpy_s")
+                }
+                .size,
+        )
+
+        // Now let's check the ContextSensitiveDataFlow between the DerefPMV of Path in Line 26 and
+        // the derefPMV of the memcpy_s in Line 24
+        // This one should be both a CallingContextIn (into the ieFunc) and a CallingContextOut
+        // (from the memcpy_s)
+        val dfgEdge = readDerefPMV.prevDFGEdges.single()
+        assertTrue(dfgEdge is ContextSensitiveDataflow)
+        assertEquals(
+            readCall,
+            dfgEdge.callingContexts.filterIsInstance<CallingContextIn>().single().calls.single(),
+        )
+        assertEquals(
+            memcpyCall2,
+            dfgEdge.callingContexts.filterIsInstance<CallingContextOut>().single().calls.single(),
+        )
+
+        // Sanity check: There should be no path to the sgxieDerefDerefPMV, so this should be false
+        assertTrue(
+            printlnCall.arguments
+                .single()
+                .followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
+                    it === sgxieDerefDerefPMV
+                }
+                .fulfilled
+                .isEmpty()
+        )
     }
 }
