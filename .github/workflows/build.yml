@@ -89,7 +89,9 @@ jobs:
           if grep -q '^enableCodyzeConsole=true' gradle.properties; then
             EXCLUDES="$EXCLUDES -x shadowJar -x shadowDistZip -x shadowDistTar"
           fi
-          ./gradlew --parallel spotlessCheck -x spotlessApply build $EXCLUDES koverXmlReport koverHtmlReport performanceTest integrationTest
+          # The test log4j2.xml files default to DEBUG. On a full build that is tens of
+          # thousands of lines nobody reads.
+          ./gradlew --parallel -Pcpg.log.level=INFO spotlessCheck -x spotlessApply build $EXCLUDES koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}
