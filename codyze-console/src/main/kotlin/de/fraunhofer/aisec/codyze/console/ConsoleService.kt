@@ -250,20 +250,23 @@ class ConsoleService {
     }
 
     /**
-     * Returns the details of the innermost node at the given position of a translation unit, or
-     * `null` if there is no node at this position.
+     * Returns the details of the innermost node at the given position of a translation unit (or the
+     * innermost node containing the range up to the end position), or `null` if there is no such
+     * node.
      */
     fun getNodeDetailsAt(
         componentName: String,
         id: String,
         line: Int,
         column: Int,
+        endLine: Int? = null,
+        endColumn: Int? = null,
     ): NodeDetailsJSON? {
         return getComponent(componentName)
             ?.translationUnits
             ?.find { it.id == Uuid.parse(id) }
             ?.cpgTU
-            ?.nodeAt(line, column)
+            ?.nodeAt(line, column, endLine, endColumn)
             ?.toDetailsJSON()
     }
 
@@ -272,6 +275,21 @@ class ConsoleService {
      * analysis warnings), or `null` if there is no such node.
      */
     fun getNodeDetails(nodeId: String): NodeDetailsJSON? {
+        return findNode(nodeId)?.toDetailsJSON()
+    }
+
+    /**
+     * Returns the places where the analysis is uncertain that the nodes with the given IDs rely on
+     * (see [trustIssues]). IDs of nodes that do not exist are ignored.
+     */
+    fun getTrustIssues(nodeIds: Collection<String>): List<TrustIssueJSON> {
+        return trustIssues(
+            nodeIds.toSet().mapNotNull { id -> findNode(id)?.let { id to it } }.toMap()
+        )
+    }
+
+    /** Returns the node (or overlay) with the given ID, using an index built on first use. */
+    private fun findNode(nodeId: String): Node? {
         val id = runCatching { Uuid.parse(nodeId) }.getOrNull() ?: return null
         val index =
             nodeIndex
@@ -284,7 +302,7 @@ class ConsoleService {
                     ?.also { nodeIndex = it }
                 ?: return null
 
-        return index[id]?.toDetailsJSON()
+        return index[id]
     }
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */

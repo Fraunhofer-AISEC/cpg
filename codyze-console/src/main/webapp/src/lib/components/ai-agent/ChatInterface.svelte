@@ -16,6 +16,14 @@
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
+  import {
+    checkTrust,
+    citationLabel,
+    extractCitations,
+    extractNodeIds,
+    resolveNodes
+  } from '$lib/agentEvidence';
+  import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { getConceptCounts } from '$lib/annotations';
@@ -29,7 +37,9 @@
     Model,
     NodeDetailsJSON,
     NodeRefJSON,
-    FileAnnotationsJSON
+    FileAnnotationsJSON,
+    TrustIssueJSON,
+    CodeSelection
   } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
@@ -164,6 +174,29 @@
 
   function askAboutNode(details: NodeDetailsJSON, question: (where: string) => string) {
     onMessageChange(question(describeNode(details.node)));
+  }
+
+  // The input next to selected code asks right away. The selection is the context of the question,
+  // instead of the inspected node
+  const maxSelectionLength = 2000;
+
+  function describeSelection(s: CodeSelection): string {
+    const lines = s.startLine === s.endLine ? `${s.startLine}` : `${s.startLine}-${s.endLine}`;
+    const text =
+      s.text.length > maxSelectionLength ? `${s.text.slice(0, maxSelectionLength)}…` : s.text;
+    const node = s.node ? `; the innermost node containing it is ${describeNode(s.node)}` : '';
+    return `${s.fileName}:${lines}, selected code \`${text}\`${node}`;
+  }
+
+  function askAboutSelection(question: string, selection: CodeSelection) {
+    if (isLoading) return;
+    // The draft in the input stays where it is
+    const draft = currentMessage;
+    showAgent();
+    chosenBlock = null;
+    onMessageChange(question);
+    onSendMessage(describeSelection(selection));
+    onMessageChange(draft);
   }
 
   // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
@@ -337,6 +370,14 @@
         run: () => (paletteQuery = '')
       },
       {
+        id: 'ask',
+        category: 'Selection',
+        label: 'Ask the agent about the selected code',
+        shortcut: `${mod}K`,
+        disabledReason: openedUnit ? undefined : 'No file is open',
+        run: () => askRequest++
+      },
+      {
         id: 'back',
         category: 'Go',
         label: 'Back',
@@ -497,6 +538,195 @@
     focus.inspect(() => getNodeDetails(nodeId), true);
   }
 
+  // The nodes cited in the answers of the agent, resolved to their locations to label and open them
+  let citedRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  const citedKey = $derived(
+    [
+      ...new Set([
+        ...messages.flatMap((m) =>
+          m.role === 'assistant' && m.contentType !== 'tool-result'
+            ? extractCitations(m.content)
+            : []
+        ),
+        ...extractCitations(streamingContent)
+      ])
+    ].join(',')
+  );
+
+  $effect(() => {
+    const key = citedKey;
+    if (!key) return;
+    resolveNodes(key.split(',')).then((refs) => {
+      if (key === citedKey) citedRefs = refs;
+    });
+  });
+
+  // Inspects a node cited by the agent and shows it in the code
+  async function openCitation(nodeId: string) {
+    const ref = citedRefs.get(nodeId) ?? (await getNodeDetails(nodeId).catch(() => null))?.node;
+    if (ref) selectRef(ref);
+  }
+
+  // The conversation as a timeline: one block per question, with the tool calls as numbered steps
+  // (the evidence trail) and the answer last
+  interface TimelineEntry {
+    message: ChatMessage;
+    /** The index of the message in [messages] */
+    index: number;
+    /** The number of the step, for tool calls */
+    step?: number;
+  }
+
+  const timeline = $derived.by(() => {
+    const blocks: { question: ChatMessage | null; entries: TimelineEntry[] }[] = [];
+    messages.forEach((message, index) => {
+      if (message.role === 'user') {
+        blocks.push({ question: message, entries: [] });
+        return;
+      }
+      if (blocks.length === 0) blocks.push({ question: null, entries: [] });
+      const block = blocks[blocks.length - 1];
+      const step =
+        message.contentType === 'tool-result'
+          ? block.entries.filter((e) => e.step).length + 1
+          : undefined;
+      block.entries.push({ message, index, step });
+    });
+    return blocks;
+  });
+
+  // The evidence of each block: the node IDs returned by each step, and the IDs that are only
+  // cited in the answer
+  const blockEvidence = $derived(
+    timeline.map((block) => {
+      const steps = block.entries.flatMap((e) =>
+        e.step ? [{ step: e.step, ids: extractNodeIds(e.message.toolResult?.content) }] : []
+      );
+      const returned = new Set(steps.flatMap((s) => s.ids));
+      const cited = block.entries.flatMap((e) =>
+        e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+      );
+      return { steps, claimed: [...new Set(cited)].filter((id) => !returned.has(id)) };
+    })
+  );
+
+  // The nodes of the evidence, resolved to their locations. IDs that are no nodes are missing
+  let evidenceRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  const evidenceKey = $derived(
+    [...new Set(blockEvidence.flatMap((e) => [...e.steps.flatMap((s) => s.ids), ...e.claimed]))]
+      .sort()
+      .join(',')
+  );
+
+  $effect(() => {
+    const key = evidenceKey;
+    if (!key) return;
+    resolveNodes(key.split(',')).then((refs) => {
+      if (key === evidenceKey) evidenceRefs = refs;
+    });
+  });
+
+  // The block whose evidence is shown in the code: the one the user chose, or else the latest one
+  // with evidence
+  let chosenBlock = $state<number | null>(null);
+  const activeBlock = $derived(
+    chosenBlock !== null && chosenBlock < timeline.length
+      ? chosenBlock
+      : blockEvidence.findLastIndex((e) => e.steps.some((s) => s.ids.length) || e.claimed.length)
+  );
+
+  function stepNodes(ids: string[]): NodeRefJSON[] {
+    return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
+  }
+
+  // The tool calls of the active block that have evidence in the code, to step through them like in
+  // a debugger. Nodes only cited in the answer are no step: they are marked in the code and named
+  // in the trust notes under the answer
+  const threadSteps = $derived.by(() => {
+    const evidence = blockEvidence[activeBlock];
+    const block = timeline[activeBlock];
+    if (!evidence || !block || !layers.visible.agent) return [];
+    return evidence.steps.flatMap(({ step, ids }) => {
+      const nodes = stepNodes(ids);
+      const entry = block.entries.find((e) => e.step === step);
+      const tool = entry?.message.toolResult?.toolName ?? 'tool';
+      return nodes.length
+        ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
+        : [];
+    });
+  });
+
+  // The places where the analysis is uncertain that the evidence of each block relies on. The block
+  // the agent is still working on is checked once it is done
+  let blockTrust = $state.raw<TrustIssueJSON[][]>([]);
+  $effect(() => {
+    const evidence = blockEvidence;
+    const pending = isLoading ? evidence.length - 1 : -1;
+    Promise.all(
+      evidence.map((e, b) =>
+        b === pending ? [] : checkTrust([...e.steps.flatMap((s) => s.ids), ...e.claimed])
+      )
+    ).then((trust) => {
+      if (evidence === blockEvidence) blockTrust = trust;
+    });
+  });
+
+  // The trust issues shown in full, by block; otherwise only the first few are shown
+  let trustExpanded = $state<Record<number, boolean>>({});
+  const TRUST_PREVIEW = 3;
+
+  // Who relies on an issue, e.g. "Step 1", "Steps 1, 3" or "The answer"
+  function trustSubject(issue: TrustIssueJSON, b: number): { text: string; plural: boolean } {
+    const evidence = blockEvidence[b];
+    const steps = (evidence?.steps ?? [])
+      .filter((s) => s.ids.some((id) => issue.evidence.includes(id)))
+      .map((s) => s.step);
+    if (steps.length === 0) return { text: 'The answer', plural: false };
+    return {
+      text: `${steps.length === 1 ? 'Step' : 'Steps'} ${steps.join(', ')}`,
+      plural: steps.length > 1
+    };
+  }
+
+  function trustLocation(ref: NodeRefJSON): string {
+    return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
+  }
+
+  // The files with evidence of the active thread, marked in the file tree
+  const threadUnits = $derived(
+    new Set(
+      layers.visible.agent
+        ? focus.thread.flatMap((n) => (n.ref.translationUnitId ? [n.ref.translationUnitId] : []))
+        : []
+    )
+  );
+
+  // The step of the inspected node, if it belongs to the active thread
+  const threadStepIndex = $derived(
+    threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
+  );
+
+  function goToThreadStep(index: number) {
+    const step = threadSteps[index];
+    if (step) selectRef(step.nodes[0]);
+  }
+
+  // The evidence of the active block, shown as numbered markers in the code
+  $effect(() => {
+    const evidence = blockEvidence[activeBlock];
+    const nodes: ThreadNode[] = [];
+    if (evidence) {
+      for (const { step, ids } of evidence.steps) {
+        for (const ref of stepNodes(ids)) nodes.push({ ref, step, claimed: false });
+      }
+      const answerStep = evidence.steps.length + 1;
+      for (const ref of stepNodes(evidence.claimed)) {
+        nodes.push({ ref, step: answerStep, claimed: true });
+      }
+    }
+    focus.thread = nodes;
+  });
+
   // The concept suggestions are attached to the last tool result that suggested a concept
   const suggestionAnchorIndex = $derived(
     suggestions.length > 0
@@ -633,6 +863,13 @@
     document.body.style.cursor = 'col-resize';
   }
 
+  // Why the agent cannot be asked right now
+  const askDisabledReason = $derived(
+    isLoading ? 'The agent is still working' : !selectedModel ? 'No LLM provider configured' : null
+  );
+  // Incremented to open the input for the selected code, e.g. from the command palette
+  let askRequest = $state(0);
+
   // The selected node is attached to questions as context, unless the user removed it
   let dismissedContextId = $state<string | null>(null);
   const contextNode = $derived(
@@ -641,6 +878,8 @@
 
   function send() {
     showAgent();
+    // The new question becomes the active thread
+    chosenBlock = null;
     onSendMessage(contextNode ? describeNode(contextNode) : undefined);
   }
 
@@ -797,6 +1036,105 @@
   {/each}
 {/snippet}
 
+<!-- The reasoning of the model before a message, collapsed -->
+<!-- Where the analysis is uncertain for the evidence of a block, in the color of uncertainty -->
+{#snippet trustNotes(b: number)}
+  {@const issues = blockTrust[b] ?? []}
+  {@const claimed = stepNodes(blockEvidence[b]?.claimed ?? [])}
+  {@const shown = trustExpanded[b] ? issues : issues.slice(0, TRUST_PREVIEW)}
+  {#if issues.length > 0 || claimed.length > 0}
+    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug text-red-700">
+      {#each shown as issue (issue.kind + issue.location.id)}
+        {@const subject = trustSubject(issue, b)}
+        <li>
+          <button
+            type="button"
+            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left hover:bg-red-50 disabled:hover:bg-transparent"
+            disabled={issue.location.startLine < 1}
+            title={issue.location.code || issue.location.name}
+            onclick={() => {
+              chosenBlock = b;
+              selectRef(issue.location);
+            }}
+          >
+            <span aria-hidden="true">⚠</span>
+            <span class="min-w-0 flex-1"
+              >{subject.text}
+              {subject.plural ? 'rely' : 'relies'} on {issue.reason}
+              <span class="font-mono whitespace-nowrap text-red-800/80"
+                >· {trustLocation(issue.location)}</span
+              ></span
+            >
+          </button>
+        </li>
+      {/each}
+      {#if issues.length > TRUST_PREVIEW}
+        <li>
+          <button
+            type="button"
+            class="rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+            onclick={() => (trustExpanded = { ...trustExpanded, [b]: !trustExpanded[b] })}
+          >
+            {trustExpanded[b] ? 'Show less' : `+ ${issues.length - TRUST_PREVIEW} more`}
+          </button>
+        </li>
+      {/if}
+      {#if claimed.length > 0}
+        <!-- Cited nodes no tool returned are claims of the model, not results of the analysis -->
+        <li class="flex flex-wrap items-center gap-1 px-1">
+          <span aria-hidden="true">⚠</span>
+          <span
+            >The answer cites {claimed.length === 1 ? 'a node' : `${claimed.length} nodes`} no tool returned:</span
+          >
+          {#each claimed as ref (ref.id)}
+            <button
+              type="button"
+              class="rounded border border-dashed border-gray-300 px-1 font-mono text-[10px] text-gray-700 hover:border-gray-500 hover:bg-gray-50"
+              onclick={() => {
+                chosenBlock = b;
+                selectRef(ref);
+              }}
+            >
+              {citationLabel(ref)}
+            </button>
+          {/each}
+        </li>
+      {/if}
+    </ul>
+  {/if}
+{/snippet}
+
+{#snippet reasoning(message: ChatMessage)}
+  {#if message.reasoning}
+    <div class="my-1 inline-block">
+      <button
+        class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
+        onclick={() => toggleReasoning(message.id)}
+      >
+        <svg
+          class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(message.id)
+            ? 'rotate-90'
+            : ''}"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Thought process</span>
+      </button>
+      {#if expandedReasoning.has(message.id)}
+        <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
+          <p class="text-xs leading-relaxed whitespace-pre-wrap text-gray-400 italic">
+            {message.reasoning}
+          </p>
+        </div>
+      {/if}
+    </div>
+  {/if}
+{/snippet}
+
 {#snippet workingDot()}
   <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" title="The agent is working"
   ></span>
@@ -934,6 +1272,7 @@
           onComponentSelect={handleComponentSelect}
           conceptSuggestions={tusWithSuggestions}
           {conceptCounts}
+          agentUnits={threadUnits}
           revealUnit={treeReveal}
           embedded
         />
@@ -1004,6 +1343,17 @@
         {/each}
       </div>
     {/if}
+    {#if threadSteps.length > 0}
+      <StepBar
+        title="Agent"
+        steps={threadSteps.map((s) => ({ label: s.label, title: s.title, number: s.step }))}
+        index={threadStepIndex}
+        onSelect={goToThreadStep}
+        onClose={() => layers.toggle('agent')}
+        closeTitle="Hide the agent's evidence (● Agent layer)"
+        shape="square"
+      />
+    {/if}
     {#if focus.path.length >= 2}
       <StepBar
         title="Path"
@@ -1011,6 +1361,7 @@
         index={focus.pathIndex}
         onSelect={goToStep}
         onClose={() => focus.clearPath()}
+        closeTitle="Close the dataflow path"
       />
     {/if}
     <div class="flex min-h-0 flex-1">
@@ -1022,7 +1373,6 @@
       {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
         <CodeViewer
           translationUnit={openedUnit}
-          highlightLine={selectedNode?.startLine ?? undefined}
           componentName={selectedComponentName ?? undefined}
           selectedNodeId={selectedNode?.id}
           onNavigateToNode={handleNavigateToNode}
@@ -1032,6 +1382,9 @@
           externalInspector
           lanes
           onInspect={showInspector}
+          onAsk={askAboutSelection}
+          {askDisabledReason}
+          {askRequest}
         >
           {#snippet headerStart()}
             {@render historyButtons()}
@@ -1138,7 +1491,7 @@
       {:else}
         <!-- Messages -->
         <div
-          class="min-h-0 flex-1 overflow-y-auto"
+          class="min-h-0 flex-1 overflow-y-auto bg-gray-50"
           style="transform: translateZ(0);"
           bind:this={messagesContainer}
           onscroll={handleScroll}
@@ -1164,93 +1517,154 @@
             </div>
           {/if}
 
-          {#each messages as message, i (i)}
-            {#if message.role === 'user'}
-              <div class="flex flex-col items-end gap-1 px-3 py-2">
-                {#if message.context}
-                  <span
-                    class="max-w-[85%] truncate rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500"
-                    title={message.context}>📎 {message.context}</span
-                  >
-                {/if}
-                <div class="max-w-[85%] rounded-2xl bg-blue-600 px-3 py-2 text-white">
-                  <div class="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
-                </div>
-              </div>
-            {:else}
-              <div class={message.contentType === 'tool-result' ? 'px-3 py-1' : 'px-3 py-3'}>
-                {#if message.reasoning}
-                  <div class="mb-2 inline-block">
-                    <button
-                      class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
-                      onclick={() => toggleReasoning(message.id)}
+          {#each timeline as block, b (b)}
+            {@const isLast = b === timeline.length - 1}
+            {@const isActive = b === activeBlock}
+            {@const evidence = blockEvidence[b]}
+            {@const hasEvidence =
+              evidence.steps.some((s) => s.ids.length) || evidence.claimed.length > 0}
+            <section
+              class="mx-2 my-2 rounded-md border bg-white {isActive && hasEvidence
+                ? 'border-slate-400'
+                : 'border-gray-200'}"
+            >
+              {#if block.question}
+                <!-- The question, with the code it refers to -->
+                <header class="border-b border-gray-100 px-3 py-2">
+                  <div class="flex items-start gap-2">
+                    <p
+                      class="min-w-0 flex-1 text-sm leading-snug font-medium whitespace-pre-wrap text-gray-900"
                     >
-                      <svg
-                        class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(
-                          message.id
-                        )
-                          ? 'rotate-90'
-                          : ''}"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
+                      {block.question.content}
+                    </p>
+                    {#if hasEvidence}
+                      <!-- Only one thread is shown in the code at a time -->
+                      <button
+                        type="button"
+                        class="mt-0.5 shrink-0 rounded px-1 text-[11px] {isActive
+                          ? 'text-slate-800'
+                          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}"
+                        aria-pressed={isActive}
+                        disabled={isActive}
+                        title={isActive
+                          ? 'The evidence of this question is shown in the code'
+                          : 'Show the evidence of this question in the code'}
+                        onclick={() => (chosenBlock = b)}
                       >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                      <span>Thought process</span>
-                    </button>
-                    {#if expandedReasoning.has(message.id)}
-                      <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
-                        <p class="text-xs leading-relaxed whitespace-pre-wrap text-gray-400 italic">
-                          {message.reasoning}
-                        </p>
+                        {isActive ? '● in code' : '○ show in code'}
+                      </button>
+                    {/if}
+                  </div>
+                  {#if block.question.context}
+                    <p
+                      class="mt-1 truncate font-mono text-[10px] text-gray-500"
+                      title={block.question.context}
+                    >
+                      📎 {block.question.context}
+                    </p>
+                  {/if}
+                </header>
+              {/if}
+              <div class="px-3 py-1.5">
+                {#each block.entries as entry (entry.index)}
+                  {@const message = entry.message}
+                  {@render reasoning(message)}
+                  {#if message.contentType === 'tool-result' && message.toolResult}
+                    <!-- A tool call: a numbered step of the evidence trail -->
+                    <div class="flex min-w-0 items-start gap-1.5">
+                      <span
+                        class="mt-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-slate-700 px-0.5 text-[10px] leading-none font-semibold text-white tabular-nums"
+                        title="Step {entry.step}"
+                      >
+                        {entry.step}
+                      </span>
+                      <div class="min-w-0 flex-1">
+                        <ToolResultBlock
+                          toolResult={message.toolResult}
+                          onItemClick={handleNodeClick}
+                        />
+                      </div>
+                      {#if stepNodes(evidence.steps.find((s) => s.step === entry.step)?.ids ?? []).length > 0}
+                        {@const nodes = stepNodes(
+                          evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
+                        )}
+                        <button
+                          type="button"
+                          class="mt-1.5 shrink-0 rounded px-1 text-[11px] text-gray-400 tabular-nums hover:bg-gray-100 hover:text-gray-700"
+                          title="Go to the first of the nodes this step returned"
+                          onclick={() => {
+                            chosenBlock = b;
+                            selectRef(nodes[0]);
+                          }}
+                        >
+                          {nodes.length}
+                          {nodes.length === 1 ? 'node' : 'nodes'} →
+                        </button>
+                      {/if}
+                    </div>
+                    {#if entry.index === suggestionAnchorIndex}
+                      <!-- The pending concept suggestions of the agent, to accept or reject -->
+                      <div class="my-1 ml-5 overflow-hidden rounded border border-gray-200">
+                        <ConceptChecklist
+                          bind:items={suggestions}
+                          onApplySuggestions={handleApplyAndReload}
+                          onHighlightNode={revealSuggestedNode}
+                        />
+                      </div>
+                    {/if}
+                  {:else if message.content}
+                    <!-- The answer (or an error) -->
+                    <div class="prose prose-sm max-w-none py-1.5 text-gray-800">
+                      <MarkdownRenderer
+                        content={message.content}
+                        citations={citedRefs}
+                        onCite={openCitation}
+                      />
+                    </div>
+                    {#if message.contentType === 'text' && extractCitations(message.content).length === 0}
+                      <!-- Answers are only verifiable through the nodes they rely on -->
+                      <p
+                        class="pb-1 text-[11px] text-gray-400"
+                        title="The answer cites no nodes of the code, so it is not backed by evidence from the analysis"
+                      >
+                        ○ Unsupported: no nodes cited
+                      </p>
+                    {/if}
+                  {/if}
+                {/each}
+
+                {#if !(isLast && isLoading)}
+                  {@render trustNotes(b)}
+                {/if}
+
+                {#if isLast && (isLoading || displayContent)}
+                  <div class="py-1.5">
+                    {#if displayContent}
+                      <div class="prose prose-sm max-w-none text-gray-800">
+                        <MarkdownRenderer
+                          content={displayContent}
+                          citations={citedRefs}
+                          onCite={openCitation}
+                        />
+                      </div>
+                    {:else}
+                      <div class="flex gap-1 py-1" title="The agent is working">
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"
+                        ></div>
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"
+                        ></div>
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"
+                        ></div>
                       </div>
                     {/if}
                   </div>
                 {/if}
-                {#if message.contentType === 'tool-result' && message.toolResult}
-                  <ToolResultBlock toolResult={message.toolResult} onItemClick={handleNodeClick} />
-                  {#if i === suggestionAnchorIndex}
-                    <!-- The pending concept suggestions of the agent, to accept or reject -->
-                    <div class="my-1 overflow-hidden rounded border border-gray-200">
-                      <ConceptChecklist
-                        bind:items={suggestions}
-                        onApplySuggestions={handleApplyAndReload}
-                        onHighlightNode={revealSuggestedNode}
-                      />
-                    </div>
-                  {/if}
-                {:else if message.content}
-                  <div class="prose prose-sm max-w-none text-gray-800">
-                    <MarkdownRenderer content={message.content} />
-                  </div>
-                {/if}
               </div>
-            {/if}
+            </section>
           {/each}
-
-          {#if isLoading || displayContent}
-            <div class="px-3 py-3">
-              {#if displayContent}
-                <div class="prose prose-sm max-w-none text-gray-800">
-                  <MarkdownRenderer content={displayContent} />
-                </div>
-              {:else}
-                <div class="flex gap-1">
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"
-                  ></div>
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"
-                  ></div>
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          {/if}
         </div>
 
         <!-- Input -->
