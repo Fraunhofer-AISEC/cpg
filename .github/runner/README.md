@@ -57,15 +57,20 @@ This installs the build dependencies and Docker, adds swap, creates the tool cac
 
 ## 3. Register the runner
 
-Create a registration token in the repository (or organization) settings under
-*Actions > Runners > New self-hosted runner*, then on the VM:
+The runners are registered at **organization** level. Create a registration token in the
+organization settings under *Actions > Runners > New self-hosted runner* (this needs org admin),
+then on the VM:
 
 ```bash
 cd ~/actions-runner1
-./config.sh --url https://github.com/Fraunhofer-AISEC/cpg --token <TOKEN> \
-  --labels self-hosted,Linux,ARM64 --unattended
+./config.sh --url https://github.com/Fraunhofer-AISEC --token <TOKEN> \
+  --name sas-cpg-ci-1 --labels self-hosted,Linux,ARM64 --unattended
 sudo ./svc.sh install && sudo ./svc.sh start
 ```
+
+To replace an existing runner of the same name, remove it first (`./config.sh remove --token
+<REMOVE_TOKEN>` on the old VM, or in the runner's settings page). The token and the runner's
+`.credentials` files are secrets and must not be copied between machines.
 
 Run **one** runner per VM. Two concurrent builds on 8 vCPUs compete for CPU and memory and are
 slower than running them one after the other.
