@@ -221,4 +221,46 @@ class CXXInferenceTest {
         assertNotNull(funcBar)
         assertFalse(funcBar.isInferred)
     }
+
+    @Test
+    fun testNullPointerConstantResolvesInC() {
+        val file = File("src/test/resources/c/null_pointer_constant.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val (zero, zeroLong, one) = tu.calls("take_pointer")
+        for (call in listOf(zero, zeroLong)) {
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.none { it.isInferred },
+                "${call.code} invokes an inferred function",
+            )
+        }
+        assertTrue(one.invokes.all { it.isInferred })
+    }
+
+    @Test
+    fun testNullPointerConstantResolvesInCpp() {
+        val file = File("src/test/resources/cxx/inference/null_pointer_constant.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        val takePointer = tu.calls["take_pointer"]
+        assertNotNull(takePointer)
+        assertTrue(takePointer.invokes.isNotEmpty())
+        assertTrue(takePointer.invokes.none { it.isInferred })
+
+        val overloaded = tu.calls["overloaded"]
+        assertNotNull(overloaded)
+        val target = overloaded.invokes.singleOrNull()
+        assertNotNull(target)
+        assertFalse(target.isInferred)
+        assertLocalName("int", target.parameters.singleOrNull()?.type)
+    }
 }
