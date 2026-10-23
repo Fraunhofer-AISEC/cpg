@@ -557,35 +557,50 @@ fun getSession(projectName: String? = null): CpgSession? =
 fun <T : HasProjectNamePayload> T.runOnSession(
     mutating: Boolean = false,
     query: (CpgSession, T) -> CallToolResult,
-): CallToolResult {
-    return try {
-        var session = getSession(projectName)
-        var result: CallToolResult? = null
-        // A re-analysis of the project replaces its session while holding the old one's write lock,
-        // so a call that waited for that lock must not query the stale session but the new one.
-        while (session != null && result == null) {
-            val current = session
-            result =
-                current.lock.withAccess(mutating) {
-                    if (getSession(projectName) === current) query(current, this) else null
-                }
-            if (result == null) session = getSession(projectName)
-        }
-        if (result != null) return result
-
-        val available = "Available projects: ${analysisSessions.keys.joinToString { "'$it'" }}."
-        val message =
-            when {
-                analysisSessions.isEmpty() ->
-                    "No project has been analyzed yet. Please analyze one first using cpg_analyze."
-                projectName != null -> "Unknown project '$projectName'. $available"
-                else -> "Several projects are analyzed, so 'projectName' is required. $available"
-            }
-        CallToolResult(content = listOf(TextContent(message)))
+): CallToolResult =
+    try {
+        withCurrentSession(projectName, mutating) { query(it, this) }
+            ?: noSessionResult(projectName)
     } catch (e: Exception) {
         CallToolResult(
             content =
                 listOf(TextContent("Error executing query: ${e.message ?: e::class.simpleName}"))
         )
     }
+
+/**
+ * Runs [query] on the session currently registered for [projectName] (see [getSession]), under its
+ * lock, or returns `null` if there is none. A re-analysis replaces a project's session while
+ * holding the old one's write lock, so a call that waited for that lock checks that its session is
+ * still the current one, and otherwise runs on the new one instead of the stale one.
+ */
+private fun <R : Any> withCurrentSession(
+    projectName: String?,
+    mutating: Boolean,
+    query: (CpgSession) -> R,
+): R? {
+    while (true) {
+        val session = getSession(projectName) ?: return null
+        session.lock
+            .withAccess(mutating) {
+                if (getSession(projectName) === session) query(session) else null
+            }
+            ?.let {
+                return it
+            }
+        // Replaced while we waited for its lock: try again on the session that replaced it.
+    }
+}
+
+/** Why there is no session for [projectName], and which projects there are. */
+private fun noSessionResult(projectName: String?): CallToolResult {
+    val available = "Available projects: ${analysisSessions.keys.joinToString { "'$it'" }}."
+    val message =
+        when {
+            analysisSessions.isEmpty() ->
+                "No project has been analyzed yet. Please analyze one first using cpg_analyze."
+            projectName != null -> "Unknown project '$projectName'. $available"
+            else -> "Several projects are analyzed, so 'projectName' is required. $available"
+        }
+    return CallToolResult(content = listOf(TextContent(message)))
 }
