@@ -1810,6 +1810,47 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testPointerSizedIntegerTypes() {
+        val files =
+            listOf(
+                File("src/test/resources/c/pointer_sized_integers.c"),
+                File("src/test/resources/cxx/pointer_sized_integers.cpp"),
+            )
+        for (file in files) {
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                    it.registerLanguage<CLanguage>()
+                    it.registerLanguage<CPPLanguage>()
+                }
+            assertNotNull(tu)
+
+            val caller = tu.functions["caller"]
+            assertNotNull(caller)
+            val expected =
+                listOf(
+                    "size_t" to NumericType.Modifier.UNSIGNED,
+                    "ssize_t" to NumericType.Modifier.SIGNED,
+                    "ptrdiff_t" to NumericType.Modifier.SIGNED,
+                    "intptr_t" to NumericType.Modifier.SIGNED,
+                    "uintptr_t" to NumericType.Modifier.UNSIGNED,
+                )
+            assertEquals(expected.size, caller.parameters.size)
+            for ((parameter, typeAndModifier) in caller.parameters.zip(expected)) {
+                val (name, modifier) = typeAndModifier
+                val type = parameter.type
+                assertIs<IntegerType>(type, "${file.name}: ${parameter.name}")
+                assertLocalName(name, type)
+                assertEquals(64, type.bitWidth)
+                assertEquals(modifier, type.modifier)
+            }
+
+            val sum = caller.allChildren<BinaryOperator>().singleOrNull()
+            assertNotNull(sum)
+            assertIs<IntegerType>(sum.type, "${file.name}: ${sum.code}")
+        }
+    }
+
+    @Test
     fun testGoto() {
         val file = File("src/test/resources/c/goto.c")
         val tu =

@@ -235,6 +235,15 @@ open class CLanguage :
             "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
             "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
 
+            // Pointer-sized integers, defined in <stddef.h> and <stdint.h> (ssize_t is POSIX,
+            // defined in <sys/types.h>). We assume 64 bits, which is the case on 64-bit platforms;
+            // on 32-bit platforms, they have 32 bits.
+            "size_t" to IntegerType("size_t", 64, this, NumericType.Modifier.UNSIGNED),
+            "ssize_t" to IntegerType("ssize_t", 64, this, NumericType.Modifier.SIGNED),
+            "ptrdiff_t" to IntegerType("ptrdiff_t", 64, this, NumericType.Modifier.SIGNED),
+            "intptr_t" to IntegerType("intptr_t", 64, this, NumericType.Modifier.SIGNED),
+            "uintptr_t" to IntegerType("uintptr_t", 64, this, NumericType.Modifier.UNSIGNED),
+
             // Wide characters (wchar_t) are also defined in <stddef.h> and <wchar.h>. The size of
             // wchar_t is platform-dependent, but we assume 32 bits here, which is the case on
             // Linux. This is also the current implementation in CPPLanguage. TODO: On Windows,
