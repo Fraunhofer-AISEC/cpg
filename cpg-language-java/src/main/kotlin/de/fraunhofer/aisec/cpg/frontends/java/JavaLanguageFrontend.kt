@@ -53,6 +53,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
@@ -70,8 +71,8 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
-import java.io.FileNotFoundException
 import java.io.IOException
+import java.nio.file.Path
 import java.util.function.Consumer
 import kotlin.jvm.optionals.getOrNull
 
@@ -82,7 +83,7 @@ import kotlin.jvm.optionals.getOrNull
 @RegisterExtraPass(JavaImportResolver::class)
 @RegisterExtraPass(JavaExtraPass::class)
 open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<JavaLanguageFrontend>) :
-    LanguageFrontend<Node, Type>(ctx, language) {
+    LanguageFrontend<Node, Type>(ctx, language), SupportsNewParse {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -104,82 +105,96 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnit {
-        // load in the file
         return try {
-            val parserConfiguration = ParserConfiguration()
-            parserConfiguration.setSymbolResolver(javaSymbolResolver)
-            val parser = JavaParser(parserConfiguration)
-
-            // parse the file
-            var bench = Benchmark(this.javaClass, "Parsing source file")
-
-            context = parse(file, parser)
-            bench.addMeasurement()
-            bench = Benchmark(this.javaClass, "Transform to CPG")
-            context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
-
-            // starting point is always a translation declaration
-            val tud = newTranslationUnit(file.toString(), rawNode = context)
-            currentTU = tud
-            scopeManager.resetToGlobal(tud)
-            val packDecl = context?.packageDeclaration?.orElse(null)
-
-            // We need to create nested namespace (if we have a package declaration) so that we have
-            // correct symbols on the global scope. Otherwise, we put everything directly into the
-            // translation unit
-            val holder =
-                packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
-                    previous: Namespace?,
-                    path ->
-                    val fqn = previous?.name.fqn(path)
-
-                    val nsd = newNamespace(fqn, rawNode = packDecl, holder = previous ?: tud)
-                    scopeManager.enterScope(nsd)
-                    nsd
-                } ?: tud
-
-            for (type in context?.types ?: listOf()) {
-                // handle each type. all declaration in this type will be added by the scope manager
-                // along the way
-                val declaration = declarationHandler.handle(type)
-                if (declaration != null) {
-                    scopeManager.addDeclaration(declaration)
-                    holder.addDeclaration(declaration)
-                }
-            }
-
-            // We put imports and includes directly into the file scope, because otherwise the
-            // import would be visible as symbols in the whole namespace
-            scopeManager.enterScope(tud)
-            for (anImport in context?.imports ?: listOf()) {
-                newInclude(anImport.nameAsString, holder = tud)
-            }
-
-            // We create an implicit import for "java.lang.*"
-            newImport(
-                    parseName("java.lang"),
-                    style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
-                    holder = tud,
-                )
-                .implicit("import java.lang.*")
-            scopeManager.leaveScope(tud)
-
-            if (holder is Namespace) {
-                tud.allChildren<Namespace>().reversed().forEach { scopeManager.leaveScope(it) }
-            }
-            bench.addMeasurement()
-            tud
+            parse(file.readText(Charsets.UTF_8), file.toPath())
         } catch (ex: IOException) {
             throw TranslationException(ex)
         }
     }
 
-    @Throws(TranslationException::class, FileNotFoundException::class)
-    fun parse(file: File?, parser: JavaParser): CompilationUnit {
-        val result = parser.parse(file)
+    @Throws(TranslationException::class)
+    override fun parse(content: String, path: Path?): TranslationUnit {
+        val parserConfiguration = ParserConfiguration()
+        parserConfiguration.setSymbolResolver(javaSymbolResolver)
+        val parser = JavaParser(parserConfiguration)
+
+        // parse the content
+        var bench = Benchmark(this.javaClass, "Parsing source file")
+
+        context = parseCompilationUnit(content, path, parser)
+        // Unlike JavaParser.parse(File), parsing from a String does not attach Storage
+        // automatically. Attach it ourselves when a path is known, so that locationOf() (which
+        // reads CompilationUnit.storage) keeps working for content-based parsing too.
+        path?.let { context?.setStorage(it) }
+        bench.addMeasurement()
+        bench = Benchmark(this.javaClass, "Transform to CPG")
+        context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
+
+        // starting point is always a translation declaration
+        val tud = newTranslationUnit(path?.toString() ?: "unknown", rawNode = context)
+        currentTU = tud
+        scopeManager.resetToGlobal(tud)
+        val packDecl = context?.packageDeclaration?.orElse(null)
+
+        // We need to create nested namespace (if we have a package declaration) so that we have
+        // correct symbols on the global scope. Otherwise, we put everything directly into the
+        // translation unit
+        val holder =
+            packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
+                previous: Namespace?,
+                segment ->
+                val fqn = previous?.name.fqn(segment)
+
+                val nsd = newNamespace(fqn, rawNode = packDecl, holder = previous ?: tud)
+                scopeManager.enterScope(nsd)
+                nsd
+            } ?: tud
+
+        for (type in context?.types ?: listOf()) {
+            // handle each type. all declaration in this type will be added by the scope manager
+            // along the way
+            val declaration = declarationHandler.handle(type)
+            if (declaration != null) {
+                scopeManager.addDeclaration(declaration)
+                holder.addDeclaration(declaration)
+            }
+        }
+
+        // We put imports and includes directly into the file scope, because otherwise the
+        // import would be visible as symbols in the whole namespace
+        scopeManager.enterScope(tud)
+        for (anImport in context?.imports ?: listOf()) {
+            newInclude(anImport.nameAsString, holder = tud)
+        }
+
+        // We create an implicit import for "java.lang.*"
+        newImport(
+                parseName("java.lang"),
+                style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                holder = tud,
+            )
+            .implicit("import java.lang.*")
+        scopeManager.leaveScope(tud)
+
+        if (holder is Namespace) {
+            tud.allChildren<Namespace>().reversed().forEach { scopeManager.leaveScope(it) }
+        }
+        bench.addMeasurement()
+        return tud
+    }
+
+    @Throws(TranslationException::class)
+    private fun parseCompilationUnit(
+        content: String,
+        path: Path?,
+        parser: JavaParser,
+    ): CompilationUnit {
+        val result = parser.parse(content)
         val optional = result.result
         if (optional.isEmpty) {
-            throw TranslationException("JavaParser could not parse file")
+            throw TranslationException(
+                "JavaParser could not parse the content" + (path?.let { " of $it" } ?: "")
+            )
         }
         if (optional.get().parsed == Parsedness.PARSED) {
             log.debug("Successfully parsed java file")
@@ -195,7 +210,10 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                     log.error(sb.toString())
                 }
             )
-            log.error("Could not parse the file {} correctly! AST may be empty", file)
+            log.error(
+                "Could not parse {} correctly! AST may be empty",
+                path?.toString() ?: "<in-memory content>",
+            )
         }
         return optional.get()
     }

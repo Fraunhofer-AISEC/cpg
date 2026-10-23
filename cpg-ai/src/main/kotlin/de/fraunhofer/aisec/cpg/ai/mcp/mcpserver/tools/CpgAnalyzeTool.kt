@@ -54,6 +54,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAddCodePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
@@ -64,6 +65,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -103,12 +105,14 @@ import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.softDependencies
 import de.fraunhofer.aisec.cpg.project.Project
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import java.nio.file.Paths
-import java.util.IdentityHashMap
+import java.util.Collections
 import kotlin.String
 import kotlin.io.path.exists
 import kotlin.reflect.KClass
@@ -117,6 +121,24 @@ import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
+import org.slf4j.LoggerFactory
+
+open class CpgMcpServer(
+    serverInfo: Implementation,
+    options: ServerOptions,
+    instructionsProvider: (() -> String)? = null,
+    block: Server.() -> Unit = {},
+) :
+    Server(
+        serverInfo = serverInfo,
+        options = options,
+        instructionsProvider = instructionsProvider,
+        block = block,
+    ) {
+    var languages: MutableList<String> = Project.defaultLanguages.toMutableList()
+}
+
+val log = LoggerFactory.getLogger(CpgMcpServer::class.java)
 
 val toolDescription =
     """
@@ -143,7 +165,7 @@ val toolDescription =
     """
         .trimIndent()
 
-fun Server.addCpgAnalyzeTool() {
+fun CpgMcpServer.addCpgAnalyzeTool() {
     this.addTool(
         name = "cpg_analyze",
         description = toolDescription,
@@ -151,7 +173,8 @@ fun Server.addCpgAnalyzeTool() {
     ) { request ->
         try {
             val payload = request.arguments?.toObject<CpgAnalyzePayload>()
-            val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
+            val analysisResult =
+                runCpgAnalyze(payload, runPasses = true, cleanup = payload?.keepLive != true)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
@@ -169,7 +192,7 @@ fun Server.addCpgAnalyzeTool() {
  * If [runPasses] is true, all default passes will be run, otherwise no pass will be run. If
  * [cleanup] is true, we clean up the [TypeManager] memory after analysis.
  */
-fun runCpgAnalyze(
+fun CpgMcpServer.runCpgAnalyze(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
     cleanup: Boolean,
@@ -204,6 +227,16 @@ fun runCpgAnalyze(
 
     val project =
         Project.from(path) {
+            languages {
+                for (language in languages) {
+                    try {
+                        use(Class.forName(language).kotlin as KClass<out Language<*>>)
+                    } catch (_: ClassNotFoundException) {
+                        log.warn("Class not found: $language")
+                    }
+                }
+            }
+
             if (!runPasses) passes {}
             translation {
                 it.debugParser(true)
@@ -261,7 +294,7 @@ fun runCpgAnalyze(
  */
 
 /** Translate source code into the AST of the CPG (Code Property Graph). */
-fun Server.addCpgTranslate() {
+fun CpgMcpServer.addCpgTranslate() {
     this.addTool(
         name = "cpg_translate",
         description =
@@ -468,7 +501,12 @@ fun Server.addRunPass() {
         for (node in nodes) {
             for (passToExecute in orderedPassesToExecute) {
                 // Check if pass has already been executed for the respective node
-                if (passToExecute !in session.nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+                if (
+                    passToExecute !in
+                        session.nodeToPass.computeIfAbsent(node) {
+                            Collections.synchronizedSet(mutableSetOf())
+                        }
+                ) {
                     // Execute the pass for the node
                     val passResult =
                         runPassForNode(
@@ -517,7 +555,7 @@ data class PassExecutionResult(val success: Boolean, val message: String)
  * extending the server.
  */
 inline fun <reified T : Node> runPassForNodeInternal(
-    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
+    nodeToPass: MutableMap<Node, MutableSet<KClass<out Pass<*>>>>,
     result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<T>>,
@@ -542,7 +580,9 @@ inline fun <reified T : Node> runPassForNodeInternal(
                 ctx = ctx,
                 targets =
                     nodes.filter {
-                        nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(actualClass)
+                        nodeToPass
+                            .computeIfAbsent(it) { Collections.synchronizedSet(mutableSetOf()) }
+                            .add(actualClass)
                     },
                 result = result,
             )
@@ -575,7 +615,7 @@ inline fun <reified T : Node> runPassForNodeInternal(
  * Returns a [CallToolResult] if there was an error during execution, otherwise returns null.
  */
 fun runPassForNode(
-    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
+    nodeToPass: MutableMap<Node, MutableSet<KClass<out Pass<*>>>>,
     result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<*>>,
@@ -622,6 +662,84 @@ fun runPassForNode(
                 prototype::class,
                 ctx,
                 preList = eogStarters,
+            )
+        }
+    }
+}
+
+/**
+ * Registers a tool which adds new code to an existing [TranslationResult]. It runs the respective
+ * frontend and the passes in a targeted way.
+ */
+fun CpgMcpServer.addAddCodeTool() {
+    this.addTool<CpgAddCodePayload>(
+        name = "cpg_add_code",
+        description =
+            """Adds the given code to an existing CPG/TranslationResult. The language is required to identify the respective language frontend. It also triggers the passes which were registered before with a focus on only the new code and the dependents/dependencies."""
+                .trimIndent(),
+    ) { session: CpgSession, payload: CpgAddCodePayload ->
+        val result = session.translationResult
+        val translationContext = session.translationContext
+        if (result == null || translationContext == null) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("No CPG available, so no code could be added."))
+            )
+        }
+
+        // Reuse the canonical Language instance already registered on this context (instead of
+        // constructing a new one), since addSource(..., language) requires identity with one of
+        // ctx.availableLanguages.
+        val language =
+            translationContext.availableLanguages.firstOrNull {
+                it.handlesExtension(payload.languageFileEnding)
+            }
+                ?: return@addTool CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "No matching Language class found or registered for ${payload.languageFileEnding}."
+                            )
+                        )
+                )
+
+        val components = result.components
+        val targetComponent =
+            if (payload.component != null) {
+                components.singleOrNull { it.name.toString() == payload.component }
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Unknown component '${payload.component}'. Available components: ${components.map { it.name }}."
+                                )
+                            )
+                    )
+            } else {
+                components.singleOrNull()
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Several components are analyzed, so 'component' is required. Available components: ${components.map { it.name }}."
+                                )
+                            )
+                    )
+            }
+
+        try {
+            val newTu =
+                result.translationManager.addSource(result, targetComponent, payload.code, language)
+            if (newTu == null) {
+                CallToolResult(content = listOf(TextContent("Could not translate the input.")))
+            } else {
+                runDirtyPasses(result)
+                CallToolResult(
+                    content = listOf(TextContent("The source code has been added to the CPG."))
+                )
+            }
+        } catch (e: Exception) {
+            CallToolResult(
+                content = listOf(TextContent("Error: ${e.message ?: e::class.simpleName}"))
             )
         }
     }

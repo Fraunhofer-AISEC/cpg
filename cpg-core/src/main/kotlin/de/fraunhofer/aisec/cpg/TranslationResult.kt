@@ -57,8 +57,12 @@ import kotlin.reflect.KClass
  * it and a [Pass] can extend it.
  */
 class TranslationResult(
-    /** A reference to our [TranslationManager]. */
-    private val translationManager: TranslationManager,
+    /**
+     * A reference to our [TranslationManager]. Exposed so that callers holding only a
+     * [TranslationResult] can still reach [TranslationManager.addSource] without separately keeping
+     * track of the [TranslationManager] that produced it.
+     */
+    @DoNotPersist val translationManager: TranslationManager,
     /**
      * The final [TranslationContext] of this translation result. Currently, for parallel
      * processing, we are creating one translation context for each parsed file (containing a
@@ -104,6 +108,15 @@ class TranslationResult(
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
+
+    /**
+     * True if this [TranslationResult] was produced by a [TranslationManager.analyze] run with
+     * [TranslationConfiguration.disableCleanup] enabled, meaning [finalCtx] (and its
+     * [ScopeManager]) are still live and usable, e.g. by
+     * [de.fraunhofer.aisec.cpg.TranslationManager.addSource]. Set by [TranslationManager] itself;
+     * not meant to be mutated by callers.
+     */
+    @DoNotPersist var isLive: Boolean = false
 
     @Convert(TranslationStatsConverter::class) var stats = TranslationStats()
 
@@ -207,7 +220,14 @@ class TranslationResult(
      * reprocessed by the specified pass.
      */
     fun markDirty(node: Node, pass: KClass<out Pass<*>>) {
-        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.add(pass)
+        val passes = dirtyNodes.computeIfAbsent(node) { mutableListOf() }
+        // Dedup on insert: multiple, independent call sites may mark the same node dirty for the
+        // same pass in one go (e.g. a node that is both newly added and the caller of a
+        // just-cleaned-up stale call). Without this, a single markClean call would only remove one
+        // of the duplicate entries, leaving the node permanently (and incorrectly) dirty.
+        if (pass !in passes) {
+            passes.add(pass)
+        }
     }
 
     /**
