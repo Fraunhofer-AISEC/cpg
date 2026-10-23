@@ -363,7 +363,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     /**
      * Translates a Java
      * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
-     * into a [MemberAccess].
+     * into a [MemberAccess], or into a [Reference] with a fully qualified name if it accesses a
+     * static field (or enum constant) through the name of its type.
      */
     private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): Expression {
         // If the scope is the name of a type (e.g., `Errors` in `Errors.NOT_ALLOWED`), this is an
@@ -374,6 +375,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             try {
                 fieldAccessExpr.resolve()
             } catch (_: RuntimeException) {
+                null
+            } catch (_: NoClassDefFoundError) {
+                // JavaParser throws this (an Error) if the classpath is incomplete
                 null
             }
         val declaringType =
@@ -415,11 +419,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 fieldType = frontend.typeOf(ResolvedPrimitiveType.INT)
                 baseType = frontend.typeOf(scopeType.asArrayType().componentType)
             } else {
-                val symbol = fieldAccessExpr.resolve()
-                fieldType = frontend.typeOf(symbol.type)
+                // Reuse the symbol resolved above instead of resolving a second time
+                if (symbol != null) {
+                    fieldType = frontend.typeOf(symbol.type)
 
-                if (symbol.isField) {
-                    baseType = objectType(symbol.asField().declaringType().qualifiedName)
+                    if (symbol.isField) {
+                        baseType = objectType(symbol.asField().declaringType().qualifiedName)
+                    }
                 }
             }
         } catch (_: UnsolvedSymbolException) {}
