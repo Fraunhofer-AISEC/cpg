@@ -940,12 +940,16 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         // The imports (and static imports) of the file are resolved by the import resolver
         val imports = enum.translationUnit?.imports
         assertNotNull(imports)
+        val enumsImport = result.records["compiling.enums.EnumsImport"]
+        assertNotNull(enumsImport)
         assertEquals(
-            result.records["compiling.enums.EnumsImport"],
+            enumsImport,
             imports.single { it.symbol == "EnumsImport" }.importedSymbols["EnumsImport"]?.single(),
         )
+        val constant = result.fields["compiling.enums.EnumsImport.CONSTANT"]
+        assertNotNull(constant)
         assertEquals(
-            result.fields["compiling.enums.EnumsImport.CONSTANT"],
+            constant,
             imports.single { it.symbol == "CONSTANT" }.importedSymbols["CONSTANT"]?.single(),
         )
         assertEquals(

@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -431,26 +432,43 @@ fun ScopeManager.updateImportedSymbols(import: Import) {
             // In this case, the symbol must point to a name scope
             val symbolScope = lookupScope(symbol)
             if (symbolScope is RecordScope) {
-                // Only some members of a record can be imported (e.g., only static ones)
-                import.importedSymbols =
-                    symbolScope.symbols
-                        .mapValues { (_, declarations) ->
+                // Only some members of a record can be imported (e.g., only static ones). This
+                // includes the ones inherited from supertypes, unless they are hidden.
+                val imported = mutableMapOf<Symbol, MutableList<Declaration>>()
+                for (recordScope in withSupertypeScopes(symbolScope)) {
+                    for ((name, declarations) in recordScope.symbols) {
+                        if (name in imported) continue
+                        val importable =
                             declarations.filterTo(mutableListOf()) { import.isImportable(it) }
-                        }
-                        .filterValues { it.isNotEmpty() }
-                        .toMutableMap()
+                        if (importable.isNotEmpty()) imported[name] = importable
+                    }
+                }
+                import.importedSymbols = imported
             } else if (symbolScope is NameScope) {
                 import.importedSymbols = symbolScope.symbols
             }
         }
     } else {
         // or a symbol directly
-        val list =
+        var list =
             lookupSymbolByName(import.import, import.language, import.location, scope).filterTo(
                 mutableListOf()
             ) {
                 import.isImportable(it)
             }
+        if (list.isEmpty() && import.language is HasImportsFromRecords) {
+            // The symbol might be inherited by the record we are importing from
+            val recordScope = import.import.parent?.let { lookupScope(it) } as? RecordScope
+            list =
+                recordScope
+                    ?.let { withSupertypeScopes(it) }
+                    ?.drop(1)
+                    ?.firstNotNullOfOrNull { scope ->
+                        scope.symbols[import.symbol]
+                            ?.filterTo(mutableListOf()) { import.isImportable(it) }
+                            ?.takeIf { it.isNotEmpty() }
+                    } ?: list
+        }
         import.importedSymbols = mutableMapOf(import.symbol to list)
     }
 
@@ -471,4 +489,28 @@ private fun Import.isImportable(declaration: Declaration): Boolean {
     } else {
         true
     }
+}
+
+/**
+ * Returns this scope followed by the scopes of all (transitive) supertypes of its [Record] that are
+ * part of the graph, in breadth-first order, so that a member of a subtype comes before one that it
+ * hides. The supertypes are only known once the [TypeHierarchyResolver] has run.
+ */
+private fun ScopeManager.withSupertypeScopes(start: RecordScope): List<RecordScope> {
+    val result = mutableListOf(start)
+    val visited = mutableSetOf<Record>()
+    val queue = ArrayDeque<Record>()
+    (start.astNode as? Record)?.let {
+        visited += it
+        queue += it
+    }
+    while (queue.isNotEmpty()) {
+        for (superRecord in queue.removeFirst().superTypeDeclarations) {
+            if (visited.add(superRecord)) {
+                queue += superRecord
+                (lookupScope(superRecord) as? RecordScope)?.let { result += it }
+            }
+        }
+    }
+    return result
 }
