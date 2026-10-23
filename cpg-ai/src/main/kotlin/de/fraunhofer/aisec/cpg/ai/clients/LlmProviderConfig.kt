@@ -25,17 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
-import ai.koog.http.client.ktor.KtorKoogHttpClient
-import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig
-import ai.koog.prompt.executor.clients.google.GoogleLLMClient
-import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
-import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.clients.retry.RetryConfig
-import ai.koog.prompt.executor.clients.retry.RetryingLLMClient
-import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
-import ai.koog.prompt.llm.LLMCapability
-import ai.koog.prompt.llm.LLMProvider
-import ai.koog.prompt.llm.LLModel
 import com.typesafe.config.Config
 import de.fraunhofer.aisec.cpg.helpers.filterMapped
 import io.ktor.client.*
@@ -43,9 +33,6 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger as KtorLogger
-import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -69,7 +56,7 @@ private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
  * into multiples of it. With these settings, the two backoff waits between 3 attempts are at most
  * ~1s and ~2s (before jitter); each attempt is bounded by the client's own request/socket timeout.
  */
-private val transientFailureRetryConfig =
+internal val transientFailureRetryConfig =
     RetryConfig(maxAttempts = 3, initialDelay = 1.seconds, maxDelay = 5.seconds)
 
 /**
@@ -83,7 +70,7 @@ internal const val DEFAULT_CONTEXT_LENGTH = 128_000L
  * Accepts every server certificate chain and host, for [ClientConfig.insecureTls]. No chain
  * validation and no hostname check - intended only for trusted internal networks.
  */
-private val TRUST_ALL =
+internal val TRUST_ALL =
     object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
 
@@ -91,16 +78,6 @@ private val TRUST_ALL =
 
         override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
     }
-
-/** A [ChatLlm] built by [LlmProviderConfig], together with the HTTP clients it created for it. */
-private class OwnedChatLlm(val chatLlm: ChatLlm, val httpClients: List<HttpClient>) :
-    AutoCloseable {
-    override fun close() {
-        chatLlm.executor.close()
-        // The executor may not close a base client it was handed; HttpClient.close() is idempotent.
-        httpClients.forEach { it.close() }
-    }
-}
 
 /**
  * Resolves configured LLM providers to Koog executors. Owns every executor it creates: one per
@@ -181,156 +158,9 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
         val contextLength = override ?: detected ?: DEFAULT_CONTEXT_LENGTH
 
         return when (config.provider) {
-            ClientProvider.GEMINI -> {
-                val apiKey = config.apiKey ?: return null
-                // Gemini has no real "local/custom endpoint" use case (unlike the OpenAI-compatible
-                // providers below), so we intentionally don't try to route config.baseUrl through
-                // here; it is still used for model discovery in fetchGeminiModels.
-                OwnedChatLlm(
-                    ChatLlm(
-                        executor =
-                            MultiLLMPromptExecutor(
-                                LLMProvider.Google to
-                                    RetryingLLMClient(
-                                        GoogleLLMClient(apiKey),
-                                        transientFailureRetryConfig,
-                                    )
-                            ),
-                        model =
-                            LLModel(
-                                provider = LLMProvider.Google,
-                                id = model,
-                                capabilities =
-                                    listOf(
-                                        LLMCapability.Temperature,
-                                        LLMCapability.Tools,
-                                        // GoogleLLMClient.execute() requires this capability too
-                                        // (same
-                                        // requireCapability(LLMCapability.Completion) check as
-                                        // OpenAILLMClient below); without it every Gemini model
-                                        // fails
-                                        // with "Model <id> does not support completion".
-                                        LLMCapability.Completion,
-                                    ),
-                                contextLength = contextLength,
-                            ),
-                    ),
-                    httpClients = emptyList(),
-                )
-            }
-
-            ClientProvider.OPENAI_COMPATIBLE -> {
-                // Can log the full request/response bodies exchanged with the OpenAI-compatible
-                // endpoint (tool schema, tool_choice, and the raw completion) - invaluable for
-                // debugging tool-calling issues against custom/local servers (vLLM, ollama, ...),
-                // whose behavior can diverge from the official OpenAI API in ways that are
-                // otherwise invisible from inside Koog's client. Gated on this logger's own DEBUG
-                // level rather than always-on: with a growing tool-calling history resent on every
-                // round trip, unconditional body logging (as opposed to Ktor's terser default
-                // LogLevel.INFO, which only logs the request line/status/duration) previously
-                // produced multi-tens-of-megabytes log files for a single skill run.
-                if (config.insecureTls) {
-                    log.warn(
-                        "TLS is fully disabled for client {} ({}): any certificate for any host " +
-                            "is accepted. Use only on trusted internal networks.",
-                        config.name,
-                        config.baseUrl,
-                    )
-                }
-                val loggingKtorClient =
-                    HttpClient(CIO) {
-                        if (config.insecureTls) engine { https { trustManager = TRUST_ALL } }
-                        install(Logging) {
-                            logger =
-                                object : KtorLogger {
-                                    override fun log(message: String) {
-                                        log.debug(message)
-                                    }
-                                }
-                            level = if (log.isDebugEnabled) LogLevel.ALL else LogLevel.INFO
-                            // At LogLevel.ALL, Ktor logs the full request including headers - an
-                            // unredacted Authorization header (a real API key) would otherwise
-                            // leak into the host application's debug logs verbatim.
-                            sanitizeHeader { header ->
-                                header.equals(HttpHeaders.Authorization, ignoreCase = true)
-                            }
-                        }
-                    }
-                // Reuses Koog's own KtorKoogHttpClient.Factory (rather than hand-rolling the
-                // KoogHttpClient setup) so we get its baseUrl/contentType/ContentNegotiation/SSE
-                // wiring exactly as the default apiKey-based OpenAILLMClient constructor would -
-                // only swapping in our logging-enabled Ktor client underneath.
-                // By default (requestTimeoutMillis == null) this leaves Koog's own
-                // ConnectionTimeoutConfig default (900s) in place; a host application that bounds
-                // calls with its own timeout should set requestTimeoutMillis to match it.
-                val timeoutConfig =
-                    config.requestTimeoutMillis?.let {
-                        ConnectionTimeoutConfig(requestTimeoutMillis = it, socketTimeoutMillis = it)
-                    } ?: ConnectionTimeoutConfig()
-                val client =
-                    OpenAILLMClient(
-                        apiKey = config.apiKey ?: "not-needed",
-                        settings =
-                            OpenAIClientSettings(
-                                baseUrl = config.baseUrl,
-                                timeoutConfig = timeoutConfig,
-                            ),
-                        httpClientFactory =
-                            KtorKoogHttpClient.Factory(baseClient = loggingKtorClient),
-                    )
-                OwnedChatLlm(
-                    ChatLlm(
-                        executor =
-                            MultiLLMPromptExecutor(
-                                LLMProvider.OpenAI to
-                                    RetryingLLMClient(client, transientFailureRetryConfig)
-                            ),
-                        model =
-                            LLModel(
-                                provider = LLMProvider.OpenAI,
-                                id = model,
-                                capabilities =
-                                    listOf(
-                                        LLMCapability.Temperature,
-                                        LLMCapability.Tools,
-                                        // AbstractOpenAILLMClient.execute() requires this base
-                                        // capability before it will run a completion at all;
-                                        // without
-                                        // it every model fails with "Model <id> does not support
-                                        // completion".
-                                        LLMCapability.Completion,
-                                        // OpenAILLMClient.determineParams() separately requires the
-                                        // model to declare one of the two OpenAI endpoint
-                                        // capabilities
-                                        // to know which request shape to send; without it, every
-                                        // custom/local model (ollama, vLLM, mlx, ...) fails with
-                                        // "Cannot determine proper LLM params". These servers all
-                                        // speak
-                                        // the legacy /v1/chat/completions shape (matching
-                                        // OpenAIClientSettings' default chatCompletionsPath), not
-                                        // the
-                                        // newer /v1/responses API.
-                                        LLMCapability.OpenAIEndpoint.Completions,
-                                        // Without any LLMCapability.Schema.JSON.*,
-                                        // requestLLMStructured
-                                        // can't use native response_format: json_schema and instead
-                                        // falls back to emulating structured output via a synthetic
-                                        // schema-tool forced through tool_choice - which some
-                                        // OpenAI-compatible servers (e.g. vLLM) reject outright
-                                        // with a
-                                        // "When using tool_choice, tools must be set" 400. Basic
-                                        // (rather than Standard, which assumes polymorphism/defs
-                                        // support many local/vLLM-served models lack) matches
-                                        // Koog's
-                                        // own precedent for local/Qwen-class models.
-                                        LLMCapability.Schema.JSON.Basic,
-                                    ),
-                                contextLength = contextLength,
-                            ),
-                    ),
-                    httpClients = listOf(loggingKtorClient),
-                )
-            }
+            ClientProvider.GEMINI -> config.apiKey?.let { GeminiChatLlm(it, model, contextLength) }
+            ClientProvider.OPENAI_COMPATIBLE ->
+                OpenAiCompatibleChatLlm(config, model, contextLength)
         }
     }
 
