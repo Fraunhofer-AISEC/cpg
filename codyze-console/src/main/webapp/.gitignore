@@ -1,5 +1,8 @@
 node_modules
 
+# Generated files
+/src/lib/utils/cpg-completions.ts
+
 # Output
 .output
 .vercel

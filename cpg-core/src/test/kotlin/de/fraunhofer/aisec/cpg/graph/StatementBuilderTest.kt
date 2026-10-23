@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import kotlin.test.Test
@@ -37,50 +37,28 @@ import kotlin.test.assertNotNull
 
 class StatementBuilderTest {
     @Test
-    fun testNewLookupScopeStatement() {
+    fun testNewLookupScope() {
         val frontend =
             TestLanguageFrontend(
                 ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         val result =
             frontend.build {
-                translationResult {
-                    var tu =
-                        with(frontend) {
-                            var tu = newTranslationUnitDeclaration("main.file")
-                            scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("main.file") { tu ->
+                    newVariable("a", holder = tu)
 
-                            var globalA = newVariableDeclaration("a")
-                            scopeManager.addDeclaration(globalA)
-                            tu.declarations += globalA
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.body =
+                            newBlock(enterScope = true) { body ->
+                                body.statements += newDeclarationStatement { stmt ->
+                                    newVariable("a", holder = stmt)
+                                }
 
-                            var func = newFunctionDeclaration("main")
-                            scopeManager.enterScope(func)
-
-                            var body = newBlock()
-                            scopeManager.enterScope(body)
-
-                            var localA = newVariableDeclaration("a")
-                            var stmt = newDeclarationStatement()
-                            stmt.declarations += localA
-                            scopeManager.addDeclaration(localA)
-                            body += stmt
-
-                            body += newLookupScopeStatement(listOf("a"), scopeManager.globalScope)
-                            body += newReference("a")
-
-                            scopeManager.leaveScope(body)
-                            func.body = body
-                            scopeManager.leaveScope(func)
-
-                            scopeManager.addDeclaration(func)
-                            tu.declarations += func
-
-                            scopeManager.leaveScope(tu)
-                            tu
-                        }
-
-                    components.firstOrNull()?.translationUnits?.add(tu)
+                                body.statements +=
+                                    newLookupScope(listOf("a"), scopeManager.globalScope)
+                                body.statements += newReference("a")
+                            }
+                    }
                 }
             }
 

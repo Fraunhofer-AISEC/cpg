@@ -29,12 +29,57 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.test.*
+import java.io.File
 import java.nio.file.Path
 import kotlin.test.*
 
 internal class TypeTests : BaseTest() {
+
+    @Test
+    fun testFooCallAndParamType() {
+        val file = File("src/test/resources/longtype.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        // Find the call to foo in main (line 7 in the test resource)
+        val calls = tu.calls("foo")
+        assertTrue(calls.isNotEmpty())
+
+        val call =
+            calls.firstOrNull { c ->
+                val loc = c.location?.region
+                loc != null && loc.startLine == 7
+            }
+        // fallback: take any call to foo if line-based lookup fails
+        val actualCall = call ?: calls.firstOrNull()
+        assertNotNull(actualCall)
+        assertInvokes(actualCall, foo)
+        assertIs<Call>(actualCall)
+
+        // The function's first parameter should be a pointer-to-pointer to 'long'
+        val param = foo.parameters["dataPtr"]
+        assertNotNull(param)
+
+        val paramType = param.type as PointerType
+        assertIs<PointerType>(paramType)
+
+        val inner = paramType.elementType as PointerType
+        assertIs<PointerType>(inner)
+
+        val pointed = inner.elementType
+        assertTrue { pointed is IntegerType }
+        assertLocalName("long int", pointed)
+    }
+
     @Test
     fun reference() {
         val language = CPPLanguage()

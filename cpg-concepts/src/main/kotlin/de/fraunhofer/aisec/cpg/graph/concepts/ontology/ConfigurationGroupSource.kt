@@ -37,8 +37,8 @@ import kotlin.collections.MutableMap
 
 /**
  * Represents a possible group source for a configuration group. For example, when loading an INI
- * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
- * declaration would be the source of the configuration group.
+ * file with our INI file frontend, each section is presented as a [Record]. This record declaration
+ * would be the source of the configuration group.
  */
 public open class ConfigurationGroupSource(
     dataLocation: DataLocation?,

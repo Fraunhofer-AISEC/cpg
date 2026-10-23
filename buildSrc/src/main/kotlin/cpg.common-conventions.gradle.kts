@@ -11,6 +11,14 @@ plugins {
     signing
     kotlin("jvm")
     kotlin("plugin.serialization")
+
+    // Restricts the native binaries pulled in by JavaCPP "-platform" artifacts (we use
+    // org.bytedeco:llvm-platform in cpg-language-llvm) to the platforms in `javacppPlatform`,
+    // which defaults to the host platform. Without it, every build resolves the natives for all
+    // nine LLVM target platforms, ~2.2 GB. This only filters how *we* resolve the dependency; the
+    // published POM still declares plain `llvm-platform`, so consumers keep getting every
+    // platform unless they opt into the same filtering.
+    id("org.bytedeco.gradle-javacpp-platform")
 }
 
 java {
@@ -23,16 +31,10 @@ java {
 repositories {
     mavenCentral()
 
-    ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/")
-        metadataSources {
-            artifact()
-        }
-
-        patternLayout {
-            artifact("[organisation].[module]_[revision].[ext]")
-        }
-    }
+    // Serves the SootUp fork (github.com/KuechA/SootUp) built on demand, under
+    // com.github.KuechA.SootUp:sootup.* -- see the `sootup` version in
+    // gradle/libs.versions.toml.
+    maven { setUrl("https://jitpack.io") }
 }
 
 //
@@ -73,6 +75,14 @@ testing {
                 all {
                     testTask.configure {
                         maxHeapSize = "4048m"
+                        // The test log4j2.xml files default to DEBUG, which is what you want while
+                        // working on a test and tens of thousands of lines of noise in a CI log.
+                        // -Pcpg.log.level raises it; the forked test JVM only sees it as a system
+                        // property.
+                        systemProperty(
+                            "cpg.log.level",
+                            (project.findProperty("cpg.log.level") as String?) ?: "DEBUG",
+                        )
                         reports {
                             junitXml.apply {
                                 isOutputPerTestCase = false
@@ -103,6 +113,14 @@ testing {
                 all {
                     testTask.configure {
                         maxHeapSize = "4048m"
+                        // The test log4j2.xml files default to DEBUG, which is what you want while
+                        // working on a test and tens of thousands of lines of noise in a CI log.
+                        // -Pcpg.log.level raises it; the forked test JVM only sees it as a system
+                        // property.
+                        systemProperty(
+                            "cpg.log.level",
+                            (project.findProperty("cpg.log.level") as String?) ?: "DEBUG",
+                        )
                     }
                 }
             }
@@ -141,7 +159,6 @@ val serialExecutionService =
 val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
 dependencies {
     implementation(libs.apache.commons.lang3)
-    implementation(libs.neo4j.ogm.core)
     implementation(libs.jackson)
 }
 

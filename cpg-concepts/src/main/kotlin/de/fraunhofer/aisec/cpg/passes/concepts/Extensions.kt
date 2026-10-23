@@ -29,11 +29,12 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass.Companion.filterDuplicates
 import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
+import kotlinx.coroutines.runBlocking
 
 /**
  * The core DSL function of our tagging API. It represents a configuration-style DSL to define a
@@ -45,11 +46,10 @@ import kotlin.reflect.safeCast
  * nodes are "tagged" with [OverlayNode]s. Currently, the only allowed statements are:
  * - [each]: Applies the specified overlay nodes to "each" of the nodes selected.
  *
- * In the following example, each [CallExpression] with the name "foo" is tagged with an overlay
- * class `Bar`:
+ * In the following example, each [Call] with the name "foo" is tagged with an overlay class `Bar`:
  * ```Kotlin
  * tag {
- *   each<CallExpression>("foo").with {
+ *   each<Call>("foo").with {
  *     Bar()
  *   }
  * }
@@ -212,8 +212,7 @@ data class Selector<T : Node>(
      */
     operator fun invoke(node: Node): T? {
         // Try to cast the node to T, if it's not an instance of T, it is null
-        val tNode = klass.safeCast(node)
-        if (tNode == null) return null
+        val tNode = klass.safeCast(node) ?: return null
 
         // Check, if predicate matches
         return if (
@@ -228,31 +227,33 @@ data class Selector<T : Node>(
 }
 
 /**
- * A selector that describes a possible selection of a CPG [Node] by the following properties:
- * - its [KClass] (mandatory, see [klass]),
- * - its [Node.name] (see [namePredicate]),
- * - any other property (see [predicate])
+ * Starting from a given [Node], we also want to propagate information to other nodes. This node is
+ * identified by [transformation].
  */
 data class Propagator<S : Node, T : Node>(val transformation: ((S) -> T)) {
     var builders = mutableListOf<(BuilderContext<T>) -> List<OverlayNode>>()
 
     operator fun invoke(lattice: NodeToOverlayState, state: NodeToOverlayStateElement, node: S) {
         val changedNode = transformation(node)
-        builders.forEach { builder ->
-            // We compute the new overlay nodes and discard those which are already present in the
-            // state or in the node's overlay nodes.
-            val newNodes = BuilderContext(lattice, state, changedNode, builder).build()
-            val filteredNewNodes = filterDuplicates(state, changedNode, newNodes)
-            // We directly add the new overlay nodes to the state, so that they are available for
-            // the next computations.
-            lattice.lub(
-                one = state,
-                two =
-                    NodeToOverlayStateElement(
-                        changedNode to PowersetLattice.Element(*filteredNewNodes.toTypedArray())
-                    ),
-                allowModify = true,
-            )
+        runBlocking {
+            builders.forEach { builder ->
+                // We compute the new overlay nodes and discard those which are already present in
+                // the
+                // state or in the node's overlay nodes.
+                val newNodes = BuilderContext(lattice, state, changedNode, builder).build()
+                val filteredNewNodes = filterDuplicates(state, changedNode, newNodes)
+                // We directly add the new overlay nodes to the state, so that they are available
+                // for
+                // the next computations.
+                lattice.lub(
+                    one = state,
+                    two =
+                        NodeToOverlayStateElement(
+                            changedNode to PowersetLattice.Element(*filteredNewNodes.toTypedArray())
+                        ),
+                    allowModify = true,
+                )
+            }
         }
     }
 }

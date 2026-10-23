@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.flows
 
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import java.util.Objects
 
 /**
@@ -35,12 +35,11 @@ import java.util.Objects
  * such as a main function, a library initialization function or a "remote" entry point, such as a
  * network endpoint.
  */
-abstract class EntryPoint(underlyingNode: FunctionDeclaration?) :
-    Concept(underlyingNode = underlyingNode)
+abstract class EntryPoint(underlyingNode: Function?) : Concept(underlyingNode = underlyingNode)
 
 /** Represents a local entry point into the execution of the program, such as a main function. */
 abstract class LocalEntryPoint(
-    underlyingNode: FunctionDeclaration?,
+    underlyingNode: Function?,
     /**
      * If this entry point is specifically designed to be invoked on a certain
      * [OperatingSystemArchitecture], it can be specified here.
@@ -55,15 +54,13 @@ abstract class LocalEntryPoint(
 }
 
 /** The main function of a program. */
-open class Main(underlyingNode: FunctionDeclaration? = null, os: OperatingSystemArchitecture) :
+open class Main(underlyingNode: Function? = null, os: OperatingSystemArchitecture) :
     LocalEntryPoint(underlyingNode = underlyingNode, os = os)
 
 /** Represents an entry point that is triggered if the code is loaded as a (dynamic) library. */
-open class LibraryEntryPoint(
-    underlyingNode: FunctionDeclaration? = null,
-    os: OperatingSystemArchitecture,
-) : LocalEntryPoint(underlyingNode = underlyingNode, os = os)
+open class LibraryEntryPoint(underlyingNode: Function? = null, os: OperatingSystemArchitecture) :
+    LocalEntryPoint(underlyingNode = underlyingNode, os = os)
 
 /** Represents an entry point that can be triggered remotely, such as a network endpoint. */
-abstract class RemoteEntryPoint(underlyingNode: FunctionDeclaration?) :
+abstract class RemoteEntryPoint(underlyingNode: Function?) :
     EntryPoint(underlyingNode = underlyingNode)

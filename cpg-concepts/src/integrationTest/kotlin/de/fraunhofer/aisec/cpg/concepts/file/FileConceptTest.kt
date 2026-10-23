@@ -262,7 +262,8 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(fileSetFMask)
         assertEquals(fileWrite.file, fileSetFMask.file)
-        val fileWriteEOG = fileWrite.collectAllNextEOGPaths(true).map { it.nodes }.flatten().toSet()
+        val fileWriteEOG =
+            fileWrite.collectAllNextEOGPaths(true).flatMapTo(mutableSetOf()) { it.nodes }
         assertTrue(fileSetFMask in fileWriteEOG)
 
         assertEquals(1, result.allChildrenWithOverlays<File>().size)
@@ -423,14 +424,14 @@ class FileConceptTest : BaseTest() {
         val files = conceptNodes.filterIsInstance<File>()
         assertEquals(
             setOf("a", "b"),
-            files.map { it.fileName }.toSet(),
+            files.mapTo(mutableSetOf()) { it.fileName },
             "Expected to find two `File` nodes (\"a\" and \"b\").",
         )
 
         val writes = conceptNodes.filterIsInstance<WriteFile>()
         assertEquals(
             setOf("a", "b"),
-            writes.map { it.file.fileName }.toSet(),
+            writes.mapTo(mutableSetOf()) { it.file.fileName },
             "Expected to find two `WriteFile` nodes (to \"a\" and \"b\").",
         )
     }
@@ -504,7 +505,7 @@ class FileConceptTest : BaseTest() {
 
         assertEquals(
             allTempFiles.size,
-            allTempFiles.map { it.fileName }.toSet().count(),
+            allTempFiles.mapTo(mutableSetOf()) { it.fileName }.count(),
             "Expected the temp files to have unique names.",
         )
     }
@@ -615,7 +616,7 @@ class FileConceptTest : BaseTest() {
 
         assertEquals(
             allTempFiles.size,
-            allTempFiles.map { it.fileName }.toSet().count(),
+            allTempFiles.mapTo(mutableSetOf()) { it.fileName }.count(),
             "Expected the temp files to have unique names.",
         )
     }

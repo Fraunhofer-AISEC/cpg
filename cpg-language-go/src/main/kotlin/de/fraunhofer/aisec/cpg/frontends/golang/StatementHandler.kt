@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
+    GoHandler<Expression, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
 
-    override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Statement {
+    override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Expression {
         return when (node) {
             is GoStandardLibrary.Ast.AssignStmt -> handleAssignStmt(node)
             is GoStandardLibrary.Ast.BranchStmt -> handleBranchStmt(node)
@@ -44,7 +43,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.DeclStmt -> handleDeclStmt(node)
             is GoStandardLibrary.Ast.DeferStmt -> handleDeferStmt(node)
             is GoStandardLibrary.Ast.ExprStmt -> {
-                return frontend.expressionHandler.handle(node.x)
+                frontend.expressionHandler.handle(node.x)
             }
             is GoStandardLibrary.Ast.ForStmt -> handleForStmt(node)
             is GoStandardLibrary.Ast.GoStmt -> handleGoStmt(node)
@@ -60,7 +59,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): AssignExpression {
+    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): Assign {
         val lhs = assignStmt.lhs.map { frontend.expressionHandler.handle(it) }
         val rhs = assignStmt.rhs.map { frontend.expressionHandler.handle(it) }
 
@@ -74,71 +73,65 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 "="
             }
 
-        return newAssignExpression(operatorCode, lhs, rhs, rawNode = assignStmt)
+        return newAssign(operatorCode, lhs, rhs, rawNode = assignStmt)
     }
 
-    private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Statement {
+    private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Expression {
         when (branchStmt.tokString) {
             "break" -> {
-                val stmt = newBreakStatement(rawNode = branchStmt)
-                branchStmt.label?.let { stmt.label = it.name }
-                return stmt
+                return newBreak(rawNode = branchStmt) { stmt ->
+                    branchStmt.label?.let { stmt.label = it.name }
+                }
             }
             "continue" -> {
-                val stmt = newContinueStatement(rawNode = branchStmt)
-                branchStmt.label?.let { stmt.label = it.name }
-                return stmt
+                return newContinue(rawNode = branchStmt) { stmt ->
+                    branchStmt.label?.let { stmt.label = it.name }
+                }
             }
             "goto" -> {
-                val stmt = newGotoStatement(rawNode = branchStmt)
-                branchStmt.label?.let { stmt.labelName = it.name }
-                return stmt
+                return newGoto(rawNode = branchStmt) { stmt ->
+                    branchStmt.label?.let { stmt.labelName = it.name }
+                }
             }
         }
 
         return newProblemExpression("unknown token \"${branchStmt.tokString}\" in branch statement")
     }
 
-    private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
-        val compound = newBlock(rawNode = blockStmt)
-
-        frontend.scopeManager.enterScope(compound)
-
-        for (stmt in blockStmt.list) {
-            val node = handle(stmt)
-            // Do not add case statements to the block because the already add themselves in
-            // handleCaseClause. Otherwise, the order of case's would be wrong
-            if (node !is CaseStatement) {
-                compound += node
+    private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Expression {
+        return newBlock(rawNode = blockStmt, enterScope = true) { compound ->
+            for (stmt in blockStmt.list) {
+                val node = handle(stmt)
+                // Do not add case statements to the block because the already add themselves in
+                // handleCaseClause. Otherwise, the order of case's would be wrong
+                if (node !is Case) {
+                    compound.statements += node
+                }
             }
         }
-
-        frontend.scopeManager.leaveScope(compound)
-
-        return compound
     }
 
     private fun handleCaseClause(
         caseClause: GoStandardLibrary.Ast.CaseClause,
         typeSwitchLhs: Node? = null,
         typeSwitchRhs: Expression? = null,
-    ): Statement {
+    ): Expression {
         val isTypeSwitch = typeSwitchRhs != null
 
         val case =
             if (caseClause.list.isEmpty()) {
-                newDefaultStatement(rawNode = caseClause)
+                newDefault(rawNode = caseClause)
             } else {
-                val case = newCaseStatement(rawNode = caseClause)
-                if (isTypeSwitch) {
-                    // If this case is within a type switch, we want to wrap the case expression in
-                    // a TypeExpression
-                    val type = frontend.typeOf(caseClause.list[0])
-                    case.caseExpression = newTypeExpression(type.name, type)
-                } else {
-                    case.caseExpression = frontend.expressionHandler.handle(caseClause.list[0])
+                newCase(rawNode = caseClause) { case ->
+                    if (isTypeSwitch) {
+                        // If this case is within a type switch, we want to wrap the case expression
+                        // in a TypeExpression
+                        val type = frontend.typeOf(caseClause.list[0])
+                        case.caseExpression = newTypeExpression(type.name, type)
+                    } else {
+                        case.caseExpression = frontend.expressionHandler.handle(caseClause.list[0])
+                    }
                 }
-                case
             }
 
         // We need to find the current block / scope and add the statements to it
@@ -150,7 +143,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         }
 
         // Add the case statement
-        currentBlock += case
+        currentBlock.statements += case
 
         // Wrap everything inside the case in a block statement, if this is a type-switch, so that
         // we can re-declare the variable locally in the block.
@@ -168,8 +161,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             val stmt = newDeclarationStatement()
             stmt.isImplicit = true
 
-            val decl = newVariableDeclaration(typeSwitchLhs.name)
-            if (case is CaseStatement) {
+            val decl = newVariable(typeSwitchLhs.name)
+            if (case is Case) {
                 decl.type = (case.caseExpression as? TypeExpression)?.type ?: unknownType()
             } else {
                 // We need to work with type listeners here because they might not have their type
@@ -194,20 +187,20 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             stmt.declarations += decl
 
             if (block != null) {
-                block += stmt
+                block.statements += stmt
             }
         }
 
         for (s in caseClause.body) {
             if (block != null) {
-                block += handle(s)
+                block.statements += handle(s)
             } else {
-                currentBlock += handle(s)
+                currentBlock.statements += handle(s)
             }
         }
 
         if (block != null) {
-            currentBlock += block
+            currentBlock.statements += block
         }
 
         block?.let { frontend.scopeManager.leaveScope(it) }
@@ -220,19 +213,18 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleDeclStmt(declStmt: GoStandardLibrary.Ast.DeclStmt): DeclarationStatement {
         // Let's create a variable declaration (wrapped with a declaration stmt) with
         // this, because we define the variable here
-        val stmt = newDeclarationStatement(rawNode = declStmt)
-        val declaration = frontend.declarationHandler.handle(declStmt.decl)
-        if (declaration is DeclarationSequence) {
-            for (declaration in declaration.declarations) {
+        return newDeclarationStatement(rawNode = declStmt) { stmt ->
+            val declaration = frontend.declarationHandler.handle(declStmt.decl)
+            if (declaration is DeclarationSequence) {
+                for (declaration in declaration.declarations) {
+                    frontend.scopeManager.addDeclaration(declaration)
+                }
+                stmt.declarations = declaration.asMutableList()
+            } else if (declaration != null) {
                 frontend.scopeManager.addDeclaration(declaration)
+                stmt.singleDeclaration = declaration
             }
-            stmt.declarations = declaration.asMutableList()
-        } else if (declaration != null) {
-            frontend.scopeManager.addDeclaration(declaration)
-            stmt.singleDeclaration = declaration
         }
-
-        return stmt
     }
 
     /**
@@ -242,9 +234,10 @@ class StatementHandler(frontend: GoLanguageFrontend) :
      * EOG of the call later in an extra pass.
      */
     private fun handleDeferStmt(deferStmt: GoStandardLibrary.Ast.DeferStmt): UnaryOperator {
-        val op = newUnaryOperator("defer", postfix = false, prefix = true, rawNode = deferStmt)
-        op.input = frontend.expressionHandler.handle(deferStmt.call)
-        return op
+        return newUnaryOperator("defer", postfix = false, prefix = true, rawNode = deferStmt) { op
+            ->
+            op.input = frontend.expressionHandler.handle(deferStmt.call)
+        }
     }
 
     /**
@@ -252,134 +245,103 @@ class StatementHandler(frontend: GoLanguageFrontend) :
      * supplied call expression in a separate Go routine. We cannot model this 1:1, so we basically
      * we create a call expression to a built-in call.
      */
-    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): CallExpression {
+    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): Call {
         val ref = newReference("go")
-        val call = newCallExpression(ref, "go", rawNode = goStmt)
-        call += frontend.expressionHandler.handle(goStmt.call)
-
-        return call
+        return newCall(ref, "go", rawNode = goStmt) { call ->
+            call.arguments += frontend.expressionHandler.handle(goStmt.call)
+        }
     }
 
-    private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): ForStatement {
-        val stmt = newForStatement(rawNode = forStmt)
-
-        frontend.scopeManager.enterScope(stmt)
-
-        forStmt.init?.let { stmt.initializerStatement = handle(it) }
-        forStmt.cond?.let { stmt.condition = frontend.expressionHandler.handle(it) }
-        forStmt.post?.let { stmt.iterationStatement = handle(it) }
-        forStmt.body?.let { stmt.statement = handle(it) }
-
-        frontend.scopeManager.leaveScope(stmt)
-
-        return stmt
+    private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): For {
+        return newFor(rawNode = forStmt, enterScope = true) { stmt ->
+            forStmt.init?.let { stmt.initializerStatement = handle(it) }
+            forStmt.cond?.let { stmt.condition = frontend.expressionHandler.handle(it) }
+            forStmt.post?.let { stmt.iterationStatement = handle(it) }
+            forStmt.body?.let { stmt.statement = handle(it) }
+        }
     }
 
     private fun handleIncDecStmt(incDecStmt: GoStandardLibrary.Ast.IncDecStmt): UnaryOperator {
-        val op =
-            newUnaryOperator(
-                incDecStmt.tokString,
-                postfix = true,
-                prefix = false,
-                rawNode = incDecStmt,
-            )
-        op.input = frontend.expressionHandler.handle(incDecStmt.x)
-
-        return op
+        return newUnaryOperator(
+            incDecStmt.tokString,
+            postfix = true,
+            prefix = false,
+            rawNode = incDecStmt,
+        ) { op ->
+            op.input = frontend.expressionHandler.handle(incDecStmt.x)
+        }
     }
 
-    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): IfStatement {
-        val stmt = newIfStatement(rawNode = ifStmt)
+    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): IfElse {
+        return newIfElse(rawNode = ifStmt, enterScope = true) { stmt ->
+            ifStmt.init?.let { stmt.initializerStatement = frontend.statementHandler.handle(it) }
 
-        frontend.scopeManager.enterScope(stmt)
+            stmt.condition = frontend.expressionHandler.handle(ifStmt.cond)
+            stmt.thenStatement = frontend.statementHandler.handle(ifStmt.body)
 
-        ifStmt.init?.let { stmt.initializerStatement = frontend.statementHandler.handle(it) }
-
-        stmt.condition = frontend.expressionHandler.handle(ifStmt.cond)
-        stmt.thenStatement = frontend.statementHandler.handle(ifStmt.body)
-
-        ifStmt.`else`?.let { stmt.elseStatement = frontend.statementHandler.handle(it) }
-
-        frontend.scopeManager.leaveScope(stmt)
-
-        return stmt
+            ifStmt.`else`?.let { stmt.elseStatement = frontend.statementHandler.handle(it) }
+        }
     }
 
-    private fun handleLabeledStmt(labeledStmt: GoStandardLibrary.Ast.LabeledStmt): LabelStatement {
-        val stmt = newLabelStatement(rawNode = labeledStmt)
-        stmt.subStatement = handle(labeledStmt.stmt)
-        stmt.label = labeledStmt.label.name
-
-        return stmt
+    private fun handleLabeledStmt(labeledStmt: GoStandardLibrary.Ast.LabeledStmt): Label {
+        return newLabel(rawNode = labeledStmt) { stmt ->
+            stmt.subStatement = handle(labeledStmt.stmt)
+            stmt.label = labeledStmt.label.name
+        }
     }
 
-    private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEachStatement {
-        val forEach = newForEachStatement(rawNode = rangeStmt)
+    private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEach {
+        return newForEach(rawNode = rangeStmt, enterScope = true) { forEach ->
+            // TODO: Support other use cases that do not use DEFINE
+            if (rangeStmt.tokString == ":=") {
+                val stmt = newDeclarationStatement()
 
-        frontend.scopeManager.enterScope(forEach)
-
-        // TODO: Support other use cases that do not use DEFINE
-        if (rangeStmt.tokString == ":=") {
-            val stmt = newDeclarationStatement()
-
-            // TODO: not really the best way to deal with this
-            // TODO: key type is always int. we could set this
-            rangeStmt.key?.let {
-                val ref = frontend.expressionHandler.handle(it)
-                if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name, rawNode = it)
-                    frontend.scopeManager.addDeclaration(key)
-                    stmt.declarationEdges += key
+                // TODO: not really the best way to deal with this
+                // TODO: key type is always int. we could set this
+                rangeStmt.key?.let {
+                    val ref = frontend.expressionHandler.handle(it)
+                    if (ref is Reference) {
+                        val key = newVariable(ref.name, rawNode = it)
+                        frontend.scopeManager.addDeclaration(key)
+                        stmt.declarationEdges += key
+                    }
                 }
+
+                // TODO: not really the best way to deal with this
+                rangeStmt.value?.let {
+                    val ref = frontend.expressionHandler.handle(it)
+                    if (ref is Reference) {
+                        val key = newVariable(ref.name, rawNode = it)
+                        frontend.scopeManager.addDeclaration(key)
+                        stmt.declarationEdges += key
+                    }
+                }
+
+                forEach.variable = stmt
             }
 
-            // TODO: not really the best way to deal with this
-            rangeStmt.value?.let {
-                val ref = frontend.expressionHandler.handle(it)
-                if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name, rawNode = it)
-                    frontend.scopeManager.addDeclaration(key)
-                    stmt.declarationEdges += key
-                }
-            }
-
-            forEach.variable = stmt
+            forEach.iterable = frontend.expressionHandler.handle(rangeStmt.x)
+            forEach.statement = frontend.statementHandler.handle(rangeStmt.body)
         }
-
-        forEach.iterable = frontend.expressionHandler.handle(rangeStmt.x)
-        forEach.statement = frontend.statementHandler.handle(rangeStmt.body)
-
-        frontend.scopeManager.leaveScope(forEach)
-
-        return forEach
     }
 
-    private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): ReturnStatement {
-        val `return` = newReturnStatement(rawNode = returnStmt)
-
-        val results = returnStmt.results
-        if (results.isNotEmpty()) {
-            val expr = frontend.expressionHandler.handle(results[0])
-
-            // TODO: parse more than one result expression
-            `return`.returnValue = expr
-        } else {
-            // TODO: connect result statement to result variables
+    private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): Return {
+        return newReturn(rawNode = returnStmt) { `return` ->
+            // TODO: connect an empty return statement to named result variables
+            `return`.returnValues =
+                returnStmt.results.map { frontend.expressionHandler.handle(it) }.toMutableList()
         }
-
-        return `return`
     }
 
     private fun handleSendStmt(sendStmt: GoStandardLibrary.Ast.SendStmt): BinaryOperator {
-        val op = newBinaryOperator("<-", rawNode = sendStmt)
-        op.lhs = frontend.expressionHandler.handle(sendStmt.chan)
-        op.rhs = frontend.expressionHandler.handle(sendStmt.value)
-
-        return op
+        return newBinaryOperator("<-", rawNode = sendStmt) { op ->
+            op.lhs = frontend.expressionHandler.handle(sendStmt.chan)
+            op.rhs = frontend.expressionHandler.handle(sendStmt.value)
+        }
     }
 
-    private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Statement {
-        val switch = newSwitchStatement(rawNode = switchStmt)
+    private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Expression {
+        val switch = newSwitch(rawNode = switchStmt)
 
         frontend.scopeManager.enterScope(switch)
 
@@ -396,39 +358,29 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return switch
     }
 
-    private fun handleTypeSwitchStmt(
-        typeSwitchStmt: GoStandardLibrary.Ast.TypeSwitchStmt
-    ): SwitchStatement {
-        val switch = newSwitchStatement(rawNode = typeSwitchStmt)
+    private fun handleTypeSwitchStmt(typeSwitchStmt: GoStandardLibrary.Ast.TypeSwitchStmt): Switch {
+        return newSwitch(rawNode = typeSwitchStmt, enterScope = true) { switch ->
+            typeSwitchStmt.init?.let { switch.initializerStatement = handle(it) }
 
-        frontend.scopeManager.enterScope(switch)
+            val assign = frontend.statementHandler.handle(typeSwitchStmt.assign)
+            val (lhs, rhs) =
+                if (assign is Assign) {
+                    val rhs = assign.rhs.singleOrNull()
+                    switch.selector = rhs
+                    Pair(assign.lhs.singleOrNull(), (rhs as? UnaryOperator)?.input)
+                } else {
+                    Pair(null, null)
+                }
 
-        typeSwitchStmt.init?.let { switch.initializerStatement = handle(it) }
-
-        val assign = frontend.statementHandler.handle(typeSwitchStmt.assign)
-        val (lhs, rhs) =
-            if (assign is AssignExpression) {
-                val rhs = assign.rhs.singleOrNull()
-                switch.selector = rhs
-                Pair(assign.lhs.singleOrNull(), (rhs as? UnaryOperator)?.input)
-            } else {
-                Pair(null, null)
-            }
-
-        val body = newBlock(rawNode = typeSwitchStmt.body)
-
-        frontend.scopeManager.enterScope(body)
-
-        for (c in typeSwitchStmt.body.list.filterIsInstance<GoStandardLibrary.Ast.CaseClause>()) {
-            handleCaseClause(c, lhs, rhs)
+            switch.statement =
+                newBlock(rawNode = typeSwitchStmt.body, enterScope = true) { body ->
+                    for (c in
+                        typeSwitchStmt.body.list.filterIsInstance<
+                            GoStandardLibrary.Ast.CaseClause
+                        >()) {
+                        handleCaseClause(c, lhs, rhs)
+                    }
+                }
         }
-
-        frontend.scopeManager.leaveScope(body)
-
-        switch.statement = body
-
-        frontend.scopeManager.leaveScope(switch)
-
-        return switch
     }
 }

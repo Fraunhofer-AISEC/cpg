@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.edges.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Import as ImportNode
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import kotlin.reflect.KProperty
 
@@ -45,7 +45,7 @@ enum class ImportStyle {
      * with the same name as the imported symbol.
      *
      * Note: Some languages support importing more than one symbol at a time. In this case, the list
-     * is split into multiple [ImportDeclaration] nodes (and [Import] edges).
+     * is split into multiple [Import] nodes (and [Import] edges).
      */
     IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
 
@@ -65,14 +65,20 @@ enum class ImportStyle {
 }
 
 /**
- * This edge represents the import of a [NamespaceScope] into another [Scope]. The [style] of import
- * (e.g., whether only a certain symbol or the whole namespace is imported) is determined by the
- * [declaration].
+ * This edge represents the import of a [NameScope] (usually a namespace, but for languages with
+ * [de.fraunhofer.aisec.cpg.frontends.HasImportsFromRecords] also a record) into another [Scope].
+ * The [style] of import (e.g., whether only a certain symbol or the whole namespace is imported) is
+ * determined by the [declaration].
  */
-class Import(start: Scope, end: NamespaceScope, var declaration: ImportDeclaration? = null) :
-    Edge<NamespaceScope>(start, end) {
+class Import(start: Scope, end: NameScope, var declaration: ImportNode? = null) :
+    Edge<NameScope>(start, end) {
 
-    override var labels = setOf("SCOPE_IMPORT")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [Import] edges (see [Edge.labels]). */
+        val LABELS = setOf("SCOPE_IMPORT")
+    }
 
     val style: ImportStyle?
         get() = declaration?.style
@@ -88,9 +94,9 @@ class Imports(
     override var mirrorProperty: KProperty<MutableCollection<Import>>,
     outgoing: Boolean = true,
 ) :
-    EdgeSet<NamespaceScope, Import>(
+    EdgeSet<NameScope, Import>(
         thisRef = thisRef,
         init = { start, end -> Import(start as Scope, end) },
         outgoing = outgoing,
     ),
-    MirroredEdgeCollection<NamespaceScope, Import>
+    MirroredEdgeCollection<NameScope, Import>

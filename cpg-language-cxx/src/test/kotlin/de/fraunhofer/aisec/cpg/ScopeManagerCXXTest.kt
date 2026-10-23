@@ -26,16 +26,19 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 
 internal class ScopeManagerTest : BaseTest() {
@@ -52,7 +55,7 @@ internal class ScopeManagerTest : BaseTest() {
         val ctx = TranslationContext(config)
         val frontend = CXXLanguageFrontend(ctx, CPPLanguage())
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
-        val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }
+        val methods = tu.allChildren<Method>().filter { it !is Constructor }
         assertFalse(methods.isEmpty())
 
         methods.forEach {
@@ -60,7 +63,10 @@ internal class ScopeManagerTest : BaseTest() {
             assertSame(it, scope!!.astNode)
         }
 
-        val constructors = tu.allChildren<ConstructorDeclaration>()
+        val constructors =
+            tu.allChildren<Constructor>().filter {
+                it.recordDeclaration?.name?.localName == "SomeClass"
+            }
         assertFalse(constructors.isEmpty())
 
         // make sure that the scope of the constructor actually has the constructor as an ast node.
@@ -70,5 +76,34 @@ internal class ScopeManagerTest : BaseTest() {
             val scope = ctx.scopeManager.lookupScope(it)
             assertSame(it, scope!!.astNode)
         }
+    }
+
+    @Test
+    @Throws(TranslationException::class)
+    fun testCallCFunctionFromCPP() {
+        val topLevel = File("src/test/resources/cxx/c_interop")
+        val result =
+            analyze(
+                listOf(File(topLevel, "math_utils.c"), File(topLevel, "main.cpp")),
+                topLevel.toPath(),
+                true,
+            ) {
+                it.registerLanguage<CLanguage>()
+                it.registerLanguage<CPPLanguage>()
+            }
+
+        // The C function definition
+        val addFunc = result.functions("add").firstOrNull { it.isDefinition }
+        assertNotNull(addFunc, "Expected a function declaration for 'add' in the C file")
+        assertIs<CLanguage>(addFunc.language, "Expected 'add' to belong to CLanguage")
+
+        // The call in the C++ file
+        val addCall = result.calls["add"]
+        assertNotNull(addCall, "Expected a call to 'add' in the C++ file")
+        assertIs<CPPLanguage>(addCall.language, "Expected the call to belong to CPPLanguage")
+        assertFalse(addCall.invokes.isEmpty(), "Expected 'add' call to be resolved")
+
+        // The call should resolve to the 'add' definition from the C file
+        assertInvokes(addCall, addFunc)
     }
 }

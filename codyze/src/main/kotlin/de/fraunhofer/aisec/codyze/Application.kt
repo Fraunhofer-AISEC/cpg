@@ -36,8 +36,10 @@ class Codyze : CliktCommand() {
 fun main(args: Array<String>) {
     Codyze()
         .subcommands(
-            de.fraunhofer.aisec.codyze.console.Command,
-            de.fraunhofer.aisec.codyze.compliance.Command,
+            listOfNotNull(
+                ConsoleCommandHelper.consoleCommand(),
+                de.fraunhofer.aisec.codyze.compliance.Command,
+            )
         )
         .main(args)
 }

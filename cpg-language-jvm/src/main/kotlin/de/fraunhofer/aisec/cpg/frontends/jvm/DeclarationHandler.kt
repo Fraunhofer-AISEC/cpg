@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import sootup.core.jimple.basic.Local
+import sootup.core.jimple.common.Local
 import sootup.core.model.SootClass
 import sootup.core.model.SootField
 import sootup.core.model.SootMethod
@@ -37,79 +37,90 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
 
     override fun handle(ctx: Any): Declaration {
-        return when (ctx) {
-            is SootClass -> handleClass(ctx)
-            is SootMethod -> handleMethod(ctx)
-            is SootField -> handleField(ctx)
-            is Local -> handleLocal(ctx)
-            else -> {
-                log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
-                newProblemDeclaration(
-                    "Unhandled declaration type: ${ctx.javaClass.simpleName}",
-                    rawNode = ctx,
-                )
+        try {
+            return when (ctx) {
+                is SootClass -> handleClass(ctx)
+                is SootMethod -> handleMethod(ctx)
+                is SootField -> handleField(ctx)
+                is Local -> handleLocal(ctx)
+                else -> {
+                    log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
+                    newProblemDeclaration(
+                        "Unhandled declaration type: ${ctx.javaClass.simpleName}",
+                        rawNode = ctx,
+                    )
+                }
             }
+        } catch (e: Exception) {
+            log.error("Error while handling a declaration", e)
+            return newProblemDeclaration(
+                "Error handling declaration ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 
-    private fun handleClass(sootClass: SootClass): RecordDeclaration {
-        val record =
-            newRecordDeclaration(
-                sootClass.getName(),
-                if (sootClass.isInterface()) {
-                    "interface"
-                } else {
-                    "class"
-                },
-                rawNode = sootClass,
+    private fun handleClass(sootClass: SootClass): Record {
+        return newRecord(
+            sootClass.getName(),
+            if (sootClass.isInterface()) {
+                "interface"
+            } else {
+                "class"
+            },
+            rawNode = sootClass,
+            enterScope = true,
+        ) { record ->
+            // Collect super class
+            val o = sootClass.superclass
+            if (o.isPresent) {
+                record.addSuperClass(frontend.typeOf(o.get()))
+            }
+
+            // Map the class' access flags onto the canonical visibility model. The class is not
+            // yet on the scope stack, so the current scope reflects its enclosing (declaration)
+            // context.
+            record.applyAccessFlags(
+                sootClass.modifiers.mapTo(mutableSetOf()) {
+                    it.name.lowercase(java.util.Locale.ROOT)
+                }
             )
 
-        // Collect super class
-        val o = sootClass.superclass
-        if (o.isPresent) {
-            record.addSuperClass(frontend.typeOf(o.get()))
-        }
+            // Collect implemented interfaces
+            for (i in sootClass.interfaces) {
+                record.implementedInterfaces += frontend.typeOf(i)
+            }
 
-        // Collect implemented interfaces
-        for (i in sootClass.interfaces) {
-            record.implementedInterfaces += frontend.typeOf(i)
-        }
+            // Loop through all fields
+            for (sootField in sootClass.fields) {
+                val field = handle(sootField) as? Field
+                if (field != null) {
+                    frontend.scopeManager.addDeclaration(field)
+                    record.addDeclaration(field)
+                }
+            }
 
-        // Enter the class scope
-        frontend.scopeManager.enterScope(record)
-
-        // Loop through all fields
-        for (sootField in sootClass.fields) {
-            val field = handle(sootField) as? FieldDeclaration
-            if (field != null) {
-                frontend.scopeManager.addDeclaration(field)
-                record.addDeclaration(field)
+            // Loop through all methods. A method whose body cannot be rebuilt from the reprinted
+            // Jimple text is translated from the original, compiled class instead -- see
+            // JVMLanguageFrontend.withMethodPositions.
+            for (sootMethod in sootClass.methods) {
+                val method = frontend.withMethodPositions(sootMethod) { handle(it) as? Method }
+                if (method != null) {
+                    frontend.scopeManager.addDeclaration(method)
+                    record.addDeclaration(method)
+                }
             }
         }
-
-        // Loop through all methods
-        for (sootMethod in sootClass.methods) {
-            val method = handle(sootMethod) as? MethodDeclaration
-            if (method != null) {
-                frontend.scopeManager.addDeclaration(method)
-                record.addDeclaration(method)
-            }
-        }
-
-        // Leave the class scope
-        frontend.scopeManager.leaveScope(record)
-
-        return record
     }
 
-    private fun handleMethod(sootMethod: SootMethod): MethodDeclaration {
+    private fun handleMethod(sootMethod: SootMethod): Method {
         val record = frontend.scopeManager.currentRecord
 
         val method =
             if (sootMethod.name == "<init>") {
-                newConstructorDeclaration(sootMethod.name, record, rawNode = sootMethod)
+                newConstructor(sootMethod.name, record, rawNode = sootMethod)
             } else {
-                newMethodDeclaration(
+                newMethod(
                     sootMethod.name,
                     sootMethod.isStatic,
                     frontend.scopeManager.currentRecord,
@@ -117,26 +128,44 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 )
             }
 
+        // Map the method's access flags onto the canonical visibility model.
+        method.applyAccessFlags(
+            sootMethod.modifiers.mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
+        )
+
         // Enter method scope
         frontend.scopeManager.enterScope(method)
 
         // Add "@this" as the receiver
         val receiver =
-            newVariableDeclaration("@this", method.recordDeclaration?.toType() ?: unknownType())
+            newVariable("@this", method.recordDeclaration?.toType() ?: unknownType())
                 .implicit("@this")
         frontend.scopeManager.addDeclaration(receiver)
         method.receiver = receiver
 
         // Add method parameters
         for ((index, type) in sootMethod.parameterTypes.withIndex()) {
-            val param = newParameterDeclaration("@parameter${index}", frontend.typeOf(type))
-            frontend.scopeManager.addDeclaration(param)
-            method.parameters += param
+            newParameter("@parameter${index}", frontend.typeOf(type), holder = method)
         }
 
-        if (sootMethod.isConcrete) {
-            // Handle method body
-            method.body = frontend.statementHandler.handle(sootMethod.body)
+        // Parse body if doNotParseBody returns false
+        if (!frontend.frontendConfiguration.doNotParseBody(method) && sootMethod.isConcrete) {
+            // Handle method body. Building the body can still fail -- a Jimple body is resolved
+            // lazily, so this is where a body that cannot be reconstructed surfaces. Keep the
+            // method declaration (with its parameters and signature) in that case instead of
+            // dropping the whole method: a body-less method is a much smaller loss, and the graph
+            // stays consistent for everyone referring to this method.
+            runCatching { frontend.statementHandler.handle(sootMethod.body) }
+                .onFailure {
+                    log.error(
+                        "Could not translate the body of {}; keeping the method declaration " +
+                            "without a body",
+                        sootMethod.signature,
+                        it,
+                    )
+                }
+                .getOrNull()
+                ?.let { method.body = it }
         }
 
         // Leave method scope
@@ -145,16 +174,31 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         return method
     }
 
-    fun handleField(field: SootField): FieldDeclaration {
-        return newFieldDeclaration(
-            field.name,
-            frontend.typeOf(field.type),
-            field.modifiers.map { it.name.lowercase() },
-            rawNode = field,
+    fun handleField(field: SootField): Field {
+        val declaration = newField(field.name, frontend.typeOf(field.type), rawNode = field)
+
+        // Map the field's access flags onto the canonical visibility model. A field is always a
+        // record member.
+        declaration.applyAccessFlags(
+            field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
         )
+
+        return declaration
     }
 
-    private fun handleLocal(local: Local): VariableDeclaration {
-        return newVariableDeclaration(local.name, frontend.typeOf(local.type), rawNode = local)
+    private fun handleLocal(local: Local): Variable {
+        return newVariable(local.name, frontend.typeOf(local.type), rawNode = local)
+    }
+
+    /**
+     * Records the JVM bytecode access flags [rawModifiers] (including ones without a canonical
+     * meaning, such as `final` or `volatile`) losslessly on [Declaration.modifiers] and lets the
+     * language project them onto the canonical properties via
+     * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which sets
+     * [Declaration.visibility] and, where applicable, [ValueDeclaration.isStatic].
+     */
+    private fun Declaration.applyAccessFlags(rawModifiers: Set<String>) {
+        modifiers = modifiers + rawModifiers
+        frontend.language.applyModifiers(this, frontend.scopeManager.currentScope)
     }
 }

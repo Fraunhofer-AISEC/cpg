@@ -28,19 +28,14 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.applyWithScope
-import de.fraunhofer.aisec.cpg.graph.builder.body
-import de.fraunhofer.aisec.cpg.graph.builder.declare
-import de.fraunhofer.aisec.cpg.graph.builder.function
-import de.fraunhofer.aisec.cpg.graph.builder.problemDecl
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.problems
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import kotlin.test.Test
@@ -60,10 +55,19 @@ internal class ExtensionsTest : BaseTest() {
                 .build()
     ) =
         testFrontend(config).build {
-            translationResult {
-                translationUnit("foo.bar") {
-                    function("foo") { body { declare { problemDecl(problemDeclText) } } }
-                        .additionalProblems += ProblemExpression(problemExprText)
+            singleTranslationUnit("foo.bar") { tu ->
+                newFunction("foo", holder = tu, enterScope = true) { func ->
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newProblemDeclaration(
+                                    problem = problemDeclText,
+                                    problemType = ProblemNode.ProblemType.TRANSLATION,
+                                    holder = declStmt,
+                                )
+                            }
+                        }
+                    func.additionalProblems += ProblemExpression(problemExprText)
                 }
             }
         }
@@ -88,13 +92,10 @@ internal class ExtensionsTest : BaseTest() {
         with(TestLanguageFrontend()) {
             val collectionComprehension =
                 newCollectionComprehension().applyWithScope {
-                    val varA = newVariableDeclaration("a")
-                    val declarationStatement = newDeclarationStatement()
-                    declarationStatement.addDeclaration(varA)
-                    this.statement = declarationStatement
+                    this.statement = newDeclarationStatement { it.addDeclaration(newVariable("a")) }
                 }
             val varA = collectionComprehension.variables["a"]
-            assertIs<VariableDeclaration>(varA)
+            assertIs<Variable>(varA)
             assertIs<GlobalScope>(varA.scope)
         }
     }

@@ -8,7 +8,7 @@ int main()
   {
   case 1:
     return 0;
-  // default:
+    // default:
   }
 
   // the EOG should follow here as well

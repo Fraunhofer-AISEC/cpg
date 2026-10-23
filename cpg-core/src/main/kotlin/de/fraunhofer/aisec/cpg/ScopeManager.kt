@@ -28,12 +28,13 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -46,8 +47,8 @@ import org.slf4j.LoggerFactory
  * identify outer scopes that should be the target of a jump (continue, break, throw).
  *
  * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
- * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
- * Afterward the currently valid "stack" of scopes within the tree can be accessed.
+ * the scope and [resetToGlobal] when they first handle a new [TranslationUnit]. Afterward the
+ * currently valid "stack" of scopes within the tree can be accessed.
  *
  * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
  * than adding the declaration to the node itself. This ensures that all declarations are properly
@@ -76,6 +77,46 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      */
     private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
+    /**
+     * Caches the result of [lookupSymbolByName] (for calls without a custom [predicate], which
+     * cannot be cached safely). [lookupSymbolByName] can be called repeatedly for the same symbol
+     * (e.g. once per reference to the same variable, or once per candidate scope during ambiguous
+     * call/member resolution), and walking the scope chain for every single call is unnecessarily
+     * expensive.
+     *
+     * The cache is invalidated wholesale (see [symbolTableGeneration]) whenever a symbol table is
+     * mutated (see [invalidateSymbolLookupCache]), rather than per-entry, to keep invalidation
+     * trivially correct. This is cheap in practice because virtually all symbol table mutations
+     * happen while the language frontend is still building the AST, before any of the passes that
+     * call [lookupSymbolByName] (e.g. [SymbolResolver]) run.
+     */
+    private val symbolLookupCache: MutableMap<SymbolLookupCacheKey, List<Declaration>> =
+        mutableMapOf()
+
+    /** See [symbolLookupCache]. Bumped by [invalidateSymbolLookupCache]. */
+    private var symbolTableGeneration: Int = 0
+
+    /** The [symbolTableGeneration] that [symbolLookupCache] was last cleared for. */
+    private var symbolLookupCacheGeneration: Int = -1
+
+    /**
+     * Must be called whenever a symbol table (i.e. [Scope.symbols] or [Scope.wildcardImports]) is
+     * mutated, so that [symbolLookupCache] does not serve stale results.
+     */
+    internal fun invalidateSymbolLookupCache() {
+        symbolTableGeneration++
+    }
+
+    /** The key identifying a cached [lookupSymbolByName] result in [symbolLookupCache]. */
+    private data class SymbolLookupCacheKey(
+        val scope: Scope?,
+        val symbol: Symbol,
+        val language: Language<*>,
+        val qualifiedLookup: Boolean,
+        val replaceImports: Boolean,
+        val fileScope: FileScope?,
+    )
+
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -92,8 +133,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         private set
 
     /** The current function, according to the scope that is currently active. */
-    val currentFunction: FunctionDeclaration?
-        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
+    val currentFunction: Function?
+        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? Function
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: Block?
@@ -103,14 +144,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
      * correctly if a method contains a lambda or other types of function declarations
      */
-    val currentMethod: MethodDeclaration?
+    val currentMethod: Method?
         get() =
-            this.firstScopeOrNull { scope: Scope? -> scope?.astNode is MethodDeclaration }?.astNode
-                as? MethodDeclaration
+            this.firstScopeOrNull { scope: Scope? -> scope?.astNode is Method }?.astNode as? Method
 
     /** The current record, according to the scope that is currently active. */
-    val currentRecord: RecordDeclaration?
-        get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
+    val currentRecord: Record?
+        get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? Record
 
     val currentNamespace: Name?
         get() {
@@ -129,12 +169,20 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * @param toMerge The scope managers to merge into this one
      */
     fun mergeFrom(toMerge: Collection<ScopeManager>) {
+        // Merging combines symbol tables from several scope managers into this one, so any cached
+        // lookups may no longer be valid.
+        invalidateSymbolLookupCache()
+
         val globalScopes = toMerge.map { it.globalScope }
         val currGlobalScope = scopeMap[null]
         if (currGlobalScope !is GlobalScope) {
             LOGGER.error("Scope for null node is not a GlobalScope or is null")
         } else {
             currGlobalScope.mergeFrom(globalScopes)
+            // The merge above blindly concatenates symbol lists from every translation unit's
+            // global scope. Re-collapse them now, so that e.g. an `extern` declaration in one TU
+            // and its definition in another TU still resolve as a single declaration.
+            currGlobalScope.symbols.collapseRedeclarations()
             scopeMap[null] = currGlobalScope
         }
         for (manager in toMerge) {
@@ -145,6 +193,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                 if (existing != null) {
                     // merge symbols
                     existing.symbols.mergeFrom(entry.value.symbols)
+                    existing.symbols.collapseRedeclarations()
 
                     // copy over the typedefs as well just to be sure
                     existing.typedefs.putAll(entry.value.typedefs)
@@ -159,9 +208,11 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     // The only way to do this, is to filter for the particular
                     // scope (the value of the map) and return the keys (the nodes)
                     val keys =
-                        manager.scopeMap
-                            .filter { it.value.astNode == entry.value.astNode }
-                            .map { it.key }
+                        manager.scopeMap.entries.mapFiltered({
+                            it.value.astNode == entry.value.astNode
+                        }) {
+                            it.key
+                        }
 
                     // now, we redirect it to the existing scope
                     keys.forEach { manager.scopeMap[it] = existing }
@@ -200,7 +251,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
         scopeMap[scope.astNode] = scope
         if (scope is NameScope) {
-            // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
+            // for this to work, it is essential that Record and Namespace
             // nodes have a FQN as their name.
             val name = scope.astNode?.name
             if (name != null) {
@@ -231,22 +282,22 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         if (!scopeMap.containsKey(nodeToScope)) {
             val newScope =
                 when (nodeToScope) {
-                    is WhileStatement,
-                    is DoStatement,
-                    is AssertStatement,
-                    is ForStatement,
-                    is ForEachStatement,
-                    is SwitchStatement,
-                    is TryStatement,
-                    is IfStatement,
+                    is While,
+                    is DoWhile,
+                    is Assert,
+                    is For,
+                    is ForEach,
+                    is Switch,
+                    is Try,
+                    is IfElse,
                     is CatchClause,
                     is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
-                    is FunctionDeclaration -> FunctionScope(nodeToScope)
-                    is RecordDeclaration -> RecordScope(nodeToScope)
-                    is TemplateDeclaration -> TemplateScope(nodeToScope)
-                    is TranslationUnitDeclaration -> FileScope(nodeToScope)
-                    is NamespaceDeclaration -> newNamespaceIfNecessary(nodeToScope)
+                    is Function -> FunctionScope(nodeToScope)
+                    is Record -> RecordScope(nodeToScope)
+                    is Template -> TemplateScope(nodeToScope)
+                    is TranslationUnit -> FileScope(nodeToScope)
+                    is Namespace -> newNamespaceIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
                             "No known scope for AST node of type {}",
@@ -279,18 +330,18 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * A small internal helper function used by [enterScope] to create a [NamespaceScope].
      *
      * The issue with name scopes, such as a namespace, is that it can exist across several files,
-     * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
-     * to make namespace resolution work across files, only one [NameScope] must exist that holds
-     * all declarations, such as classes, independently of the translation units. Therefore, we need
-     * to check, whether such as node already exists. If it does already exist:
-     * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
+     * i.e. translation units, represented by different [Namespace] nodes. But, in order to make
+     * namespace resolution work across files, only one [NameScope] must exist that holds all
+     * declarations, such as classes, independently of the translation units. Therefore, we need to
+     * check, whether such as node already exists. If it does already exist:
+     * - we update the scope map so that the current [Namespace] points to the existing
      *   [NamespaceScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
      *   [enterScope].
      *
      * Otherwise, we return a new namespace scope.
      */
-    private fun newNamespaceIfNecessary(nodeToScope: NamespaceDeclaration): NamespaceScope? {
+    private fun newNamespaceIfNecessary(nodeToScope: Namespace): NamespaceScope? {
         val existingScope =
             filterScopes { it is NamespaceScope && it.name == nodeToScope.name }.firstOrNull()
 
@@ -353,11 +404,18 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * This function MUST be called when a language frontend first handles a [Declaration]. It adds
      * a declaration to the scope manager, taking into account the currently active scope.
      *
+     * Returns the canonical declaration for [declaration]'s symbol: usually [declaration] itself,
+     * but if the current scope's language merged it into an already-registered declaration of the
+     * same symbol (see [HasRedeclarations.isRedeclaration]), the pre-existing declaration it was
+     * merged into. Callers that subsequently wire the declaration into an AST
+     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] MUST use the returned value, not
+     * [declaration], to avoid re-introducing the duplicate the merge just collapsed.
+     *
      * @param declaration the declaration to add
      */
     fun <T : Declaration> addDeclaration(declaration: T): T {
-        currentScope.addSymbol(declaration.symbol, declaration)
-        return declaration
+        @Suppress("UNCHECKED_CAST")
+        return currentScope.addSymbol(declaration.symbol, declaration) as T
     }
 
     /**
@@ -409,9 +467,18 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
-        return if (node is TranslationUnitDeclaration) {
+        return if (node is TranslationUnit) {
             globalScope
         } else scopeMap[node]
+    }
+
+    /**
+     * Returns the [FileScope] of the file (i.e., the [TranslationUnit]) that [node] belongs to, if
+     * the language frontend created one, e.g., to hold the file-level imports.
+     */
+    fun fileScopeOf(node: Node): FileScope? {
+        val tu = node as? TranslationUnit ?: node.translationUnit ?: return null
+        return scopeMap[tu] as? FileScope
     }
 
     /**
@@ -425,16 +492,16 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts
-     * the feature of some languages to attach a label to a point in the source code and use it as
-     * the target for control flow manipulation, e.g. [BreakStatement], [GotoStatement].
+     * This function retrieves the [Label] associated with the [labelString]. This depicts the
+     * feature of some languages to attach a label to a point in the source code and use it as the
+     * target for control flow manipulation, e.g. [Break], [Goto].
      */
-    fun getLabelStatement(labelString: String?): LabelStatement? {
+    fun getLabel(labelString: String?): Label? {
         if (labelString == null) return null
-        var labelStatement: LabelStatement?
+        var labelStatement: Label?
         var searchScope: Scope? = currentScope
         while (searchScope != null) {
-            labelStatement = searchScope.labelStatements[labelString]
+            labelStatement = searchScope.labels[labelString]
             if (labelStatement != null) {
                 return labelStatement
             }
@@ -447,7 +514,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * This function MUST be called when a language frontend first enters a translation unit. It
      * sets the [GlobalScope] to the current translation unit specified in [declaration].
      */
-    fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
+    fun resetToGlobal(declaration: TranslationUnit?) {
         val global = this.globalScope
         // update the AST node to this translation unit declaration
         global.astNode = declaration
@@ -458,7 +525,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * Adds typedefs to a [Scope]. The language frontend needs to decide on the scope of the
      * typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set as default.
      */
-    fun addTypedef(typedef: TypedefDeclaration, scope: Scope = globalScope) {
+    fun addTypedef(typedef: Typedef, scope: Scope = globalScope) {
         scope.addTypedef(typedef)
     }
 
@@ -491,8 +558,9 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         node: HasNameAndLocation,
         language: Language<*> = node.language,
         scope: Scope? = currentScope,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
     ): ScopeExtraction? {
-        return extractScope(node.name, language, node.location, scope)
+        return extractScope(node.name, language, node.location, scope, localSymbols)
     }
 
     /**
@@ -517,6 +585,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         language: Language<*>,
         location: PhysicalLocation? = null,
         scope: Scope? = currentScope,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
     ): ScopeExtraction? {
         var n = name
         var s: Scope? = null
@@ -532,7 +601,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             }
 
             // We need to check, whether we have an alias for the name's parent in this file
-            val scope = lookupScopeByName(scopeName, language, scope)
+            val scope = lookupScopeByName(scopeName, language, scope, localSymbols)
 
             if (scope == null) {
                 Util.warnWithFileLocation(
@@ -551,8 +620,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
     /**
      * This function looks up a [Scope] by its [name] relative to [startScope]. The reason why this
-     * is necessary is that the [name] could potentially include aliases set by an
-     * [ImportDeclaration] and therefore can not directly be found in the [nameScopeMap].
+     * is necessary is that the [name] could potentially include aliases set by an [Import] and
+     * therefore can not directly be found in the [nameScopeMap].
      *
      * It works by splitting the name into its parts and then iteratively looking up the scope for
      * each part, starting at the "beginning". For example if we have a name `A::B::C`, we first
@@ -564,7 +633,12 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * @param name the name to look up
      * @param startScope the scope to start the lookup in
      */
-    fun lookupScopeByName(name: Name, language: Language<*>?, startScope: Scope?): Scope? {
+    fun lookupScopeByName(
+        name: Name,
+        language: Language<*>?,
+        startScope: Scope?,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
+    ): Scope? {
         val parts = name.splitTo(mutableListOf())
         var part: Name? = name
         var scope = startScope
@@ -581,24 +655,28 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             // namespace (in different files), but they all (should) point to the same scope.
             scope =
                 scope
-                    .lookupSymbol(part.localName, languageOnly = language) {
-                        it is NamespaceDeclaration ||
-                            it is RecordDeclaration ||
-                            it is TypedefDeclaration
+                    .lookupSymbol(
+                        part.localName,
+                        languageOnly = language,
+                        localSymbols = localSymbols,
+                    ) {
+                        it is Namespace || it is Record || it is Typedef
                     }
                     .map {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
                         nameScopeMap[
-                            if (it is TypedefDeclaration) {
+                            if (it is Typedef) {
                                 it.type.name
                             } else {
                                 it.name
                             }]
                     }
-                    .toSet()
-                    .singleOrNull()
+                    // We need exactly one scope. We compare them by identity, since hashing a
+                    // scope (and therefore its AST node, e.g., a namespace with all its
+                    // declarations) is very expensive
+                    .let { scopes -> scopes.firstOrNull()?.takeIf { s -> scopes.all { it === s } } }
         }
 
         return scope
@@ -647,17 +725,15 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * Retrieves the [RecordDeclaration] for the given name in the given scope.
+     * Retrieves the [Record] for the given name in the given scope.
      *
      * @param name the name
      * * @param scope the scope. Default is [currentScope]
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name, language: Language<*>): RecordDeclaration? {
-        return lookupSymbolByName(name, language)
-            .filterIsInstance<RecordDeclaration>()
-            .singleOrNull()
+    fun getRecordForName(name: Name, language: Language<*>): Record? {
+        return lookupSymbolByName(name, language).filterIsInstance<Record>().singleOrNull()
     }
 
     fun typedefFor(
@@ -728,6 +804,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         node: Node,
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         return lookupSymbolByName(
@@ -736,6 +813,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             node.location,
             scope,
             replaceImports = replaceImports,
+            localSymbols = localSymbols,
+            fileScope = fileScopeOf(node),
             predicate = predicate,
         )
     }
@@ -749,7 +828,14 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
     ): List<T> {
-        return lookupSymbolByName(node.name, node.language, node.location, scope, replaceImports) {
+        return lookupSymbolByName(
+                node.name,
+                node.language,
+                node.location,
+                scope,
+                replaceImports,
+                fileScope = fileScopeOf(node),
+            ) {
                 it is T
             }
             .filterIsInstance<T>()
@@ -769,6 +855,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * This means that as soon one or more declarations (of the matching [language]) for the symbol
      * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
      * "higher" scope and only the ones from the lower ones will be returned.
+     *
+     * In the unqualified case, [fileScope] is the [FileScope] of the file in which the lookup takes
+     * place, so that its symbols (e.g., the imports of the file) are also considered (see
+     * [Scope.lookupSymbol]). [lookupSymbolByNodeName] sets this automatically.
      */
     fun lookupSymbolByName(
         name: Name,
@@ -776,9 +866,11 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         location: PhysicalLocation? = null,
         startScope: Scope? = currentScope,
         replaceImports: Boolean = true,
+        localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
+        fileScope: FileScope? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
-        val extractedScope = extractScope(name, language, location, startScope)
+        val extractedScope = extractScope(name, language, location, startScope, localSymbols)
         val scope: Scope?
         val n: Name
         if (extractedScope == null) {
@@ -787,6 +879,34 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         } else {
             scope = extractedScope.scope
             n = extractedScope.adjustedName
+        }
+
+        // A custom predicate is a per-call lambda and cannot be safely used as (or compared
+        // through) a cache key, so we only cache the common case where neither it nor a
+        // localSymbols override is given. A localSymbols override answers differently depending
+        // on how much of the EOG has been traversed so far, so its results must never be cached
+        // across call sites either.
+        val cacheKey =
+            if (predicate == null && localSymbols == null) {
+                SymbolLookupCacheKey(
+                    scope = scope ?: startScope,
+                    symbol = n.localName,
+                    language = language,
+                    qualifiedLookup = scope != null,
+                    replaceImports = replaceImports,
+                    fileScope = fileScope,
+                )
+            } else {
+                null
+            }
+        if (cacheKey != null) {
+            if (symbolLookupCacheGeneration != symbolTableGeneration) {
+                symbolLookupCache.clear()
+                symbolLookupCacheGeneration = symbolTableGeneration
+            }
+            symbolLookupCache[cacheKey]?.let {
+                return it
+            }
         }
 
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
@@ -800,6 +920,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                             languageOnly = language,
                             qualifiedLookup = true,
                             replaceImports = replaceImports,
+                            localSymbols = localSymbols,
                             predicate = predicate,
                         )
                         .toMutableList()
@@ -812,6 +933,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                             n.localName,
                             languageOnly = language,
                             replaceImports = replaceImports,
+                            localSymbols = localSymbols,
+                            fileScope = fileScope,
                             predicate = predicate,
                         )
                         ?.toMutableList() ?: mutableListOf()
@@ -823,12 +946,16 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         val it = list.iterator()
         while (it.hasNext()) {
             val decl = it.next()
-            if (decl is FunctionDeclaration) {
+            if (decl is Function) {
                 val definition = decl.definition
                 if (!decl.isDefinition && definition != null && definition in list) {
                     it.remove()
                 }
             }
+        }
+
+        if (cacheKey != null) {
+            symbolLookupCache[cacheKey] = list
         }
 
         return list
@@ -867,13 +994,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * Returns the [TranslationUnitDeclaration] that should be used for inference, especially for
-     * global declarations.
+     * Returns the [TranslationUnit] that should be used for inference, especially for global
+     * declarations.
      *
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
-    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
         return source.language.translationUnitForInference<TypeToInfer>(source)
     }
 }
@@ -883,9 +1010,8 @@ fun <T : Declaration> ContextProvider.declare(declaration: T): T {
 }
 
 /**
- * [SignatureResult] will be the result of the function [FunctionDeclaration.matchesSignature] which
- * calculates whether the provided [CallExpression] will match the signature of the current
- * [FunctionDeclaration].
+ * [SignatureResult] will be the result of the function [Function.matchesSignature] which calculates
+ * whether the provided [Call] will match the signature of the current [Function].
  */
 sealed class SignatureResult(open val casts: List<CastResult>? = null) {
     val ranking: Int
@@ -907,7 +1033,7 @@ data object IncompatibleSignature : SignatureResult()
 
 data class SignatureMatches(override val casts: List<CastResult>) : SignatureResult(casts)
 
-fun FunctionDeclaration.matchesSignature(
+fun Function.matchesSignature(
     signature: List<Type>,
     arguments: List<Expression>? = null,
     useDefaultArguments: Boolean = false,
@@ -980,34 +1106,34 @@ fun FunctionDeclaration.matchesSignature(
  * [bestViable]) of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original expression that triggered the resolution. Most likely a [CallExpression]. */
+    /** The original expression that triggered the resolution. Most likely a [Call]. */
     val source: Expression,
 
     /** The arguments that were supplied to the expression. */
     val arguments: List<Expression>,
 
     /**
-     * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
-     * [ScopeManager.lookupSymbolByName]), more specifically a list of [FunctionDeclaration] nodes.
+     * A set of candidate symbols we discovered based on the [Call.callee] (using
+     * [ScopeManager.lookupSymbolByName]), more specifically a list of [Function] nodes.
      */
-    var candidateFunctions: Set<FunctionDeclaration>,
+    var candidateFunctions: Set<Function>,
 
     /**
      * A set of functions, that restrict the [candidateFunctions] to those whose signature match.
      */
-    var viableFunctions: Set<FunctionDeclaration>,
+    var viableFunctions: Set<Function>,
 
     /**
-     * A helper map to store the [SignatureResult] of each call to
-     * [FunctionDeclaration.matchesSignature] for each function in [viableFunctions].
+     * A helper map to store the [SignatureResult] of each call to [Function.matchesSignature] for
+     * each function in [viableFunctions].
      */
-    var signatureResults: Map<FunctionDeclaration, SignatureResult>,
+    var signatureResults: Map<Function, SignatureResult>,
 
     /**
      * This set contains the best viable function(s) of the [viableFunctions]. Ideally this is only
      * one, but because of ambiguities or other factors, this can contain multiple functions.
      */
-    var bestViable: Set<FunctionDeclaration>,
+    var bestViable: Set<Function>,
 
     /** The kind of success this resolution had. */
     var success: SuccessKind,
@@ -1030,7 +1156,7 @@ data class CallResolutionResult(
          * Ideally, we have only one function in [bestViable], but it could be that we still have
          * multiple functions in this list. The most common scenario for this is if we have a member
          * call to an interface, and we know at least partially which implemented classes could be
-         * in the [MemberExpression.base]. In this case, all best viable functions of each of the
+         * in the [MemberAccess.base]. In this case, all best viable functions of each of the
          * implemented classes are contained in [bestViable].
          */
         SUCCESSFUL,

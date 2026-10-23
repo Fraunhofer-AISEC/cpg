@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
 import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.toLocation
 import java.io.File
@@ -50,6 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.absolute
 import kotlin.io.path.name
 import kotlin.io.path.readText
+import kotlin.math.max
 import kotlin.reflect.full.findAnnotation
 import kotlin.time.DurationUnit
 import org.slf4j.LoggerFactory
@@ -67,22 +67,28 @@ private constructor(
     private val isCancelled = AtomicBoolean(false)
 
     /**
-     * Kicks off the analysis.
+     * Kicks off the analysis and reports progress through [callbacks].
      *
-     * This method orchestrates all passes that will do the main work.
-     *
+     * @param ctx The [TranslationContext] to use for the analysis. If none is provided, a new one
+     *   is created.
+     * @param callbacks Callback(s) that are notified after frontend parsing and after each pass.
      * @return a [CompletableFuture] with the [TranslationResult].
      */
-    fun analyze(): CompletableFuture<TranslationResult> {
+    fun analyze(
+        ctx: TranslationContext? = null,
+        callbacks: Collection<TranslationProgressCallback>? = null,
+    ): CompletableFuture<TranslationResult> {
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
-        return CompletableFuture.supplyAsync { analyzeNonAsync() }
+        return CompletableFuture.supplyAsync {
+            analyzeNonAsync(ctx = ctx ?: TranslationContext(config), callbacks = callbacks)
+        }
     }
 
-    private fun analyzeNonAsync(): TranslationResult {
+    private fun analyzeNonAsync(
+        ctx: TranslationContext,
+        callbacks: Collection<TranslationProgressCallback>?,
+    ): TranslationResult {
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
-
-        // Build a new global translation context
-        val ctx = TranslationContext(config)
 
         // Build a new translation result
         val result = TranslationResult(this, ctx)
@@ -94,19 +100,20 @@ private constructor(
             // Parse Java/C/CPP files
             val bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
             executedFrontends = runFrontends(ctx, result)
+            callbacks?.forEach { callback ->
+                runCatching { callback.afterFrontends(ctx, result, executedFrontends) }
+                    .onFailure {
+                        log.warn(
+                            "Progress callback {} failed after frontend execution",
+                            callback::class.simpleName ?: callback.javaClass.simpleName,
+                            it,
+                        )
+                    }
+            }
+            ctx.executedFrontends.addAll(executedFrontends)
             bench.addMeasurement()
 
-            if (config.useParallelPasses) {
-                // Execute list of parallel passes together in parallel
-                for (list in config.registeredPasses) {
-                    executePassesInParallel(list, ctx, result, executedFrontends)
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
-            } else {
-                executePassesSequentially(ctx, result, executedFrontends)
-            }
+            executePassesSequentially(ctx, result, executedFrontends, callbacks)
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
         } finally {
@@ -118,10 +125,11 @@ private constructor(
             }
         }
 
+        // ensure LoC is non-zero for division in average time per LoC
         log.info(
             "Translated {} LoC in total ({} / LoC)",
             result.stats.totalLinesOfCode,
-            (outerBench.duration / result.stats.totalLinesOfCode).toString(
+            (outerBench.duration / max(result.stats.totalLinesOfCode, 1)).toString(
                 DurationUnit.MILLISECONDS,
                 decimals = 3,
             ),
@@ -145,7 +153,7 @@ private constructor(
      * * is `true`.
      */
     @Throws(TranslationException::class)
-    private fun runFrontends(
+    fun runFrontends(
         ctx: TranslationContext,
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
@@ -204,7 +212,7 @@ private constructor(
                         // to disable it.
                         if (useParallelFrontends && !supportsParallelParsing) {
                             log.warn(
-                                "Parallel frontends are not yet supported for the language frontend ${frontendClass?.simpleName}"
+                                "Parallel frontends are not yet supported for the language frontend ${frontendClass.simpleName}"
                             )
                             useParallelFrontends = false
                         }
@@ -274,14 +282,12 @@ private constructor(
             )
 
             // Collects all used languages used in the main analysis code
-            result.usedLanguages.addAll(
-                sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet()
-            )
+            result.usedLanguages.addAll(sourceLocations.mapNotNull { with(ctx) { it.language } })
         }
 
         // Adds all languages provided as additional sources that may be relevant in the main code
         result.usedLanguages.addAll(
-            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }.toSet()
+            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }
         )
 
         result.usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
@@ -318,7 +324,7 @@ private constructor(
                         component.name = compName
                         component.location = includePath.toLocation()
                         result.addComponent(component)
-                        ctx.config.topLevels.put(includePath.name, includePath.toFile())
+                        ctx.config.topLevels[includePath.name] = includePath.toFile()
                     }
 
                     usedFrontends.addAll(
@@ -421,7 +427,7 @@ private constructor(
             }
         }
 
-        var b =
+        val b =
             Benchmark(
                 TranslationManager::class.java,
                 "Merging type and scope information to final context",
@@ -498,19 +504,19 @@ private constructor(
             }
 
             // Check, if the frontend supports the new API
-            var tu =
+            val tu =
                 if (frontend is SupportsNewParse) {
                     // Read the file contents and supply it to the frontend. This gives us a chance
                     // to do some statistics here, for example on the lines of code. For now, we
                     // just print it, in a future PR we will gather this information and consolidate
                     // it.
-                    var path = sourceLocation.toPath().absolute()
-                    var content = path.readText()
-                    var linesOfCode = content.linesOfCode
+                    val path = sourceLocation.toPath().absolute()
+                    val content = path.readText()
+                    val linesOfCode = content.linesOfCode
 
                     log.info("{} has {} LoC", path, linesOfCode)
 
-                    var tu = frontend.parse(content, path)
+                    val tu = frontend.parse(content, path)
 
                     // Add the LoC. This needs to be synchronized on the stats object, because of
                     // parallel parsing

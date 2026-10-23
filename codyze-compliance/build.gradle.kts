@@ -32,8 +32,12 @@ mavenPublishing {
     }
 }
 
+val codyzeConsoleEnabled = findProject(":codyze-console") != null
+
 dependencies {
-    implementation(projects.codyzeConsole)
+    if (codyzeConsoleEnabled) {
+        implementation(project(":codyze-console"))
+    }
     implementation(libs.kaml)
 
     // We depend on the Python frontend for the integration tests, but the frontend is only

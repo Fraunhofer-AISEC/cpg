@@ -37,6 +37,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * A [Pass] collecting statistics for the graph. Currently, it collects the number of nodes and the
  * number of problem nodes (i.e., nodes where the translation failed for some reason).
  */
+@Description(
+    "A pass that collects statistics (number of nodes and number of problems) about the graph."
+)
 class StatisticsCollectionPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     /** Iterates the nodes of the [result] to collect statistics. */

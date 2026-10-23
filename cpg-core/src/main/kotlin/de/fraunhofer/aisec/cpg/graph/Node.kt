@@ -35,30 +35,32 @@ import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
+import de.fraunhofer.aisec.cpg.helpers.smallMutableSetOf
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
+import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
+import de.fraunhofer.aisec.cpg.sarif.CodeSpan
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
-import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -72,14 +74,80 @@ abstract class Node() :
     HasScope,
     HasAssumptions {
 
+    /**
+     * Caches the (structural) [hashCode]. A value of `0` means "not yet computed" (a genuine
+     * hashCode of `0` is harmless: it simply recomputes on the next call). [hashCode] depends only
+     * on [name], [location] and the constant runtime class, so the [name] and [location] setters
+     * invalidate this cache. This is safe because [Name] is immutable and no [PhysicalLocation] is
+     * mutated in place in the codebase, so those setters observe every change. With the cache, the
+     * value returned is always identical to the live computation.
+     */
+    @DoNotPersist @JsonIgnore private var cachedHashCode: Int = 0
+
     /** This property holds the full name using our new [Name] class. */
-    @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
+    @Convert(NameConverter::class)
+    override var name: Name = emptyName
+        set(value) {
+            field = value
+            cachedHashCode = 0
+        }
+
+    /** Backing storage for [code] when it is not interned as a [codeSpan]. */
+    @DoNotPersist @JsonIgnore private var literalCode: String? = null
+
+    /**
+     * Lazily-populated pointer into a shared, cached copy of this node's source file, used instead
+     * of a dedicated copy of [code] when the code exactly matches a range of that file. Only ever
+     * populated via [setCodeSpan]. See [de.fraunhofer.aisec.cpg.sarif.tryInternCode].
+     */
+    @DoNotPersist @JsonIgnore private var codeSpan: CodeSpan? = null
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
+     *
+     * Internally, this may be backed by [codeSpan] (an offset range into a shared, cached copy of
+     * the whole source file) instead of a dedicated copy of the string, to avoid the O(depth)
+     * duplication that comes from nested AST nodes each holding an overlapping copy of their
+     * ancestors' code. This is purely a storage optimization: the value returned/accepted here is
+     * unaffected by which representation is used.
      */
-    var code: String? = null
+    var code: String?
+        get() = codeSpan?.materialize() ?: literalCode
+        set(value) {
+            codeSpan = null
+            literalCode = value
+        }
+
+    /**
+     * Whether [code] is currently backed by a [CodeSpan] shared with other nodes of the same file,
+     * rather than a dedicated copy of the string. Exposed for diagnostics/benchmarking only: the
+     * value returned by [code] is identical either way.
+     */
+    @DoNotPersist
+    @get:JsonIgnore
+    val isCodeInterned: Boolean
+        get() = codeSpan != null
+
+    /**
+     * Sets [code] to [span]'s content without allocating a dedicated copy of the string. Used only
+     * by [setCodeAndLocation] once it has verified that [span] reproduces the original code
+     * exactly.
+     */
+    internal fun setCodeSpan(span: CodeSpan) {
+        codeSpan = span
+        literalCode = null
+    }
+
+    /**
+     * Copies [other]'s [code], preserving an interned [codeSpan] if [other] has one, instead of
+     * materializing and re-storing a dedicated copy of the string (as a plain `code = other.code`
+     * assignment would).
+     */
+    internal fun copyCodeFrom(other: Node) {
+        codeSpan = other.codeSpan
+        literalCode = other.literalCode
+    }
 
     /**
      * The language of this node. This property is set in [Node.applyMetadata] by a
@@ -93,10 +161,10 @@ abstract class Node() :
      * The scope this node "lives" in / in which it is defined. This property is set in
      * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
      *
-     * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without
-     * any namespaces), the scope of the [RecordDeclaration] is most likely a [GlobalScope]. Since
-     * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
-     * class would be a [RecordScope] pointing to the [RecordDeclaration].
+     * For example, if a [Record] is defined in a [TranslationUnit] (without any namespaces), the
+     * scope of the [Record] is most likely a [GlobalScope]. Since the declaration itself creates a
+     * [RecordScope], the scope of a [Method] within the class would be a [RecordScope] pointing to
+     * the [Record].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
@@ -105,7 +173,12 @@ abstract class Node() :
     /** Optional comment of this node. */
     var comment: String? = null
 
-    @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
+    @Convert(LocationConverter::class)
+    override var location: PhysicalLocation? = null
+        set(value) {
+            field = value
+            cachedHashCode = 0
+        }
 
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
@@ -121,31 +194,95 @@ abstract class Node() :
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
 
+    /** Lazy backing field for [basicBlockEdges]. */
+    private var _basicBlockEdges: BasicBlockEdgeList<Node>? = null
+
+    /**
+     * The [BasicBlockEdgeList] leading to the basic block this node belongs to.
+     *
+     * The backing container is allocated lazily on first access: basic blocks are only populated by
+     * the optional [BasicBlockCollectorPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
+    @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(BasicBlockCollectorPass::class)
+    var basicBlockEdges: BasicBlockEdgeList<Node>
+        get() =
+            _basicBlockEdges
+                ?: BasicBlockEdgeList<Node>(
+                        this,
+                        mirrorProperty = BasicBlock::nodeEdges,
+                        outgoing = true,
+                    )
+                    .also { _basicBlockEdges = it }
+        protected set(value) {
+            _basicBlockEdges = value
+        }
+
+    /** The basic block this node belongs to. */
+    var basicBlock by unwrapping(Node::basicBlockEdges)
+
+    /** Lazy backing field for [nextCDGEdges]. */
+    private var _nextCDGEdges: ControlDependences<Node>? = null
+
     /**
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
      * Graph (CDG).
+     *
+     * The backing container is allocated lazily on first access: CDG edges are only populated by
+     * the optional [ControlDependenceGraphPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
-    var nextCDGEdges: ControlDependences<Node> =
-        ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
-        protected set
+    var nextCDGEdges: ControlDependences<Node>
+        get() =
+            _nextCDGEdges
+                ?: ControlDependences<Node>(
+                        this,
+                        mirrorProperty = Node::prevCDGEdges,
+                        outgoing = true,
+                    )
+                    .also { _nextCDGEdges = it }
+        protected set(value) {
+            _nextCDGEdges = value
+        }
 
-    var nextCDG by unwrapping(Node::nextCDGEdges)
+    /** Virtual property for accessing [nextCDGEdges] as plain nodes. */
+    @DoNotPersist
+    val nextCDG: MutableList<Node>
+        get() = nextCDGEdges.unwrap()
+
+    /** Lazy backing field for [prevCDGEdges]. */
+    private var _prevCDGEdges: ControlDependences<Node>? = null
 
     /**
      * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
      * Dependence Graph (CDG).
+     *
+     * The backing container is allocated lazily on first access (see [nextCDGEdges]).
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
-    var prevCDGEdges: ControlDependences<Node> =
-        ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
-        protected set
+    var prevCDGEdges: ControlDependences<Node>
+        get() =
+            _prevCDGEdges
+                ?: ControlDependences<Node>(
+                        this,
+                        mirrorProperty = Node::nextCDGEdges,
+                        outgoing = false,
+                    )
+                    .also { _prevCDGEdges = it }
+        protected set(value) {
+            _prevCDGEdges = value
+        }
 
-    var prevCDG by unwrapping(Node::prevCDGEdges)
+    /** Virtual property for accessing [prevCDGEdges] as plain nodes. */
+    @DoNotPersist
+    val prevCDG: MutableList<Node>
+        get() = prevCDGEdges.unwrap()
 
-    @DoNotPersist @Transient @JsonIgnore var astParent: AstNode? = null
+    @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -155,69 +292,129 @@ abstract class Node() :
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val prevFullDFG: List<Node>
         get() {
-            return prevDFGEdges
-                .filter { it.granularity is FullDataflowGranularity }
-                .map { it.start }
+            return prevDFGEdges.mapFiltered({
+                it.granularity is FullDataflowGranularity &&
+                    !it.functionSummary &&
+                    it.derefDepth == null
+            }) {
+                it.start
+            }
+        }
+
+    /** Virtual property for accessing [prevDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val prevFunctionSummaryDFG: List<Node>
+        get() {
+            return prevDFGEdges.mapFiltered({ it.functionSummary }) { it.start }
         }
 
     /** Outgoing data flow edges */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
     var nextDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val nextFullDFG: List<Node>
         get() {
-            return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
+            return nextDFGEdges.mapFiltered({
+                it.granularity is FullDataflowGranularity &&
+                    !it.functionSummary &&
+                    it.derefDepth == null
+            }) {
+                it.end
+            }
         }
 
-    /** Outgoing Program Dependence Edges. */
+    /** Virtual property for accessing [nextDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val nextFunctionSummaryDFG: List<Node>
+        get() {
+            return nextDFGEdges.mapFiltered({ it.functionSummary }) { it.end }
+        }
+
+    /** Lazy backing field for [nextPDGEdges]. */
+    private var _nextPDGEdges: ProgramDependences<Node>? = null
+
+    /**
+     * Outgoing Program Dependence Edges.
+     *
+     * The backing container is allocated lazily on first access: PDG edges are only populated by
+     * the optional [ProgramDependenceGraphPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
-        protected set
+    var nextPDGEdges: ProgramDependences<Node>
+        get() =
+            _nextPDGEdges
+                ?: ProgramDependences<Node>(
+                        this,
+                        mirrorProperty = Node::prevPDGEdges,
+                        outgoing = true,
+                    )
+                    .also { _nextPDGEdges = it }
+        protected set(value) {
+            _nextPDGEdges = value
+        }
 
-    var nextPDG by unwrapping(Node::nextPDGEdges)
+    /** Virtual property for accessing [nextPDGEdges] as plain nodes. */
+    @DoNotPersist
+    val nextPDG: MutableSet<Node>
+        get() = nextPDGEdges.unwrap()
 
-    /** Incoming Program Dependence Edges. */
+    /** Lazy backing field for [prevPDGEdges]. */
+    private var _prevPDGEdges: ProgramDependences<Node>? = null
+
+    /**
+     * Incoming Program Dependence Edges.
+     *
+     * The backing container is allocated lazily on first access (see [nextPDGEdges]).
+     */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    var prevPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
-        protected set
+    var prevPDGEdges: ProgramDependences<Node>
+        get() =
+            _prevPDGEdges
+                ?: ProgramDependences<Node>(
+                        this,
+                        mirrorProperty = Node::nextPDGEdges,
+                        outgoing = false,
+                    )
+                    .also { _prevPDGEdges = it }
+        protected set(value) {
+            _prevPDGEdges = value
+        }
 
-    var prevPDG by unwrapping(Node::prevPDGEdges)
+    /** Virtual property for accessing [prevPDGEdges] as plain nodes. */
+    @DoNotPersist
+    val prevPDG: MutableSet<Node>
+        get() = prevPDGEdges.unwrap()
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    @DoNotPersist override val assumptions: MutableSet<Assumption> = smallMutableSetOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -234,8 +431,8 @@ abstract class Node() :
      */
     var isImplicit = false
 
-    /** Required field for object graph mapping. It contains the node id. */
-    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
+    /** Required field for persistence. It contains the node ID. */
+    @DoNotPersist var legacyId: Long = NodeIdGenerator.next()
 
     /**
      * A (more or less) unique identifier for this node. It is a [Uuid] derived from
@@ -258,12 +455,28 @@ abstract class Node() :
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
      */
-    val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+    val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
 
+    /** Lazy backing field for [overlayEdges]. */
+    private var _overlayEdges: Overlays? = null
+
+    /**
+     * The [OverlayNode]s attached to this node.
+     *
+     * The backing container is allocated lazily on first access: overlays are only added by
+     * (optional) concept/overlay passes and stay empty on the vast majority of nodes.
+     */
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
-    val overlayEdges: Overlays =
-        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
-    var overlays by unwrapping(Node::overlayEdges)
+    val overlayEdges: Overlays
+        get() =
+            _overlayEdges
+                ?: Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+                    .also { _overlayEdges = it }
+
+    /** Virtual property for accessing [overlayEdges] as plain nodes. */
+    @DoNotPersist
+    val overlays: MutableSet<Node>
+        get() = overlayEdges.unwrap()
 
     /**
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
@@ -285,10 +498,12 @@ abstract class Node() :
     open fun disconnectFromGraph() {
         nextDFGEdges.clear()
         prevDFGEdges.clear()
-        prevCDGEdges.clear()
-        nextCDGEdges.clear()
-        prevPDGEdges.clear()
-        nextPDGEdges.clear()
+        // The CDG/PDG/overlay containers are lazily allocated; only clear them if they were ever
+        // populated, so disconnecting does not allocate empty containers just to clear them.
+        _prevCDGEdges?.clear()
+        _nextCDGEdges?.clear()
+        _prevPDGEdges?.clear()
+        _nextPDGEdges?.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
 
@@ -296,7 +511,7 @@ abstract class Node() :
             underlyingNodeEdge.clear()
         }
 
-        this.overlayEdges.clear()
+        _overlayEdges?.clear()
     }
 
     override fun toString(): String {
@@ -342,7 +557,16 @@ abstract class Node() :
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass.name)
+        // Cached (see [cachedHashCode]); invalidated by the [name]/[location] setters. This is
+        // called very frequently (every structural HashMap/HashSet operation on a node), so
+        // avoiding
+        // the recomputation - and the varargs array [Objects.hash] allocates - is worthwhile.
+        var h = cachedHashCode
+        if (h == 0) {
+            h = Objects.hash(name, location, this.javaClass.name)
+            cachedHashCode = h
+        }
+        return h
     }
 
     /** Returns the starting point of the EOG outside this node and its children. */
@@ -361,6 +585,9 @@ abstract class Node() :
         @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
         const val EMPTY_NAME = ""
+
+        /** A single shared instance used as [name]'s default, to avoid allocating one per node. */
+        private val emptyName = Name(EMPTY_NAME)
     }
 }
 

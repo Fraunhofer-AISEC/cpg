@@ -28,25 +28,29 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.HasImportsFromRecords
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import as ScopeImport
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.inference.tryNamespaceInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -54,12 +58,14 @@ import java.util.IdentityHashMap
 
 /**
  * This class holds the information about import dependencies between nodes that represent some kind
- * of "module" (usually either a [TranslationUnitDeclaration] or a [Component]). The dependency is
- * based on which module imports symbols of another module (usually in the form of a
- * [NamespaceDeclaration]). The idea is to provide a sorted list of modules in which to resolve
- * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
- * time someone accesses the property.
+ * of "module" (usually either a [TranslationUnit] or a [Component]). The dependency is based on
+ * which module imports symbols of another module (usually in the form of a [Namespace]). The idea
+ * is to provide a sorted list of modules in which to resolve symbols and imports ideally. This is
+ * stored in [sorted] and is automatically computed the fist time someone accesses the property.
  */
+@Description(
+    "Resolves import statements in the code, linking imported entities to their definitions within the CPG."
+)
 class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T, IdentitySet<T>>() {
 
     init {
@@ -81,10 +87,8 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
             return false
         }
 
-        var list = this.computeIfAbsent(importer) { identitySetOf<T>() }
-        var added = list.add(imported)
-
-        return added
+        val list = this.computeIfAbsent(importer) { identitySetOf<T>() }
+        return list.add(imported)
     }
 
     /**
@@ -108,7 +112,9 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
                         // future, if we see a benefit to NOT group processing per component but
                         // rather just process all TUs in the order they are necessary regardless of
                         // their parent component.
-                        entry.value.filter { entry.key.astParent == it.astParent }.toIdentitySet(),
+                        entry.value.filterTo(identitySetOf()) {
+                            entry.key.astParent == it.astParent
+                        },
                     )
                 }
         }
@@ -126,13 +132,13 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
          *   the list
          */
         fun resolveDependencies(): List<T> {
-            var list = mutableListOf<T>()
+            val list = mutableListOf<T>()
 
             while (true) {
                 // Try to get the next module
                 var tu = nextWithoutDependencies()
                 if (tu == null) {
-                    var remaining = keys
+                    val remaining = keys
                     // No modules without dependencies found. If there are no modules left, this
                     // means we are done
                     if (remaining.isEmpty()) {
@@ -193,9 +199,9 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
 }
 
 /**
- * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope].
- * It does so by first building a dependency map between [TranslationUnitDeclaration] nodes, based
- * on their [ImportDeclaration] nodes.
+ * This pass looks for [Import] nodes and imports symbols into their respective [Scope]. It does so
+ * by first building a dependency map between [TranslationUnit] nodes, based on their [Import]
+ * nodes.
  */
 class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
@@ -217,7 +223,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                 // Create a new import dependency object for the component, to make sure that all
                 // TUs are included.
                 node.translationUnitDependencies = ImportDependencies(node.translationUnits)
-            } else if (node is ImportDeclaration) {
+            } else if (node is Import) {
                 collectImportDependencies(node)
             }
         }
@@ -226,8 +232,8 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // Now we need to iterate through all modules
         walker.clearCallbacks()
         walker.registerHandler { node ->
-            if (node is ImportDeclaration) {
-                handleImportDeclaration(node)
+            if (node is Import) {
+                handleImport(node)
             }
         }
 
@@ -240,11 +246,8 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         }
     }
 
-    /**
-     * This callback collects dependencies between [TranslationUnitDeclaration] nodes based on a
-     * [ImportDeclaration].
-     */
-    private fun collectImportDependencies(import: ImportDeclaration) {
+    /** This callback collects dependencies between [TranslationUnit] nodes based on a [Import]. */
+    private fun collectImportDependencies(import: Import) {
         val currentComponent = import.component
         if (currentComponent == null) {
             errorWithFileLocation(import, log, "Cannot determine component of import node")
@@ -256,7 +259,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
         // Let's look for imported namespaces
         // First, we collect the individual parts of the name
-        var parts = mutableListOf<Name>()
+        val parts = mutableListOf<Name>()
         var name: Name? = import.import
         while (name != null) {
             parts += name
@@ -271,7 +274,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // whether `backend.app.db` is a namespace, if not, we look at `backend.app` and lastly at
         // `backend`. We do this in order to make the dependency as fine-grained as possible.
         for (part in parts) {
-            var namespaces =
+            val namespaces =
                 scopeManager.lookupSymbolByName(
                     part,
                     import.language,
@@ -289,9 +292,12 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     // leaf namespaces. However, this can be extremely slow because it first gathers
                     // all children and then filters them. Instead, we can directly filter for the
                     // child declarations.
-                    it is NamespaceDeclaration &&
+                    (it is Namespace &&
                         !it.isInferred &&
-                        it.declarations.filterIsInstance<NamespaceDeclaration>().isEmpty()
+                        it.declarations.none { it is Namespace }) ||
+                        // For languages that can import from records, a record is also an
+                        // authoritative source, since it is always declared in a single file
+                        (it is Record && !it.isInferred && it.language is HasImportsFromRecords)
                 }
 
             // We are only interested in "leaf" namespace declarations, meaning that they do not
@@ -304,9 +310,9 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
                 // Retrieve the module of the declarations
-                var namespaceTu = declaration.translationUnit
-                var namespaceComponent = declaration.component
-                var importTu = import.translationUnit
+                val namespaceTu = declaration.translationUnit
+                val namespaceComponent = declaration.component
+                val importTu = import.translationUnit
                 // Skip, if we cannot find the module or if they belong to the same module (we do
                 // not want self-references)
                 if (
@@ -344,15 +350,15 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         }
     }
 
-    private fun handleImportDeclaration(import: ImportDeclaration) {
+    private fun handleImport(import: Import) {
         ctx.scopeManager.updateImportedSymbols(import)
     }
 
     /**
-     * This function populates the [Scope.importedScopes] property of the [Scope] that the
-     * [ImportDeclaration] "lives" in.
+     * This function populates the [Scope.importedScopes] property of the [Scope] that the [Import]
+     * "lives" in.
      */
-    private fun ImportDeclaration.populateImportedScopes() {
+    private fun Import.populateImportedScopes() {
         val startScope = scope
         val name =
             when (style) {
@@ -373,20 +379,31 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             return
         }
 
-        // Try to look up the namespace scope by the name
-        var targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+        // Try to look up the scope by the name. This is usually a namespace, but languages with
+        // the HasImportsFromRecords trait can also import from a record
+        val language = language
+        var targetScope = scopeManager.lookupScope(name)
+        if (targetScope is RecordScope && language !is HasImportsFromRecords) {
+            errorWithFileLocation(this, log, "The language does not support imports from records")
+            return
+        }
+
         if (targetScope == null) {
             // Try to infer it, if inference is configured
-            val decl = tryNamespaceInference(name, this)
-            if (decl != null) {
-                targetScope = scopeManager.lookupScope(name) as? NamespaceScope
-            }
+            targetScope =
+                if (language is HasImportsFromRecords && language.importsFromRecord(this)) {
+                    language.inferImportTarget(this)
+                } else {
+                    tryNamespaceInference(name, this)?.let {
+                        scopeManager.lookupScope(name) as? NamespaceScope
+                    }
+                }
         }
 
         // If we have a target scope, we can create an "import" edge
         if (targetScope != null) {
             // Create a new import edge with all the necessary information
-            val edge = Import(startScope, targetScope, this)
+            val edge = ScopeImport(startScope, targetScope, this)
             startScope.importedScopeEdges += edge
         }
     }
@@ -397,15 +414,15 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 }
 
 /**
- * This function updates the [ImportDeclaration.importedSymbols]. This is done once at the beginning
- * by the [ImportResolver]. However, we need to update this list once we infer new symbols in
- * namespaces that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't
- * be visible to the later passes.
+ * This function updates the [Import.importedSymbols]. This is done once at the beginning by the
+ * [ImportResolver]. However, we need to update this list once we infer new symbols in namespaces
+ * that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't be visible
+ * to the later passes.
  */
-fun ScopeManager.updateImportedSymbols(import: ImportDeclaration) {
+fun ScopeManager.updateImportedSymbols(import: Import) {
     // We always need to search at the global scope because we are "importing" something, so by
     // definition, this is not in the scope of the current file.
-    val scope = globalScope ?: return
+    val scope = globalScope
 
     // Let's do some importing. We need to import either a wildcard
     if (import.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE) {
@@ -414,15 +431,86 @@ fun ScopeManager.updateImportedSymbols(import: ImportDeclaration) {
         if (symbol != null) {
             // In this case, the symbol must point to a name scope
             val symbolScope = lookupScope(symbol)
-            if (symbolScope is NameScope) {
+            if (symbolScope is RecordScope) {
+                // Only some members of a record can be imported (e.g., only static ones). This
+                // includes the ones inherited from supertypes, unless they are hidden.
+                val imported = mutableMapOf<Symbol, MutableList<Declaration>>()
+                for (recordScope in withSupertypeScopes(symbolScope)) {
+                    for ((name, declarations) in recordScope.symbols) {
+                        if (name in imported) continue
+                        val importable =
+                            declarations.filterTo(mutableListOf()) { import.isImportable(it) }
+                        if (importable.isNotEmpty()) imported[name] = importable
+                    }
+                }
+                import.importedSymbols = imported
+            } else if (symbolScope is NameScope) {
                 import.importedSymbols = symbolScope.symbols
             }
         }
     } else {
         // or a symbol directly
-        val list =
-            lookupSymbolByName(import.import, import.language, import.location, scope)
-                .toMutableList()
+        var list =
+            lookupSymbolByName(import.import, import.language, import.location, scope).filterTo(
+                mutableListOf()
+            ) {
+                import.isImportable(it)
+            }
+        if (list.isEmpty() && import.language is HasImportsFromRecords) {
+            // The symbol might be inherited by the record we are importing from
+            val recordScope = import.import.parent?.let { lookupScope(it) } as? RecordScope
+            list =
+                recordScope
+                    ?.let { withSupertypeScopes(it) }
+                    ?.drop(1)
+                    ?.firstNotNullOfOrNull { scope ->
+                        scope.symbols[import.symbol]
+                            ?.filterTo(mutableListOf()) { import.isImportable(it) }
+                            ?.takeIf { it.isNotEmpty() }
+                    } ?: list
+        }
         import.importedSymbols = mutableMapOf(import.symbol to list)
     }
+
+    // Import.importedSymbols is read by Scope.lookupSymbol (via replaceImports), so any cached
+    // ScopeManager.lookupSymbolByName results may no longer be valid.
+    invalidateSymbolLookupCache()
+}
+
+/**
+ * Checks whether [declaration] can be imported by this [Import]. For languages that can import from
+ * records ([HasImportsFromRecords]), only some members of a record can be imported (see
+ * [HasImportsFromRecords.isImportableFromRecord]). Everything else can always be imported.
+ */
+private fun Import.isImportable(declaration: Declaration): Boolean {
+    val language = language
+    return if (language is HasImportsFromRecords && declaration.scope is RecordScope) {
+        language.isImportableFromRecord(declaration)
+    } else {
+        true
+    }
+}
+
+/**
+ * Returns this scope followed by the scopes of all (transitive) supertypes of its [Record] that are
+ * part of the graph, in breadth-first order, so that a member of a subtype comes before one that it
+ * hides. The supertypes are only known once the [TypeHierarchyResolver] has run.
+ */
+private fun ScopeManager.withSupertypeScopes(start: RecordScope): List<RecordScope> {
+    val result = mutableListOf(start)
+    val visited = mutableSetOf<Record>()
+    val queue = ArrayDeque<Record>()
+    (start.astNode as? Record)?.let {
+        visited += it
+        queue += it
+    }
+    while (queue.isNotEmpty()) {
+        for (superRecord in queue.removeFirst().superTypeDeclarations) {
+            if (visited.add(superRecord)) {
+                queue += superRecord
+                (lookupScope(superRecord) as? RecordScope)?.let { result += it }
+            }
+        }
+    }
+    return result
 }

@@ -38,6 +38,8 @@ import kotlin.collections.MutableMap
 
 /** describes the actual database or a table in a database */
 public open class DatabaseStorage(
+    val timeToLiveSeconds: Long?,
+    val hasAutomatedCleanup: Boolean?,
     activityLogging: ActivityLogging?,
     atRestEncryption: Boolean?,
     backups: MutableList<Backup?>,

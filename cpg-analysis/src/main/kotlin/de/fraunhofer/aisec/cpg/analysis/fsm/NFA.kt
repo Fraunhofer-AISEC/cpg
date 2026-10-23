@@ -48,7 +48,9 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
         fun getEpsilonClosure(states: MutableSet<State>): Set<State> {
             for (epsilonEdges in
                 states.map { state -> state.outgoingEdges.filter { edge -> edge.op == EPSILON } }) {
-                states.addAll(getEpsilonClosure(epsilonEdges.map { it.nextState }.toMutableSet()))
+                states.addAll(
+                    getEpsilonClosure(epsilonEdges.mapTo(mutableSetOf()) { it.nextState })
+                )
             }
             return states
         }
@@ -103,7 +105,8 @@ class NFA(states: Set<State> = setOf()) : FSM(states) {
                 // because multiple states in the current epsilonClosure might have edges with the
                 // same 'name' but to different states
                 // we again have to get the epsilonClosure of the target states
-                val transitionClosure = getEpsilonClosure(edges.map { it.nextState }.toMutableSet())
+                val transitionClosure =
+                    getEpsilonClosure(edges.mapTo(mutableSetOf()) { it.nextState })
                 if (transitionClosure in epsilonClosures) {
                     // if the transitionClosure is already in the DFA, get the DFA state it
                     // corresponds to

@@ -2,8 +2,12 @@
   "extends": [
     "config:recommended",
     "schedule:weekly",
-    ":enableVulnerabilityAlerts"
+    ":enableVulnerabilityAlerts",
+    "security:minimumReleaseAgeNpm"
   ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
   "patch": {
     "enabled": false
   },
@@ -26,6 +30,10 @@
       "addLabels": [
         "npm"
       ]
+    },
+    {
+      "matchFileNames": ["codyze-console/**/webapp/**"],
+      "groupName": "Codyze Console WebApp dependencies"
     }
   ]
 }

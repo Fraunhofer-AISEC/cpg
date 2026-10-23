@@ -26,15 +26,15 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.IntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.*
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,7 +43,10 @@ class IntegerValueTest {
     private val name = Name("testVariable")
     private val current = LatticeInterval.Bounded(1, 1)
     val lattice =
-        TupleState<Any>(DeclarationState(IntervalLattice()), NewIntervalState(IntervalLattice()))
+        TupleState<Any>(
+            DeclarationState(NewIntervalLattice()),
+            NewIntervalState(NewIntervalLattice()),
+        )
 
     @Test
     fun applyDeclarationTest() {
@@ -53,14 +56,14 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val declaration =
-            VariableDeclaration().apply {
+            Variable().apply {
                 name = this@IntegerValueTest.name
                 initializer =
                     Literal<Int>().apply {
                         value = 5
                         this.value?.let { value ->
                             startState.first[this.objectIdentifier()] =
-                                IntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
                         }
                     }
             }
@@ -77,7 +80,7 @@ class IntegerValueTest {
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
-        val declaration = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+        val declaration = Variable().apply { name = this@IntegerValueTest.name }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
             IntegerValue().applyEffect(lattice = lattice, state = startState, node = declaration),
@@ -94,8 +97,8 @@ class IntegerValueTest {
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
-                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
             }
         val unaryOperator =
             UnaryOperator().apply {
@@ -119,8 +122,8 @@ class IntegerValueTest {
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
-                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
             }
         val unaryOperator =
             UnaryOperator().apply {
@@ -144,8 +147,8 @@ class IntegerValueTest {
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
-                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
             }
         val unaryOperator =
             UnaryOperator().apply {
@@ -169,8 +172,8 @@ class IntegerValueTest {
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
-                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
             }
         val unaryOperator =
             UnaryOperator().apply {
@@ -194,8 +197,8 @@ class IntegerValueTest {
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
-                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
             }
         val unaryOperator =
             UnaryOperator().apply {
@@ -209,27 +212,27 @@ class IntegerValueTest {
     }
 
     @Test
-    fun applyAssignExpression() {
+    fun applyAssign() {
         val startState =
             TupleStateElement<Any>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
                 rhs +=
                     Literal<Int>().apply {
                         value = 3
                         this.value?.let { value ->
                             startState.first[this.objectIdentifier()] =
-                                IntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
                         }
                     }
             }
@@ -247,13 +250,13 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
             }
         assertEquals(
@@ -270,20 +273,20 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "+="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
                 rhs +=
                     Literal<Int>().apply {
                         value = 3
                         this.value?.let { value ->
                             startState.first[this.objectIdentifier()] =
-                                IntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
                         }
                     }
             }
@@ -301,13 +304,13 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "+="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
             }
         assertEquals(
@@ -324,20 +327,20 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "-="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
                 rhs +=
                     Literal<Int>().apply {
                         value = 3
                         this.value?.let { value ->
                             startState.first[this.objectIdentifier()] =
-                                IntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
                         }
                     }
             }
@@ -355,13 +358,13 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "-="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
             }
         assertEquals(
@@ -378,20 +381,20 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "*="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
                 rhs +=
                     Literal<Int>().apply {
                         value = 3
                         this.value?.let { value ->
                             startState.first[this.objectIdentifier()] =
-                                IntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
                         }
                     }
             }
@@ -409,13 +412,13 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "*="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
             }
         assertEquals(
@@ -432,20 +435,20 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "/="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
                 rhs +=
                     Literal<Int>().apply {
                         value = 3
                         this.value?.let { value ->
                             startState.first[this.objectIdentifier()] =
-                                IntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
                         }
                     }
             }
@@ -463,13 +466,13 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "/="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
             }
         assertEquals(
@@ -486,20 +489,20 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "%="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
                 rhs +=
                     Literal<Int>().apply {
                         value = 3
                         this.value?.let { value ->
                             startState.first[this.objectIdentifier()] =
-                                IntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
                         }
                     }
             }
@@ -517,13 +520,13 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "%="
                 lhs +=
                     Reference().apply {
                         name = this@IntegerValueTest.name
-                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
-                        startState.first[objectIdentifier()] = IntervalLattice.Element(current)
+                        refersTo = Variable().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
                     }
             }
         assertEquals(

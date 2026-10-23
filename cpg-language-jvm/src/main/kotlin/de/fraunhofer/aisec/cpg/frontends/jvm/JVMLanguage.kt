@@ -25,35 +25,164 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
+import de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
+import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
-class JVMLanguage : Language<JVMLanguageFrontend>() {
-    override val fileExtensions: List<String>
-        get() = listOf("class", "java", "jimple", "jar", "apk")
+/**
+ * The lower-cased spellings of the JVM bytecode access flags that this frontend maps onto the
+ * canonical [Visibility] model. They correspond to `ACC_PUBLIC`, `ACC_PROTECTED`, `ACC_PRIVATE` and
+ * `ACC_STATIC` and are kept losslessly (together with any other access flag) in
+ * [de.fraunhofer.aisec.cpg.graph.HasModifiers.modifiers].
+ */
+const val PUBLIC = "public"
 
-    override val namespaceDelimiter: String
-        get() = "."
+const val PROTECTED = "protected"
 
-    override val frontend: KClass<out JVMLanguageFrontend>
-        get() = JVMLanguageFrontend::class
+const val PRIVATE = "private"
 
-    override val builtInTypes: Map<String, Type>
-        get() =
-            mapOf(
-                "float" to FloatingPointType("float", 32, this),
-                "double" to FloatingPointType("double", 64, this),
-                "char" to IntegerType("char", 8, this, NumericType.Modifier.UNSIGNED),
-                "boolean" to BooleanType("boolean", 1, this),
-                "byte" to IntegerType("byte", 8, this),
-                "short" to IntegerType("short", 16, this),
-                "int" to IntegerType("int", 32, this),
-                "long" to IntegerType("long", 64, this),
-                "java.lang.String" to StringType("java.lang.String", this),
-                "java.lang.Class" to ObjectType("java.lang.Class", listOf(), true, this),
-            )
+const val STATIC = "static"
 
-    override val compoundAssignmentOperators: Set<String>
-        get() = setOf()
+/**
+ * Language definition for JVM-based artifacts.
+ *
+ * Supports bytecode and source artifacts in the JVM ecosystem and registers JVM built-in types used
+ * by the frontend during parsing and type resolution.
+ *
+ * The JVM expresses member and type accessibility via bytecode access flags. `ACC_PUBLIC`,
+ * `ACC_PROTECTED` and `ACC_PRIVATE` map onto the corresponding access-control [Visibility] values,
+ * and the *absence* of all three denotes Java's package-private default, which maps to
+ * [Visibility.PACKAGE]. `ACC_STATIC` marks static (class-level) members. Because the JVM genuinely
+ * enforces access control on record members, this language declares [HasVisibilityModifiers]. See
+ * [applyModifiers] for how the raw access flags are projected onto the canonical model.
+ */
+open class JVMLanguage :
+    Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading, HasVisibilityModifiers {
+    override val fileExtensions: List<String> = listOf("class", "jimple", "jar", "apk")
+
+    override val namespaceDelimiter: String = "."
+
+    override val frontend: KClass<out JVMLanguageFrontend> = JVMLanguageFrontend::class
+
+    override val builtInTypes: Map<String, Type> =
+        mapOf(
+            "float" to FloatingPointType("float", 32, this),
+            "double" to FloatingPointType("double", 64, this),
+            "char" to IntegerType("char", 8, this, NumericType.Modifier.UNSIGNED),
+            "boolean" to BooleanType("boolean", 1, this),
+            "byte" to IntegerType("byte", 8, this),
+            "short" to IntegerType("short", 16, this),
+            "int" to IntegerType("int", 32, this),
+            "long" to IntegerType("long", 64, this),
+            "java.lang.String" to StringType("java.lang.String", this),
+            "java.lang.Class" to ObjectType("java.lang.Class", listOf(), true, this),
+        )
+
+    override val compoundAssignmentOperators: Set<String> = setOf()
+
+    /**
+     * Projects the JVM bytecode access flags recorded in [Declaration.modifiers] onto the canonical
+     * [Visibility] model. The access modifiers `public`/`protected`/`private` map onto the
+     * corresponding [Visibility], while the *absence* of all three denotes Java's package-private
+     * default and maps to [Visibility.PACKAGE]. `static` is projected onto
+     * [ValueDeclaration.isStatic]. Unlike C's `static`, a JVM access flag always carries the same
+     * meaning, so [scope] is irrelevant here.
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        declaration.visibility =
+            when {
+                PUBLIC in declaration.modifiers -> Visibility.PUBLIC
+                PROTECTED in declaration.modifiers -> Visibility.PROTECTED
+                PRIVATE in declaration.modifiers -> Visibility.PRIVATE
+                // No access flag at all means package-private (Visibility.PACKAGE) in the JVM.
+                else -> Visibility.PACKAGE
+            }
+
+        if (STATIC in declaration.modifiers) {
+            (declaration as? ValueDeclaration)?.isStatic = true
+        }
+    }
+
+    /**
+     * This function handles some specifics of the Java language when choosing a reference target
+     * before invoking [Language.bestViableReferenceCandidate].
+     */
+    override fun bestViableReferenceCandidate(ref: Reference): Declaration? {
+        // Java allows to have "ambiguous" symbol when importing static fields and methods.
+        // Therefore, it can be that we both import a field and a method with the same name. We
+        // therefore do some additional filtering of the candidates here, before handling it.
+        if (ref.candidates.size > 1) {
+            if (ref.resolutionHelper is Call) {
+                val functionDecls = ref.candidates.filterIsInstance<Function>()
+                // We can also check if the signature matches to account for overloading.
+                val targetType = ref.type as? FunctionType
+                val filteredFunctions =
+                    functionDecls.filterTo(mutableSetOf()) {
+                        it.parameters.any { it.type == targetType?.parameters }
+                    }
+                if (filteredFunctions.isNotEmpty()) ref.candidates = filteredFunctions
+                else ref.candidates = functionDecls.toSet()
+            } else {
+                ref.candidates = ref.candidates.filterIsInstanceTo<Variable, _>(mutableSetOf())
+            }
+        }
+
+        return super.bestViableReferenceCandidate(ref)
+    }
+}
+
+/**
+ * Determines if the given file is an APK file by checking if it is a valid ZIP file and contains
+ * either "AndroidManifest.xml" or "classes.dex".
+ */
+fun File.isApk(): Boolean {
+    if (!this.isFile) {
+        return false
+    }
+    if (this.endsWith(".apk")) {
+        return true
+    }
+    return try {
+        ZipFile(this).use { zip ->
+            zip.getEntry("AndroidManifest.xml") != null || zip.getEntry("classes.dex") != null
+        }
+    } catch (_: Exception) {
+        false
+    }
+}
+
+/**
+ * Determines if the given file is a JAR file by checking if it is a valid ZIP file and contains
+ * either a manifest or compiled classes.
+ */
+fun File.isJar(): Boolean {
+    if (!this.isFile) {
+        return false
+    }
+    if (this.endsWith(".jar")) {
+        return true
+    }
+    return try {
+        ZipFile(this).use { zip ->
+            zip.getEntry("META-INF/MANIFEST.MF") != null ||
+                zip.entries().asSequence().any { entry ->
+                    !entry.isDirectory && entry.name.endsWith(".class")
+                }
+        }
+    } catch (_: Exception) {
+        false
+    }
 }

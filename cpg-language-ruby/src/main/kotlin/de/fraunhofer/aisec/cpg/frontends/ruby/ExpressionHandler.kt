@@ -26,8 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import org.jruby.ast.*
 import org.jruby.ast.Node
 import org.jruby.ast.types.INameNode
@@ -54,99 +60,83 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
     }
 
     private fun handleOperatorCallNode(node: OperatorCallNode): BinaryOperator {
-        val binOp = newBinaryOperator(node.name.idString())
+        return newBinaryOperator(node.name.idString()) { binOp ->
+            (this.handle(node.receiverNode) as? Expression)?.let { binOp.lhs = it }
 
-        (this.handle(node.receiverNode) as? Expression)?.let { binOp.lhs = it }
-
-        // Always seems to be an array?
-        val list = node.argsNode as ArrayNode
-        (this.handle(list.get(0)) as? Expression)?.let { binOp.rhs = it }
-
-        return binOp
+            // Always seems to be an array?
+            val list = node.argsNode as ArrayNode
+            (this.handle(list.get(0)) as? Expression)?.let { binOp.rhs = it }
+        }
     }
 
     private fun handleINameNode(node: INameNode): Reference {
         return newReference(node.name.idString())
     }
 
-    private fun handleIterNode(node: IterNode): LambdaExpression {
+    private fun handleIterNode(node: IterNode): Lambda {
         // a complete hack, to handle iter nodes, which is sort of a lambda expression
         // so we create an anonymous function declaration out of the bodyNode and varNode
-        val func = newFunctionDeclaration("", rawNode = node)
+        val func =
+            newFunction("", rawNode = node, enterScope = true) { func ->
+                for (arg in node.argsNode.args) {
+                    val param = frontend.declarationHandler.handle(arg) as? Parameter
+                    if (param == null) {
+                        continue
+                    }
 
-        frontend.scopeManager.enterScope(func)
+                    frontend.scopeManager.addDeclaration(param)
+                    func.parameters += param
+                }
 
-        for (arg in node.argsNode.args) {
-            val param = frontend.declarationHandler.handle(arg) as? ParameterDeclaration
-            if (param == null) {
-                continue
+                func.body = frontend.statementHandler.handle(node.bodyNode)
             }
 
-            frontend.scopeManager.addDeclaration(param)
-            func.parameters += param
+        return newLambda { it.function = func }
+    }
+
+    private fun handleDAsgnNode(node: DAsgnNode): Assign {
+        return newAssign("=") { assign ->
+            // we need to build a reference out of the assignment node itself for our LHS
+            assign.lhs = mutableListOf(handleINameNode(node))
+            assign.rhs = mutableListOf(this.handle(node.valueNode))
         }
-
-        func.body = frontend.statementHandler.handle(node.bodyNode)
-
-        frontend.scopeManager.leaveScope(func)
-
-        val lambda = newLambdaExpression()
-        lambda.function = func
-
-        return lambda
     }
 
-    private fun handleDAsgnNode(node: DAsgnNode): AssignExpression {
-        val assign = newAssignExpression("=")
-
-        // we need to build a reference out of the assignment node itself for our LHS
-        assign.lhs = mutableListOf(handleINameNode(node))
-        assign.rhs = mutableListOf(this.handle(node.valueNode))
-
-        return assign
-    }
-
-    private fun handleLocalAsgnNode(node: LocalAsgnNode): AssignExpression {
-        val assign = newAssignExpression("=")
-
-        // we need to build a reference out of the assignment node itself for our LHS
-        assign.lhs = mutableListOf(handleINameNode(node))
-        assign.rhs = mutableListOf(this.handle(node.valueNode))
-
-        return assign
+    private fun handleLocalAsgnNode(node: LocalAsgnNode): Assign {
+        return newAssign("=") { assign ->
+            // we need to build a reference out of the assignment node itself for our LHS
+            assign.lhs = mutableListOf(handleINameNode(node))
+            assign.rhs = mutableListOf(this.handle(node.valueNode))
+        }
     }
 
     private fun handleCallNode(node: CallNode): Expression {
         val base =
             handle(node.receiverNode) as? Expression
                 ?: return ProblemExpression("could not parse base")
-        val callee = newMemberExpression(node.name.asJavaString(), base)
+        val callee = newMemberAccess(node.name.asJavaString(), base)
 
-        val mce = newMemberCallExpression(callee, false)
+        return newMemberCall(callee, false) { mce ->
+            for (arg in node.argsNode?.childNodes() ?: emptyList()) {
+                mce.addArgument(handle(arg))
+            }
 
-        for (arg in node.argsNode?.childNodes() ?: emptyList()) {
-            mce.addArgument(handle(arg))
+            // add the iterNode as last argument
+            node.iterNode?.let { mce.addArgument(handle(it)) }
         }
-
-        // add the iterNode as last argument
-        node.iterNode?.let { mce.addArgument(handle(it)) }
-
-        return mce
     }
 
     private fun handleFCallNode(node: FCallNode): Expression {
         val callee = handleINameNode(node)
 
-        val call = newCallExpression(callee)
+        return newCall(callee) { call ->
+            for (arg in node.argsNode?.childNodes() ?: emptyList()) {
+                call.addArgument(handle(arg))
+            }
 
-        for (arg in node.argsNode?.childNodes() ?: emptyList()) {
-            call.addArgument(handle(arg))
+            // add the iterNode as last argument
+            node.iterNode?.let { call.addArgument(handle(it)) }
         }
-
-        // add the iterNode as last argument
-        node.iterNode?.let { call.addArgument(handle(it)) }
-
-        return call
     }
 
     private fun handleStrNode(node: StrNode): Literal<String> {

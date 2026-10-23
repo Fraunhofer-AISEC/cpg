@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.memory
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import java.util.Objects
 
 /** The memory management mode of a memory concept. */
@@ -71,13 +72,23 @@ open class Allocate(
     concept: Concept,
     /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
+    /**
+     * The expression that determines the allocation size **in bytes**, if known. For example, the
+     * `N` argument of `malloc(N)`, the product `M * N` of `calloc(M, N)`, or — for `new T[N]` — the
+     * synthesised expression `sizeof(T) * N`. `null` when the size couldn't be derived statically
+     * (e.g. for managed constructors that don't carry an explicit size argument).
+     */
+    var size: Expression? = null,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
     override fun equals(other: Any?): Boolean {
-        return other is Allocate && super.equals(other) && other.what == this.what
+        return other is Allocate &&
+            super.equals(other) &&
+            other.what == this.what &&
+            other.size == this.size
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), what)
+        return Objects.hash(super.hashCode(), what, size)
     }
 }
 

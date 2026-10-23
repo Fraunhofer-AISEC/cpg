@@ -26,15 +26,20 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.test.*
+import de.fraunhofer.aisec.cpg.test.BaseTest
+import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
 import java.math.BigInteger
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -223,13 +228,32 @@ internal class CXXLiteralTest : BaseTest() {
 
             val invalid2 = tu.variables["invalid2"]?.initializer
             assertIs<ProblemExpression>(invalid2)
+
+            assertLiteral('\u0000', primitiveType("wchar_t"), main, "wideChar1")
+            assertLiteral(0x1F600, primitiveType("wchar_t"), main, "wideChar2")
+            assertLiteral(513, primitiveType("wchar_t"), main, "wideMulti")
+        }
+    }
+
+    @Test
+    fun testArrays() {
+        val file = File("src/test/resources/c/arrays.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        with(tu) {
+            val foo = tu.functions["foo"]
+            assertNotNull(foo)
         }
     }
 
     private fun assertLiteral(
         expectedValue: Any,
         expectedType: Type,
-        functionDeclaration: FunctionDeclaration,
+        functionDeclaration: Function,
         name: String,
     ) {
         val variableDeclaration = functionDeclaration.variables[name]

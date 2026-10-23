@@ -26,67 +26,60 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.newReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newReturn
 import kotlin.collections.plusAssign
 
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
+    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
 
-    private fun handleNode(node: TypeScriptNode): Statement {
+    private fun handleNode(node: TypeScriptNode): Expression {
         when (node.type) {
             "Block" -> return handleBlock(node)
             "FirstStatement" -> return handleVariableStatement(node)
             "VariableStatement" -> return handleVariableStatement(node)
             "ExpressionStatement" -> return handleExpressionStatement(node)
             "ReturnStatement" -> return handleReturnStatement(node)
-            "FunctionDeclaration" -> return handleFunctionDeclaration(node)
+            "FunctionDeclaration" -> return handleFunction(node)
         }
 
         return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
-    private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
+    private fun handleFunction(node: TypeScriptNode): Expression {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
-        val statement = newDeclarationStatement(rawNode = node)
+        return newDeclarationStatement(rawNode = node) { statement ->
+            val decl = this.frontend.declarationHandler.handle(node)
 
-        val decl = this.frontend.declarationHandler.handle(node)
-
-        if (decl != null) {
-            this.frontend.scopeManager.addDeclaration(decl)
-            statement.declarations += decl
+            if (decl != null) {
+                this.frontend.scopeManager.addDeclaration(decl)
+                statement.declarations += decl
+            }
         }
-
-        return statement
     }
 
-    private fun handleReturnStatement(node: TypeScriptNode): ReturnStatement {
-        val returnStmt = newReturnStatement(rawNode = node)
-
-        node.children?.first()?.let {
-            returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
+    private fun handleReturnStatement(node: TypeScriptNode): Return {
+        return newReturn(rawNode = node) { returnStmt ->
+            node.children?.first()?.let {
+                returnStmt.returnValue = this.frontend.expressionHandler.handle(it)
+            }
         }
-
-        return returnStmt
     }
 
     private fun handleBlock(node: TypeScriptNode): Block {
-        val block = newBlock(rawNode = node)
-
-        node.children?.forEach { this.handle(it)?.let { it1 -> block.statements += it1 } }
-
-        return block
+        return newBlock(rawNode = node) { block ->
+            node.children?.forEach { this.handle(it)?.let { it1 -> block.statements += it1 } }
+        }
     }
 
     private fun handleExpressionStatement(node: TypeScriptNode): Expression {
@@ -98,20 +91,18 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {
-        val statement = newDeclarationStatement(rawNode = node)
+        return newDeclarationStatement(rawNode = node) { statement ->
+            // the declarations are contained in a VariableDeclarationList
+            val nodes = node.firstChild("VariableDeclarationList")?.children
 
-        // the declarations are contained in a VariableDeclarationList
-        val nodes = node.firstChild("VariableDeclarationList")?.children
+            for (variableNode in nodes ?: emptyList()) {
+                val decl = this.frontend.declarationHandler.handle(variableNode)
 
-        for (variableNode in nodes ?: emptyList()) {
-            val decl = this.frontend.declarationHandler.handle(variableNode)
-
-            if (decl != null) {
-                this.frontend.scopeManager.addDeclaration(decl)
-                statement.declarations += decl
+                if (decl != null) {
+                    this.frontend.scopeManager.addDeclaration(decl)
+                    statement.declarations += decl
+                }
             }
         }
-
-        return statement
     }
 }

@@ -27,18 +27,32 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
+
+/** The Java access modifier keywords, used to control member visibility. */
+const val PUBLIC = "public"
+const val PROTECTED = "protected"
+const val PRIVATE = "private"
+
+/** The Java `static` modifier, marking a class-level (rather than per-instance) member. */
+const val STATIC = "static"
 
 /** The Java language. */
 open class JavaLanguage :
@@ -50,10 +64,13 @@ open class JavaLanguage :
     HasUnknownType,
     HasShortCircuitOperators,
     HasFunctionOverloading,
-    HasImplicitReceiver {
+    HasImplicitReceiver,
+    HasVisibilityModifiers,
+    HasImportsFromRecords {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
-    @Transient override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
+    @DoNotPersist
+    override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
     override val superClassKeyword = "super"
 
     override val qualifiers = listOf("final", "volatile")
@@ -72,7 +89,7 @@ open class JavaLanguage :
      * See
      * [Java Language Specification](https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html).
      */
-    @Transient
+    @DoNotPersist
     @JsonIgnore
     override val builtInTypes =
         mapOf(
@@ -103,6 +120,38 @@ open class JavaLanguage :
             "java.lang.String" to StringType("java.lang.String", this),
         )
 
+    /**
+     * Applies Java's declaration modifiers to [declaration]. Java has genuine member access
+     * control, so the access modifiers `public`/`protected`/`private` map onto the corresponding
+     * [Visibility]. The `static` modifier marks a class-level (rather than per-instance) member
+     * when it appears on a record member, including nested types, as well as a static import, which
+     * imports from a record rather than from a package ([Declaration.isStatic]).
+     *
+     * The subtle case is Java's access-control *default*: a member or a (top-level or nested) type
+     * without any of `public`/`protected`/`private` is package-private. Therefore, once all present
+     * access modifiers have been mapped, a declaration whose visibility is still
+     * [Visibility.UNKNOWN] and which appears in a record, namespace (package) or global scope is
+     * mapped to [Visibility.PACKAGE] — but never a local, which never carries package visibility.
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        when {
+            PUBLIC in declaration.modifiers -> declaration.visibility = Visibility.PUBLIC
+            PROTECTED in declaration.modifiers -> declaration.visibility = Visibility.PROTECTED
+            PRIVATE in declaration.modifiers -> declaration.visibility = Visibility.PRIVATE
+        }
+
+        if (STATIC in declaration.modifiers && (scope is RecordScope || declaration is Import)) {
+            declaration.isStatic = true
+        }
+
+        if (
+            declaration.visibility == Visibility.UNKNOWN &&
+                (scope is RecordScope || scope is NamespaceScope || scope is GlobalScope)
+        ) {
+            declaration.visibility = Visibility.PACKAGE
+        }
+    }
+
     override fun propagateTypeOfBinaryOperation(
         operatorCode: String?,
         lhsType: Type,
@@ -119,8 +168,8 @@ open class JavaLanguage :
     }
 
     override fun SymbolResolver.handleSuperExpression(
-        memberExpression: MemberExpression,
-        curClass: RecordDeclaration,
+        memberExpression: MemberAccess,
+        curClass: Record,
     ) = handleSuperExpressionHelper(memberExpression, curClass)
 
     /**
@@ -132,10 +181,10 @@ open class JavaLanguage :
         // Therefore, it can be that we both import a field and a method with the same name. We
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
-            if (ref.resolutionHelper is CallExpression) {
-                ref.candidates = ref.candidates.filter { it is FunctionDeclaration }.toSet()
+            if (ref.resolutionHelper is Call) {
+                ref.candidates = ref.candidates.filterTo(mutableSetOf()) { it is Function }
             } else {
-                ref.candidates = ref.candidates.filter { it is VariableDeclaration }.toSet()
+                ref.candidates = ref.candidates.filterTo(mutableSetOf()) { it is Variable }
             }
         }
 

@@ -30,18 +30,32 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
+import kotlin.script.experimental.api.ResultValue
+import kotlin.script.experimental.api.ResultWithDiagnostics
+import kotlin.script.experimental.api.ScriptDiagnostic
+import kotlin.script.experimental.api.constructorArgs
+import kotlin.script.experimental.host.toScriptSource
+import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
+import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
+import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -74,49 +88,42 @@ class ConsoleService {
     suspend fun analyze(request: AnalyzeRequestJSON): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(request.sourceDir)
-            val builder =
-                TranslationConfiguration.builder()
-                    .sourceLocations(path.toFile())
-                    .defaultPasses()
-                    .loadIncludes(true)
-                    .registerPass<PythonStdLibConfigurationPass>()
-                    .registerPass<LoadPersistedConcepts>()
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                    .optionalLanguage(
-                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
-                    )
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
-                    .codeInNodes(true)
+            val project =
+                Project.from(path) {
+                    // If an explicit top-level is requested, we place the sources in a single
+                    // component rooted there instead of relying on auto-detection
+                    request.topLevel?.let {
+                        component(
+                            DEFAULT_APPLICATION_NAME,
+                            root = Path.of(it),
+                            sources = listOf(path),
+                        )
+                    }
 
-            if (request.includeDir != null) {
-                builder.includePath(request.includeDir)
-            }
+                    translation {
+                        it.loadIncludes(true)
+                        it.registerPass<PythonStdLibConfigurationPass>()
+                        it.registerPass<LoadPersistedConcepts>()
 
-            if (request.topLevel != null) {
-                builder.topLevel(File(request.topLevel))
-            }
-
-            if (request.conceptsFile != null) {
-                builder.configurePass<LoadPersistedConcepts>(
-                    LoadPersistedConcepts.Configuration(
-                        conceptFiles = listOf(File(request.conceptsFile))
-                    )
-                )
-            }
-
-            val config = builder.build()
+                        request.includeDir?.let { dir -> it.includePath(dir) }
+                        request.conceptsFile?.let { file ->
+                            it.configurePass<LoadPersistedConcepts>(
+                                LoadPersistedConcepts.Configuration(
+                                    conceptFiles = listOf(File(file))
+                                )
+                            )
+                        }
+                    }
+                }
 
             // Build an ad-hoc project
-            val project =
-                AnalysisProject(name = AD_HOC_PROJECT_NAME, projectDir = null, config = config)
-            analyzeProject(project)
+            val analysisProject =
+                AnalysisProject(
+                    name = AD_HOC_PROJECT_NAME,
+                    projectDir = null,
+                    config = project.config,
+                )
+            analyzeProject(analysisProject)
         }
 
     /** Analyzes the given project and returns the analysis result as [AnalysisResultJSON]. */
@@ -124,6 +131,11 @@ class ConsoleService {
         lastProject = project
 
         val result = project.analyze()
+
+        // The console only works on one project at a time, so replace any previous session in the
+        // MCP server instead of keeping it alongside
+        analysisSessions.clear()
+        registerSession(project.name, result.translationResult)
 
         // Populate QueryTree cache for lazy loading
         populateQueryTreeCache(result.requirementsResults)
@@ -173,10 +185,13 @@ class ConsoleService {
 
     /**
      * Returns the translation unit with the given ID for the specified component as
-     * [TranslationUnitJSON].
+     * [TranslationUnitJSON], including its code.
      */
     fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
-        return getComponent(componentName)?.translationUnits?.find { it.id == Uuid.parse(id) }
+        return getComponent(componentName)
+            ?.translationUnits
+            ?.find { it.id == Uuid.parse(id) }
+            ?.let { it.copy(code = it.cpgTU?.code ?: "") }
     }
 
     /**
@@ -193,6 +208,18 @@ class ConsoleService {
             ?.find { it.id == Uuid.parse(id) }
             ?.cpgTU
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
+    }
+
+    /**
+     * Returns the nodes with the given IDs as [NodeJSON] (without DFG edges). IDs of nodes that do
+     * not exist (e.g., because an LLM made them up) are omitted.
+     */
+    fun getNodes(nodeIds: Collection<String>): List<NodeJSON> {
+        val wanted = nodeIds.toSet()
+        val result = analysisResult?.analysisResult?.translationResult
+        if (wanted.isEmpty() || result == null) return emptyList()
+
+        return result.nodes.filter { it.id.toString() in wanted }.map { it.toJSON(noEdges = true) }
     }
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */
@@ -241,9 +268,62 @@ class ConsoleService {
     }
 
     /**
-     * Adds a new [Concept] node as an [de.fraunhofer.aisec.cpg.graph.OverlayNode] to an existing
-     * node in the analysis result. The DFG edges can be configured to connect the new concept node
-     * to the existing node.
+     * Executes a Kotlin query script against the current [TranslationResult].
+     *
+     * The [TranslationResult] is available as the `result` variable within the script. All common
+     * CPG packages are imported automatically, so the
+     * [Shortcut API][de.fraunhofer.aisec.cpg.graph.functions] can be used directly.
+     *
+     * @param scriptCode The Kotlin script code to evaluate
+     * @return The result of the last expression in the script as a string, or an error message
+     */
+    suspend fun executeQuery(scriptCode: String): String =
+        withContext(Dispatchers.IO) {
+            val translationResult =
+                analysisResult?.analysisResult?.translationResult
+                    ?: return@withContext "No analysis result available. Please run an analysis first."
+
+            try {
+                val compilationConfiguration =
+                    createJvmCompilationConfigurationFromTemplate<CpgQueryScript>()
+                val evaluationConfiguration =
+                    createJvmEvaluationConfigurationFromTemplate<CpgQueryScript> {
+                        constructorArgs(translationResult)
+                    }
+
+                val scriptResult =
+                    BasicJvmScriptingHost()
+                        .eval(
+                            scriptCode.toScriptSource(),
+                            compilationConfiguration,
+                            evaluationConfiguration,
+                        )
+
+                when (scriptResult) {
+                    is ResultWithDiagnostics.Success -> {
+                        when (val returnValue = scriptResult.value.returnValue) {
+                            is ResultValue.Value -> returnValue.value?.toString() ?: "null"
+                            is ResultValue.Unit -> "Query executed successfully (no return value)"
+                            is ResultValue.Error -> "Error: ${returnValue.error}"
+                            else -> "Query executed (no result)"
+                        }
+                    }
+                    is ResultWithDiagnostics.Failure -> {
+                        val errors =
+                            scriptResult.reports.filter {
+                                it.severity >= ScriptDiagnostic.Severity.ERROR
+                            }
+                        "Compilation error: ${errors.joinToString("; ") { it.message }}"
+                    }
+                }
+            } catch (e: Exception) {
+                "Error executing query: ${e.message}"
+            }
+        }
+
+    /**
+     * Adds a new [Concept] node as an [OverlayNode] to an existing node in the analysis result. The
+     * DFG edges can be configured to connect the new concept node to the existing node.
      *
      * @param request The request containing node ID, concept name and configuration parameters
      *   (connect DFG)
@@ -295,12 +375,9 @@ class ConsoleService {
      * Extracts the nodes from the given translation unit. If [overlayNodes] is true, it extracts
      * the overlay nodes, otherwise it extracts the AST nodes.
      */
-    private fun extractNodes(
-        tu: TranslationUnitDeclaration,
-        overlayNodes: Boolean,
-    ): List<NodeJSON> {
+    private fun extractNodes(tu: TranslationUnit, overlayNodes: Boolean): List<NodeJSON> {
         return if (overlayNodes) {
-            tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
+            tu.nodes.mapFlatMapped({ it.overlays }) { it.toJSON() }
         } else {
             tu.declarations.map { it.toJSON() } + tu.statements.map { it.toJSON() }
         }

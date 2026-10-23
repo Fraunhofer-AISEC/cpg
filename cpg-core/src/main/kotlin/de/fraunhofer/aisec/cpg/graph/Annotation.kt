@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import java.util.*
 
 class Annotation : AstNode() {
@@ -33,9 +33,8 @@ class Annotation : AstNode() {
 
     fun getValueForName(name: String): Expression? {
         return members
-            .filter { member: AnnotationMember -> member.name.lastPartsMatch(name) }
-            .map { obj: AnnotationMember -> obj.value }
-            .firstOrNull()
+            .firstOrNull { member: AnnotationMember -> member.name.lastPartsMatch(name) }
+            ?.value
     }
 
     override fun equals(other: Any?): Boolean {

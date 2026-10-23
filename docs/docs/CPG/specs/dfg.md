@@ -5,8 +5,18 @@ of incoming data flows (`prevDFG`) and outgoing data flows (`nextDFG`). In the
 following, we summarize how different types of nodes construct the respective
 data flows.
 
+## Levels of Analysis
+There are three different levels of the analysis which correspond to which passes are enabled.
 
-## CallExpression
+The `DFGPass` constructs flow-insensitive, field-insensitive DFG edges. Interprocedural edges (i.e., those between arguments and parameters, and return values and wherever they flow to), do get a label specifying the call, so that subsequent analyses can be context-sensitive. If neither of the other two passes is registered, the `DFGPass` also draws these edges itself, as an over-approximation, so that the resulting graph still has meaningful (if less precise) `Reference` and interprocedural edges. If one of the subsequent passes is registered but fails, the current implementation won't recover any missing edges.
+
+The `ControlFlowSensitiveDFGPass`, as the name suggests, constructs flow-sensitive DFG edges for `Reference`s and, for calls to functions with an existing function summary, interprocedural edges labelled with the calling context. It is meant to be run instead of the `DFGPass`'s fallback described above, not in addition to it.
+
+The `PointsToPass` is more precise and takes into account a certain level of pointer arithmetic which is ignored by the other two passes. It computes the same flow-sensitive `Reference` and interprocedural edges as the `ControlFlowSensitiveDFGPass` (the two are meant to be run exclusively of one another), and additionally handles calls to functions without any function summary via a conservative fallback. This yields the most precise results but is also the slowest pass.
+
+See [DFG Passes](../impl/dfg-passes.md) for a detailed, per-feature breakdown of which pass is responsible for what.
+
+## Call
 
 Interesting fields:
 
@@ -29,7 +39,7 @@ to the call.
 Scheme:
   ```mermaid
   flowchart LR
-    node([CallExpression]) -.- invokes["invokes[j]"];
+    node([Call]) -.- invokes["invokes[j]"];
     node -.- arguments["arguments[i]"];
     invokes ==> decl([FunctionDeclaration])
     decl -.- parameters["parameters[i]"]
@@ -44,13 +54,13 @@ The base and all arguments flow to the call expression.
 Scheme:
   ```mermaid
   flowchart LR
-    arguments["arguments[i]"] -- "for all i: DFG" --> node([CallExpression]);
+    arguments["arguments[i]"] -- "for all i: DFG" --> node([Call]);
     base -- DFG --> node;
     arguments -.- node;
     node -.- base;
   ```
 
-## CastExpression
+## Cast
 
 Interesting fields:
 
@@ -60,12 +70,12 @@ The value of the `expression` flows to the cast expression.
 Scheme:
 ```mermaid
   flowchart LR
-    node([CastExpression]) -.- expression;
+    node([Cast]) -.- expression;
     expression -- DFG --> node;
 ```
 
 
-## AssignExpression
+## Assign
 
 Interesting fields:
 
@@ -89,16 +99,16 @@ Scheme:
 * Standard case:
   ```mermaid
   flowchart LR
-      node([AssignExpression]) -.- rhs(rhs);
+      node([Assign]) -.- rhs(rhs);
         rhs -- DFG --> lhs;
-      node([AssignExpression]) -.- lhs(lhs);
+      node([Assign]) -.- lhs(lhs);
   ```
 * If the assignment happens inside another statement/expression (not inside a
   `Block`):
   ```mermaid
   flowchart LR
-      node([AssignExpression]) -.- lhs(lhs);
-      node([AssignExpression]) -.- rhs(rhs);
+      node([Assign]) -.- lhs(lhs);
+      node([Assign]) -.- rhs(rhs);
       rhs -- DFG --> lhs;
       rhs -- DFG --> node;
   ```
@@ -106,9 +116,9 @@ Scheme:
   `rhs` is equal, we actually make the DFG-edges for each indexed value: 
   ```mermaid
   flowchart LR
-      node([AssignExpression]) -.- rhs("rhs[i]");
+      node([Assign]) -.- rhs("rhs[i]");
         rhs -- "for all i: DFG[i]" --> lhs;
-      node([AssignExpression]) -.- lhs("lhs[i]");
+      node([Assign]) -.- lhs("lhs[i]");
   ```
 
 ### Case 2: Compound assignment (`operatorCode: *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=` )
@@ -152,7 +162,7 @@ Scheme:
     lhs -- DFG --> node;
   ```
 
-## NewArrayExpression
+## ArrayConstruction
 
 Interesting fields:
 
@@ -163,11 +173,11 @@ The `initializer` flows to the array creation expression.
 Scheme:
   ```mermaid
   flowchart LR
-    node([NewArrayExpression]) -.- initializer(initializer)
+    node([ArrayConstruction]) -.- initializer(initializer)
     initializer -- DFG --> node
   ```
 
-## NewExpression
+## New
 
 Interesting fields:
 
@@ -178,11 +188,11 @@ The `initializer` flows to the whole expression.
 Scheme:
 ```mermaid
   flowchart LR
-    node([NewExpression]) -.- initializer(initializer)
+    node([New]) -.- initializer(initializer)
     initializer -- DFG --> node
 ```
 
-## SubscriptExpression
+## Subscription
 
 Interesting fields:
 
@@ -195,7 +205,7 @@ not differentiate between the field which is accessed.
 Scheme:
   ```mermaid
   flowchart LR
-    arrayExpression -- DFG --> node([SubscriptExpression]);
+    arrayExpression -- DFG --> node([Subscription]);
     arrayExpression -.- node;
   ```
 
@@ -204,7 +214,7 @@ Scheme:
 Interesting fields:
 
 * `comprehensionExpressions:
-* List<CollectionComprehension.ComprehensionExpression>`: The list of
+* List<CollectionComprehension.Comprehension>`: The list of
   expressions which are iterated over.
 * `statement: Statement`: The statement which returns the data.
 
@@ -221,7 +231,7 @@ Scheme:
     node -.- stmt;
 ```
 
-## CollectionComprehension.ComprehensionExpression
+## CollectionComprehension.Comprehension
 
 Interesting fields:
 
@@ -237,7 +247,7 @@ all `predicates` flow to the whole node.
 Scheme:
 ```mermaid
   flowchart LR
-    pred["for all i: predicates[i]"]  -- DFG --> stmt["statement"] -- DFG --> node([CollectionComprehension.ComprehensionExpression]);
+    pred["for all i: predicates[i]"]  -- DFG --> stmt["statement"] -- DFG --> node([CollectionComprehension.Comprehension]);
     iterable["iterable"] -- DFG --> var["variable"];
     var -- DFG --> node;
     node -.- pred;
@@ -252,7 +262,7 @@ Scheme:
     program's behavior. This information can easily be found in the [program
     dependence graph (PDG)](./pdg).
 
-## ConditionalExpression
+## Conditional
 
 Interesting fields:
 
@@ -262,13 +272,13 @@ Interesting fields:
 * `elseExpression: Expression`: The expression which is executed if the
   condition does not hold.
 
-The `thenExpr` and the `elseExpr` flow to the `ConditionalExpression`. This
+The `thenExpr` and the `elseExpr` flow to the `Conditional`. This
 means that implicit data flows are not considered.
 
 Scheme:
   ```mermaid
   flowchart LR
-    thenExpression -- DFG --> node([ConditionalExpression]);
+    thenExpression -- DFG --> node([Conditional]);
     thenExpression -.- node;
     elseExpression -.- node;
     elseExpression -- DFG --> node;
@@ -396,7 +406,7 @@ performs the following actions:
     lhs -- DFG --> refersTo
   ```
 
-## MemberExpression
+## MemberAccess
 
 Interesting fields:
 
@@ -404,7 +414,7 @@ Interesting fields:
 * `refersTo: Declaration?`: The field it refers to. If the class is not
   implemented in the code under analysis, it is `null`.
 
-The MemberExpression represents an access to an object's field and extends a
+The MemberAccess represents an access to an object's field and extends a
 Reference with a `base`
 
 If an implementation of the respective class is available, we handle it like a
@@ -419,7 +429,7 @@ Interesting fields:
 
 The data of the last statement in `expressions` flows to the expression.
 
-## InitializerListExpression
+## InitializerList
 
 Interesting fields:
 
@@ -431,11 +441,11 @@ The data of all initializers flow to this expression.
 Scheme:
 ```mermaid
   flowchart LR
-    inits["for all i: initializers[i]"] -- DFG --> node([InitializerListExpression]);
+    inits["for all i: initializers[i]"] -- DFG --> node([InitializerList]);
     node -.- inits;
 ```
 
-## KeyValueExpression
+## KeyValue
 
 Interesting fields:
 
@@ -446,12 +456,12 @@ The value flows to this expression.
 Scheme:
 ```mermaid
   flowchart LR
-    value -- DFG --> node([KeyValueExpression]);
+    value -- DFG --> node([KeyValue]);
     value -.- node;
 ```
 
 
-## LambdaExpression
+## Lambda
 
 Interesting fields:
 
@@ -462,7 +472,7 @@ The data flow from the function representing the lambda to the expression.
 Scheme:
 ```mermaid
   flowchart LR
-    function -- DFG --> node([LambdaExpression]);
+    function -- DFG --> node([Lambda]);
     function -.- node;
 ```
 
@@ -510,7 +520,7 @@ and -- also back from the node to the input.
 *Dangerous: We have to ensure that the first operation is performed before the
 last one (if applicable).*
 
-## ThrowExpression
+## Throw
 
 Interesting fields:
 
@@ -523,13 +533,13 @@ The return value flows to the whole statement.
 Scheme:
 ```mermaid
   flowchart LR
-    exception -- DFG --> node([ThrowExpression]);
+    exception -- DFG --> node([Throw]);
     parentException -- DFG --> node;
     exception -.- node;
     parentException -.- node;
 ```
 
-## ReturnStatement
+## Return
 
 Interesting fields:
 
@@ -540,7 +550,7 @@ The return value flows to the whole statement.
 Scheme:
 ```mermaid
   flowchart LR
-    returnValue -- DFG --> node([ReturnStatement]);
+    returnValue -- DFG --> node([Return]);
     returnValue -.- node;
 ```
 ## Branching Statements
@@ -556,7 +566,7 @@ node.
     program's behavior. This information can easily be found in the [program
     dependence graph (PDG)](./pdg).
 
-### ForEachStatement
+### ForEach
 
 Interesting fields:
 
@@ -577,7 +587,7 @@ and add the DFG from the iterable to this declaration.
 Scheme:
 ```mermaid
   flowchart LR
-    node([ForEachStatement]) -.- variable[variable: DeclarationStatement]
+    node([ForEach]) -.- variable[variable: DeclarationStatement]
     node -.- iterable[iterable]
     variable -.- declarations["declarations[i]"]
     iterable -- for all i: DFG --> declarations
@@ -591,99 +601,11 @@ looping. We add a DFG edge only to this declaration.
 Scheme:
 ```mermaid
   flowchart LR
-    node([ForEachStatement]) -.- statement[variable]
+    node([ForEach]) -.- statement[variable]
     node -.- iterable[iterable]
     statement -.- localVars[variables]
     localVars -. "last" .-> variable
     iterable -- DFG --> variable
-    variable -- DFG --> node
-```
-
-### DoStatement
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([DoStatement]) -.- condition(condition)
-    condition -- DFG --> node
-```
-
-### WhileStatement
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-* `conditionDeclaration: Statement`: A declaration containing the condition in
-  the initializer, used instead of the condition.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([WhileStatement]) -.- condition(condition)
-    node -.- conditionDeclaration(conditionDeclaration)
-    condition -- DFG --> node
-    conditionDeclaration  -- DFG --> node
-```
-
-### ForStatement
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-* `conditionDeclaration: Statement`: A declaration containing the condition in
-  the initializer, used instead of the condition.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([ForStatement]) -.- condition(condition)
-    node -.- conditionDeclaration(conditionDeclaration)
-    condition -- DFG --> node
-    conditionDeclaration  -- DFG --> node
-```
-
-
-### IfStatement
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-* `conditionDeclaration: Statement`: A declaration with an initializer
-  containing the condition which can be used instead of the condition.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([IfStatement]) -.- condition(condition)
-    node -.- conditionDeclaration(conditionDeclaration)
-    condition -- DFG --> node
-    conditionDeclaration  -- DFG --> node
-```
-
-
-### SwitchStatement
-Interesting fields:
-
-* `selector: Statement`: The expression that is evaluated before making the
-  branching decision.
-* `selectorDeclaration: Statement`: A declaration containing the selector in the
-  initializer, used instead of the selector.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([SwitchStatement]) -.- selector(selector)
-    node -.- selectorDeclaration(selectorDeclaration)
-    selector -- DFG --> node
-    selectorDeclaration  -- DFG --> node
 ```
 
 ## FunctionDeclaration
@@ -701,7 +623,7 @@ Scheme:
   flowchart LR
     returns -- DFG --> node([FunctionDeclaration]);
     body -.- node;
-    body -.- |in all statements| returns["returns: ReturnStatement"]
+    body -.- |in all statements| returns["returns: Return"]
 ```
 
 

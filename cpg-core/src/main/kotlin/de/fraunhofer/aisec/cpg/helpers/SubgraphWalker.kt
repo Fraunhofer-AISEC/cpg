@@ -28,14 +28,43 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.For
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Label
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerReference
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.Throw
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.While
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.fieldCache
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -69,7 +98,7 @@ object SubgraphWalker {
             }
             val fields = ArrayList<Field>()
             fields.addAll(getAllEdgeFields(classType.superclass))
-            fields.addAll(listOf(*classType.declaredFields).filter { it.name.contains("Edge") })
+            fields.addAll(classType.declaredFields.filter { it.name.contains("Edge") })
 
             // update the cache
             fieldCache[cacheKey] = fields
@@ -187,13 +216,13 @@ object SubgraphWalker {
             flattedASTTree.filter { node -> node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty() }
         // Nodes that are incoming edges, no other node
         border.entries =
-            eogNodes
-                .filter { node: Node -> node.prevEOG.any { prev -> prev !in eogNodes } }
-                .toMutableList()
+            eogNodes.filterTo(mutableListOf()) { node: Node ->
+                node.prevEOG.any { prev -> prev !in eogNodes }
+            }
         border.exits =
-            eogNodes
-                .filter { node: Node -> node.nextEOG.any { next -> next !in eogNodes } }
-                .toMutableList()
+            eogNodes.filterTo(mutableListOf()) { node: Node ->
+                node.nextEOG.any { next -> next !in eogNodes }
+            }
         return border
     }
 
@@ -258,7 +287,7 @@ object SubgraphWalker {
                     }
 
                     val unseenChildren =
-                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+                        strategy(current).asSequence().filterTo(mutableListOf()) { it !in seen }
 
                     seen.addAll(unseenChildren)
                     unseenChildren.asReversed().forEach { child -> todo.push(Pair(child, current)) }
@@ -388,16 +417,16 @@ object SubgraphWalker {
  * Tries to replace the [old] expression with a [new] one, given the [parent].
  *
  * There are different things to consider:
- * - First, this only works if [parent] is either an [ArgumentHolder] or [StatementHolder].
- *   Otherwise, we cannot instruct the parent to exchange the node
+ * - First, this only works for a known set of node types that can hold an [Expression] as one of
+ *   their AST children. Otherwise, we cannot instruct the parent to exchange the node
  * - Second, since exchanging the node has influence on their edges (such as EOG, DFG, etc.), we
  *   only support a replacement very early in the pass system. To be specific, we only allow
  *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
- * - Lastly, if the [new] node is a [CallExpression.callee] of a [CallExpression] parent, and the
- *   [old] and [new] expressions are of different types (e.g., exchanging a simple [Reference] for a
- *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
+ * - Lastly, if the [new] node is a [Call.callee] of a [Call] parent, and the [old] and [new]
+ *   expressions are of different types (e.g., exchanging a simple [Reference] for a
+ *   [MemberAccess]), we also replace the [Call] with a [MemberCall].
  */
 context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replace(
@@ -414,25 +443,212 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
 
     val success =
         when (parent) {
-            is CallExpression -> {
+            is Call -> {
                 if (parent.callee == old) {
                     // Now we are running into a problem. If the previous callee and the new callee
                     // are of different types (ref/vs. member expression). We also need to replace
                     // the whole call expression instead.
-                    if (parent is MemberCallExpression && new is Reference) {
-                        val newCall = parent.toCallExpression(new)
+                    if (parent is MemberCall && new is Reference) {
+                        val newCall = parent.toCall(new)
                         return replace(parent.astParent, parent, newCall)
-                    } else if (new is MemberExpression) {
-                        val newCall = parent.toMemberCallExpression(new)
+                    } else if (new is MemberAccess) {
+                        val newCall = parent.toMemberCall(new)
                         return replace(parent.astParent, parent, newCall)
                     } else {
                         parent.callee = new
                         true
                     }
-                } else run { parent.replace(old, new) }
+                } else {
+                    val idx = parent.arguments.indexOf(old)
+                    if (idx == -1) {
+                        false
+                    } else {
+                        parent.setArgument(idx, new)
+                        true
+                    }
+                }
             }
-            is ArgumentHolder -> parent.replace(old, new)
-            is StatementHolder -> parent.replace(old, new)
+            is Assign ->
+                if (parent.lhs.singleOrNull() == old) {
+                    parent.lhs = mutableListOf(new)
+                    true
+                } else if (parent.rhs.singleOrNull() == old) {
+                    parent.rhs = mutableListOf(new)
+                    true
+                } else {
+                    false
+                }
+            is BinaryOperator ->
+                if (parent.lhs == old) {
+                    parent.lhs = new
+                    true
+                } else if (parent.rhs == old) {
+                    parent.rhs = new
+                    true
+                } else {
+                    false
+                }
+            is Cast ->
+                if (parent.expression == old) {
+                    parent.expression = new
+                    parent.expression.access = parent.access
+                    true
+                } else {
+                    false
+                }
+            is CollectionComprehension ->
+                if (parent.statement == old) {
+                    parent.statement = new
+                    true
+                } else if (new is Comprehension) {
+                    var changedSomething = false
+                    val newCompExp =
+                        parent.comprehensionExpressions.map {
+                            if (it == old) {
+                                changedSomething = true
+                                new
+                            } else it
+                        }
+                    parent.comprehensionExpressions.clear()
+                    parent.comprehensionExpressions.addAll(newCompExp)
+                    changedSomething
+                } else {
+                    false
+                }
+            is Comprehension ->
+                if (parent.variable == old) {
+                    parent.variable = new
+                    true
+                } else if (parent.iterable == old) {
+                    parent.iterable = new
+                    true
+                } else if (parent.predicate == old) {
+                    parent.predicate = new
+                    true
+                } else {
+                    false
+                }
+            is Conditional ->
+                when (old) {
+                    parent.thenExpression -> {
+                        parent.thenExpression = new
+                        true
+                    }
+                    parent.elseExpression -> {
+                        parent.elseExpression = new
+                        true
+                    }
+                    else -> false
+                }
+            is DoWhile ->
+                if (parent.condition == old) {
+                    parent.condition = new
+                    true
+                } else {
+                    false
+                }
+            is IfElse -> {
+                parent.condition = new
+                true
+            }
+            is InitializerList -> {
+                val idx = parent.initializerEdges.indexOfFirst { it.end == old }
+                if (idx != -1) {
+                    old.unregisterTypeObserver(parent)
+                    parent.initializerEdges[idx].end = new
+                    new.registerTypeObserver(parent)
+                    new.access = parent.access
+                    true
+                } else {
+                    false
+                }
+            }
+            is KeyValue ->
+                if (parent.key == old) {
+                    parent.key = new
+                    true
+                } else if (parent.value == old) {
+                    parent.value = new
+                    true
+                } else {
+                    false
+                }
+            is MemberAccess ->
+                if (parent.base == old) {
+                    parent.base = new
+                    true
+                } else {
+                    false
+                }
+            is Parameter ->
+                if (parent.default == old) {
+                    parent.default = new
+                    true
+                } else {
+                    false
+                }
+            is Return -> parent.returnValueEdges.replace(old, new)
+            is Subscription ->
+                if (parent.arrayExpression == old) {
+                    parent.arrayExpression = new
+                    true
+                } else if (parent.subscriptExpression == old) {
+                    parent.subscriptExpression = new
+                    true
+                } else {
+                    false
+                }
+            is Throw ->
+                when {
+                    parent.exception == old -> {
+                        parent.exception = new
+                        true
+                    }
+                    parent.parentException == old -> {
+                        parent.parentException = new
+                        true
+                    }
+                    else -> false
+                }
+            // Setting the input of these nodes already propagates their access value to the new
+            // input (see exchangeTypeObserverWithAccessPropagation), so we do not need to do it
+            // here
+            is UnaryOperator ->
+                if (parent.input == old) {
+                    parent.input = new
+                    true
+                } else {
+                    false
+                }
+            is PointerDereference ->
+                if (parent.input == old) {
+                    parent.input = new
+                    true
+                } else {
+                    false
+                }
+            is PointerReference ->
+                if (parent.input == old) {
+                    parent.input = new
+                    true
+                } else {
+                    false
+                }
+            is While -> {
+                parent.condition = new
+                true
+            }
+            is HasInitializer -> {
+                parent.initializer = new
+                true
+            }
+            is Record -> parent.statementEdges.replace(old, new)
+            is Namespace -> parent.statementEdges.replace(old, new)
+            is TranslationUnit -> parent.statementEdges.replace(old, new)
+            is Label -> parent.statementEdges.replace(old, new)
+            is ForEach -> parent.statementEdges.replace(old, new)
+            is Block -> parent.statementEdges.replace(old, new)
+            is For -> parent.statementEdges.replace(old, new)
             else -> {
                 Pass.log.error(
                     "Parent AST node is not an argument or statement holder. Cannot replace node. Further analysis might not be entirely accurate."
@@ -494,11 +710,11 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
 }
 
 /**
- * Copies the properties of this [CallExpression] to the given [call] and sets the `call.callee` to
- * [callee]. Note that the ast children are not duplicated. This means that their `astParent` will
- * now point to [call].
+ * Copies the properties of this [Call] to the given [call] and sets the `call.callee` to [callee].
+ * Note that the ast children are not duplicated. This means that their `astParent` will now point
+ * to [call].
  */
-private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
+private fun Call.duplicateTo(call: Call, callee: Reference) {
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
@@ -508,7 +724,7 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
     }
     call.type = this.type
     call.assignedTypes = this.assignedTypes
-    call.code = this.code
+    call.copyCodeFrom(this)
     call.location = this.location
     call.argumentIndex = this.argumentIndex
     call.annotations = this.annotations
@@ -520,34 +736,37 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
 }
 
 /**
- * Creates a new [CallExpression] with the same properties (e.g. ast childre, etc.) except from DFG
- * and EOG edges as [this]. It sets the [CallExpression.callee] to [callee].
+ * Creates a new [Call] with the same properties (e.g. ast childre, etc.) except from DFG and EOG
+ * edges as [this]. It sets the [Call.callee] to [callee].
  */
-fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
-    val call = CallExpression()
+fun MemberCall.toCall(callee: Reference): Call {
+    val call = Call()
     duplicateTo(call, callee)
+    call.arguments.forEach { it.astParent = call }
 
     return call
 }
 
 /**
- * Creates a new [MemberCallExpression] with the same properties (e.g. ast children, etc.) except
- * from DFG and EOG edges as [this]. It sets the [MemberCallExpression.callee] to [callee].
+ * Creates a new [MemberCall] with the same properties (e.g. ast children, etc.) except from DFG and
+ * EOG edges as [this]. It sets the [MemberCall.callee] to [callee].
  */
-fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
-    val call = MemberCallExpression()
+fun Call.toMemberCall(callee: MemberAccess): MemberCall {
+    val call = MemberCall()
     duplicateTo(call, callee)
+    call.arguments.forEach { it.astParent = call }
 
     return call
 }
 
 /**
- * Creates a new [ConstructExpression] with the same properties (e.g. ast children, etc.) except
- * from DFG and EOG edges as [this]. It sets the [ConstructExpression.callee] to [callee].
+ * Creates a new [Construction] with the same properties (e.g. ast children, etc.) except from DFG
+ * and EOG edges as [this]. It sets the [Construction.callee] to [callee].
  */
-fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
-    val construct = ConstructExpression()
+fun Call.toConstruct(callee: Reference): Construction {
+    val construct = Construction()
     duplicateTo(construct, callee)
+    construct.arguments.forEach { it.astParent = construct }
 
     return construct
 }

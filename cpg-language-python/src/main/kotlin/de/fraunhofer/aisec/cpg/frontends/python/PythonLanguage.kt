@@ -25,33 +25,39 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
-import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.converters.SimpleNameConverter
 import java.io.File
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
-class PythonLanguage :
+open class PythonLanguage :
     Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity,
+    HasMemberAmbiguity,
     HasBuiltins,
     HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")
@@ -60,7 +66,7 @@ class PythonLanguage :
     override val builtinsNamespace: Name = Name("builtins")
     override val builtinsFileCandidates = nameToLanguageFiles(builtinsNamespace)
 
-    @Transient
+    @DoNotPersist
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
@@ -81,7 +87,7 @@ class PythonLanguage :
         setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
 
     // https://docs.python.org/3/reference/datamodel.html#special-method-names
-    @Transient
+    @DoNotPersist
     override val overloadedOperatorNames:
         Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
         mapOf(
@@ -130,7 +136,7 @@ class PythonLanguage :
         )
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             "bool" to BooleanType(typeName = "bool", language = this),
@@ -222,21 +228,40 @@ class PythonLanguage :
     override val evaluator: ValueEvaluator
         get() = PythonValueEvaluator()
 
+    /**
+     * In Python, `None`, `False`, numeric zero, and empty strings/collections are "falsy", and
+     * every other value is "truthy". See
+     * https://docs.python.org/3/reference/expressions.html#truth-value-testing
+     */
+    override fun isTruthy(value: Any?): Boolean? =
+        when {
+            value is CouldNotResolve -> null
+            value is Boolean -> value
+            value is Number -> value.toDouble() != 0.0
+            value is String -> value.isNotEmpty()
+            value is Collection<*> -> value.isNotEmpty()
+            value is Map<*, *> -> value.isNotEmpty()
+            value == null -> false // None
+            else -> null
+        }
+
     override fun propagateTypeOfBinaryOperation(
         operatorCode: String?,
         lhsType: Type,
         rhsType: Type,
         hint: BinaryOperator?,
     ): Type {
-        when {
-            operatorCode == "/" && lhsType is NumericType && rhsType is NumericType -> {
+        when (operatorCode) {
+            "/" if lhsType is NumericType && rhsType is NumericType -> {
                 // In Python, the / operation automatically casts the result to a float
                 return primitiveType("float")
             }
-            operatorCode == "*" && lhsType is StringType && rhsType is NumericType -> {
+
+            "*" if lhsType is StringType && rhsType is NumericType -> {
                 return lhsType
             }
-            operatorCode == "//" && lhsType is NumericType && rhsType is NumericType -> {
+
+            "//" if lhsType is NumericType && rhsType is NumericType -> {
                 return if (lhsType is IntegerType && rhsType is IntegerType) {
                     // In Python, the // operation keeps the type as an int if both inputs are
                     // integers
@@ -246,10 +271,42 @@ class PythonLanguage :
                     primitiveType("float")
                 }
             }
+            /**
+             * Python boolean operators 'or' and 'and' are interpreted as follows:
+             * - `x or y` return `x` if `x` is truthy, else `y`
+             * - `x and y` returns `x` if `x` is falsy, else `y`.
+             *
+             * Since we cannot determine the boolean value of `x`, one of the operands could be
+             * returned. We return `lhsType` if both sides have the same type, otherwise we fall
+             * back to `unknownType()`. The concrete possible types are tracked via
+             * [HasType.assignedTypes] in [propagateAssignedTypesOfBinaryOperation], with which we
+             * model `union types` here.
+             *
+             * See https://docs.python.org/3/reference/expressions.html#boolean-operations
+             * *
+             */
+            "or",
+            "and" -> {
+                return if (lhsType == rhsType) lhsType else unknownType()
+            }
 
             // The rest behaves like other languages
             else ->
                 return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+        }
+    }
+
+    override fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        // Python's "or" and "and" can return either operand at runtime, so we merge the
+        // assignedTypes of both sides.
+        return when (operatorCode) {
+            "or",
+            "and" -> lhs.assignedTypes + rhs.assignedTypes
+            else -> emptySet()
         }
     }
 
@@ -261,7 +318,7 @@ class PythonLanguage :
     ): CastResult {
         // Parameters in python do not have a static type. Therefore, we need to match for all types
         // when trying to cast one type to the type of a function parameter at *runtime*
-        if (targetHint is ParameterDeclaration) {
+        if (targetHint is Parameter) {
             // However, if we find type hints, we at least want to issue a warning if the types
             // would not match
             if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
@@ -285,38 +342,82 @@ class PythonLanguage :
     }
 
     /**
+     * Python knows no access control modifiers at all, so the only "modifier" we can interpret is
+     * the name of the [declaration] itself: the PEP 8 leading-underscore convention, mapped by
+     * [visibilityForName].
+     *
+     * That convention only carries meaning for *record members*, which is why we restrict it to
+     * declarations appearing in a [RecordScope] (methods, constructors, operators and fields).
+     * Module-level functions and local variables keep the default [Visibility.UNKNOWN].
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        if (scope is RecordScope) {
+            declaration.visibility = visibilityForName(declaration.name.localName)
+        }
+    }
+
+    /**
+     * Python has **no enforced access control**; the visibility of a member is purely a PEP 8
+     * naming convention (see https://peps.python.org/pep-0008/#descriptive-naming-styles and
+     * https://docs.python.org/3/tutorial/classes.html#private-variables). We therefore map the
+     * (local) name of a declaration onto the canonical [Visibility] *heuristically*:
+     * - A name with a **leading double underscore** that is **not** a trailing "dunder" (e.g.
+     *   `__x`, but not `__init__`) triggers Python's name-mangling and is conventionally "private"
+     *   → [Visibility.PRIVATE].
+     * - A **single leading underscore** (e.g. `_x`) marks a "non-public"/"internal use" member. We
+     *   map it to [Visibility.PROTECTED]: since this mapping is applied primarily to record
+     *   members, the record-relative axis (protected) is a closer fit than the module-relative
+     *   [Visibility.PACKAGE], and it matches how subclasses conventionally still use such members.
+     * - Everything else (including dunders such as `__init__`) is conventionally public →
+     *   [Visibility.PUBLIC].
+     *
+     * Because none of this is enforced by the language, the frontend deliberately does **not**
+     * declare [de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers]; it only records the
+     * conventional visibility so that passes may read it, without ever discarding a resolution
+     * candidate.
+     */
+    internal fun visibilityForName(localName: String): Visibility {
+        return when {
+            // Leading double underscore, but not a trailing dunder → name-mangled → "private".
+            localName.startsWith("__") && !localName.endsWith("__") -> Visibility.PRIVATE
+            // Single leading underscore (but not a dunder like `__init__`) → "non-public".
+            localName.startsWith("_") && !localName.startsWith("__") -> Visibility.PROTECTED
+            // Public names (including dunders such as `__init__`).
+            else -> Visibility.PUBLIC
+        }
+    }
+
+    /**
      * Returns the files that can represent the given name. This includes all possible file
      * extensions and the name plus the `__init__` identifier, as this is the name for declaration
      * files if the namespace has sub-namespaces.
      */
     fun nameToLanguageFiles(name: Name): Set<File> {
         val filesForNamespace =
-            fileExtensions
-                .flatMap { extension ->
-                    setOf(name, Name(IDENTIFIER_INIT, name)).map {
-                        File(
-                            it.toString().replace(language.namespaceDelimiter, File.separator) +
-                                "." +
-                                extension
-                        )
-                    }
+            fileExtensions.flatMapTo(mutableSetOf()) { extension ->
+                setOf(name, Name(IDENTIFIER_INIT, name)).map {
+                    File(
+                        it.toString().replace(language.namespaceDelimiter, File.separator) +
+                            "." +
+                            extension
+                    )
                 }
-                .toMutableSet()
+            }
         return filesForNamespace
     }
 
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.
-         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_POSITIONAL_ONLY_ARGUMENT = "posonlyarg"
 
         /**
          * This is a "modifier" to differentiate parameters in functions that are "keyword" only.
-         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
 

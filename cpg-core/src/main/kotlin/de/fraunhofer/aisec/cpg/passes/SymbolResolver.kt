@@ -32,12 +32,21 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.operatorCallFromDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
@@ -47,37 +56,55 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunction
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.util.IdentityHashMap
 import kotlin.collections.firstOrNull
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
+ * A mapping of [LocalScope]s (block/loop/catch/comprehension scopes - see
+ * [ScopeManager.enterScope]'s dispatch) to the set of [Declaration]s that have been reached, along
+ * the specific EOG path represented by this lattice element, by the program point it is associated
+ * with. This is the actual flow-sensitive state threaded through [Lattice.iterateEOG] in
+ * [SymbolResolver.acceptWithIterateEOG]: unlike every other kind of [Scope]
+ * (global/namespace/record/function, whose [Scope.symbols] is fully known before any pass runs and
+ * is therefore read directly, unaffected by EOG position), a [LocalScope]'s visible declarations
+ * genuinely depend on how far the EOG has been traversed - most simply, "used before declared"
+ * within the same block.
+ */
+typealias LocalDeclarationLattice =
+    ConcurrentMapLattice<LocalScope, PowersetLattice.Element<Declaration>>
+
+typealias LocalDeclarationElement =
+    ConcurrentMapLattice.Element<LocalScope, PowersetLattice.Element<Declaration>>
+
+/**
  * Creates new connections between the place where a variable is declared and where it is used.
  *
- * A field access is modeled with a [MemberExpression]. After AST building, its base and member
+ * A field access is modeled with a [MemberAccess]. After AST building, its base and member
  * references are set to [Reference] stubs. This pass resolves those references and makes the member
- * point to the appropriate [FieldDeclaration] and the base to the "this" [FieldDeclaration] of the
- * containing class. It is also capable of resolving references to fields that are inherited from a
- * superclass and thus not declared in the actual base class. When base or member declarations are
- * not found in the graph, a new "inferred" [FieldDeclaration] is being created that is then used to
- * collect all usages to the same unknown declaration. [Reference] stubs are removed from the graph
- * after being resolved.
+ * point to the appropriate [Field] and the base to the "this" [Field] of the containing class. It
+ * is also capable of resolving references to fields that are inherited from a superclass and thus
+ * not declared in the actual base class. When base or member declarations are not found in the
+ * graph, a new "inferred" [Field] is being created that is then used to collect all usages to the
+ * same unknown declaration. [Reference] stubs are removed from the graph after being resolved.
  *
  * Accessing a local variable is modeled directly with a [Reference]. This step of the pass doesn't
  * remove the [Reference] nodes like in the field usage case but rather makes their "refersTo" point
  * to the appropriate [ValueDeclaration].
  *
- * Resolves [CallExpression] and [NewExpression] targets.
+ * Resolves [Call] and [New] targets.
  *
- * A [CallExpression] specifies the method that wants to be called via [CallExpression.name]. The
- * call target is a method of the same class the caller belongs to, so the name is resolved to the
- * appropriate [MethodDeclaration]. This pass also takes into consideration that a method might not
- * be present in the current class, but rather has its implementation in a superclass, and sets the
- * pointer accordingly.
+ * A [Call] specifies the method that wants to be called via [Call.name]. The call target is a
+ * method of the same class the caller belongs to, so the name is resolved to the appropriate
+ * [Method]. This pass also takes into consideration that a method might not be present in the
+ * current class, but rather has its implementation in a superclass, and sets the pointer
+ * accordingly.
  *
- * Constructor calls with [ConstructExpression] are resolved in such a way that their
- * [ConstructExpression.instantiates] points to the correct [RecordDeclaration]. Additionally, the
- * [ConstructExpression.constructor] is set to the according [ConstructorDeclaration].
+ * Constructor calls with [Construction] are resolved in such a way that their
+ * [Construction.instantiates] points to the correct [Record]. Additionally, the
+ * [Construction.constructor] is set to the according [Constructor].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
@@ -85,6 +112,9 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
+@Description(
+    "Resolves symbols in the CPG, linking variable and function usages (i.e., refersTo and calledBy/invokes edges) to their respective declarations. Generates the call graph."
+)
 open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /** Configuration for the [SymbolResolver]. */
@@ -108,10 +138,22 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     protected lateinit var walker: ScopedWalker<Node>
 
-    protected val templateList = mutableListOf<TemplateDeclaration>()
+    protected val templateList = mutableListOf<Template>()
 
     /** Our configuration. */
     var passConfig = passConfig<Configuration>()
+
+    /**
+     * An optional override for where a [de.fraunhofer.aisec.cpg.graph.scopes.Scope]'s directly
+     * declared symbols come from during a [handleReference] lookup, forwarded to
+     * [ScopeManager.lookupSymbolByNodeName] as `localSymbols`. `null` (the default) means every
+     * lookup uses [de.fraunhofer.aisec.cpg.graph.scopes.Scope.symbols] as usual, which is what the
+     * default, non-flow-sensitive traversal in [accept] relies on. [acceptWithIterateEOG] sets this
+     * to answer "which declarations have been reached by this point in the EOG" for
+     * [de.fraunhofer.aisec.cpg.graph.scopes.LocalScope]s specifically, making local (block-scoped)
+     * references flow-sensitive while leaving every other kind of scope untouched.
+     */
+    protected var localSymbolsOverride: ((Scope, Symbol) -> List<Declaration>?)? = null
 
     /**
      * If [Configuration.ignoreUnreachableDeclarations] is enabled, this predicate will filter
@@ -121,7 +163,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private val eogPredicate: ((Declaration) -> Boolean)? =
         if (passConfig?.ignoreUnreachableDeclarations == true) {
             { declaration ->
-                if (declaration is FunctionDeclaration) {
+                if (declaration is Function) {
                         declaration.astParent
                     } else {
                         declaration
@@ -135,21 +177,21 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun accept(eogStarter: Node) {
         ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
-        if (passConfig?.experimentalEOGWorklist == true && eogStarter is FunctionDeclaration) {
+        cacheTemplates(ctx.currentComponent)
+
+        walker =
+            ScopedWalker(
+                scopeManager,
+                if (passConfig?.skipUnreachableEOG == true) {
+                    Strategy::REACHABLE_EOG_FORWARD
+                } else {
+                    Strategy::EOG_FORWARD
+                },
+            )
+
+        if (passConfig?.experimentalEOGWorklist == true) {
             acceptWithIterateEOG(eogStarter)
         } else {
-            cacheTemplates(ctx.currentComponent)
-
-            walker =
-                ScopedWalker(
-                    scopeManager,
-                    if (passConfig?.skipUnreachableEOG == true) {
-                        Strategy::REACHABLE_EOG_FORWARD
-                    } else {
-                        Strategy::EOG_FORWARD
-                    },
-                )
-
             walker.clearCallbacks()
             walker.registerHandler(this::handle)
 
@@ -166,9 +208,314 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function caches all [TemplateDeclaration]s into [templateList]. It either fetches the
-     * existing result from [componentsToTemplates] or fills [templateList] for the first time and
-     * then stores this result.
+     * This function resolves symbols for the given EOG starter [t] (see [EOGStarterHolder] - e.g. a
+     * [Function], but also a translation unit, record, namespace, or a field/variable with an
+     * initializer) in two phases:
+     * 1. [collectDeclarationState] drives a pure, side-effect-free [Lattice.iterateEOG] - the same
+     *    worklist/fixpoint engine used by [PointsToPass], [ControlDependenceGraphPass] and
+     *    [UnreachableEOGPass] - purely to compute, for every [Node] in [t]'s EOG, the *final*,
+     *    fully-converged [LocalDeclarationElement] of [LocalScope] declarations reachable by that
+     *    point, recorded into [nodeStates].
+     * 2. [walker] (the very same [ScopedWalker] instance and [Strategy] - honoring
+     *    [Configuration.skipUnreachableEOG] - that the default, non-experimental code path in
+     *    [accept] uses) then does the actual resolution, calling [handle] on every node exactly as
+     *    the default path would, with [localSymbolsOverride] pointed at that node's precomputed
+     *    entry in [nodeStates] so [handleReference] resolves [LocalScope] symbols flow-sensitively.
+     *
+     * Splitting the two concerns like this (rather than calling [handle] directly from the
+     * [Lattice.iterateEOG] transformation) avoids two problems that plagued an earlier version of
+     * this function:
+     * - A node can be reached via more than one incoming [EvaluationOrder] edge - not just a loop
+     *   back-edge, but also a genuine, non-cyclic merge (e.g. the first node after an `if`/`else`
+     *   where neither branch terminates). Resolving as soon as the *first* edge arrives would make
+     *   the result depend on whichever predecessor the engine happens to schedule first, since
+     *   nothing would ever re-resolve the node once a *later* edge brings a bigger, merged state.
+     *   [collectDeclarationState] sidesteps this entirely by never resolving anything itself - it
+     *   just accumulates (via [LocalDeclarationLattice]'s own union `lub`) every state that ever
+     *   reaches a node, so by the time phase 2 reads [nodeStates], the recorded value already
+     *   reflects every incoming path.
+     * - [handleOverloadedOperator] physically replaces a [BinaryOperator]/[UnaryOperator] node with
+     *   an [OperatorCall], rewiring its EOG edges in the process. [Lattice.iterateEOG] determines
+     *   how to continue by reading the *same* edge's `end.nextEOGEdges` right after invoking the
+     *   transformation, so mutating the graph inside that callback would make the engine think the
+     *   EOG ends right there. [ScopedWalker], on the other hand, already tolerates this exact kind
+     *   of mid-traversal AST/EOG mutation (it re-reads `nextEOGEdges` lazily) - which is why the
+     *   default, non-experimental path can call [handle] on operators inline without any
+     *   special-casing, and why phase 2 reusing it can too.
+     */
+    protected open fun acceptWithIterateEOG(t: Node) {
+        // The scope t itself introduces (e.g. a Function's FunctionScope), used to tell apart a
+        // LocalScope that belongs to this starter's own traversal (and is therefore genuinely
+        // flow-sensitive here) from one belonging to an *enclosing*, already fully-resolved starter
+        // (e.g. a captured variable in an outer function, when t is a nested function/lambda) - the
+        // latter must fall back to the ordinary, static Scope.symbols lookup instead of appearing
+        // "not yet declared".
+        val starterScope = ctx.scopeManager.lookupScope(t)
+
+        val lattice = LocalDeclarationLattice(PowersetLattice<Declaration>())
+        var startState = LocalDeclarationElement()
+
+        // Some declarations belonging to a LocalScope are never themselves the *target* of an EOG
+        // edge - e.g. a CatchClause's exception parameter, the individual target Variables of a
+        // tuple/multiple declaration, or a locally-declared function prototype (itself its own,
+        // separate EOG starter, possibly with a nonempty nextEOGEdges of its own for evaluating a
+        // default argument value - but never reached *from* this starter's own traversal, since
+        // nothing has an edge pointing into it) - exactly like a Function's Parameters are never
+        // reached via EOG either. The relevant criterion for "never reached" is having no
+        // *incoming* EOG edge; an unrelated, nonempty outgoing chain of its own doesn't change that
+        // nothing in *this* traversal will ever visit it. Where exactly such a declaration should
+        // become visible depends on how it's declared (see [seedPlanFor]): some are genuinely
+        // atomic with entering their enclosing construct (a catch parameter is in scope for the
+        // whole catch clause), while others (a local function prototype, the individual variables
+        // of a tuple/multiple declaration) are declared "at a point" - like an ordinary local
+        // variable - and must only become visible from there onward, not from the very start.
+        val startSeeds = mutableMapOf<LocalScope, MutableList<Declaration>>()
+        val anchoredSeeds = mutableMapOf<Node, MutableList<Declaration>>()
+        (t as? AstNode)
+            ?.allChildren<Declaration>()
+            ?.filter { it.scope is LocalScope && it.prevEOGEdges.isEmpty() }
+            ?.forEach { declaration ->
+                val scope = declaration.scope as LocalScope
+                when (val plan = seedPlanFor(declaration, t)) {
+                    is SeedPlan.AtStart ->
+                        startSeeds.getOrPut(scope) { mutableListOf() } += declaration
+                    is SeedPlan.AtAnchor ->
+                        anchoredSeeds.getOrPut(plan.anchor) { mutableListOf() } += declaration
+                }
+            }
+        if (startSeeds.isNotEmpty()) {
+            val seededElement =
+                LocalDeclarationElement(
+                    startSeeds.map { (scope, decls) ->
+                        scope to PowersetLattice.Element(*decls.toTypedArray())
+                    }
+                )
+            startState = runBlocking { lattice.lub(startState, seededElement, true) }
+        }
+
+        // Phase 1: compute, for every node, the final (fully-converged) set of LocalScope
+        // declarations reachable by that point - without resolving anything yet.
+        val nodeStates = IdentityHashMap<Node, LocalDeclarationElement>()
+        val (_, timeout) =
+            lattice.iterateEOG(
+                t.nextEOGEdges,
+                startState,
+                transformation = { l, edge, state ->
+                    collectDeclarationState(l, edge, state, nodeStates, anchoredSeeds)
+                },
+            )
+        if (timeout) {
+            log.warn("Could not compute final state for EOG starter {} (due to timeout)", t.name)
+        }
+
+        // Phase 2: resolve, reusing the same walker/strategy the default path uses, consulting
+        // nodeStates for LocalScope visibility instead of Scope.symbols.
+        try {
+            walker.clearCallbacks()
+            walker.registerHandler { node ->
+                localSymbolsOverride = { scope, symbol ->
+                    if (scope is LocalScope && isWithinStarter(scope, starterScope)) {
+                        nodeStates[node]?.get(scope)?.filter { it.name.localName == symbol }
+                            ?: emptyList()
+                    } else {
+                        // Not a LocalScope we're tracking flow-sensitively (either not a LocalScope
+                        // at all, or one belonging to an enclosing, already-resolved starter): fall
+                        // back to the default, static Scope.symbols[symbol] lookup.
+                        null
+                    }
+                }
+                // If the type observer is disabled, nothing else computes the type of a raw
+                // BinaryOperator/UnaryOperator (see propagateOperatorType); the EOG guarantees its
+                // operand(s) already have their final type by the time it is reached here.
+                if (ctx.config.disableTypeObserver) {
+                    propagateOperatorType(node)
+                }
+                handle(node)
+            }
+            walker.iterate(t)
+        } finally {
+            localSymbolsOverride = null
+        }
+    }
+
+    /**
+     * How a [Declaration] with no incoming EOG edge (see [acceptWithIterateEOG]) should be made
+     * visible in [LocalDeclarationLattice].
+     */
+    private sealed class SeedPlan {
+        /** Visible from the very start of the enclosing EOG starter's traversal. */
+        object AtStart : SeedPlan()
+
+        /**
+         * Visible once [anchor] has *finished* being handled, i.e. from its own lexical declaration
+         * point onward.
+         */
+        data class AtAnchor(val anchor: Node) : SeedPlan()
+    }
+
+    /**
+     * Determines the [SeedPlan] for [declaration]. If [declaration] is itself a direct element of
+     * some ancestor's statement list (see [statementsOrNull]) - e.g. a locally-declared function
+     * prototype, or the [de.fraunhofer.aisec.cpg.graph.declarations.Tuple] wrapping the individual
+     * variables of a tuple/multiple declaration - it is declared "at a point" like an ordinary
+     * local variable.
+     *
+     * We anchor it to the *preceding* sibling statement that is EOG-reachable (searching further
+     * back over any other EOG-invisible siblings, e.g. several prototypes declared back to back),
+     * with the convention that the declaration becomes visible once that anchor has *finished*
+     * being handled - not to the *next* reachable sibling with a "becomes visible before it" rule:
+     * a compound statement's own sub-expressions (e.g. a call's callee reference) are reached via
+     * the EOG *before* the statement node itself, so anchoring forward and seeding beforehand would
+     * still be one step too late for anything referencing the declaration within that very anchor
+     * statement. If no such preceding sibling exists (declaration is at/near the start of the
+     * block), it is visible from the start of this traversal - nothing in this scope could have
+     * referenced it earlier anyway.
+     *
+     * If we walk all the way up to [starterRoot] without ever finding a statement-list membership
+     * for [declaration] at all, it must instead be a structural part of its enclosing construct
+     * itself (e.g. a [de.fraunhofer.aisec.cpg.graph.expressions.CatchClause]'s exception
+     * parameter), which is visible for that whole construct, i.e. from the start of this traversal.
+     */
+    private fun seedPlanFor(declaration: Declaration, starterRoot: Node): SeedPlan {
+        var current: Node = declaration
+        while (current !== starterRoot) {
+            val parent = current.astParent ?: return SeedPlan.AtStart
+            val statements = statementsOrNull(parent)
+            if (statements != null && current in statements) {
+                val index = statements.indexOf(current)
+                val anchor =
+                    statements.subList(0, index).lastOrNull { it.prevEOGEdges.isNotEmpty() }
+                return if (anchor != null) SeedPlan.AtAnchor(anchor) else SeedPlan.AtStart
+            }
+            current = parent
+        }
+        return SeedPlan.AtStart
+    }
+
+    /**
+     * Returns [node]'s directly-owned, ordered list of statements, if it is one of the AST node
+     * kinds that has one (what used to be `StatementHolder` before its removal), or `null`
+     * otherwise.
+     */
+    private fun statementsOrNull(node: Node): List<Expression>? =
+        when (node) {
+            is Block -> node.statements
+            is Label -> node.statements
+            is ForEach -> node.statements
+            is For -> node.statements
+            is Record -> node.statements
+            is Namespace -> node.statements
+            is TranslationUnit -> node.statements
+            else -> null
+        }
+
+    /**
+     * Whether [scope] is (transitively) nested within [starterScope], i.e. whether it belongs to
+     * the EOG starter currently being processed rather than to an enclosing one. If [starterScope]
+     * is `null` (the starter itself introduces no scope, e.g. a bare field/variable initializer),
+     * we conservatively treat every [LocalScope] as belonging to it - such starters are simple
+     * enough (and any nested comprehension/lambda-with-outer-capture inside one is rare enough)
+     * that this is an acceptable simplification for now.
+     */
+    private fun isWithinStarter(scope: Scope, starterScope: Scope?): Boolean {
+        if (starterScope == null) {
+            return true
+        }
+        var current: Scope? = scope
+        while (current != null) {
+            if (current === starterScope) {
+                return true
+            }
+            current = current.parent
+        }
+        return false
+    }
+
+    /**
+     * The pure, side-effect-free state-transfer function used by phase 1 of [acceptWithIterateEOG].
+     * If [EvaluationOrder.end] is itself a [Declaration] in a [LocalScope], it is pushed into
+     * [state]. The resulting per-node state is then merged (via [LocalDeclarationLattice]'s union
+     * `lub`) into [nodeStates] - across *every* visit of this node, from *every* incoming edge, so
+     * that once [Lattice.iterateEOG] converges, [nodeStates] holds each node's complete, final set
+     * of reachable [LocalScope] declarations, independent of which predecessor the engine happened
+     * to schedule first. [nodeStates] is read back in phase 2 of [acceptWithIterateEOG] to drive
+     * the actual resolution. Finally, any declarations anchored to [EvaluationOrder.end] via
+     * [anchoredSeeds] (see [seedPlanFor]) are pushed into the *returned* state (but not into
+     * [nodeStates] for this node) since they become visible only from the next node onward, not
+     * from this one.
+     */
+    private suspend fun collectDeclarationState(
+        lattice: Lattice<LocalDeclarationElement>,
+        currentEdge: EvaluationOrder,
+        state: LocalDeclarationElement,
+        nodeStates: MutableMap<Node, LocalDeclarationElement>,
+        anchoredSeeds: Map<Node, List<Declaration>>,
+    ): LocalDeclarationElement {
+        val lattice = lattice as? LocalDeclarationLattice ?: return state
+        val node = currentEdge.end
+
+        var newState = state
+
+        val declarationScope = (node as? Declaration)?.scope
+        if (declarationScope is LocalScope) {
+            newState =
+                lattice.lub(
+                    newState,
+                    LocalDeclarationElement(declarationScope to PowersetLattice.Element(node)),
+                    true,
+                )
+        }
+
+        val existing = nodeStates[node]
+        nodeStates[node] =
+            if (existing != null) {
+                lattice.lub(existing, newState, true)
+            } else {
+                newState.duplicate()
+            }
+
+        val anchored = anchoredSeeds[node]
+        if (!anchored.isNullOrEmpty()) {
+            val byScope = anchored.groupBy { it.scope as LocalScope }
+            newState =
+                lattice.lub(
+                    newState,
+                    LocalDeclarationElement(
+                        byScope.map { (scope, decls) ->
+                            scope to PowersetLattice.Element(*decls.toTypedArray())
+                        }
+                    ),
+                    true,
+                )
+        }
+
+        return newState
+    }
+
+    /**
+     * [handle] does not compute the type of a [BinaryOperator] or [UnaryOperator] itself; normally,
+     * it relies on [HasType]'s reactive [HasType.TypeObserver] mechanism (both implement it
+     * themselves, via `typeChanged`) to propagate the type of [BinaryOperator.lhs]/
+     * [BinaryOperator.rhs] (or [UnaryOperator.input]) once they are resolved. That mechanism can be
+     * switched off entirely via [TranslationConfiguration.Builder.disableTypeObserver], in which
+     * case nothing else computes these types. Since the EOG guarantees [node]'s operand(s) were
+     * already handled (and thus have their final type) by the time [node] itself is reached, we can
+     * invoke the same `typeChanged` callback directly here, exactly mirroring what the reactive
+     * path would have done - including its special-casing of `.*`/`->*` for function-pointer types
+     * (see [BinaryOperator.typeChanged]) - rather than reimplementing the type propagation
+     * ourselves.
+     */
+    private fun propagateOperatorType(node: Node) {
+        when (node) {
+            is BinaryOperator -> node.typeChanged(node.rhs.type, node.rhs)
+            is UnaryOperator -> node.typeChanged(node.input.type, node.input)
+        }
+    }
+
+    /**
+     * This function caches all [Template]s into [templateList]. It either fetches the existing
+     * result from [componentsToTemplates] or fills [templateList] for the first time and then
+     * stores this result.
      */
     private fun cacheTemplates(component: Component?) {
         if (component in componentsToTemplates) {
@@ -182,7 +529,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     Strategy::AST_FORWARD,
                     object : IVisitor<AstNode>() {
                         override fun visit(t: AstNode) {
-                            if (t is TemplateDeclaration) {
+                            if (t is Template) {
                                 templateList.add(t)
                             }
                         }
@@ -204,16 +551,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *   depending on the name.
      * - The results of the lookup are stored in [Reference.candidates]. The purpose of this is
      *   two-fold. First, it is a good way to debug potential symbol resolution errors. Second, it
-     *   is used by other functions, for example [handleCallExpression], which then picks the best
-     *   viable option out of the candidates (if the reference is part of the
-     *   [CallExpression.callee]).
+     *   is used by other functions, for example [handleCall], which then picks the best viable
+     *   option out of the candidates (if the reference is part of the [Call.callee]).
      * - In the next step, we need to decide whether we are resolving a standalone reference (which
-     *   most likely points to a [VariableDeclaration]) or if we are part of a
-     *   [CallExpression.callee]. In the first case, we can directly assign [Reference.refersTo]
-     *   based on the candidates (at the moment we only assign it if we have exactly one candidate).
-     *   In the second case, we are finished and let [handleCallExpression] take care of the rest
-     *   once the EOG reaches the appropriate [CallExpression] (which should actually be just be the
-     *   next EOG node).
+     *   most likely points to a [Variable]) or if we are part of a [Call.callee]. In the first
+     *   case, we can directly assign [Reference.refersTo] based on the candidates (at the moment we
+     *   only assign it if we have exactly one candidate). In the second case, we are finished and
+     *   let [handleCall] take care of the rest once the EOG reaches the appropriate [Call] (which
+     *   should actually be just be the next EOG node).
      */
     protected open fun handleReference(ref: Reference) {
         val language = ref.language
@@ -229,7 +574,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         // Ignore references to "super" if the language has super expressions, because they will be
-        // handled separately in handleMemberExpression
+        // handled separately in handleMemberAccess
         if (language is HasSuperClasses && ref.name.localName == language.superClassKeyword) {
             return
         }
@@ -240,7 +585,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val predicate: ((Declaration) -> Boolean)? =
             if (helperType is FunctionPointerType) {
                 { declaration ->
-                    if (declaration is FunctionDeclaration) {
+                    if (declaration is Function) {
                         declaration.returnTypes == listOf(helperType.returnType) &&
                             declaration.matchesSignature(helperType.parameters) !=
                                 IncompatibleSignature
@@ -255,7 +600,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // Find a list of candidate symbols. In most cases, we can just perform a lookup by name
         // which either performs an unqualified lookup beginning from the current scope "upwards",
         // or a qualified lookup starting from the scope specified in the name.
-        var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
+        var candidates =
+            scopeManager
+                .lookupSymbolByNodeName(
+                    ref,
+                    localSymbols = localSymbolsOverride,
+                    predicate = predicate,
+                )
+                .toSet()
 
         // But we have to consider one special case: For languages, that support implicit receivers,
         // this reference might be a member access of either the current class or a parent class.
@@ -269,8 +621,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 !ref.name.isQualified() &&
                 record != null
         ) {
-            candidates = resolveMemberByName(ref.name.localName, setOf(record.toType())).toSet()
+            candidates = resolveMemberByName(ref.name.localName, setOf(record.toType()))
         }
+
+        // Drop candidates that are invisible to this reference because of internal linkage: a
+        // declaration with [Visibility.INTERNAL] (e.g. a file-scope `static` in C/C++) is confined
+        // to its own translation unit and must not be resolved from another one.
+        candidates = candidates.onlyVisibleFrom(ref)
 
         // Store the candidates in the reference
         ref.candidates = candidates
@@ -283,7 +640,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // For now, we still separate the resolving of simple variable references from call
         // resolving. Therefore, we need to stop here if we are the callee of a call and continue in
-        // handleCallExpression.
+        // handleCall.
         //
         // However, there is a special case that we want to catch, that is if we are "calling" a
         // reference to a variable (or parameter). This can be done in several languages, e.g., in
@@ -291,8 +648,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // resolve the reference of this call expression back to its original declaration, and then
         // we later continue in the DynamicInvokeResolver, which sets the invokes edge.
         if (
-            ref.resolutionHelper is CallExpression &&
-                (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration)
+            ref.resolutionHelper is Call &&
+                (wouldResolveTo !is Variable && wouldResolveTo !is Parameter)
         ) {
             return
         }
@@ -324,17 +681,49 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles resolving of a [MemberExpression] in the [ScopeManager.currentRecord].
-     * This works similar to [handleReference]. First, we set the [MemberExpression.candidates]
-     * based on [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName]
-     * based on the current class and its parent classes. Then, if we resolve a
-     * [MemberCallExpression], we abort (and later pick up resolving in [handleCallExpression]). In
-     * case of a field access, we set the [MemberExpression.refersTo] based on
-     * [Language.bestViableReferenceCandidate].
+     * Narrows this set of resolution candidates to those that are *visible* from [ref] given their
+     * linkage — the linkage-level counterpart to the access-control filter [onlyAccessibleFrom].
+     * Currently the only linkage restriction modeled is internal linkage: a declaration with
+     * [Visibility.INTERNAL] (in C/C++ a file-scope `static`, mapped by the frontend via
+     * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]) is confined to its own
+     * translation unit, so it must not be resolved from a reference in a different one. This is
+     * what makes cross-translation-unit lookups of `static` globals and functions fail, as the
+     * language semantics require. The name is intentionally kept general so that further linkage
+     * kinds (should another language need them) can be folded in here without renaming.
+     *
+     * Candidates without internal linkage are always kept, so languages that never assign
+     * [Visibility.INTERNAL] are completely unaffected. As internal linkage is comparatively rare,
+     * we avoid resolving [ref]'s translation unit unless at least one candidate actually has it.
+     *
+     * Unlike the access-control filter [onlyAccessibleFrom], this one is intentionally *not* gated
+     * behind a language trait: the meaning of [Visibility.INTERNAL] — "confined to its own
+     * translation unit" — is language-independent, so a frontend only ever assigns it when it truly
+     * holds. Enforcing it unconditionally therefore cannot wrongly hide a reachable declaration the
+     * way enforcing a merely *recorded* `private` could, which is why access control needs the
+     * [HasVisibilityModifiers] opt-in and linkage does not.
      */
-    protected open fun handleMemberExpression(current: MemberExpression) {
+    private fun Set<Declaration>.onlyVisibleFrom(ref: Reference): Set<Declaration> {
+        if (none { it.hasInternalLinkage }) {
+            return this
+        }
+
+        val referencingUnit = ref.translationUnit
+        return filterTo(mutableSetOf()) { candidate ->
+            !candidate.hasInternalLinkage || candidate.translationUnit == referencingUnit
+        }
+    }
+
+    /**
+     * This function handles resolving of a [MemberAccess] in the [ScopeManager.currentRecord]. This
+     * works similar to [handleReference]. First, we set the [MemberAccess.candidates] based on
+     * [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName] based on the
+     * current class and its parent classes. Then, if we resolve a [MemberCall], we abort (and later
+     * pick up resolving in [handleCall]). In case of a field access, we set the
+     * [MemberAccess.refersTo] based on [Language.bestViableReferenceCandidate].
+     */
+    protected open fun handleMemberAccess(current: MemberAccess) {
         // Some locals for easier smart casting
-        val base = current.base
+        val base = (current.base as? PointerDereference)?.input ?: current.base
         val language = current.language
         val record = scopeManager.currentRecord
 
@@ -357,15 +746,15 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Find candidates based on possible base types
         val (possibleTypes, _) = getPossibleContainingTypes(current)
-        current.candidates = resolveMemberByName(current.name.localName, possibleTypes).toSet()
+        current.candidates = resolveMemberByName(current.name.localName, possibleTypes)
 
         // For legacy reasons, resolving of simple variable references (including fields) is
         // separated from call resolving. Therefore, we need to stop here if we are the callee of a
-        // member call and continue in handleCallExpression. But we can already make
-        // handleCallExpression a bit cleaner, if we set the candidates here, similar to what we do
+        // member call and continue in handleCall. But we can already make
+        // handleCall a bit cleaner, if we set the candidates here, similar to what we do
         // in handleReference.
         val helper = current.resolutionHelper
-        if (helper is MemberCallExpression) {
+        if (helper is MemberCall) {
             return
         }
 
@@ -387,20 +776,19 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * This function resolves a possible overloaded -> (arrow) operator, for languages which support
      * operator overloading. The implicit call to the overloaded operator function is inserted as
-     * base for the MemberExpression. This can be the case for a [MemberExpression] or
-     * [MemberCallExpression]
+     * base for the MemberAccess. This can be the case for a [MemberAccess] or [MemberCall]
      */
     private fun resolveOverloadedArrowOperator(ex: Expression): Type? {
         var type: Type? = null
         if (
             ex.language is HasOperatorOverloading &&
-                ex is MemberExpression &&
+                ex is MemberAccess &&
                 ex.operatorCode == "->" &&
                 ex.base.type !is PointerType
         ) {
             val result = resolveOperator(ex)
             val op = result?.bestViable?.singleOrNull()
-            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
+            if (result?.success == SUCCESSFUL && op is Operator) {
                 type = op.returnTypes.singleOrNull()?.root ?: unknownType()
 
                 // We need to insert a new operator call expression in between
@@ -416,14 +804,16 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /**
      * The central entry-point for all symbol-resolving. It dispatches the handling of the node to
-     * the appropriate function based on the node type.
+     * the appropriate function based on the node type. Both traversal strategies ([accept]'s
+     * default [ScopedWalker] path and [acceptWithIterateEOG]) funnel through this single
+     * dispatcher.
      */
     protected open fun handle(node: Node?) {
         when (node) {
-            is MemberExpression -> handleMemberExpression(node)
+            is MemberAccess -> handleMemberAccess(node)
             is Reference -> handleReference(node)
-            is ConstructExpression -> handleConstructExpression(node)
-            is CallExpression -> handleCallExpression(node)
+            is Construction -> handleConstruction(node)
+            is Call -> handleCall(node)
             is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
 
@@ -432,30 +822,29 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles the resolution of a [CallExpression] based on a list of candidates. The
-     * candidates are taken from [CallExpression.callee] which are set either in [handleReference]
-     * or [handleMemberExpression], depending on the type.
+     * This function handles the resolution of a [Call] based on a list of candidates. The
+     * candidates are taken from [Call.callee] which are set either in [handleReference] or
+     * [handleMemberAccess], depending on the type.
      *
      * In any case, the candidates are then resolved with the arguments of the call expression using
-     * [resolveWithArguments]. The result of this resolution is stored in [CallExpression.invokes]
-     * and depending on [CallResolutionResult.SuccessKind] are warning is emitted if resolution was
-     * erroneous or ambiguous. Furthermore, the [CallExpression.callee]'s [Reference.refersTo] is
-     * also set.
+     * [resolveWithArguments]. The result of this resolution is stored in [Call.invokes] and
+     * depending on [CallResolutionResult.SuccessKind] are warning is emitted if resolution was
+     * erroneous or ambiguous. Furthermore, the [Call.callee]'s [Reference.refersTo] is also set.
      *
      * If the resolution was unsuccessful, we try to infer the function based on the information
-     * provided in the [CallResolutionResult] and the [CallExpression]. This is done in
+     * provided in the [CallResolutionResult] and the [Call]. This is done in
      * [tryFunctionInference].
      *
-     * @param call The [CallExpression] to resolve.
+     * @param call The [Call] to resolve.
      */
-    protected open fun handleCallExpression(call: CallExpression) {
+    protected open fun handleCall(call: Call) {
         // Some local variables for easier smart casting
         val callee = call.callee
         val language = call.language
 
         // If the base type is unknown, we cannot resolve the call
         if (
-            callee is MemberExpression &&
+            callee is MemberAccess &&
                 callee.base.type is UnknownType &&
                 callee.base.assignedTypes.isEmpty()
         ) {
@@ -473,11 +862,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // We have a dynamic invoke in two cases:
         // a) our callee is not a reference
         // b) our reference already refers to a variable rather than a function
-        if (
-            callee !is Reference ||
-                callee.refersTo is VariableDeclaration ||
-                callee.refersTo is ParameterDeclaration
-        ) {
+        if (callee !is Reference || callee.refersTo is Variable || callee.refersTo is Parameter) {
             return
         }
 
@@ -508,7 +893,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         possibleContainingTypes: Set<Type>,
     ): Set<Declaration> {
         var candidates = mutableSetOf<Declaration>()
-        val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
+        val records =
+            possibleContainingTypes.mapNotNullTo(mutableSetOf()) { it.root.recordDeclaration }
         for (record in records) {
             candidates.addAll(
                 ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
@@ -517,29 +903,114 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Find invokes by supertypes
         if (candidates.isEmpty() && symbol.isNotEmpty()) {
-            val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
+            val records =
+                possibleContainingTypes.mapNotNullTo(mutableSetOf()) { it.root.recordDeclaration }
             candidates = getInvocationCandidatesFromParents(symbol, records).toMutableSet()
         }
 
         // Add overridden invokes
         candidates.addAll(
-            candidates
-                .filterIsInstance<FunctionDeclaration>()
-                .map { getOverridingCandidates(possibleContainingTypes, it) }
-                .flatten()
+            candidates.filterIsInstance<Function>().flatMap {
+                getOverridingCandidates(possibleContainingTypes, it)
+            }
         )
 
-        return candidates
+        // Drop members that are inaccessible from where the access happens (e.g. a `private` member
+        // reached from outside its record), for languages that model access control.
+        return candidates.onlyAccessibleFrom(scopeManager.currentRecord)
     }
 
-    protected open fun handleConstructExpression(constructExpression: ConstructExpression) {
+    /**
+     * Narrows this set of member-resolution candidates to those that are accessible from the record
+     * [from] in which the access syntactically occurs, honoring member access control (e.g. C/C++
+     * `private` / `protected`) for languages that declare it via [HasVisibilityModifiers].
+     * Candidates in languages without that trait, and members whose visibility is
+     * [Visibility.UNKNOWN] or [Visibility.PUBLIC], are always accessible, so unrelated languages
+     * remain unaffected.
+     *
+     * The filter is intentionally conservative and only ever *narrows* an ambiguous candidate set:
+     * if it would remove every candidate — for instance because the code genuinely performs an
+     * access the source language forbids — the original set is returned unchanged. We would rather
+     * resolve a technically-illegal access than silently drop the only edge and leave the reference
+     * unresolvable. As access control only restricts [Visibility.PRIVATE] and
+     * [Visibility.PROTECTED] members, we skip the work entirely unless at least one candidate
+     * carries such a visibility.
+     */
+    private fun Set<Declaration>.onlyAccessibleFrom(from: Record?): Set<Declaration> {
+        if (none { it.hasRestrictedVisibility }) {
+            return this
+        }
+
+        val accessible = filterTo(mutableSetOf()) { it.isAccessibleFrom(from) }
+        return accessible.ifEmpty { this }
+    }
+
+    /**
+     * Whether this member declaration is accessible from the record [from] in which the access
+     * occurs. A [Visibility.PRIVATE] member is only accessible from within its own declaring
+     * record, a [Visibility.PROTECTED] member additionally from records that (transitively) inherit
+     * from the declaring one. Any other visibility (including [Visibility.UNKNOWN]), and any
+     * language without the [HasVisibilityModifiers] trait, imposes no restriction.
+     *
+     * "Access relationship" here means the structural relation between the record [from] where the
+     * access is written and the record that declares the member, which is what decides whether the
+     * access is legal. We model exactly the two that every access-controlled language shares and
+     * that are derivable from [from] and the declaring record alone:
+     * 1. **same record** — `from` *is* the declaring record (grants access to `private` members),
+     *    e.g. a method of `class C` reading `C`'s own `private` field;
+     * 2. **subclass** — `from` (transitively) inherits from the declaring record (additionally
+     *    grants access to `protected` members), e.g. a method of `class D : C` reading a
+     *    `protected` field declared in `C`.
+     *
+     * We stop at these two rather than "any number" because every further way access can be granted
+     * requires modeling a *different* relationship that is not expressible from `from` and the
+     * declaring record alone, and is often language-specific: a C++ `friend` declaration names an
+     * unrelated grantee, a nested class reaches into its lexically enclosing one, Java adds
+     * package/module membership, and so on. Those grants are *not* recognized here and such a
+     * member is reported as inaccessible. That is safe because [onlyAccessibleFrom] never removes
+     * the last candidate: an unambiguous access (e.g. a friend call with a single candidate) still
+     * resolves; only a genuinely ambiguous candidate set could be narrowed too aggressively.
+     */
+    private fun Declaration.isAccessibleFrom(from: Record?): Boolean {
+        if (language !is HasVisibilityModifiers) {
+            return true
+        }
+
+        return when (visibility) {
+            Visibility.PRIVATE -> from != null && declaringRecord == from
+            Visibility.PROTECTED -> from != null && declaringRecord in from.ancestorRecords
+            else -> true
+        }
+    }
+
+    /**
+     * The [Record] that declares this member. For any member that is *lexically* nested in its
+     * record this is simply the closest enclosing [Record] in the AST ([firstParentOrNull], which
+     * walks [Node.astParent]); the surrounding [de.fraunhofer.aisec.cpg.graph.scopes.RecordScope]
+     * would give the same answer for those.
+     *
+     * A [Method], however, may be *defined out-of-line* (e.g. C++ `void C::foo() {}`), where its
+     * AST parent and its scope are the enclosing namespace or translation unit, not the record. We
+     * therefore prefer its explicitly-tracked [Method.recordDeclaration], which points at the
+     * record even for such definitions. Returns `null` for non-members.
+     */
+    private val Declaration.declaringRecord: Record?
+        get() = (this as? Method)?.recordDeclaration ?: firstParentOrNull<Record>()
+
+    /** This [Record] and all records in its transitive super-type chain. */
+    private val Record.ancestorRecords: Set<Record>
+        get() {
+            return toType().ancestors.mapNotNullTo(mutableSetOf()) { it.type.recordDeclaration }
+        }
+
+    protected open fun handleConstruction(constructExpression: Construction) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)
             return
         val recordDeclaration = constructExpression.type.root.recordDeclaration
         constructExpression.instantiates = recordDeclaration
         for (template in templateList) {
             if (
-                template is RecordTemplateDeclaration &&
+                template is RecordTemplate &&
                     recordDeclaration != null &&
                     recordDeclaration in template.realizations &&
                     (constructExpression.templateArguments.size <= template.parameters.size)
@@ -560,7 +1031,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         if (missingParam != null) {
                             constructExpression.addTemplateParameter(
                                 missingParam,
-                                TemplateDeclaration.TemplateInitialization.DEFAULT,
+                                Template.TemplateInitialization.DEFAULT,
                             )
                         }
                     }
@@ -584,18 +1055,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * [HasOperatorOverloading.overloadedOperatorNames].
      *
      * Internally, it takes the result of [resolveOperator] and if successful, replaces the node
-     * with the resolved [OperatorCallExpression].
+     * with the resolved [OperatorCall].
      */
     protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
         val functionDeclaration = result?.bestViable?.singleOrNull() ?: return
 
         // If the result was successful, we can replace the node
-        if (
-            result.success == SUCCESSFUL &&
-                functionDeclaration is OperatorDeclaration &&
-                op is Expression
-        ) {
+        if (result.success == SUCCESSFUL && functionDeclaration is Operator && op is Expression) {
             val call = operatorCallFromDeclaration(functionDeclaration, op)
             walker.replace(op.astParent, op, call)
         }
@@ -617,7 +1084,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun resolveOperator(op: HasOverloadedOperation): CallResolutionResult? {
         val language = op.language
         val base = op.operatorBase
-        if (language !is HasOperatorOverloading || language.isPrimitive(base.type)) {
+        val baseType = (base as? PointerDereference)?.input?.type ?: base.type
+        if (language !is HasOperatorOverloading || language.isPrimitive(baseType)) {
             return null
         }
 
@@ -630,36 +1098,34 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val possibleTypes = mutableSetOf<Type>()
-        possibleTypes.add(op.operatorBase.type)
-        possibleTypes.addAll(op.operatorBase.assignedTypes)
+        possibleTypes.add(baseType)
+        val baseAssignedtype =
+            (base as? PointerDereference)?.input?.assignedTypes ?: base.assignedTypes
 
-        val candidates =
-            resolveMemberByName(symbol, possibleTypes)
-                .filterIsInstance<OperatorDeclaration>()
-                .toSet()
+        possibleTypes.addAll(baseAssignedtype)
+
+        val candidates = resolveMemberByName(symbol, possibleTypes).filterIsInstance<Operator>()
 
         return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
     }
 
     private fun getInvocationCandidatesFromParents(
         name: Symbol,
-        possibleTypes: Set<RecordDeclaration>,
+        possibleTypes: Set<Record>,
     ): List<Declaration> {
         val workingPossibleTypes = mutableSetOf(*possibleTypes.toTypedArray())
         return if (possibleTypes.isEmpty()) {
             listOf()
         } else {
             val firstLevelCandidates =
-                possibleTypes
-                    .map { record ->
-                        scopeManager.lookupSymbolByName(record.name.fqn(name), record.language)
-                    }
-                    .flatten()
+                possibleTypes.flatMap { record ->
+                    scopeManager.lookupSymbolByName(record.name.fqn(name), record.language)
+                }
 
             // C++ does not allow overloading at different hierarchy levels. If we find a
-            // FunctionDeclaration with the same name as the function in the CallExpression we have
-            // to stop the search in the parent even if the FunctionDeclaration does not match with
-            // the signature of the CallExpression
+            // Function with the same name as the function in the Call we have
+            // to stop the search in the parent even if the Function does not match with
+            // the signature of the Call
             // TODO: move this to refineMethodResolution of CXXLanguage
             if (possibleTypes.firstOrNull()?.language.isCPP) { // TODO: Needs a special trait?
                 workingPossibleTypes.removeIf { recordDeclaration ->
@@ -670,7 +1136,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 workingPossibleTypes.flatMap {
                     getInvocationCandidatesFromParents(
                         name,
-                        it.superTypeDeclarations.filter { it !in possibleTypes }.toSet(),
+                        it.superTypeDeclarations.filterTo(mutableSetOf()) { it !in possibleTypes },
                     )
                 }
             }
@@ -684,31 +1150,29 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     private fun getOverridingCandidates(
         possibleSubTypes: Set<Type>,
-        declaration: FunctionDeclaration,
-    ): Set<FunctionDeclaration> {
-        return declaration.overriddenBy
-            .filter { f ->
-                if (f is MethodDeclaration) {
-                    val record = f.recordDeclaration
-                    record != null && record.toType() in possibleSubTypes
-                } else {
-                    false
-                }
+        declaration: Function,
+    ): Set<Function> {
+        return declaration.overriddenBy.filterTo(mutableSetOf()) { f ->
+            if (f is Method) {
+                val record = f.recordDeclaration
+                record != null && record.toType() in possibleSubTypes
+            } else {
+                false
             }
-            .toSet()
+        }
     }
 
     /**
      * @param constructExpression we want to find an invocation target for
-     * @param recordDeclaration associated with the Object the ConstructExpression constructs
-     * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If
-     *   there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
-     *   matches the ConstructExpression.
+     * @param recordDeclaration associated with the Object the Construction constructs
+     * @return a [Constructor] that is an invocation of the given Construction. If there is no valid
+     *   [Constructor] we will create an implicit ConstructDeclaration that matches the
+     *   Construction.
      */
     private fun getConstructorDeclaration(
-        constructExpression: ConstructExpression,
-        recordDeclaration: RecordDeclaration,
-    ): ConstructorDeclaration? {
+        constructExpression: Construction,
+        recordDeclaration: Record,
+    ): Constructor? {
         val signature = constructExpression.signature
         val constructorCandidate =
             recordDeclaration.constructors.firstOrNull {
@@ -728,18 +1192,18 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
 
-        val componentsToTemplates = mutableMapOf<Component, MutableList<TemplateDeclaration>>()
+        val componentsToTemplates = mutableMapOf<Component, MutableList<Template>>()
 
         /**
-         * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
+         * Adds implicit duplicates of the TemplateParams to the implicit Construction
          *
-         * @param templateParams of the [VariableDeclaration]/[NewExpression]
+         * @param templateParams of the [Variable]/[New]
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
-         *   [ConstructExpression] uses AST as well as the [VariableDeclaration]/[NewExpression]
+         *   [Construction] uses AST as well as the [Variable]/[New]
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
-            constructExpression: ConstructExpression,
+            constructExpression: Construction,
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {
@@ -753,29 +1217,31 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 }
 
 /**
- * This function decides which functions to add to [CallExpression.invokes] based on the candidates
- * and the arguments. It uses [resolveWithArguments] to resolve the best viable function based on
- * the candidates and the arguments.
+ * This function decides which functions to add to [Call.invokes] based on the candidates and the
+ * arguments. It uses [resolveWithArguments] to resolve the best viable function based on the
+ * candidates and the arguments.
  *
  * If the resolution is [SUCCESSFUL], it sets the invokes edge to the best viable functions. If it
  * is [AMBIGUOUS] or [PROBLEMATIC], it sets the invokes edge to all possible viable functions. If it
  * is unresolved, it tries to infer the function using [tryFunctionInference].
  *
  * @param callee The [Reference] of the callee.
- * @param call The [CallExpression] to resolve.
+ * @param call The [Call] to resolve.
  */
-internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: CallExpression) {
+internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Call) {
     // Try to resolve the best viable function based on the candidates and the arguments
     val result = resolveWithArguments(callee.candidates, call.arguments, call)
     when (result.success) {
         PROBLEMATIC -> {
-            Pass.Companion.log.error(
+            Pass.log.error(
                 "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
             )
-            call.invokes = result.bestViable.toMutableList()
+            call.invokes =
+                if (result.bestViable.isEmpty()) tryFunctionInference(call, result).toMutableList()
+                else result.bestViable.toMutableList()
         }
         AMBIGUOUS -> {
-            Pass.Companion.log.warn(
+            Pass.log.warn(
                 "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
             )
             call.invokes = result.bestViable.toMutableList()
@@ -793,17 +1259,18 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
 }
 
 /**
- * Returns a set of types in which the [CallExpression.callee] (which is a [Reference]) could reside
- * in. More concretely, it returns a [Pair], where the first element is the set of types and the
- * second is our best guess.
+ * Returns a set of types in which the [Call.callee] (which is a [Reference]) could reside in. More
+ * concretely, it returns a [Pair], where the first element is the set of types and the second is
+ * our best guess.
  */
 internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>, Type?> {
     val possibleTypes = mutableSetOf<Type>()
     var bestGuess: Type? = null
-    if (ref is MemberExpression) {
-        bestGuess = ref.base.type
-        possibleTypes.add(ref.base.type)
-        possibleTypes.addAll(ref.base.assignedTypes)
+    if (ref is MemberAccess) {
+        val base = (ref.base as? PointerDereference)?.input ?: ref.base
+        bestGuess = base.type
+        possibleTypes.add(base.type)
+        possibleTypes.addAll(base.assignedTypes)
     } else if (ref.language is HasImplicitReceiver) {
         // This could be a member call with an implicit receiver, so let's add the current class
         // to the possible list
@@ -817,17 +1284,17 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
 }
 
 /**
- * This function tries to resolve a set of [candidates] (e.g. coming from a [CallExpression.callee])
- * into the best matching [FunctionDeclaration] (or multiple functions, if applicable) based on the
- * supplied [arguments]. The result is returned in the form of a [CallResolutionResult] which holds
- * detail information about intermediate results as well as the kind of success the resolution had.
+ * This function tries to resolve a set of [candidates] (e.g. coming from a [Call.callee]) into the
+ * best matching [Function] (or multiple functions, if applicable) based on the supplied
+ * [arguments]. The result is returned in the form of a [CallResolutionResult] which holds detail
+ * information about intermediate results as well as the kind of success the resolution had.
  *
  * The [source] expression specifies the node in the graph that triggered this resolution. This is
- * most likely a [CallExpression], but could be other node as well. It is also the source of the
- * scope and language used in the resolution.
+ * most likely a [Call], but could be other node as well. It is also the source of the scope and
+ * language used in the resolution.
  */
 internal fun Pass<*>.resolveWithArguments(
-    candidates: Set<Declaration>,
+    candidates: Collection<Declaration>,
     arguments: List<Expression>,
     source: Expression,
 ): CallResolutionResult {
@@ -835,7 +1302,9 @@ internal fun Pass<*>.resolveWithArguments(
         CallResolutionResult(
             source,
             arguments,
-            candidates.filterIsInstance<FunctionDeclaration>().toSet(),
+            candidates.filterIsInstanceTo<Function, IdentitySet<Function>>(
+                identitySetOf<Function>()
+            ),
             setOf(),
             mapOf(),
             setOf(),
@@ -849,7 +1318,7 @@ internal fun Pass<*>.resolveWithArguments(
     // will always fail
     val extractedScope =
         if (
-            source is MemberCallExpression &&
+            source is MemberCall &&
                 (source.base?.type is DynamicType ||
                     source.base?.type is UnknownType ||
                     source.base?.type is AutoType)
@@ -882,20 +1351,19 @@ internal fun Pass<*>.resolveWithArguments(
     // Filter functions that match the signature of our call, either directly or with casts;
     // those functions are "viable". Take default arguments into account if the language has
     // them.
-    result.signatureResults =
-        result.candidateFunctions
-            .map {
-                Pair(
-                    it,
-                    it.matchesSignature(
-                        arguments.map(Expression::type),
-                        arguments,
-                        source.language is HasDefaultArguments,
-                    ),
+    result.signatureResults = buildMap {
+        for (candidate in result.candidateFunctions) {
+            val signatureResult =
+                candidate.matchesSignature(
+                    arguments.map(Expression::type),
+                    arguments,
+                    source.language is HasDefaultArguments,
                 )
+            if (signatureResult is SignatureMatches) {
+                put(candidate, signatureResult)
             }
-            .filter { it.second is SignatureMatches }
-            .associate { it }
+        }
+    }
     result.viableFunctions = result.signatureResults.keys
 
     // If we have a "problematic" result, we can stop here. In this case we cannot really

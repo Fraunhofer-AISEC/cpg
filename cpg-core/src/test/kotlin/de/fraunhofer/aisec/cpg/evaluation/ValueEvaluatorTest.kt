@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 import org.junit.jupiter.api.assertThrows
 
 class NotReallyANumber : Number() {
@@ -60,6 +57,7 @@ class NotReallyANumber : Number() {
     }
 }
 
+// TODO Mathias
 class ValueEvaluatorTest {
 
     @Test
@@ -768,9 +766,9 @@ class ValueEvaluatorTest {
     }
 
     @Test
-    fun testHandleConditionalExpression() {
+    fun testHandleConditional() {
         with(TestLanguageFrontend()) {
-            val a = newVariableDeclaration("a")
+            val a = newVariable("a")
             a.initializer = newLiteral(1)
 
             val aRef = newReference("a")
@@ -782,7 +780,7 @@ class ValueEvaluatorTest {
             comparison.lhs = aRef
             comparison.rhs = newLiteral(1)
 
-            var cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            var cond = newConditional(comparison, newLiteral(2), aRef)
             assertEquals(1, cond.evaluate())
 
             // handle equals
@@ -790,12 +788,50 @@ class ValueEvaluatorTest {
             comparison.lhs = aRef
             comparison.rhs = newLiteral(1)
 
-            cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            cond = newConditional(comparison, newLiteral(2), aRef)
             assertEquals(2, cond.evaluate())
 
             // handle invalid
-            cond = newConditionalExpression(newProblemExpression(), newLiteral(2), aRef)
+            cond = newConditional(newProblemExpression(), newLiteral(2), aRef)
             assertEquals("{}", cond.evaluate())
+        }
+    }
+
+    @Test
+    fun testHandleHasInitializerWithWrite() {
+        val tu =
+            ValueEvaluationTests.getInitializerWithWriteExample()
+                .components
+                .first()
+                .translationUnits
+                .first()
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val a = main.calls("println").getOrNull(0)?.arguments?.firstOrNull()
+        val b = main.calls("println").getOrNull(1)?.arguments?.firstOrNull()
+        val c = main.calls("println").getOrNull(2)?.arguments?.firstOrNull()
+        assertNotNull(a)
+        assertNotNull(b)
+        assertNotNull(c)
+
+        // `a` has another write, so we cannot evaluate a single value
+        assertEquals("{a}", ValueEvaluator().evaluate(a))
+
+        // MultiValueEvaluator instead returns all values that `a` could have
+        assertEquals(ConcreteNumberSet(mutableSetOf(0, 5)), MultiValueEvaluator().evaluate(a))
+
+        // `b` only has its initializer, no other writes
+        assertEquals(0, ValueEvaluator().evaluate(b))
+
+        // `c` has no initializer
+        assertEquals(7, ValueEvaluator().evaluate(c))
+
+        with(TestLanguageFrontend()) {
+            // A non-Variable HasInitializer, e.g. `new int[]{1}`.
+            val array = newArrayConstruction()
+            array.initializer = newLiteral(1)
+            assertEquals(1, ValueEvaluator().evaluate(array))
         }
     }
 }

@@ -125,11 +125,7 @@ class PassOrderingHelper {
      * * [ExecuteBefore] dependencies
      */
     private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
-        if (
-            (workingList + firstPassesList + lastPassesList)
-                .filter { it.passClass == newElement }
-                .isNotEmpty()
-        ) {
+        if ((workingList + firstPassesList + lastPassesList).any { it.passClass == newElement }) {
             // we already know about this pass
             return
         }
@@ -221,7 +217,6 @@ class PassOrderingHelper {
                 (pass.passClass.softExecuteBefore +
                     pass.passClass.hardExecuteBefore)) { // iterate over all executeBefore passes
                 (workingList + firstPassesList + lastPassesList)
-                    .map { it }
                     .filter { it.passClass == executeBeforePass } // find the executeBeforePass
                     .forEach {
                         it.dependenciesRemaining += pass.passClass

@@ -26,27 +26,42 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.Visibility
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.primitiveType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.project.DetectionResult
+import de.fraunhofer.aisec.cpg.project.Detector
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
+import java.nio.file.Path
 import kotlin.math.max
-import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-class GoLanguage :
+open class GoLanguage :
     Language<GoLanguageFrontend>(),
     HasShortCircuitOperators,
     HasGenerics,
     HasStructs,
     HasFirstClassFunctions,
     HasAnonymousIdentifier,
-    HasFunctionStyleCasts {
+    HasFunctionStyleCasts,
+    HasVisibilityModifiers,
+    Detector {
+
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        return detectGo(root, environment)
+    }
+
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
-    @Transient override val frontend = GoLanguageFrontend::class
+    @DoNotPersist override val frontend = GoLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
     override val startCharacter = '['
@@ -66,7 +81,7 @@ class GoLanguage :
     override val simpleAssignmentOperators = setOf("=", ":=")
 
     /** See [Documentation](https://pkg.go.dev/builtin). */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             // https://pkg.go.dev/builtin#any
@@ -199,7 +214,7 @@ class GoLanguage :
         }
 
         // We accept all kind of numbers if the literal is part of the call expression
-        if (targetHint is ParameterDeclaration && hint is Literal<*>) {
+        if (targetHint is Parameter && hint is Literal<*>) {
             return if (type is NumericType && targetType is NumericType) {
                 DirectMatch
             } else {
@@ -207,7 +222,7 @@ class GoLanguage :
             }
         }
 
-        // We additionally want to emulate the behaviour of Go's interface system here
+        // We additionally want to emulate the behavior of Go's interface system here
         if (targetType.isInterface) {
             var b: CastResult = DirectMatch
             val target = (type.root as? ObjectType)?.recordDeclaration
@@ -224,6 +239,24 @@ class GoLanguage :
         }
 
         return CastNotPossible
+    }
+
+    /**
+     * Go has no visibility keywords whatsoever, so — unlike most languages — this does not look at
+     * [Declaration.modifiers] at all (the Go frontend uses those for an unrelated purpose, namely
+     * marking embedded struct fields). Instead the visibility follows solely from the casing of the
+     * declaration's identifier, see [visibilityOf].
+     *
+     * Only declarations living in a [NameScope] have export semantics: package-level funcs, vars,
+     * consts and types, as well as struct fields and interface methods (a
+     * [de.fraunhofer.aisec.cpg.graph.scopes.RecordScope] is a [NameScope] too). Block-scoped locals
+     * are unreachable from another package by construction and are therefore left at
+     * [Visibility.UNKNOWN] ("no restriction").
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        if (scope is NameScope) {
+            declaration.visibility = visibilityOf(declaration.name.localName)
+        }
     }
 
     override fun propagateTypeOfBinaryOperation(
@@ -285,5 +318,35 @@ class GoLanguage :
             // For all the rest, we take the default behavior
             else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
+    }
+
+    companion object {
+        /**
+         * Maps a Go identifier onto the canonical [Visibility]. Go has no access-control keywords:
+         * the visibility of a declaration is derived solely from the casing of its identifier (see
+         * https://go.dev/ref/spec#Exported_identifiers):
+         * - an identifier whose first character is a Unicode upper-case letter is *exported* and is
+         *   therefore reachable from other packages, which we model as [Visibility.PUBLIC];
+         * - any other identifier is *unexported* and confined to its own package, which we model as
+         *   [Visibility.PACKAGE] (module/package visibility, not tied to a record — Go has no
+         *   record-level `private`/`protected` access control).
+         *
+         * The blank identifier `_` as well as empty/unnamed declarations carry no meaningful
+         * visibility and are left as [Visibility.UNKNOWN] ("no restriction").
+         *
+         * This is the pure mapping only; [applyModifiers] is what decides *which* declarations it
+         * is applied to.
+         */
+        internal fun visibilityOf(identifier: String): Visibility =
+            when {
+                // The blank identifier and unnamed declarations have no export semantics.
+                identifier.isEmpty() || identifier == "_" -> Visibility.UNKNOWN
+                // Go decides "exported" on the first *rune*, so we must look at the first full code
+                // point rather than the first UTF-16 char to handle non-ASCII (e.g. "Über" vs
+                // "über") identifiers correctly. `isUpperCase` returns false for uncased scripts,
+                // which matches Go's "upper-case letter" rule.
+                Character.isUpperCase(identifier.codePointAt(0)) -> Visibility.PUBLIC
+                else -> Visibility.PACKAGE
+            }
     }
 }

@@ -32,26 +32,33 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.io.path.Path
 
 /**
- * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
- * or [Handler] should create. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [TranslationUnit]. This is the top-most [Node] that a [LanguageFrontend] or
+ * [Handler] should create. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * If [enterScope] is `true`, [de.fraunhofer.aisec.cpg.ScopeManager.enterScope] /
+ * [de.fraunhofer.aisec.cpg.ScopeManager.leaveScope] are called automatically around [init] (or, if
+ * [init] is `null`, around nothing at all). This defaults to `false` so that existing callers that
+ * manage scope manually are unaffected; new callers can opt in.
  */
 @JvmOverloads
 context(provider: ContextProvider)
-fun MetadataProvider.newTranslationUnitDeclaration(
+fun MetadataProvider.newTranslationUnit(
     name: CharSequence,
     rawNode: Any? = null,
-): TranslationUnitDeclaration {
-    val node = TranslationUnitDeclaration()
+    enterScope: Boolean = false,
+    init: ((TranslationUnit) -> Unit)? = null,
+): TranslationUnit {
+    val node = TranslationUnit()
     val path = Path(name.toString())
 
     // We must avoid absolute path names as name for the translation unit, as this
@@ -68,88 +75,151 @@ fun MetadataProvider.newTranslationUnitDeclaration(
     node.applyMetadata(this, relativeName, rawNode, true)
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
     return node
 }
 
 /**
- * Creates a new [FunctionDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newFunctionDeclaration(
-    name: CharSequence?,
-    localNameOnly: Boolean = false,
-    rawNode: Any? = null,
-): FunctionDeclaration {
-    val node = FunctionDeclaration()
-    node.applyMetadata(this, name, rawNode, localNameOnly)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [MethodDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [Function]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
+ *
+ * If [enterScope] is `true`, scope is entered/left automatically around [init]. If [holder] is
+ * given, the resulting node is also registered in the [de.fraunhofer.aisec.cpg.ScopeManager] and
+ * added to [holder] automatically. Both default to the previous (fully manual) behavior.
  */
 @JvmOverloads
-fun MetadataProvider.newMethodDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newFunction(
+    name: CharSequence?,
+    localNameOnly: Boolean = false,
+    rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((Function) -> Unit)? = null,
+): Function {
+    val node = Function()
+    node.applyMetadata(this, name, rawNode, localNameOnly)
+
+    log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [Method]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * See [newFunction] for the semantics of [holder], [enterScope] and [init].
+ */
+@JvmOverloads
+context(provider: ContextProvider)
+fun MetadataProvider.newMethod(
     name: CharSequence?,
     isStatic: Boolean = false,
-    recordDeclaration: RecordDeclaration? = null,
+    recordDeclaration: Record? = null,
     rawNode: Any? = null,
-): MethodDeclaration {
-    val node = MethodDeclaration()
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((Method) -> Unit)? = null,
+): Method {
+    val node = Method()
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.isStatic = isStatic
     node.recordDeclaration = recordDeclaration
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [OperatorDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Operator]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ *
+ * See [newFunction] for the semantics of [holder], [enterScope] and [init].
  */
 @JvmOverloads
-fun MetadataProvider.newOperatorDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newOperator(
     name: CharSequence,
     operatorCode: String,
-    recordDeclaration: RecordDeclaration? = null,
+    recordDeclaration: Record? = null,
     rawNode: Any? = null,
-): OperatorDeclaration {
-    val node = OperatorDeclaration()
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((Operator) -> Unit)? = null,
+): Operator {
+    val node = Operator()
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.operatorCode = operatorCode
     node.recordDeclaration = recordDeclaration
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [ConstructorDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Constructor]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ *
+ * See [newFunction] for the semantics of [holder], [enterScope] and [init].
  */
 context(provider: ContextProvider)
 @JvmOverloads
-fun MetadataProvider.newConstructorDeclaration(
+fun MetadataProvider.newConstructor(
     name: CharSequence?,
-    recordDeclaration: RecordDeclaration?,
+    recordDeclaration: Record?,
     rawNode: Any? = null,
-): ConstructorDeclaration {
-    val node = ConstructorDeclaration()
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((Constructor) -> Unit)? = null,
+): Constructor {
+    val node = Constructor()
 
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
@@ -157,69 +227,110 @@ fun MetadataProvider.newConstructorDeclaration(
     node.type = recordDeclaration?.toType() ?: provider.unknownType()
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [ParameterDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Parameter]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
  */
 @JvmOverloads
-fun MetadataProvider.newParameterDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newParameter(
     name: CharSequence?,
-    type: Type = unknownType(),
+    type: Type = this.unknownType(),
     variadic: Boolean = false,
     rawNode: Any? = null,
-): ParameterDeclaration {
-    val node = ParameterDeclaration()
+    holder: DeclarationHolder? = null,
+    init: ((Parameter) -> Unit)? = null,
+): Parameter {
+    val node = Parameter()
     node.applyMetadata(this, name, rawNode, doNotPrependNamespace = true)
 
     node.type = type
     node.isVariadic = variadic
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [VariableDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Variable]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
  */
 @JvmOverloads
-fun MetadataProvider.newVariableDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newVariable(
     name: CharSequence?,
-    type: Type = unknownType(),
+    type: Type = this.unknownType(),
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null,
-): VariableDeclaration {
-    val node = VariableDeclaration()
+    holder: DeclarationHolder? = null,
+    init: ((Variable) -> Unit)? = null,
+): Variable {
+    val node = Variable()
     node.applyMetadata(this, name, rawNode, true)
 
     node.type = type
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [TupleDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [Tuple]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 context(provider: ContextProvider)
 @JvmOverloads
-fun LanguageProvider.newTupleDeclaration(
-    elements: List<VariableDeclaration>,
+fun LanguageProvider.newTuple(
+    elements: List<Variable>,
     initializer: Expression?,
     rawNode: Any? = null,
-): TupleDeclaration {
-    val node = TupleDeclaration()
+    init: ((Tuple) -> Unit)? = null,
+): Tuple {
+    val node = Tuple()
     node.applyMetadata(this, null, rawNode, true)
 
     // Tuples always have an auto-type
@@ -232,22 +343,30 @@ fun LanguageProvider.newTupleDeclaration(
     node.initializer = initializer
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
 /**
- * Creates a new [TypedefDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Typedef]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
  */
 @JvmOverloads
-fun MetadataProvider.newTypedefDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newTypedef(
     targetType: Type,
     alias: Type,
     rawNode: Any? = null,
-): TypedefDeclaration {
-    val node = TypedefDeclaration()
+    holder: DeclarationHolder? = null,
+    init: ((Typedef) -> Unit)? = null,
+): Typedef {
+    val node = Typedef()
     node.applyMetadata(this, alias.typeName, rawNode)
 
     node.type = targetType
@@ -256,149 +375,269 @@ fun MetadataProvider.newTypedefDeclaration(
     node.alias.name = node.name
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [TypeParameterDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newTypeParameterDeclaration(
-    name: CharSequence?,
-    rawNode: Any? = null,
-): TypeParameterDeclaration {
-    val node = TypeParameterDeclaration()
-    node.applyMetadata(this, name, rawNode, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [RecordDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [TypeParameter]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
  */
 @JvmOverloads
-fun MetadataProvider.newRecordDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newTypeParameter(
+    name: CharSequence?,
+    rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+    init: ((TypeParameter) -> Unit)? = null,
+): TypeParameter {
+    val node = TypeParameter()
+    node.applyMetadata(this, name, rawNode, true)
+
+    log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [Record]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * See [newFunction] for the semantics of [holder], [enterScope] and [init].
+ */
+@JvmOverloads
+context(provider: ContextProvider)
+fun MetadataProvider.newRecord(
     name: CharSequence,
     kind: String,
     rawNode: Any? = null,
-): RecordDeclaration {
-    val node = RecordDeclaration()
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((Record) -> Unit)? = null,
+): Record {
+    val node = Record()
     node.applyMetadata(this, name, rawNode, false)
 
     node.kind = kind
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [EnumDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [Enumeration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
  */
 @JvmOverloads
-fun MetadataProvider.newEnumDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newEnumeration(
     name: CharSequence?,
     rawNode: Any? = null,
-): EnumDeclaration {
-    val node = EnumDeclaration()
+    holder: DeclarationHolder? = null,
+    init: ((Enumeration) -> Unit)? = null,
+): Enumeration {
+    val node = Enumeration()
     node.applyMetadata(this, name, rawNode)
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [FunctionTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newFunctionTemplateDeclaration(
-    name: CharSequence?,
-    rawNode: Any? = null,
-): FunctionTemplateDeclaration {
-    val node = FunctionTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [RecordTemplateDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newRecordTemplateDeclaration(
-    name: CharSequence?,
-    rawNode: Any? = null,
-): RecordTemplateDeclaration {
-    val node = RecordTemplateDeclaration()
-    node.applyMetadata(this, name, rawNode, true)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [EnumConstantDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newEnumConstantDeclaration(
-    name: CharSequence?,
-    rawNode: Any? = null,
-): EnumConstantDeclaration {
-    val node = EnumConstantDeclaration()
-    node.applyMetadata(this, name, rawNode)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [FieldDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [FunctionTemplate]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
+ *
+ * See [newFunction] for the semantics of [holder], [enterScope] and [init].
  */
 @JvmOverloads
-fun MetadataProvider.newFieldDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newFunctionTemplate(
     name: CharSequence?,
-    type: Type = unknownType(),
-    modifiers: List<String>? = listOf(),
+    rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((FunctionTemplate) -> Unit)? = null,
+): FunctionTemplate {
+    val node = FunctionTemplate()
+    node.applyMetadata(this, name, rawNode, true)
+
+    log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [RecordTemplate]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ *
+ * See [newFunction] for the semantics of [holder], [enterScope] and [init].
+ */
+@JvmOverloads
+context(provider: ContextProvider)
+fun MetadataProvider.newRecordTemplate(
+    name: CharSequence?,
+    rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((RecordTemplate) -> Unit)? = null,
+): RecordTemplate {
+    val node = RecordTemplate()
+    node.applyMetadata(this, name, rawNode, true)
+
+    log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [EnumConstant]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
+ */
+@JvmOverloads
+context(provider: ContextProvider)
+fun MetadataProvider.newEnumConstant(
+    name: CharSequence?,
+    rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+    init: ((EnumConstant) -> Unit)? = null,
+): EnumConstant {
+    val node = EnumConstant()
+    node.applyMetadata(this, name, rawNode)
+
+    log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [Field]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
+ */
+@JvmOverloads
+context(provider: ContextProvider)
+fun MetadataProvider.newField(
+    name: CharSequence?,
+    type: Type = this.unknownType(),
+    modifiers: Set<String> = setOf(),
+    isStatic: Boolean = false,
     initializer: Expression? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null,
-): FieldDeclaration {
-    val node = FieldDeclaration()
+    holder: DeclarationHolder? = null,
+    init: ((Field) -> Unit)? = null,
+): Field {
+    val node = Field()
     node.applyMetadata(this, name, rawNode)
 
     node.type = type
-    node.modifiers = modifiers ?: listOf()
+    node.modifiers = modifiers ?: setOf()
+    node.isStatic = isStatic
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
-        if (initializer is NewArrayExpression) {
+        if (initializer is ArrayConstruction) {
             node.isArray = true
         }
         node.initializer = initializer
     }
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
@@ -407,12 +646,18 @@ fun MetadataProvider.newFieldDeclaration(
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
  */
 @JvmOverloads
+context(provider: ContextProvider)
 fun MetadataProvider.newProblemDeclaration(
     problem: String = "",
     problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
     rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+    init: ((ProblemDeclaration) -> Unit)? = null,
 ): ProblemDeclaration {
     val node = ProblemDeclaration()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -421,65 +666,149 @@ fun MetadataProvider.newProblemDeclaration(
     node.problemType = problemType
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [IncludeDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Include]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
  */
 @JvmOverloads
-fun MetadataProvider.newIncludeDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newInclude(
     includeFilename: CharSequence,
     rawNode: Any? = null,
-): IncludeDeclaration {
-    val node = IncludeDeclaration()
+    holder: DeclarationHolder? = null,
+    init: ((Include) -> Unit)? = null,
+): Include {
+    val node = Include()
     node.applyMetadata(this, includeFilename, rawNode, true)
     node.filename = includeFilename.toString()
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }
 
 /**
- * Creates a new [NamespaceDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
- */
-@JvmOverloads
-fun MetadataProvider.newNamespaceDeclaration(
-    name: CharSequence,
-    rawNode: Any? = null,
-): NamespaceDeclaration {
-    val node = NamespaceDeclaration()
-    node.applyMetadata(this, name, rawNode)
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [ImportDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [Namespace]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
+ *
+ * See [newFunction] for the semantics of [holder], [enterScope] and [init].
  */
 @JvmOverloads
-fun MetadataProvider.newImportDeclaration(
+context(provider: ContextProvider)
+fun MetadataProvider.newNamespace(
+    name: CharSequence,
+    rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+    enterScope: Boolean = false,
+    init: ((Namespace) -> Unit)? = null,
+): Namespace {
+    val node = Namespace()
+    node.applyMetadata(this, name, rawNode)
+
+    log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
+    if (holder != null) {
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [Extension]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
+ */
+@JvmOverloads
+context(provider: ContextProvider)
+fun MetadataProvider.newExtension(
+    name: CharSequence,
+    rawNode: Any? = null,
+    holder: DeclarationHolder? = null,
+): Extension {
+    val node = Extension()
+    node.applyMetadata(this, name, rawNode)
+
+    log(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [Import]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * If [holder] is given, the resulting node is also registered in the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] and added to [holder] automatically.
+ */
+@JvmOverloads
+context(provider: ContextProvider)
+fun MetadataProvider.newImport(
     import: Name,
     style: ImportStyle,
     alias: Name? = null,
     rawNode: Any? = null,
-): ImportDeclaration {
-    val node = ImportDeclaration()
+    holder: DeclarationHolder? = null,
+    init: ((Import) -> Unit)? = null,
+): Import {
+    val node = Import()
     node.applyMetadata(this, alias ?: import, rawNode, doNotPrependNamespace = true)
     node.import = import
     node.alias = alias
     node.style = style
 
     log(node)
+
+    init?.invoke(node)
+
+    if (holder != null) {
+        val scopeManager = provider.ctx.scopeManager
+        scopeManager.addDeclaration(node)
+        holder.addDeclaration(node)
+    }
+
     return node
 }

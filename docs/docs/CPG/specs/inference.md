@@ -54,7 +54,7 @@ more likely.
 
 ## Inference of function declarations
 
-If we try to resolve a `CallExpression`, where no `FunctionDeclaration` with a
+If we try to resolve a `Call`, where no `FunctionDeclaration` with a
 matching name and signature exists in the CPG, we infer a new
 `FunctionDeclaration`. This may include inferring a receiver (i.e., the base a
 method is invoked on) for object-oriented programming languages. We also infer

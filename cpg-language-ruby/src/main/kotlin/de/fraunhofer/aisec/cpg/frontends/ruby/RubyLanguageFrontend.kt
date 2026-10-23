@@ -29,13 +29,14 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.file.Path
 import org.jruby.Ruby
 import org.jruby.ast.BlockNode
+import org.jruby.ast.ClassNode
 import org.jruby.ast.MethodDefNode
 import org.jruby.ast.RootNode
 import org.jruby.parser.Parser
@@ -47,11 +48,11 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
     val expressionHandler: ExpressionHandler = ExpressionHandler(this)
     val statementHandler: StatementHandler = StatementHandler(this)
 
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         return parse(file.readText(Charsets.UTF_8), file.toPath())
     }
 
-    override fun parse(content: String, path: Path?): TranslationUnitDeclaration {
+    override fun parse(content: String, path: Path?): TranslationUnit {
         val ruby = Ruby.getGlobalRuntime()
         val parser = Parser(ruby)
 
@@ -70,32 +71,32 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
         return handleRootNode(node)
     }
 
-    private fun handleRootNode(node: RootNode): TranslationUnitDeclaration {
-        val tu = newTranslationUnitDeclaration(node.file, rawNode = node)
+    private fun handleRootNode(node: RootNode): TranslationUnit {
+        return newTranslationUnit(node.file, rawNode = node) { tu ->
+            scopeManager.resetToGlobal(tu)
 
-        scopeManager.resetToGlobal(tu)
+            // The root node can either contain a single node or a block node. We normalize both
+            // cases into a flat list of top-level nodes.
+            val topLevelNodes =
+                when (val body = node.bodyNode) {
+                    is BlockNode -> body.filterNotNull()
+                    null -> emptyList()
+                    else -> listOf(body)
+                }
 
-        // The root node can either contain a single node or a block node
-        if (node.bodyNode is MethodDefNode) {
-            val decl = declarationHandler.handle(node.bodyNode)
-            scopeManager.addDeclaration(decl)
-            tu.declarations += decl
-        } else if (node.bodyNode is BlockNode) {
-            // Otherwise, we need to loop over the block
-            val block = node.bodyNode as BlockNode
-            for (innerNode in block.filterNotNull()) {
-                if (innerNode is MethodDefNode) {
+            for (innerNode in topLevelNodes) {
+                // Method definitions (`def`) and class definitions (`class`) become declarations,
+                // everything else is treated as a top-level statement.
+                if (innerNode is MethodDefNode || innerNode is ClassNode) {
                     val decl = declarationHandler.handle(innerNode)
                     scopeManager.addDeclaration(decl)
                     tu.declarations += decl
                 } else {
                     val stmt = statementHandler.handle(innerNode)
-                    tu += stmt
+                    tu.statements += stmt
                 }
             }
         }
-
-        return tu
     }
 
     override fun codeOf(astNode: org.jruby.ast.Node): String? {

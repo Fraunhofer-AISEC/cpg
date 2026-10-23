@@ -23,11 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("UNCHECKED_CAST")
+
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
@@ -37,10 +39,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import kotlin.collections.mapNotNull
 
 /** A generic interface used to determine potential next steps. */
@@ -53,9 +55,10 @@ interface StepSelector {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean = false,
     ): Boolean
 }
 
@@ -74,9 +77,10 @@ class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps) {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         // Follow the edge if we're still in the maxSteps range and not an edge across function
         // boundaries.
@@ -97,20 +101,38 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
-        if (
-            analysisDirection.edgeRequiresCallPush(currentNode, edge) &&
-                currentNode is CallExpression
-        ) {
+        // is this a short Function Summary Edge?
+        val isShortFS = ((edge as? Dataflow)?.functionSummary) == true
+        // Are we still in the range of the max steps?
+        val maxStepsOk = (this.maxSteps == null || ctx.steps < maxSteps)
+        // Are we still in the range of the max depth?
+        val maxDepthOk = (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
+        // If we have a shortFS and we exceeded the max depth, we follow it. Otherwise, we ignore it
+        val followShortFS = isShortFS && (!maxDepthOk || !interproceduralEdgesExist)
+        // If this is no shortFS and we did not yet reach the max depth, we follow it
+        val followEverythingButShortFS = !isShortFS && maxDepthOk
+        // Is this even an interprocedural edge or an edge we are going to follow anyways (assuming
+        // that the maxSteps are still ok)?
+        val isInterProcedural = (edge is ContextSensitiveDataflow) || isShortFS
+        // Summary: In case we did not yet exceed the maxSteps, we follow the edge either if it's no
+        // interprocedural edge or if we follow the shortFS edges or if we follow everything but the
+        // short FS edges
+
+        if (currentNode is Call && analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
             // Check if the call expression is already in the call stack because this would indicate
             // a loop (recursion).
             if (currentNode in ctx.callStack) {
                 loopingPaths.add(
-                    NodePath(path.map { it.first } + currentNode)
-                        .addAssumptionDependence(path.map { it.second } + ctx)
+                    NodePath(
+                            path.map { it.first } + currentNode,
+                            path.mapNotNull { it.second } + edge,
+                        )
+                        .addAssumptionDependence(path.map { it.third } + ctx)
                 )
                 return false
             }
@@ -118,8 +140,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
 
         // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
         // call stack is not deeper yet)
-        return (this.maxSteps == null || ctx.steps < maxSteps) &&
-            (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
+        return maxStepsOk && (!isInterProcedural || followShortFS || followEverythingButShortFS)
     }
 }
 
@@ -137,15 +158,16 @@ class InterproceduralWithDfgTermination(
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         val nextNode = analysisDirection.unwrapNextStepFromEdge(edge)
         if (
             currentNode != nextNode &&
                 edge is Invoke &&
-                currentNode !is CallExpression &&
+                currentNode !is Call &&
                 ctx.callStack.isEmpty()
         ) {
             // We're leaving the current function and will go to a scope we haven't seen before
@@ -185,6 +207,17 @@ enum class GraphToFollow {
     EOG,
 }
 
+/** A single operation on the call stack which is required to follow an edge. */
+sealed interface CallStackOp {
+    val call: Call
+}
+
+/** Requires pushing [call] onto the call stack. */
+data class PushCall(override val call: Call) : CallStackOp
+
+/** Requires popping [call] from the call stack. */
+data class PopCall(override val call: Call) : CallStackOp
+
 /**
  * Determines in which direction we follow the edges. Must determine which sub-graph we want to
  * follow.
@@ -199,10 +232,10 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>>
+    ): Collection<Triple<Node, Edge<Node>, Context>>
 
     /**
      * Considering the [edge], it determines which node (start or end of the edge) will be used as
@@ -218,24 +251,31 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
     fun <T : HasAssumptions> unwrapNextStepFromEdge(
         edge: Edge<Node>,
         hasAssumptions: T,
-    ): Pair<Node, T> {
-        return Pair(
+    ): Triple<Node, Edge<Node>, T> {
+        return Triple(
             unwrapNextStepFromEdge(edge),
+            edge,
             hasAssumptions.addAssumptionDependence(hasAssumptions),
         )
     }
 
     /**
-     * Determines if the [edge] starting at [currentNode] requires to push a [CallExpression] on the
-     * stack.
+     * Determines the [CallStackOp]s required to follow the [edge] starting at [currentNode]. The
+     * result is ordered: a single edge may require several pushes and pops in a defined sequence.
      */
-    abstract fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean
+    abstract fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp>
 
     /**
-     * Determines if the [edge] starting at [currentNode] requires to pop a [CallExpression] from
-     * the stack.
+     * Determines if the [edge] starting at [currentNode] requires to push a [Call] on the stack.
      */
-    abstract fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean
+    fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean =
+        callStackOps(currentNode, edge).any { it is PushCall }
+
+    /**
+     * Determines if the [edge] starting at [currentNode] requires to pop a [Call] from the stack.
+     */
+    fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean =
+        callStackOps(currentNode, edge).any { it is PopCall }
 
     /**
      * Filters all provided [edges] and checks if they are in [scope] and fulfill the provided
@@ -246,14 +286,24 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         edges: Collection<Edge<Node>>,
         ctx: Context,
         scope: AnalysisScope,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Edge<Node>, Context>> {
         return edges.mapNotNull { edge ->
             val newCtx = ctx.clone()
             if (
-                scope.followEdge(currentNode, edge, newCtx, path, loopingPaths, this) &&
+                scope.followEdge(
+                    currentNode,
+                    edge,
+                    newCtx,
+                    path,
+                    loopingPaths,
+                    this,
+                    edges.any { it is ContextSensitiveDataflow /*&&
+                            ((it.start as? FunctionDeclaration)?.isInferred == false ||
+                                (it.end as? FunctionDeclaration)?.isInferred == false)*/ },
+                ) &&
                     sensitivities.all {
                         it.followEdge(currentNode, edge, newCtx, path, loopingPaths, this)
                     }
@@ -265,7 +315,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
 
     /**
      * In some cases, we have to skip one step to actually continue in the graph. Typical examples
-     * are [CallExpression]s where we have a loop through the function's code and return to the same
+     * are [Call]s where we have a loop through the function's code and return to the same
      * expression in the EOG. We then have to skip the call to proceed with the next step in the
      * EOG. This method applies the filtering (based on [scope] and [sensitivities]) as usual to
      * determine valid next steps but instead of doing it once, it does the same logic twice, first
@@ -274,20 +324,20 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
      * new starting node, it calculates the possible next edges by applying [nextStep].
      *
      * Note that the [nodeStart] may not be the same node as [unwrapNextStepFromEdge] would return,
-     * e.g. because a [CallExpression] is the start-node of an [Invoke] edge and may be required
-     * even when following the graph with [Forward].
+     * e.g. because a [Call] is the start-node of an [Invoke] edge and may be required even when
+     * following the graph with [Forward].
      */
     internal fun filterAndJump(
         currentNode: Node,
         edges: Collection<Edge<Node>>,
         ctx: Context,
         scope: AnalysisScope,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
         nextStep: (Node) -> Collection<Edge<Node>>,
         nodeStart: (Edge<Node>) -> Node,
-    ): List<Pair<Node, Context>> {
+    ): List<Triple<Node, Edge<Node>, Context>> {
         val filteredToJump =
             filterEdges(
                 currentNode = currentNode,
@@ -299,7 +349,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
                 sensitivities = sensitivities,
             )
         // This is a bit more tricky because we need to go to the next step when we
-        // return to the CallExpression. Therefore, we make one more step.
+        // return to the Call. Therefore, we make one more step.
 
         return filteredToJump.flatMap { (nextEdge, newCtx) ->
             // nextEdge.start is the call expression
@@ -323,10 +373,10 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Triple<Node, Edge<Node>, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
 
@@ -345,7 +395,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
             }
             GraphToFollow.EOG -> {
                 val interprocedural =
-                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
+                    if (currentNode is Call && currentNode.invokes.isNotEmpty()) {
                         // Enter the functions/methods which are/can be invoked here
                         val called = currentNode.invokeEdges as Collection<Edge<Node>>
 
@@ -359,13 +409,12 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                 sensitivities = sensitivities,
                             )
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
-                    } else if (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty()) {
+                    } else if (currentNode is Return || currentNode.nextEOG.isEmpty()) {
                         // Return from the functions/methods which have been invoked.
                         val returnedTo =
-                            (currentNode as? FunctionDeclaration
-                                    ?: currentNode.firstParentOrNull<FunctionDeclaration>()
-                                    ?: (currentNode as? OverlayNode)?.underlyingNode
-                                        as? FunctionDeclaration)
+                            (currentNode as? Function
+                                    ?: currentNode.firstParentOrNull<Function>()
+                                    ?: (currentNode as? OverlayNode)?.underlyingNode as? Function)
                                 ?.calledByEdges as Collection<Edge<Node>>? ?: setOf()
 
                         filterAndJump(
@@ -412,25 +461,24 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
         return edge.end
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
+                // The calling contexts are stored in flow order, so we can simply walk them.
+                (edge as? ContextSensitiveDataflow)?.callingContexts?.flatMap { context ->
+                    context.calls.map {
+                        if (context is CallingContextIn) PushCall(it) else PopCall(it)
+                    }
+                } ?: listOf()
             }
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is CallExpression
-            }
-        }
-    }
-
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
-        return when (graphToFollow) {
-            GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
-            }
-
-            GraphToFollow.EOG -> {
-                edge is Invoke && (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
+                when {
+                    edge !is Invoke -> listOf()
+                    currentNode is Call -> listOf(PushCall(currentNode))
+                    currentNode is Return || currentNode.nextEOG.isEmpty() ->
+                        listOfNotNull((edge.start as? Call)?.let { PopCall(it) })
+                    else -> listOf()
+                }
             }
         }
     }
@@ -442,10 +490,10 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Triple<Node, Edge<Node>, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
                 filterEdges(
@@ -464,44 +512,50 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
 
             GraphToFollow.EOG -> {
                 val interprocedural =
-                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
-                        val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
+                    when (currentNode) {
+                        is Call if currentNode.invokes.isNotEmpty() -> {
+                            val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
 
-                        filterEdges(
+                            filterEdges(
+                                    currentNode = currentNode,
+                                    edges = returnedFrom,
+                                    ctx = ctx,
+                                    scope = scope,
+                                    path = path,
+                                    loopingPaths = loopingPaths,
+                                    sensitivities = sensitivities,
+                                )
+                                .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
+                        }
+
+                        is Function -> {
+                            val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
+
+                            filterAndJump(
                                 currentNode = currentNode,
-                                edges = returnedFrom,
+                                edges = calledBy,
                                 ctx = ctx,
                                 scope = scope,
+                                sensitivities = sensitivities,
+                                nextStep = { it.prevEOGEdges },
                                 path = path,
                                 loopingPaths = loopingPaths,
-                                sensitivities = sensitivities,
+                                nodeStart = { it.start },
                             )
-                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
-                    } else if (currentNode is FunctionDeclaration) {
-                        val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
+                        }
 
-                        filterAndJump(
-                            currentNode = currentNode,
-                            edges = calledBy,
-                            ctx = ctx,
-                            scope = scope,
-                            sensitivities = sensitivities,
-                            nextStep = { it.prevEOGEdges },
-                            path = path,
-                            loopingPaths = loopingPaths,
-                            nodeStart = { it.start },
-                        )
-                    } else {
-                        filterEdges(
-                                currentNode = currentNode,
-                                edges = currentNode.prevEOGEdges,
-                                ctx = ctx,
-                                scope = scope,
-                                path = path,
-                                loopingPaths = loopingPaths,
-                                sensitivities = sensitivities,
-                            )
-                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
+                        else -> {
+                            filterEdges(
+                                    currentNode = currentNode,
+                                    edges = currentNode.prevEOGEdges,
+                                    ctx = ctx,
+                                    scope = scope,
+                                    path = path,
+                                    loopingPaths = loopingPaths,
+                                    sensitivities = sensitivities,
+                                )
+                                .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
+                        }
                     }
 
                 interprocedural.ifEmpty {
@@ -521,29 +575,30 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
     }
 
     override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
-        return edge.start
+        return if (edge is Invoke) edge.end else edge.start
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
+                // We walk the flow-ordered calling contexts in reverse and swap the roles of
+                // [CallingContextIn] and [CallingContextOut].
+                (edge as? ContextSensitiveDataflow)?.callingContexts?.reversed()?.flatMap { context
+                    ->
+                    context.calls.reversed().map {
+                        if (context is CallingContextOut) PushCall(it) else PopCall(it)
+                    }
+                } ?: listOf()
             }
 
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is CallExpression
-            }
-        }
-    }
-
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
-        return when (graphToFollow) {
-            GraphToFollow.DFG -> {
-                edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
-            }
-
-            GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is FunctionDeclaration
+                when {
+                    edge !is Invoke -> listOf()
+                    currentNode is Call -> listOf(PushCall(currentNode))
+                    currentNode is Function ->
+                        listOfNotNull((edge.start as? Call)?.let { PopCall(it) })
+                    else -> listOf()
+                }
             }
         }
     }
@@ -555,10 +610,10 @@ class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFol
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Triple<Node, Edge<Node>, Context>> {
         TODO("Not yet implemented")
     }
 
@@ -566,11 +621,7 @@ class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFol
         TODO("Not yet implemented")
     }
 
-    override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
+    override fun callStackOps(currentNode: Node, edge: Edge<Node>): List<CallStackOp> {
         TODO("Not yet implemented")
     }
 }
@@ -596,11 +647,12 @@ object FilterUnreachableEOG : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
-        return edge !is EvaluationOrder || edge.unreachable != true
+        return edge !is EvaluationOrder || !edge.unreachable
     }
 }
 
@@ -610,11 +662,13 @@ object OnlyFullDFG : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
-        return edge !is Dataflow || edge.granularity is FullDataflowGranularity
+        return edge !is Dataflow ||
+            (edge.granularity is FullDataflowGranularity && edge.derefDepth == null)
     }
 }
 
@@ -624,33 +678,24 @@ object ContextSensitive : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
-        return if (analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
-            // Push the call of our calling context to the stack.
-            // This is for following DFG edges.
-            (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
-                ctx.callStack.push(it)
+        // A single edge may require several pushes and pops, so we apply them in order. The
+        // [Context] has already been cloned by [AnalysisDirection.filterEdges], so aborting in the
+        // middle of the sequence does not leak a half-applied call stack.
+        for (op in analysisDirection.callStackOps(currentNode, edge)) {
+            when (op) {
+                is PushCall -> ctx.callStack.push(op.call)
+                // An empty stack means that we started the analysis somewhere in the middle, so we
+                // do not know the context and have to be permissive.
+                is PopCall ->
+                    if (!ctx.callStack.isEmpty() && !ctx.callStack.popIfOnTop(op.call)) return false
             }
-                ?:
-                // This is for following the EOG
-                (currentNode as? CallExpression)?.let { ctx.callStack.push(it) }
-            true
-        } else if (analysisDirection.edgeRequiresCallPop(currentNode, edge)) {
-            // We are only interested in outgoing edges from our current
-            // "call-in", i.e., the call expression that is on the stack.
-            ctx.callStack.isEmpty() ||
-                (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
-                    ctx.callStack.popIfOnTop(it)
-                } == true ||
-                ((edge as? Invoke)?.start as? CallExpression)?.let {
-                    ctx.callStack.popIfOnTop(it)
-                } == true
-        } else {
-            true
         }
+        return true
     }
 }
 
@@ -663,13 +708,14 @@ object FieldSensitive : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         return if (edge is Dataflow) {
             if (
-                currentNode is InitializerListExpression &&
+                currentNode is InitializerList &&
                     analysisDirection.unwrapNextStepFromEdge(edge) in currentNode.initializers &&
                     edge.granularity is IndexedDataflowGranularity
             ) {
@@ -680,7 +726,7 @@ object FieldSensitive : AnalysisSensitivity() {
                 ctx.indexStack.isEmpty() ||
                     ctx.indexStack.popIfOnTop(edge.granularity as IndexedDataflowGranularity)
             } else if (
-                analysisDirection.unwrapNextStepFromEdge(edge) is InitializerListExpression &&
+                analysisDirection.unwrapNextStepFromEdge(edge) is InitializerList &&
                     edge.granularity is IndexedDataflowGranularity
             ) {
                 // CurrentNode is the child and nextDFG goes to ILE => currentNode's written
@@ -706,9 +752,10 @@ object Implicit : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
-        loopingPaths: MutableList<NodePath>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
+        loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         return true
     }

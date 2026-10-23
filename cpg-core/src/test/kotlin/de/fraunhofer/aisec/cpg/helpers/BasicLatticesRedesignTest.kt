@@ -25,398 +25,994 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.HashMapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
+import de.fraunhofer.aisec.cpg.helpers.functional.MIN_GLOBAL_STATE_PRUNE_SIZE
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.TimeoutBudget
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 
 class BasicLatticesRedesignTest {
     @Test
-    fun testPowersetLattice() {
-        val powersetLattice = PowersetLattice<String>()
+    fun testConcurrentIdentityHashMapKeysView() {
+        data class ValueKey(val id: Int)
 
-        val emptyLattice1 = powersetLattice.bottom
-        val emptyLattice2 = powersetLattice.bottom
-        assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice1, emptyLattice2))
-        assertEquals(emptyLattice1, emptyLattice2)
+        val map = ConcurrentIdentityHashMap<ValueKey, String>()
+        val first = ValueKey(1)
+        val equalButDistinct = ValueKey(1)
+        val absentEqualKey = ValueKey(1)
 
-        val blaLattice1 = PowersetLattice.Element("bla")
-        val blaLattice2 = PowersetLattice.Element("bla")
-        assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, blaLattice2))
-        assertEquals(blaLattice1, blaLattice2)
+        val keys = map.keys
 
-        val blaFooLattice = PowersetLattice.Element("bla", "foo")
-        assertEquals(Order.GREATER, powersetLattice.compare(blaFooLattice, blaLattice1))
-        assertNotEquals(blaFooLattice, blaLattice1)
+        map.put(first, "first")
+        assertTrue(first in keys)
+        assertFalse(absentEqualKey in keys)
 
-        val bluLattice = PowersetLattice.Element("blu")
-        assertEquals(Order.UNEQUAL, powersetLattice.compare(blaFooLattice, bluLattice))
-        assertEquals(Order.UNEQUAL, powersetLattice.compare(bluLattice, blaFooLattice))
-        assertNotEquals(blaFooLattice, bluLattice)
+        map.put(equalButDistinct, "second")
+        assertEquals(2, keys.size)
+        assertTrue(equalButDistinct in keys)
 
-        assertEquals(Order.LESSER, powersetLattice.compare(blaLattice1, blaFooLattice))
-        assertNotEquals(blaLattice1, blaFooLattice)
-
-        val blaBlubLattice = PowersetLattice.Element("bla", "blub")
-        assertEquals(Order.UNEQUAL, powersetLattice.compare(blaFooLattice, blaBlubLattice))
-        assertNotEquals(blaFooLattice, blaBlubLattice)
-        assertEquals(Order.UNEQUAL, powersetLattice.compare(blaBlubLattice, blaFooLattice))
-        assertEquals(Order.UNEQUAL, powersetLattice.compare(blaBlubLattice, bluLattice))
-        assertEquals(Order.UNEQUAL, powersetLattice.compare(bluLattice, blaBlubLattice))
-        assertNotEquals(blaBlubLattice, bluLattice)
-
-        assertNotSame(emptyLattice1, powersetLattice.duplicate(emptyLattice1))
-        assertNotSame(emptyLattice1, powersetLattice.duplicate(emptyLattice1))
-        assertNotSame(blaLattice1, powersetLattice.duplicate(blaLattice1))
-        assertNotSame(blaLattice1, powersetLattice.duplicate(blaLattice1))
-        assertNotSame(blaFooLattice, powersetLattice.duplicate(blaFooLattice))
-        assertNotSame(blaFooLattice, powersetLattice.duplicate(blaFooLattice))
-        assertNotSame(blaBlubLattice, powersetLattice.duplicate(blaBlubLattice))
-        assertNotSame(blaBlubLattice, powersetLattice.duplicate(blaBlubLattice))
-
-        val emptyLubEmpty = powersetLattice.lub(emptyLattice1, emptyLattice1)
-        assertNotSame(emptyLattice1, emptyLubEmpty)
-        assertEquals(emptyLattice1, emptyLubEmpty)
-        assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice1, emptyLubEmpty))
-        assertNotSame(emptyLattice2, emptyLubEmpty)
-        assertEquals(emptyLattice1, emptyLubEmpty)
-        assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice2, emptyLubEmpty))
-
-        val empty1LubBla1 = powersetLattice.lub(emptyLattice1, blaLattice1)
-        assertNotSame(emptyLattice1, emptyLubEmpty)
-        assertEquals(emptyLattice1, emptyLubEmpty)
-        assertNotSame(emptyLattice1, empty1LubBla1)
-        assertNotEquals(emptyLattice1, empty1LubBla1)
-        assertNotSame(blaLattice1, empty1LubBla1)
-        assertEquals(blaLattice1, empty1LubBla1)
-        assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice1, empty1LubBla1))
-        assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, empty1LubBla1))
-
-        val emptyLattice3 = PowersetLattice.Element<String>()
-        val emptyLubBla = powersetLattice.lub(emptyLattice3, blaLattice1)
-        assertNotSame(emptyLattice3, emptyLubBla)
-        assertNotEquals(emptyLattice3, emptyLubBla)
-        assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice3, emptyLubBla))
-        assertNotSame(blaLattice1, emptyLubBla)
-        assertEquals(blaLattice1, emptyLubBla)
-        assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, emptyLubBla))
-
-        val blaFooBlub = powersetLattice.lub(blaFooLattice, blaBlubLattice)
-        val blaGlb = powersetLattice.glb(blaFooLattice, blaBlubLattice)
-        assertNotSame(blaLattice1, blaGlb)
-        assertNotSame(blaLattice2, blaGlb)
-        assertEquals(blaLattice2, blaGlb)
-        assertEquals(blaLattice1, blaGlb)
-        assertNotSame(emptyLattice3, blaFooBlub)
-        assertNotEquals(emptyLattice3, blaFooBlub)
-        assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice3, blaFooBlub))
-        assertNotSame(blaLattice1, blaFooBlub)
-        assertNotEquals(blaLattice1, blaFooBlub)
-        assertEquals(Order.LESSER, powersetLattice.compare(blaLattice1, blaFooBlub))
-        assertNotSame(blaFooLattice, blaFooBlub)
-        assertNotEquals(blaFooLattice, blaFooBlub)
-        assertEquals(Order.LESSER, powersetLattice.compare(blaFooLattice, blaFooBlub))
-        assertNotSame(blaBlubLattice, blaFooBlub)
-        assertNotEquals(blaBlubLattice, blaFooBlub)
-        assertEquals(Order.LESSER, powersetLattice.compare(blaBlubLattice, blaFooBlub))
-        assertEquals(PowersetLattice.Element("bla", "blub", "foo"), blaFooBlub)
+        @Suppress("UNCHECKED_CAST") val mutableKeys = keys as MutableSet<ValueKey>
+        assertTrue(mutableKeys.remove(first))
+        assertFalse(map.containsKey(first))
+        assertTrue(map.containsKey(equalButDistinct))
     }
 
     @Test
-    fun testMapLattice() {
-        val mapLattice =
-            MapLattice<String, PowersetLattice.Element<String>>(PowersetLattice<String>())
-        val emptyLattice1 = MapLattice.Element<String, PowersetLattice.Element<String>>()
-        val emptyLattice2 = mapLattice.bottom
-        assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLattice2))
-        assertEquals(emptyLattice1, emptyLattice2)
+    fun testPowersetLattice() {
+        runBlocking {
+            val powersetLattice = PowersetLattice<String>()
 
-        val blaPowerset = PowersetLattice.Element("bla")
+            val emptyLattice1 = powersetLattice.bottom
+            val emptyLattice2 = powersetLattice.bottom
+            assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice1, emptyLattice2))
+            assertEquals(emptyLattice1, emptyLattice2)
 
-        assertThrows<IllegalArgumentException> { emptyLattice1.compare(blaPowerset) }
-        assertThrows<IllegalArgumentException> { blaPowerset.compare(emptyLattice1) }
+            val blaLattice1 = PowersetLattice.Element("bla")
+            val blaLattice2 = PowersetLattice.Element("bla")
+            assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, blaLattice2))
+            assertEquals(blaLattice1, blaLattice2)
 
-        val aBlaLattice1 = (MapLattice.Element("a" to blaPowerset))
-        val aBlaLattice2 = (MapLattice.Element("a" to PowersetLattice.Element("bla")))
-        assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, aBlaLattice2))
-        assertEquals(aBlaLattice1, aBlaLattice2)
-        assertNotSame(aBlaLattice1, aBlaLattice2)
+            val blaFooLattice = PowersetLattice.Element("bla", "foo")
+            assertEquals(Order.GREATER, powersetLattice.compare(blaFooLattice, blaLattice1))
+            assertNotEquals(blaFooLattice, blaLattice1)
 
-        val aBlaFooLattice = (MapLattice.Element("a" to PowersetLattice.Element("bla", "foo")))
-        assertEquals(Order.GREATER, mapLattice.compare(aBlaFooLattice, aBlaLattice1))
-        assertNotEquals(aBlaFooLattice, aBlaLattice1)
-        assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaFooLattice))
-        assertNotEquals(aBlaLattice1, aBlaFooLattice)
+            val bluLattice = PowersetLattice.Element("blu")
+            assertEquals(Order.UNEQUAL, powersetLattice.compare(blaFooLattice, bluLattice))
+            assertEquals(Order.UNEQUAL, powersetLattice.compare(bluLattice, blaFooLattice))
+            assertNotEquals(blaFooLattice, bluLattice)
 
-        val aBlaBFooLattice =
-            (MapLattice.Element(
-                "a" to PowersetLattice.Element("bla"),
-                "b" to PowersetLattice.Element("foo"),
-            ))
-        assertEquals(Order.GREATER, mapLattice.compare(aBlaBFooLattice, aBlaLattice1))
-        assertNotEquals(aBlaBFooLattice, aBlaLattice1)
-        assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaBFooLattice))
-        assertNotEquals(aBlaLattice1, aBlaBFooLattice)
+            assertEquals(Order.LESSER, powersetLattice.compare(blaLattice1, blaFooLattice))
+            assertNotEquals(blaLattice1, blaFooLattice)
 
-        // Duplicates are equal but not identical. Same for the elements.
-        val emptyDuplicate = mapLattice.duplicate(emptyLattice1)
-        assertNotSame(emptyLattice1, emptyDuplicate)
-        assertNotSame(emptyLattice1, emptyDuplicate) // Somehow, the empty set
-        // is the same
-        assertEquals(emptyLattice1, emptyDuplicate)
-        val aBlaLatticeDuplicate = mapLattice.duplicate(aBlaLattice1)
-        assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
-        assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
-        assertEquals(aBlaLattice1, aBlaLatticeDuplicate)
-        val aBlaFooLatticeDuplicate = mapLattice.duplicate(aBlaFooLattice)
-        assertNotSame(aBlaFooLattice, aBlaFooLatticeDuplicate)
-        assertNotSame(aBlaBFooLattice, aBlaFooLatticeDuplicate)
-        assertEquals(aBlaFooLattice, aBlaFooLatticeDuplicate)
-        val aBlaBFooLatticeDuplicate = mapLattice.duplicate(aBlaBFooLattice)
-        assertNotSame(aBlaFooLattice, aBlaBFooLatticeDuplicate)
-        assertNotSame(aBlaBFooLattice, aBlaBFooLatticeDuplicate)
-        assertEquals(aBlaBFooLattice, aBlaBFooLatticeDuplicate)
+            val blaBlubLattice = PowersetLattice.Element("bla", "blub")
+            assertEquals(Order.UNEQUAL, powersetLattice.compare(blaFooLattice, blaBlubLattice))
+            assertNotEquals(blaFooLattice, blaBlubLattice)
+            assertEquals(Order.UNEQUAL, powersetLattice.compare(blaBlubLattice, blaFooLattice))
+            assertEquals(Order.UNEQUAL, powersetLattice.compare(blaBlubLattice, bluLattice))
+            assertEquals(Order.UNEQUAL, powersetLattice.compare(bluLattice, blaBlubLattice))
+            assertNotEquals(blaBlubLattice, bluLattice)
 
-        val emptyLubEmpty = mapLattice.lub(emptyLattice1, emptyLattice1)
-        assertNotSame(emptyLattice1, emptyLubEmpty)
-        assertEquals(emptyLattice1, emptyLubEmpty)
-        assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLubEmpty))
-        assertNotSame(emptyLattice2, emptyLubEmpty)
-        assertEquals(emptyLattice1, emptyLubEmpty)
-        assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice2, emptyLubEmpty))
+            assertNotSame(emptyLattice1, powersetLattice.duplicate(emptyLattice1))
+            assertNotSame(emptyLattice1, powersetLattice.duplicate(emptyLattice1))
+            assertNotSame(blaLattice1, powersetLattice.duplicate(blaLattice1))
+            assertNotSame(blaLattice1, powersetLattice.duplicate(blaLattice1))
+            assertNotSame(blaFooLattice, powersetLattice.duplicate(blaFooLattice))
+            assertNotSame(blaFooLattice, powersetLattice.duplicate(blaFooLattice))
+            assertNotSame(blaBlubLattice, powersetLattice.duplicate(blaBlubLattice))
+            assertNotSame(blaBlubLattice, powersetLattice.duplicate(blaBlubLattice))
 
-        val emptyLubABla = mapLattice.lub(emptyLattice1, aBlaLattice1)
-        assertNotSame(emptyLattice1, mapLattice.bottom)
-        assertNotEquals<Map<String, Set<String>>>(emptyLattice1, emptyLubABla)
-        assertEquals(Order.LESSER, mapLattice.compare(emptyLattice1, emptyLubABla))
-        assertNotSame(aBlaLattice1, emptyLubABla)
-        assertEquals(aBlaLattice1, emptyLubABla)
-        assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, emptyLubABla))
+            val emptyLubEmpty = runBlocking { powersetLattice.lub(emptyLattice1, emptyLattice1) }
+            assertNotSame(emptyLattice1, emptyLubEmpty)
+            assertEquals(emptyLattice1, emptyLubEmpty)
+            assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice1, emptyLubEmpty))
+            assertNotSame(emptyLattice2, emptyLubEmpty)
+            assertEquals(emptyLattice1, emptyLubEmpty)
+            assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice2, emptyLubEmpty))
 
-        val aFooBBlaLattice =
-            MapLattice.Element(
-                "a" to PowersetLattice.Element("foo"),
-                "b" to PowersetLattice.Element("bla"),
-            )
-        val aBlaFooBBla =
-            mapLattice.lub(aBlaFooLattice, aFooBBlaLattice) // a to {"foo", "bla"}, b to {"bla"}
-        assertNotSame(emptyLattice1, aBlaFooBBla)
-        assertNotEquals(emptyLattice1, aBlaFooBBla)
-        assertEquals(Order.LESSER, mapLattice.compare(emptyLattice1, aBlaFooBBla))
-        assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, emptyLattice1))
-        assertNotSame(aBlaLattice1, aBlaFooBBla)
-        assertNotEquals(aBlaLattice1, aBlaFooBBla)
-        assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaFooBBla))
-        assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, aBlaLattice1))
-        assertNotSame(aBlaFooLattice, aBlaFooBBla)
-        assertNotEquals(aBlaFooLattice, aBlaFooBBla)
-        assertEquals(Order.LESSER, mapLattice.compare(aBlaFooLattice, aBlaFooBBla))
-        assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, aBlaFooLattice))
-        assertNotSame(aBlaBFooLattice, aBlaFooBBla)
-        assertNotEquals(aBlaBFooLattice, aBlaFooBBla)
-        assertEquals(Order.UNEQUAL, mapLattice.compare(aBlaBFooLattice, aBlaFooBBla))
-        assertEquals(Order.UNEQUAL, mapLattice.compare(aBlaFooBBla, aBlaBFooLattice))
-        assertNotSame(aFooBBlaLattice, aBlaFooBBla)
-        assertNotEquals(aFooBBlaLattice, aBlaFooBBla)
-        assertEquals(Order.LESSER, mapLattice.compare(aFooBBlaLattice, aBlaFooBBla))
-        assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, aFooBBlaLattice))
-        assertEquals(setOf("a", "b"), aBlaFooBBla.keys)
-        assertEquals(PowersetLattice.Element("bla", "foo"), aBlaFooBBla["a"])
-        assertEquals(PowersetLattice.Element("bla"), aBlaFooBBla["b"])
+            val empty1LubBla1 = runBlocking { powersetLattice.lub(emptyLattice1, blaLattice1) }
+            assertNotSame(emptyLattice1, emptyLubEmpty)
+            assertEquals(emptyLattice1, emptyLubEmpty)
+            assertNotSame(emptyLattice1, empty1LubBla1)
+            assertNotEquals(emptyLattice1, empty1LubBla1)
+            assertNotSame(blaLattice1, empty1LubBla1)
+            assertEquals(blaLattice1, empty1LubBla1)
+            assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice1, empty1LubBla1))
+            assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, empty1LubBla1))
 
-        assertFalse(aBlaFooBBla == emptyLattice1) // Wrong elements
-        assertTrue(emptyLattice1 == emptyLattice2) // This is equal
-        assertTrue(aBlaLattice1 == aBlaLattice2) // This is equal
-        assertFalse(aBlaFooBBla == aBlaFooBBla["a"]) // Wrong types
-        assertFalse(aBlaFooBBla["a"] == aBlaFooBBla) // Wrong types
+            val emptyLattice3 = PowersetLattice.Element<String>()
+            val emptyLubBla = runBlocking { powersetLattice.lub(emptyLattice3, blaLattice1) }
+            assertNotSame(emptyLattice3, emptyLubBla)
+            assertNotEquals(emptyLattice3, emptyLubBla)
+            assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice3, emptyLubBla))
+            assertNotSame(blaLattice1, emptyLubBla)
+            assertEquals(blaLattice1, emptyLubBla)
+            assertEquals(Order.EQUAL, powersetLattice.compare(blaLattice1, emptyLubBla))
 
-        val aEmptyBEmptyGlb = mapLattice.glb(aFooBBlaLattice, aBlaBFooLattice)
-        val aEmptyBEmpty =
-            MapLattice.Element(
-                "a" to PowersetLattice.Element<String>(),
-                "b" to PowersetLattice.Element<String>(),
-            )
-        assertNotSame(aEmptyBEmptyGlb, aEmptyBEmpty)
-        assertEquals(aEmptyBEmptyGlb, aEmptyBEmpty)
-        assertEquals(Order.LESSER, aEmptyBEmptyGlb.compare(aFooBBlaLattice))
-        assertEquals(Order.LESSER, aEmptyBEmptyGlb.compare(aBlaBFooLattice))
+            val blaFooBlub = runBlocking { powersetLattice.lub(blaFooLattice, blaBlubLattice) }
+            val blaGlb = powersetLattice.glb(blaFooLattice, blaBlubLattice)
+            assertNotSame(blaLattice1, blaGlb)
+            assertNotSame(blaLattice2, blaGlb)
+            assertEquals(blaLattice2, blaGlb)
+            assertEquals(blaLattice1, blaGlb)
+            assertNotSame(emptyLattice3, blaFooBlub)
+            assertNotEquals(emptyLattice3, blaFooBlub)
+            assertEquals(Order.LESSER, powersetLattice.compare(emptyLattice3, blaFooBlub))
+            assertNotSame(blaLattice1, blaFooBlub)
+            assertNotEquals(blaLattice1, blaFooBlub)
+            assertEquals(Order.LESSER, powersetLattice.compare(blaLattice1, blaFooBlub))
+            assertNotSame(blaFooLattice, blaFooBlub)
+            assertNotEquals(blaFooLattice, blaFooBlub)
+            assertEquals(Order.LESSER, powersetLattice.compare(blaFooLattice, blaFooBlub))
+            assertNotSame(blaBlubLattice, blaFooBlub)
+            assertNotEquals(blaBlubLattice, blaFooBlub)
+            assertEquals(Order.LESSER, powersetLattice.compare(blaBlubLattice, blaFooBlub))
+            assertEquals(PowersetLattice.Element("bla", "blub", "foo"), blaFooBlub)
+        }
+    }
 
-        val aBlaGlb = mapLattice.glb(aBlaFooLattice, aBlaBFooLattice)
-        assertNotSame(aBlaGlb, aBlaLattice1)
-        assertNotSame(aBlaGlb, aBlaLattice2)
-        assertEquals(aBlaGlb, aBlaLattice1)
-        assertEquals(Order.LESSER, aBlaGlb.compare(aBlaFooLattice))
-        assertEquals(Order.LESSER, aBlaGlb.compare(aBlaBFooLattice))
+    @Test
+    fun testConcurrentMapLattice() {
+        runBlocking {
+            val mapLattice =
+                ConcurrentMapLattice<String, PowersetLattice.Element<String>>(
+                    PowersetLattice<String>()
+                )
+            val emptyLattice1 =
+                ConcurrentMapLattice.Element<String, PowersetLattice.Element<String>>()
+            val emptyLattice2 = mapLattice.bottom
+            assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLattice2))
+            assertEquals(emptyLattice1, emptyLattice2)
+
+            val blaPowerset = PowersetLattice.Element("bla")
+
+            assertThrows<IllegalArgumentException> { emptyLattice1.compare(blaPowerset) }
+            assertThrows<IllegalArgumentException> { blaPowerset.compare(emptyLattice1) }
+
+            val aBlaLattice1 = (ConcurrentMapLattice.Element("a" to blaPowerset))
+            val aBlaLattice2 = (ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla")))
+            assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, aBlaLattice2))
+            assertEquals(aBlaLattice1, aBlaLattice2)
+            assertNotSame(aBlaLattice1, aBlaLattice2)
+
+            val aBlaFooLattice =
+                (ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla", "foo")))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaFooLattice, aBlaLattice1))
+            assertNotEquals(aBlaFooLattice, aBlaLattice1)
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaFooLattice))
+            assertNotEquals(aBlaLattice1, aBlaFooLattice)
+
+            val aBlaBFooLattice =
+                (ConcurrentMapLattice.Element(
+                    "a" to PowersetLattice.Element("bla"),
+                    "b" to PowersetLattice.Element("foo"),
+                ))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaBFooLattice, aBlaLattice1))
+            assertNotEquals(aBlaBFooLattice, aBlaLattice1)
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaBFooLattice))
+            assertNotEquals(aBlaLattice1, aBlaBFooLattice)
+
+            // Duplicates are equal but not identical. Same for the elements.
+            val emptyDuplicate = mapLattice.duplicate(emptyLattice1)
+            assertNotSame(emptyLattice1, emptyDuplicate)
+            assertNotSame(emptyLattice1, emptyDuplicate) // Somehow, the empty set
+            // is the same
+            assertEquals(emptyLattice1, emptyDuplicate)
+            val aBlaLatticeDuplicate = mapLattice.duplicate(aBlaLattice1)
+            assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
+            assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
+            assertEquals(aBlaLattice1, aBlaLatticeDuplicate)
+            val aBlaFooLatticeDuplicate = mapLattice.duplicate(aBlaFooLattice)
+            assertNotSame(aBlaFooLattice, aBlaFooLatticeDuplicate)
+            assertNotSame(aBlaBFooLattice, aBlaFooLatticeDuplicate)
+            assertEquals(aBlaFooLattice, aBlaFooLatticeDuplicate)
+            val aBlaBFooLatticeDuplicate = mapLattice.duplicate(aBlaBFooLattice)
+            assertNotSame(aBlaFooLattice, aBlaBFooLatticeDuplicate)
+            assertNotSame(aBlaBFooLattice, aBlaBFooLatticeDuplicate)
+            assertEquals(aBlaBFooLattice, aBlaBFooLatticeDuplicate)
+
+            val emptyLubEmpty = runBlocking { mapLattice.lub(emptyLattice1, emptyLattice1) }
+            assertNotSame(emptyLattice1, emptyLubEmpty)
+            assertEquals(emptyLattice1, emptyLubEmpty)
+            assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLubEmpty))
+            assertNotSame(emptyLattice2, emptyLubEmpty)
+            assertEquals(emptyLattice1, emptyLubEmpty)
+            assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice2, emptyLubEmpty))
+
+            val emptyLubABla = runBlocking { mapLattice.lub(emptyLattice1, aBlaLattice1) }
+            assertNotSame(emptyLattice1, mapLattice.bottom)
+            assertNotEquals<Map<String, Set<String>>>(emptyLattice1, emptyLubABla)
+            assertEquals(Order.LESSER, mapLattice.compare(emptyLattice1, emptyLubABla))
+            assertNotSame(aBlaLattice1, emptyLubABla)
+            assertEquals(aBlaLattice1, emptyLubABla)
+            assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, emptyLubABla))
+
+            val aFooBBlaLattice =
+                ConcurrentMapLattice.Element(
+                    "a" to PowersetLattice.Element("foo"),
+                    "b" to PowersetLattice.Element("bla"),
+                )
+            val aBlaFooBBla = runBlocking {
+                mapLattice.lub(aBlaFooLattice, aFooBBlaLattice)
+            } // a to {"foo", "bla"}, b to {"bla"}
+            assertNotSame(emptyLattice1, aBlaFooBBla)
+            assertNotEquals(emptyLattice1, aBlaFooBBla)
+            assertEquals(Order.LESSER, mapLattice.compare(emptyLattice1, aBlaFooBBla))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, emptyLattice1))
+            assertNotSame(aBlaLattice1, aBlaFooBBla)
+            assertNotEquals(aBlaLattice1, aBlaFooBBla)
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaFooBBla))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, aBlaLattice1))
+            assertNotSame(aBlaFooLattice, aBlaFooBBla)
+            assertNotEquals(aBlaFooLattice, aBlaFooBBla)
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaFooLattice, aBlaFooBBla))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, aBlaFooLattice))
+            assertNotSame(aBlaBFooLattice, aBlaFooBBla)
+            assertNotEquals(aBlaBFooLattice, aBlaFooBBla)
+            assertEquals(Order.UNEQUAL, mapLattice.compare(aBlaBFooLattice, aBlaFooBBla))
+            assertEquals(Order.UNEQUAL, mapLattice.compare(aBlaFooBBla, aBlaBFooLattice))
+            assertNotSame(aFooBBlaLattice, aBlaFooBBla)
+            assertNotEquals(aFooBBlaLattice, aBlaFooBBla)
+            assertEquals(Order.LESSER, mapLattice.compare(aFooBBlaLattice, aBlaFooBBla))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaFooBBla, aFooBBlaLattice))
+            assertEquals(setOf("a", "b"), aBlaFooBBla.keys)
+            assertEquals(PowersetLattice.Element("bla", "foo"), aBlaFooBBla["a"])
+            assertEquals(PowersetLattice.Element("bla"), aBlaFooBBla["b"])
+
+            assertFalse(aBlaFooBBla == emptyLattice1) // Wrong elements
+            assertTrue(emptyLattice1 == emptyLattice2) // This is equal
+            assertTrue(aBlaLattice1 == aBlaLattice2) // This is equal
+            assertFalse(aBlaFooBBla == aBlaFooBBla["a"]) // Wrong types
+            assertFalse(aBlaFooBBla["a"] == aBlaFooBBla) // Wrong types
+
+            val aEmptyBEmptyGlb = mapLattice.glb(aFooBBlaLattice, aBlaBFooLattice)
+            val aEmptyBEmpty =
+                ConcurrentMapLattice.Element(
+                    "a" to PowersetLattice.Element<String>(),
+                    "b" to PowersetLattice.Element<String>(),
+                )
+            assertNotSame(aEmptyBEmptyGlb, aEmptyBEmpty)
+            assertEquals(aEmptyBEmptyGlb, aEmptyBEmpty)
+            assertEquals(Order.LESSER, aEmptyBEmptyGlb.compare(aFooBBlaLattice))
+            assertEquals(Order.LESSER, aEmptyBEmptyGlb.compare(aBlaBFooLattice))
+
+            val aBlaGlb = mapLattice.glb(aBlaFooLattice, aBlaBFooLattice)
+            assertNotSame(aBlaGlb, aBlaLattice1)
+            assertNotSame(aBlaGlb, aBlaLattice2)
+            assertEquals(aBlaGlb, aBlaLattice1)
+            assertEquals(Order.LESSER, aBlaGlb.compare(aBlaFooLattice))
+            assertEquals(Order.LESSER, aBlaGlb.compare(aBlaBFooLattice))
+        }
+    }
+
+    @Test
+    fun testHashMapLattice() {
+        runBlocking {
+            val mapLattice =
+                HashMapLattice<String, PowersetLattice.Element<String>>(PowersetLattice<String>())
+
+            // bottom is empty
+            val emptyLattice1 = HashMapLattice.Element<String, PowersetLattice.Element<String>>()
+            val emptyLattice2 = mapLattice.bottom
+            assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLattice2))
+            assertEquals(emptyLattice1, emptyLattice2)
+
+            // compare against the wrong lattice element type throws
+            val blaPowerset = PowersetLattice.Element("bla")
+            assertThrows<IllegalArgumentException> { emptyLattice1.compare(blaPowerset) }
+
+            // Pointwise ordering on a single key
+            val aBlaLattice1 = HashMapLattice.Element("a" to blaPowerset)
+            val aBlaLattice2 = HashMapLattice.Element("a" to PowersetLattice.Element("bla"))
+            assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, aBlaLattice2))
+            assertEquals(aBlaLattice1, aBlaLattice2)
+            assertNotSame(aBlaLattice1, aBlaLattice2)
+
+            val aBlaFooLattice =
+                HashMapLattice.Element("a" to PowersetLattice.Element("bla", "foo"))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaFooLattice, aBlaLattice1))
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaFooLattice))
+
+            val aBlaBFooLattice =
+                HashMapLattice.Element(
+                    "a" to PowersetLattice.Element("bla"),
+                    "b" to PowersetLattice.Element("foo"),
+                )
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaBFooLattice, aBlaLattice1))
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaBFooLattice))
+
+            // duplicate is structurally equal but not identical
+            val aBlaLatticeDuplicate = mapLattice.duplicate(aBlaLattice1)
+            assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
+            assertEquals(aBlaLattice1, aBlaLatticeDuplicate)
+
+            // lub of disjoint maps unions keys
+            val aFooBBlaLattice =
+                HashMapLattice.Element(
+                    "a" to PowersetLattice.Element("foo"),
+                    "b" to PowersetLattice.Element("bla"),
+                )
+            val aBlaFooBBla = mapLattice.lub(aBlaFooLattice, aFooBBlaLattice)
+            assertEquals(setOf("a", "b"), aBlaFooBBla.keys)
+            assertEquals(PowersetLattice.Element("bla", "foo"), aBlaFooBBla["a"])
+            assertEquals(PowersetLattice.Element("bla"), aBlaFooBBla["b"])
+
+            // glb takes the intersection of keys and inner-glb's the values
+            val aEmptyBEmptyGlb = mapLattice.glb(aFooBBlaLattice, aBlaBFooLattice)
+            val aEmptyBEmpty =
+                HashMapLattice.Element(
+                    "a" to PowersetLattice.Element<String>(),
+                    "b" to PowersetLattice.Element<String>(),
+                )
+            assertEquals(aEmptyBEmpty, aEmptyBEmptyGlb)
+
+            // The point of HashMapLattice: keys collapse on `equals`, not identity. Build two
+            // `Integer` instances that are equal but allocated separately (above the
+            // Integer.valueOf cache range to defeat interning), put each into its own element,
+            // and check that the lub joins them onto a single entry. Doing this with the
+            // identity-keyed MapLattice would leave two distinct entries.
+            val intLattice =
+                HashMapLattice<Int, PowersetLattice.Element<String>>(PowersetLattice<String>())
+            val keyA: Int = 1000 + 1
+            val keyB: Int = (1000 + 1) * 1
+            assertNotSame(keyA as Any, keyB as Any) // different Integer instances
+            assertEquals(keyA, keyB) // …with equal values
+            val branchA = HashMapLattice.Element(keyA to PowersetLattice.Element("a"))
+            val branchB = HashMapLattice.Element(keyB to PowersetLattice.Element("b"))
+            val merged = intLattice.lub(branchA, branchB)
+            assertEquals(1, merged.size)
+            assertEquals(PowersetLattice.Element("a", "b"), merged[keyA])
+            assertEquals(PowersetLattice.Element("a", "b"), merged[keyB])
+
+            // The in-place `lub` variant should also collapse the equal keys.
+            val mergedInPlace = intLattice.lub(branchA, branchB, allowModify = true)
+            assertSame(branchA, mergedInPlace)
+            assertEquals(1, mergedInPlace.size)
+            assertEquals(PowersetLattice.Element("a", "b"), mergedInPlace[keyB])
+
+            // `set` operator allows a nullable key (silently dropped). This mirrors the override
+            // we rely on in DeclarationStateElement for `Node.objectIdentifier()` call sites.
+            // (HashMapLattice itself doesn't add that operator; we just check the underlying
+            // HashMap behavior here for completeness — set a real key and read it back.)
+            val mutable = HashMapLattice.Element<String, PowersetLattice.Element<String>>()
+            mutable["x"] = PowersetLattice.Element("y")
+            assertEquals(PowersetLattice.Element("y"), mutable["x"])
+        }
     }
 
     @Test
     fun testPairLattice() {
-        val tupleLattice = TupleLattice(PowersetLattice<String>(), PowersetLattice<String>())
+        runBlocking {
+            val tupleLattice = TupleLattice(PowersetLattice<String>(), PowersetLattice<String>())
 
-        val emptyEmpty = tupleLattice.bottom
-        val emptyBla =
-            TupleLattice.Element<PowersetLattice.Element<String>, PowersetLattice.Element<String>>(
-                PowersetLattice.Element(),
-                PowersetLattice.Element("bla"),
-            )
+            val emptyEmpty = tupleLattice.bottom
+            val emptyBla =
+                TupleLattice.Element<
+                    PowersetLattice.Element<String>,
+                    PowersetLattice.Element<String>,
+                >(
+                    PowersetLattice.Element(),
+                    PowersetLattice.Element("bla"),
+                )
 
-        val blaEmpty =
-            TupleLattice.Element<PowersetLattice.Element<String>, PowersetLattice.Element<String>>(
-                PowersetLattice.Element("bla"),
-                PowersetLattice.Element(),
-            )
-        val emptyBla2 = tupleLattice.duplicate(emptyBla)
-        assertEquals(Order.EQUAL, tupleLattice.compare(emptyBla, emptyBla2))
-        assertEquals(emptyBla, emptyBla2)
-        assertNotSame(emptyBla, emptyBla2)
-        val (emptyBlaFirst, emptyBlaSecond) = emptyBla
-        assertSame(emptyBlaFirst, emptyBla.first)
-        assertSame(emptyBlaSecond, emptyBla.second)
-        assertNotSame(emptyBlaFirst, emptyBla2.first)
-        assertEquals(emptyBlaFirst, emptyBla2.first)
-        assertNotSame(emptyBlaSecond, emptyBla2.second)
-        assertEquals(emptyBlaSecond, emptyBla2.second)
+            val blaEmpty =
+                TupleLattice.Element<
+                    PowersetLattice.Element<String>,
+                    PowersetLattice.Element<String>,
+                >(
+                    PowersetLattice.Element("bla"),
+                    PowersetLattice.Element(),
+                )
+            val emptyBla2 = tupleLattice.duplicate(emptyBla)
+            assertEquals(Order.EQUAL, tupleLattice.compare(emptyBla, emptyBla2))
+            assertEquals(emptyBla, emptyBla2)
+            assertNotSame(emptyBla, emptyBla2)
+            val (emptyBlaFirst, emptyBlaSecond) = emptyBla
+            assertSame(emptyBlaFirst, emptyBla.first)
+            assertSame(emptyBlaSecond, emptyBla.second)
+            assertNotSame(emptyBlaFirst, emptyBla2.first)
+            assertEquals(emptyBlaFirst, emptyBla2.first)
+            assertNotSame(emptyBlaSecond, emptyBla2.second)
+            assertEquals(emptyBlaSecond, emptyBla2.second)
 
-        assertThrows<IllegalArgumentException> { emptyBlaFirst.compare(emptyBla) }
-        assertThrows<IllegalArgumentException> { emptyBla.compare(emptyBlaFirst) }
+            assertThrows<IllegalArgumentException> { emptyBlaFirst.compare(emptyBla) }
+            assertThrows<IllegalArgumentException> { emptyBla.compare(emptyBlaFirst) }
 
-        assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, emptyBla))
-        assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, blaEmpty))
-        assertEquals(Order.GREATER, tupleLattice.compare(emptyBla, emptyEmpty))
-        assertEquals(Order.GREATER, tupleLattice.compare(blaEmpty, emptyEmpty))
-        assertEquals(Order.UNEQUAL, tupleLattice.compare(blaEmpty, emptyBla))
-        assertEquals(Order.UNEQUAL, tupleLattice.compare(emptyBla, blaEmpty))
+            assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, emptyBla))
+            assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, blaEmpty))
+            assertEquals(Order.GREATER, tupleLattice.compare(emptyBla, emptyEmpty))
+            assertEquals(Order.GREATER, tupleLattice.compare(blaEmpty, emptyEmpty))
+            assertEquals(Order.UNEQUAL, tupleLattice.compare(blaEmpty, emptyBla))
+            assertEquals(Order.UNEQUAL, tupleLattice.compare(emptyBla, blaEmpty))
 
-        val emptyEmptyGlb = tupleLattice.glb(blaEmpty, emptyBla)
-        assertNotSame(emptyEmpty, emptyEmptyGlb)
-        assertEquals(emptyEmpty, emptyEmptyGlb)
-        assertEquals(Order.LESSER, tupleLattice.compare(emptyEmptyGlb, blaEmpty))
-        assertEquals(Order.LESSER, tupleLattice.compare(emptyEmptyGlb, emptyBla))
+            val emptyEmptyGlb = tupleLattice.glb(blaEmpty, emptyBla)
+            assertNotSame(emptyEmpty, emptyEmptyGlb)
+            assertEquals(emptyEmpty, emptyEmptyGlb)
+            assertEquals(Order.LESSER, tupleLattice.compare(emptyEmptyGlb, blaEmpty))
+            assertEquals(Order.LESSER, tupleLattice.compare(emptyEmptyGlb, emptyBla))
 
-        val emptyEmptyDuplicate = tupleLattice.duplicate(emptyEmpty)
-        assertNotSame(emptyEmpty, emptyEmptyDuplicate)
-        assertEquals(emptyEmpty, emptyEmptyDuplicate)
-        assertEquals(emptyEmpty.hashCode(), emptyEmptyDuplicate.hashCode())
+            val emptyEmptyDuplicate = tupleLattice.duplicate(emptyEmpty)
+            assertNotSame(emptyEmpty, emptyEmptyDuplicate)
+            assertEquals(emptyEmpty, emptyEmptyDuplicate)
+            assertEquals(emptyEmpty.hashCode(), emptyEmptyDuplicate.hashCode())
 
-        val blaBla = tupleLattice.lub(emptyBla, blaEmpty)
-        assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, blaBla))
-        assertEquals(Order.LESSER, tupleLattice.compare(emptyBla, blaBla))
-        assertEquals(Order.LESSER, tupleLattice.compare(blaEmpty, blaBla))
-        assertEquals(Order.GREATER, tupleLattice.compare(blaBla, emptyEmpty))
-        assertEquals(Order.GREATER, tupleLattice.compare(blaBla, emptyBla))
-        assertEquals(Order.GREATER, tupleLattice.compare(blaBla, blaEmpty))
+            val blaBla = runBlocking { tupleLattice.lub(emptyBla, blaEmpty) }
+            assertEquals(Order.LESSER, tupleLattice.compare(emptyEmpty, blaBla))
+            assertEquals(Order.LESSER, tupleLattice.compare(emptyBla, blaBla))
+            assertEquals(Order.LESSER, tupleLattice.compare(blaEmpty, blaBla))
+            assertEquals(Order.GREATER, tupleLattice.compare(blaBla, emptyEmpty))
+            assertEquals(Order.GREATER, tupleLattice.compare(blaBla, emptyBla))
+            assertEquals(Order.GREATER, tupleLattice.compare(blaBla, blaEmpty))
 
-        // We explicitly want to call equals here
-        assertFalse(blaBla == emptyBla) // Wrong elements
-        assertFalse(blaBla == blaEmpty) // Wrong elements
-        assertTrue(emptyBla2 == emptyBla) // Wrong elements
-        assertFalse(blaBla == emptyBlaFirst) // Wrong types
-        assertFalse(emptyBlaFirst == blaBla) // Wrong types
+            // We explicitly want to call equals here
+            assertFalse(blaBla == emptyBla) // Wrong elements
+            assertFalse(blaBla == blaEmpty) // Wrong elements
+            assertTrue(emptyBla2 == emptyBla) // Wrong elements
+            assertFalse(blaBla == emptyBlaFirst) // Wrong types
+            assertFalse(emptyBlaFirst == blaBla) // Wrong types
+        }
     }
 
     @Test
     fun testTripleLattice() {
-        val tripleLattice =
-            TripleLattice<
+        runBlocking {
+            val tripleLattice =
+                TripleLattice<
+                    PowersetLattice.Element<String>,
+                    PowersetLattice.Element<String>,
+                    PowersetLattice.Element<String>,
+                >(
+                    PowersetLattice<String>(),
+                    PowersetLattice<String>(),
+                    PowersetLattice<String>(),
+                )
+
+            val bottom = tripleLattice.bottom
+
+            val emptyEmptyEmpty =
+                TripleLattice.Element(
+                    PowersetLattice.Element<String>(),
+                    PowersetLattice.Element<String>(),
+                    PowersetLattice.Element<String>(),
+                )
+            assertNotSame(bottom, emptyEmptyEmpty)
+            assertEquals(bottom, emptyEmptyEmpty)
+            assertEquals(bottom.hashCode(), emptyEmptyEmpty.hashCode())
+
+            val emptyEmptyBla =
+                TripleLattice.Element(
+                    PowersetLattice.Element<String>(),
+                    PowersetLattice.Element<String>(),
+                    PowersetLattice.Element("bla"),
+                )
+            val emptyBlaEmpty =
+                TripleLattice.Element(
+                    PowersetLattice.Element<String>(),
+                    PowersetLattice.Element("bla"),
+                    PowersetLattice.Element<String>(),
+                )
+            val blaEmptyEmpty =
+                TripleLattice.Element(
+                    PowersetLattice.Element("bla"),
+                    PowersetLattice.Element<String>(),
+                    PowersetLattice.Element<String>(),
+                )
+
+            val emptyEmptyBla2 = tripleLattice.duplicate(emptyEmptyBla)
+            assertEquals(Order.EQUAL, tripleLattice.compare(emptyEmptyBla, emptyEmptyBla2))
+            assertEquals(emptyEmptyBla, emptyEmptyBla2)
+            assertNotSame(emptyEmptyBla, emptyEmptyBla2)
+            val (emptyBlaFirst, emptyBlaSecond, emptyBlaThird) = emptyEmptyBla
+            assertSame(emptyBlaFirst, emptyEmptyBla.first)
+            assertSame(emptyBlaSecond, emptyEmptyBla.second)
+            assertSame(emptyBlaThird, emptyEmptyBla.third)
+            assertNotSame(emptyBlaFirst, emptyEmptyBla2.first)
+            assertEquals(emptyBlaFirst, emptyEmptyBla2.first)
+            assertNotSame(emptyBlaSecond, emptyEmptyBla2.second)
+            assertEquals(emptyBlaSecond, emptyEmptyBla2.second)
+            assertNotSame(emptyBlaThird, emptyEmptyBla2.third)
+            assertEquals(emptyBlaThird, emptyEmptyBla2.third)
+
+            assertThrows<IllegalArgumentException> { emptyBlaFirst.compare(emptyEmptyBla) }
+            assertThrows<IllegalArgumentException> { emptyEmptyBla.compare(emptyBlaFirst) }
+
+            assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, emptyEmptyBla))
+            assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, emptyBlaEmpty))
+            assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, blaEmptyEmpty))
+            assertEquals(Order.GREATER, tripleLattice.compare(emptyEmptyBla, emptyEmptyEmpty))
+            assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyEmpty, emptyEmptyEmpty))
+            assertEquals(Order.GREATER, tripleLattice.compare(emptyBlaEmpty, emptyEmptyEmpty))
+            assertEquals(Order.UNEQUAL, tripleLattice.compare(blaEmptyEmpty, emptyEmptyBla))
+            assertEquals(Order.UNEQUAL, tripleLattice.compare(emptyEmptyBla, blaEmptyEmpty))
+            assertEquals(Order.UNEQUAL, tripleLattice.compare(emptyBlaEmpty, blaEmptyEmpty))
+
+            val blaEmptyBla = runBlocking { tripleLattice.lub(emptyEmptyBla, blaEmptyEmpty) }
+            assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, blaEmptyBla))
+            assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyBla, blaEmptyBla))
+            assertEquals(Order.LESSER, tripleLattice.compare(blaEmptyEmpty, blaEmptyBla))
+            assertEquals(Order.UNEQUAL, tripleLattice.compare(emptyBlaEmpty, blaEmptyBla))
+            assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, emptyEmptyEmpty))
+            assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, emptyEmptyBla))
+            assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, blaEmptyEmpty))
+
+            val emptyEmptyEmptyGlb = tripleLattice.glb(blaEmptyBla, emptyBlaEmpty)
+            assertNotSame(emptyEmptyEmptyGlb, emptyEmptyEmpty)
+            assertEquals(emptyEmptyEmptyGlb, emptyEmptyEmpty)
+            assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmptyGlb, blaEmptyBla))
+            assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmptyGlb, emptyBlaEmpty))
+
+            // We explicitly want to call equals here
+            assertFalse(blaEmptyBla == emptyEmptyBla) // Wrong elements
+            assertFalse(emptyEmptyEmpty == emptyEmptyBla) // Wrong elements
+            assertFalse(emptyEmptyEmpty == emptyBlaEmpty) // Wrong elements
+            assertFalse(emptyEmptyEmpty == blaEmptyEmpty) // Wrong elements
+            assertTrue(emptyEmptyBla2 == emptyEmptyBla) // Same type and same elements
+            assertFalse(blaEmptyBla == emptyBlaFirst) // Wrong types
+            assertFalse(emptyBlaFirst == blaEmptyBla) // Wrong types
+        }
+    }
+
+    /**
+     * Builds a chain of [size] nodes connected by EOG edges and returns them. If [loopBackTo] is
+     * given, the last node additionally gets an edge back to the node at that index.
+     */
+    private fun eogChain(size: Int, loopBackTo: Int? = null): List<Literal<Int>> {
+        val nodes = (0 until size).map { Literal<Int>().apply { name = Name("n$it") } }
+        nodes.zipWithNext { current, next -> current.nextEOGEdges += next }
+        loopBackTo?.let { nodes.last().nextEOGEdges += nodes[it] }
+        return nodes
+    }
+
+    @Test
+    fun testIterateEOGPrunesOnlyDeadStates() {
+        // The chain has to be longer than MIN_GLOBAL_STATE_PRUNE_SIZE, otherwise we never even look
+        // for dead states.
+        val size = MIN_GLOBAL_STATE_PRUNE_SIZE * 2
+        val lattice = PowersetLattice<String>()
+
+        // Every edge adds the name of the node it points to, so the state at the end of the chain
+        // has to know about every node except the first one. If we ever dropped a state that is
+        // still live, we would lose elements here.
+        val transformation:
+            suspend (
+                Lattice<PowersetLattice.Element<String>>,
+                EvaluationOrder,
                 PowersetLattice.Element<String>,
-                PowersetLattice.Element<String>,
-                PowersetLattice.Element<String>,
-            >(
-                PowersetLattice<String>(),
-                PowersetLattice<String>(),
-                PowersetLattice<String>(),
+            ) -> PowersetLattice.Element<String> =
+            { _, edge, state ->
+                PowersetLattice.Element(state).apply { add(edge.end.name.localName) }
+            }
+
+        val chain = eogChain(size)
+        val (chainResult, chainTimeout) =
+            lattice.iterateEOG(chain.first().nextEOGEdges.toList(), lattice.bottom, transformation)
+        assertFalse(chainTimeout)
+        assertEquals(chain.drop(1).map { it.name.localName }.toSet(), chainResult.toSet())
+
+        // The same, but the tail of the chain loops back into its middle. The states of the edges
+        // inside the loop stay live for as long as the loop is being iterated, so this would fail
+        // if we pruned by "already processed" instead of by reachability.
+        val loop = eogChain(size, loopBackTo = size / 2)
+        val (loopResult, loopTimeout) =
+            lattice.iterateEOG(loop.first().nextEOGEdges.toList(), lattice.bottom, transformation)
+        assertFalse(loopTimeout)
+        assertEquals(loop.drop(1).map { it.name.localName }.toSet(), loopResult.toSet())
+    }
+
+    @Test
+    fun testIterateEOGRestoresTimeoutStack() = runBlocking {
+        val lattice = PowersetLattice<String>()
+
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+
+        // A regular run must not leak its timeout budget into the ambient coroutine context, so
+        // that concurrent/unrelated analyses can never observe or corrupt it.
+        lattice.iterateEogInternal(
+            start.nextEOGEdges.toList(),
+            lattice.bottom,
+            { _, _, state -> state },
+            Lattice.Strategy.PRECISE,
+            10000.milliseconds,
+        )
+        assertNull(currentCoroutineContext()[TimeoutBudget])
+
+        // ... and neither does a run whose transformation throws.
+        assertThrows<IllegalStateException> {
+            lattice.iterateEogInternal(
+                start.nextEOGEdges.toList(),
+                lattice.bottom,
+                { _, _, _ -> throw IllegalStateException("transformation failed") },
+                Lattice.Strategy.PRECISE,
+                10000.milliseconds,
+            )
+        }
+        assertNull(currentCoroutineContext()[TimeoutBudget])
+    }
+
+    @Test
+    @Timeout(5)
+    fun testTimeoutBudgetCreditTerminatesAndExtendsRemaining() {
+        // This used to spin forever: kotlin.concurrent.atomics.AtomicReference<Duration> compares
+        // by reference, and Duration (a value class) is re-boxed on every load(), so the current
+        // value returned by load() was never reference-equal to what compareAndSet actually found
+        // in the field, and the retry loop in credit() could never succeed. If this regresses,
+        // @Timeout fails the test instead of the whole suite hanging.
+        val budget = TimeoutBudget(TimeSource.Monotonic.markNow(), 100.milliseconds)
+        val before = budget.remaining
+
+        budget.credit(500.milliseconds)
+
+        assertTrue(
+            budget.remaining > before,
+            "credit() has to extend the budget, not just leave it unchanged",
+        )
+    }
+
+    @Test
+    @Timeout(10)
+    fun testIterateEOGCreditsTimeSpentInNestedAnalysis() = runBlocking {
+        val lattice = PowersetLattice<String>()
+
+        val outerStart = Literal<Int>()
+        val outerEnd = Literal<Int>()
+        outerStart.nextEOGEdges += outerEnd
+
+        val innerStart = Literal<Int>()
+        val innerEnd = Literal<Int>()
+        innerStart.nextEOGEdges += innerEnd
+
+        // Simulates analyzing a function whose transformation triggers analysis of a callee (e.g.
+        // to compute its function summary) - a nested iterateEOG call with its own, independent
+        // timeout, which credits the time it took back to the enclosing budget. This is the
+        // scenario that reliably hung before the credit() fix above; @Timeout is the safety net in
+        // case it regresses.
+        val (_, timedOut) =
+            lattice.iterateEOG(
+                outerStart.nextEOGEdges.toList(),
+                lattice.bottom,
+                { innerLattice, _, state ->
+                    innerLattice.iterateEOG(
+                        innerStart.nextEOGEdges.toList(),
+                        innerLattice.bottom,
+                        { _, _, innerState -> innerState },
+                        timeout = 5.seconds,
+                    )
+                    state
+                },
+                timeout = 5.seconds,
             )
 
-        val bottom = tripleLattice.bottom
+        assertFalse(timedOut)
+    }
 
-        val emptyEmptyEmpty =
-            TripleLattice.Element(
-                PowersetLattice.Element<String>(),
-                PowersetLattice.Element<String>(),
-                PowersetLattice.Element<String>(),
+    @Test
+    fun testPowersetLatticeKeyForDedupesStructurally() {
+        val node = Literal<Int>()
+        val otherNode = Literal<Int>()
+
+        // Pair: structural equality on both components, not reference equality on the Pair itself.
+        val pairs =
+            PowersetLattice.Element(Pair(node, true), Pair(node, true), Pair(otherNode, true))
+        assertEquals(2, pairs.size)
+        assertTrue(pairs.contains(Pair(node, true)))
+        assertTrue(pairs.remove(Pair(node, true)))
+        assertEquals(1, pairs.size)
+        assertFalse(pairs.contains(Pair(node, true)))
+
+        // NodeWithPropertiesKey: node by reference, properties structurally - two separately
+        // constructed instances describing the same node and properties still count as one.
+        val propsA = equalLinkedHashSetOf<Any>("a")
+        val propsB = equalLinkedHashSetOf<Any>("a")
+        val keys =
+            PowersetLattice.Element(
+                PointsToPass.NodeWithPropertiesKey(node, propsA),
+                PointsToPass.NodeWithPropertiesKey(node, propsB),
+                PointsToPass.NodeWithPropertiesKey(otherNode, propsA),
             )
-        assertNotSame(bottom, emptyEmptyEmpty)
-        assertEquals(bottom, emptyEmptyEmpty)
-        assertEquals(bottom.hashCode(), emptyEmptyEmpty.hashCode())
+        assertEquals(2, keys.size)
+        assertTrue(keys.remove(PointsToPass.NodeWithPropertiesKey(node, propsB)))
+        assertEquals(1, keys.size)
 
-        val emptyEmptyBla =
-            TripleLattice.Element(
-                PowersetLattice.Element<String>(),
-                PowersetLattice.Element<String>(),
-                PowersetLattice.Element("bla"),
+        // Everything else (plain nodes here) keeps reference-identity semantics.
+        val nodes = PowersetLattice.Element(node, node, otherNode)
+        assertEquals(2, nodes.size)
+
+        // null is a valid element and does not special-case into either of the above.
+        val withNull = PowersetLattice.Element<Node?>(null, null, node)
+        assertEquals(2, withNull.size)
+        assertTrue(withNull.contains(null))
+        assertTrue(withNull.remove(null))
+        assertEquals(1, withNull.size)
+        assertFalse(withNull.contains(null))
+    }
+
+    @Test
+    fun testAddAllWithoutCheckFastPathsPreserveContents() {
+        val original = concurrentIdentitySetOf("a", "b", "c")
+        val copy = ConcurrentIdentitySet<String>()
+        copy.addAllWithoutCheck(original)
+        assertEquals(original.toSet(), copy.toSet())
+
+        val originalElement = PowersetLattice.Element("a", "b", "c")
+        // Goes through the constructor's Set<T> overload, which has to detect that the argument is
+        // itself an Element and dispatch to the fast, map.putAll-based overload instead of silently
+        // falling back to recomputing every key.
+        val copiedElement = PowersetLattice.Element(originalElement as Set<String>)
+        assertEquals(originalElement.toSet(), copiedElement.toSet())
+    }
+
+    @Test
+    fun testDuplicateSharesEntries() {
+        val original =
+            ConcurrentMapLattice.Element(
+                "a" to PowersetLattice.Element("bla"),
+                "b" to PowersetLattice.Element("foo"),
             )
-        val emptyBlaEmpty =
-            TripleLattice.Element(
-                PowersetLattice.Element<String>(),
-                PowersetLattice.Element("bla"),
-                PowersetLattice.Element<String>(),
+
+        val copy = original.duplicate()
+
+        // The copy holds the very same entries as the original ...
+        assertEquals(original.keys, copy.keys)
+        for (key in original.keys) {
+            assertSame(original[key], copy[key])
+            assertTrue(assertNotNull(copy[key]).isShared)
+        }
+
+        // ... which is why modifying them directly (bypassing getForUpdate) is rejected: with no
+        // way to retroactively swap in a private copy once the caller already holds the shared
+        // object, letting the mutation through would silently corrupt every other owner.
+        assertThrows<AssertionError> { assertNotNull(copy["a"]).add("blub") }
+        assertThrows<AssertionError> { assertNotNull(original["a"]).add("blub") }
+
+        // Asking for a private copy of one entry gives us a modifiable one and leaves the other
+        // owner - and the entries we did not ask for - alone.
+        val shared = assertNotNull(original["b"])
+        val private = assertNotNull(copy.getForUpdate("a"))
+        assertNotSame(original["a"], private)
+        assertFalse(private.isShared)
+        private.add("blub")
+
+        assertEquals(PowersetLattice.Element("bla", "blub"), copy["a"])
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
+        assertSame(shared, copy["b"])
+    }
+
+    @Test
+    fun testPutPrivatizesAnAlreadySharedValue() {
+        val original = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val copy = original.duplicate()
+        val shared = assertNotNull(copy["a"])
+        assertTrue(shared.isShared)
+
+        // Storing an already-shared value with put() (instead of putShared()) is a caller bug -
+        // put()'s contract is that the caller hands the value over and does not keep using the
+        // reference - but unlike onMutate's case, put() can fix it: it has not stored the value
+        // anywhere yet, so it is free to store a private copy instead of the shared instance.
+        val other = ConcurrentMapLattice.Element<String, PowersetLattice.Element<String>>()
+        other.put("a", shared)
+
+        assertNotSame(shared, other["a"])
+        assertFalse(assertNotNull(other["a"]).isShared)
+        assertEquals(shared, other["a"])
+
+        // The value we handed over is unaffected, and so is everyone still sharing it.
+        assertNotNull(other["a"]).add("blub")
+        assertEquals(PowersetLattice.Element("bla"), shared)
+        assertEquals(PowersetLattice.Element("bla"), original["a"])
+    }
+
+    /**
+     * A duplicate shares not only the entries but the map itself, so it must not cost anything per
+     * entry. Adding or removing a key on either side still has to leave the other one alone.
+     */
+    @Test
+    fun testDuplicateSharesTheMapItself() {
+        val original =
+            ConcurrentMapLattice.Element(
+                "a" to PowersetLattice.Element("bla"),
+                "b" to PowersetLattice.Element("foo"),
             )
-        val blaEmptyEmpty =
-            TripleLattice.Element(
-                PowersetLattice.Element("bla"),
-                PowersetLattice.Element<String>(),
-                PowersetLattice.Element<String>(),
+
+        val copy = original.duplicate()
+
+        copy.put("c", PowersetLattice.Element("new in the copy"))
+        original.put("d", PowersetLattice.Element("new in the original"))
+        original.remove("a")
+
+        assertEquals(setOf("a", "b", "c"), copy.keys.toSet())
+        assertEquals(setOf("b", "d"), original.keys.toSet())
+    }
+
+    @Test
+    fun testLubSharesEntries() {
+        val lattice =
+            ConcurrentMapLattice<String, PowersetLattice.Element<String>>(PowersetLattice())
+        val one = ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla"))
+        val two = ConcurrentMapLattice.Element("b" to PowersetLattice.Element("foo"))
+
+        // A key which only one of the two sides has carries its value over unchanged, so the
+        // result shares it instead of copying it.
+        val result = runBlocking { lattice.lub(one, two) }
+        assertSame(one["a"], result["a"])
+        assertSame(two["b"], result["b"])
+        assertThrows<AssertionError> { assertNotNull(result["a"]).add("blub") }
+
+        // The in-place variant may not modify the value it took from `two` either.
+        val inPlace = runBlocking { lattice.lub(one, two, allowModify = true) }
+        assertSame(one, inPlace)
+        assertSame(two["b"], one["b"])
+        assertThrows<AssertionError> { assertNotNull(one["b"]).add("blub") }
+    }
+
+    @Test
+    @Timeout(60)
+    fun testIterateEOGRespectsStateEntryBudget() {
+        val lattice = PowersetLattice<Int>()
+
+        // A cycle in the EOG, so the analysis only terminates once the state stops growing ...
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+        end.nextEOGEdges += start
+
+        // ... which it never does here: every visit adds an element which was not in the state
+        // before, so without a budget this run would go on forever.
+        var counter = 0
+
+        val (result, aborted) =
+            lattice.iterateEOG(
+                start.nextEOGEdges.toList(),
+                lattice.bottom,
+                { _, _, state -> PowersetLattice.Element(state).also { it += counter++ } },
+                maxStateEntries = 100,
             )
 
-        val emptyEmptyBla2 = tripleLattice.duplicate(emptyEmptyBla)
-        assertEquals(Order.EQUAL, tripleLattice.compare(emptyEmptyBla, emptyEmptyBla2))
-        assertEquals(emptyEmptyBla, emptyEmptyBla2)
-        assertNotSame(emptyEmptyBla, emptyEmptyBla2)
-        val (emptyBlaFirst, emptyBlaSecond, emptyBlaThird) = emptyEmptyBla
-        assertSame(emptyBlaFirst, emptyEmptyBla.first)
-        assertSame(emptyBlaSecond, emptyEmptyBla.second)
-        assertSame(emptyBlaThird, emptyEmptyBla.third)
-        assertNotSame(emptyBlaFirst, emptyEmptyBla2.first)
-        assertEquals(emptyBlaFirst, emptyEmptyBla2.first)
-        assertNotSame(emptyBlaSecond, emptyEmptyBla2.second)
-        assertEquals(emptyBlaSecond, emptyEmptyBla2.second)
-        assertNotSame(emptyBlaThird, emptyEmptyBla2.third)
-        assertEquals(emptyBlaThird, emptyEmptyBla2.third)
+        // We get the results computed so far, together with the information that they are not a
+        // fixpoint.
+        assertTrue(aborted)
+        assertTrue(result.isNotEmpty())
+    }
 
-        assertThrows<IllegalArgumentException> { emptyBlaFirst.compare(emptyEmptyBla) }
-        assertThrows<IllegalArgumentException> { emptyEmptyBla.compare(emptyBlaFirst) }
+    /**
+     * [ConcurrentMapLattice.Element.putAllBatched] exists so that [ConcurrentMapLattice.lub] can
+     * take the map's write lock once instead of once per entry. It must still apply the very rules
+     * [ConcurrentMapLattice.Element.put] and [ConcurrentMapLattice.Element.putShared] do, which is
+     * what this checks - a batched write which forgets to share or to privatize is exactly the bug
+     * that makes a fixpoint silently wrong.
+     */
+    @Test
+    fun testPutAllBatchedKeepsTheSharingRules() {
+        val handedOver = PowersetLattice.Element<String>("handedOver")
+        val keptByProducer = PowersetLattice.Element<String>("keptByProducer")
+        val alreadyShared =
+            PowersetLattice.Element<String>("alreadyShared").also { it.isShared = true }
 
-        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, emptyEmptyBla))
-        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, emptyBlaEmpty))
-        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, blaEmptyEmpty))
-        assertEquals(Order.GREATER, tripleLattice.compare(emptyEmptyBla, emptyEmptyEmpty))
-        assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyEmpty, emptyEmptyEmpty))
-        assertEquals(Order.GREATER, tripleLattice.compare(emptyBlaEmpty, emptyEmptyEmpty))
-        assertEquals(Order.UNEQUAL, tripleLattice.compare(blaEmptyEmpty, emptyEmptyBla))
-        assertEquals(Order.UNEQUAL, tripleLattice.compare(emptyEmptyBla, blaEmptyEmpty))
-        assertEquals(Order.UNEQUAL, tripleLattice.compare(emptyBlaEmpty, blaEmptyEmpty))
+        val keyHandedOver = Literal<Int>()
+        val keyKept = Literal<Int>()
+        val keyShared = Literal<Int>()
 
-        val blaEmptyBla = tripleLattice.lub(emptyEmptyBla, blaEmptyEmpty)
-        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmpty, blaEmptyBla))
-        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyBla, blaEmptyBla))
-        assertEquals(Order.LESSER, tripleLattice.compare(blaEmptyEmpty, blaEmptyBla))
-        assertEquals(Order.UNEQUAL, tripleLattice.compare(emptyBlaEmpty, blaEmptyBla))
-        assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, emptyEmptyEmpty))
-        assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, emptyEmptyBla))
-        assertEquals(Order.GREATER, tripleLattice.compare(blaEmptyBla, blaEmptyEmpty))
+        val map = ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>()
+        map.putAllBatched(
+            listOf(
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyHandedOver,
+                    handedOver,
+                    sharedWithProducer = false,
+                ),
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyKept,
+                    keptByProducer,
+                    sharedWithProducer = true,
+                ),
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyShared,
+                    alreadyShared,
+                    sharedWithProducer = false,
+                ),
+            )
+        )
 
-        val emptyEmptyEmptyGlb = tripleLattice.glb(blaEmptyBla, emptyBlaEmpty)
-        assertNotSame(emptyEmptyEmptyGlb, emptyEmptyEmpty)
-        assertEquals(emptyEmptyEmptyGlb, emptyEmptyEmpty)
-        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmptyGlb, blaEmptyBla))
-        assertEquals(Order.LESSER, tripleLattice.compare(emptyEmptyEmptyGlb, emptyBlaEmpty))
+        // A value the producer handed over is stored as it is and stays private.
+        assertSame(handedOver, map[keyHandedOver])
+        assertFalse(handedOver.isShared)
 
-        // We explicitly want to call equals here
-        assertFalse(blaEmptyBla == emptyEmptyBla) // Wrong elements
-        assertFalse(emptyEmptyEmpty == emptyEmptyBla) // Wrong elements
-        assertFalse(emptyEmptyEmpty == emptyBlaEmpty) // Wrong elements
-        assertFalse(emptyEmptyEmpty == blaEmptyEmpty) // Wrong elements
-        assertTrue(emptyEmptyBla2 == emptyEmptyBla) // Same type and same elements
-        assertFalse(blaEmptyBla == emptyBlaFirst) // Wrong types
-        assertFalse(emptyBlaFirst == blaEmptyBla) // Wrong types
+        // A value the producer keeps a reference to is stored as it is, but marked as shared, so
+        // that the next getForUpdate privatizes it instead of modifying the producer's copy too.
+        assertSame(keptByProducer, map[keyKept])
+        assertTrue(keptByProducer.isShared)
+
+        // A value which was already shared although the producer claimed to hand it over is a
+        // caller bug. Like put(), we route around it by storing a private copy rather than letting
+        // the other owner of that value be corrupted.
+        val stored = assertNotNull(map[keyShared])
+        assertNotSame(alreadyShared, stored)
+        assertEquals(alreadyShared.toSet(), stored.toSet())
+        assertFalse(stored.isShared)
+    }
+
+    /**
+     * The batched [ConcurrentMapLattice.lub] has to produce what the entry-by-entry one did, on
+     * both of its branches, for states which overlap the way two real states at a merge point do:
+     * some keys only in one of them, some in both, some with differing values.
+     */
+    @Test
+    fun testLubIsUnaffectedByBatching() = runBlocking {
+        val lattice = ConcurrentMapLattice<Node, PowersetLattice.Element<String>>(PowersetLattice())
+        val keys = List(250) { Literal<Int>() }
+
+        // The two maps overlap the way two states meeting at a merge point do: every third key is
+        // only in one of them, the rest are in both - half of those with a differing value.
+        fun buildOne() =
+            ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>().apply {
+                keys.forEachIndexed { index, key ->
+                    if (index % 3 != 1) putShared(key, PowersetLattice.Element<String>("a$index"))
+                }
+            }
+
+        fun buildTwo() =
+            ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>().apply {
+                keys.forEachIndexed { index, key ->
+                    when {
+                        index % 3 == 0 -> {}
+                        index % 3 == 1 -> putShared(key, PowersetLattice.Element<String>("b$index"))
+                        index % 2 == 0 -> putShared(key, PowersetLattice.Element<String>("a$index"))
+                        else ->
+                            putShared(key, PowersetLattice.Element<String>("a$index", "b$index"))
+                    }
+                }
+            }
+
+        // What the union has to look like, computed without any of the machinery under test.
+        val reference = buildOne()
+        val referenceTwo = buildTwo()
+        val expected =
+            keys.associateWith { key ->
+                (reference[key]?.toSet() ?: emptySet()) + (referenceTwo[key]?.toSet() ?: emptySet())
+            }
+
+        // Both branches, and both the sequential and the chunked path through the parallel phase.
+        for (allowModify in listOf(true, false)) {
+            for (parallelism in listOf(1, 4)) {
+                val where = "allowModify=$allowModify, parallelism=$parallelism"
+                val merged = lattice.lub(buildOne(), buildTwo(), allowModify, false, parallelism)
+
+                assertEquals(keys.size, merged.size, where)
+                keys.forEachIndexed { index, key ->
+                    assertEquals(
+                        expected[key],
+                        assertNotNull(merged[key]).toSet(),
+                        "$index, $where",
+                    )
+                }
+            }
+        }
     }
 }

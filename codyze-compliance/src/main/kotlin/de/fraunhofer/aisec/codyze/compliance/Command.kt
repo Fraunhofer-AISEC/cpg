@@ -31,8 +31,6 @@ import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.ProjectOptions
 import de.fraunhofer.aisec.codyze.TranslationOptions
-import de.fraunhofer.aisec.codyze.console.ConsoleService
-import de.fraunhofer.aisec.codyze.console.startConsole
 import java.io.File
 
 /** The main `compliance` command. */
@@ -65,7 +63,7 @@ open class ScanCommand : ProjectCommand() {
         }
 
         if (projectOptions.startConsole) {
-            ConsoleService.fromAnalysisResult(result).startConsole()
+            ConsoleServiceHelper.startConsole(result)
         }
     }
 }

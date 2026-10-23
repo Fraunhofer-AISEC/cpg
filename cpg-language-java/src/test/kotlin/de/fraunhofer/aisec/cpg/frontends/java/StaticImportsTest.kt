@@ -27,8 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -68,7 +69,7 @@ internal class StaticImportsTest : BaseTest() {
         assertNotNull(staticField)
         assertTrue(staticField.modifiers.contains("static"))
 
-        val memberExpressionExpressions = main.allChildren<MemberExpression>()
+        val memberExpressionExpressions = main.allChildren<MemberAccess>()
         // we have two member expressions, one to the field and one to the method
         assertEquals(2, memberExpressionExpressions.size)
 
@@ -76,6 +77,56 @@ internal class StaticImportsTest : BaseTest() {
         val usage = memberExpressionExpressions[{ it.type.name.localName == "int" }]
         assertNotNull(usage)
         assertEquals(staticField, usage.refersTo)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testInferredSingleStaticImport() {
+        val result =
+            analyze(
+                listOf(
+                    // we want JavaParser to analyze both files so that resolving works
+                    topLevel.resolve("inferred/Provider.java").toFile(),
+                    topLevel.resolve("inferred/Consumer.java").toFile(),
+                ),
+                // we need to specify the root of the folder so that the JavaParser correctly
+                // resolve the package
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JavaLanguage>()
+            }
+
+        val provider = result.records["Provider", SearchModifier.UNIQUE]
+        assertNotNull(provider)
+        val consumer = result.records["Consumer", SearchModifier.UNIQUE]
+        assertNotNull(consumer)
+
+        // "doesNotExist" is not declared by Provider. Since it is used both as a field and as a
+        // method in Consumer, both are inferred as static members of Provider (the target of the
+        // static import), but not of Consumer. We look them up with UNIQUE to also assert that
+        // exactly one of each was inferred.
+        val inferredField = provider.fields["doesNotExist", SearchModifier.UNIQUE]
+        assertNotNull(inferredField)
+        assertTrue(inferredField.isInferred)
+        assertTrue(inferredField.isStatic)
+        val inferredMethod = provider.methods["doesNotExist", SearchModifier.UNIQUE]
+        assertNotNull(inferredMethod)
+        assertTrue(inferredMethod.isInferred)
+        assertTrue(inferredMethod.isStatic)
+        assertTrue(consumer.fields.none { it.name.localName == "doesNotExist" })
+        assertTrue(consumer.methods.none { it.name.localName == "doesNotExist" })
+
+        val main = findByUniqueName(result.methods, "main")
+
+        // The field usage "doesNotExist" must resolve to the inferred field on Provider and the
+        // call to the inferred method
+        val fieldUsage =
+            main.refs.single { it.name.localName == "doesNotExist" && it.astParent !is Call }
+        assertRefersTo(fieldUsage, inferredField)
+        val call = main.calls["doesNotExist"]
+        assertNotNull(call)
+        assertInvokes(call, inferredMethod)
     }
 
     @Test
@@ -95,7 +146,7 @@ internal class StaticImportsTest : BaseTest() {
             when (call.name.localName) {
                 "a" -> {
                     assertInvokes(call, methods["a"])
-                    assertTrue((call.invokes[0] as MethodDeclaration).isStatic)
+                    assertTrue((call.invokes[0] as Method).isStatic)
                 }
                 "b" -> {
                     val bs = methods { it.name.localName == "b" && it.isStatic }

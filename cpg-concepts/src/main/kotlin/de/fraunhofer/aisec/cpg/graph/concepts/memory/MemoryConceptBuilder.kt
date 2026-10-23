@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 
 /**
  * Creates a new [Memory] concept.
@@ -66,6 +67,8 @@ fun MetadataProvider.newDynamicLoading(underlyingNode: Node, connect: Boolean) =
  *     * @param concept The [Concept] concept this operation belongs to.
  *
  * @param what Defines the object whose memory is allocated.
+ * @param size The expression that determines the size of the allocation, if known. See
+ *   [Allocate.size].
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
  *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
@@ -75,10 +78,11 @@ fun MetadataProvider.newAllocate(
     underlyingNode: Node,
     concept: Concept,
     what: Node?,
+    size: Expression? = null,
     connect: Boolean,
 ) =
     newOperation(
-        { concept -> Allocate(concept = concept, what = what) },
+        { concept -> Allocate(concept = concept, what = what, size = size) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,

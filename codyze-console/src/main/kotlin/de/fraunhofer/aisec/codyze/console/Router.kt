@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
+import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -32,7 +34,10 @@ import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.utils.io.ClosedWriteChannelException
 import kotlin.reflect.KClass
+import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonObject
 
 /**
  * This function sets up the API routes for the web application. It defines the endpoints for
@@ -54,12 +59,14 @@ import kotlin.reflect.KClass
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
+ * - POST `/api/nodes`: Retrieves the nodes with the given IDs (without DFG edges). Unknown node IDs
+ *   are omitted.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
-fun Routing.apiRoutes(service: ConsoleService) {
+fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
     // The API routes are prefixed with /api
     route("/api") {
         // The endpoint to analyze a project
@@ -169,6 +176,19 @@ fun Routing.apiRoutes(service: ConsoleService) {
             call.respond(nodes)
         }
 
+        // The endpoint to get multiple nodes by IDs (batch fetch)
+        post("/nodes") {
+            try {
+                val nodeIds = call.receive<List<String>>()
+                call.respond(service.getNodes(nodeIds))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Invalid request format: ${e.message}"),
+                )
+            }
+        }
+
         // The endpoint to add a concept node to the current analysis result
         post("/concepts") {
             try {
@@ -245,6 +265,9 @@ fun Routing.apiRoutes(service: ConsoleService) {
             }
         }
 
+        // Feature flags endpoint
+        get("/features") { call.respond(mapOf("mcpEnabled" to chatEnabled)) }
+
         // The endpoint to get a QueryTree with its parent IDs for tree expansion
         get("/querytrees/{queryTreeId}/parents") {
             val queryTreeId =
@@ -261,6 +284,71 @@ fun Routing.apiRoutes(service: ConsoleService) {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
             }
         }
+
+        // The endpoint to execute a Kotlin query script against the current TranslationResult
+        post("/execute-query") {
+            try {
+                val request = call.receive<ExecuteQueryRequestJSON>()
+                val result = service.executeQuery(request.scriptCode)
+                call.respond(mapOf("result" to result))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Failed to execute query: ${e.message}"),
+                )
+            }
+        }
+    }
+}
+
+/** Chat and MCP routes — only registered when [ChatService] is available. */
+fun Route.chatRoutes(chatService: ChatService) {
+    route("/api/chat") {
+        post {
+            val request = call.receive<ChatRequestJSON>()
+            call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                try {
+                    chatService.chat(request).collect { chunk ->
+                        try {
+                            chunk.split("\n").forEach { line -> write("data: $line\n") }
+                            write("\n")
+                            flush()
+                        } catch (e: ClosedWriteChannelException) {
+                            throw CancellationException("Client disconnected", e)
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    // Expected when client disconnects
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    try {
+                        write("data: ERROR: ${e.message}\n\n")
+                        flush()
+                    } catch (ignored: Exception) {}
+                }
+            }
+        }
+
+        get("/providers") { call.respond(chatService.listAvailableProviders()) }
+
+        get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
+
+        post("/mcp/prompts/{name}") {
+            val name =
+                call.parameters["name"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val arguments = call.receiveNullable<Map<String, String>>() ?: emptyMap()
+            call.respond(chatService.getPrompt(name, arguments))
+        }
+
+        post("/mcp/tools/{toolName}") {
+            val toolName =
+                call.parameters["toolName"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val body = call.receive<JsonObject>()
+            val result = chatService.callTool(toolName, body)
+            call.respond(result)
+        }
+
+        get("/skills") { call.respond(chatService.getSkills()) }
     }
 }
 

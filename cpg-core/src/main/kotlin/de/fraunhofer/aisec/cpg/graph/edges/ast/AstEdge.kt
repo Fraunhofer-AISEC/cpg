@@ -30,16 +30,19 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
-import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
-@RelationshipEntity
 open class AstEdge<T : AstNode>(start: AstNode, end: T) : Edge<T>(start, end) {
     init {
         end.astParent = start
     }
 
-    override var labels: Set<String> = setOf("AST")
+    override var labels: Set<String> = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [AstEdge]s (see [Edge.labels]). */
+        val LABELS = setOf("AST")
+    }
 }
 
 /** Creates an [AstEdges] container starting from this node. */
@@ -97,4 +100,6 @@ open class AstEdges<NodeType : AstNode, PropertyEdgeType : AstEdge<NodeType>>(
         init = init,
         onAdd = onAdd,
         onRemove = onRemove,
+        // The AST can have more than a single element, so we set a higher initial capacity.
+        initialCapacity = 8,
     )
