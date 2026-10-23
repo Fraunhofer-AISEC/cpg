@@ -177,9 +177,8 @@ fun Server.listCallsTo() {
         readOnly = true,
         name = "cpg_list_calls_to",
         description = toolDescription,
-    ) { session: CpgSession, payload: CpgListCallsToPayload ->
-        listCallsTo(session, payload)
-    }
+        handler = ::listCallsTo,
+    )
 }
 
 internal fun listCallsTo(session: CpgSession, payload: CpgListCallsToPayload): CallToolResult {
@@ -221,9 +220,8 @@ fun Server.getAllArgs() {
         readOnly = true,
         name = "cpg_list_call_args",
         description = toolDescription,
-    ) { session: CpgSession, payload: CpgIdPayload ->
-        listCallArgs(session, payload)
-    }
+        handler = ::listCallArgs,
+    )
 }
 
 internal fun listCallArgs(session: CpgSession, payload: CpgIdPayload): CallToolResult {
@@ -247,9 +245,8 @@ fun Server.getArgByIndexOrName() {
         readOnly = true,
         name = "cpg_list_call_arg_by_name_or_index",
         description = toolDescription,
-    ) { session: CpgSession, payload: CpgCallArgumentByNameOrIndexPayload ->
-        listCallArgByNameOrIndex(session, payload)
-    }
+        handler = ::listCallArgByNameOrIndex,
+    )
 }
 
 internal fun listCallArgByNameOrIndex(

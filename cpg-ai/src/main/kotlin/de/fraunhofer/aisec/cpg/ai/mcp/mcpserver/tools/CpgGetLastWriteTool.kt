@@ -121,7 +121,6 @@ fun Server.addGetLastWriteTool() {
         readOnly = true,
         name = "cpg_get_last_write",
         description = toolDescription,
-    ) { session: CpgSession, payload: CpgIdPayload ->
-        getLastWrite(session, payload)
-    }
+        handler = ::getLastWrite,
+    )
 }
