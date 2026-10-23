@@ -151,4 +151,27 @@ class IdentitySetTest {
         set.clear()
         assertTrue(set.isEmpty())
     }
+
+    /**
+     * Equal sets must have equal hash codes regardless of the order in which their elements were
+     * added, because [IdentitySet]s are used as part of hash keys.
+     */
+    @Test
+    fun testHashCodeIsConsistentWithEquals() {
+        // More elements than the Integer cache holds, so that the insertion counters are boxed
+        // into distinct objects.
+        val elements = List(300) { Any() }
+        val forward = IdentitySet<Any>().apply { addAll(elements) }
+        val backward = IdentitySet<Any>().apply { addAll(elements.reversed()) }
+        val copy = IdentitySet<Any>().apply { addAll(forward) }
+
+        assertEquals(forward, backward)
+        assertEquals(forward.hashCode(), backward.hashCode())
+        assertEquals(forward, copy)
+        assertEquals(forward.hashCode(), copy.hashCode())
+
+        val map = HashMap<IdentitySet<Any>, String>()
+        map[forward] = "found"
+        assertEquals("found", map[backward])
+    }
 }
