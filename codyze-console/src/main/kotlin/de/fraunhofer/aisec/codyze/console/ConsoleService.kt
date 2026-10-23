@@ -39,6 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -49,6 +51,7 @@ import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.script.experimental.api.ResultValue
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.ScriptDiagnostic
@@ -86,6 +89,10 @@ class ConsoleService {
     // Lookup of nodes (including overlays) by ID, built lazily on the first node request
     private var nodeIndex: Map<Uuid, Node>? = null
 
+    // The number of concepts per translation unit by component. Counting them walks all nodes of a
+    // component, so the result is kept until the analysis or its concepts change
+    private val conceptCountsCache = ConcurrentHashMap<String, Map<String, Int>>()
+
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
      */
@@ -106,6 +113,9 @@ class ConsoleService {
 
                     translation {
                         it.loadIncludes(true)
+                        // The program dependence graph, shown as a slice of the code in the UI
+                        it.registerPass<ControlDependenceGraphPass>()
+                        it.registerPass<ProgramDependenceGraphPass>()
                         it.registerPass<PythonStdLibConfigurationPass>()
                         it.registerPass<LoadPersistedConcepts>()
 
@@ -147,6 +157,7 @@ class ConsoleService {
         val json = result.toJSON()
         this@ConsoleService.analysisResult = json
         nodeIndex = null
+        conceptCountsCache.clear()
         return json
     }
 
@@ -244,9 +255,15 @@ class ConsoleService {
      * ID of the unit, or `null` if there is no such component.
      */
     fun getConceptCounts(componentName: String): Map<String, Int>? {
-        return getComponent(componentName)?.translationUnits?.associate {
-            it.id.toString() to (it.cpgTU?.conceptAnnotations()?.size ?: 0)
+        conceptCountsCache[componentName]?.let {
+            return it
         }
+        val counts =
+            getComponent(componentName)?.translationUnits?.associate {
+                it.id.toString() to (it.cpgTU?.conceptAnnotations()?.size ?: 0)
+            } ?: return null
+        conceptCountsCache[componentName] = counts
+        return counts
     }
 
     /**
@@ -286,6 +303,22 @@ class ConsoleService {
         return trustIssues(
             nodeIds.toSet().mapNotNull { id -> findNode(id)?.let { id to it } }.toMap()
         )
+    }
+
+    /**
+     * Returns the slice of the program dependence graph around the node with the given ID (see
+     * [pdgSlice]), or `null` if there is no such node.
+     */
+    fun getPdgSlice(nodeId: String, direction: PdgDirection, hops: Int): PdgSliceJSON? {
+        return findNode(nodeId)?.let { pdgSlice(it, direction, hops) }
+    }
+
+    /**
+     * Returns how many statements are in the slice of the program dependence graph around the node
+     * with the given ID in each direction, or `null` if there is no such node.
+     */
+    fun getPdgCounts(nodeId: String, hops: Int): PdgCountsJSON? {
+        return findNode(nodeId)?.let { pdgCounts(it, hops) }
     }
 
     /** Returns the node (or overlay) with the given ID, using an index built on first use. */
@@ -438,6 +471,7 @@ class ConsoleService {
                 )
                 .also { newConceptNodes += it }
         nodeIndex = nodeIndex?.plus(concept.id to concept)
+        conceptCountsCache.clear()
 
         // Build the new persisted concept entry and store it, so we can export it later
         newPersistedConcepts += request.buildPersistedConcept(concept)

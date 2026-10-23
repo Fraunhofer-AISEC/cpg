@@ -4,7 +4,7 @@
 
   /**
    * Draws the direct dataflows of the inspected node as arcs in a lane next to the line numbers,
-   * like the jump arrows of IDA or Ghidra: shorter arcs inside, longer ones outside. An arc starts
+   * nested with shorter arcs inside and longer ones outside. An arc starts
    * with a dot at the line the value comes from and ends with an arrow at the line it goes to.
    * Small dots mark the endpoint tokens in the code. Arcs to lines outside of the viewport are
    * clipped at its edge with a hint, and dataflows into other files become chips at the end of the
@@ -58,8 +58,8 @@
 
   // The distance between the nesting levels of the arcs and the number of levels that fit into the
   // lane; further arcs share the outermost level
-  const levelStep = 0.3;
-  const innerOffset = 0.55;
+  const levelStep = 0.2;
+  const innerOffset = 0.4;
   const maxLevels = $derived(
     Math.max(1, Math.floor((laneRight - laneLeft - innerOffset) / levelStep) + 1)
   );
