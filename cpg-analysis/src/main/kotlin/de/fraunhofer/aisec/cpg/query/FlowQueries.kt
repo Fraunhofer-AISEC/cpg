@@ -524,9 +524,7 @@ internal fun Node.alwaysComesFromInternal(
                     maxCallDepth = scope.maxCallDepth,
                     maxSteps = scope.maxSteps,
                     allReachableNodes =
-                        prevDFGPaths
-                            .filter { it.scope != null && it !is FunctionDeclaration }
-                            .toSet(),
+                        prevDFGPaths.filter { it.scope != null && it !is Function }.toSet(),
                 )
             } else scope
         val prevEOGEvaluation =
