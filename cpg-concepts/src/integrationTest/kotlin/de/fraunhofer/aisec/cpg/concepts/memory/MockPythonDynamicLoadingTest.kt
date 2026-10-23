@@ -91,8 +91,12 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     node.prevDFGEdges.addContextSensitive(
                         node = construct,
                         granularity = FullDataflowGranularity,
-                        callingContext =
-                            CallingContextOut(mutableListOf(dynamicLoading.underlyingNode as Call)),
+                        callingContexts =
+                            listOf(
+                                CallingContextOut(
+                                    mutableListOf(dynamicLoading.underlyingNode as Call)
+                                )
+                            ),
                     )
 
                     // Mark it as "dirty" for symbol resolver

@@ -121,6 +121,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         val language: Language<*>,
         val qualifiedLookup: Boolean,
         val replaceImports: Boolean,
+        val fileScope: FileScope?,
     )
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
@@ -486,6 +487,15 @@ class ScopeManager() : ScopeProvider, ContextProvider {
     }
 
     /**
+     * Returns the [FileScope] of the file (i.e., the [TranslationUnit]) that [node] belongs to, if
+     * the language frontend created one, e.g., to hold the file-level imports.
+     */
+    fun fileScopeOf(node: Node): FileScope? {
+        val tu = node as? TranslationUnit ?: node.translationUnit ?: return null
+        return scopeMap[tu] as? FileScope
+    }
+
+    /**
      * This function looks up scope by its FQN. This only works for [NameScope]s.
      *
      * Note: Beware that this only does a very simple lookup in the scope table and DOES NOT take
@@ -666,7 +676,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
                     ) {
                         it is Namespace || it is Record || it is Typedef
                     }
-                    .mapTo(mutableSetOf()) {
+                    .map {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
@@ -677,7 +687,10 @@ class ScopeManager() : ScopeProvider, ContextProvider {
                                 it.name
                             }]
                     }
-                    .singleOrNull()
+                    // We need exactly one scope. We compare them by identity, since hashing a
+                    // scope (and therefore its AST node, e.g., a namespace with all its
+                    // declarations) is very expensive
+                    .let { scopes -> scopes.firstOrNull()?.takeIf { s -> scopes.all { it === s } } }
         }
 
         return scope
@@ -816,6 +829,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
             scope,
             replaceImports = replaceImports,
             localSymbols = localSymbols,
+            fileScope = fileScopeOf(node),
             predicate = predicate,
         )
     }
@@ -829,7 +843,14 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         scope: Scope = node.scope ?: currentScope,
         replaceImports: Boolean = true,
     ): List<T> {
-        return lookupSymbolByName(node.name, node.language, node.location, scope, replaceImports) {
+        return lookupSymbolByName(
+                node.name,
+                node.language,
+                node.location,
+                scope,
+                replaceImports,
+                fileScope = fileScopeOf(node),
+            ) {
                 it is T
             }
             .filterIsInstance<T>()
@@ -849,6 +870,10 @@ class ScopeManager() : ScopeProvider, ContextProvider {
      * This means that as soon one or more declarations (of the matching [language]) for the symbol
      * are found in a "local" scope, these shadow all other occurrences of the same / symbol in a
      * "higher" scope and only the ones from the lower ones will be returned.
+     *
+     * In the unqualified case, [fileScope] is the [FileScope] of the file in which the lookup takes
+     * place, so that its symbols (e.g., the imports of the file) are also considered (see
+     * [Scope.lookupSymbol]). [lookupSymbolByNodeName] sets this automatically.
      */
     fun lookupSymbolByName(
         name: Name,
@@ -857,6 +882,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
         startScope: Scope? = currentScope,
         replaceImports: Boolean = true,
         localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
+        fileScope: FileScope? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val extractedScope = extractScope(name, language, location, startScope, localSymbols)
@@ -883,6 +909,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
                     language = language,
                     qualifiedLookup = scope != null,
                     replaceImports = replaceImports,
+                    fileScope = fileScope,
                 )
             } else {
                 null
@@ -922,6 +949,7 @@ class ScopeManager() : ScopeProvider, ContextProvider {
                             languageOnly = language,
                             replaceImports = replaceImports,
                             localSymbols = localSymbols,
+                            fileScope = fileScope,
                             predicate = predicate,
                         )
                         ?.toMutableList() ?: mutableListOf()
