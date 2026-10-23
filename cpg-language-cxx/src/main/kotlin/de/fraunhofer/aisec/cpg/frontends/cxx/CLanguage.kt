@@ -276,6 +276,15 @@ open class CLanguage :
             return ImplicitCast
         }
 
+        // An unknown type means we could not determine it (e.g. because of missing headers), not
+        // that it does not fit. Without function overloading, there is no overload set to rank, so
+        // the only function with this name is the right target; rejecting it would make the call
+        // resolver infer a duplicate, body-less function instead. Languages with overloading (C++)
+        // keep rejecting unknown types, because an unknown type would fit every overload.
+        if (this !is HasFunctionOverloading && (type is UnknownType || targetType is UnknownType)) {
+            return ImplicitCast
+        }
+
         return CastNotPossible
     }
 }

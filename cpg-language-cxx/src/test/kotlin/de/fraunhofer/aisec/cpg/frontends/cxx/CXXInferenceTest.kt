@@ -221,4 +221,46 @@ class CXXInferenceTest {
         assertNotNull(funcBar)
         assertFalse(funcBar.isInferred)
     }
+
+    @Test
+    fun testUnknownArgumentTypeResolvesInC() {
+        val file = File("src/test/resources/c/unknown_argument_type.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        // C has no overloading, so the only function with that name is the target, even if we
+        // cannot determine the type of an argument
+        for (name in listOf("grow", "forward_declared")) {
+            val calls = tu.calls(name)
+            assertTrue(calls.isNotEmpty())
+            for (call in calls) {
+                assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+                assertTrue(
+                    call.invokes.none { it.isInferred },
+                    "${call.code} invokes an inferred function",
+                )
+            }
+        }
+        assertTrue(tu.functions.none { it.isInferred && it.name.localName != "undeclared_fn" })
+    }
+
+    @Test
+    fun testUnknownArgumentTypeDoesNotPickAnOverloadInCpp() {
+        val file = File("src/test/resources/cxx/inference/unknown_argument_type.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // An unknown argument type would fit every overload, so C++ must not silently pick one of
+        // the declared overloads. This documents the current behavior: it infers a new function.
+        val call = tu.calls["grow"]
+        assertNotNull(call)
+        assertTrue(call.invokes.isNotEmpty())
+        assertTrue(call.invokes.all { it.isInferred })
+    }
 }
