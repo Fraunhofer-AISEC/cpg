@@ -60,6 +60,27 @@ jobs:
           echo "Needs a build: $code"
           echo "code=$code" >> "$GITHUB_OUTPUT"
 
+  # The single job to mark as required in the branch protection. It fails if the decision whether to
+  # build failed (a skipped `build` would otherwise look like success), and if `build` failed or was
+  # cancelled. It passes if `build` succeeded or was skipped because nothing relevant changed.
+  ci:
+    needs: [changes, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          BUILD: ${{ needs.build.result }}
+          NEEDS_BUILD: ${{ needs.changes.outputs.code }}
+        run: |
+          echo "changes=$CHANGES, build=$BUILD, needs build=$NEEDS_BUILD"
+          [[ "$CHANGES" == "success" ]] || exit 1
+          if [[ "$NEEDS_BUILD" == "true" ]]; then
+            [[ "$BUILD" == "success" ]] || exit 1
+          else
+            [[ "$BUILD" == "skipped" ]] || exit 1
+          fi
+
   build:
     needs: changes
     if: needs.changes.outputs.code == 'true'
