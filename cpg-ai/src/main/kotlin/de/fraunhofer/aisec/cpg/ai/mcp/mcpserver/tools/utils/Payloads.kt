@@ -28,6 +28,17 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 import de.fraunhofer.aisec.cpg.passes.Description
 import kotlinx.serialization.Serializable
 
+/** The description of the `projectName` that every [HasProjectNamePayload] exposes to the LLM. */
+const val PROJECT_NAME_DESCRIPTION =
+    "The name of the analyzed project this tool should operate on, as returned by cpg_analyze or cpg_translate. Can be omitted if only one project is analyzed."
+
+/** The payload of tools that need nothing but the project to operate on. */
+@Serializable
+@Description("The payload to identify an analyzed project by its name.")
+data class CpgProjectPayload(
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null
+) : HasProjectNamePayload
+
 @Serializable
 data class CpgAnalyzePayload(
     @Description(
@@ -46,11 +57,17 @@ data class CpgAnalyzePayload(
 
 @Serializable
 @Description("The payload to identify a node by its name.")
-data class CpgNamePayload(@Description("The local name of the node to consider.") val name: String)
+data class CpgNamePayload(
+    @Description("The local name of the node to consider.") val name: String,
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
 
 @Serializable
 @Description("The payload to identify a node by its id.")
-data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
+data class CpgIdPayload(
+    @Description("The id of the node to consider.") val id: String,
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
 
 @Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
@@ -62,18 +79,21 @@ data class CpgCallArgumentByNameOrIndexPayload(
         "The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here."
     )
     val index: Int? = null,
-)
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
 
 @Serializable
 data class CpgApplyConceptsPayload(
-    @Description("List of concept assignments to perform") val assignments: List<ConceptAssignment>
-)
+    @Description("List of concept assignments to perform") val assignments: List<ConceptAssignment>,
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
 
 @Serializable
 data class CpgRunPassPayload(
     @Description("The FQN of the pass to run.") val passName: String,
     @Description("The ID of the node which should be analyzed by the pass.") val nodeId: String,
-)
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
 
 @Serializable
 data class KeyValuePair<K, V>(
@@ -111,7 +131,8 @@ data class CpgDataflowPayload(
     @Description("Source concept type (e.g., 'ReadData', 'Data', 'Authentication')")
     val from: String,
     @Description("Target concept type (e.g., 'HttpRequest', 'Call')") val to: String,
-)
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
 
 /**
  * This class represents information about a pass, including its fully qualified name (FQN), a

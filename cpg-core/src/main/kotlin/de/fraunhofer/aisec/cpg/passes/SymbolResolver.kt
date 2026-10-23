@@ -36,11 +36,16 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.operatorCallFromDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -51,9 +56,28 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunction
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.util.IdentityHashMap
 import kotlin.collections.firstOrNull
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+/**
+ * A mapping of [LocalScope]s (block/loop/catch/comprehension scopes - see
+ * [ScopeManager.enterScope]'s dispatch) to the set of [Declaration]s that have been reached, along
+ * the specific EOG path represented by this lattice element, by the program point it is associated
+ * with. This is the actual flow-sensitive state threaded through [Lattice.iterateEOG] in
+ * [SymbolResolver.acceptWithIterateEOG]: unlike every other kind of [Scope]
+ * (global/namespace/record/function, whose [Scope.symbols] is fully known before any pass runs and
+ * is therefore read directly, unaffected by EOG position), a [LocalScope]'s visible declarations
+ * genuinely depend on how far the EOG has been traversed - most simply, "used before declared"
+ * within the same block.
+ */
+typealias LocalDeclarationLattice =
+    ConcurrentMapLattice<LocalScope, PowersetLattice.Element<Declaration>>
+
+typealias LocalDeclarationElement =
+    ConcurrentMapLattice.Element<LocalScope, PowersetLattice.Element<Declaration>>
 
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
@@ -120,6 +144,18 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     var passConfig = passConfig<Configuration>()
 
     /**
+     * An optional override for where a [de.fraunhofer.aisec.cpg.graph.scopes.Scope]'s directly
+     * declared symbols come from during a [handleReference] lookup, forwarded to
+     * [ScopeManager.lookupSymbolByNodeName] as `localSymbols`. `null` (the default) means every
+     * lookup uses [de.fraunhofer.aisec.cpg.graph.scopes.Scope.symbols] as usual, which is what the
+     * default, non-flow-sensitive traversal in [accept] relies on. [acceptWithIterateEOG] sets this
+     * to answer "which declarations have been reached by this point in the EOG" for
+     * [de.fraunhofer.aisec.cpg.graph.scopes.LocalScope]s specifically, making local (block-scoped)
+     * references flow-sensitive while leaving every other kind of scope untouched.
+     */
+    protected var localSymbolsOverride: ((Scope, Symbol) -> List<Declaration>?)? = null
+
+    /**
      * If [Configuration.ignoreUnreachableDeclarations] is enabled, this predicate will filter
      * candidates whether they are [EvaluationOrder.unreachable]. If the declaration has ONLY
      * unreachable incoming EOG edges, we ignore them.
@@ -141,21 +177,21 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun accept(eogStarter: Node) {
         ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
-        if (passConfig?.experimentalEOGWorklist == true && eogStarter is Function) {
+        cacheTemplates(ctx.currentComponent)
+
+        walker =
+            ScopedWalker(
+                scopeManager,
+                if (passConfig?.skipUnreachableEOG == true) {
+                    Strategy::REACHABLE_EOG_FORWARD
+                } else {
+                    Strategy::EOG_FORWARD
+                },
+            )
+
+        if (passConfig?.experimentalEOGWorklist == true) {
             acceptWithIterateEOG(eogStarter)
         } else {
-            cacheTemplates(ctx.currentComponent)
-
-            walker =
-                ScopedWalker(
-                    scopeManager,
-                    if (passConfig?.skipUnreachableEOG == true) {
-                        Strategy::REACHABLE_EOG_FORWARD
-                    } else {
-                        Strategy::EOG_FORWARD
-                    },
-                )
-
             walker.clearCallbacks()
             walker.registerHandler(this::handle)
 
@@ -169,6 +205,311 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun finalCleanup() {
         componentsToTemplates.clear()
+    }
+
+    /**
+     * This function resolves symbols for the given EOG starter [t] (see [EOGStarterHolder] - e.g. a
+     * [Function], but also a translation unit, record, namespace, or a field/variable with an
+     * initializer) in two phases:
+     * 1. [collectDeclarationState] drives a pure, side-effect-free [Lattice.iterateEOG] - the same
+     *    worklist/fixpoint engine used by [PointsToPass], [ControlDependenceGraphPass] and
+     *    [UnreachableEOGPass] - purely to compute, for every [Node] in [t]'s EOG, the *final*,
+     *    fully-converged [LocalDeclarationElement] of [LocalScope] declarations reachable by that
+     *    point, recorded into [nodeStates].
+     * 2. [walker] (the very same [ScopedWalker] instance and [Strategy] - honoring
+     *    [Configuration.skipUnreachableEOG] - that the default, non-experimental code path in
+     *    [accept] uses) then does the actual resolution, calling [handle] on every node exactly as
+     *    the default path would, with [localSymbolsOverride] pointed at that node's precomputed
+     *    entry in [nodeStates] so [handleReference] resolves [LocalScope] symbols flow-sensitively.
+     *
+     * Splitting the two concerns like this (rather than calling [handle] directly from the
+     * [Lattice.iterateEOG] transformation) avoids two problems that plagued an earlier version of
+     * this function:
+     * - A node can be reached via more than one incoming [EvaluationOrder] edge - not just a loop
+     *   back-edge, but also a genuine, non-cyclic merge (e.g. the first node after an `if`/`else`
+     *   where neither branch terminates). Resolving as soon as the *first* edge arrives would make
+     *   the result depend on whichever predecessor the engine happens to schedule first, since
+     *   nothing would ever re-resolve the node once a *later* edge brings a bigger, merged state.
+     *   [collectDeclarationState] sidesteps this entirely by never resolving anything itself - it
+     *   just accumulates (via [LocalDeclarationLattice]'s own union `lub`) every state that ever
+     *   reaches a node, so by the time phase 2 reads [nodeStates], the recorded value already
+     *   reflects every incoming path.
+     * - [handleOverloadedOperator] physically replaces a [BinaryOperator]/[UnaryOperator] node with
+     *   an [OperatorCall], rewiring its EOG edges in the process. [Lattice.iterateEOG] determines
+     *   how to continue by reading the *same* edge's `end.nextEOGEdges` right after invoking the
+     *   transformation, so mutating the graph inside that callback would make the engine think the
+     *   EOG ends right there. [ScopedWalker], on the other hand, already tolerates this exact kind
+     *   of mid-traversal AST/EOG mutation (it re-reads `nextEOGEdges` lazily) - which is why the
+     *   default, non-experimental path can call [handle] on operators inline without any
+     *   special-casing, and why phase 2 reusing it can too.
+     */
+    protected open fun acceptWithIterateEOG(t: Node) {
+        // The scope t itself introduces (e.g. a Function's FunctionScope), used to tell apart a
+        // LocalScope that belongs to this starter's own traversal (and is therefore genuinely
+        // flow-sensitive here) from one belonging to an *enclosing*, already fully-resolved starter
+        // (e.g. a captured variable in an outer function, when t is a nested function/lambda) - the
+        // latter must fall back to the ordinary, static Scope.symbols lookup instead of appearing
+        // "not yet declared".
+        val starterScope = ctx.scopeManager.lookupScope(t)
+
+        val lattice = LocalDeclarationLattice(PowersetLattice<Declaration>())
+        var startState = LocalDeclarationElement()
+
+        // Some declarations belonging to a LocalScope are never themselves the *target* of an EOG
+        // edge - e.g. a CatchClause's exception parameter, the individual target Variables of a
+        // tuple/multiple declaration, or a locally-declared function prototype (itself its own,
+        // separate EOG starter, possibly with a nonempty nextEOGEdges of its own for evaluating a
+        // default argument value - but never reached *from* this starter's own traversal, since
+        // nothing has an edge pointing into it) - exactly like a Function's Parameters are never
+        // reached via EOG either. The relevant criterion for "never reached" is having no
+        // *incoming* EOG edge; an unrelated, nonempty outgoing chain of its own doesn't change that
+        // nothing in *this* traversal will ever visit it. Where exactly such a declaration should
+        // become visible depends on how it's declared (see [seedPlanFor]): some are genuinely
+        // atomic with entering their enclosing construct (a catch parameter is in scope for the
+        // whole catch clause), while others (a local function prototype, the individual variables
+        // of a tuple/multiple declaration) are declared "at a point" - like an ordinary local
+        // variable - and must only become visible from there onward, not from the very start.
+        val startSeeds = mutableMapOf<LocalScope, MutableList<Declaration>>()
+        val anchoredSeeds = mutableMapOf<Node, MutableList<Declaration>>()
+        (t as? AstNode)
+            ?.allChildren<Declaration>()
+            ?.filter { it.scope is LocalScope && it.prevEOGEdges.isEmpty() }
+            ?.forEach { declaration ->
+                val scope = declaration.scope as LocalScope
+                when (val plan = seedPlanFor(declaration, t)) {
+                    is SeedPlan.AtStart ->
+                        startSeeds.getOrPut(scope) { mutableListOf() } += declaration
+                    is SeedPlan.AtAnchor ->
+                        anchoredSeeds.getOrPut(plan.anchor) { mutableListOf() } += declaration
+                }
+            }
+        if (startSeeds.isNotEmpty()) {
+            val seededElement =
+                LocalDeclarationElement(
+                    startSeeds.map { (scope, decls) ->
+                        scope to PowersetLattice.Element(*decls.toTypedArray())
+                    }
+                )
+            startState = runBlocking { lattice.lub(startState, seededElement, true) }
+        }
+
+        // Phase 1: compute, for every node, the final (fully-converged) set of LocalScope
+        // declarations reachable by that point - without resolving anything yet.
+        val nodeStates = IdentityHashMap<Node, LocalDeclarationElement>()
+        val (_, timeout) =
+            lattice.iterateEOG(
+                t.nextEOGEdges,
+                startState,
+                transformation = { l, edge, state ->
+                    collectDeclarationState(l, edge, state, nodeStates, anchoredSeeds)
+                },
+            )
+        if (timeout) {
+            log.warn("Could not compute final state for EOG starter {} (due to timeout)", t.name)
+        }
+
+        // Phase 2: resolve, reusing the same walker/strategy the default path uses, consulting
+        // nodeStates for LocalScope visibility instead of Scope.symbols.
+        try {
+            walker.clearCallbacks()
+            walker.registerHandler { node ->
+                localSymbolsOverride = { scope, symbol ->
+                    if (scope is LocalScope && isWithinStarter(scope, starterScope)) {
+                        nodeStates[node]?.get(scope)?.filter { it.name.localName == symbol }
+                            ?: emptyList()
+                    } else {
+                        // Not a LocalScope we're tracking flow-sensitively (either not a LocalScope
+                        // at all, or one belonging to an enclosing, already-resolved starter): fall
+                        // back to the default, static Scope.symbols[symbol] lookup.
+                        null
+                    }
+                }
+                // If the type observer is disabled, nothing else computes the type of a raw
+                // BinaryOperator/UnaryOperator (see propagateOperatorType); the EOG guarantees its
+                // operand(s) already have their final type by the time it is reached here.
+                if (ctx.config.disableTypeObserver) {
+                    propagateOperatorType(node)
+                }
+                handle(node)
+            }
+            walker.iterate(t)
+        } finally {
+            localSymbolsOverride = null
+        }
+    }
+
+    /**
+     * How a [Declaration] with no incoming EOG edge (see [acceptWithIterateEOG]) should be made
+     * visible in [LocalDeclarationLattice].
+     */
+    private sealed class SeedPlan {
+        /** Visible from the very start of the enclosing EOG starter's traversal. */
+        object AtStart : SeedPlan()
+
+        /**
+         * Visible once [anchor] has *finished* being handled, i.e. from its own lexical declaration
+         * point onward.
+         */
+        data class AtAnchor(val anchor: Node) : SeedPlan()
+    }
+
+    /**
+     * Determines the [SeedPlan] for [declaration]. If [declaration] is itself a direct element of
+     * some ancestor's statement list (see [statementsOrNull]) - e.g. a locally-declared function
+     * prototype, or the [de.fraunhofer.aisec.cpg.graph.declarations.Tuple] wrapping the individual
+     * variables of a tuple/multiple declaration - it is declared "at a point" like an ordinary
+     * local variable.
+     *
+     * We anchor it to the *preceding* sibling statement that is EOG-reachable (searching further
+     * back over any other EOG-invisible siblings, e.g. several prototypes declared back to back),
+     * with the convention that the declaration becomes visible once that anchor has *finished*
+     * being handled - not to the *next* reachable sibling with a "becomes visible before it" rule:
+     * a compound statement's own sub-expressions (e.g. a call's callee reference) are reached via
+     * the EOG *before* the statement node itself, so anchoring forward and seeding beforehand would
+     * still be one step too late for anything referencing the declaration within that very anchor
+     * statement. If no such preceding sibling exists (declaration is at/near the start of the
+     * block), it is visible from the start of this traversal - nothing in this scope could have
+     * referenced it earlier anyway.
+     *
+     * If we walk all the way up to [starterRoot] without ever finding a statement-list membership
+     * for [declaration] at all, it must instead be a structural part of its enclosing construct
+     * itself (e.g. a [de.fraunhofer.aisec.cpg.graph.expressions.CatchClause]'s exception
+     * parameter), which is visible for that whole construct, i.e. from the start of this traversal.
+     */
+    private fun seedPlanFor(declaration: Declaration, starterRoot: Node): SeedPlan {
+        var current: Node = declaration
+        while (current !== starterRoot) {
+            val parent = current.astParent ?: return SeedPlan.AtStart
+            val statements = statementsOrNull(parent)
+            if (statements != null && current in statements) {
+                val index = statements.indexOf(current)
+                val anchor =
+                    statements.subList(0, index).lastOrNull { it.prevEOGEdges.isNotEmpty() }
+                return if (anchor != null) SeedPlan.AtAnchor(anchor) else SeedPlan.AtStart
+            }
+            current = parent
+        }
+        return SeedPlan.AtStart
+    }
+
+    /**
+     * Returns [node]'s directly-owned, ordered list of statements, if it is one of the AST node
+     * kinds that has one (what used to be `StatementHolder` before its removal), or `null`
+     * otherwise.
+     */
+    private fun statementsOrNull(node: Node): List<Expression>? =
+        when (node) {
+            is Block -> node.statements
+            is Label -> node.statements
+            is ForEach -> node.statements
+            is For -> node.statements
+            is Record -> node.statements
+            is Namespace -> node.statements
+            is TranslationUnit -> node.statements
+            else -> null
+        }
+
+    /**
+     * Whether [scope] is (transitively) nested within [starterScope], i.e. whether it belongs to
+     * the EOG starter currently being processed rather than to an enclosing one. If [starterScope]
+     * is `null` (the starter itself introduces no scope, e.g. a bare field/variable initializer),
+     * we conservatively treat every [LocalScope] as belonging to it - such starters are simple
+     * enough (and any nested comprehension/lambda-with-outer-capture inside one is rare enough)
+     * that this is an acceptable simplification for now.
+     */
+    private fun isWithinStarter(scope: Scope, starterScope: Scope?): Boolean {
+        if (starterScope == null) {
+            return true
+        }
+        var current: Scope? = scope
+        while (current != null) {
+            if (current === starterScope) {
+                return true
+            }
+            current = current.parent
+        }
+        return false
+    }
+
+    /**
+     * The pure, side-effect-free state-transfer function used by phase 1 of [acceptWithIterateEOG].
+     * If [EvaluationOrder.end] is itself a [Declaration] in a [LocalScope], it is pushed into
+     * [state]. The resulting per-node state is then merged (via [LocalDeclarationLattice]'s union
+     * `lub`) into [nodeStates] - across *every* visit of this node, from *every* incoming edge, so
+     * that once [Lattice.iterateEOG] converges, [nodeStates] holds each node's complete, final set
+     * of reachable [LocalScope] declarations, independent of which predecessor the engine happened
+     * to schedule first. [nodeStates] is read back in phase 2 of [acceptWithIterateEOG] to drive
+     * the actual resolution. Finally, any declarations anchored to [EvaluationOrder.end] via
+     * [anchoredSeeds] (see [seedPlanFor]) are pushed into the *returned* state (but not into
+     * [nodeStates] for this node) since they become visible only from the next node onward, not
+     * from this one.
+     */
+    private suspend fun collectDeclarationState(
+        lattice: Lattice<LocalDeclarationElement>,
+        currentEdge: EvaluationOrder,
+        state: LocalDeclarationElement,
+        nodeStates: MutableMap<Node, LocalDeclarationElement>,
+        anchoredSeeds: Map<Node, List<Declaration>>,
+    ): LocalDeclarationElement {
+        val lattice = lattice as? LocalDeclarationLattice ?: return state
+        val node = currentEdge.end
+
+        var newState = state
+
+        val declarationScope = (node as? Declaration)?.scope
+        if (declarationScope is LocalScope) {
+            newState =
+                lattice.lub(
+                    newState,
+                    LocalDeclarationElement(declarationScope to PowersetLattice.Element(node)),
+                    true,
+                )
+        }
+
+        val existing = nodeStates[node]
+        nodeStates[node] =
+            if (existing != null) {
+                lattice.lub(existing, newState, true)
+            } else {
+                newState.duplicate()
+            }
+
+        val anchored = anchoredSeeds[node]
+        if (!anchored.isNullOrEmpty()) {
+            val byScope = anchored.groupBy { it.scope as LocalScope }
+            newState =
+                lattice.lub(
+                    newState,
+                    LocalDeclarationElement(
+                        byScope.map { (scope, decls) ->
+                            scope to PowersetLattice.Element(*decls.toTypedArray())
+                        }
+                    ),
+                    true,
+                )
+        }
+
+        return newState
+    }
+
+    /**
+     * [handle] does not compute the type of a [BinaryOperator] or [UnaryOperator] itself; normally,
+     * it relies on [HasType]'s reactive [HasType.TypeObserver] mechanism (both implement it
+     * themselves, via `typeChanged`) to propagate the type of [BinaryOperator.lhs]/
+     * [BinaryOperator.rhs] (or [UnaryOperator.input]) once they are resolved. That mechanism can be
+     * switched off entirely via [TranslationConfiguration.Builder.disableTypeObserver], in which
+     * case nothing else computes these types. Since the EOG guarantees [node]'s operand(s) were
+     * already handled (and thus have their final type) by the time [node] itself is reached, we can
+     * invoke the same `typeChanged` callback directly here, exactly mirroring what the reactive
+     * path would have done - including its special-casing of `.*`/`->*` for function-pointer types
+     * (see [BinaryOperator.typeChanged]) - rather than reimplementing the type propagation
+     * ourselves.
+     */
+    private fun propagateOperatorType(node: Node) {
+        when (node) {
+            is BinaryOperator -> node.typeChanged(node.rhs.type, node.rhs)
+            is UnaryOperator -> node.typeChanged(node.input.type, node.input)
+        }
     }
 
     /**
@@ -259,7 +600,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // Find a list of candidate symbols. In most cases, we can just perform a lookup by name
         // which either performs an unqualified lookup beginning from the current scope "upwards",
         // or a qualified lookup starting from the scope specified in the name.
-        var candidates = scopeManager.lookupSymbolByNodeName(ref, predicate = predicate).toSet()
+        var candidates =
+            scopeManager
+                .lookupSymbolByNodeName(
+                    ref,
+                    localSymbols = localSymbolsOverride,
+                    predicate = predicate,
+                )
+                .toSet()
 
         // But we have to consider one special case: For languages, that support implicit receivers,
         // this reference might be a member access of either the current class or a parent class.
@@ -456,7 +804,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /**
      * The central entry-point for all symbol-resolving. It dispatches the handling of the node to
-     * the appropriate function based on the node type.
+     * the appropriate function based on the node type. Both traversal strategies ([accept]'s
+     * default [ScopedWalker] path and [acceptWithIterateEOG]) funnel through this single
+     * dispatcher.
      */
     protected open fun handle(node: Node?) {
         when (node) {

@@ -25,36 +25,38 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.ctx
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
+import java.nio.file.Path
+import kotlin.io.path.createDirectory
+import kotlin.io.path.writeText
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
+import org.junit.jupiter.api.io.TempDir
 
 class CpgAnalyzeToolTest {
 
     @Test
-    fun testReanalyze() {
-        // Build a small CPG without passes
-        runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
-            runPasses = false,
-            cleanup = true,
-        )
-        val oldGlobalAnalysisResult = globalAnalysisResult
-        val oldCtx = ctx
-        assertNotNull(oldGlobalAnalysisResult)
-        assertNotNull(oldCtx)
+    fun testReanalyze(@TempDir tempDir: Path) {
+        val project = tempDir.resolve("hello").createDirectory()
+        project.resolve("main.py").writeText("def hello():\n    print('X')")
+        val payload = CpgAnalyzePayload(path = project.toString())
 
-        // Bild the CPG again but we expect a new ctx and globalAnalysisResult
-        runCpgAnalyze(
-            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
-            runPasses = false,
-            cleanup = true,
-        )
-        assertNotSame(oldCtx, ctx)
-        assertNotSame(oldGlobalAnalysisResult, globalAnalysisResult)
+        // Build a small CPG without passes
+        val first = runCpgAnalyze(payload, runPasses = false, cleanup = true)
+        val oldSession = getSession(first.projectName)
+        assertNotNull(oldSession)
+
+        // Build the CPG of the same project again; we expect its session to be replaced by one
+        // with a new result and a new context
+        val second = runCpgAnalyze(payload, runPasses = false, cleanup = true)
+        assertEquals(first.projectName, second.projectName)
+        val newSession = getSession(second.projectName)
+        assertNotNull(newSession)
+        assertNotSame(oldSession.translationResult, newSession.translationResult)
+        assertNotSame(oldSession.translationContext, newSession.translationContext)
     }
 }

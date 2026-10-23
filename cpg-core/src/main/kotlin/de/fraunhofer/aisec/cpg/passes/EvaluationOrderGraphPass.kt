@@ -602,8 +602,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See [Specification for Return](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#return)
      */
     protected fun handleReturn(node: Return) {
-        // analyze the return value
-        handleEOG(node.returnValue)
+        // analyze the return values from left to right
+        node.returnValues.forEach { handleEOG(it) }
 
         // push the statement itself
         attachToEOG(node)
@@ -1322,12 +1322,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /** We use the scope where the current [node] is in, to find a statement labeled with [label] */
     fun getLabeledASTNode(node: Node, label: String): Node? {
-        scopeManager.jumpTo(node.scope)
-        val labelStatement = scopeManager.getLabel(label)
-        labelStatement?.subStatement?.let {
-            return it
+        // Temporarily jump to the node's scope to perform label lookup and restore the old scope
+        val oldScope = scopeManager.jumpTo(node.scope)
+        try {
+            val labelStatement = scopeManager.getLabel(label)
+            labelStatement?.subStatement?.let {
+                return it
+            }
+            return null
+        } finally {
+            // restore previous scope (may be null)
+            scopeManager.jumpTo(oldScope)
         }
-        return null
     }
 
     /**

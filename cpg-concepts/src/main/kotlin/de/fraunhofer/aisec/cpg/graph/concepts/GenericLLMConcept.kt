@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.concepts
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.persistence.Convert
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 
 /**
@@ -41,8 +43,25 @@ class GenericLLMConcept(
     underlyingNode: Node? = null,
     val conceptName: String,
     val description: String,
-    val properties: GenericProperties,
-) : Concept(underlyingNode = underlyingNode) {
+    @Convert(GenericPropertiesConverter::class) override val properties: GenericProperties,
+) : Concept(underlyingNode = underlyingNode), HasGenericProperties {
+
+    /** Lazy backing field for [propertyReferenceEdges]. */
+    private var _propertyReferenceEdges: GenericPropertyReferences? = null
+
+    /**
+     * The nodes referenced by [properties], as real relationships. Derived from [properties], which
+     * stays the single source of truth.
+     *
+     * The backing container is allocated lazily on first access, since most generic concepts do not
+     * reference any other node. Note that it is *not* invalidated afterwards: [properties] must not
+     * be mutated after this concept is constructed, or the edges will go stale.
+     */
+    @Relationship(value = GenericPropertyReferenceEdge.RELATIONSHIP_NAME)
+    override val propertyReferenceEdges: GenericPropertyReferences
+        get() =
+            _propertyReferenceEdges
+                ?: buildGenericPropertyReferences(properties).also { _propertyReferenceEdges = it }
 
     override fun equals(other: Any?): Boolean {
         return other is GenericLLMConcept &&

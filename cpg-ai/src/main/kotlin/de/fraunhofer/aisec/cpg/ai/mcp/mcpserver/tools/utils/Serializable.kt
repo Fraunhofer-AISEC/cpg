@@ -214,6 +214,8 @@ data class CallInfo(
 
 @Serializable
 data class CpgAnalysisResult(
+    /** The name of the analyzed project. Pass it as `projectName` to target it in tool calls. */
+    val projectName: String,
     val totalNodes: Int,
     val functions: Int,
     val variables: Int,
