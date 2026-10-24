@@ -2,13 +2,13 @@
   import type { LayoutProps } from './$types';
   import { PageHeader } from '$lib/components/navigation';
   import { FileTree } from '$lib/components/analysis';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
 
   let { data, children }: LayoutProps = $props();
 
   // Clean breadcrumb navigation
   const referrerUrl = $derived(() => {
-    const urlParams = new URLSearchParams($page.url.search);
+    const urlParams = new URLSearchParams(page.url.search);
     return urlParams.get('referrer');
   });
 
@@ -20,7 +20,7 @@
     const referrer = referrerUrl();
     if (referrer) {
       // If we have a queryTreeNodeId, add it as targetNodeId to the referrer URL
-      const urlParams = new URLSearchParams($page.url.search);
+      const urlParams = new URLSearchParams(page.url.search);
       const queryTreeNodeId = urlParams.get('queryTreeNodeId');
 
       if (queryTreeNodeId) {
@@ -36,7 +36,7 @@
 
   // Get current unit ID from the URL using page store
   const currentUnitId = $derived(() => {
-    const match = $page.url.pathname.match(/\/translation-unit\/([^\/]+)/);
+    const match = page.url.pathname.match(/\/translation-unit\/([^\/]+)/);
     return match ? match[1] : undefined;
   });
 </script>
