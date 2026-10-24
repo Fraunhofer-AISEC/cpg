@@ -187,9 +187,9 @@ open class CPPLanguage :
             "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Pointer-sized integers, defined in <cstddef> and <cstdint> (ssize_t is POSIX, defined
-            // in <sys/types.h>). We assume 64 bits, which is the case on 64-bit platforms; on
-            // 32-bit
-            // platforms, they have 32 bits.
+            // in <sys/types.h>). We assume 64 bits, which is the case on 64-bit platforms.
+            // TODO: On 32-bit platforms, they have 32 bits, but it's not clear how we could model
+            // this properly.
             "size_t" to IntegerType("size_t", 64, this, NumericType.Modifier.UNSIGNED),
             "ssize_t" to IntegerType("ssize_t", 64, this, NumericType.Modifier.SIGNED),
             "ptrdiff_t" to IntegerType("ptrdiff_t", 64, this, NumericType.Modifier.SIGNED),
