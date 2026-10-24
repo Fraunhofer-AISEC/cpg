@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -389,18 +388,15 @@ internal fun Pass<*>.tryMethodInference(
             false
         } else {
             // 3) Lastly, if we are still undecided, we do a quick check on the current
-            // component,
-            // if we have multiple calls to the same function from across different locations.
-            // This is a bit more expensive, so we leave this as a last resort.
-            // If we encounter "others", there is a high chance this is a global function. Of
-            // course, we could run into a scenario where we have multiple calls to `init()` in
-            // several classes and in all occasions the `this` was left out; but this seems
-            // unlikely
-            val others =
-                ctx.currentComponent.calls {
-                    it != call && it.name == call.name && call !is MemberCall
-                }
-            others.isNotEmpty()
+            // component, if we have multiple calls to the same function from across different
+            // locations. If we encounter "others", there is a high chance this is a global
+            // function. Of course, we could run into a scenario where we have multiple calls to
+            // `init()` in several classes and in all occasions the `this` was left out; but this
+            // seems unlikely.
+            //
+            // Note that `call` itself is part of the current component and therefore contributes
+            // one occurrence of its own name, which is why we are looking for more than one.
+            ctx.callNameOccurrences(ctx.currentComponent, call.name) > 1
         }
 
     if (inferGlobalFunction) {

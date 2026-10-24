@@ -245,6 +245,22 @@ open class Function :
 
     override var firstBasicBlock: BasicBlock? = null
 
+    /**
+     * Note that the [body] is deliberately *not* part of this comparison, even though it is part of
+     * the function. [Node.equals], which [super] ends up in, already compares the physical
+     * [Node.location] (and refuses equality outright when either side has none), so two functions
+     * that compare equal up to that point are by construction the same function in the same place
+     * of the same file - at which point they cannot sensibly have differing bodies, and comparing
+     * them adds nothing.
+     *
+     * What it does add is cost, and a lot of it: [de.fraunhofer.aisec.cpg.graph.expressions.Block]
+     * compares its statements recursively, so including the body turns every single function
+     * comparison into a deep traversal of the whole function. That is not a theoretical concern -
+     * symbol resolution collects candidate declarations into a [Set], and a header parsed once per
+     * translation unit yields one structurally equal copy of each of its functions per unit, all
+     * landing in the same bucket. Every lookup of such a symbol then paid one full body traversal
+     * per copy.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -253,13 +269,12 @@ open class Function :
             return false
         }
         return (super.equals(other) &&
-            body == other.body &&
             parameters == other.parameters &&
             propertyEqualsList(parameterEdges, other.parameterEdges) &&
             throwsTypes == other.throwsTypes)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), body, parameters, throwsTypes)
+    override fun hashCode() = Objects.hash(super.hashCode(), parameters, throwsTypes)
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is Parameter) {
