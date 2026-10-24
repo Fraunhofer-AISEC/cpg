@@ -278,7 +278,7 @@ open class CLanguage :
         }
 
         // The integer literal 0 is a null pointer constant, which can be implicitly cast to any
-        // pointer (also in C++)
+        // pointer (also in C++, whose tryCast delegates to this one first)
         if (targetType is PointerType && hint.isZeroLiteral()) {
             return ImplicitCast
         }
@@ -287,7 +287,8 @@ open class CLanguage :
     }
 
     private fun HasType?.isZeroLiteral(): Boolean {
-        val value = (this as? Literal<*>)?.value
-        return value is Number && value.toLong() == 0L
+        val literal = this as? Literal<*> ?: return false
+        val value = literal.value
+        return literal.type is IntegerType && value is Number && value.toLong() == 0L
     }
 }

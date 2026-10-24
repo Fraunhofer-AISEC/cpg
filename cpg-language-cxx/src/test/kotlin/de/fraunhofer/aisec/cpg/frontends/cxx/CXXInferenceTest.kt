@@ -231,15 +231,24 @@ class CXXInferenceTest {
             }
         assertNotNull(tu)
 
-        val (zero, zeroLong, one) = tu.calls("take_pointer")
-        for (call in listOf(zero, zeroLong)) {
+        val nullPointers = tu.calls("take_pointer")
+        assertEquals(4, nullPointers.size)
+        for (call in nullPointers) {
             assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
             assertTrue(
                 call.invokes.none { it.isInferred },
                 "${call.code} invokes an inferred function",
             )
         }
-        assertTrue(one.invokes.all { it.isInferred })
+
+        val others = tu.calls("take_other_pointer")
+        assertEquals(2, others.size)
+        for (call in others) {
+            assertTrue(
+                call.invokes.all { it.isInferred },
+                "${call.code} resolves to the definition",
+            )
+        }
     }
 
     @Test
