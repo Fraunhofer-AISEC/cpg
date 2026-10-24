@@ -1,0 +1,234 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:GoExtraPass.kt$GoExtraPass$type is UnknownType || (type is PointerType &amp;&amp; type.isArray) || node.type.name.localName == "map"</ID>
+    <ID>ComplexCondition:GoHandler.kt$GoHandler$last != null &amp;&amp; last.length >= 2 &amp;&amp; last[0] == 'v' &amp;&amp; last[1].isDigit()</ID>
+    <ID>ComplexCondition:GoLanguage.kt$GoLanguage$(type is ObjectType &amp;&amp; targetType is AutoType) || (type is PointerType &amp;&amp; type.isArray &amp;&amp; targetType.root is AutoType)</ID>
+    <ID>ComplexCondition:GoLanguage.kt$GoLanguage$targetType is PointerType || targetType.isInterface || targetType.isMap || targetType.isChannel || targetType.underlyingType is FunctionType</ID>
+    <ID>ComplexCondition:GoUtils.kt$sub.size == 2 &amp;&amp; ((sub[0] in GoLanguageFrontend.goosValues &amp;&amp; sub[0] != symbols["GOOS"]) || (sub[1] in GoLanguageFrontend.goarchValues &amp;&amp; sub[1] != symbols["GOARCH"]))</ID>
+    <ID>CyclomaticComplexMethod:DeclarationHandler.kt$DeclarationHandler$private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): Function</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$override fun handleNode(node: GoStandardLibrary.Ast.Expr): Expression</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleCallExpr(callExpr: GoStandardLibrary.Ast.CallExpr): Expression</ID>
+    <ID>CyclomaticComplexMethod:GoExtraPass.kt$GoExtraPass$private fun handleInitializerList(node: InitializerList)</ID>
+    <ID>CyclomaticComplexMethod:GoLanguage.kt$GoLanguage$override fun propagateTypeOfBinaryOperation( operatorCode: String?, lhsType: Type, rhsType: Type, hint: BinaryOperator?, ): Type</ID>
+    <ID>CyclomaticComplexMethod:GoLanguage.kt$GoLanguage$override fun tryCast( type: Type, targetType: Type, hint: HasType?, targetHint: HasType?, ): CastResult</ID>
+    <ID>CyclomaticComplexMethod:GoLanguageFrontend.kt$GoLanguageFrontend$@Throws(TranslationException::class) override fun parse(file: File): TranslationUnit</ID>
+    <ID>CyclomaticComplexMethod:GoLanguageFrontend.kt$GoLanguageFrontend$override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type</ID>
+    <ID>CyclomaticComplexMethod:GoLiterals.kt$private fun unescapeGo(body: String, onCodePoint: (Int) -> Unit, onByte: (Int) -> Unit): Boolean</ID>
+    <ID>CyclomaticComplexMethod:GoStandardLibrary.kt$GoStandardLibrary.Ast.Expr$override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any?</ID>
+    <ID>CyclomaticComplexMethod:GoStandardLibrary.kt$GoStandardLibrary.Ast.Stmt$override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any?</ID>
+    <ID>CyclomaticComplexMethod:SpecificationHandler.kt$SpecificationHandler$private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): Declaration</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Expression</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$private fun handleCaseClause( caseClause: GoStandardLibrary.Ast.CaseClause, typeSwitchLhs: Node? = null, typeSwitchRhs: Expression? = null, ): Expression</ID>
+    <ID>EmptyDefaultConstructor:GoFrontendConfiguration.kt$EmptyGoFrontendConfiguration$()</ID>
+    <ID>EmptyDefaultConstructor:GoFrontendConfiguration.kt$GoFrontendConfiguration$()</ID>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: this will only find methods within the current translation unit.</ID>
+    <ID>ForbiddenComment:GoLanguage.kt$GoLanguage$// TODO: Actually, this is an interface{ Error() string } type.</ID>
+    <ID>ForbiddenComment:GoLanguage.kt$GoLanguage$// TODO: Actually, this should be a type alias to int32</ID>
+    <ID>ForbiddenComment:GoLanguage.kt$GoLanguage$// TODO: Actually, this should be a type alias to interface{}</ID>
+    <ID>ForbiddenComment:GoLanguage.kt$GoLanguage$// TODO: Actually, this should be a type alias to uint8</ID>
+    <ID>ForbiddenComment:GoLanguageFrontend.kt$GoLanguageFrontend$// TODO: this is broken if we see the declaration of the method before the class :(</ID>
+    <ID>ForbiddenComment:GoLanguageFrontendTest.kt$GoLanguageFrontendTest$// TODO: Maps can have dedicated types and parsing them as a generic here is only a</ID>
+    <ID>ForbiddenComment:GoStandardLibrary.kt$// TODO: optimize to use iterators instead</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: Support other use cases that do not use DEFINE</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: connect an empty return statement to named result variables</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: key type is always int. we could set this</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: not really the best way to deal with this</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetArrayTypeElt(arrayType: Ast.ArrayType): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetAssignStmtLhs(assignStmt: Ast.AssignStmt, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetAssignStmtRhs(assignStmt: Ast.AssignStmt, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetAssignStmtTok(assignStmt: Ast.AssignStmt): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBasicLitKind(basicLit: Ast.BasicLit): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBasicLitValue(basicLit: Ast.BasicLit): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBinaryExprOpString(binaryExpr: Ast.BinaryExpr): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBinaryExprX(binaryExpr: Ast.BinaryExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBinaryExprY(binaryExpr: Ast.BinaryExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBlockStmtList(blockStmt: Ast.BlockStmt, i: Int): Ast.Stmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBranchStmtLabel(branchStmt: Ast.BranchStmt): Ast.Ident?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetBranchStmtTokString(branchStmt: Ast.BranchStmt): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetCallExprArg(callExpr: Ast.CallExpr, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetCallExprFun(callExpr: Ast.CallExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetCaseClauseBody(caseClause: Ast.CaseClause, i: Int): Ast.Stmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetCaseClauseList(caseClause: Ast.CaseClause, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetChanTypeValue(chanType: Ast.ChanType): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetCommentMapNodeComment(commentMap: Ast.CommentMap, node: Ast.Node): String?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetCompositeLitElt(compositeLit: Ast.CompositeLit, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetCompositeLitType(compositeLit: Ast.CompositeLit): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetDeclStmtDecl(declStmt: Ast.DeclStmt): Ast.Decl</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetDeferStmtCall(deferStmt: Ast.DeferStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetEllipsisElt(ellipsis: Ast.Ellipsis): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetExprStmtX(exprStmt: Ast.ExprStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFieldListList(fieldList: Ast.FieldList, i: Int): Ast.Field</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFieldName(field: Ast.Field, i: Int): Ast.Ident</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFieldType(field: Ast.Field): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFileComments(file: Ast.File): Pointer</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFileDecl(file: Ast.File, i: Int): Ast.Decl</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFileImport(file: Ast.File, i: Int): Ast.ImportSpec</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFileName(file: Ast.File): Ast.Ident</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFileSetFileName(fileSet: Ast.FileSet, pos: Int): String?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFileSetNodeCode(fileSet: Ast.FileSet, node: Ast.Node): String?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFileSetPosition(fileSet: Ast.FileSet, pos: Int): Ast.Position</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetForStmtBody(forStmt: Ast.ForStmt): Ast.BlockStmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetForStmtCond(forStmt: Ast.ForStmt): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetForStmtInit(forStmt: Ast.ForStmt): Ast.Stmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetForStmtPost(forStmt: Ast.ForStmt): Ast.Stmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFuncDeclBody(funcDecl: Ast.FuncDecl): Ast.BlockStmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFuncDeclName(funcDecl: Ast.FuncDecl): Ast.Ident</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFuncDeclRecv(funcDecl: Ast.FuncDecl): Ast.FieldList?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFuncDeclType(funcDecl: Ast.FuncDecl): Ast.FuncType</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFuncTypeParams(funcType: Ast.FuncType): Ast.FieldList</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFuncTypeResults(funcType: Ast.FuncType): Ast.FieldList?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetFuncTypeTypeParams(funcType: Ast.FuncType): Ast.FieldList?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetGenDeclSpec(genDecl: Ast.GenDecl, i: Int): Ast.Spec</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetGenDeclTok(genDecl: Ast.GenDecl): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetGoStmtCall(goStmt: Ast.GoStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIdentName(ident: Ast.Ident): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIfStmtBody(ifStmt: Ast.IfStmt): Ast.BlockStmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIfStmtCond(ifStmt: Ast.IfStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIfStmtElse(ifStmt: Ast.IfStmt): Ast.Stmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIfStmtInit(ifStmt: Ast.IfStmt): Ast.Stmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetImportSpecName(importSpec: Ast.ImportSpec): Ast.Ident?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetImportSpecPath(importSpec: Ast.ImportSpec): Ast.BasicLit</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIncDecStmtTokString(incDecStmt: Ast.IncDecStmt): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIncDecStmtX(incDecStmt: Ast.IncDecStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIndexExprIndex(IndexExpr: Ast.IndexExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIndexExprX(IndexExpr: Ast.IndexExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIndexListExprIndex(indexListExpr: Ast.IndexListExpr, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetIndexListExprX(indexListExpr: Ast.IndexListExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetInterfaceTypeIncomplete(interfaceType: Ast.InterfaceType): Boolean</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetInterfaceTypeMethods(interfaceType: Ast.InterfaceType): Ast.FieldList</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetKeyValueExprKey(keyValueExpr: Ast.KeyValueExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetKeyValueExprValue(keyValueExpr: Ast.KeyValueExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetLabeledStmtLabel(labeledStmt: Ast.LabeledStmt): Ast.Ident</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetLabeledStmtStmt(labeledStmt: Ast.LabeledStmt): Ast.Stmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetMapTypeKey(mapType: Ast.MapType): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetMapTypeValue(mapType: Ast.MapType): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNodeEnd(node: Ast.Node): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNodePos(node: Ast.Node): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumAssignStmtLhs(assignStmt: Ast.AssignStmt): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumAssignStmtRhs(assignStmt: Ast.AssignStmt): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumBlockStmtList(blockStmt: Ast.BlockStmt): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumCallExprArgs(callExpr: Ast.CallExpr): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumCaseClauseBody(caseClause: Ast.CaseClause): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumCaseClauseList(caseClause: Ast.CaseClause): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumCompositeLitElts(compositeLit: Ast.CompositeLit): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumFieldListList(fieldList: Ast.FieldList): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumFieldNames(field: Ast.Field): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumFileDecls(file: Ast.File): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumFileImports(file: Ast.File): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumGenDeclSpecs(genDecl: Ast.GenDecl): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumIndexListExprIndices(indexListExpr: Ast.IndexListExpr): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumReturnStmtResults(returnStmt: Ast.ReturnStmt): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumValueSpecNames(valueSpec: Ast.ValueSpec): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetNumValueSpecValues(valueSpec: Ast.ValueSpec): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetParenExprX(parenExpr: Ast.ParenExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetPositionColumn(position: Ast.Position): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetPositionLine(position: Ast.Position): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetRangeStmtBody(rangeStmt: Ast.RangeStmt): Ast.BlockStmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetRangeStmtKey(rangeStmt: Ast.RangeStmt): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetRangeStmtTokString(rangeStmt: Ast.RangeStmt): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetRangeStmtValue(rangeStmt: Ast.RangeStmt): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetRangeStmtX(rangeStmt: Ast.RangeStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetReturnStmtResult(returnStmt: Ast.ReturnStmt, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSelectorExprSel(selectorExpr: Ast.SelectorExpr): Ast.Ident</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSelectorExprX(selectorExpr: Ast.SelectorExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSendStmtChan(sendStmt: Ast.SendStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSendStmtValue(sendStmt: Ast.SendStmt): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSliceExprHigh(sliceExpr: Ast.SliceExpr): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSliceExprLow(sliceExpr: Ast.SliceExpr): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSliceExprMax(sliceExpr: Ast.SliceExpr): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSliceExprX(sliceExpr: Ast.SliceExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetStarExprX(starExpr: Ast.StarExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetStructTypeFields(structType: Ast.StructType): Ast.FieldList</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetStructTypeIncomplete(structType: Ast.StructType): Boolean</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSwitchStmtBody(stmt: Ast.SwitchStmt): Ast.BlockStmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSwitchStmtInit(switchStmt: Ast.SwitchStmt): Ast.Stmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetSwitchStmtTag(switchStmt: Ast.SwitchStmt): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetType(obj: Pointer): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeAssertExprType(typeAssertExpr: Ast.TypeAssertExpr): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeAssertExprX(typeAssertExpr: Ast.TypeAssertExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeSpecAssign(typeSpec: Ast.TypeSpec): Int</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeSpecName(typeSpec: Ast.TypeSpec): Ast.Ident</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeSpecType(typeSpec: Ast.TypeSpec): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeSwitchStmtAssign(typeSwitchStmt: Ast.TypeSwitchStmt): Ast.Stmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeSwitchStmtBody(typeSwitchStmt: Ast.TypeSwitchStmt): Ast.BlockStmt</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetTypeSwitchStmtInit(typeSwitchStmt: Ast.TypeSwitchStmt): Ast.Stmt?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetUnaryExprOpString(unaryExpr: Ast.UnaryExpr): String</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetUnaryExprX(unaryExpr: Ast.UnaryExpr): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetValueSpecName(valueSpec: Ast.ValueSpec, i: Int): Ast.Ident</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetValueSpecType(valueSpec: Ast.ValueSpec): Ast.Expr?</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun GetValueSpecValue(valueSpec: Ast.ValueSpec, i: Int): Ast.Expr</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun MakeFuncDeclFromFuncLit(funcLit: Ast.FuncLit): Ast.FuncDecl</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun NewCommentMap(fset: Ast.FileSet, file: Ast.File, comments: Any): Ast.CommentMap</ID>
+    <ID>FunctionNaming:GoStandardLibrary.kt$GoStandardLibrary$fun NewFileSet(): Ast.FileSet</ID>
+    <ID>FunctionParameterNaming:GoStandardLibrary.kt$GoStandardLibrary$IndexExpr: Ast.IndexExpr</ID>
+    <ID>LargeClass:GoLanguageFrontendTest.kt$GoLanguageFrontendTest : BaseTest</ID>
+    <ID>LongMethod:DeclarationHandler.kt$DeclarationHandler$private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): Function</ID>
+    <ID>LongMethod:DeclarationTest.kt$DeclarationTest$@Test fun testStruct()</ID>
+    <ID>LongMethod:GoLanguage.kt$GoLanguage$override fun tryCast( type: Type, targetType: Type, hint: HasType?, targetHint: HasType?, ): CastResult</ID>
+    <ID>LongMethod:GoLanguageFrontend.kt$GoLanguageFrontend$@Throws(TranslationException::class) override fun parse(file: File): TranslationUnit</ID>
+    <ID>LongMethod:GoLanguageFrontend.kt$GoLanguageFrontend$override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type</ID>
+    <ID>LongMethod:GoLanguageFrontendTest.kt$GoLanguageFrontendTest$@Test fun testFunctionDeclaration()</ID>
+    <ID>LongMethod:GoLanguageFrontendTest.kt$GoLanguageFrontendTest$@Test fun testLiteral()</ID>
+    <ID>LongMethod:SpecificationHandler.kt$SpecificationHandler$private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): Declaration</ID>
+    <ID>LongMethod:StatementHandler.kt$StatementHandler$private fun handleCaseClause( caseClause: GoStandardLibrary.Ast.CaseClause, typeSwitchLhs: Node? = null, typeSwitchRhs: Expression? = null, ): Expression</ID>
+    <ID>LongMethod:VisibilityTest.kt$VisibilityTest$@Test fun testVisibility()</ID>
+    <ID>MagicNumber:GoBuildDetector.kt$GoBuildDetector$5</ID>
+    <ID>MagicNumber:GoLanguage.kt$GoLanguage$128</ID>
+    <ID>MagicNumber:GoLanguage.kt$GoLanguage$16</ID>
+    <ID>MagicNumber:GoLanguage.kt$GoLanguage$3</ID>
+    <ID>MagicNumber:GoLanguage.kt$GoLanguage$32</ID>
+    <ID>MagicNumber:GoLanguage.kt$GoLanguage$64</ID>
+    <ID>MagicNumber:GoLanguage.kt$GoLanguage$8</ID>
+    <ID>MagicNumber:GoLiterals.kt$0x07</ID>
+    <ID>MagicNumber:GoLiterals.kt$0x08</ID>
+    <ID>MagicNumber:GoLiterals.kt$0x09</ID>
+    <ID>MagicNumber:GoLiterals.kt$0x0A</ID>
+    <ID>MagicNumber:GoLiterals.kt$0x0B</ID>
+    <ID>MagicNumber:GoLiterals.kt$0x0C</ID>
+    <ID>MagicNumber:GoLiterals.kt$10</ID>
+    <ID>MagicNumber:GoLiterals.kt$16</ID>
+    <ID>MagicNumber:GoLiterals.kt$255</ID>
+    <ID>MagicNumber:GoLiterals.kt$3</ID>
+    <ID>MagicNumber:GoLiterals.kt$4</ID>
+    <ID>MagicNumber:GoLiterals.kt$8</ID>
+    <ID>MagicNumber:GoStandardLibrary.kt$GoStandardLibrary.Ast.BasicLit.Kind.CHAR$8</ID>
+    <ID>MagicNumber:GoStandardLibrary.kt$GoStandardLibrary.Ast.BasicLit.Kind.FLOAT$6</ID>
+    <ID>MagicNumber:GoStandardLibrary.kt$GoStandardLibrary.Ast.BasicLit.Kind.IDENT$4</ID>
+    <ID>MagicNumber:GoStandardLibrary.kt$GoStandardLibrary.Ast.BasicLit.Kind.IMAG$7</ID>
+    <ID>MagicNumber:GoStandardLibrary.kt$GoStandardLibrary.Ast.BasicLit.Kind.INT$5</ID>
+    <ID>MagicNumber:GoStandardLibrary.kt$GoStandardLibrary.Ast.BasicLit.Kind.STRING$9</ID>
+    <ID>MagicNumber:GoUtils.kt$50</ID>
+    <ID>MagicNumber:StatementHandler.kt$StatementHandler$47</ID>
+    <ID>MaxLineLength:GoExtraPass.kt$GoExtraPass$"This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods of Embedded Structs to the Record's Scope."</ID>
+    <ID>NestedBlockDepth:GoExtraPass.kt$GoExtraPass$private fun handleAssign(assign: Assign)</ID>
+    <ID>NestedBlockDepth:GoExtraPass.kt$GoExtraPass$private fun handleInitializerList(node: InitializerList)</ID>
+    <ID>NestedBlockDepth:GoLanguageFrontend.kt$GoLanguageFrontend$@Throws(TranslationException::class) override fun parse(file: File): TranslationUnit</ID>
+    <ID>NestedBlockDepth:SpecificationHandler.kt$SpecificationHandler$private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): Declaration</ID>
+    <ID>ReturnCount:BuildConstraints.kt$BuildConstraintExpression.Companion$private fun StringTokenizer.readExpression(): BuildConstraintExpression?</ID>
+    <ID>ReturnCount:BuildConstraints.kt$BuildConstraintExpression.Companion$private fun StringTokenizer.readOperatorCode(): String?</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleCallExpr(callExpr: GoStandardLibrary.Ast.CallExpr): Expression</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleIdent(ident: GoStandardLibrary.Ast.Ident): Expression</ID>
+    <ID>ReturnCount:GoBuildDetector.kt$GoBuildDetector$override fun detect(root: Path, environment: TargetEnvironment): DetectionResult?</ID>
+    <ID>ReturnCount:GoBuildDetector.kt$GoBuildDetector$private fun runGo( command: List&lt;String>, directory: File?, environment: TargetEnvironment? = null, ): List&lt;String>?</ID>
+    <ID>ReturnCount:GoLanguage.kt$GoLanguage$override fun tryCast( type: Type, targetType: Type, hint: HasType?, targetHint: HasType?, ): CastResult</ID>
+    <ID>ReturnCount:GoLanguageFrontend.kt$GoLanguageFrontend$override fun locationOf(astNode: GoStandardLibrary.Ast.Node): PhysicalLocation?</ID>
+    <ID>ReturnCount:GoLanguageFrontend.kt$GoLanguageFrontend$override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type</ID>
+    <ID>ReturnCount:GoLiterals.kt$private fun unescapeGo(body: String, onCodePoint: (Int) -> Unit, onByte: (Int) -> Unit): Boolean</ID>
+    <ID>ReturnCount:GoProjectDetection.kt$internal fun parseGoMod(goMod: Path): GoModule?</ID>
+    <ID>ReturnCount:GoUtils.kt$internal fun shouldBeBuild(file: File, symbols: Map&lt;String, String>): Boolean</ID>
+    <ID>ReturnCount:StatementHandler.kt$StatementHandler$private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Expression</ID>
+    <ID>TooGenericExceptionCaught:GoBuildDetector.kt$GoBuildDetector$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:GoStandardLibrary.kt$GoStandardLibrary.Companion$ex: Exception</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : GoHandler</ID>
+    <ID>TooManyFunctions:GoStandardLibrary.kt$GoStandardLibrary : Library</ID>
+    <ID>TooManyFunctions:StatementHandler.kt$StatementHandler : GoHandler</ID>
+    <ID>UnusedPrivateMember:GoLanguageFrontend.kt$GoLanguageFrontend$private fun isBuiltinType(name: String): Boolean</ID>
+    <ID>VariableNaming:DeclarationTest.kt$DeclarationTest$val `return` = body.statements.first() as? Return</ID>
+    <ID>VariableNaming:GoLanguageFrontendTest.kt$GoLanguageFrontendTest$val `if` = body.statements[1] as? IfElse</ID>
+    <ID>VariableNaming:GoStandardLibrary.kt$GoStandardLibrary.Ast.CallExpr$val `fun`: Expr by lazy { INSTANCE.GetCallExprFun(this) }</ID>
+    <ID>VariableNaming:GoStandardLibrary.kt$GoStandardLibrary.Ast.IfStmt$val `else`: Stmt? by lazy { INSTANCE.GetIfStmtElse(this) }</ID>
+    <ID>VariableNaming:StatementTest.kt$StatementTest$val `do` = p.methods["Do"]</ID>
+  </CurrentIssues>
+</SmellBaseline>

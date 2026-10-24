@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:Application.kt$Application$fun setupProject(): Project</ID>
+    <ID>CyclomaticComplexMethod:Schema.kt$Schema$fun extractSchema()</ID>
+    <ID>CyclomaticComplexMethod:Schema.kt$Schema$private fun entitiesToJson(kClass: KClass&lt;out Node>): MutableList&lt;SchemaNode></ID>
+    <ID>CyclomaticComplexMethod:Schema.kt$Schema$private fun printEntitiesToMarkdown(kClass: KClass&lt;out Node>, out: PrintWriter)</ID>
+    <ID>LongMethod:Application.kt$Application$fun setupProject(): Project</ID>
+    <ID>LongMethod:Schema.kt$Schema$fun extractSchema()</ID>
+    <ID>LongMethod:Schema.kt$Schema$private fun entitiesToJson(kClass: KClass&lt;out Node>): MutableList&lt;SchemaNode></ID>
+    <ID>LongMethod:Schema.kt$Schema$private fun printEntitiesToMarkdown(kClass: KClass&lt;out Node>, out: PrintWriter)</ID>
+    <ID>LongParameterList:Neo4J.kt$( noPurgeDb: Boolean = false, protocol: String = Neo4jConnectionDefaults.PROTOCOL, host: String = Neo4jConnectionDefaults.HOST, port: Int = Neo4jConnectionDefaults.PORT, neo4jUsername: String = Neo4jConnectionDefaults.USERNAME, neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD, )</ID>
+    <ID>MatchingDeclarationName:Neo4jDefaults.kt$Neo4jConnectionDefaults</ID>
+    <ID>MaxLineLength:Application.kt$Application$"Limit the ControlFlowSensitiveDFGPass to functions with a complexity less than what is specified here. "</ID>
+    <ID>MaxLineLength:Application.kt$Application$*</ID>
+    <ID>MaxLineLength:Application.kt$Application.Exclusive$"Maps the names of software components to their respective files. The files are separated by commas (No whitespace!)."</ID>
+    <ID>MaxLineLength:Application.kt$Application.Exclusive$"The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"</ID>
+    <ID>MaxLineLength:Schema.kt$Schema$"${toLabel(kClass)}--\"${relationshipLabel.second}${multiplicity}\"-->${toLabel(kClass)}${relationshipLabel.second}[&lt;a href='#${toAnchorLink("e" + toLabel(targetInfo.second))}'>${toLabel(targetInfo.second)}&lt;/a>]:::outer"</ID>
+    <ID>MaxLineLength:Schema.kt$Schema$".child{background:#dddddd;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}"</ID>
+    <ID>MaxLineLength:Schema.kt$Schema$".classLabel{background:#aabbff;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}"</ID>
+    <ID>MaxLineLength:Schema.kt$Schema$".inherited-relationship{background:#dddddd;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}"</ID>
+    <ID>MaxLineLength:Schema.kt$Schema$".relationship{background:#aaffbb;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}"</ID>
+    <ID>MaxLineLength:Schema.kt$Schema$".superclassLabel{background:#dddddd;border-radius:5%;line-height:26px;display:inline-block;text-align:center;margin-bottom:10px;padding-left:10px;padding-right:10px;}"</ID>
+    <ID>MaxLineLength:Schema.kt$Schema$"This file shows all node labels and relationships between them that are persisted from the in memory CPG to the Neo4j database. "</ID>
+    <ID>NestedBlockDepth:Schema.kt$Schema$private fun entitiesToJson(kClass: KClass&lt;out Node>): MutableList&lt;SchemaNode></ID>
+    <ID>NestedBlockDepth:Schema.kt$Schema$private fun printEntitiesToMarkdown(kClass: KClass&lt;out Node>, out: PrintWriter)</ID>
+    <ID>PackageNaming:Application.kt$package de.fraunhofer.aisec.cpg_vis_neo4j</ID>
+    <ID>PackageNaming:ApplicationSetupProjectTest.kt$package de.fraunhofer.aisec.cpg_vis_neo4j</ID>
+    <ID>PackageNaming:ApplicationTest.kt$package de.fraunhofer.aisec.cpg_vis_neo4j</ID>
+    <ID>PackageNaming:Schema.kt$package de.fraunhofer.aisec.cpg_vis_neo4j</ID>
+    <ID>ReturnCount:Application.kt$Application$@Throws(Exception::class, ConnectException::class, IllegalArgumentException::class) override fun call(): Int</ID>
+    <ID>SpreadOperator:Application.kt$(*args)</ID>
+    <ID>SpreadOperator:Application.kt$Application$(*exclusionPatterns.toTypedArray())</ID>
+    <ID>TooManyFunctions:Schema.kt$Schema</ID>
+    <ID>TopLevelPropertyNaming:Neo4J.kt$/** * Defines the number of edges to be processed in a single batch operation during persistence. * * This constant is used for chunking collections of edges into smaller groups to optimize write * performance and reduce memory usage when interacting with the Neo4j database. Specifically, it * determines the maximum size of each chunk of edges to be persisted in one batch operation. */ const val edgeChunkSize = 10000</ID>
+    <ID>TopLevelPropertyNaming:Neo4J.kt$/** * Specifies the maximum number of nodes to be processed in a single chunk during persistence * operations. * * This constant is used to control the size of batches when persisting a list of nodes to the * database. Breaking the list into chunks of this size helps improve performance and memory * efficiency during database writes. Each chunk is handled individually, ensuring that operations * remain manageable even for large data sets. */ const val nodeChunkSize = 10000</ID>
+    <ID>UnusedPrivateProperty:Application.kt$Application$@CommandLine.Option( names = ["--save-depth"], description = [ "Performance optimisation: " + "Limit recursion depth form neo4j OGM when leaving the AST. " + "$DEFAULT_SAVE_DEPTH (default) means no limit is used." ], ) private var depth: Int = DEFAULT_SAVE_DEPTH</ID>
+    <ID>UnusedPrivateProperty:Application.kt$Application$private val packages: Array&lt;String> = arrayOf("de.fraunhofer.aisec.cpg.graph", "de.fraunhofer.aisec.cpg.frontends")</ID>
+    <ID>UnusedPrivateProperty:Application.kt$private const val EXIT_FAILURE = 1</ID>
+  </CurrentIssues>
+</SmellBaseline>

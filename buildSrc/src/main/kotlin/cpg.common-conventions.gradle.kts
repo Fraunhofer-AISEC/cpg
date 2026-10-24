@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("cpg.formatting-conventions")
+    id("cpg.static-analysis-conventions")
 
     `java-library`
     `jvm-test-suite`

@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ClassNaming:BSI_TR02102.kt$BSI_TR02102 : SotaRequirementsCatalogCryptoCatalogTLSCatalog</ID>
+    <ID>EmptyFunctionBlock:Dsl.kt${}</ID>
+    <ID>ForbiddenComment:BSI_TR02102.kt$BSI_TR02102$// TODO: Not sure why the AI suggests me this value. The TR doesn't state anything.</ID>
+    <ID>ForbiddenComment:BSI_TR02102.kt$BSI_TR02102$// TODO: There are requirements concerning padding!</ID>
+    <ID>ForbiddenComment:CryptoCheckHelpers.kt$// TODO: We cannot check this statically, but it is a requirement that the IV is unique for each</ID>
+    <ID>FunctionNaming:BSI_TR02102.kt$BSI_TR02102$private fun TransportEncryption.checkTLS1_2( requiresPFS: Boolean = false, forbidsPSK: Boolean = false, ): QueryTree&lt;Boolean></ID>
+    <ID>FunctionNaming:BSI_TR02102.kt$BSI_TR02102$private fun TransportEncryption.checkTLS1_3(forbidsPSK: Boolean = false): QueryTree&lt;Boolean></ID>
+    <ID>ImplicitDefaultLocale:Dsl.kt$String.format("%03d", requirements.size + 1)</ID>
+    <ID>LargeClass:BSI_TR02102.kt$BSI_TR02102 : SotaRequirementsCatalogCryptoCatalogTLSCatalog</ID>
+    <ID>LongMethod:BSI_TR02102.kt$BSI_TR02102$private fun Signature.checkRSASignature(): QueryTree&lt;Boolean></ID>
+    <ID>LongMethod:BSI_TR02102.kt$BSI_TR02102$private fun TransportEncryption.checkTLS1_2( requiresPFS: Boolean = false, forbidsPSK: Boolean = false, ): QueryTree&lt;Boolean></ID>
+    <ID>LongMethod:BSI_TR02102.kt$BSI_TR02102$private fun TransportEncryption.checkTLS1_3(forbidsPSK: Boolean = false): QueryTree&lt;Boolean></ID>
+    <ID>LongMethod:DslTest.kt$DslTest$@Test fun testDsl()</ID>
+    <ID>LongParameterList:Project.kt$AnalysisProject$( /** * The builder for the project. Potentially null if this is a temporary project that was created * using [AnalysisProject.temporary]. */ var builder: ProjectBuilder? = null, /** The project name. */ var name: String, /** The project directory, if it exists on file. Null if the project is an ad-hoc project. */ var projectDir: Path?, /** The folder where the queries are located. */ var queriesFolder: Path? = projectDir?.resolve("queries"), /** The folder where the security goals are located. */ var securityGoalsFolder: Path? = projectDir?.resolve("security-goals"), /** The folder where the components are located. */ var componentsFolder: Path? = projectDir?.resolve("components"), /** * The folder where additional libraries can be placed for analysis, these can be stubs * containing only type information or entire source code files. The subfolders are used to * create components and the format should be libraries/&lt;componentName>/&lt;namespacefolders>. In * the case of a stdlib, this would look like libraries/stdlib/[os,sys, ...]. In the case of an * external library it would look like libraries/mylibrary/org/mylibrary/somesubfolder/... if * the namespace starts with org.mylibrary. or libraries/mylibrary/mylibrary/somesubfolder/... * if the namespace starts with mylibrary. */ var librariesPath: Path? = projectDir?.resolve("libraries"), var requirementFunctions: Map&lt;String, TranslationResult.() -> QueryTree&lt;Boolean>> = emptyMap(), var requirementCategories: Map&lt;String, RequirementCategoryBuilder> = emptyMap(), var assumptionStatusFunctions: Map&lt;(Assumption) -> Boolean, AssumptionStatus> = emptyMap(), var suppressedQueryTreeIDs: Map&lt;(QueryTree&lt;*>) -> Boolean, Any> = emptyMap(), /** The translation configuration for the project. */ var config: TranslationConfiguration, /** * Any post-process steps that can be applied to the analysis result. This can for example be * used to fill [AnalysisResult.sarif]. */ var postProcess: (AnalysisProject.(AnalysisResult) -> Pair&lt;List&lt;ReportingDescriptor>, List&lt;Result>>)? = null, )</ID>
+    <ID>LongParameterList:Project.kt$AnalysisProject.Companion$( projectDir: Path, sources: List&lt;Path>? = null, components: List&lt;String>? = null, exclusionPatterns: List&lt;String>? = null, librariesPath: Path? = projectDir.resolve("libraries"), postProcess: (AnalysisProject.(AnalysisResult) -> Pair&lt; List&lt;ReportingDescriptor>, List&lt;Result>, >)? = null, configModifier: ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? = null, )</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$1.2f</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$1.3f</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$104</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$128</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$192</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$250</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$256</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$3000</ID>
+    <ID>MagicNumber:BSI_TR02102.kt$BSI_TR02102$96</ID>
+    <ID>MatchingDeclarationName:Annotations.kt$Import</ID>
+    <ID>MaxLineLength:BSI_TR02102.kt$BSI_TR02102$"The hash function ${hashFunction.hashFunctionName} is not considered secure. Should be one of ${secureFunctions.map { cls -> cls.simpleName }}."</ID>
+    <ID>MaxLineLength:BSI_TR02102.kt$de.fraunhofer.aisec.codyze.catalogs.german.BSI_TR02102.kt</ID>
+    <ID>MaxLineLength:CryptoCheckHelpers.kt$"We cannot check the uniqueness of the IV statically, so we assume it is unique.\n\nThis should be verified manually."</ID>
+    <ID>MaxLineLength:Project.kt$TranslationOptions$"The components to analyze. They must be located inside the 'components' folder inside the project directory. The 'components' folder will be taken as the topLevel property for the translation configuration."</ID>
+    <ID>MaxLineLength:TLSCheckHelpers.kt$"TLS 1.3 PSK handshake mode $mode is NOT recommended. Should be one of $recommendedHandshakeWithPSK"</ID>
+    <ID>MaxLineLength:TLSCheckHelpers.kt$"TLS 1.3 certificate signature algorithm $algorithm is NOT recommended. Should be one of $recommendedCertSignatureAlgorithms"</ID>
+    <ID>MaxLineLength:TLSCheckHelpers.kt$"TLS 1.3 cipher suite ${suite?.name} is NOT recommended. Should be one of $recommendedCipherSuites"</ID>
+    <ID>MaxLineLength:TLSCheckHelpers.kt$"TLS 1.3 signature algorithm $algorithm is NOT recommended. Should be one of $recommendedSignatureAlgorithms"</ID>
+    <ID>MaxLineLength:TLSCheckHelpers.kt$"TLS 1.3 supported group $group is NOT recommended. Should be one of $recommendedSupportedGroups"</ID>
+    <ID>NestedBlockDepth:BSI_TR02102.kt$BSI_TR02102$private fun Signature.checkRSASignature(): QueryTree&lt;Boolean></ID>
+    <ID>ReturnCount:BSI_TR02102.kt$BSI_TR02102$private fun TransportEncryption.checkTLS1_2( requiresPFS: Boolean = false, forbidsPSK: Boolean = false, ): QueryTree&lt;Boolean></ID>
+    <ID>ReturnCount:BSI_TR02102.kt$BSI_TR02102$private fun TransportEncryption.checkTLS1_3(forbidsPSK: Boolean = false): QueryTree&lt;Boolean></ID>
+    <ID>ReturnCount:CodyzeScriptHost.kt$fun evaluateScriptAndIncludes(scriptFile: Path): CodyzeScript?</ID>
+    <ID>TooManyFunctions:BSI_TR02102.kt$BSI_TR02102 : SotaRequirementsCatalogCryptoCatalogTLSCatalog</ID>
+    <ID>TooManyFunctions:CryptoCheckHelpers.kt$de.fraunhofer.aisec.codyze.catalogs.helpers.CryptoCheckHelpers.kt</ID>
+    <ID>TooManyFunctions:Dsl.kt$de.fraunhofer.aisec.codyze.dsl.Dsl.kt</ID>
+    <ID>UnusedParameter:BSI_TR02102.kt$BSI_TR02102$forbidsPSK: Boolean = false</ID>
+    <ID>UnusedParameter:Dsl.kt$message: () -> String</ID>
+    <ID>UnusedPrivateProperty:BSI_TR02102.kt$BSI_TR02102$val ivIsRandom = this.isRandomIv()</ID>
+    <ID>UnusedPrivateProperty:CodyzeScriptHost.kt$val includedScript = evaluateScript(script.projectBuilder.projectDir.resolve(include), script.projectBuilder) ?: return null</ID>
+    <ID>UseRequire:Dsl.kt$ProjectBuilder$throw IllegalArgumentException("Project name must be set")</ID>
+  </CurrentIssues>
+</SmellBaseline>

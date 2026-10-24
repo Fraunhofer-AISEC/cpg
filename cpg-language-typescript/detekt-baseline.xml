@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleNode(node: TypeScriptNode): Expression</ID>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: support ObjectBindingPattern (whatever it is). seems to be multiple assignment</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$// TODO: fqn - how?</ID>
+    <ID>LongMethod:TypescriptLanguageFrontendTest.kt$TypeScriptLanguageFrontendTest$@Test fun testComplexCall()</ID>
+    <ID>MagicNumber:JavaScriptLanguage.kt$JavaScriptLanguage$64</ID>
+    <ID>MatchingDeclarationName:TypescriptLanguageFrontendTest.kt$TypeScriptLanguageFrontendTest</ID>
+    <ID>ReturnCount:DeclarationHandler.kt$DeclarationHandler$private fun handleNode(node: TypeScriptNode): Declaration</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleNode(node: TypeScriptNode): Expression</ID>
+    <ID>ReturnCount:StatementHandler.kt$StatementHandler$private fun handleNode(node: TypeScriptNode): Expression</ID>
+    <ID>ReturnCount:TypeHandler.kt$TypeHandler$fun handleNode(node: TypeScriptNode): Type</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : Handler</ID>
+  </CurrentIssues>
+</SmellBaseline>

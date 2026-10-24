@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>EmptyFunctionBlock:Application.kt$Codyze${}</ID>
+    <ID>MatchingDeclarationName:Application.kt$Codyze : CliktCommand</ID>
+    <ID>TooGenericExceptionCaught:ConsoleCommandHelper.kt$ConsoleCommandHelper$e: Exception</ID>
+  </CurrentIssues>
+</SmellBaseline>
