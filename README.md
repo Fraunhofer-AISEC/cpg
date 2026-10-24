@@ -181,7 +181,7 @@ For parsing TypeScript, the necessary TypeScript-based code can be found in the 
 
 #### Codyze Console
 
-The [Codyze Console](codyze-console/README.md) web application is an optional module, enabled/disabled via the `gradle.properties` setting `enableCodyzeConsole`. Its AI chat feature additionally requires the `cpg-ai` module (see above), which - as noted there - is automatically enabled alongside `codyze-console` unless `enableAIModule` is set explicitly.
+The [Codyze Console](codyze-console/README.md) web application is an optional module, enabled/disabled via the `gradle.properties` setting `enableCodyzeConsole`. Its AI chat feature additionally requires the `cpg-ai` module (see above), which - as noted there - is automatically enabled alongside `codyze-console` unless `enableAIModule` is set explicitly. The same module also ships `codyze repl`, an interactive Kotlin REPL for ad-hoc CPG queries - see the [REPL section](codyze-console/README.md#repl) of its README.
 
 ### Code Style
 
