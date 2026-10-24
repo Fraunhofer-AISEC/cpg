@@ -54,7 +54,9 @@ import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.ceil
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
@@ -88,6 +90,165 @@ private const val FIRST_STATE_SAMPLE_AFTER_EDGES = 64
 private const val STATES_PER_SAMPLE = 8
 
 /**
+ * How long a single edge may be transformed before [EdgeStallWatchdog] reports that we are stuck on
+ * it. Every further report about the same edge is due after twice the time of the previous one, so
+ * a genuinely unbounded operation costs us a logarithmic number of log lines.
+ *
+ * The transformation of one edge is expected to take milliseconds, so anything in the minutes range
+ * is a bug. Note that this only *reports*; whether we can actually abandon the edge is up to
+ * [withTimeout] and thus up to the transformation reaching a cancellation point.
+ */
+private val SINGLE_EDGE_STALL_REPORT_AFTER = 1.minutes
+
+/** How often [EdgeStallWatchdog] looks whether an analysis is still working on the same edge. */
+private val STALL_POLL_INTERVAL = 15.seconds
+
+/**
+ * Watches the [Lattice.iterateEOG] runs which are currently in progress and reports an edge whose
+ * transformation does not finish, *while* it does not finish.
+ *
+ * We need this because the transformation of a single edge is not interruptible in general: it is
+ * ordinary Kotlin code, and [withTimeout] can only cancel it where it reaches a cancellation point.
+ * If it does not, the analysis is stuck with no way to tell from the outside what it is stuck in --
+ * the log stays silent for however long the operation takes, and the stack of the thread that runs
+ * the worklist only shows that it is waiting for its children. So we sample the stack traces of the
+ * worker threads instead, which is the only thing that actually names the operation to blame.
+ *
+ * Runs are strictly nested: a transformation may analyze a callee, which starts another run inside
+ * the current one. Only the innermost run reports, because all the outer ones are stuck by
+ * construction while it is working and would just repeat each other.
+ */
+private object EdgeStallWatchdog {
+
+    /**
+     * One [Lattice.iterateEOG] run in progress. [enter] and [leave] are called for every single
+     * edge, so they do no more than write two fields; everything which costs anything - describing
+     * the edge, walking the stacks - happens on the watchdog thread and only if we are actually
+     * stuck.
+     */
+    class Run(private val name: String) {
+        /** The edge we are working on, or `null` if we are between edges. */
+        @Volatile private var edge: EvaluationOrder? = null
+
+        /** When we started with [edge], in [System.nanoTime]. */
+        @Volatile private var sinceNanos: Long = 0
+
+        /** How long [edge] has to take before we report about it again. */
+        @Volatile
+        private var reportAfterNanos: Long = SINGLE_EDGE_STALL_REPORT_AFTER.inWholeNanoseconds
+
+        /** Records that we are about to transform [edge]. */
+        fun enter(edge: EvaluationOrder) {
+            sinceNanos = System.nanoTime()
+            reportAfterNanos = SINGLE_EDGE_STALL_REPORT_AFTER.inWholeNanoseconds
+            this.edge = edge
+        }
+
+        /** Records that we are done with the current edge. */
+        fun leave() {
+            edge = null
+        }
+
+        /** Logs a stall if the current edge has been running for too long. */
+        fun reportIfStalled() {
+            val stuckOn = edge ?: return
+            val elapsed = System.nanoTime() - sinceNanos
+            if (elapsed < reportAfterNanos) return
+            // Back off first: if the logging below throws, we still do not want to spin on it.
+            reportAfterNanos = elapsed * 2
+            Pass.log.warn(
+                "The analysis of {} has been transforming the single edge {} for {}. This is a bug: " +
+                    "the transformation of one edge is expected to take milliseconds. The threads " +
+                    "are currently here:\n{}",
+                name,
+                describe(stuckOn),
+                elapsed.nanoseconds,
+                workerStackTraces(),
+            )
+        }
+    }
+
+    /**
+     * The runs in progress, innermost last. Guarded by the monitor of this object, which the worker
+     * threads only ever take for the very short [register]/[unregister], never while transforming.
+     */
+    private val runs = mutableListOf<Run>()
+
+    private var poller: Thread? = null
+
+    /** Registers a new, innermost run under the given name and returns its handle. */
+    @Synchronized
+    fun register(name: String): Run {
+        val run = Run(name)
+        // The watchdog exists to tell us what an analysis is stuck in, and it can only tell us by
+        // logging it, so there is nothing to gain from watching when nobody is listening. Checking
+        // here rather than inside the loop means a run which is not being debugged never starts a
+        // polling thread at all, and the per-edge enter/leave stay the two field writes they are.
+        if (!Pass.log.isDebugEnabled) {
+            return run
+        }
+        runs.add(run)
+        if (poller == null) {
+            poller =
+                Thread { poll() }
+                    .apply {
+                        this.name = "cpg-iterate-eog-watchdog"
+                        // Must not keep the JVM alive: this thread never finishes on its own.
+                        this.isDaemon = true
+                        start()
+                    }
+        }
+        return run
+    }
+
+    /** Removes [run] again. */
+    @Synchronized
+    fun unregister(run: Run) {
+        runs.remove(run)
+    }
+
+    @Synchronized private fun innermost(): Run? = runs.lastOrNull()
+
+    private fun poll() {
+        while (true) {
+            try {
+                Thread.sleep(STALL_POLL_INTERVAL.inWholeMilliseconds)
+                innermost()?.reportIfStalled()
+            } catch (_: InterruptedException) {
+                return
+            } catch (e: Exception) {
+                // A watchdog which takes the analysis down with it would be worse than no watchdog.
+                Pass.log.warn("The iterateEOG watchdog failed and stops watching", e)
+                return
+            }
+        }
+    }
+
+    /**
+     * The stacks of the threads which could be doing the work, which are the one running the
+     * worklist and the coroutine dispatcher's workers. We deliberately do not dump every thread of
+     * the JVM: the interesting ones are few and the uninteresting ones are many.
+     */
+    private fun workerStackTraces(): String =
+        Thread.getAllStackTraces()
+            .asSequence()
+            .filter { (thread, stack) ->
+                stack.isNotEmpty() &&
+                    (thread.name.startsWith("DefaultDispatcher-worker-") ||
+                        thread.name.startsWith("main") ||
+                        thread.name.startsWith("cpg-"))
+            }
+            .joinToString("\n") { (thread, stack) ->
+                val frames =
+                    stack.take(STALL_STACK_FRAMES).joinToString("\n") { frame -> "\tat $frame" }
+                "\"${thread.name}\" ${thread.state}\n$frames"
+            }
+}
+
+/** The number of stack frames [EdgeStallWatchdog] logs per thread. */
+private const val STALL_STACK_FRAMES = 25
+
+/**
  * Bookkeeping for a single [Lattice.iterateEOG] run. Memory consumption of the analysis is driven
  * by the product of [peakLiveStates] and the number of entries in each of them, neither of which is
  * visible from the outside, so we report both.
@@ -96,7 +257,21 @@ private const val STATES_PER_SAMPLE = 8
  * reaches the end: without the intermediate reports, the log would name every function but the one
  * that actually caused the problem.
  */
-private class IterationStatistics(private val startEdges: List<EvaluationOrder>) {
+private class IterationStatistics(
+    private val startEdges: List<EvaluationOrder>,
+    /**
+     * Whether anything measured here is ever going to be looked at. Resolved once per run, because
+     * asking the logger is a filter-chain walk and the alternative would be asking it for every
+     * single edge.
+     */
+    val diagnosticsEnabled: Boolean,
+    /**
+     * Whether [sample] still has to count even with diagnostics off, because
+     * [Lattice.Configuration.maxStateEntries] is enforced from its result. That budget is a safety
+     * net rather than a diagnostic, so it may not be switched off with the logging.
+     */
+    private val budgetEnabled: Boolean,
+) {
     /** The number of edges we took off a worklist. */
     var processedEdges = 0
         private set
@@ -114,6 +289,15 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
     /** The number of entries of the biggest state we looked at, or -1 if we never sampled one. */
     private var sampledStateEntries = -1
 
+    /** How long the whole run spent in the transformation, as opposed to the worklist itself. */
+    private var transformationTime = Duration.ZERO
+
+    /** How long the single slowest transformation of this run took. */
+    private var slowestTransformation = Duration.ZERO
+
+    /** The edge whose transformation took [slowestTransformation]. */
+    private var slowestEdge: String? = null
+
     /** The number of processed edges at which we take the next sample. */
     private var nextSampleEdge = FIRST_STATE_SAMPLE_AFTER_EDGES
 
@@ -122,6 +306,21 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
 
     private val name: String
         get() = startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+
+    /**
+     * Records that transforming [edge] took [duration], so that [report] can name the edge which
+     * cost us the most. A run whose time is dominated by a single edge is a very different problem
+     * from one which is slow because it processes many of them, and the two are indistinguishable
+     * from the outside.
+     */
+    fun recordTransformation(edge: EvaluationOrder, duration: Duration) {
+        if (!diagnosticsEnabled) return
+        transformationTime += duration
+        if (duration > slowestTransformation) {
+            slowestTransformation = duration
+            slowestEdge = describe(edge)
+        }
+    }
 
     /**
      * Records that we are about to process another edge while [liveStates] states are alive, and
@@ -142,6 +341,10 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
      * budget is a best-effort early warning, not a guarantee against ever exhausting the heap.
      */
     fun sample(liveStates: Int, states: () -> Iterable<Lattice.Element>): Long {
+        // Nobody is going to read the counters and no budget is being enforced, so there is
+        // nothing to count. Returning zero is right either way: the caller compares it against a
+        // budget which is null in that case.
+        if (!diagnosticsEnabled && !budgetEnabled) return 0
         processedEdges++
         if (liveStates > peakLiveStates) {
             peakLiveStates = liveStates
@@ -201,6 +404,64 @@ private class IterationStatistics(private val startEdges: List<EvaluationOrder>)
                 peakEntries,
             )
         }
+
+        // A run whose time went into a single edge is a bug in the transformation, not a big
+        // analysis, so it gets its own message and it gets it unconditionally.
+        if (slowestTransformation > SINGLE_EDGE_STALL_REPORT_AFTER) {
+            Pass.log.warn(
+                "The analysis of {} spent {} of its {} in the transformation of the single edge {}. " +
+                    "This edge, not the size of the function, is what made the analysis slow.",
+                name,
+                slowestTransformation,
+                transformationTime,
+                slowestEdge,
+            )
+        } else if (Pass.log.isDebugEnabled) {
+            Pass.log.debug(
+                "The analysis of {} spent {} in {} transformations, at most {} in a single one ({}).",
+                name,
+                transformationTime,
+                processedEdges,
+                slowestTransformation,
+                slowestEdge,
+            )
+        }
+    }
+}
+
+/**
+ * A short description of [edge] which is good enough to find the corresponding source location
+ * again. We describe the node the edge leads to, because that is the one the transformation looks
+ * at.
+ */
+private fun describe(edge: EvaluationOrder): String {
+    val target = edge.end
+    return "${target.javaClass.simpleName} \"${target.name.localName}\" at ${target.location}"
+}
+
+/**
+ * Runs [block], which is the transformation of [edge], and tells both [statistics] and [watchdog]
+ * how long it took. The two serve different purposes: [statistics] reports afterwards which edge
+ * was the most expensive one, [watchdog] reports *while* an edge refuses to finish.
+ */
+private suspend inline fun <R> measureAndRecord(
+    edge: EvaluationOrder,
+    statistics: IterationStatistics,
+    watchdog: EdgeStallWatchdog.Run,
+    crossinline block: suspend () -> R,
+): R {
+    // One field read, as opposed to the two clock reads and four volatile writes below. The
+    // watchdog only ever reports by logging, so it has nothing to do here either.
+    if (!statistics.diagnosticsEnabled) {
+        return block()
+    }
+    watchdog.enter(edge)
+    val started = TimeSource.Monotonic.markNow()
+    try {
+        return block()
+    } finally {
+        statistics.recordTransformation(edge, started.elapsedNow())
+        watchdog.leave()
     }
 }
 
@@ -474,6 +735,20 @@ class TimeoutBudget(private val startMark: TimeMark, timeout: Duration) :
         }
     }
 
+    /**
+     * Like [credit], but never extends the budget beyond [max] in total. Useful when the caller
+     * wants to exempt nested work without letting repeated credits (e.g. from deeply nested
+     * callees, each extending their caller's budget in turn) stretch the budget by an unbounded
+     * multiple of what it started with.
+     */
+    fun creditUpTo(elapsed: Duration, max: Duration) {
+        while (true) {
+            val current = remainingNanos.load()
+            val next = minOf(current + elapsed.inWholeNanoseconds, max.inWholeNanoseconds)
+            if (remainingNanos.compareAndSet(current, next)) break
+        }
+    }
+
     companion object Key : CoroutineContext.Key<TimeoutBudget>
 }
 
@@ -712,7 +987,17 @@ interface Lattice<T : Lattice.Element> {
                 currentCoroutineContext()
             }
 
-        val statistics = IterationStatistics(startEdges)
+        // Resolved once here rather than per edge; see [IterationStatistics.diagnosticsEnabled].
+        val statistics =
+            IterationStatistics(
+                startEdges,
+                diagnosticsEnabled = Pass.log.isDebugEnabled,
+                budgetEnabled = maxStateEntries != null,
+            )
+        val watchdog =
+            EdgeStallWatchdog.register(
+                startEdges.firstOrNull()?.start?.name?.localName ?: "<unknown>"
+            )
         var aborted = true
         return withContext(context) {
             try {
@@ -725,11 +1010,16 @@ interface Lattice<T : Lattice.Element> {
                         timeout,
                         maxStateEntries,
                         statistics,
+                        watchdog,
                     )
-                statistics.finalStateEntries = result.first.entryCount()
+                // entryCount() walks the whole state, and only report() ever reads this.
+                if (statistics.diagnosticsEnabled) {
+                    statistics.finalStateEntries = result.first.entryCount()
+                }
                 aborted = result.second
                 result
             } finally {
+                EdgeStallWatchdog.unregister(watchdog)
                 statistics.report(aborted)
             }
         }
@@ -747,8 +1037,13 @@ interface Lattice<T : Lattice.Element> {
         timeout: Duration,
         maxStateEntries: Long?,
         statistics: IterationStatistics,
+        watchdog: EdgeStallWatchdog.Run,
     ): Pair<T, Boolean> {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
+        // Hoisted out of the worklist loop below: it captures globalState, so writing it inline
+        // would allocate one of these for every single edge, only for [IterationStatistics.sample]
+        // to drop it again when nobody is sampling.
+        val liveStatesForSampling: () -> Iterable<Lattice.Element> = { globalState.values }
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
             globalState.put(startEdge, startState)
@@ -892,7 +1187,7 @@ interface Lattice<T : Lattice.Element> {
             // accommodate that peak at some point, and a state that grows that large once can grow
             // that large again, so we would rather stop a run that proved it can spike than let it
             // through on the hope that this particular spike was a one-off.
-            val liveEntries = statistics.sample(globalState.size) { globalState.values }
+            val liveEntries = statistics.sample(globalState.size, liveStatesForSampling)
 
             // All edges which are still to be processed are in one of the worklists at this point,
             // so this is the only place where we can determine which states are still live.
@@ -959,15 +1254,29 @@ interface Lattice<T : Lattice.Element> {
                 if (timeout != Duration.INFINITE)
                     currentCoroutineContext()[TimeoutBudget]?.remaining ?: Duration.INFINITE
                 else Duration.INFINITE
-            @Suppress("UNCHECKED_CAST")
-            val newState =
-                transformation(
-                    this@Lattice,
-                    nextEdge,
-                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
-                )
+            // What the transformation produced, or null if it did not get that far. The handler for
+            // the timeout below needs it, so it cannot live inside the block.
+            var transformed: T? = null
             try {
                 withTimeout(remainingTime) {
+                    // The transformation has to run *inside* the timeout. It is by far the most
+                    // expensive part of an iteration - it is the one which analyzes callees and
+                    // walks the graph - so a timeout which only covers the bookkeeping below is a
+                    // timeout which does not limit anything. Note that this only helps as far as
+                    // the transformation is cooperative: cancellation takes effect at its
+                    // suspension points and wherever it calls `ensureActive`, and not in between.
+                    @Suppress("UNCHECKED_CAST")
+                    val newState =
+                        measureAndRecord(nextEdge, statistics, watchdog) {
+                            transformation(
+                                this@Lattice,
+                                nextEdge,
+                                if (isNotNearStartOrEndOfBasicBlock) nextGlobal
+                                else nextGlobal.duplicate() as T,
+                            )
+                        }
+                    transformed = newState
+
                     nextEdge.end.nextEOGEdges.forEach {
                         currentCoroutineContext().ensureActive()
                         // We continue with the nextEOG edge if we haven't seen it before or if we
@@ -1078,7 +1387,12 @@ interface Lattice<T : Lattice.Element> {
                 Pass.log.info(
                     "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
                 )
-                finalState = this@Lattice.lub(finalState, newState, false)
+                // If we were cancelled before the transformation finished, we do not have its
+                // result and fold in the state we had on entering the edge instead. That state
+                // holds at this program point too, so the result stays an over-approximation -
+                // which is all we promise for an aborted run, and the caller is told that this is
+                // not a fixpoint.
+                finalState = this@Lattice.lub(finalState, transformed ?: nextGlobal, false)
                 Pass.log.info("Finished calculating final lub")
                 return Pair(finalState, true)
             }
@@ -1747,26 +2061,40 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     allKeys.collectMaybeParallel<K, Element.PendingWrite<K, V>> { key, writes ->
                         val otherValue = two[key]
                         val thisValue = one[key]
-                        if (thisValue != null && otherValue != null) {
-                            writes +=
-                                Element.PendingWrite(
-                                    key,
-                                    innerLattice.lub(
-                                        one = thisValue,
-                                        two = otherValue,
-                                        allowModify = false,
-                                        widen = widen,
-                                        // We already run on $CPU_CORES coroutines, so we don't
-                                        // need any additional ones
-                                        1,
-                                    ),
-                                    sharedWithProducer = false,
-                                )
-                        } else {
-                            // Only one of the two maps has this key, so its value carries over
-                            // unchanged. We share it with that map instead of copying it.
-                            (thisValue ?: otherValue)?.let {
-                                writes += Element.PendingWrite(key, it, sharedWithProducer = true)
+                        when {
+                            // Both maps hold the very same object, and lub(x, x) is x, so there is
+                            // nothing to compute and nothing to copy. Note that sharing it does not
+                            // introduce an alias: the object is reachable from both maps already,
+                            // which is how it got here, so this only records a sharing which exists
+                            // either way - and which [duplicate] or [putShared] should have marked
+                            // when it handed the object to its second owner.
+                            thisValue != null && otherValue != null && thisValue === otherValue -> {
+                                writes +=
+                                    Element.PendingWrite(key, thisValue, sharedWithProducer = true)
+                            }
+                            thisValue != null && otherValue != null -> {
+                                writes +=
+                                    Element.PendingWrite(
+                                        key,
+                                        innerLattice.lub(
+                                            one = thisValue,
+                                            two = otherValue,
+                                            allowModify = false,
+                                            widen = widen,
+                                            // We already run on $CPU_CORES coroutines, so we don't
+                                            // need any additional ones
+                                            1,
+                                        ),
+                                        sharedWithProducer = false,
+                                    )
+                            }
+                            else -> {
+                                // Only one of the two maps has this key, so its value carries over
+                                // unchanged. We share it with that map instead of copying it.
+                                (thisValue ?: otherValue)?.let {
+                                    writes +=
+                                        Element.PendingWrite(key, it, sharedWithProducer = true)
+                                }
                             }
                         }
                     }
