@@ -43,7 +43,7 @@ class IntegerValueTest {
     private val name = Name("testVariable")
     private val current = LatticeInterval.Bounded(1, 1)
     val lattice =
-        TupleState<Any>(
+        TupleState<Any, NewIntervalLattice.Element>(
             DeclarationState(NewIntervalLattice()),
             NewIntervalState(NewIntervalLattice()),
         )
@@ -51,7 +51,7 @@ class IntegerValueTest {
     @Test
     fun applyDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -76,7 +76,7 @@ class IntegerValueTest {
     @Test
     fun applyUninitializedDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -90,7 +90,7 @@ class IntegerValueTest {
     @Test
     fun applyPrefixIncrement() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -115,7 +115,7 @@ class IntegerValueTest {
     @Test
     fun applyPostfixIncrement() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -140,7 +140,7 @@ class IntegerValueTest {
     @Test
     fun applyPrefixDecrement() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -165,7 +165,7 @@ class IntegerValueTest {
     @Test
     fun applyPostfixIncrementation() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -190,7 +190,7 @@ class IntegerValueTest {
     @Test
     fun applyUnaryStar() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -214,7 +214,7 @@ class IntegerValueTest {
     @Test
     fun applyAssign() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -245,7 +245,7 @@ class IntegerValueTest {
     @Test
     fun testAssignUnresolved() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -268,7 +268,7 @@ class IntegerValueTest {
     @Test
     fun testAssignPlusLiteral() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -299,7 +299,7 @@ class IntegerValueTest {
     @Test
     fun testAssignPlusUnresolved() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -322,7 +322,7 @@ class IntegerValueTest {
     @Test
     fun testAssignMinusLiteral() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -353,7 +353,7 @@ class IntegerValueTest {
     @Test
     fun testAssignMinusUnresolved() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -376,7 +376,7 @@ class IntegerValueTest {
     @Test
     fun testAssignTimesLiteral() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -407,7 +407,7 @@ class IntegerValueTest {
     @Test
     fun testAssignTimesUnresolved() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -430,7 +430,7 @@ class IntegerValueTest {
     @Test
     fun testAssignDivLiteral() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -461,7 +461,7 @@ class IntegerValueTest {
     @Test
     fun testAssignDivUnresolved() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -484,7 +484,7 @@ class IntegerValueTest {
     @Test
     fun testAssignModLiteral() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -515,7 +515,7 @@ class IntegerValueTest {
     @Test
     fun testAssignModUnresolved() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
