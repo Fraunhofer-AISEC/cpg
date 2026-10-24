@@ -277,7 +277,9 @@ open class CLanguage :
         }
 
         // In C (but not in C++, see CPPLanguage.tryCast), void* can also be implicitly cast to any
-        // other pointer, e.g. the result of malloc or NULL
+        // other object pointer, including pointers to pointers, e.g. the result of malloc or NULL.
+        // Function pointers are excluded, as in the C standard: they are a FunctionPointerType, not
+        // a PointerType.
         if (isVoidPointerToOtherPointer(type, targetType)) {
             return ImplicitCast
         }

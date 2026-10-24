@@ -231,8 +231,8 @@ class CXXInferenceTest {
             }
         assertNotNull(tu)
 
-        val calls = tu.calls("take_pointer")
-        assertEquals(3, calls.size)
+        val calls = tu.calls("take_pointer") + tu.calls("take_pointer_pointer")
+        assertEquals(4, calls.size)
         for (call in calls) {
             assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
             assertTrue(
