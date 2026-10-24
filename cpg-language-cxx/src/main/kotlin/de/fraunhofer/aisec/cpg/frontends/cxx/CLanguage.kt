@@ -292,7 +292,9 @@ open class CLanguage :
      * Strips the pointer levels [type] and [targetType] have in common and checks whether either of
      * the remaining types is unknown: an [UnknownType], or an [ObjectType] whose record we
      * inferred. An inferred record is only our guess that an undeclared type name (e.g. a typedef
-     * from a missing header) is a struct; it may as well be an integer or an enum.
+     * from a missing header) is a struct; it may as well be an integer or an enum. Pointer levels
+     * only one side has are not stripped, so a known non-pointer type still does not fit a pointer,
+     * even to an unknown type.
      */
     private fun isUnknownBehindPointers(type: Type, targetType: Type): Boolean {
         var current = type

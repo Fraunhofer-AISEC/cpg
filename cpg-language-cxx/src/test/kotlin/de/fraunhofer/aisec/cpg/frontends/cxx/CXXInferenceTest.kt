@@ -244,7 +244,11 @@ class CXXInferenceTest {
                 )
             }
         }
-        assertTrue(tu.functions.none { it.isInferred && it.name.localName != "undeclared_fn" })
+        // undeclared_fn is declared nowhere, so it is the only function we need to infer
+        assertEquals(
+            listOf("undeclared_fn"),
+            tu.functions.filter { it.isInferred }.map { it.name.localName },
+        )
     }
 
     @Test
