@@ -99,6 +99,12 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             )
         }
 
+        // If we already inferred this very function, hand that one out again instead of creating a
+        // second, identical declaration.
+        existingInferredFunction(name, signature)?.let {
+            return it
+        }
+
         return inferInScopeOf(start) {
                 val inferred: Function =
                     if (record != null) {
@@ -200,6 +206,65 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         // probably not do anything wrong by calling it "this".
         val receiver = newVariable("this", record?.toType() ?: unknownType())
         method.receiver = receiver
+    }
+
+    /**
+     * Returns a [Function] that a previous call to [inferFunctionDeclaration] already inferred into
+     * [start] for the same [name] and [signature], or `null` if there is none.
+     *
+     * Inference is supposed to be idempotent: several calls to the same unknown function should all
+     * end up invoking one inferred declaration, and for the ordinary case they already do - the
+     * first call infers the declaration, and every later call simply *resolves* to it and never
+     * reaches inference at all. That breaks down whenever the declaration cannot be placed where
+     * the lookup will later go looking for it. The clearest case is a call through a qualifier that
+     * does not exist (`missing::ns::fn(...)` with no `missing::ns` anywhere): resolution fails
+     * already in [de.fraunhofer.aisec.cpg.ScopeManager.extractScope], so no candidate is ever
+     * found, while inference falls back to the global scope and registers the function under its
+     * *unqualified* local name - somewhere the next lookup of the qualified name will never look.
+     * Every single call site then infers its own copy.
+     *
+     * That is not just redundant, it degrades badly: the duplicates accumulate in the same symbol
+     * list, every subsequent lookup of that symbol has to carry and compare all of them, and each
+     * newly added symbol invalidates [de.fraunhofer.aisec.cpg.ScopeManager]'s symbol lookup cache -
+     * so a file with many such calls gets progressively slower as it is resolved.
+     *
+     * Note that this deliberately only matches *inferred* declarations: a real declaration that
+     * happens to have the same name and signature must not be handed out here, since not reaching
+     * inference at all is the resolver's job, and silently substituting a parsed declaration for an
+     * inferred one would hide genuine resolution failures.
+     *
+     * [name] is whatever the caller passes to [inferFunctionDeclaration], and that is not
+     * consistently a local name: [TranslationUnit.inferFunction] passes `call.name.localName`,
+     * while [Namespace.inferFunction] passes the whole, possibly qualified `call.name`. Since a
+     * [Scope.symbols] entry is always keyed by the *local* name (see [Declaration.symbol]), we have
+     * to reduce it to that here - otherwise the lookup below simply never matches for the namespace
+     * case, and inference there keeps producing a declaration per call site.
+     *
+     * A caveat this cannot address: the namespace a call named the function in is already lost by
+     * the time we get here, because [de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference]
+     * falls back to the global scope and the local name when the qualifier does not resolve. Two
+     * calls `missing_a::foo(1)` and `missing_b::foo(1)`, neither namespace existing, therefore end
+     * up sharing one inferred `foo` rather than getting one each. Properly separating them means
+     * inferring the missing namespace (as the record/type path already does via
+     * [de.fraunhofer.aisec.cpg.passes.inference.tryScopeInference]) and placing the function there
+     * under its qualified name, which changes the shape of the graph and is left for its own
+     * change.
+     */
+    private fun existingInferredFunction(name: CharSequence?, signature: List<Type?>): Function? {
+        if (name == null) {
+            return null
+        }
+
+        val symbol = name.toString().substringAfterLast(language.namespaceDelimiter)
+        val scope = scopeManager.lookupScope(start) ?: return null
+        return scope.symbols[symbol]?.firstOrNull { candidate ->
+            candidate is Function &&
+                candidate.isInferred &&
+                candidate.parameters.size == signature.size &&
+                candidate.parameters.withIndex().all { (i, parameter) ->
+                    parameter.type == (signature[i] ?: UnknownType.getUnknownType(language))
+                }
+        } as? Function
     }
 
     /** This function creates a [Parameter] for each parameter in the [function]'s [signature]. */

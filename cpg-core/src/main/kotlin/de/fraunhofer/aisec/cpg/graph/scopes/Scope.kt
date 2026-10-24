@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Typedef
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
@@ -45,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.LookupScope
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -59,6 +62,40 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 typealias Symbol = String
 
 typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
+
+/**
+ * A reusable, stateless filter that can be passed wherever a symbol lookup accepts a `predicate`
+ * (see [Scope.lookupSymbol] and [de.fraunhofer.aisec.cpg.ScopeManager.lookupSymbolByName]).
+ *
+ * The point of naming these filters instead of writing them as lambdas at the call site is that
+ * they can serve as part of a cache key, which an arbitrary lambda cannot: a fresh lambda instance
+ * is a different object on every call, and even a shared one says nothing about what it selects.
+ * [de.fraunhofer.aisec.cpg.ScopeManager.lookupSymbolByName] therefore refuses to cache a lookup
+ * with an arbitrary `predicate`, but can cache one filtered by a [SymbolFilter].
+ *
+ * Caching such a lookup *as its own entry* - rather than caching the unfiltered lookup and applying
+ * the filter to its result afterwards - is not an optimization detail but a correctness
+ * requirement. [Scope.lookupSymbol] applies the predicate while walking up the scope chain and
+ * stops at the first scope that yields a non-empty result, so the filter decides *which scope
+ * wins*: a filtered lookup legitimately walks past a nearer scope whose only entry for the symbol
+ * was filtered out, and ends up with a declaration from an outer scope that the unfiltered lookup
+ * would never have reached (and which post-filtering could therefore never recover).
+ */
+enum class SymbolFilter : (Declaration) -> Boolean {
+    /** Selects declarations that declare a type, i.e. are a [DeclaresType]. */
+    DECLARES_TYPE {
+        override fun invoke(declaration: Declaration) = declaration is DeclaresType
+    },
+
+    /**
+     * Selects declarations that introduce a named scope which [Scope.name] lookups can descend
+     * into - a [Namespace], a [Record] or a [Typedef] (whose aliased type may name one).
+     */
+    DECLARES_SCOPE {
+        override fun invoke(declaration: Declaration) =
+            declaration is Namespace || declaration is Record || declaration is Typedef
+    },
+}
 
 /**
  * Represent semantic scopes in the language. Depending on the language scopes can have visibility
@@ -423,14 +460,28 @@ sealed class Scope(
  * list.
  */
 private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
+    // This runs for every scope visited by every single symbol lookup, so the (by far dominant)
+    // case of a candidate list that contains no Import at all has to stay free: bail out before
+    // allocating anything. Languages without an import mechanism never get past this line.
+    if (this.none { it is Import }) {
+        return
+    }
+
     val imports = this.filterIsInstance<Import>()
+
+    // Remove the imports by identity. MutableList.remove(element) would compare with equals(),
+    // which for a Declaration is a structural comparison of name, code, comment and location -
+    // needlessly expensive over a long candidate list, and outright wrong when the list holds
+    // several structurally equal declarations (as it does when the same header was parsed once per
+    // translation unit), since it would then drop whichever equal declaration happens to come
+    // first rather than the import itself.
+    this.removeAll { it is Import }
+
     for (import in imports) {
         val set = import.importedSymbols[symbol]
         if (set != null) {
             this.addAll(set)
         }
-
-        this.remove(import)
     }
 }
 

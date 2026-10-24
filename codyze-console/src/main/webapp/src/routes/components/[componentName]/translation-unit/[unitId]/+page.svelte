@@ -1,14 +1,14 @@
 <script lang="ts">
   import { CodeViewer } from '$lib/components/analysis';
   import { Button } from '$lib/components/ui';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
 
-  const line = $derived($page.url.searchParams.get('line'));
-  const finding = $derived($page.url.searchParams.get('finding'));
-  const kind = $derived($page.url.searchParams.get('kind'));
+  const line = $derived(page.url.searchParams.get('line'));
+  const finding = $derived(page.url.searchParams.get('finding'));
+  const kind = $derived(page.url.searchParams.get('kind'));
 
   async function exportConcepts() {
     const res = await fetch('/api/export-concepts');
