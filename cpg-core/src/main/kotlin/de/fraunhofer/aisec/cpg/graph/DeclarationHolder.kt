@@ -40,8 +40,16 @@ interface DeclarationHolder {
      */
     fun addDeclaration(declaration: Declaration)
 
+    /**
+     * Note that "contains" is decided by *identity* throughout the [addIfNotContains] overloads,
+     * not by [Any.equals]. What these guard against is wiring the very same node into the same
+     * holder twice, which is a question about object identity; two distinct declarations that
+     * merely compare equal are two declarations and both belong in the holder. Deciding it
+     * structurally was also expensive, since [Node.equals] compares name, code, comment and
+     * location, and the scan runs once per added declaration over everything added so far.
+     */
     fun <T : Declaration> addIfNotContains(collection: MutableCollection<T>, declaration: T) {
-        if (!collection.contains(declaration)) {
+        if (collection.none { it === declaration }) {
             collection.add(declaration)
         }
     }
@@ -67,15 +75,16 @@ interface DeclarationHolder {
         declaration: T,
         outgoing: Boolean,
     ) {
+        // Identity, not equality - see the first addIfNotContains overload.
         var contains = false
         for (element in collection) {
             if (outgoing) {
-                if (element.end == declaration) {
+                if (element.end === declaration) {
                     contains = true
                     break
                 }
             } else {
-                if (element.start == declaration) {
+                if (element.start === declaration) {
                     contains = true
                     break
                 }

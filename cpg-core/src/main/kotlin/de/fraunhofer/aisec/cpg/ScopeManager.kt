@@ -107,15 +107,52 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         symbolTableGeneration++
     }
 
-    /** The key identifying a cached [lookupSymbolByName] result in [symbolLookupCache]. */
-    private data class SymbolLookupCacheKey(
+    /**
+     * The key identifying a cached [lookupSymbolByName] result in [symbolLookupCache].
+     *
+     * [scope] and [fileScope] are compared and hashed by *identity*, deliberately not with
+     * [Scope.equals], which considers two scopes equal when their [Scope.astNode]s are structurally
+     * equal and their names match. Distinct scope objects can satisfy that without being
+     * interchangeable - most notably when the same header is parsed once per translation unit,
+     * which yields one separate scope object per unit for the very same record or namespace
+     * - and conflating them here would let a lookup starting in one of them answer from a result
+     *   computed for another. Identity is also what makes hashing the key O(1) instead of a
+     *   structural hash of the scope's AST node.
+     */
+    private class SymbolLookupCacheKey(
         val scope: Scope?,
         val symbol: Symbol,
         val language: Language<*>,
         val qualifiedLookup: Boolean,
         val replaceImports: Boolean,
         val fileScope: FileScope?,
-    )
+        val filter: SymbolFilter?,
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) {
+                return true
+            }
+            return other is SymbolLookupCacheKey &&
+                scope === other.scope &&
+                symbol == other.symbol &&
+                language == other.language &&
+                qualifiedLookup == other.qualifiedLookup &&
+                replaceImports == other.replaceImports &&
+                fileScope === other.fileScope &&
+                filter == other.filter
+        }
+
+        override fun hashCode(): Int {
+            var result = System.identityHashCode(scope)
+            result = 31 * result + symbol.hashCode()
+            result = 31 * result + language.hashCode()
+            result = 31 * result + qualifiedLookup.hashCode()
+            result = 31 * result + replaceImports.hashCode()
+            result = 31 * result + System.identityHashCode(fileScope)
+            result = 31 * result + filter.hashCode()
+            return result
+        }
+    }
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
@@ -530,6 +567,79 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
+     * Collapses entries of this candidate list that are not several declarations at all, but *one*
+     * declaration that the frontend parsed more than once, keeping the first of each group.
+     *
+     * Languages that include headers textually - C and C++ above all - parse an included file once
+     * per including translation unit, and each parse builds its own node for every declaration in
+     * it. A header included by 40 units therefore contributes 40 nodes for the same entity, all
+     * registered under the same symbol. Left alone, every lookup of such a symbol hands 40
+     * candidates to the caller, which is both wrong (they denote one entity) and expensive. It is
+     * also the single largest source of spurious ambiguity on real projects: C has no function
+     * overloading, so a call with several candidates comes out `PROBLEMATIC` and drags all of them
+     * into its `invokes` edge.
+     *
+     * Copies are recognized by their origin: the same kind of declaration, the same name, the same
+     * declared type and the same [PhysicalLocation] - same file, same region. A genuine
+     * redeclaration, an overload or an ODR violation is by definition written somewhere *else*, so
+     * none of those can be collapsed by accident. Note that this deliberately does not touch
+     * [Scope.symbols] itself: the duplicates are real nodes in their own translation unit's AST and
+     * removing them from the symbol table (rather than from this particular lookup result) would
+     * leave them stranded there, resolvable by nothing and linked to nothing.
+     *
+     * Two kinds of declaration need separate treatment:
+     * - A [Typedef] carries no location of its own, so it is identified by what it declares, i.e.
+     *   its alias and aliased type. That is exactly the condition under which C and C++ permit a
+     *   typedef to be repeated at all (C11 §6.7p3, C++ [dcl.typedef]p2), and it matters
+     *   disproportionately in practice, the standard integer typedefs being the most widely
+     *   included declarations there are. The two are compared by *name* rather than with
+     *   [Type.equals], which additionally requires both types to share the very same scope object -
+     *   something copies originating from translation units parsed in parallel do not.
+     * - A declaration with internal linkage (a file-scope `static`) is never collapsed, even though
+     *   its copies do share a location: internal linkage means every translation unit gets its own,
+     *   genuinely distinct entity, which is why [de.fraunhofer.aisec.cpg.passes.SymbolResolver]
+     *   narrows such candidates by translation unit. Folding them into one would leave every unit
+     *   but the winner unable to resolve its own copy.
+     */
+    private fun MutableList<Declaration>.collapseDuplicateParses() {
+        if (size < 2) {
+            return
+        }
+
+        val seen = HashSet<Any>(size)
+        retainAll { declaration ->
+            val key = declaration.duplicateParseKey() ?: return@retainAll true
+            seen.add(key)
+        }
+    }
+
+    /**
+     * A key identifying the piece of source [this] was parsed from, or `null` if that cannot be
+     * determined (in which case the declaration must never be collapsed). See
+     * [collapseDuplicateParses].
+     */
+    private fun Declaration.duplicateParseKey(): Any? {
+        if (hasInternalLinkage) {
+            return null
+        }
+
+        if (this is Typedef) {
+            return listOf(Typedef::class, name, alias.name, type.name)
+        }
+
+        val location = location ?: return null
+
+        // The declared type has to be part of the key, because a location does *not* by itself
+        // pin down what was declared there. C and C++ expand macros before parsing, so one
+        // declaration in a header can legitimately declare different things in different
+        // translation units: given `void f(MY_TYPE x);`, a unit defining `MY_TYPE` as `int` and one
+        // defining it as `double` both produce an `f` at the very same region of the very same
+        // file, and the two are genuinely different functions. Collapsing those would make one
+        // unit's calls resolve against the other unit's signature.
+        return listOf(this::class, name, location, (this as? ValueDeclaration)?.type?.name)
+    }
+
+    /**
      * This class represents the result of the [extractScope] operation. It contains a [scope]
      * object, if a scope was found and the [adjustedName] that is normalized if any aliases were
      * found during scope extraction.
@@ -653,16 +763,35 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             // alias. We need to map the declaration to a scope and then hope that its unique. We
             // need to do it in this order because there can be multiple declarations of the same
             // namespace (in different files), but they all (should) point to the same scope.
-            scope =
-                scope
-                    .lookupSymbol(
-                        part.localName,
-                        languageOnly = language,
+            //
+            // We go through lookupSymbolByName rather than calling Scope.lookupSymbol directly so
+            // that this lookup participates in symbolLookupCache - this runs once per part of every
+            // qualified name, which on a language like C++ means essentially every name there is.
+            // Passing the named SymbolFilter.DECLARES_SCOPE (instead of an equivalent lambda) is
+            // what makes the result cacheable at all; see [SymbolFilter]. An unqualified
+            // single-part name makes lookupSymbolByName's own extractScope a no-op, so this stays
+            // the same unqualified lookup it has always been, and cannot recurse back into here.
+            val declarations =
+                if (language != null) {
+                    lookupSymbolByName(
+                        name = Name(part.localName, delimiter = part.delimiter),
+                        language = language,
+                        startScope = scope,
                         localSymbols = localSymbols,
-                    ) {
-                        it is Namespace || it is Record || it is Typedef
-                    }
-                    .map {
+                        predicate = SymbolFilter.DECLARES_SCOPE,
+                    )
+                } else {
+                    scope.lookupSymbol(
+                        part.localName,
+                        languageOnly = null,
+                        localSymbols = localSymbols,
+                        predicate = SymbolFilter.DECLARES_SCOPE,
+                    )
+                }
+
+            scope =
+                declarations
+                    .mapTo(mutableSetOf()) {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
@@ -881,13 +1010,15 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             n = extractedScope.adjustedName
         }
 
-        // A custom predicate is a per-call lambda and cannot be safely used as (or compared
-        // through) a cache key, so we only cache the common case where neither it nor a
-        // localSymbols override is given. A localSymbols override answers differently depending
-        // on how much of the EOG has been traversed so far, so its results must never be cached
-        // across call sites either.
+        // An arbitrary predicate is a per-call lambda and cannot be safely used as (or compared
+        // through) a cache key, so a lookup carrying one stays uncached - unless it is one of the
+        // named, stateless SymbolFilters, which can be part of the key (see [SymbolFilter] for why
+        // this has to be a separate cache entry rather than post-filtering a cached unfiltered
+        // lookup). A localSymbols override answers differently depending on how much of the EOG has
+        // been traversed so far, so its results must never be cached across call sites either.
+        val filter = predicate as? SymbolFilter
         val cacheKey =
-            if (predicate == null && localSymbols == null) {
+            if ((predicate == null || filter != null) && localSymbols == null) {
                 SymbolLookupCacheKey(
                     scope = scope ?: startScope,
                     symbol = n.localName,
@@ -895,6 +1026,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     qualifiedLookup = scope != null,
                     replaceImports = replaceImports,
                     fileScope = fileScope,
+                    filter = filter,
                 )
             } else {
                 null
@@ -954,6 +1086,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             }
         }
 
+        list.collapseDuplicateParses()
+
         if (cacheKey != null) {
             symbolLookupCache[cacheKey] = list
         }
@@ -974,9 +1108,12 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         startScope: Scope?,
     ): DeclaresType? {
         var symbols =
-            lookupSymbolByName(name = name, language = language, startScope = startScope) {
-                    it is DeclaresType
-                }
+            lookupSymbolByName(
+                    name = name,
+                    language = language,
+                    startScope = startScope,
+                    predicate = SymbolFilter.DECLARES_TYPE,
+                )
                 .filterIsInstance<DeclaresType>()
 
         // We need to have a single match, otherwise we have an ambiguous type. We emit a warning
