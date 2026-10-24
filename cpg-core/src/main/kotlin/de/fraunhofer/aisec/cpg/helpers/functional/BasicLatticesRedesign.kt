@@ -2052,26 +2052,40 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     allKeys.collectMaybeParallel<K, Element.PendingWrite<K, V>> { key, writes ->
                         val otherValue = two[key]
                         val thisValue = one[key]
-                        if (thisValue != null && otherValue != null) {
-                            writes +=
-                                Element.PendingWrite(
-                                    key,
-                                    innerLattice.lub(
-                                        one = thisValue,
-                                        two = otherValue,
-                                        allowModify = false,
-                                        widen = widen,
-                                        // We already run on $CPU_CORES coroutines, so we don't
-                                        // need any additional ones
-                                        1,
-                                    ),
-                                    sharedWithProducer = false,
-                                )
-                        } else {
-                            // Only one of the two maps has this key, so its value carries over
-                            // unchanged. We share it with that map instead of copying it.
-                            (thisValue ?: otherValue)?.let {
-                                writes += Element.PendingWrite(key, it, sharedWithProducer = true)
+                        when {
+                            // Both maps hold the very same object, and lub(x, x) is x, so there is
+                            // nothing to compute and nothing to copy. Note that sharing it does not
+                            // introduce an alias: the object is reachable from both maps already,
+                            // which is how it got here, so this only records a sharing which exists
+                            // either way - and which [duplicate] or [putShared] should have marked
+                            // when it handed the object to its second owner.
+                            thisValue != null && otherValue != null && thisValue === otherValue -> {
+                                writes +=
+                                    Element.PendingWrite(key, thisValue, sharedWithProducer = true)
+                            }
+                            thisValue != null && otherValue != null -> {
+                                writes +=
+                                    Element.PendingWrite(
+                                        key,
+                                        innerLattice.lub(
+                                            one = thisValue,
+                                            two = otherValue,
+                                            allowModify = false,
+                                            widen = widen,
+                                            // We already run on $CPU_CORES coroutines, so we don't
+                                            // need any additional ones
+                                            1,
+                                        ),
+                                        sharedWithProducer = false,
+                                    )
+                            }
+                            else -> {
+                                // Only one of the two maps has this key, so its value carries over
+                                // unchanged. We share it with that map instead of copying it.
+                                (thisValue ?: otherValue)?.let {
+                                    writes +=
+                                        Element.PendingWrite(key, it, sharedWithProducer = true)
+                                }
                             }
                         }
                     }

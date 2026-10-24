@@ -1,0 +1,37 @@
+name: stale
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v10
+        with:
+          days-before-stale: 90
+          days-before-close: 14
+          exempt-issue-labels: "blocked,epic"
+          exempt-pr-labels: "blocked,cla-required"
+          exempt-all-milestones: true
+          stale-issue-label: "stale"
+          stale-pr-label: "stale"
+          stale-issue-message: >
+            This issue has had no activity for 90 days and is being marked as stale. It will be
+            closed in 14 days if no further activity occurs. Remove the `stale` label or comment
+            to keep it open.
+          stale-pr-message: >
+            This pull request has had no activity for 90 days and is being marked as stale. It
+            will be closed in 14 days if no further activity occurs. Remove the `stale` label,
+            push a commit, or comment to keep it open.
+          close-issue-message: >
+            Closing due to inactivity. Feel free to reopen if this is still relevant.
+          close-pr-message: >
+            Closing due to inactivity. Feel free to reopen or open a new PR if this is still
+            relevant.
