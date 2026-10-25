@@ -56,9 +56,6 @@ import ai.koog.skills.model.Skill
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.cpg.ai.clients.*
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.UNPARSABLE_ARGUMENTS_KEY
-import de.fraunhofer.aisec.cpg.ai.skills.LIST_DIRECTORY_TOOL_NAME
-import de.fraunhofer.aisec.cpg.ai.skills.READ_FILE_TOOL_NAME
 import de.fraunhofer.aisec.cpg.ai.skills.buildSkillCatalog
 import de.fraunhofer.aisec.cpg.ai.skills.buildSkillFileToolRegistry
 import de.fraunhofer.aisec.cpg.ai.skills.defaultSkillDirectories
@@ -396,19 +393,6 @@ class ChatService(
     }
 
     /**
-     * [extractFallbackToolCall] for [text], logging when it recovers a call so that a model or
-     * server that needs this fallback shows up in the log.
-     */
-    private fun detectFallbackToolCall(text: String): MessagePart.Tool.Call? =
-        extractFallbackToolCall(text, validToolNames()).also {
-            if (it != null)
-                log.info("Recovered a tool call to {} from the model's text answer", it.tool)
-        }
-
-    private fun validToolNames() =
-        tools.map { it.name }.toSet() + LIST_DIRECTORY_TOOL_NAME + READ_FILE_TOOL_NAME
-
-    /**
      * The agent's tool-calling loop: request the LLM, and if it calls tool(s), execute them and
      * send the results back, repeating until the LLM responds with text. This mirrors Koog's
      * built-in single-run strategy shape, extended with:
@@ -514,45 +498,6 @@ class ChatService(
                     }
                 }
 
-            // Some models attempt a tool call as free-form text instead of a real structured
-            // tool_calls response (see extractFallbackToolCall doc). Both "first attempt" and
-            // "after the nudge" responses get this same check before falling through to the
-            // nudge/finish behavior above, since a text-only reply can happen at either point.
-            val detectFallbackToolCall by
-                node<String, Pair<String, MessagePart.Tool.Call?>>("detectFallbackToolCall") { text
-                    ->
-                    text to detectFallbackToolCall(text)
-                }
-            val fallbackToolCallDetected by
-                node<Pair<String, MessagePart.Tool.Call?>, ToolCalls>("fallbackToolCallDetected") {
-                    (_, call) ->
-                    ToolCalls(listOf(requireNotNull(call)))
-                }
-            val fallbackNoToolCallDetected by
-                node<Pair<String, MessagePart.Tool.Call?>, String>("fallbackNoToolCallDetected") {
-                    (text, _) ->
-                    text
-                }
-
-            val detectFallbackToolCallAfterNudge by
-                node<String, Pair<String, MessagePart.Tool.Call?>>(
-                    "detectFallbackToolCallAfterNudge"
-                ) { text ->
-                    text to detectFallbackToolCall(text)
-                }
-            val fallbackToolCallDetectedAfterNudge by
-                node<Pair<String, MessagePart.Tool.Call?>, ToolCalls>(
-                    "fallbackToolCallDetectedAfterNudge"
-                ) { (_, call) ->
-                    ToolCalls(listOf(requireNotNull(call)))
-                }
-            val fallbackNoToolCallDetectedAfterNudge by
-                node<Pair<String, MessagePart.Tool.Call?>, String>(
-                    "fallbackNoToolCallDetectedAfterNudge"
-                ) { (text, _) ->
-                    text
-                }
-
             // Once the model believes a turn is finished (both paths above that used to go
             // straight to nodeFinish), ask once more for a structured TaskStatus instead of
             // letting callers infer completion by re-parsing whatever the skill persisted to
@@ -608,7 +553,7 @@ class ChatService(
             // "any Text part present", regardless of tool calls), checking onTextMessage first
             // would let that empty text part win the race and silently skip the tool call.
             edge(requestLlm forwardTo executeTool onToolCalls { true })
-            edge(requestLlm forwardTo detectFallbackToolCall onTextMessage { true })
+            edge(requestLlm forwardTo buildNudge onTextMessage { true })
             // See emptyResponseToNudge/emptyResponseToFinish docs above: treat a genuinely empty
             // response the same as unhelpful text - nudge the model to actually continue.
             edge(
@@ -646,7 +591,7 @@ class ChatService(
             )
             edge(sendToolResultStream forwardTo sendToolResult)
             edge(sendToolResult forwardTo executeTool onToolCalls { true })
-            edge(sendToolResult forwardTo detectFallbackToolCall onTextMessage { true })
+            edge(sendToolResult forwardTo buildNudge onTextMessage { true })
             // Same empty-response fallback as after requestLlm above.
             edge(
                 sendToolResult forwardTo
@@ -656,28 +601,12 @@ class ChatService(
                     }
             )
 
-            edge(
-                detectFallbackToolCall forwardTo
-                    fallbackToolCallDetected onCondition
-                    { (_, call) ->
-                        call != null
-                    }
-            )
-            edge(fallbackToolCallDetected forwardTo executeTool)
-            edge(
-                detectFallbackToolCall forwardTo
-                    fallbackNoToolCallDetected onCondition
-                    { (_, call) ->
-                        call == null
-                    }
-            )
-            edge(fallbackNoToolCallDetected forwardTo buildNudge)
             edge(emptyResponseToNudge forwardTo buildNudge)
 
             edge(buildNudge forwardTo nudgeRequestStream)
             edge(nudgeRequestStream forwardTo nudgeRequest)
             edge(nudgeRequest forwardTo executeTool onToolCalls { true })
-            edge(nudgeRequest forwardTo detectFallbackToolCallAfterNudge onTextMessage { true })
+            edge(nudgeRequest forwardTo requestTaskStatus onTextMessage { true })
             // Same empty-response case as above, but this is already the nudge response - there's
             // no further nudge to give, so end the turn, matching how unhelpful text after the
             // nudge already ends at nodeFinish below.
@@ -689,22 +618,6 @@ class ChatService(
                     }
             )
 
-            edge(
-                detectFallbackToolCallAfterNudge forwardTo
-                    fallbackToolCallDetectedAfterNudge onCondition
-                    { (_, call) ->
-                        call != null
-                    }
-            )
-            edge(fallbackToolCallDetectedAfterNudge forwardTo executeTool)
-            edge(
-                detectFallbackToolCallAfterNudge forwardTo
-                    fallbackNoToolCallDetectedAfterNudge onCondition
-                    { (_, call) ->
-                        call == null
-                    }
-            )
-            edge(fallbackNoToolCallDetectedAfterNudge forwardTo requestTaskStatus)
             edge(emptyResponseToFinish forwardTo requestTaskStatus)
             edge(requestTaskStatus forwardTo finishWithTaskStatus)
             edge(finishWithTaskStatus forwardTo nodeFinish)
@@ -1037,123 +950,6 @@ class ChatService(
                 }
             return listOfNotNull(system) + window
         }
-
-        /**
-         * Extracts a tool call from [text] when the model attempted one via free-form text instead
-         * of a real structured `tool_calls` response - e.g. because the LLM provider's tool-call
-         * parser doesn't recognize this particular model's native tool-call format (observed with
-         * some self-hosted models/servers).
-         *
-         * Only deliberate-looking forms count, so that a model merely *talking about* a call does
-         * not run it: a JSON object inside a fenced code block or a `<tool_call>` tag, or a message
-         * that consists of nothing but one JSON object. The object needs a name-like key
-         * ([NAME_KEYS]) matching one of [validToolNames]; the arguments may be an object or - like
-         * in the OpenAI format, where the call sits under `function` - a JSON string. Returns null
-         * if nothing matches, which is the common case.
-         */
-        internal fun extractFallbackToolCall(
-            text: String,
-            validToolNames: Set<String>,
-        ): MessagePart.Tool.Call? {
-            val deliberate = buildList {
-                FENCED_CODE_BLOCK_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
-                TOOL_CALL_TAG_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
-            }
-            for (candidate in deliberate) {
-                for (jsonText in findJsonObjects(candidate)) {
-                    toToolCall(jsonText, validToolNames)?.let {
-                        return it
-                    }
-                }
-            }
-            return toToolCall(text.trim(), validToolNames)
-        }
-
-        private fun toToolCall(
-            jsonText: String,
-            validToolNames: Set<String>,
-        ): MessagePart.Tool.Call? {
-            if (!jsonText.startsWith("{")) return null
-            val obj =
-                runCatching { Json.parseToJsonElement(jsonText) }.getOrNull() as? JsonObject
-                    ?: return null
-            // OpenAI format: {"function": {"name": ..., "arguments": "<json string>"}}
-            val call = obj["function"] as? JsonObject ?: obj
-            val name =
-                NAME_KEYS.firstNotNullOfOrNull { key ->
-                    (call[key] as? JsonPrimitive)?.contentOrNull
-                }
-            if (name == null || name !in validToolNames) return null
-            val arguments =
-                when (val value = ARGUMENT_KEYS.firstNotNullOfOrNull { key -> call[key] }) {
-                    null -> JsonObject(emptyMap())
-                    is JsonObject -> value
-                    is JsonPrimitive ->
-                        // Arguments sent as a JSON string; if they are not valid, let the tool
-                        // answer with an error the model can act on (see assembleStreamedAnswer).
-                        runCatching { Json.parseToJsonElement(value.content) }.getOrNull()
-                            as? JsonObject
-                            ?: JsonObject(
-                                mapOf(UNPARSABLE_ARGUMENTS_KEY to JsonPrimitive(value.content))
-                            )
-                    else -> JsonObject(emptyMap())
-                }
-            return MessagePart.Tool.Call(tool = name, args = arguments)
-        }
-
-        /**
-         * Finds all top-level, brace-balanced `{...}` substrings in [text], ignoring braces inside
-         * JSON strings (a tool argument may well be source code).
-         */
-        internal fun findJsonObjects(text: String): List<String> {
-            val results = mutableListOf<String>()
-            var depth = 0
-            var start = -1
-            var inString = false
-            var escaped = false
-            for ((i, c) in text.withIndex()) {
-                if (inString) {
-                    when {
-                        escaped -> escaped = false
-                        c == '\\' -> escaped = true
-                        c == '"' -> inString = false
-                    }
-                    continue
-                }
-                when (c) {
-                    '"' -> if (depth > 0) inString = true
-                    '{' -> {
-                        if (depth == 0) start = i
-                        depth++
-                    }
-                    '}' ->
-                        if (depth > 0) {
-                            depth--
-                            if (depth == 0 && start >= 0) {
-                                results.add(text.substring(start, i + 1))
-                                start = -1
-                            }
-                        }
-                }
-            }
-            return results
-        }
-
-        /** Matches fenced code blocks, e.g. ` ```json ... ``` ` (see [extractFallbackToolCall]). */
-        private val FENCED_CODE_BLOCK_REGEX = Regex("```(?:\\w+)?\\s*([\\s\\S]*?)```")
-
-        /**
-         * Matches the common `<tool_call>...</tool_call>` convention (see
-         * [extractFallbackToolCall]).
-         */
-        private val TOOL_CALL_TAG_REGEX =
-            Regex("<tool_call>([\\s\\S]*?)</tool_call>", RegexOption.IGNORE_CASE)
-
-        /** Candidate JSON keys for a tool's name, in order of preference. */
-        private val NAME_KEYS = listOf("name", "tool", "tool_name", "function")
-
-        /** Candidate JSON keys for a tool's arguments, in order of preference. */
-        private val ARGUMENT_KEYS = listOf("arguments", "parameters", "input")
 
         fun createIfConfigExist(): ChatService? {
             val config = ConfigFactory.load()
