@@ -31,8 +31,12 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
+import java.util.IdentityHashMap
 
 /**
  * The translation context holds all necessary managers and configurations needed during the
@@ -62,6 +66,53 @@ open class TranslationContext(
      * (through individual contexts) and then finally merged into a final one.
      */
     val scopeManager: ScopeManager = ScopeManager(this)
+
+    /** Backing store of [callNameOccurrences], populated lazily, one entry per [Component]. */
+    private val componentCallNameOccurrences = IdentityHashMap<Component, Map<Name, Int>>()
+
+    /**
+     * How many [Call] nodes with the given [name] exist anywhere in [component]. Used by the
+     * inference heuristics (see [de.fraunhofer.aisec.cpg.passes.inference.tryMethodInference]) to
+     * answer "is this name called from more than one place?", which is a hint that it is a global
+     * function rather than a method invoked on an implicit receiver.
+     *
+     * The per-component histogram is computed on first access and then reused. This matters a great
+     * deal: the question is asked once per unresolved call, and answering it by walking the
+     * component's AST every time (which is what the callers used to do) is quadratic in the size of
+     * the program - on a large C/C++ code base, with its many unresolvable calls into headers that
+     * were never parsed, that single lookup dominated the entire
+     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] in both runtime and allocation.
+     *
+     * The histogram is a snapshot taken when the first question for [component] is asked, so [Call]
+     * nodes created *afterwards* (e.g. an [de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall]
+     * replacing an operator during symbol resolution) are not reflected in it. That is deliberate
+     * and harmless here: the heuristic only distinguishes "called from one place" from "called from
+     * several", and the calls synthesized during resolution carry operator names that this
+     * particular heuristic is never consulted for.
+     */
+    fun callNameOccurrences(component: Component?, name: Name): Int {
+        if (component == null) {
+            return 0
+        }
+
+        // Guarded because this [TranslationContext] is shared: passes run sequentially today, but
+        // the pass infrastructure explicitly provides for running them in parallel, and a racing
+        // `getOrPut` on a plain [IdentityHashMap] does not merely return a stale count - it can
+        // corrupt the table. Building the histogram twice under contention would be wasteful but
+        // harmless, so holding the lock across it keeps this simple.
+        val occurrences =
+            synchronized(componentCallNameOccurrences) {
+                componentCallNameOccurrences.getOrPut(component) {
+                    val counts = mutableMapOf<Name, Int>()
+                    for (call in component.calls) {
+                        counts[call.name] = (counts[call.name] ?: 0) + 1
+                    }
+                    counts
+                }
+            }
+
+        return occurrences[name] ?: 0
+    }
 
     /**
      * Set of files, that are available for additional analysis. They are not the primary subjects
@@ -120,12 +171,30 @@ open class TranslationContext(
     internal val File.language: Language<*>?
         get() {
             val languages = availableLanguages.filter { it.handlesFile(this) }
-            if (languages.size > 1) {
+
+            // Two languages can legitimately claim the same file extension when one of them *is*
+            // the other, extended: the prime example is C and C++, where CPPLanguage derives from
+            // CLanguage and `.h` is a valid header extension for both. Picking whichever happens to
+            // be registered first would be arbitrary, and in that particular case usually wrong:
+            // a `.h` file in a project that also contains C++ is in practice a C++ header, and
+            // treating it as plain C robs it of the traits that distinguish the two (function
+            // overloading, templates, classes, implicit receivers, ...) even though it is parsed
+            // with the C++ parser anyway. We therefore let the most specific (most derived)
+            // language win, which degrades gracefully: if only CLanguage is registered, a `.h`
+            // file still gets it.
+            val mostSpecific =
+                languages.filter { candidate ->
+                    languages.none { other ->
+                        other !== candidate && candidate.javaClass.isAssignableFrom(other.javaClass)
+                    }
+                }
+
+            if (mostSpecific.size > 1) {
                 log.warn(
-                    "Multiple languages match for file extension ${this.extension}, the first registered language will be used."
+                    "Multiple unrelated languages match for file extension ${this.extension}, the first registered language will be used."
                 )
             }
-            return languages.firstOrNull()
+            return mostSpecific.firstOrNull()
         }
 
     override val ctx: TranslationContext

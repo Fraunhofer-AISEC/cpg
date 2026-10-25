@@ -225,6 +225,79 @@ class ImportResolverTest {
     }
 
     @Test
+    fun testImportInheritedFromRecord() {
+        val frontend =
+            TestLanguageFrontend(
+                ctx =
+                    TranslationContext(TranslationConfiguration.builder().defaultPasses().build()),
+                language = RecordImportTestLanguage(),
+            )
+        val result =
+            frontend.build {
+                val tuB = newTranslationUnit("file.b")
+                scopeManager.resetToGlobal(tuB)
+                newNamespace("b", holder = tuB, enterScope = true) { pkgB ->
+                    // `D` only inherits `staticMethod` from `C`, it does not declare it
+                    newImport(
+                        parseName("a.D.staticMethod"),
+                        style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                        holder = pkgB,
+                    ) {
+                        it.isStatic = true
+                    }
+                    newImport(
+                        parseName("a.D"),
+                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                        holder = pkgB,
+                    ) {
+                        it.isStatic = true
+                    }
+                }
+
+                val tuA = newTranslationUnit("file.a")
+                scopeManager.resetToGlobal(tuA)
+                newNamespace("a", holder = tuA, enterScope = true) { pkgA ->
+                    val c =
+                        newRecord("C", "class", holder = pkgA, enterScope = true) { record ->
+                            newMethod(
+                                "staticMethod",
+                                isStatic = true,
+                                recordDeclaration = record,
+                                holder = record,
+                            )
+                            newMethod("instanceMethod", recordDeclaration = record, holder = record)
+                        }
+                    newRecord("D", "class", holder = pkgA, enterScope = true) { record ->
+                        record.superClasses.add(c.toType())
+                    }
+                }
+
+                translationResult {
+                    val app = components.firstOrNull()
+                    app?.translationUnits?.add(tuB)
+                    app?.translationUnits?.add(tuA)
+                }
+            }
+
+        val staticMethod = result.methods["a.C.staticMethod"]
+        assertNotNull(staticMethod)
+        val instanceMethod = result.methods["a.C.instanceMethod"]
+        assertNotNull(instanceMethod)
+
+        // The inherited method is imported, and we do not infer a copy of it in `D`
+        assertTrue(result.records["a.D"]?.methods?.isEmpty() == true)
+        val (single, wildcard) =
+            result.imports.partition { it.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE }
+        assertEquals(
+            listOf<Declaration>(staticMethod),
+            single.single().importedSymbols.values.flatten(),
+        )
+        val wildcardSymbols = wildcard.single().importedSymbols.values.flatten()
+        assertContains(wildcardSymbols, staticMethod)
+        assertFalse(instanceMethod in wildcardSymbols)
+    }
+
+    @Test
     fun testImportFromRecordWithoutTrait() {
         val result = buildRecordImports(TestLanguage())
 
