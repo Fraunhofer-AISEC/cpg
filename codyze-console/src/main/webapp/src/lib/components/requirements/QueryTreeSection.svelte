@@ -4,7 +4,6 @@
   import { DashboardSection } from '../dashboard';
   import { loadQueryTreeWithParents } from '$lib/stores/queryTreeStore';
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
 
   interface Props {
     queryTree: QueryTreeJSON | undefined;

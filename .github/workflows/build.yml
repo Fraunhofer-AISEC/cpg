@@ -21,8 +21,15 @@ on:
   merge_group:
   pull_request:
     types: [opened, synchronize, reopened]
+    # Keep in sync with build-skip.yml, which reports the required "build" check for these paths
     paths-ignore:
       - "docs/**"
+      - ".github/**"
+      - "!.github/workflows/build.yml"
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/v') }}
 
 permissions:
   id-token: write
@@ -74,6 +81,9 @@ jobs:
           pip3 install jep==$(grep "org.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
+      - name: Submit dependency graph
+        if: github.ref == 'refs/heads/main'
+        uses: gradle/actions/dependency-submission@v5
       - name: Build ${{ env.version }}
         run: |
           # The distZip/distTar and shadowJar/shadowDistZip/shadowDistTar slow down the build and are not needed in CI.
