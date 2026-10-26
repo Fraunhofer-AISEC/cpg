@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamesPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.paginate
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toInfo
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.functions
@@ -42,9 +44,16 @@ fun Server.getFunctionsByName() {
         This tool looks up a batch of functions by their (local) names and returns their full
         details, including code (unless includeCode is set to false), parameters, and signature.
 
+        Names are matched exactly, not as a pattern: "read" finds every function whose local name
+        is read, and a qualified name like "Stream::read" also finds "ns::Stream::read" (its last
+        name parts match). To search by a regular expression instead, use cpg_list_functions'
+        pattern.
+
         Prefer this over cpg_list_functions when the target function names are already known
         (e.g. from an input file), since cpg_list_functions dumps the entire codebase's function
         list, which can be very large and expensive for big libraries.
+        Results come in pages of at most $DEFAULT_LIST_LIMIT functions; use the limit/offset
+        parameters to page through more.
 
         Example prompts:
         - "Show me the functions named encrypt, decrypt and hash_password"
@@ -55,27 +64,35 @@ fun Server.getFunctionsByName() {
         readOnly = true,
         name = "cpg_get_functions_by_name",
         description = toolDescription,
-    ) { session: CpgSession, payload: CpgNamesPayload ->
-        val functionsByName: Map<String, List<Function>> =
-            payload.names.associateWith { name ->
-                session.translationResult.functions.filter { it.name.lastPartsMatch(name) }
-            }
+        handler = ::getFunctionsByName,
+    )
+}
 
-        val found =
-            functionsByName.values.flatten().map {
-                TextContent(Json.encodeToString(it.toInfo(includeCode = payload.includeCode)))
-            }
-        val notFound = functionsByName.filterValues { it.isEmpty() }.keys
+/**
+ * The page of functions matching [CpgNamesPayload.names] selected by its limit/offset (see
+ * [paginate]), followed by the names nothing matched. That notice covers all names, not only the
+ * page, since it describes the request as a whole.
+ */
+internal fun getFunctionsByName(session: CpgSession, payload: CpgNamesPayload): CallToolResult {
+    val functionsByName: Map<String, List<Function>> =
+        payload.names.associateWith { name ->
+            session.translationResult.functions.filter { it.name.lastPartsMatch(name) }
+        }
 
-        val notFoundNotice =
-            if (notFound.isNotEmpty()) {
-                listOf(
-                    TextContent("No function found for these names: ${notFound.joinToString(", ")}")
-                )
-            } else {
-                emptyList()
-            }
+    val page = paginate(functionsByName.values.flatten(), payload.limit, payload.offset)
+    val found =
+        page.items.map {
+            TextContent(Json.encodeToString(it.toInfo(includeCode = payload.includeCode)))
+        }
+    val notFound = functionsByName.filterValues { it.isEmpty() }.keys
+    val notFoundNotice =
+        if (notFound.isNotEmpty()) {
+            TextContent("No function found for these names: ${notFound.joinToString(", ")}")
+        } else {
+            null
+        }
 
-        CallToolResult(content = found + notFoundNotice)
-    }
+    return CallToolResult(
+        content = found + listOfNotNull(page.summary?.let { TextContent(it) }, notFoundNotice)
+    )
 }

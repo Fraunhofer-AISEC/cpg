@@ -31,7 +31,9 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgBackwardPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamesPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
@@ -77,6 +79,32 @@ class BoundedOutputToolsTest {
         assertEquals(1, lastPage.size, "1 remaining call and no summary")
 
         assertEquals(3, listCallsTo(session, CpgListCallsToPayload("f")).content.size)
+    }
+
+    @Test
+    fun functionsByNameIsPaginated(@TempDir dir: Path) {
+        val names = (0 until 25).map { "f$it" }
+        val session =
+            analyze(dir, names.joinToString(" ") { "int $it() { return 0; }" }, passes = false)
+        val requested = names + "missing"
+
+        val firstPage =
+            getFunctionsByName(session, CpgNamesPayload(requested, includeCode = false))
+                .content
+                .filterIsInstance<TextContent>()
+        assertEquals(DEFAULT_LIST_LIMIT + 2, firstPage.size, "a page, the summary and the notice")
+        assertTrue(firstPage[DEFAULT_LIST_LIMIT].text.contains("offset=$DEFAULT_LIST_LIMIT"))
+        assertTrue(firstPage.last().text.contains("missing"))
+
+        val lastPage =
+            getFunctionsByName(
+                    session,
+                    CpgNamesPayload(requested, includeCode = false, offset = DEFAULT_LIST_LIMIT),
+                )
+                .content
+                .filterIsInstance<TextContent>()
+        assertEquals(5 + 1, lastPage.size, "the remaining functions and the notice, no summary")
+        assertTrue(lastPage.last().text.contains("missing"))
     }
 
     @Test

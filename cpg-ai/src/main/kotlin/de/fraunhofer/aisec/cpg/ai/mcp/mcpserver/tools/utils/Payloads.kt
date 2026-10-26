@@ -81,6 +81,8 @@ data class CpgNamesPayload(
         "Whether to include each function's source code in the response. Defaults to true. Set to false if you only need to confirm a function exists or inspect its signature/parameters - use cpg_get_node afterwards to fetch the full source for a specific one once picked."
     )
     val includeCode: Boolean = true,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
     @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
 ) : HasProjectNamePayload
 

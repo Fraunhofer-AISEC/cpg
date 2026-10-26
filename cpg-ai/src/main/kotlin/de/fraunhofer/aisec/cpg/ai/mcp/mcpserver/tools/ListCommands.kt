@@ -54,6 +54,8 @@ fun Server.listFunctions() {
         function once picked.
         Results come in pages of at most $DEFAULT_LIST_LIMIT items. Narrow large listings down with pattern, file or calls
         instead of paging through everything; use the limit/offset parameters to page through the rest.
+        To look up functions whose names are already known, use cpg_get_functions_by_name, which matches
+        names exactly instead of by pattern.
 
         Example prompts:
         - "Show me all functions in the analyzed code"
