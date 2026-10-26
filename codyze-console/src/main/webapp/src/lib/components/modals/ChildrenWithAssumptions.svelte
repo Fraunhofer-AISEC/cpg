@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { loadQueryTrees } from '$lib/stores/queryTreeStore';
@@ -103,8 +103,8 @@
 
   function getChildLink(childId: string): string {
     // Use baseUrl if provided, otherwise use current page
-    const urlString = baseUrl || $page.url.pathname;
-    const url = new URL(urlString, $page.url.origin);
+    const urlString = baseUrl || page.url.pathname;
+    const url = new URL(urlString, page.url.origin);
     url.searchParams.set('targetNodeId', childId);
     return url.toString();
   }
@@ -125,7 +125,7 @@
     // Check if we're navigating to the same targetNodeId
     const url = new URL(getChildLink(childId));
     const targetNodeId = url.searchParams.get('targetNodeId');
-    const currentTargetNodeId = $page.url.searchParams.get('targetNodeId');
+    const currentTargetNodeId = page.url.searchParams.get('targetNodeId');
 
     if (targetNodeId === currentTargetNodeId && targetNodeId) {
       // Same target - just scroll to it without navigation
