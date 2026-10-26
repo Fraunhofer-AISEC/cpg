@@ -30,7 +30,7 @@ plugins {
     id("cpg.application-conventions")
     id("cpg.frontend-dependency-conventions")
     kotlin("plugin.serialization")
-    // ToolContract.kt: checks for tests of hosts that register their own tools (e.g. DUST)
+    // ToolContract.kt: checks for tests of hosts that register their own tools
     `java-test-fixtures`
 }
 
