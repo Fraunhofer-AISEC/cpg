@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -276,6 +277,18 @@ open class CLanguage :
             return ImplicitCast
         }
 
+        // The integer literal 0 is a null pointer constant, which can be implicitly cast to any
+        // pointer (also in C++, whose tryCast delegates to this one first)
+        if (targetType is PointerType && hint.isZeroLiteral()) {
+            return ImplicitCast
+        }
+
         return CastNotPossible
+    }
+
+    private fun HasType?.isZeroLiteral(): Boolean {
+        val literal = this as? Literal<*> ?: return false
+        val value = literal.value
+        return literal.type is IntegerType && value is Number && value.toLong() == 0L
     }
 }
