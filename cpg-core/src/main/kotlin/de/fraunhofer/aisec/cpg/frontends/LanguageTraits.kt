@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.passes.*
@@ -398,6 +399,37 @@ interface HasImportsFromRecords : LanguageTrait {
 
         val record = pass.tryRecordInference(import.objectType(name), import) ?: return null
         return pass.scopeManager.lookupScope(record) as? RecordScope
+    }
+
+    /**
+     * Returns the [Record] that the unqualified [ref] is imported from, if there is a single symbol
+     * import with the same name that imports from a record (see [importsFromRecord]). For example,
+     * this returns `a.b.C` for a reference `m` and `import static a.b.C.m;`. If [ref] cannot be
+     * resolved otherwise, we need to infer a (static) member in this record, rather than in the
+     * current record or the current namespace.
+     */
+    context(pass: Pass<*>)
+    fun recordImportedFor(ref: Reference): Record? {
+        if (ref.name.isQualified()) {
+            return null
+        }
+
+        // We need the import itself, not the symbols it imports (there are none yet)
+        val import =
+            ref.scope
+                ?.lookupSymbol(
+                    ref.name.localName,
+                    replaceImports = false,
+                    fileScope = pass.scopeManager.fileScopeOf(ref),
+                )
+                ?.filterIsInstance<Import>()
+                ?.firstOrNull {
+                    it.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE &&
+                        importsFromRecord(it)
+                } ?: return null
+
+        val name = import.import.parent ?: return null
+        return pass.scopeManager.lookupScope(name)?.astNode as? Record
     }
 }
 
