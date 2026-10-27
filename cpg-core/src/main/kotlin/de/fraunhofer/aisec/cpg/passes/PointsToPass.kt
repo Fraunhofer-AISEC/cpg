@@ -3657,6 +3657,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
+        // If a variable has no value, an UnknownMemoryValue is added.
         if (
             currentNode is Variable &&
                 !currentNode.isStatic &&
