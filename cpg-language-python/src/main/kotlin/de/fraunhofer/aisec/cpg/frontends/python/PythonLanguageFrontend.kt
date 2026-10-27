@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import jep.JepException
 import jep.python.PyObject
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
@@ -93,35 +94,47 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         lastLineNumber = fileAsLines.size
         lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
-        jep.getInterp().use {
-            it.set("content", fileContent)
-            it.set("filename", file.absolutePath)
-            it.exec("import ast")
-            it.exec("import sys")
-            it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
+        try {
+            jep.getInterp().use {
+                it.set("content", fileContent)
+                it.set("filename", file.absolutePath)
+                it.exec("import ast")
+                it.exec("import sys")
+                it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
-            val pyAST = it.getValue("parsed") as PyObject
+                val pyAST = it.getValue("parsed") as PyObject
 
-            val tud = pythonASTtoCPG(pyAST, file.toPath())
-            populateSystemInformation(config, tud)
+                val tud = pythonASTtoCPG(pyAST, file.toPath())
+                populateSystemInformation(config, tud)
 
-            if (config.matchCommentsToNodes) {
-                it.exec("import tokenize")
-                it.exec("reader = tokenize.open(filename).readline")
-                it.exec("tokens = tokenize.generate_tokens(reader)")
-                it.exec("tokenList = list(tokens)")
-                // This constant has to be retrieved from the system as it was changed in different
-                // Python versions
-                it.exec("commentCode = tokenize.COMMENT")
+                if (config.matchCommentsToNodes) {
+                    it.exec("import tokenize")
+                    it.exec("reader = tokenize.open(filename).readline")
+                    it.exec("tokens = tokenize.generate_tokens(reader)")
+                    it.exec("tokenList = list(tokens)")
+                    // This constant has to be retrieved from the system as it was changed in
+                    // different Python versions
+                    it.exec("commentCode = tokenize.COMMENT")
 
-                val pyCommentCode =
-                    (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
-                val pyTokens =
-                    (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
-                addCommentsToCPG(tud, pyTokens, pyCommentCode)
+                    val pyCommentCode =
+                        (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
+                    val pyTokens =
+                        (it.getValue("tokenList") as? ArrayList<*>)
+                            ?: TODO("Cannot get tokens of $it")
+                    addCommentsToCPG(tud, pyTokens, pyCommentCode)
+                }
+
+                return tud
             }
-
-            return tud
+        } catch (ex: JepException) {
+            // This can happen, e.g., if the file contains invalid Python syntax (such as
+            // Python-2-only syntax) that CPython's own `ast` module refuses to parse. We do not
+            // want a single unparsable file to abort the whole translation, so we convert it into
+            // a [TranslationException]. This is caught by the [TranslationManager] on a per-file
+            // basis, logged, and translation continues with the remaining files.
+            throw TranslationException(
+                "Could not parse Python file ${file.absolutePath}: ${ex.message}"
+            )
         }
     }
 
