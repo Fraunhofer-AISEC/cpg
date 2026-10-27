@@ -94,47 +94,48 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         lastLineNumber = fileAsLines.size
         lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
-        try {
-            jep.getInterp().use {
-                it.set("content", fileContent)
-                it.set("filename", file.absolutePath)
-                it.exec("import ast")
-                it.exec("import sys")
-                it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
+        jep.getInterp().use {
+            it.set("content", fileContent)
+            it.set("filename", file.absolutePath)
+            it.exec("import ast")
+            it.exec("import sys")
 
-                val pyAST = it.getValue("parsed") as PyObject
-
-                val tud = pythonASTtoCPG(pyAST, file.toPath())
-                populateSystemInformation(config, tud)
-
-                if (config.matchCommentsToNodes) {
-                    it.exec("import tokenize")
-                    it.exec("reader = tokenize.open(filename).readline")
-                    it.exec("tokens = tokenize.generate_tokens(reader)")
-                    it.exec("tokenList = list(tokens)")
-                    // This constant has to be retrieved from the system as it was changed in
-                    // different Python versions
-                    it.exec("commentCode = tokenize.COMMENT")
-
-                    val pyCommentCode =
-                        (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
-                    val pyTokens =
-                        (it.getValue("tokenList") as? ArrayList<*>)
-                            ?: TODO("Cannot get tokens of $it")
-                    addCommentsToCPG(tud, pyTokens, pyCommentCode)
+            // Only the actual parsing is wrapped: a JepException here means CPython's own `ast`
+            // module rejected the file (e.g. Python-2-only syntax), which we want to treat as one
+            // unparsable file rather than aborting the whole translation. A JepException raised
+            // later, while we are walking the AST in [pythonASTtoCPG], indicates a bug in our own
+            // conversion logic and must keep propagating unchanged, not be mistaken for a syntax
+            // error in the input file.
+            val pyAST =
+                try {
+                    it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
+                    it.getValue("parsed") as PyObject
+                } catch (ex: JepException) {
+                    throw TranslationException(
+                        "Could not parse Python file ${file.absolutePath}: ${ex.message}"
+                    )
                 }
 
-                return tud
+            val tud = pythonASTtoCPG(pyAST, file.toPath())
+            populateSystemInformation(config, tud)
+
+            if (config.matchCommentsToNodes) {
+                it.exec("import tokenize")
+                it.exec("reader = tokenize.open(filename).readline")
+                it.exec("tokens = tokenize.generate_tokens(reader)")
+                it.exec("tokenList = list(tokens)")
+                // This constant has to be retrieved from the system as it was changed in
+                // different Python versions
+                it.exec("commentCode = tokenize.COMMENT")
+
+                val pyCommentCode =
+                    (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
+                val pyTokens =
+                    (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
+                addCommentsToCPG(tud, pyTokens, pyCommentCode)
             }
-        } catch (ex: JepException) {
-            // This can happen, e.g., if the file contains invalid Python syntax (such as
-            // Python-2-only syntax) that CPython's own `ast` module refuses to parse. We do not
-            // want a single unparsable file to abort the whole translation, so we convert it into
-            // a [TranslationException]. This is caught by the [TranslationManager] on a per-file
-            // basis, logged, and translation continues with the remaining files.
-            throw TranslationException(
-                "Could not parse Python file ${file.absolutePath}: ${ex.message}"
-            )
+
+            return tud
         }
     }
 
