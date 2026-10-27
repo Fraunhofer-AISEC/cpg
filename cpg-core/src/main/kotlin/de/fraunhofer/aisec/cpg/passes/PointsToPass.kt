@@ -3657,7 +3657,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
-        // If a variable has no value, an UnknownMemoryValue is added.
+        // A local variable that is declared without an initializer has no value, so an
+        // UnknownMemoryValue is created.
+        // Otherwise, a read before the first write would find nothing.
+        // Static and global variables are skipped, they are initialized implicitly.
         if (
             currentNode is Variable &&
                 !currentNode.isStatic &&
