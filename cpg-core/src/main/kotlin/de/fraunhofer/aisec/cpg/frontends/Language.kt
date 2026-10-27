@@ -545,17 +545,27 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * single item. Otherwise, we have an ambiguous result and cannot determine the result with
      * certainty.
      *
-     * If we encounter an ambiguous result, a warning is issued.
+     * If we encounter an ambiguous result, a warning is issued - except when [ref] is the
+     * [Call.callee] of a call (see [Reference.resolutionHelper]). Several candidates for a callee
+     * are not an ambiguity at all but the completely ordinary case of an overload set, which
+     * [SymbolResolver.handleCall] subsequently narrows down by matching the call's arguments
+     * against each candidate's signature. Reporting it here would therefore produce a warning per
+     * call to any overloaded function - by far the dominant source of log noise on real C++ code -
+     * for a situation that is about to be resolved correctly a moment later. Should the callee
+     * genuinely stay unresolvable or ambiguous after signature matching,
+     * [decideInvokesBasedOnCandidates] reports exactly that, so nothing goes unnoticed.
      */
     open fun bestViableReferenceCandidate(ref: Reference): Declaration? {
         return if (ref.candidates.size > 1) {
-            Util.warnWithFileLocation(
-                ref,
-                log,
-                "Resolution of reference {} was ambiguous, cannot set refersTo correctly, " +
-                    "will be set to null.",
-                ref.name,
-            )
+            if (ref.resolutionHelper !is Call) {
+                Util.warnWithFileLocation(
+                    ref,
+                    log,
+                    "Resolution of reference {} was ambiguous, cannot set refersTo correctly, " +
+                        "will be set to null.",
+                    ref.name,
+                )
+            }
             null
         } else {
             ref.candidates.singleOrNull()

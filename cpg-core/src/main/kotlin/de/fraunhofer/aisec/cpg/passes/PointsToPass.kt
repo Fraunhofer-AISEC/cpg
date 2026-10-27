@@ -80,13 +80,24 @@ import kotlinx.coroutines.*
  * the declarations of a header which is included by two translation units - would be considered the
  * same key and would share one synthetic value node. [Name], in contrast, is a value type where two
  * equal names must map to the same entry.
+ *
+ * [Literal]s are the exception: they are keyed by their value, because two literals with the same
+ * value denote the same thing. Keying them by identity created a new synthetic node per literal, so
+ * a loop added one per iteration and never reached its fixpoint.
  */
 private data class UnknownValueKey(val node: Node, val name: Name) {
-    override fun equals(other: Any?) =
-        other is UnknownValueKey && node === other.node && name == other.name
+    /** What identifies [node] in this key: the value of a [Literal], the identity of all else. */
+    private val nodeKey: Any =
+        if (node is Literal<*>) LiteralValueKey(node.value) else PointsToPass.IdKey(node)
 
-    override fun hashCode() = 31 * System.identityHashCode(node) + name.hashCode()
+    override fun equals(other: Any?) =
+        other is UnknownValueKey && nodeKey == other.nodeKey && name == other.name
+
+    override fun hashCode() = 31 * nodeKey.hashCode() + name.hashCode()
 }
+
+/** The value of a [Literal], as part of an [UnknownValueKey]. */
+private data class LiteralValueKey(val value: Any?)
 
 /**
  * Caches the synthetic [MemoryAddress]/[UnknownMemoryValue] nodes we create for a node whose value
@@ -94,8 +105,100 @@ private data class UnknownValueKey(val node: Node, val name: Name) {
  * [PointsToPass.finalCleanup].
  */
 private val nodesCreatingUnknownValues = ConcurrentHashMap<UnknownValueKey, MemoryAddress>()
+
+/**
+ * Where a synthetic node from [syntheticNodeFor] comes from: the first node of its chain which is
+ * not synthetic, and how many synthetic nodes lie between that one and this one (including this
+ * one).
+ */
+private class SyntheticOrigin(val root: Node, val depth: Int, val isSummary: Boolean)
+
+/** The [SyntheticOrigin] of every node created by [syntheticNodeFor]. */
+private val syntheticOrigins = ConcurrentHashMap<PointsToPass.IdKey<Node>, SyntheticOrigin>()
+
+/** The key of [summaryNodes]: the root of a chain, the name, and whether this is a value. */
+private data class SummaryKey(val rootAndName: UnknownValueKey, val isValue: Boolean)
+
+/** The summary nodes created by [syntheticNodeFor] once a chain reached its maximum depth. */
+private val summaryNodes = ConcurrentHashMap<SummaryKey, MemoryAddress>()
+
+/**
+ * The number of synthetic nodes a chain may consist of before [syntheticNodeFor] summarizes the
+ * rest of it.
+ */
+private const val MAX_SYNTHETIC_CHAIN_DEPTH = 6
+
+/**
+ * Returns the synthetic [MemoryAddress] or [UnknownMemoryValue] for [name] relative to [base], i.e.
+ * the address of one of its fields or its unknown value, and creates it with [create] if there is
+ * none yet.
+ *
+ * Every such node can be the [base] of another one, e.g. in a loop like `p = &p->next;`, which
+ * reaches a new field address in every iteration. To make such loops reach a fixpoint, we count how
+ * many synthetic nodes a chain consists of. Once it exceeds [MAX_SYNTHETIC_CHAIN_DEPTH], we return
+ * one summary node per chain root and [name] instead of a new node (k-limiting). A summary node
+ * stands for many memory locations, so writes to it must not replace its previous values (see
+ * [isSummaryNode]).
+ */
+private fun syntheticNodeFor(
+    base: Node,
+    name: Name,
+    isValue: Boolean,
+    create: () -> MemoryAddress,
+): MemoryAddress {
+    val baseOrigin = syntheticOrigins[PointsToPass.IdKey(base)]
+    val root = baseOrigin?.root ?: base
+    val depth = (baseOrigin?.depth ?: 0) + 1
+
+    if (depth <= MAX_SYNTHETIC_CHAIN_DEPTH) {
+        return nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(base, name)) {
+            create().also {
+                syntheticOrigins[PointsToPass.IdKey(it)] = SyntheticOrigin(root, depth, false)
+            }
+        }
+    }
+
+    return summaryNodes.computeIfAbsent(SummaryKey(UnknownValueKey(root, name), isValue)) {
+        create().also {
+            // Everything derived from a summary node is summarized as well
+            syntheticOrigins[PointsToPass.IdKey(it)] =
+                SyntheticOrigin(root, MAX_SYNTHETIC_CHAIN_DEPTH, true)
+        }
+    }
+}
+
+/**
+ * Whether [node] is a summary node of [syntheticNodeFor], which stands for many memory locations.
+ */
+private fun isSummaryNode(node: Node): Boolean =
+    syntheticOrigins[PointsToPass.IdKey(node)]?.isSummary == true
+
+/**
+ * The number of [Function]s in the [TranslationResult] we are analyzing, i.e. the number of targets
+ * this pass is going to be handed. Note that this counts declarations and definitions separately,
+ * so a function which is declared in a header and defined in a source file contributes two.
+ *
+ * This is global rather than a field because [consumeTarget] creates a fresh pass instance for
+ * every single target, so an instance field could never accumulate anything.
+ */
 var totalFunctionCount = 0
+
+/**
+ * The number of targets we have been handed so far, used to report the progress against
+ * [totalFunctionCount]. Only the top-level analysis of a target is counted: a function which we
+ * analyze early because somebody calls it (see [PointsToPass.calculateFunctionSummaries]) is
+ * counted when its own turn comes, not when it is analyzed as a callee. Otherwise this would count
+ * *visits* rather than targets and would run past [totalFunctionCount].
+ */
 var analyzedFunctionCount = 0
+
+/**
+ * The multiple of the configured [PointsToPass.Configuration.timeout] which the analysis of a
+ * single function may take in total, including the analyses of the callees it triggers. See
+ * [PointsToPass.calculateFunctionSummaries] for why the budget grows at all.
+ */
+private const val MAX_TIMEOUT_EXTENSION_FACTOR = 4
+
 private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
 private const val FIELD_ACCESS_SUMMARY_SEGMENT = "<summary>"
 
@@ -450,13 +553,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /**
          * The timeout after which we stop analyzing a function. Default 60 minutes.
          *
-         * Analyzing a function can trigger a nested analysis of its own (e.g. to compute a callee's
-         * function summary), which gets its own, independent [timeout] - time already spent in such
-         * a callee is credited back to the caller's budget (see [TimeoutBudget.credit]), so the
-         * caller is not unfairly charged for it twice, but each nesting level can still *add* up to
-         * one more [timeout] of wall-clock time to the whole chain if its callee is slow for a
-         * reason unrelated to the caller. So the wall-clock bound for one top-level analysis is
-         * [timeout] times its call chain's nesting depth, not a flat [timeout].
+         * Analyzing a function has two phases which are both bounded by this, so one function can
+         * take up to twice as long: first the fixpoint iteration over its EOG, and then the work of
+         * writing the resulting state into the graph and deriving the function summary from it.
+         *
+         * Whichever phase runs out of time keeps the results it has and the analysis continues with
+         * the next function, so a function which hits the timeout ends up with fewer dataflows than
+         * it should have.
+         *
+         * Analyzing a function can also trigger a nested analysis of its own (e.g. to compute a
+         * callee's function summary), which gets its own, independent [timeout] - time already
+         * spent in such a callee is credited back to the caller's budget (see
+         * [TimeoutBudget.credit]), so the caller is not unfairly charged for it twice, but each
+         * nesting level can still *add* up to one more [timeout] of wall-clock time to the whole
+         * chain if its callee is slow for a reason unrelated to the caller, up to a multiple of it;
+         * see [calculateFunctionSummaries].
          */
         var timeout: Duration = 60.minutes,
 
@@ -492,6 +603,68 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     // circles. Therefore, we store the chain of Functions we currently analyze
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
+    /**
+     * Index for [mergeFSEntry], keyed by the same [Node] (a parameter or a [Return]) that
+     * [Function.functionSummary] itself is keyed by. See [mergeFSEntry] for why this is needed at
+     * all. Scoped to this pass instance rather than made global: unlike
+     * [nodesCreatingUnknownValues] or [CallToMemAddrMap], nothing here needs to survive past this
+     * instance's own targets, and a fresh instance is created per target anyway (see
+     * [consumeTarget]).
+     */
+    private val fsEntryIndex =
+        ConcurrentIdentityHashMap<Node, ConcurrentHashMap<FSEntry, FSEntry>>()
+
+    /**
+     * Adds [newEntry] to the [Function.functionSummary] of the function it belongs to, under [key]
+     * (one of its parameters, or a [Return]), merging its `lastWrites` into a matching existing
+     * entry instead of adding a redundant, separate one.
+     *
+     * Without this, a set of [FSEntry] accumulates one entry *per write-site* instead of one entry
+     * *per relationship*: [FSEntry.equals] ignores `lastWrites` on purpose, but a plain `Set.add()`
+     * only checks equals to decide whether to skip an insert - it does not merge into whatever it
+     * found equal. A widely-aliased parameter (many field addresses, each with its own partial
+     * `lastWrites`) or a [Return] revisited many times while [Lattice.iterateEOG] converges to a
+     * fixpoint both funnel through here, and either can turn one logical fact into many thousands
+     * of entries that never collapse back down - which is how a single function's summary grows to
+     * gigabytes.
+     *
+     * The index is keyed by [FSEntry] itself, using its `lastWrites`-excluding equals/hashCode, so
+     * finding the existing entry (if any) is an O(1) lookup rather than a scan.
+     */
+    private fun mergeFSEntry(
+        functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>,
+        key: Node,
+        newEntry: FSEntry,
+        // Whether newEntry.lastWrites is shared with other entries; if so, a new entry gets a copy
+        // that later merges may modify
+        copyLastWritesOnInsert: Boolean = false,
+    ) {
+        val index = fsEntryIndex.computeIfAbsent(key) { ConcurrentHashMap() }
+        // computeIfAbsent runs the lambda at most once per key and atomically publishes its result,
+        // so concurrent inserters of the same logical entry cannot end up with two of them -
+        // exactly
+        // one of them wins and adds newEntry to functionSummary, and the others merge into it
+        // below.
+        var inserted: FSEntry? = null
+        val stored =
+            index.computeIfAbsent(newEntry) {
+                (if (copyLastWritesOnInsert)
+                        it.copy(
+                            lastWrites =
+                                PowersetLattice.Element<NodeWithPropertiesKey>().apply {
+                                    addAll(it.lastWrites)
+                                }
+                        )
+                    else it)
+                    .also { entry -> inserted = entry }
+            }
+        if (stored === inserted) {
+            functionSummary.computeIfAbsent(key) { ConcurrentHashMap.newKeySet() }.add(stored)
+        } else {
+            stored.lastWrites.addAll(newEntry.lastWrites)
+        }
+    }
+
     override fun cleanup() {
         // Nothing to do. Note that the caches below are shared between all targets of one pass
         // execution, so they must not be cleared here, only in [finalCleanup].
@@ -505,6 +678,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      */
     override fun finalCleanup() {
         nodesCreatingUnknownValues.clear()
+        syntheticOrigins.clear()
+        summaryNodes.clear()
         CallToMemAddrMap.clear()
         globalDerefs.clear()
         totalFunctionCount = 0
@@ -538,13 +713,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     suspend fun acceptInternal(node: Node) {
         var analysisTimeout = false
 
+        // Whether somebody else is already analyzing a function and we are only being called to
+        // compute a summary for one of its callees. [accept] clears the chain for every target, and
+        // the enclosing analysis has put itself on it, so an empty chain means that this is the
+        // top-level analysis of a target.
+        val isCalleeAnalysis = functionSummaryAnalysisChain.isNotEmpty()
+
         if (node is Function) {
             // If we haven't done so yet, set the total number of functions
             if (totalFunctionCount == 0)
                 totalFunctionCount =
                     node.firstParentOrNull<TranslationResult>()?.functions?.size ?: 0
 
-            analyzedFunctionCount++
+            // Only count the targets, not the callees we analyze on the way: a callee is counted
+            // when its own turn comes. See [analyzedFunctionCount].
+            if (!isCalleeAnalysis) analyzedFunctionCount++
 
             // If the node has a body and a function summary, we have visited it before and can
             // return here.
@@ -553,6 +736,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     node.functionSummary.keys.any {
                         it in node.parameters ||
                             it in node.returns ||
+                            // A function without a return statement has its dummy summary keyed by
+                            // itself (see [addDummyFunctionSummary]), and only a dummy is ever
+                            // keyed that way - everything else keys by a parameter or a Return.
+                            // Without this, such a function counts as not-yet-analyzed and is
+                            // analyzed again at every call site, hitting the same timeout each
+                            // time, which is what the dummy exists to prevent.
+                            it === node ||
                             // We already analyzed the function, but it doesn't affect any
                             // parameters or return values
                             (it as? Literal<*>)?.value == "dummy"
@@ -580,13 +770,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 node.functionSummary.computeIfAbsent(Return()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
                 }
+                // We have put ourselves on the chain above and are leaving again, so we have to
+                // take ourselves off it. Otherwise we would stay on it for the rest of this target
+                // and every further call of this function would be mistaken for a recursive one.
+                functionSummaryAnalysisChain.remove(node)
                 return
             }
 
             log.info(
                 "Analyzing function ${node.name}. Complexity: ${
                             NumberFormat.getNumberInstance(Locale.US).format(c)
-                        }. (Function $analyzedFunctionCount / $totalFunctionCount)"
+                        }. (Function $analyzedFunctionCount / $totalFunctionCount${
+                            if (isCalleeAnalysis) ", as a callee at depth ${functionSummaryAnalysisChain.size}" else ""
+                        })"
             )
         } else {
             if (log.isTraceEnabled) {
@@ -594,53 +790,154 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
-        val lattice =
-            PointsToState(
-                SingleGeneralState(
-                    GeneralStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
-                ),
-                SingleDeclarationState(
-                    DeclarationStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
-                ),
-            )
+        // From here on we can be cancelled: the enclosing analysis runs our transformation
+        // inside its own withTimeout, so its budget can run out while we are analyzing a callee
+        // for it. Everything that has to happen either way goes into the finally below.
+        var cancelled = false
+        try {
+            val lattice =
+                PointsToState(
+                    SingleGeneralState(
+                        GeneralStateEntry(PowersetLattice(), PowersetLattice(), PowersetLattice())
+                    ),
+                    SingleDeclarationState(
+                        DeclarationStateEntry(
+                            PowersetLattice(),
+                            PowersetLattice(),
+                            PowersetLattice(),
+                        )
+                    ),
+                )
 
-        var startState = lattice.bottom
-        val addresses = startState.getAddresses(node, node)
-        startState =
-            lattice.pushToDeclarationsState(
-                startState,
-                node,
-                DeclarationStateEntryElement(
-                    PowersetLattice.Element(addresses),
-                    PowersetLattice.Element(),
-                    PowersetLattice.Element(),
-                ),
-            )
+            var startState = lattice.bottom
+            val addresses = startState.getAddresses(node, node)
+            startState =
+                lattice.pushToDeclarationsState(
+                    startState,
+                    node,
+                    DeclarationStateEntryElement(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                    ),
+                )
 
-        startState = transferInternal(lattice, node, startState)
+            startState = transferInternal(lattice, node, startState)
 
-        val finalState =
-            if (node is Function && node.body == null) {
-                handleEmptyFunction(lattice, startState, node)
-            } else {
-                var (result, aborted) =
-                    lattice.iterateEOG(
-                        node.nextEOGEdges,
-                        startState,
-                        ::transfer,
-                        timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
-                        maxStateEntries = passConfig<Configuration>()?.maxStateEntries,
-                    )
-                // If we ran out of time or memory, treat it as an empty Function but still
-                // include the results we got
-                if (aborted && node is Function) {
-                    analysisTimeout = true
-                    result = handleEmptyFunction(lattice, result as PointsToState.Element, node)
+            val finalState =
+                if (node is Function && node.body == null) {
+                    handleEmptyFunction(lattice, startState, node)
+                } else {
+                    var (result, aborted) =
+                        lattice.iterateEOG(
+                            node.nextEOGEdges,
+                            startState,
+                            ::transfer,
+                            timeout = passConfig<Configuration>()?.timeout ?: Duration.INFINITE,
+                            maxStateEntries = passConfig<Configuration>()?.maxStateEntries,
+                        )
+                    // If we ran out of time or memory, treat it as an empty Function but still
+                    // include the results we got
+                    if (aborted && node is Function) {
+                        analysisTimeout = true
+                        result = handleEmptyFunction(lattice, result as PointsToState.Element, node)
+                    }
+                    result as PointsToState.Element
                 }
-                result as PointsToState.Element
-            }
 
+            // Turning the final state into graph edges and deriving the function summary from it is
+            // linear in the size of that state, and for a state with more than a hundred thousand
+            // entries that took over an hour - on top of whatever the fixpoint iteration above was
+            // allowed to take, because this phase had no budget at all. It gets one now, so the
+            // time we
+            // spend on a single function is bounded by twice the timeout instead of by nothing.
+            //
+            // Running out of the budget means we stop where we are, so the function ends up with
+            // fewer
+            // dataflow edges, and possibly a smaller function summary, than the state we computed
+            // would
+            // justify. That is a loss of completeness rather than of correctness, and it is the
+            // same
+            // kind of loss that configuring a timeout at all already accepts.
+            val postProcessingFinished =
+                withTimeoutOrNull(passConfig<Configuration>()?.timeout ?: Duration.INFINITE) {
+                    drawDataflowEdges(finalState)
+
+                    if (log.isTraceEnabled) {
+                        log.trace("Finished drawing DFG Edges")
+                    }
+
+                    /* Store function summary for this Function. */
+                    if (node is Function && node.body != null && !analysisTimeout) {
+                        storeFunctionSummary(node, finalState)
+                    }
+                    true
+                }
+            if (postProcessingFinished == null) {
+                log.warn(
+                    "Ran out of time while writing the analysis result of {} into the graph. Its " +
+                        "dataflows are incomplete and we fall back to a dummy function summary.",
+                    node.name,
+                )
+                if (node is Function) {
+                    // Whatever of the summary we got to write is derived from a graph we did not
+                    // finish
+                    // drawing, so it says less than it should. We throw it away and fall back to
+                    // the
+                    // over-approximation instead, which is both on the safe side and keeps the
+                    // callers
+                    // of this function from analyzing it again and hitting the same timeout once
+                    // per
+                    // call site. The edges we did draw stay: each of them is a flow we found, we
+                    // only
+                    // did not find all of them.
+                    node.functionSummary.clear()
+                    addDummyFunctionSummary(node)
+                }
+            }
+        } catch (e: CancellationException) {
+            cancelled = true
+            throw e
+        } finally {
+            if (node is Function) {
+                // A cancelled analysis has already written part of a summary through
+                // [mergeFSEntry], and that summary lives on the Function, so every later target
+                // would reuse it and the "we already have a summary" check above would stop us
+                // from ever completing it. Throw the partial result away and fall back to the
+                // over-approximation, exactly as the post-processing timeout does.
+                if (cancelled && node.body != null) {
+                    node.functionSummary.clear()
+                    addDummyFunctionSummary(node)
+                }
+                // Taking ourselves off the chain has to happen even when we are cancelled:
+                // a stale entry makes every later call of this function look recursive. Being
+                // somewhere other than the end is only surprising if we got here normally; when
+                // we are unwinding a cancellation, a nested analysis simply has not finished
+                // taking itself off yet.
+                if (functionSummaryAnalysisChain.lastOrNull() !== node && !cancelled) {
+                    log.error(
+                        "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+                    )
+                }
+                functionSummaryAnalysisChain.remove(node)
+            }
+        }
+
+        if (log.isTraceEnabled) {
+            log.trace("Finished with acceptInternal for ${node.name.localName}")
+        }
+    }
+
+    /**
+     * Writes the result of the analysis into the graph: the memory addresses and the memory values
+     * we computed for a node, and the dataflows which produced them.
+     */
+    private suspend fun drawDataflowEdges(finalState: PointsToState.Element) {
         for ((key, value) in finalState.generalState) {
+            // This loop is the bulk of a phase which is bounded by a timeout, and nothing in it
+            // suspends, so it has to offer that timeout a point at which it can take effect.
+            currentCoroutineContext().ensureActive()
+
             // The generalState values have 3 items: The address, the value, and the
             // prevDFG-Edges with a set of properties
             // Let's start with fetching the addresses
@@ -706,24 +1003,59 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     )
             }
         }
+    }
 
-        if (log.isTraceEnabled) {
-            log.trace("Finished drawing DFG Edges")
-        }
-
-        if (node is Function) {
-            /* Store function summary for this Function. */
-            if (node.body != null && !analysisTimeout) storeFunctionSummary(node, finalState)
-            if (functionSummaryAnalysisChain.last() == node)
-                functionSummaryAnalysisChain.remove(node)
-            else
-                log.error(
-                    "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+    /**
+     * Gives [function] the summary we use when we cannot determine its real one: every parameter
+     * flows into the return value. That over-approximates whatever the function actually does, so
+     * the callers stay on the safe side, and it stops us from analyzing [function] again for every
+     * call site.
+     *
+     * Returns the dataflows such a summary implies, namely one from each parameter (and, for a
+     * [Method], from the receiver) into the function. It is up to the caller to put them into the
+     * state; see [handleEmptyFunction] for that.
+     */
+    private fun addDummyFunctionSummary(
+        function: Function
+    ): PowersetLattice.Element<NodeWithPropertiesKey> {
+        // TODO: Also add possible dereference values to the input?
+        val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
+        // Every per-parameter entry below shares (destValueDepth=0, srcNode=null, srcValueDepth=1,
+        // subAccessName="") and differs only in lastWrites, which is what actually identifies which
+        // parameter it is about. FSEntry.equals()/hashCode() deliberately ignore lastWrites - it is
+        // where write-sites for one relationship are meant to accumulate - so a hash-based Set
+        // would
+        // treat every parameter's entry here as a duplicate of the first and silently drop it. This
+        // has to stay identity-based instead.
+        val newEntries =
+            identitySetOf<FSEntry>().apply { add(FSEntry(0, function, 1, "", isDummy = true)) }
+        function.parameters.forEach { param ->
+            // The short FS
+            newEntries.add(
+                FSEntry(
+                    0,
+                    null,
+                    1,
+                    "",
+                    mutableSetOf(
+                        NodeWithPropertiesKey(param, equalLinkedHashSetOf(param.argumentIndex))
+                    ),
+                    equalLinkedHashSetOf(true),
+                    true,
                 )
+            )
+            // Since we can't determine the DFs, we draw a DFG-Edge from every parameter
+            prevDFGs.add(NodeWithPropertiesKey(param, equalLinkedHashSetOf()))
         }
-        if (log.isTraceEnabled) {
-            log.trace("Finished with acceptInternal for ${node.name.localName}")
-        }
+        // For Methods, we also add an edge to the receiver
+        if (function is Method)
+            function.receiver?.let {
+                prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf()))
+            }
+        val rets = identitySetOf<Node>()
+        if (function.returns.isNotEmpty()) rets.addAll(function.returns) else rets.add(function)
+        rets.forEach { ret -> function.functionSummary.put(ret, newEntries) }
+        return prevDFGs
     }
 
     /**
@@ -738,40 +1070,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = startState
 
         if (function.functionSummary.isEmpty()) {
-            // Add a dummy function summary so that we don't try this every time
-            // In this dummy, all parameters point to the return
-            // TODO: Also add possible dereference values to the input?
-            val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
-            val newEntries =
-                ConcurrentHashMap.newKeySet<FSEntry>().apply {
-                    add(FSEntry(0, function, 1, "", isDummy = true))
-                }
-            function.parameters.forEach { param ->
-                // The short FS
-                newEntries.add(
-                    FSEntry(
-                        0,
-                        null,
-                        1,
-                        "",
-                        mutableSetOf(
-                            NodeWithPropertiesKey(param, equalLinkedHashSetOf(param.argumentIndex))
-                        ),
-                        equalLinkedHashSetOf(true),
-                        true,
-                    )
-                )
-                // Since we can't determine the DFs, we draw a DFG-Edge from every parameter
-                prevDFGs.add(NodeWithPropertiesKey(param, equalLinkedHashSetOf()))
-            }
-            // For Methods, we also add an edge to the receiver
-            if (function is Method)
-                function.receiver?.let {
-                    prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf()))
-                }
-            val rets = identitySetOf<Node>()
-            if (function.returns.isNotEmpty()) rets.addAll(function.returns) else rets.add(function)
-            rets.forEach { ret -> function.functionSummary.put(ret, newEntries) }
+            val prevDFGs = addDummyFunctionSummary(function)
             // draw a DFG-Edge from all parameters to the Function
             doubleState =
                 lattice.push(
@@ -924,9 +1223,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) {
         // Extract the value depth from the value's localName
         val srcValueDepth = stringToDepth(value.name.localName)
-        // Store the information in the functionSummary
-        val existingEntry =
-            node.functionSummary.computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
         val filteredLastWrites =
             lastWrites
                 // for shortFS,only use these, and for !shortFS, only those
@@ -937,7 +1233,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val v =
             if (addressName?.startsWith("NewMemoryAddress") == true) Name(addressName, node.name)
             else value
-        existingEntry.add(
+        // Store the information in the functionSummary. This same (param, value, depth)
+        // relationship
+        // is typically discovered again from a different field address or a different write-site,
+        // so
+        // this merges into a matching entry instead of adding a new one for every occurrence.
+        mergeFSEntry(
+            node.functionSummary,
+            param,
             FSEntry(
                 dstValueDepth,
                 v,
@@ -945,11 +1248,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 subAccessName,
                 filteredLastWrites,
                 equalLinkedHashSetOf(shortFS),
-            )
+            ),
         )
         // Additionally, we store this as a shortFunctionSummary
         // where the function writes to the parameter
-        val shortFSEntry =
+        mergeFSEntry(
+            node.functionSummary,
+            param,
             FSEntry(
                 dstValueDepth,
                 node,
@@ -957,13 +1262,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 subAccessName,
                 PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf())),
                 equalLinkedHashSetOf(true),
-            )
-        // Add the new entry if it doesn't exist yet
-        synchronized(existingEntry) {
-            // TODO: Do we need the synchronized? Can we be more efficient in finding matching
-            // entries?
-            if (existingEntry.none { it == shortFSEntry }) existingEntry.add(shortFSEntry)
-        }
+            ),
+        )
         val propertySet = identitySetOf<Any>(true)
         if (subAccessName != "") propertySet.add(Field().apply { name = Name(subAccessName) })
 
@@ -1011,26 +1311,34 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
                         else sourceParamValue as? Parameter
                     if (matchingDeclarations != null) {
-                        node.functionSummary
-                            .computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
-                            .add(
-                                FSEntry(
-                                    dstValueDepth,
-                                    matchingDeclarations,
-                                    stringToDepth(sourceParamValue.name.localName),
-                                    subAccessName,
-                                    mutableSetOf(
-                                        NodeWithPropertiesKey(
-                                            matchingDeclarations,
-                                            // Add the parameter index to indicate to the
-                                            // calculatePrevDFGs function that we need to
-                                            // replace the value of the call argument
-                                            equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
-                                        )
-                                    ),
-                                    equalLinkedHashSetOf(true),
-                                )
-                            )
+                        // One matching entry per path found, same reasoning as above: a widely-used
+                        // parameter can be reached via many distinct paths, so this merges rather
+                        // than accumulating one FSEntry per path.
+                        mergeFSEntry(
+                            node.functionSummary,
+                            param,
+                            FSEntry(
+                                dstValueDepth,
+                                matchingDeclarations,
+                                stringToDepth(sourceParamValue.name.localName),
+                                subAccessName,
+                                // mergeFSEntry may fold this into an existing entry and then call
+                                // .addAll() on its lastWrites concurrently with other mergeFSEntry
+                                // calls for the same key, so this has to be a thread-safe set
+                                // rather
+                                // than a plain mutableSetOf().
+                                PowersetLattice.Element(
+                                    NodeWithPropertiesKey(
+                                        matchingDeclarations,
+                                        // Add the parameter index to indicate to the
+                                        // calculatePrevDFGs function that we need to
+                                        // replace the value of the call argument
+                                        equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
+                                    )
+                                ),
+                                equalLinkedHashSetOf(true),
+                            ),
+                        )
                     }
                 }
             }
@@ -1108,6 +1416,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             parallelism = innerCoroutineCounter,
                             minChunkSize = 1,
                         ) { (value, shortFS, subAccessName, lastWrites) ->
+                            // [addParameterInfoToFS] walks the DFG for every entry, which is the
+                            // expensive half of this function, so we give the timeout around us a
+                            // chance to stop us before each of them.
+                            currentCoroutineContext().ensureActive()
+
                             /* See if we can find something that is different from the initial value.*/
                             if (
                                 value.name != param.name &&
@@ -1408,10 +1721,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val parentFD = currentNode.firstParentOrNull<Function>()
             if (parentFD != null) {
                 currentNode.returnValues.forEach { rV ->
-                    val fsEntry =
-                        parentFD.functionSummary.computeIfAbsent(currentNode) {
-                            ConcurrentHashMap.newKeySet<FSEntry>()
-                        }
                     // Filter shortFS Values
                     var values =
                         doubleState.getValues(rV, rV).mapFilteredTo(
@@ -1422,28 +1731,50 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     var addresses = mutableSetOf<Node>()
                     for (depth in 1..3) {
-                        fsEntry.addAll(
-                            values.map { value ->
-                                // If the value is a newly created MemoryAddress, we only set the
-                                // name so that we know later that we have to create a new
-                                // MemoryAddress for each Call
-                                val addressName = (value as? MemoryAddress)?.name?.localName
-                                val v =
-                                    if (addressName?.startsWith("NewMemoryAddress") == true)
-                                        Name(addressName, parentFD.name)
-                                    else value
-                                val lastWrite =
-                                    if (depth == 1)
-                                        mutableSetOf(
-                                            NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
-                                        )
-                                    else
-                                        addresses.flatMapTo(mutableSetOf()) { address ->
-                                            doubleState.getLastWrites(address)
-                                        }
-                                FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false))
-                            }
-                        )
+                        // This Return is visited again every time Lattice.iterateEOG revisits this
+                        // edge while converging to a fixpoint, so this runs far more than once per
+                        // Return in the source. Without merging, every revisit would add its own
+                        // FSEntry for the same (depth, v) relationship instead of contributing to
+                        // one entry's lastWrites, which is how a summary balloons to way more
+                        // entries than there are actual relationships.
+                        //
+                        // Beyond depth 1, the lastWrites are those of the addresses and the same
+                        // for every value, so we collect them once per depth instead of once per
+                        // value.
+                        val depthLastWrites =
+                            if (depth == 1) null
+                            else
+                                addresses.flatMapTo(PowersetLattice.Element()) { address ->
+                                    doubleState.getLastWrites(address)
+                                }
+                        values.forEach { value ->
+                            // Let the timeout of the enclosing iterateEOG interrupt us here
+                            currentCoroutineContext().ensureActive()
+                            // If the value is a newly created MemoryAddress, we only set the
+                            // name so that we know later that we have to create a new
+                            // MemoryAddress for each Call
+                            val addressName = (value as? MemoryAddress)?.name?.localName
+                            val v =
+                                if (addressName?.startsWith("NewMemoryAddress") == true)
+                                    Name(addressName, parentFD.name)
+                                else value
+                            // A thread-safe set: mergeFSEntry may fold this into an existing entry
+                            // and .addAll() its contents concurrently with other revisits of this
+                            // same edge. depthLastWrites is shared by all values, which is why
+                            // mergeFSEntry has to copy it if it becomes the lastWrites of a new
+                            // entry.
+                            val lastWrite =
+                                depthLastWrites
+                                    ?: PowersetLattice.Element(
+                                        NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
+                                    )
+                            mergeFSEntry(
+                                parentFD.functionSummary,
+                                currentNode,
+                                FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false)),
+                                copyLastWritesOnInsert = depthLastWrites != null,
+                            )
+                        }
                         // Try to deref the values. If we have nothing there, stop, otherwise,
                         // continue
                         val derefValues =
@@ -1582,6 +1913,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             it.start
                         }
                     }
+                // These tasks all add to the one state which [push] modifies in place, so the
+                // assignment stores the same reference that `doubleState` already holds and no
+                // task can lose the contribution of another one. It would be a lost update if
+                // [push] ever started to return a new element instead.
                 argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
                     doubleState =
                         innerCalculateIncomingCallingContexts(
@@ -1765,6 +2100,24 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val propertySet: EqualLinkedHashSet<Any>,
         val dst: IdentitySet<Node> = identitySetOf(),
     ) {
+        /**
+         * The collections already merged into [lastWrites], by identity. Merging one again cannot
+         * add anything, so [mergeLastWrites] skips it. Applying a large summary merges the same
+         * `prev` set into the same entry many times, and each merge would otherwise hash all its
+         * elements again.
+         *
+         * This is only sound while merged collections are not modified, which holds for the `prev`
+         * sets of [handleCall]: they are complete once [deduplicatePreprocessedFSEntries] is done.
+         */
+        private val mergedFrom = ConcurrentHashMap.newKeySet<IdKey<Any>>()
+
+        /** Adds [newLastWrites] to [lastWrites], unless we already did so before. */
+        fun mergeLastWrites(newLastWrites: Collection<NodeWithPropertiesKey>) {
+            if (mergedFrom.add(IdKey(newLastWrites))) {
+                lastWrites.addAll(newLastWrites)
+            }
+        }
+
         override fun equals(other: Any?): Boolean {
             return other is MapDstToSrcEntry &&
                 param === other.param &&
@@ -1848,7 +2201,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     )
 
     private data class AddEntryDestinationDedupCache(
-        val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap()
+        val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap(),
+        /**
+         * Looks up the [MapDstToSrcEntry] for one destination that matches a given (param, srcNode,
+         * propertySet, dst) combination, which is exactly what [MapDstToSrcEntry.equals] and
+         * [MapDstToSrcEntry.hashCode] compare - they deliberately ignore `lastWrites` so that a
+         * lookup key does not have to carry one. See [insertOrMerge], which is the only reader and
+         * writer of this map.
+         *
+         * Without this index, [insertOrMerge] scanned the (unindexed, identity-keyed)
+         * [DestinationContext.currentSet] with `firstOrNull` for every source it inserts. That set
+         * accumulates over the whole [handleCall] of a Call - across every dereference depth and
+         * every one of its invokes - so a Call with many invokes made every insert scan a set that
+         * kept growing, which is quadratic in the number of entries. A production run got stuck for
+         * over ten minutes transforming a single Call edge because of exactly this.
+         */
+        val entryIndex: ConcurrentHashMap<MapDstToSrcEntry, MapDstToSrcEntry> = ConcurrentHashMap(),
     )
 
     private class AddEntryToMapCache {
@@ -1965,6 +2333,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 inv
             }
         invokes.forEach { invoke ->
+            // Handling a single call is the most expensive thing the analysis does: it may analyze
+            // the callee, and it applies the callee's whole function summary to our state. The
+            // timeout of the enclosing [iterateEOG] can only cut that short where we let it, so we
+            // offer it a cancellation point per callee and per dereference depth below.
+            currentCoroutineContext().ensureActive()
             val inv = calculateFunctionSummaries(invoke)
             if (inv != null) {
                 doubleState =
@@ -2071,6 +2444,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // We can't go through all levels at once as a change at a lower level may
                 // affect a higher level. So let's do this step by step
                 for (depth in 0..3) {
+                    currentCoroutineContext().ensureActive()
                     // Create a snapshot of mapDstToSrc. calculateCallDestinations reads from this,
                     // it should contain all the required information (the info from the previous
                     // depths). This allows us to use threads in which addEntryToMap at the same
@@ -2121,6 +2495,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
         mapDstToSrc.forEach { (dstAddr, values) ->
+            currentCoroutineContext().ensureActive()
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
@@ -2233,14 +2608,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // acceptInternal ran its own, independently timed nested analysis. Credit
                         // the time it took back to our own (enclosing) budget, if any, so that we
                         // aren't unfairly penalized for time spent in a callee that has already
-                        // been charged against its own budget.
+                        // been charged against its own budget. The credit is capped at
+                        // MAX_TIMEOUT_EXTENSION_FACTOR times the configured timeout: a function
+                        // with many callees, each of which has callees of its own, would otherwise
+                        // extend its budget over and over and could run for an arbitrary multiple
+                        // of the configured timeout. The cap is what makes the wall clock time of
+                        // one analysis bounded again.
                         val budget = currentCoroutineContext()[TimeoutBudget]
                         if (budget != null) {
                             val elapsed = startTime.elapsedNow()
                             if (log.isTraceEnabled) {
                                 log.trace("Old remaining timeout: ${budget.remaining}")
                             }
-                            budget.credit(elapsed)
+                            val configuredTimeout = passConfig<Configuration>()?.timeout
+                            if (configuredTimeout != null) {
+                                budget.creditUpTo(
+                                    elapsed,
+                                    configuredTimeout * MAX_TIMEOUT_EXTENSION_FACTOR,
+                                )
+                            } else {
+                                budget.credit(elapsed)
+                            }
                             if (log.isTraceEnabled) {
                                 log.trace(
                                     "Increased remaining timeout to consider time spent in acceptInternal. New remaining timeout: ${budget.remaining}"
@@ -2484,6 +2872,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * into an existing entry that matches the same logical key (srcNode, param, propertySet,
          * dst).
          *
+         * The lookup goes through [AddEntryDestinationDedupCache.entryIndex], which is keyed by
+         * exactly that logical key - see the KDoc there for why: [context.currentSet] itself is
+         * identity-keyed and unindexed, and used to be scanned with `firstOrNull` here, which does
+         * not scale to the size this set reaches over a whole [handleCall].
+         *
          * @param context the destination context holding the current set of entries
          * @param source the source node that the entry points from (compared by reference)
          * @param newLastWrites collection of keys to add to the matching entry's `lastWrites`
@@ -2495,18 +2888,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             newLastWrites: Collection<NodeWithPropertiesKey>,
             entry: () -> MapDstToSrcEntry,
         ) {
-            val existing =
-                context.currentSet.firstOrNull {
-                    it.srcNode === source &&
-                        it.param === param &&
-                        it.propertySet == context.updatedPropertySet &&
-                        it.dst == destinations
+            // Only used as a lookup key: equals/hashCode ignore lastWrites, so an empty one here
+            // does not affect the lookup, and we never mutate or expose this object.
+            val probe =
+                MapDstToSrcEntry(
+                    param = param,
+                    srcNode = source,
+                    lastWrites = mutableSetOf(),
+                    propertySet = context.updatedPropertySet,
+                    dst = destinations,
+                )
+            // computeIfAbsent runs the lambda at most once per key and atomically publishes its
+            // result, so concurrent inserters of the same key cannot create two entries for it -
+            // exactly one of them creates the entry and adds it to currentSet, and the others get
+            // that same entry back below to merge their newLastWrites into.
+            var created: MapDstToSrcEntry? = null
+            val stored =
+                context.dedupCache.entryIndex.computeIfAbsent(probe) {
+                    entry().also {
+                        created = it
+                        context.currentSet += it
+                    }
                 }
-
-            if (existing != null) {
-                existing.lastWrites.addAll(newLastWrites)
-            } else {
-                context.currentSet += entry()
+            if (stored !== created) {
+                // Somebody already inserted a matching entry; extend it instead of creating a
+                // duplicate we would otherwise never find again.
+                stored.mergeLastWrites(newLastWrites)
             }
         }
 
@@ -3106,6 +3513,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 (passConfig<Configuration>()?.drawCurrentDerefDFG != false) &&
                     (currentNode.astParent as? PointerDereference)?.access != AccessValues.WRITE
             ) {
+                // The derefValues we already handled below, by identity
+                val processedDerefValues = IdentitySet<Node>()
                 values.forEach { value ->
                     // TODO: This probably can be optimized
                     /* If all we have here as a PMV value, we can skip it
@@ -3142,6 +3551,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             )
                             .forEach { entry ->
                                 val derefValue = entry.value
+                                // What we add for a derefValue does not depend on the value we
+                                // reached it through, and different values mostly share their
+                                // derefValues, so we handle each one only once.
+                                if (!processedDerefValues.add(derefValue)) {
+                                    return@forEach
+                                }
                                 if (!doubleState.hasDeclarationStateValueEntry(derefValue)) {
                                     return@forEach
                                 }
@@ -3619,6 +4034,14 @@ fun PointsToState.Element.getFromDecl(key: Node): DeclarationStateEntryElement? 
     return this.declarationsState[key]
 }
 
+/**
+ * Adds [newLatticeElement] to what the [generalState] of [currentState] holds for [newNode].
+ *
+ * This modifies [currentState] and returns that very same object rather than a new one, which is
+ * what lets several coroutines push into one state in parallel: they all contribute to the same
+ * element, and assigning the result back to the variable they read it from stores the reference it
+ * already held. Anybody who needs the state to stay as it is has to [Lattice.duplicate] it first.
+ */
 suspend fun PointsToState.push(
     currentState: PointsToState.Element,
     newNode: Node,
@@ -3647,7 +4070,10 @@ suspend fun PointsToState.push(
     return currentState
 }
 
-/** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
+/**
+ * Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. Like [push], this
+ * modifies [currentState] and hands back the same object.
+ */
 suspend fun PointsToState.pushToDeclarationsState(
     currentState: PointsToState.Element,
     newNode: Node,
@@ -3751,7 +4177,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
+                    syntheticNodeFor(node, newName, isValue = true) {
                         UnknownMemoryValue(newName, true)
                     }
                 // TODO: Check if the boolean should be true sometimes
@@ -3787,9 +4213,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             } else {
                 val newName = getNodeName(node)
                 val newEntry =
-                    nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
-                        UnknownMemoryValue(newName)
-                    }
+                    syntheticNodeFor(node, newName, isValue = true) { UnknownMemoryValue(newName) }
                 val newPair = Pair(newEntry, false)
                 // Use computeIfAbsent's own result instead of a separate, subsequent lookup: it is
                 // the only reference guaranteed to be private (not shared with another state), and
@@ -3971,9 +4395,7 @@ fun PointsToState.Element.getLastWrites(
                         val newName = Name(getNodeName(addr).localName + ".derefvalue")
                         ret.add(
                             NodeWithPropertiesKey(
-                                nodesCreatingUnknownValues.computeIfAbsent(
-                                    UnknownValueKey(addr, newName)
-                                ) {
+                                syntheticNodeFor(addr, newName, isValue = true) {
                                     UnknownMemoryValue(newName)
                                 },
                                 equalLinkedHashSetOf(),
@@ -4117,7 +4539,7 @@ fun PointsToState.Element.getValues(
                 val newName = Name(getNodeName(node).localName, base.name)
                 PowersetLattice.Element(
                     Pair(
-                        nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, newName)) {
+                        syntheticNodeFor(node, newName, isValue = true) {
                             UnknownMemoryValue(newName)
                         },
                         false,
@@ -4454,9 +4876,7 @@ fun PointsToState.Element.fetchFieldAddresses(
 
         if (!foundAnyFieldAddress) {
             val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(
-                    UnknownValueKey(addr, normalizedNodeName)
-                ) {
+                syntheticNodeFor(addr, normalizedNodeName, isValue = false) {
                     MemoryAddress(normalizedNodeName, isGlobal(addr))
                 }
 
@@ -4541,8 +4961,12 @@ suspend fun PointsToState.Element.updateValues(
             // null, AKA does not write to a field
             val fullSourcesExist = sources.any { it.third == null }
 
+            // A summary node stands for many memory locations, so a write to it only reaches one
+            // of them, and we must keep the previous values (weak update)
+            val isSummary = isSummaryNode(destAddr)
+
             // If we have any full writes, we eliminate the previous state
-            if (fullSourcesExist) {
+            if (fullSourcesExist && !isSummary) {
                 doubleState.declarationsState.put(
                     destAddr,
                     DeclarationStateEntryElement(
@@ -4558,7 +4982,8 @@ suspend fun PointsToState.Element.updateValues(
                 // Method.add()
                 // TODO: this should be fields, but for now we deal with the names
                 val writtenFields =
-                    sources.mapNotNullTo(HashSet()) { (it.third as? Field)?.name?.localName }
+                    if (isSummary) emptySet()
+                    else sources.mapNotNullTo(HashSet()) { (it.third as? Field)?.name?.localName }
                 doubleState.declarationsState.getForUpdate(destAddr)?.third?.removeIf {
                     it.properties.any { p ->
                         ((p as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
@@ -4610,6 +5035,8 @@ suspend fun PointsToState.Element.updateValues(
                     )
                 }
             } else {
+                // As in [calculateIncomingCallingContexts], the parallel tasks all modify the one
+                // state that [push] returns to them, so nothing is lost here.
                 destinations.forEachMaybeParallel { d ->
                     doubleState =
                         lattice.push(

@@ -53,7 +53,9 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
+import kotlin.time.measureTime
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
@@ -657,6 +659,53 @@ class BasicLatticesRedesignTest {
         assertNull(currentCoroutineContext()[TimeoutBudget])
     }
 
+    /**
+     * The transformation of a single edge is where an [Lattice.iterateEOG] run spends almost all of
+     * its time, so the timeout has to be able to cut a transformation short. It used to run outside
+     * the timeout, which meant that a single slow edge could keep the analysis busy for arbitrarily
+     * long - we saw a single edge run for twelve hours against a budget of thirty minutes.
+     */
+    @Test
+    // The assertion below bounds a *working* implementation, and a regression which waits for the
+    // transformation still ends after transformationDuration. A cancellation which deadlocks does
+    // not end at all, though, so @Timeout is what keeps that from hanging the suite - the same
+    // safety net the other cancellation tests in this file use.
+    @Timeout(60)
+    fun testIterateEOGTimesOutDuringASlowTransformation() {
+        val lattice = PowersetLattice<String>()
+
+        val start = Literal<Int>()
+        val end = Literal<Int>()
+        start.nextEOGEdges += end
+
+        val budget = 500.milliseconds
+        // Far more than the budget, so that a run which waits for the transformation to finish is
+        // clearly distinguishable from one which cancels it.
+        val transformationDuration = 30.seconds
+
+        var aborted = false
+        val elapsed = measureTime {
+            aborted =
+                lattice
+                    .iterateEOG(
+                        start.nextEOGEdges.toList(),
+                        lattice.bottom,
+                        { _, _, state ->
+                            delay(transformationDuration)
+                            state
+                        },
+                        timeout = budget,
+                    )
+                    .second
+        }
+
+        assertTrue(aborted, "The run has to report that it did not reach a fixpoint")
+        assertTrue(
+            elapsed < transformationDuration / 2,
+            "The timeout has to cancel the transformation instead of waiting for it, but the run took $elapsed",
+        )
+    }
+
     @Test
     @Timeout(5)
     fun testTimeoutBudgetCreditTerminatesAndExtendsRemaining() {
@@ -899,5 +948,120 @@ class BasicLatticesRedesignTest {
         // fixpoint.
         assertTrue(aborted)
         assertTrue(result.isNotEmpty())
+    }
+
+    /**
+     * [ConcurrentMapLattice.Element.putAllBatched] exists so that [ConcurrentMapLattice.lub] can
+     * take the map's write lock once instead of once per entry. It must still apply the very rules
+     * [ConcurrentMapLattice.Element.put] and [ConcurrentMapLattice.Element.putShared] do, which is
+     * what this checks - a batched write which forgets to share or to privatize is exactly the bug
+     * that makes a fixpoint silently wrong.
+     */
+    @Test
+    fun testPutAllBatchedKeepsTheSharingRules() {
+        val handedOver = PowersetLattice.Element<String>("handedOver")
+        val keptByProducer = PowersetLattice.Element<String>("keptByProducer")
+        val alreadyShared =
+            PowersetLattice.Element<String>("alreadyShared").also { it.isShared = true }
+
+        val keyHandedOver = Literal<Int>()
+        val keyKept = Literal<Int>()
+        val keyShared = Literal<Int>()
+
+        val map = ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>()
+        map.putAllBatched(
+            listOf(
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyHandedOver,
+                    handedOver,
+                    sharedWithProducer = false,
+                ),
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyKept,
+                    keptByProducer,
+                    sharedWithProducer = true,
+                ),
+                ConcurrentMapLattice.Element.PendingWrite(
+                    keyShared,
+                    alreadyShared,
+                    sharedWithProducer = false,
+                ),
+            )
+        )
+
+        // A value the producer handed over is stored as it is and stays private.
+        assertSame(handedOver, map[keyHandedOver])
+        assertFalse(handedOver.isShared)
+
+        // A value the producer keeps a reference to is stored as it is, but marked as shared, so
+        // that the next getForUpdate privatizes it instead of modifying the producer's copy too.
+        assertSame(keptByProducer, map[keyKept])
+        assertTrue(keptByProducer.isShared)
+
+        // A value which was already shared although the producer claimed to hand it over is a
+        // caller bug. Like put(), we route around it by storing a private copy rather than letting
+        // the other owner of that value be corrupted.
+        val stored = assertNotNull(map[keyShared])
+        assertNotSame(alreadyShared, stored)
+        assertEquals(alreadyShared.toSet(), stored.toSet())
+        assertFalse(stored.isShared)
+    }
+
+    /**
+     * The batched [ConcurrentMapLattice.lub] has to produce what the entry-by-entry one did, on
+     * both of its branches, for states which overlap the way two real states at a merge point do:
+     * some keys only in one of them, some in both, some with differing values.
+     */
+    @Test
+    fun testLubIsUnaffectedByBatching() = runBlocking {
+        val lattice = ConcurrentMapLattice<Node, PowersetLattice.Element<String>>(PowersetLattice())
+        val keys = List(250) { Literal<Int>() }
+
+        // The two maps overlap the way two states meeting at a merge point do: every third key is
+        // only in one of them, the rest are in both - half of those with a differing value.
+        fun buildOne() =
+            ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>().apply {
+                keys.forEachIndexed { index, key ->
+                    if (index % 3 != 1) putShared(key, PowersetLattice.Element<String>("a$index"))
+                }
+            }
+
+        fun buildTwo() =
+            ConcurrentMapLattice.Element<Node, PowersetLattice.Element<String>>().apply {
+                keys.forEachIndexed { index, key ->
+                    when {
+                        index % 3 == 0 -> {}
+                        index % 3 == 1 -> putShared(key, PowersetLattice.Element<String>("b$index"))
+                        index % 2 == 0 -> putShared(key, PowersetLattice.Element<String>("a$index"))
+                        else ->
+                            putShared(key, PowersetLattice.Element<String>("a$index", "b$index"))
+                    }
+                }
+            }
+
+        // What the union has to look like, computed without any of the machinery under test.
+        val reference = buildOne()
+        val referenceTwo = buildTwo()
+        val expected =
+            keys.associateWith { key ->
+                (reference[key]?.toSet() ?: emptySet()) + (referenceTwo[key]?.toSet() ?: emptySet())
+            }
+
+        // Both branches, and both the sequential and the chunked path through the parallel phase.
+        for (allowModify in listOf(true, false)) {
+            for (parallelism in listOf(1, 4)) {
+                val where = "allowModify=$allowModify, parallelism=$parallelism"
+                val merged = lattice.lub(buildOne(), buildTwo(), allowModify, false, parallelism)
+
+                assertEquals(keys.size, merged.size, where)
+                keys.forEachIndexed { index, key ->
+                    assertEquals(
+                        expected[key],
+                        assertNotNull(merged[key]).toSet(),
+                        "$index, $where",
+                    )
+                }
+            }
+        }
     }
 }
