@@ -3242,6 +3242,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
+        if (
+            currentNode is Variable &&
+                !currentNode.isStatic &&
+                currentNode.initializer == null &&
+                !isGlobal(currentNode)
+        ) {
+            val unknown =
+                nodesCreatingUnknownValues.computeIfAbsent(
+                    UnknownValueKey(currentNode, getNodeName(currentNode))
+                ) {
+                    UnknownMemoryValue(getNodeName(currentNode))
+                }
+            declEntriesMap[currentNode]?.second?.add(Pair(unknown, false))
+            addresses.forEach { addr -> declEntriesMap[addr]?.second?.add(Pair(unknown, false)) }
+        }
+
         (currentNode as? HasInitializer)?.initializer?.let { initializer ->
             if (initializer is Literal<*>) {
                 values.add(NodeWithPropertiesKey(initializer, equalLinkedHashSetOf()))
