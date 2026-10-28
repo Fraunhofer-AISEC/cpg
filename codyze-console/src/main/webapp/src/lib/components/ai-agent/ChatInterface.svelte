@@ -320,7 +320,7 @@
     }
     if (isTyping(event)) return;
     // The column over the graph closes first, then the graph
-    if (event.key === 'Escape' && graph.open && !contextCollapsed) {
+    if (event.key === 'Escape' && columnOverGraph && !contextCollapsed) {
       event.preventDefault();
       contextCollapsed = true;
       return;
@@ -694,8 +694,11 @@
 
   // The graph needs the width: while it is open, the navigation and the sidebar are collapsed. When
   // it closes, what it collapsed is opened again, unless it was toggled in between
-  // The column of the inspector and the agent folds into its strip as well; opened from there, it
-  // lies over the graph, so that the code keeps its width
+  // A graph opened from the code also folds the column of the inspector and the agent into its
+  // strip; opened from there, it lies over the graph, so that the code keeps its width. A graph the
+  // agent opened, e.g. the evidence of an answer, keeps the column, which shows the answer
+  let graphByAgent = $state(false);
+  const columnOverGraph = $derived(graph.open && !graphByAgent);
   let collapsedForGraph = { navigation: false, sidebar: false, context: false };
   $effect(() => {
     const open = graph.open;
@@ -704,12 +707,13 @@
         collapsedForGraph = {
           navigation: !navigation.collapsed,
           sidebar: sidebarOpen,
-          context: !contextCollapsed
+          context: !graphByAgent && !contextCollapsed
         };
         navigation.collapsed = true;
         sidebarOpen = false;
-        contextCollapsed = true;
+        if (!graphByAgent) contextCollapsed = true;
       } else {
+        graphByAgent = false;
         if (collapsedForGraph.navigation && navigation.collapsed) navigation.collapsed = false;
         if (collapsedForGraph.sidebar && !sidebarOpen) sidebarOpen = true;
         if (collapsedForGraph.context && contextCollapsed) contextCollapsed = false;
@@ -1172,6 +1176,7 @@
     }
     const pathsGraph = await getPathsGraph(toolPaths).catch(() => null);
     if (!pathsGraph || pathsGraph.nodes.length === 0) return;
+    if (!graph.open) graphByAgent = true;
     graph.showPaths(
       { description: toolPaths.description, kind: toolPaths.kind, count: toolPaths.paths.length },
       pathsGraph
@@ -1183,6 +1188,7 @@
 
   // Shows a slice a tool computed in the graph panel, like a slice asked for in the code
   function showToolSlice(toolSlice: NodeSliceJSON) {
+    if (!graph.open) graphByAgent = true;
     graph.show(
       toolSlice.start.nodeId,
       toolSlice.direction,
@@ -1235,6 +1241,7 @@
     ];
     const evidence = await getEvidenceGraph(steps, citations).catch(() => null);
     if (!evidence || evidence.graph.nodes.length === 0) return;
+    if (!graph.open) graphByAgent = true;
     graph.showPaths(
       { description: 'the evidence of the answer', kind: 'evidence', count: steps.length },
       evidence.graph,
@@ -1248,10 +1255,10 @@
     if (reveal && first) revealFromAgent(first.node.id);
   }
 
-  // Once the agent has answered, the page stays as it is: the answer offers to step through its
-  // places and to show its graph. Only a graph that shows the evidence of an earlier answer follows
-  // the new one, or closes if the new one has none, so that it does not show something else than
-  // the answer. Without an open file, the first place the answer cites is opened
+  // Once the agent has answered, the paths and slices its steps found are shown as one graph next
+  // to the answer, without switching the file. A graph of an earlier answer closes if the new one
+  // has none, so that it does not show something else than the answer. Without an open file, the
+  // first place the answer cites is opened
   let wasLoading = false;
   $effect(() => {
     const loading = isLoading;
@@ -1263,10 +1270,8 @@
     const last = timeline.length - 1;
     const block = timeline[last];
     if (!block) return;
-    if (graph.open && graph.evidence) {
-      if (graphSteps(block).length > 0) showEvidence(last, false);
-      else graph.close();
-    }
+    if (graphSteps(block).length > 0) showEvidence(last, false);
+    else if (graph.open && graph.evidence) graph.close();
     if (!openedUnit) {
       const first = block.entries
         .flatMap((e) =>
@@ -1611,7 +1616,7 @@
     // revealed it before
     dismissedContextId = null;
     // While the graph is shown, the inspector does not open over it by itself
-    if ((isLoading && contextTab === 'agent') || (graph.open && contextCollapsed)) {
+    if ((isLoading && contextTab === 'agent') || (columnOverGraph && contextCollapsed)) {
       markInspectorUnseen();
       return;
     }
@@ -2366,8 +2371,8 @@ where its evidence reaches the limits of the analysis -->
 
   <!-- Context column: inspector and agent. While the graph is shown, it is a strip, and opened from
   there it lies over the graph -->
-  {#if contextCollapsed || graph.open}
-    {@const floating = graph.open && !contextCollapsed}
+  {#if contextCollapsed || columnOverGraph}
+    {@const floating = columnOverGraph && !contextCollapsed}
     <div
       class="flex w-9 shrink-0 flex-col items-center gap-3 border-l border-gray-200 bg-gray-50 pt-3"
     >
@@ -2396,7 +2401,7 @@ where its evidence reaches the limits of the analysis -->
     </div>
   {/if}
   {#if !contextCollapsed}
-    {#if !graph.open}
+    {#if !columnOverGraph}
       <!-- Resize handle -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
@@ -2406,11 +2411,11 @@ where its evidence reaches the limits of the analysis -->
       ></div>
     {/if}
     <div
-      class="flex min-h-0 shrink-0 flex-col {graph.open
+      class="flex min-h-0 shrink-0 flex-col {columnOverGraph
         ? 'absolute top-0 right-9 bottom-0 z-30 border-l border-gray-200 bg-white shadow-xl'
         : ''}"
       style:width="{contextWidth}px"
-      transition:fly={{ x: 24, duration: graph.open ? motion(150) : 0 }}
+      transition:fly={{ x: 24, duration: columnOverGraph ? motion(150) : 0 }}
     >
       <!-- Tabs -->
       <div class="flex h-9 shrink-0 items-stretch border-b border-gray-200 px-1" role="tablist">
