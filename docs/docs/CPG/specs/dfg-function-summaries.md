@@ -120,3 +120,17 @@ Note: If multiple function summaries match a method/function declaration (after 
 3. If there are still multiple options, we take the longest signature.
 4. If this also didn't help to get a precise result, we iterate through the parameters and for index `i`, we pick the entry with the most precise matching type. We start with index 0 and count upwards, so if param0 leads to a single result, we're done and other entries won't be considered even if all the remaining parameters are more precise or whatever.
 5. If nothing helped to get a unique entry, we pick the first remaining entry and hope it's the most precise one.
+## Profiles
+
+A `Profile` bundles function summaries (and types) of code that is not part of the analyzed project, such as a standard library. It is activated with `TranslationConfiguration.Builder.profile(...)` and is opt-in. Summaries registered with `registerFunctionSummaries` take precedence over the ones of a profile.
+
+The C/C++ frontend ships the `stdlib` profile (`StdlibProfile`). It provides `size_t`, `ssize_t`, `ptrdiff_t`, `intptr_t` and `uintptr_t` as types (a typedef declared by the code takes precedence) and summaries for `memcpy`, `memmove`, `memset`, `strcpy`, `strncpy`, `strcat`, `strncat` and `strlen`:
+
+```kotlin
+TranslationConfiguration.builder()
+    .registerLanguage<CLanguage>()
+    .profile(StdlibProfile)
+    .build()
+```
+
+Leave the profile out to get the precise behavior of parsing the real headers.

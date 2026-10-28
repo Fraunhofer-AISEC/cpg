@@ -115,7 +115,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** The primitive type names of this language. */
     @get:JsonIgnore
     val primitiveTypeNames: Set<String>
-        get() = builtInTypes.keys
+        get() = builtInTypes.keys + profileTypes.keys
+
+    /**
+     * Additional types contributed by the active [Profile]s. They are not part of the language
+     * itself, so [builtInTypes] always takes precedence. This is filled by the [TranslationContext]
+     * right after the language was created.
+     */
+    @get:JsonIgnore val profileTypes: MutableMap<String, Type> = mutableMapOf()
 
     /** The built-in types of this language. */
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
@@ -169,7 +176,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    open fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
+    open fun getSimpleTypeOf(typeString: CharSequence) =
+        builtInTypes[typeString.toString()] ?: profileTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     open fun handlesFile(file: File): Boolean {

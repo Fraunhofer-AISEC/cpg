@@ -1821,6 +1821,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                     it.registerLanguage<CLanguage>()
                     it.registerLanguage<CPPLanguage>()
+                    it.profile(StdlibProfile)
                 }
             assertNotNull(tu)
 
@@ -1835,43 +1836,87 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testPointerSizedIntegerTypes() {
+    fun testStdlibProfileProvidesTypes() {
         val files =
             listOf(
-                File("src/test/resources/c/pointer_sized_integers.c"),
-                File("src/test/resources/cxx/pointer_sized_integers.cpp"),
+                File("src/test/resources/c/stdlib_profile.c"),
+                File("src/test/resources/cxx/stdlib_profile.cpp"),
             )
         for (file in files) {
             val tu =
                 analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                     it.registerLanguage<CLanguage>()
                     it.registerLanguage<CPPLanguage>()
+                    it.profile(StdlibProfile)
                 }
             assertNotNull(tu)
 
-            val caller = tu.functions["caller"]
-            assertNotNull(caller)
-            val expected =
-                listOf(
-                    "size_t" to NumericType.Modifier.UNSIGNED,
-                    "ssize_t" to NumericType.Modifier.SIGNED,
-                    "ptrdiff_t" to NumericType.Modifier.SIGNED,
-                    "intptr_t" to NumericType.Modifier.SIGNED,
-                    "uintptr_t" to NumericType.Modifier.UNSIGNED,
-                )
-            assertEquals(expected.size, caller.parameters.size)
-            for ((parameter, typeAndModifier) in caller.parameters.zip(expected)) {
-                val (name, modifier) = typeAndModifier
-                val type = parameter.type
-                assertIs<IntegerType>(type, "${file.name}: ${parameter.name}")
-                assertLocalName(name, type)
-                assertEquals(64, type.bitWidth)
-                assertEquals(modifier, type.modifier)
-            }
+            val copy = tu.functions["copy"]
+            assertNotNull(copy)
+            val size = copy.parameters["n"]
+            assertNotNull(size)
+            val type = size.type
+            assertIs<IntegerType>(type, file.name)
+            assertLocalName("size_t", type)
+            assertEquals(64, type.bitWidth)
+            assertEquals(NumericType.Modifier.UNSIGNED, type.modifier)
 
-            val sum = caller.allChildren<BinaryOperator>().singleOrNull()
+            val sum = tu.functions["next"].allChildren<BinaryOperator>().singleOrNull()
             assertNotNull(sum)
             assertIs<IntegerType>(sum.type, "${file.name}: ${sum.code}")
+        }
+    }
+
+    @Test
+    fun testWithoutStdlibProfileTypesAreNotBuiltIn() {
+        val file = File("src/test/resources/c/stdlib_profile.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        // The profile is opt-in: size_t is unknown without the headers
+        val type = tu.functions["copy"]?.parameters["n"]?.type
+        assertNotNull(type)
+        assertFalse(type is IntegerType)
+    }
+
+    @Test
+    fun testStdlibProfileProvidesFunctionSummaries() {
+        val files =
+            listOf(
+                File("src/test/resources/c/stdlib_profile.c"),
+                File("src/test/resources/cxx/stdlib_profile.cpp"),
+            )
+        for (file in files) {
+            for (useProfile in listOf(true, false)) {
+                val tu =
+                    analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                        it.registerLanguage<CLanguage>()
+                        it.registerLanguage<CPPLanguage>()
+                        it.registerPass<PointsToPass>()
+                        if (useProfile) it.profile(StdlibProfile)
+                    }
+                assertNotNull(tu)
+
+                val memcpy = tu.calls["memcpy"]?.invokes?.singleOrNull()
+                assertNotNull(memcpy, file.name)
+                assertTrue(memcpy.isInferred, file.name)
+
+                val dst = tu.functions["copy"].parameters["dst"]
+                val src = tu.functions["copy"].parameters["src"]
+                assertNotNull(dst)
+                assertNotNull(src)
+
+                // The summary says: the memory behind param1 flows to the memory behind param0.
+                // Without the profile, we know nothing about memcpy.
+                val flowsToDestination =
+                    memcpy.functionSummary[memcpy.parameters[0]].orEmpty().any {
+                        it.srcNode == memcpy.parameters[1]
+                    }
+                assertEquals(useProfile, flowsToDestination, "${file.name}, profile: $useProfile")
+            }
         }
     }
 

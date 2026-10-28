@@ -215,7 +215,8 @@ open class CPPLanguage :
             // part of the standard library. We therefore also consider them to be "built-in" types,
             // because we often don't parse all the headers which define them internally.
             // They are a fallback for missing headers: a typedef of the same name that the parsed
-            // code declares takes precedence (see TypeManager.resolvePossibleTypedef).
+            // code declares takes precedence (see TypeManager.resolvePossibleTypedef). Further
+            // standard library types, such as size_t, are provided by the [StdlibProfile].
             "std::string" to StringType("std::string", this),
             "int8_t" to IntegerType("int8_t", 8, this, NumericType.Modifier.SIGNED),
             "int16_t" to IntegerType("int16_t", 16, this, NumericType.Modifier.SIGNED),
@@ -225,16 +226,6 @@ open class CPPLanguage :
             "uint16_t" to IntegerType("uint16_t", 16, this, NumericType.Modifier.UNSIGNED),
             "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
             "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
-
-            // Pointer-sized integers, defined in <cstddef> and <cstdint> (ssize_t is POSIX, defined
-            // in <sys/types.h>). We assume 64 bits, which is the case on 64-bit platforms.
-            // TODO: On 32-bit platforms, they have 32 bits, but it's not clear how we could model
-            // this properly.
-            "size_t" to IntegerType("size_t", 64, this, NumericType.Modifier.UNSIGNED),
-            "ssize_t" to IntegerType("ssize_t", 64, this, NumericType.Modifier.SIGNED),
-            "ptrdiff_t" to IntegerType("ptrdiff_t", 64, this, NumericType.Modifier.SIGNED),
-            "intptr_t" to IntegerType("intptr_t", 64, this, NumericType.Modifier.SIGNED),
-            "uintptr_t" to IntegerType("uintptr_t", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Other commonly used extension types
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),

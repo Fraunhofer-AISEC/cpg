@@ -227,7 +227,8 @@ open class CLanguage :
             // consider them to be "built-in" types, because we often don't parse all the headers
             // which define them internally.
             // They are a fallback for missing headers: a typedef of the same name that the parsed
-            // code declares takes precedence (see TypeManager.resolvePossibleTypedef).
+            // code declares takes precedence (see TypeManager.resolvePossibleTypedef). Further
+            // standard library types, such as size_t, are provided by the [StdlibProfile].
             "bool" to IntegerType("bool", 1, this, NumericType.Modifier.SIGNED),
             "int8_t" to IntegerType("int8_t", 8, this, NumericType.Modifier.SIGNED),
             "int16_t" to IntegerType("int16_t", 16, this, NumericType.Modifier.SIGNED),
@@ -237,16 +238,6 @@ open class CLanguage :
             "uint16_t" to IntegerType("uint16_t", 16, this, NumericType.Modifier.UNSIGNED),
             "uint32_t" to IntegerType("uint32_t", 32, this, NumericType.Modifier.UNSIGNED),
             "uint64_t" to IntegerType("uint64_t", 64, this, NumericType.Modifier.UNSIGNED),
-
-            // Pointer-sized integers, defined in <stddef.h> and <stdint.h> (ssize_t is POSIX,
-            // defined in <sys/types.h>). We assume 64 bits, which is the case on 64-bit platforms.
-            // TODO: On 32-bit platforms, they have 32 bits, but it's not clear how we could model
-            // this properly.
-            "size_t" to IntegerType("size_t", 64, this, NumericType.Modifier.UNSIGNED),
-            "ssize_t" to IntegerType("ssize_t", 64, this, NumericType.Modifier.SIGNED),
-            "ptrdiff_t" to IntegerType("ptrdiff_t", 64, this, NumericType.Modifier.SIGNED),
-            "intptr_t" to IntegerType("intptr_t", 64, this, NumericType.Modifier.SIGNED),
-            "uintptr_t" to IntegerType("uintptr_t", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Wide characters (wchar_t) are also defined in <stddef.h> and <wchar.h>. The size of
             // wchar_t is platform-dependent, but we assume 32 bits here, which is the case on

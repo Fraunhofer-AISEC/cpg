@@ -157,6 +157,10 @@ open class TranslationContext(
             val language = it.constructors.firstOrNull()?.call()
             if (language == null) {
                 log.error("Could not create language instance for {}", it.simpleName)
+            } else {
+                config.profiles.forEach { profile ->
+                    language.profileTypes.putAll(profile.builtInTypes(language))
+                }
             }
             language
         }

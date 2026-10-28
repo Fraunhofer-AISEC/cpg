@@ -31,6 +31,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
+import de.fraunhofer.aisec.cpg.Profile
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
@@ -61,6 +62,7 @@ import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
+import java.io.InputStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -82,14 +84,26 @@ class DFGFunctionSummaries {
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
+        return file.inputStream().use { addEntries(it, file.extension) }
+    }
+
+    /**
+     * Reads the [DataflowEntry]s from [input]. The format is derived from the [extension] (`yaml`
+     * or `yml`, everything else is treated as JSON). Entries for an already known function replace
+     * the previous ones.
+     */
+    private fun addEntries(
+        input: InputStream,
+        extension: String,
+    ): Map<FunctionDeclarationEntry, List<DFGEntry>> {
         val mapper =
-            if (file.extension.lowercase() in listOf("yaml", "yml")) {
+            if (extension.lowercase() in listOf("yaml", "yml")) {
                     ObjectMapper(YAMLFactory())
                 } else {
                     ObjectMapper(JsonFactory())
                 }
                 .registerKotlinModule()
-        val entries = mapper.readValue<List<DataflowEntry>>(file)
+        val entries = mapper.readValue<List<DataflowEntry>>(input)
         for (entry in entries) {
             functionToDFGEntryMap[entry.functionDeclaration] = entry.dataFlows
         }
@@ -424,6 +438,32 @@ class DFGFunctionSummaries {
         /** Generates a [DFGFunctionSummaries] object from the given [files]. */
         fun fromFiles(files: List<File>): DFGFunctionSummaries {
             val dfgFunctionSummaries = DFGFunctionSummaries()
+            files.forEach { dfgFunctionSummaries.addEntriesFromFile(it) }
+            return dfgFunctionSummaries
+        }
+
+        /**
+         * Generates a [DFGFunctionSummaries] object from the summaries of the [profiles] and the
+         * [files]. The [files] are read last, so they override the summaries of a profile.
+         */
+        fun fromProfilesAndFiles(profiles: List<Profile>, files: List<File>): DFGFunctionSummaries {
+            val dfgFunctionSummaries = DFGFunctionSummaries()
+            for (profile in profiles) {
+                for (resource in profile.functionSummaries) {
+                    val stream = profile.classLoader.getResourceAsStream(resource)
+                    if (stream == null) {
+                        log.error(
+                            "Could not find function summaries {} of profile {}",
+                            resource,
+                            profile.name,
+                        )
+                        continue
+                    }
+                    stream.use {
+                        dfgFunctionSummaries.addEntries(it, resource.substringAfterLast('.'))
+                    }
+                }
+            }
             files.forEach { dfgFunctionSummaries.addEntriesFromFile(it) }
             return dfgFunctionSummaries
         }

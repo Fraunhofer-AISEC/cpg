@@ -1,0 +1,87 @@
+# Data flow summaries of the "stdlib" profile (see StdlibProfile). The format is described in
+# docs/docs/CPG/specs/dfg-function-summaries.md. The language CLanguage also covers CPPLanguage.
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: memcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: memmove
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: memset
+  dataFlows:
+    - from: param1
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strncpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strcat
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strncat
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strlen
+  dataFlows:
+    - from: param0.deref
+      to: return
+      dfgType: full

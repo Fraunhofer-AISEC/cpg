@@ -114,6 +114,8 @@ private constructor(
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
+    /** The [Profile]s that are active for this configuration. */
+    @JsonIgnore val profiles: List<Profile>,
     languages: Set<KClass<out Language<*>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -268,6 +270,7 @@ private constructor(
         private val replacedPasses =
             mutableMapOf<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>()
         private val functionSummaries = mutableListOf<File>()
+        private val profiles = mutableListOf<Profile>()
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -467,6 +470,17 @@ private constructor(
 
         fun registerFunctionSummaries(vararg functionSummary: File): Builder {
             this.functionSummaries.addAll(functionSummary)
+            return this
+        }
+
+        /**
+         * Activates a [Profile], e.g., the `stdlib` profile of the C/C++ frontend, which provides
+         * the types and the function summaries of the standard library, so that the headers do not
+         * need to be parsed. Profiles are opt-in. What the analyzed code declares itself takes
+         * precedence over a profile.
+         */
+        fun profile(profile: Profile): Builder {
+            this.profiles += profile
             return this
         }
 
@@ -773,7 +787,8 @@ private constructor(
                 includeBlocklist,
                 orderPasses(),
                 replacedPasses,
-                DFGFunctionSummaries.fromFiles(functionSummaries),
+                DFGFunctionSummaries.fromProfilesAndFiles(profiles, functionSummaries),
+                profiles.toList(),
                 languages,
                 codeInNodes,
                 processAnnotations,
