@@ -5400,4 +5400,70 @@ class PointsToPassTest {
             )
         }
     }
+
+    @Test
+    fun testMaybeUninitialized() {
+        val file = File("src/test/resources/pointsToPass/uninitialized_declaration.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // `int x; if (c) x = 1; use(x);`
+        val xRead = tu.functions["maybe"].calls["use"]?.arguments?.singleOrNull()
+        assertNotNull(xRead)
+        val literal1 = tu.functions["maybe"].literals.singleOrNull { it.value == 1 }
+        assertNotNull(literal1)
+
+        // The unknown value of the declaration survives the join next to the literal of the other
+        // path
+        assertEquals(2, xRead.fullMemoryValues.size)
+        assertTrue(xRead.fullMemoryValues.any { it is UnknownMemoryValue })
+        assertTrue(xRead.fullMemoryValues.contains(literal1))
+    }
+
+    @Test
+    fun testAlwaysUninitialized() {
+        val file = File("src/test/resources/pointsToPass/uninitialized_declaration.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // `int y; use(y);`
+        val yRead = tu.functions["always"].calls["use"]?.arguments?.singleOrNull()
+        assertNotNull(yRead)
+        assertTrue(yRead.fullMemoryValues.singleOrNull() is UnknownMemoryValue)
+    }
+
+    @Test
+    fun testInitializedVariablesAreNotFlagged() {
+        val file = File("src/test/resources/pointsToPass/uninitialized_declaration.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // Written on both paths
+        val zRead = tu.functions["both"].calls["use"]?.arguments?.singleOrNull()
+        assertNotNull(zRead)
+        assertTrue(zRead.fullMemoryValues.none { it is UnknownMemoryValue })
+        assertTrue(zRead.fullMemoryValues.all { it is Literal<*> })
+
+        // A full write removes the unknown value (strong update)
+        val uRead = tu.functions["overwritten"].calls["use"]?.arguments?.singleOrNull()
+        assertNotNull(uRead)
+        assertTrue(uRead.fullMemoryValues.none { it is UnknownMemoryValue })
+
+        // Initialized at the declaration, so there is never an unknown value
+        val wRead = tu.functions["declared"].calls["use"]?.arguments?.singleOrNull()
+        assertNotNull(wRead)
+        assertTrue(wRead.fullMemoryValues.none { it is UnknownMemoryValue })
+    }
 }
