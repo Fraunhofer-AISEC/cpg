@@ -44,6 +44,31 @@
     if (element) tick().then(() => element.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
   });
 
+  let list = $state<HTMLOListElement>();
+  // Whether there are steps before or after the visible ones
+  let scrolled = $state({ start: false, end: false });
+
+  function updateScrolled() {
+    if (!list) return;
+    scrolled = {
+      start: list.scrollLeft > 1,
+      end: list.scrollLeft + list.clientWidth < list.scrollWidth - 1
+    };
+  }
+
+  $effect(() => {
+    void steps;
+    tick().then(updateScrolled);
+  });
+
+  // The wheel scrolls the steps sideways, since they have no scrollbar
+  function scrollSideways(event: WheelEvent) {
+    if (!list || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    if (list.scrollWidth <= list.clientWidth) return;
+    event.preventDefault();
+    list.scrollLeft += event.deltaY;
+  }
+
   const previous = $derived(index < 0 ? steps.length - 1 : index - 1);
   const next = $derived(index < 0 ? 0 : index + 1);
 </script>
@@ -64,7 +89,16 @@
       ⇄ {other.label}
     </button>
   {/if}
-  <ol class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap">
+  <!-- The steps scroll sideways without a scrollbar, which does not fit into the bar: with the wheel,
+  or by stepping through them. The edges fade where more steps are -->
+  <ol
+    bind:this={list}
+    class="steps flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap"
+    class:fade-start={scrolled.start}
+    class:fade-end={scrolled.end}
+    onscroll={updateScrolled}
+    onwheel={scrollSideways}
+  >
     {#each steps as step, i (i)}
       {#if i > 0}
         <li class="shrink-0 text-gray-300" aria-hidden="true">→</li>
@@ -129,3 +163,31 @@
     </button>
   </div>
 </div>
+
+<style>
+  .steps {
+    scrollbar-width: none;
+  }
+
+  .steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fade-start {
+    mask-image: linear-gradient(to right, transparent, black 1.5rem);
+  }
+
+  .fade-end {
+    mask-image: linear-gradient(to left, transparent, black 1.5rem);
+  }
+
+  .fade-start.fade-end {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 1.5rem,
+      black calc(100% - 1.5rem),
+      transparent
+    );
+  }
+</style>
