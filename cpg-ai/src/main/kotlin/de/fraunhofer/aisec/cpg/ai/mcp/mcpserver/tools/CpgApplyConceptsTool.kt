@@ -42,7 +42,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlinx.serialization.json.add
 
 /** Provides a tool to list all available concepts which can be used to tag nodes in the CPG. */
-fun Server.listAvailableConcepts() {
+fun Server.addListAvailableConceptsTool() {
     val availableConcepts = getAvailableConcepts()
     val toolDescription =
         """
@@ -63,7 +63,7 @@ fun Server.listAvailableConcepts() {
 }
 
 /** Provides a tool to list all available operations which can be used to tag nodes in the CPG. */
-fun Server.listAvailableOperations() {
+fun Server.addListAvailableOperationsTool() {
     val availableOperations = getAvailableOperations()
     val toolDescription =
         """
@@ -90,7 +90,7 @@ fun Server.listAvailableOperations() {
  * This tool can be used to create and attach concepts or operations to nodes identified by their
  * IDs.
  */
-fun Server.addCpgApplyConceptsTool() {
+fun Server.addApplyConceptsTool() {
     val availableConcepts = getAvailableConcepts()
     val availableOperations = getAvailableOperations()
     val toolDescription =

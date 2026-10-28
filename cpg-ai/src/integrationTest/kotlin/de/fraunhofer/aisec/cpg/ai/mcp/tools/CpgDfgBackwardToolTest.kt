@@ -56,7 +56,7 @@ class CpgDfgBackwardToolTest {
     fun dfgBackwardToolTest() =
         withClient(
             registerTools = {
-                listCalls()
+                addListCallsTool()
                 addDfgBackwardTool()
             }
         ) { client ->

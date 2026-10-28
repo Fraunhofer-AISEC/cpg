@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAnalyzeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListFunctionsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
@@ -88,7 +88,7 @@ class CpgAnalysisSessionsTest {
 
     @Test
     fun identifiesAnAnalyzedProjectByItsDirectoryName() =
-        withClient(registerTools = { addCpgAnalyzeTool() }) { client ->
+        withClient(registerTools = { addAnalyzeTool() }) { client ->
             assertEquals("first", client.analyze(project("first", "def foo():\n    print('X')")))
             assertNotNull(getSession("first"))
         }
@@ -97,8 +97,8 @@ class CpgAnalysisSessionsTest {
     fun routesToolCallsToTheNamedProject() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             val first = client.analyze(project("first", "def foo():\n    print('X')"))
@@ -129,8 +129,8 @@ class CpgAnalysisSessionsTest {
     fun routesToolCallsWithoutAProjectNameToTheOnlyProject() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             client.analyze(project("first", "def foo():\n    print('X')"))
@@ -146,8 +146,8 @@ class CpgAnalysisSessionsTest {
     fun reportsTheAvailableProjectsForAnUnknownProjectName() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             client.analyze(project("first", "def foo():\n    print('X')"))
@@ -167,8 +167,8 @@ class CpgAnalysisSessionsTest {
     fun requiresAProjectNameWhenSeveralProjectsAreAnalyzed() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             client.analyze(project("first", "def foo():\n    print('X')"))

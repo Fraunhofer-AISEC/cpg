@@ -86,7 +86,7 @@ class InvalidArgumentsToolTest {
     fun addOrUpdateConceptReturnsTheProblemListInsteadOfFailing(@TempDir dir: Path) {
         val server = server()
         val file = File(dir.toFile(), "concepts.yaml")
-        server.addOrUpdateConcept(file)
+        server.addAddOrUpdateLLMConceptTool(file)
 
         val result =
             call(
@@ -109,7 +109,7 @@ class InvalidArgumentsToolTest {
     @Test
     fun typedToolsReturnTheProblemListToo(@TempDir dir: Path) {
         val server = server()
-        server.addLLMConceptAndOperations(File(dir.toFile(), "concepts.yaml"))
+        server.addAddLLMConceptAndOperationsTool(File(dir.toFile(), "concepts.yaml"))
 
         val text =
             call(
@@ -135,7 +135,7 @@ class InvalidArgumentsToolTest {
     @Test
     fun argumentsCutOffInTheStreamAreReportedSoTheModelCanResend(@TempDir dir: Path) {
         val server = server()
-        server.addLLMConceptAndOperations(File(dir.toFile(), "concepts.yaml"))
+        server.addAddLLMConceptAndOperationsTool(File(dir.toFile(), "concepts.yaml"))
 
         val text =
             call(

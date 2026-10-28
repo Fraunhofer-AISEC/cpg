@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getNode
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCalls
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCallsTo
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addGetNodeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsToTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListFunctionsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -62,7 +62,7 @@ class ListingToolsOmitCodeTest {
 
     @Test
     fun listFunctionsReturnsFunctionsWithoutCode() =
-        withClient(registerTools = { listFunctions() }) { client ->
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_functions", arguments = mapOf("detail" to true))
             assertTrue(result.content.isNotEmpty(), "Should have function declarations")
@@ -76,7 +76,7 @@ class ListingToolsOmitCodeTest {
 
     @Test
     fun listCallsReturnsCallsWithoutCode() =
-        withClient(registerTools = { listCalls() }) { client ->
+        withClient(registerTools = { addListCallsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls", arguments = mapOf("detail" to true))
             assertTrue(result.content.isNotEmpty(), "Should have call expressions")
@@ -89,7 +89,7 @@ class ListingToolsOmitCodeTest {
 
     @Test
     fun listCallsToReturnsCallsWithoutCode() =
-        withClient(registerTools = { listCallsTo() }) { client ->
+        withClient(registerTools = { addListCallsToTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls_to", arguments = mapOf("name" to "hello"))
             assertTrue(result.content.isNotEmpty(), "Should have call expressions")
@@ -104,8 +104,8 @@ class ListingToolsOmitCodeTest {
     fun getNodeReturnsTheCodeOfAListedFunction() =
         withClient(
             registerTools = {
-                listFunctions()
-                getNode()
+                addListFunctionsTool()
+                addGetNodeTool()
             }
         ) { client ->
             val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())

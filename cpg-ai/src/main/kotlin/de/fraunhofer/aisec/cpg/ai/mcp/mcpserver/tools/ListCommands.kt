@@ -45,7 +45,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.util.regex.PatternSyntaxException
 import kotlinx.serialization.json.Json
 
-fun Server.listFunctions() {
+fun Server.addListFunctionsTool() {
     val toolDescription =
         """
         This tool lists all functions, more precisely function declarations, which are held in the
@@ -84,7 +84,7 @@ fun Server.listFunctions() {
     }
 }
 
-fun Server.listRecords() {
+fun Server.addListRecordsTool() {
     val toolDescription =
         """
         This tool lists all classes and structs, more precisely their declarations, as nodeId and a
@@ -114,7 +114,7 @@ fun Server.listRecords() {
     }
 }
 
-fun Server.listConceptsAndOperations() {
+fun Server.addListConceptsAndOperationsTool() {
     val toolDescription =
         "This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph. " +
             "Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more."
@@ -131,7 +131,7 @@ fun Server.listConceptsAndOperations() {
     }
 }
 
-fun Server.listCalls() {
+fun Server.addListCallsTool() {
     val toolDescription =
         """
         This tool lists all function and method calls as nodeId, a one-line signature and its
@@ -162,7 +162,7 @@ fun Server.listCalls() {
     }
 }
 
-fun Server.listCallsTo() {
+fun Server.addListCallsToTool() {
     val toolDescription =
         """
         This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
@@ -214,7 +214,7 @@ private fun Node.matches(pattern: Regex?, file: String?): Boolean =
     (pattern == null || pattern.containsMatchIn(name.toString())) &&
         (file == null || isInFile(file))
 
-fun Server.getAllArgs() {
+fun Server.addListCallArgsTool() {
     val toolDescription =
         """This tool lists all arguments passed to the method/function call with the specified ID."""
             .trimIndent()
@@ -236,7 +236,7 @@ internal fun listCallArgs(session: CpgSession, payload: CpgIdPayload): CallToolR
     return CallToolResult(content = call.arguments.map { TextContent(it.toJson()) })
 }
 
-fun Server.getArgByIndexOrName() {
+fun Server.addListCallArgByNameOrIndexTool() {
     val toolDescription =
         """This tool lists an argument passed to the method/function call with the specified ID either by name or by index.
 
@@ -271,7 +271,7 @@ internal fun listCallArgByNameOrIndex(
     )
 }
 
-fun Server.getNode() {
+fun Server.addGetNodeTool() {
     val toolDescription =
         """
         Retrieves the complete information of a single node by its id, including its source code.

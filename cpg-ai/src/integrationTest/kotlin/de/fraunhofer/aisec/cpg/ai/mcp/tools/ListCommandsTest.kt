@@ -25,16 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getAllArgs
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getArgByIndexOrName
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getNode
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listAvailableConcepts
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listAvailableOperations
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCalls
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCallsTo
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listConceptsAndOperations
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listRecords
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addGetNodeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListAvailableConceptsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListAvailableOperationsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallArgByNameOrIndexTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallArgsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsToTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListConceptsAndOperationsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListFunctionsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListRecordsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -74,7 +74,7 @@ class ListCommandsTest {
 
     @Test
     fun listFunctionsTest() =
-        withClient(registerTools = { listFunctions() }) { client ->
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
             val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
 
             assertNotNull(result, "Result should not be null")
@@ -105,7 +105,7 @@ class ListCommandsTest {
 
     @Test
     fun listFunctionsFilterTest() =
-        withClient(registerTools = { listFunctions() }) { client ->
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
             val byPattern =
                 client.callTool(
                     name = "cpg_list_functions",
@@ -142,7 +142,7 @@ class ListCommandsTest {
 
     @Test
     fun anInvalidPatternIsReportedToTheCaller() =
-        withClient(registerTools = { listFunctions() }) { client ->
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_functions", arguments = mapOf("pattern" to "(["))
 
@@ -152,7 +152,7 @@ class ListCommandsTest {
 
     @Test
     fun listFunctionsPagingTest() =
-        withClient(registerTools = { listFunctions() }) { client ->
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
             val firstPage =
                 client.callTool(name = "cpg_list_functions", arguments = mapOf("limit" to 1))
             assertEquals(2, firstPage.content.size, "Should return one function and a paging note")
@@ -171,7 +171,7 @@ class ListCommandsTest {
 
     @Test
     fun listRecordsFilterTest() =
-        withClient(registerTools = { listRecords() }) { client ->
+        withClient(registerTools = { addListRecordsTool() }) { client ->
             val match =
                 client.callTool(name = "cpg_list_records", arguments = mapOf("pattern" to "foo"))
             assertEquals(1, match.content.size, "pattern is case-insensitive: Foo matches foo")
@@ -183,7 +183,7 @@ class ListCommandsTest {
 
     @Test
     fun listCallsFilterTest() =
-        withClient(registerTools = { listCalls() }) { client ->
+        withClient(registerTools = { addListCallsTool() }) { client ->
             val match =
                 client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "^print$"))
             val entry =
@@ -213,7 +213,7 @@ class ListCommandsTest {
 
     @Test
     fun listRecordsTest() =
-        withClient(registerTools = { listRecords() }) { client ->
+        withClient(registerTools = { addListRecordsTool() }) { client ->
             val result = client.callTool(name = "cpg_list_records", arguments = emptyMap())
             assertNotNull(result)
             assertTrue(
@@ -237,7 +237,7 @@ class ListCommandsTest {
 
     @Test
     fun listCallsTest() =
-        withClient(registerTools = { listCalls() }) { client ->
+        withClient(registerTools = { addListCallsTool() }) { client ->
             val result = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertNotNull(result)
             assertEquals(1, result.content.size, "Should return one call expression")
@@ -245,7 +245,7 @@ class ListCommandsTest {
 
     @Test
     fun listCallsToTest() =
-        withClient(registerTools = { listCallsTo() }) { client ->
+        withClient(registerTools = { addListCallsToTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls_to", arguments = mapOf("name" to "print"))
             assertNotNull(result)
@@ -256,8 +256,8 @@ class ListCommandsTest {
     fun getAllArgsTest() =
         withClient(
             registerTools = {
-                listCalls()
-                getAllArgs()
+                addListCallsTool()
+                addListCallArgsTool()
             }
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
@@ -292,8 +292,8 @@ class ListCommandsTest {
     fun getArgByIndexOrNameTest() =
         withClient(
             registerTools = {
-                listCalls()
-                getArgByIndexOrName()
+                addListCallsTool()
+                addListCallArgByNameOrIndexTool()
             }
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
@@ -335,7 +335,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableConceptsTest() =
-        withClient(registerTools = { listAvailableConcepts() }) { client ->
+        withClient(registerTools = { addListAvailableConceptsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_concepts", arguments = emptyMap())
             assertNotNull(result)
@@ -344,7 +344,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableOperationsTest() =
-        withClient(registerTools = { listAvailableOperations() }) { client ->
+        withClient(registerTools = { addListAvailableOperationsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_operations", arguments = emptyMap())
             assertNotNull(result)
@@ -353,7 +353,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableConceptsAndOperationsTest() =
-        withClient(registerTools = { listConceptsAndOperations() }) { client ->
+        withClient(registerTools = { addListConceptsAndOperationsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_concepts_and_operations", arguments = emptyMap())
             assertNotNull(result)
@@ -367,8 +367,8 @@ class ListCommandsTest {
     fun getNodeTest() =
         withClient(
             registerTools = {
-                listFunctions()
-                getNode()
+                addListFunctionsTool()
+                addGetNodeTool()
             }
         ) { client ->
             val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())

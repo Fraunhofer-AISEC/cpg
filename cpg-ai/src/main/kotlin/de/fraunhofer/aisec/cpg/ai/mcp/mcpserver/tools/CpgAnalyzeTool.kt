@@ -118,7 +118,7 @@ val toolDescription =
     """
         .trimIndent()
 
-fun Server.addCpgAnalyzeTool() {
+fun Server.addAnalyzeTool() {
     this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_analyze",
         readOnly = false,
@@ -250,7 +250,7 @@ private fun analyzeAndStore(
  */
 
 /** Translate source code into the AST of the CPG (Code Property Graph). */
-fun Server.addCpgTranslate() {
+fun Server.addTranslateTool() {
     this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_translate",
         readOnly = false,
@@ -292,7 +292,7 @@ fun Server.addCpgTranslate() {
 }
 
 /** Provide a list of all passes that can be applied to the CPG. */
-fun Server.addListPasses() {
+fun Server.addListPassesTool() {
     this.addToolWithoutCpg<NoArguments>(
         name = "cpg_list_passes",
         readOnly = true,
@@ -398,7 +398,7 @@ fun Server.addListPasses() {
  * the pass by first searching upwards and then (in case no suitable node was found) downwards the
  * AST. The tool further takes care of dependencies between the passes.
  */
-fun Server.addRunPass() {
+fun Server.addRunPassTool() {
     this.addTool<CpgRunPassPayload>(
         readOnly = false,
         name = "cpg_run_pass",

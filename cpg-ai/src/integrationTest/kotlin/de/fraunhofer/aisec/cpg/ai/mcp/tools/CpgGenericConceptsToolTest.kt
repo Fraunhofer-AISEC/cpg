@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addLLMConceptAndOperations
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addOrUpdateConcept
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listLLMConceptsOperations
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAddLLMConceptAndOperationsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAddOrUpdateLLMConceptTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListLLMConceptsOperationsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addSuggestLLMConceptsAndOperationsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.suggestLLMConceptsAndOperations
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConcept
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
@@ -77,7 +77,7 @@ class CpgGenericConceptsToolTest {
 
     @Test
     fun listLLMConceptsOperationsWithNoFileTest() =
-        withClient(registerTools = { listLLMConceptsOperations() }) { client ->
+        withClient(registerTools = { addListLLMConceptsOperationsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_llm_concepts_operations", arguments = emptyMap())
             assertNotNull(result)
@@ -91,8 +91,8 @@ class CpgGenericConceptsToolTest {
     fun addOrUpdateConceptTest() =
         withClient(
             registerTools = {
-                addOrUpdateConcept()
-                listLLMConceptsOperations()
+                addAddOrUpdateLLMConceptTool()
+                addListLLMConceptsOperationsTool()
             }
         ) { client ->
             val addResult =
@@ -129,8 +129,8 @@ class CpgGenericConceptsToolTest {
     fun addOrUpdateConceptReplacesExistingTest() =
         withClient(
             registerTools = {
-                addOrUpdateConcept()
-                listLLMConceptsOperations()
+                addAddOrUpdateLLMConceptTool()
+                addListLLMConceptsOperationsTool()
             }
         ) { client ->
             client.callTool(
@@ -172,8 +172,8 @@ class CpgGenericConceptsToolTest {
     fun listLLMConceptsOperationsTest() =
         withClient(
             registerTools = {
-                addOrUpdateConcept()
-                listLLMConceptsOperations()
+                addAddOrUpdateLLMConceptTool()
+                addListLLMConceptsOperationsTool()
             }
         ) { client ->
             client.callTool(
@@ -217,8 +217,8 @@ class CpgGenericConceptsToolTest {
     fun addLLMConceptAndOperationsAppliesTest() =
         withClient(
             registerTools = {
-                addLLMConceptAndOperations()
-                listLLMConceptsOperations()
+                addAddLLMConceptAndOperationsTool()
+                addListLLMConceptsOperationsTool()
             }
         ) { client ->
             val secretInitializer =
@@ -273,8 +273,8 @@ class CpgGenericConceptsToolTest {
     fun addLLMConceptAndOperationsBackfillsBlankPropertyDescriptionTest() =
         withClient(
             registerTools = {
-                addOrUpdateConcept()
-                addLLMConceptAndOperations()
+                addAddOrUpdateLLMConceptTool()
+                addAddLLMConceptAndOperationsTool()
             }
         ) { client ->
             client.callTool(
@@ -339,7 +339,7 @@ class CpgGenericConceptsToolTest {
 
     @Test
     fun addLLMConceptAndOperationsNoValidIdTest() =
-        withClient(registerTools = { addLLMConceptAndOperations() }) { client ->
+        withClient(registerTools = { addAddLLMConceptAndOperationsTool() }) { client ->
             val applyResult =
                 client.callTool(
                     name = "cpg_add_llm_concept_and_operations",
@@ -365,7 +365,7 @@ class CpgGenericConceptsToolTest {
 
     @Test
     fun suggestLLMConceptsAndOperationsTest() =
-        withClient(registerTools = { suggestLLMConceptsAndOperations() }) { client ->
+        withClient(registerTools = { addSuggestLLMConceptsAndOperationsTool() }) { client ->
             val secretInitializer =
                 getSession()?.translationResult?.literals?.singleOrNull { it.value == "0000" }
             assertNotNull(secretInitializer, "Expected the '0000' literal in the analyzed code")
@@ -406,7 +406,7 @@ class CpgGenericConceptsToolTest {
 
     @Test
     fun suggestLLMConceptsAndOperationsNoValidIdTest() =
-        withClient(registerTools = { suggestLLMConceptsAndOperations() }) { client ->
+        withClient(registerTools = { addSuggestLLMConceptsAndOperationsTool() }) { client ->
             val invalidId = "00000000-0000-0000-0000-000000000000"
             val secretInitializer =
                 getSession()?.translationResult?.literals?.singleOrNull { it.value == "0000" }

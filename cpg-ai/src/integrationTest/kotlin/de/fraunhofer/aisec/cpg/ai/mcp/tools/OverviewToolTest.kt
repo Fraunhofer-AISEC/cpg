@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addOverview
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addOverviewTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgOverview
@@ -53,7 +53,7 @@ class OverviewToolTest {
 
     @Test
     fun overviewTest() =
-        withClient(registerTools = { addOverview() }) { client ->
+        withClient(registerTools = { addOverviewTool() }) { client ->
             val result = client.callTool(name = "cpg_overview", arguments = emptyMap())
             val overview =
                 Json.decodeFromString<CpgOverview>((result.content.single() as TextContent).text)

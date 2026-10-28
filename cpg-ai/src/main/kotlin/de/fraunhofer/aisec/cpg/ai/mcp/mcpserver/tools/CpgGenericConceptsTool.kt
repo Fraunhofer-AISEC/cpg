@@ -52,7 +52,7 @@ private const val fileName = "concepts.yaml"
  * This is a tool to list all currently known concepts and operations. It should be queried
  * initially to get an overview of the available concepts and operations.
  */
-fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
+fun Server.addListLLMConceptsOperationsTool(file: File = File(fileName)) {
     val toolDescription =
         """
         This tool lists all currently known concepts and operations. It should be queried initially to get an overview of the available concepts and operations.
@@ -87,7 +87,7 @@ internal fun listConcepts(file: File, payload: CpgListPayload): CallToolResult {
  * graph. Matching a concept is done by its name. If a concept with the same name already exists, it
  * will be overwritten with the new information. Otherwise, a new concept will be added.
  */
-fun Server.addOrUpdateConcept(file: File = File(fileName)) {
+fun Server.addAddOrUpdateLLMConceptTool(file: File = File(fileName)) {
     val toolDescription =
         """
         This tool adds or updates a concept in the persisted LLM concepts store.
@@ -111,7 +111,7 @@ fun Server.addOrUpdateConcept(file: File = File(fileName)) {
     }
 }
 
-fun Server.suggestLLMConceptsAndOperations() {
+fun Server.addSuggestLLMConceptsAndOperationsTool() {
     val toolDescription =
         """
         Suggests concept and operations for a node in the CPG.
@@ -160,7 +160,7 @@ fun Server.suggestLLMConceptsAndOperations() {
 /**
  * This function adds a [GenericLLMConcept] and the corresponding [GenericLLMOperation]s to the CPG.
  */
-fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
+fun Server.addAddLLMConceptAndOperationsTool(file: File = File(fileName)) {
     val toolDescription =
         """
         This tool applies a concept and all its operations to the graph.
@@ -458,9 +458,9 @@ private fun File.cacheKey(): String = canonicalFile.path
  * of [LLMConceptDescription].
  *
  * The result is cached in memory per [file], validated against its last-modified timestamp, so that
- * repeated calls within the same server run (e.g. one per [addLLMConceptAndOperations] invocation)
- * only re-read and re-parse the YAML file when it has actually changed on disk, rather than on
- * every tool call.
+ * repeated calls within the same server run (e.g. one per [addAddLLMConceptAndOperationsTool]
+ * invocation) only re-read and re-parse the YAML file when it has actually changed on disk, rather
+ * than on every tool call.
  */
 internal fun loadPersistedConceptsAndOperations(
     file: File = File(fileName)

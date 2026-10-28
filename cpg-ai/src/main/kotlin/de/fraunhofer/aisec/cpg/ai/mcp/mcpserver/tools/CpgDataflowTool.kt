@@ -46,7 +46,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlinx.serialization.json.Json
 
-fun Server.addCpgDataflowTool() {
+fun Server.addDataflowTool() {
     val toolDescription =
         """
         Analyze the data flow of the nodes.

@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getFunctionsByName
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addGetFunctionsByNameTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
@@ -41,10 +41,10 @@ import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 
 /**
- * Covers the [de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getFunctionsByName] `includeCode`
- * option - unlike the bulk-listing tools, this one is meant to return full details (including code)
- * by default since it's used for a small, already-known batch of names, but callers that only need
- * to confirm existence/signature should be able to opt out.
+ * Covers the [de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addGetFunctionsByNameTool]
+ * `includeCode` option - unlike the bulk-listing tools, this one is meant to return full details
+ * (including code) by default since it's used for a small, already-known batch of names, but
+ * callers that only need to confirm existence/signature should be able to opt out.
  */
 class GetFunctionsByNameToolTest {
     @BeforeEach
@@ -62,7 +62,7 @@ class GetFunctionsByNameToolTest {
 
     @Test
     fun includesCodeByDefault() =
-        withClient(registerTools = { getFunctionsByName() }) { client ->
+        withClient(registerTools = { addGetFunctionsByNameTool() }) { client ->
             val result =
                 client.callTool(
                     name = "cpg_get_functions_by_name",
@@ -78,7 +78,7 @@ class GetFunctionsByNameToolTest {
 
     @Test
     fun omitsCodeWhenRequested() =
-        withClient(registerTools = { getFunctionsByName() }) { client ->
+        withClient(registerTools = { addGetFunctionsByNameTool() }) { client ->
             val result =
                 client.callTool(
                     name = "cpg_get_functions_by_name",

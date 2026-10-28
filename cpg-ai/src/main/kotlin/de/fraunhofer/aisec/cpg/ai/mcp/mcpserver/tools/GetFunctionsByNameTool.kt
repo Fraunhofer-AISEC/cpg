@@ -38,7 +38,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlinx.serialization.json.Json
 
-fun Server.getFunctionsByName() {
+fun Server.addGetFunctionsByNameTool() {
     val toolDescription =
         """
         This tool looks up a batch of functions by their (local) names and returns their full

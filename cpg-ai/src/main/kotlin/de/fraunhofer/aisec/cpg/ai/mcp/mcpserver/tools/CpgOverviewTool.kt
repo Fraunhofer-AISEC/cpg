@@ -36,7 +36,7 @@ import kotlinx.serialization.json.Json
 /** The maximum number of entries of each ranked list in the [CpgOverview]. */
 const val OVERVIEW_LIST_LIMIT = 25
 
-fun Server.addOverview() {
+fun Server.addOverviewTool() {
     val toolDescription =
         """
         This tool gives a compact, fixed-size overview of the analyzed code. Call it first to get
