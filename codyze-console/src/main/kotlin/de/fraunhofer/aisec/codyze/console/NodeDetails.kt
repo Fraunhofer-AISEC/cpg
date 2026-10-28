@@ -234,9 +234,12 @@ private fun Dataflow.describe(): String? {
         parts += "partial: ${(target as? Node)?.name ?: target}"
     }
     if (this is ContextSensitiveDataflow) {
-        when (callingContext) {
-            is CallingContextIn -> parts += "into call"
-            is CallingContextOut -> parts += "out of call"
+        // The contexts in the order of the flow, e.g. out of one call and into the next one
+        for (context in callingContexts) {
+            when (context) {
+                is CallingContextIn -> parts += "into call"
+                is CallingContextOut -> parts += "out of call"
+            }
         }
     }
     return parts.joinToString(", ").ifEmpty { null }
