@@ -75,6 +75,8 @@ function load(): Record<Layer, boolean> {
   try {
     const stored = JSON.parse(localStorage.getItem(storageKey) ?? '{}');
     for (const info of layerInfos) {
+      // The agent layer has no toggle above the code, so hiding it only lasts until the page is loaded again
+      if (info.id === 'agent') continue;
       if (typeof stored[info.id] === 'boolean') visible[info.id] = stored[info.id];
     }
   } catch {

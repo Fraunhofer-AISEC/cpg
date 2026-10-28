@@ -130,13 +130,20 @@
     margin-bottom: 0.25rem;
   }
 
+  /* Code in the text is in the color of the text: red would read as an error */
   :global(.prose code) {
     background-color: rgb(243, 244, 246);
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
     font-size: 0.875em;
+    font-weight: 400;
     font-family: 'Noto Sans Mono', monospace;
-    color: rgb(239, 68, 68);
+    color: rgb(31, 41, 55);
+  }
+
+  /* The typography plugin wraps code in backticks, which the background already sets apart */
+  :global(.prose code::before, .prose code::after) {
+    content: none;
   }
 
   :global(.prose pre) {

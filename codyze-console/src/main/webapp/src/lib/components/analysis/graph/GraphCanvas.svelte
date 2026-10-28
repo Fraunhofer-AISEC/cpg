@@ -209,13 +209,15 @@
     >
       <Background gap={16} size={1} bgColor="#fbfbfc" patternColor="#e2e5ea" />
       <Controls showLock={false} position="bottom-left" />
+      <!-- The minimap only shows while the mouse is over the graph, so that it does not cover the
+      cards of a graph that fits into the view -->
       <MiniMap
         pannable
         zoomable
         {nodeColor}
         maskColor="rgba(241, 245, 249, 0.7)"
         position="bottom-right"
-        class="!h-24 !w-36"
+        class="!h-24 !w-36 opacity-0 transition-opacity group-hover/flow:opacity-100"
       />
       <FitView trigger={layout} />
     </SvelteFlow>

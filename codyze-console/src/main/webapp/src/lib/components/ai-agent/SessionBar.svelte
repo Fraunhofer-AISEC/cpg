@@ -35,9 +35,13 @@
     if (open && container && !container.contains(event.target as Node)) open = null;
   }
 
-  function handleWindowKeydown(event: KeyboardEvent) {
+  // Escape closes the open popover and nothing else, e.g. not the graph next to the code. The
+  // listeners on the window run in the order they were added, which changes when this bar is shown
+  // again, so the key is kept from reaching them
+  function handleKeydown(event: KeyboardEvent) {
     if (open && event.key === 'Escape') {
       event.preventDefault();
+      event.stopPropagation();
       open = null;
     }
   }
@@ -62,7 +66,7 @@
   const toolsEntries = $derived((server ? 1 : 0) + agentSession.skills.length);
 </script>
 
-<svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
+<svelte:window onclick={handleWindowClick} />
 
 {#snippet filterInput(placeholder: string)}
   <div class="border-b border-gray-100 p-1.5">
@@ -84,9 +88,11 @@
   </p>
 {/snippet}
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="relative flex min-w-0 items-center gap-0.5 text-[11px] text-gray-500"
   bind:this={container}
+  onkeydown={handleKeydown}
 >
   {#if models.length === 0}
     <span

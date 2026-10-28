@@ -199,9 +199,18 @@
     isLoading = false;
   }
 
-  function makeStreamingCallbacks(): StreamingCallbacks {
+  // Starts a request to the agent, which a new chat stops
+  function startRequest(): AbortSignal {
+    abortController?.abort();
+    abortController = new AbortController();
+    return abortController.signal;
+  }
+
+  // The events of a request that was stopped are ignored, e.g. the ones that already arrived
+  function makeStreamingCallbacks(signal: AbortSignal): StreamingCallbacks {
     return {
       onChunk: (chunk: string) => {
+        if (signal.aborted) return;
         try {
           const event = JSON.parse(chunk);
           if (event.type === 'text') {
@@ -229,6 +238,7 @@
         }
       },
       onError: (error: string) => {
+        if (signal.aborted) return;
         chatMessages = [
           ...chatMessages,
           {
@@ -242,6 +252,7 @@
         streamingContent = '';
       },
       onComplete: () => {
+        if (signal.aborted) return;
         const reasoning = streamingReasoning || undefined;
         if (reasoning) {
           const firstToolIdx = chatMessages.findIndex((m) => m.contentType === 'tool-result');
@@ -306,11 +317,13 @@
         content: m.content
       }));
 
+      const signal = startRequest();
       await llmAgent.chat(
         llmMessages,
         selectedModel.client,
         selectedModel.model,
-        makeStreamingCallbacks()
+        makeStreamingCallbacks(signal),
+        signal
       );
     } catch (error) {
       chatMessages = [
@@ -357,11 +370,13 @@
             : msg.content
         }));
 
+      const signal = startRequest();
       await llmAgent.chat(
         llmMessages,
         selectedModel.client,
         selectedModel.model,
-        makeStreamingCallbacks()
+        makeStreamingCallbacks(signal),
+        signal
       );
     } catch (error) {
       chatMessages = [

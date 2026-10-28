@@ -500,7 +500,7 @@
         run: () => showSection(details!.callTargets.length > 0 ? 'callTargets' : 'callees')
       },
       {
-        id: 'ask',
+        id: 'ask-node',
         category: 'Selection',
         label: 'Ask the agent about it',
         disabledReason:
@@ -610,21 +610,6 @@
     window.addEventListener('pointerup', stop);
     document.body.style.cursor = 'col-resize';
   }
-
-  // The graph needs room, so the file tree makes way for it while it is shown
-  let sidebarHiddenByGraph = false;
-  $effect(() => {
-    const open = graph.open;
-    untrack(() => {
-      if (open && sidebarOpen) {
-        sidebarOpen = false;
-        sidebarHiddenByGraph = true;
-      } else if (!open && sidebarHiddenByGraph) {
-        sidebarOpen = true;
-        sidebarHiddenByGraph = false;
-      }
-    });
-  });
 
   // How many statements are in the slices of the inspected node, to preview them in the commands
   let sliceCounts = $state.raw<SliceCounts | null>(null);
@@ -882,6 +867,8 @@
     const unit = unitId ? findUnitById(unitId) : null;
     if (unit && unit.id !== selectedTranslationUnit?.id) handleFileSelect(unit);
     if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
+    // The user did not select the node, so it is not sent as the context of the next question
+    dismissedContextId = details.node.id;
     focus.inspect(() => Promise.resolve(details), true);
   }
 
@@ -1376,6 +1363,9 @@
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
   // its tab stays open and the inspector tab is only marked
   function showInspector() {
+    // A node the user inspects is the context of the next question again, also if the agent
+    // revealed it before
+    dismissedContextId = null;
     if (isLoading && contextTab === 'agent') {
       markInspectorUnseen();
       return;
@@ -2007,7 +1997,7 @@
         </div>
       {:else}
         <div class="flex flex-1 items-center justify-center text-xs text-gray-400">
-          No file is open. Open one in the file tree or with Ctrl+P.
+          No file is open. Open one in the file tree or with {modifierLabel()}P.
         </div>
       {/if}
     </div>

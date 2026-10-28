@@ -804,7 +804,7 @@
     const end = offsetLeft + charWidth * (lineColumns(line) + 3);
     const fn = annotations?.functions.find((f) => f.function.startLine === line);
     if (!fn) return end;
-    const lens = `${fn.callers} callers · calls ${fn.callees} · ${fn.externalCalls} external`;
+    const lens = `${fn.callers} ${fn.callers === 1 ? 'caller' : 'callers'} · calls ${fn.callees} · ${fn.externalCalls} external`;
     return end + charWidth + lens.length * 0.42;
   }
 

@@ -70,7 +70,7 @@
       title: string;
     }[] = [
       {
-        label: `${fn.callers} callers`,
+        label: `${fn.callers} ${fn.callers === 1 ? 'caller' : 'callers'}`,
         count: fn.callers,
         section: 'callers',
         title: `Show the callers of ${fn.function.name}`
