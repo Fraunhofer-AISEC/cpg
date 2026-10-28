@@ -320,7 +320,7 @@
   {/if}
   {#if hasAgentEvidence(row.node)}
     <span
-      class="h-1.5 w-1.5 shrink-0 rounded-[1px] bg-slate-800"
+      class="h-1.5 w-1.5 shrink-0 rounded-[1px] bg-teal-600"
       title="Has evidence of the agent's active question"
     ></span>
   {/if}

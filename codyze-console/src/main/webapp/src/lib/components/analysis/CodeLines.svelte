@@ -30,6 +30,13 @@
     sliceLines?: number[];
     /** The lines of the statement hovered in the dependence graph, tinted more strongly */
     sliceHover?: { first: number; last: number } | null;
+    /** The lines of the citation hovered in an answer of the agent, tinted in its color */
+    citedHover?: { first: number; last: number } | null;
+    /**
+     * The lines of a citation that was just followed, which light up in the color of the agent once.
+     * A new key lights them up again
+     */
+    citedFlash?: { first: number; last: number; key: number } | null;
   }
 
   let {
@@ -46,7 +53,9 @@
     gutterPadding = 0.75,
     selection = null,
     sliceLines = [],
-    sliceHover = null
+    sliceHover = null,
+    citedHover = null,
+    citedFlash = null
   }: Props = $props();
 
   const isSelected = (line: number) =>
@@ -122,6 +131,25 @@
     ></div>
   {/if}
 
+  {#if citedHover}
+    <div
+      class="pointer-events-none absolute right-0 left-0"
+      style:top="{offsetTop + (citedHover.first - 1) * lineHeight}rem"
+      style:height="{(citedHover.last - citedHover.first + 1) * lineHeight}rem"
+      style:background-color="rgba(13, 148, 136, 0.14)"
+    ></div>
+  {/if}
+
+  {#if citedFlash}
+    {#key citedFlash.key}
+      <div
+        class="cited-flash pointer-events-none absolute right-0 left-0"
+        style:top="{offsetTop + (citedFlash.first - 1) * lineHeight}rem"
+        style:height="{(citedFlash.last - citedFlash.first + 1) * lineHeight}rem"
+      ></div>
+    {/key}
+  {/if}
+
   {#if selection}
     <div
       class="pointer-events-none absolute right-0 left-0 bg-blue-600/5"
@@ -157,3 +185,27 @@
     </div>
   {/each}
 </div>
+
+<style>
+  /* A followed citation lights up once and fades, so that the eye finds it after the jump. It waits
+  for the code to scroll there first */
+  .cited-flash {
+    background-color: rgba(13, 148, 136, 0);
+    animation: cited-flash 1000ms ease-out 350ms;
+  }
+
+  @keyframes cited-flash {
+    from {
+      background-color: rgba(13, 148, 136, 0.3);
+    }
+    to {
+      background-color: rgba(13, 148, 136, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cited-flash {
+      animation: none;
+    }
+  }
+</style>

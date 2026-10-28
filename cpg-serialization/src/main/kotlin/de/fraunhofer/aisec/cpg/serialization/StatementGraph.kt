@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze.console
+package de.fraunhofer.aisec.cpg.serialization
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -55,11 +55,19 @@ enum class GraphNodeKind {
     BRANCH,
     /** Code outside of the function of the slice, in another file or not analysed at all. */
     STUB,
+    /**
+     * A concept or operation that the dependences pass through. Its node is labelled like the
+     * overlays of a node ([toOverlayRefJSON]), its code and lines are those of the node it is
+     * attached to.
+     */
+    OVERLAY,
 }
 
 enum class GraphEdgeKind {
     DATA,
     CONTROL,
+    /** From the statement of the node an overlay is attached to, to the overlay. */
+    OVERLAY,
 }
 
 /**
@@ -70,7 +78,7 @@ enum class GraphEdgeKind {
  * @property depth The number of hops from the root of the slice.
  * @property more The number of statements further away that are not part of the slice because of
  *   the hop limit, so that the UI can offer to expand it.
- * @property concept Whether a concept or operation is attached to the statement.
+ * @property overlays The concepts and operations attached to the nodes of the statement.
  * @property unresolved Whether the statement has a call whose target is unknown.
  * @property external Whether the statement has a call to code that is not analysed. For a stub: the
  *   code is not part of the analysis at all.
@@ -86,7 +94,7 @@ data class GraphNodeJSON(
     val code: String,
     val depth: Int,
     val more: Int,
-    val concept: Boolean,
+    val overlays: List<NodeRefJSON>,
     val unresolved: Boolean,
     val external: Boolean,
     val warning: Boolean,
@@ -98,6 +106,10 @@ data class GraphNodeJSON(
  *
  * @property label For data dependences the name of the variable, for control dependences `true` or
  *   `false` for the branch of the condition.
+ * @property fromPart The node of the [from] statement the dependence starts at, if it is not the
+ *   statement itself.
+ * @property toPart The node of the [to] statement the dependence ends at, if it is not the
+ *   statement itself.
  */
 @Serializable
 data class GraphEdgeJSON(
@@ -105,6 +117,8 @@ data class GraphEdgeJSON(
     val to: String,
     val kind: GraphEdgeKind,
     val label: String?,
+    val fromPart: NodeRefJSON? = null,
+    val toPart: NodeRefJSON? = null,
 )
 
 /**
@@ -137,9 +151,10 @@ private fun Node.isBodyOf(parent: Node): Boolean =
  * The statement a node belongs to: the outermost expression that is not part of another statement.
  * The header of an if or a loop (its condition, the initializer and iteration of a for loop)
  * belongs to it, while its body consists of statements of their own. Likewise, the parameters of a
- * function belong to its header.
+ * function belong to its header, and the variables of a declaration with their initializers belong
+ * to the declaration.
  */
-internal fun Node.enclosingStatement(): Node {
+fun Node.enclosingStatement(): Node {
     if (this is Parameter)
         (astParent as? Function)?.let {
             return it
@@ -147,13 +162,27 @@ internal fun Node.enclosingStatement(): Node {
     var current: Node = this
     while (true) {
         val parent = current.astParent ?: return current
+        if (parent.isDeclaredInStatement) {
+            current = parent
+            continue
+        }
         if (parent !is Expression || parent is Block || current.isBodyOf(parent)) return current
         current = parent
     }
 }
 
+/**
+ * Whether this is a variable declared by a statement, e.g. by a declaration statement. A variable
+ * is no expression, so it would otherwise end the search for the statement of its initializer.
+ */
+private val Node.isDeclaredInStatement: Boolean
+    get() =
+        this is ValueDeclaration &&
+            this !is Function &&
+            astParent.let { it is Expression && it !is Block }
+
 /** The nodes of a statement, without the statements in its body or in nested blocks. */
-internal fun Node.statementMembers(): List<Node> {
+fun Node.statementMembers(): List<Node> {
     val members = mutableListOf<Node>()
     fun visit(node: Node) {
         members += node
@@ -165,10 +194,58 @@ internal fun Node.statementMembers(): List<Node> {
     return members
 }
 
-internal val Node.isBranching: Boolean
+val Node.isBranching: Boolean
     get() = this is IfElse || this is Loop || this is Switch || this is CatchClause
 
-internal fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON {
+/** This node as a part of [statement], or `null` if it is the statement itself. */
+fun Node.asPartOf(statement: Node): NodeRefJSON? = if (this === statement) null else toRefJSON()
+
+/** Whether this is a concept or an operation, which a graph shows as an overlay. */
+val Node.isConceptOverlay: Boolean
+    get() = this is Concept || this is Operation
+
+/**
+ * The concepts and operations attached to the nodes of [statements] that are not part of them, each
+ * with its statement. A graph shows all of them, not only those its dependences reach, so that it
+ * does not depend on the dataflows of an overlay whether it is shown.
+ */
+fun overlaysOf(statements: Collection<Node>): Map<Node, Node> {
+    val known = statements.map { it.id }.toSet()
+    val overlays = LinkedHashMap<Node, Node>()
+    for (statement in statements) {
+        if (statement.isConceptOverlay) continue
+        for (member in statement.statementMembers()) {
+            member.overlays
+                .filter { it.isConceptOverlay && it.id !in known }
+                .forEach { overlays.putIfAbsent(it, statement) }
+        }
+    }
+    return overlays
+}
+
+/**
+ * The [edges] of a graph with its overlays linked to the statement of the node they are attached
+ * to, if the statement is part of the graph. The dependences between an overlay and its statement
+ * are left out, the link already shows that they belong together.
+ */
+fun attachOverlays(nodes: Collection<Node>, edges: List<GraphEdgeJSON>): List<GraphEdgeJSON> {
+    val ids = nodes.map { it.id.toString() }.toSet()
+    val links =
+        nodes
+            .filter { it.isConceptOverlay }
+            .mapNotNull { overlay ->
+                val statement =
+                    (overlay as OverlayNode).underlyingNode?.enclosingStatement()
+                        ?: return@mapNotNull null
+                val from = statement.id.toString()
+                if (from in ids) from to overlay.id.toString() else null
+            }
+    val linked = links.flatMap { (a, b) -> listOf(a to b, b to a) }.toSet()
+    return edges.filter { (it.from to it.to) !in linked } +
+        links.map { (from, to) -> GraphEdgeJSON(from, to, GraphEdgeKind.OVERLAY, null) }
+}
+
+fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON {
     // Stubs are shown as they are, without everything they contain
     val members = if (kind == GraphNodeKind.STUB) listOf(this) else statementMembers()
     val calls = members.filterIsInstance<Call>()
@@ -182,17 +259,24 @@ internal fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): Graph
             this is Function -> startLine
             else -> location?.region?.endLine ?: startLine
         }
+    val overlay = kind == GraphNodeKind.OVERLAY
     return GraphNodeJSON(
         id = id.toString(),
         kind = kind,
-        node = toRefJSON(),
+        node = if (overlay) toOverlayRefJSON() else toRefJSON(),
         startLine = startLine,
         endLine = maxOf(endLine, startLine),
         // Code that is not analysed, e.g. a function that is not declared, has no code but a name
         code = toRefJSON().code.ifEmpty { name.localName },
         depth = depth,
         more = more,
-        concept = members.any { m -> m.overlays.any { it is Concept || it is Operation } },
+        overlays =
+            if (overlay) emptyList()
+            else
+                members
+                    .flatMap { it.overlays }
+                    .filter { it.isConceptOverlay }
+                    .map { it.toOverlayRefJSON() },
         unresolved = statuses.any { it == CallStatus.UNRESOLVED },
         external =
             if (kind == GraphNodeKind.STUB) isInferred || location == null
@@ -222,33 +306,39 @@ fun pathsGraph(paths: List<List<Node>>, kind: String): GraphSliceJSON {
     val depths = mutableMapOf<Uuid, Int>()
     val edges = linkedMapOf<Pair<Uuid, Uuid>, GraphEdgeJSON>()
     val edgeKind = if (kind == "dataflow") GraphEdgeKind.DATA else GraphEdgeKind.CONTROL
+    // A statement of a path with the nodes the path enters and leaves it with
+    class Step(val statement: Node, val entry: Node, var exit: Node)
     for (path in paths) {
-        // The statements of the path, each with the node the path enters it with
-        val steps = mutableListOf<Pair<Node, Node>>()
+        val steps = mutableListOf<Step>()
         for (node in path) {
             val statement = if (node.location == null) node else node.enclosingStatement()
-            if (steps.lastOrNull()?.first !== statement) steps += statement to node
+            val last = steps.lastOrNull()
+            if (last?.statement === statement) last.exit = node
+            else steps += Step(statement, node, node)
         }
-        steps.forEachIndexed { i, (statement, _) ->
-            statements.putIfAbsent(statement.id, statement)
+        steps.forEachIndexed { i, step ->
+            statements.putIfAbsent(step.statement.id, step.statement)
             val depth = steps.size - 1 - i
-            depths[statement.id] = minOf(depths[statement.id] ?: depth, depth)
+            depths[step.statement.id] = minOf(depths[step.statement.id] ?: depth, depth)
         }
         steps.zipWithNext().forEach { (from, to) ->
-            val key = from.first.id to to.first.id
+            val key = from.statement.id to to.statement.id
             edges.putIfAbsent(
                 key,
                 GraphEdgeJSON(
-                    from = from.first.id.toString(),
-                    to = to.first.id.toString(),
+                    from = from.statement.id.toString(),
+                    to = to.statement.id.toString(),
                     kind = edgeKind,
-                    label = if (edgeKind == GraphEdgeKind.DATA) valueName(to.second) else null,
+                    label = if (edgeKind == GraphEdgeKind.DATA) valueName(to.entry) else null,
+                    fromPart = from.exit.asPartOf(from.statement),
+                    toPart = to.entry.asPartOf(to.statement),
                 ),
             )
         }
     }
     val root = paths.firstOrNull()?.lastOrNull()
     val rootStatement = root?.let { if (it.location == null) it else it.enclosingStatement() }
+    val overlays = overlaysOf(statements.values)
     return GraphSliceJSON(
         root = rootStatement?.id?.toString() ?: "",
         direction = SliceDirection.BACKWARD,
@@ -258,13 +348,47 @@ fun pathsGraph(paths: List<List<Node>>, kind: String): GraphSliceJSON {
             statements.values.map {
                 val nodeKind =
                     when {
+                        it.isConceptOverlay -> GraphNodeKind.OVERLAY
                         it.location == null || it.isInferred -> GraphNodeKind.STUB
                         it.isBranching -> GraphNodeKind.BRANCH
                         else -> GraphNodeKind.STATEMENT
                     }
                 it.toGraphNode(nodeKind, depths.getValue(it.id), 0)
-            },
-        edges = edges.values.toList(),
+            } +
+                overlays.map { (overlay, statement) ->
+                    overlay.toGraphNode(GraphNodeKind.OVERLAY, depths.getValue(statement.id), 0)
+                },
+        edges = attachOverlays(statements.values + overlays.keys, edges.values.toList()),
         truncated = false,
+    )
+}
+
+/**
+ * The union of [graphs] of statements, e.g. of the slices and paths a question to the agent led to.
+ * A statement in several graphs keeps its depth from the first one; it offers more statements only
+ * if it does in each of them. The root is the root of the first graph.
+ */
+fun mergeGraphs(graphs: List<GraphSliceJSON>): GraphSliceJSON {
+    val nodes = LinkedHashMap<String, GraphNodeJSON>()
+    val edges = LinkedHashMap<List<Any?>, GraphEdgeJSON>()
+    for (graph in graphs) {
+        for (node in graph.nodes) {
+            nodes.merge(node.id, node) { known, other ->
+                known.copy(more = minOf(known.more, other.more))
+            }
+        }
+        for (edge in graph.edges) {
+            edges.putIfAbsent(listOf(edge.from, edge.to, edge.kind, edge.label), edge)
+        }
+    }
+    val first = graphs.firstOrNull()
+    return GraphSliceJSON(
+        root = first?.root ?: "",
+        direction = first?.direction ?: SliceDirection.BACKWARD,
+        hops = graphs.maxOfOrNull { it.hops } ?: 0,
+        function = null,
+        nodes = nodes.values.toList(),
+        edges = edges.values.toList(),
+        truncated = graphs.any { it.truncated },
     )
 }

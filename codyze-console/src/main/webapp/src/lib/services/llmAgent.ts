@@ -14,14 +14,16 @@ class LLMAgent {
     messages: LLMMessage[],
     client: string,
     model: string,
-    callbacks: StreamingCallbacks
+    callbacks: StreamingCallbacks,
+    signal?: AbortSignal
   ): Promise<void> {
     await this.apiService.streamPost(
       '/api/chat',
       { messages, client, model },
       callbacks.onChunk,
       callbacks.onError,
-      callbacks.onComplete
+      callbacks.onComplete,
+      signal
     );
   }
 }

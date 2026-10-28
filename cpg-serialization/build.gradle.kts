@@ -37,5 +37,7 @@ mavenPublishing {
 
 dependencies {
     api(project(":cpg-core"))
+    // The graphs of statements show the concepts and operations attached to them
+    implementation(project(":cpg-concepts"))
     api(libs.kotlinx.serialization.json)
 }

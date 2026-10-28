@@ -9,7 +9,9 @@ class ApiService {
     body: Record<string, unknown>,
     onChunk: (chunk: string) => void,
     onError?: (error: string) => void,
-    onComplete?: () => void
+    onComplete?: () => void,
+    /** Stops the request; nothing is reported after it was aborted */
+    signal?: AbortSignal
   ): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}${url}`, {
@@ -19,7 +21,8 @@ class ApiService {
           Accept: 'text/event-stream',
           'Cache-Control': 'no-cache'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal
       });
 
       if (!response.ok) {
@@ -79,6 +82,7 @@ class ApiService {
         }
       }
     } catch (error) {
+      if (signal?.aborted) return;
       onError?.(error instanceof Error ? error.message : String(error));
     }
   }

@@ -20,6 +20,8 @@
     shape?: 'round' | 'square';
     /** Switches to another sequence of steps that shares the bar, e.g. from the path to the agent */
     other?: { label: string; onSwitch: () => void };
+    /** Steps of the agent's answer are in its color, teal; other steps are neutral */
+    agent?: boolean;
   }
 
   let {
@@ -30,7 +32,8 @@
     onClose,
     closeTitle = 'Close',
     shape = 'round',
-    other
+    other,
+    agent = false
   }: Props = $props();
 
   let stepElements: HTMLButtonElement[] = $state([]);
@@ -40,6 +43,31 @@
     const element = stepElements[index];
     if (element) tick().then(() => element.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
   });
+
+  let list = $state<HTMLOListElement>();
+  // Whether there are steps before or after the visible ones
+  let scrolled = $state({ start: false, end: false });
+
+  function updateScrolled() {
+    if (!list) return;
+    scrolled = {
+      start: list.scrollLeft > 1,
+      end: list.scrollLeft + list.clientWidth < list.scrollWidth - 1
+    };
+  }
+
+  $effect(() => {
+    void steps;
+    tick().then(updateScrolled);
+  });
+
+  // The wheel scrolls the steps sideways, since they have no scrollbar
+  function scrollSideways(event: WheelEvent) {
+    if (!list || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    if (list.scrollWidth <= list.clientWidth) return;
+    event.preventDefault();
+    list.scrollLeft += event.deltaY;
+  }
 
   const previous = $derived(index < 0 ? steps.length - 1 : index - 1);
   const next = $derived(index < 0 ? 0 : index + 1);
@@ -61,7 +89,16 @@
       ⇄ {other.label}
     </button>
   {/if}
-  <ol class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap">
+  <!-- The steps scroll sideways without a scrollbar, which does not fit into the bar: with the wheel,
+  or by stepping through them. The edges fade where more steps are -->
+  <ol
+    bind:this={list}
+    class="steps flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap"
+    class:fade-start={scrolled.start}
+    class:fade-end={scrolled.end}
+    onscroll={updateScrolled}
+    onwheel={scrollSideways}
+  >
     {#each steps as step, i (i)}
       {#if i > 0}
         <li class="shrink-0 text-gray-300" aria-hidden="true">→</li>
@@ -72,7 +109,7 @@
           bind:this={stepElements[i]}
           class="flex items-center gap-1 rounded border px-1.5 py-px font-mono text-[11px] {i ===
           index
-            ? 'border-blue-500 bg-white text-gray-900'
+            ? `${agent ? 'border-teal-600' : 'border-blue-500'} bg-white text-gray-900`
             : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-white'}"
           title={step.title}
           aria-current={i === index ? 'step' : undefined}
@@ -81,7 +118,9 @@
           <span
             class="flex h-3.5 min-w-3.5 items-center justify-center {shape === 'round'
               ? 'rounded-full'
-              : 'rounded-sm'} bg-slate-700 px-0.5 font-sans text-[9px] font-semibold text-white"
+              : 'rounded-sm'} {agent
+              ? 'bg-teal-700'
+              : 'bg-slate-700'} px-0.5 font-sans text-[9px] font-semibold text-white"
             >{step.number ?? i + 1}</span
           >
           <span class="max-w-40 truncate">{step.label}</span>
@@ -124,3 +163,31 @@
     </button>
   </div>
 </div>
+
+<style>
+  .steps {
+    scrollbar-width: none;
+  }
+
+  .steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fade-start {
+    mask-image: linear-gradient(to right, transparent, black 1.5rem);
+  }
+
+  .fade-end {
+    mask-image: linear-gradient(to left, transparent, black 1.5rem);
+  }
+
+  .fade-start.fade-end {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 1.5rem,
+      black calc(100% - 1.5rem),
+      transparent
+    );
+  }
+</style>

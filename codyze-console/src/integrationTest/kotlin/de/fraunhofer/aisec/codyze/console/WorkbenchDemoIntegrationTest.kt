@@ -34,8 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.serialization.GraphEdgeKind
+import de.fraunhofer.aisec.cpg.serialization.GraphNodeKind
+import de.fraunhofer.aisec.cpg.serialization.GraphSliceJSON
 import de.fraunhofer.aisec.cpg.serialization.NodeInfo
 import de.fraunhofer.aisec.cpg.serialization.NodePaths
+import de.fraunhofer.aisec.cpg.serialization.SliceCountsJSON
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -93,12 +97,11 @@ class WorkbenchDemoIntegrationTest {
         val main = component.translationUnits.first { it.name.endsWith("main.c") }
         val base = "/api/component/${component.name}/translation-unit/${main.id}"
 
-        // The key figures of app_main: get_key is external, the call through the function pointer
-        // is unresolved
+        // The key figures of app_main: get_key is external, and so is the call through the function
+        // pointer
         val annotations = client.get("$base/annotations").body<FileAnnotationsJSON>()
         val appMain = annotations.functions.first { it.function.name.endsWith("app_main") }
-        assertTrue(appMain.externalCalls >= 1, "external calls: ${appMain.externalCalls}")
-        assertTrue(appMain.unresolvedCalls >= 1, "unresolved calls: ${appMain.unresolvedCalls}")
+        assertTrue(appMain.externalCalls >= 2, "external calls: ${appMain.externalCalls}")
 
         // What affects the call of encrypt: the key (data) and the condition (control)
         val encrypt = client.nodeAt(base, "encrypt(key, buf, len)")
@@ -125,7 +128,13 @@ class WorkbenchDemoIntegrationTest {
             },
             "edges: ${backward.edges}",
         )
-        assertTrue(getKey.unresolved || getKey.external, "get_key should be marked as uncertain")
+        assertTrue(getKey.external, "get_key should be marked as external")
+        // The initializer of a variable is part of its declaration, not a statement of its own
+        val keyLine = positionOf("char *key = get_key(&cfg)").first
+        val atKeyLine =
+            backward.nodes.filter { it.kind != GraphNodeKind.STUB && it.startLine == keyLine }
+        assertEquals(1, atKeyLine.size, "statements at the key: ${atKeyLine.map { it.code }}")
+        assertTrue("char" in atKeyLine.single().code, "statement: ${atKeyLine.single().code}")
 
         // What the key affects: the encryption, the plain copy and the log
         val forward =
@@ -140,16 +149,23 @@ class WorkbenchDemoIntegrationTest {
             client.get("/api/node/${encrypt.node.id}/pdg-counts?hops=2").body<SliceCountsJSON>()
         assertTrue(counts.backward > 0 && counts.forward >= 0, "counts: $counts")
 
-        // The evidence of an answer relies on the unresolved call in the function
+        // Evidence that passes through the external call of get_key relies on code that is not
+        // analysed. The call is the node at its opening parenthesis, its name is the callee
+        val (callLine, callColumn) = positionOf("get_key(&cfg)")
+        val getKeyCall =
+            client
+                .get("$base/node-at?line=$callLine&column=${callColumn + "get_key".length}")
+                .body<NodeDetailsJSON>()
+        assertEquals("Call", getKeyCall.node.type, "node: ${getKeyCall.node.code}")
         val issues =
             client
                 .post("/api/trust") {
                     contentType(ContentType.Application.Json)
-                    setBody(listOf(encrypt.node.id.toString()))
+                    setBody(listOf(getKeyCall.node.id.toString()))
                 }
                 .body<List<TrustIssueJSON>>()
         assertTrue(
-            issues.any { it.kind == TrustIssueKind.UNRESOLVED_CALL },
+            issues.any { it.kind == TrustIssueKind.EXTERNAL_CODE },
             "issues: ${issues.map { "${it.kind} ${it.reason}" }}",
         )
 

@@ -122,6 +122,8 @@ class ChatService(
                 iteration++
                 val roundtripResults =
                     toolCalls.map { toolCall ->
+                        // The frontend shows what the agent is doing while the tool runs
+                        send(Events.toolCall(toolCall.name, toolCall.arguments, iteration))
                         val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
                         ToolCallWithResult(toolCall, result)
                     }

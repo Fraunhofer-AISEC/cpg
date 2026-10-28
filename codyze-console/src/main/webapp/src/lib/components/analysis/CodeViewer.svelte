@@ -6,13 +6,12 @@
   import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
   import NodeInspector from './inspector/NodeInspector.svelte';
   import CodeAnnotations from './CodeAnnotations.svelte';
-  import OverviewRuler, { type RulerMark } from './OverviewRuler.svelte';
   import HoverCard from './HoverCard.svelte';
   import AskPopup from './AskPopup.svelte';
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
-  import { describeConcept, getAnnotations } from '$lib/annotations';
+  import { getAnnotations } from '$lib/annotations';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
@@ -119,9 +118,13 @@
      * which calls this with the question and the selection
      */
     onAsk?: (question: string, selection: CodeSelection) => void;
+    /** The lines of a node the agent's answer cites, while its citation is hovered */
+    citedLines?: { first: number; last: number } | null;
+    /** The lines of a citation that was just followed, which light up once, see CodeLines */
+    citedFlash?: { first: number; last: number; key: number } | null;
     /**
-     * A slice of the program dependence graph shown in the code, as tinted lines and marks in the
-     * ruler. [onHover] is called with the statement under the mouse
+     * A slice of the program dependence graph shown in the code, as tinted lines. [onHover] is
+     * called with the statement under the mouse
      */
     slice?: {
       ranges: { id: string; first: number; last: number; label: string }[];
@@ -131,12 +134,17 @@
     };
     /** Called on a right click in the code, with the node there and the place on the screen */
     onCodeContextMenu?: (target: { details: NodeDetailsJSON; x: number; y: number }) => void;
-    /** Buttons at the end of the row of the layers, e.g. to open a panel next to the code */
+    /** Buttons in the header next to the summary of the layers, e.g. to open a panel next to it */
     layerActions?: Snippet;
     /** Why asking is not possible right now, e.g. while the agent is busy */
     askDisabledReason?: string | null;
     /** Incremented to open the input for the selection (or else the inspected node) */
     askRequest?: number;
+    /**
+     * Places in this file that violate a requirement, shown as yellow lines with the findings layer.
+     * Without it, the viewer has no findings layer
+     */
+    findings?: { startLine: number; endLine: number; label: string }[];
   }
 
   let {
@@ -164,10 +172,13 @@
     lanes = false,
     onAsk,
     slice,
+    citedLines = null,
+    citedFlash = null,
     onCodeContextMenu,
     layerActions,
     askDisabledReason = null,
-    askRequest = 0
+    askRequest = 0,
+    findings
   }: Props = $props();
 
   // The focus and the placement of the inspector never change for a viewer
@@ -592,7 +603,6 @@
       functions: annotations.functions.length,
       external: external.length,
       topExternal,
-      unresolved: annotations.calls.filter((c) => c.status === 'UNRESOLVED').length,
       concepts: annotations.concepts.length
     };
   });
@@ -611,8 +621,6 @@
             info.description +
             (fileSummary.topExternal.length ? ` (${fileSummary.topExternal.join(', ')})` : '')
         };
-      case 'uncertain':
-        return { count: fileSummary.unresolved, title: info.description };
       case 'dataflow': {
         const count = inspected ? inspected.dataflowFrom.length + inspected.dataflowTo.length : 0;
         return {
@@ -620,9 +628,11 @@
           title: inspected ? info.description : `${info.description} (nothing is selected)`
         };
       }
+      case 'findings':
+        return { count: findings?.length ?? 0, title: info.description };
       case 'agent':
         return {
-          count: new Set(agentMarkers.map((m) => m.nodeId)).size,
+          count: threadActive ? new Set(focus.thread.map((n) => n.ref.id)).size : 0,
           title: focus.thread.length
             ? info.description
             : `${info.description} (the agent has not returned any nodes yet)`
@@ -630,88 +640,28 @@
     }
   }
 
-  // The dataflow and agent layers need the lanes in the gutter
+  // The dataflow and agent layers need the lanes in the gutter, the findings layer its findings
   const shownLayers = $derived(
-    layerInfos.filter((l) => lanes || (l.id !== 'dataflow' && l.id !== 'agent'))
+    layerInfos.filter(
+      (l) =>
+        // The agent's evidence is shown from its answers, not in the code
+        l.id !== 'agent' &&
+        (lanes || l.id !== 'dataflow') &&
+        (l.id !== 'findings' || findings !== undefined)
+    )
   );
 
-  // The marks of the visible layers in the overview ruler, one lane per layer. The steps of the
-  // path and the dataflows of the inspected node share the last lane, with the steps on top
-  const rulerMarks = $derived.by((): RulerMark[] => {
-    if (!annotations) return [];
-    const color = (layer: Layer) => layerInfos.find((l) => l.id === layer)!.color;
-    const marks: RulerMark[] = [];
-    if (lanes) {
-      for (const step of agentMarkers) {
-        marks.push({
-          line: step.line,
-          lane: 4,
-          color: color('agent'),
-          label: `${step.index + 1}. ${step.title}`,
-          faded: step.faded
-        });
-      }
-      for (const step of pathMarkers) {
-        marks.push({ line: step.line, lane: 3, color: 'rgb(15, 23, 42)', label: step.title });
-      }
-      if (layers.visible.dataflow && inspected?.node.translationUnitId === translationUnit.id) {
-        const dataflows = [
-          ...inspected.dataflowFrom.map((ref) => ({ ref, label: 'comes from' })),
-          ...inspected.dataflowTo.map((ref) => ({ ref, label: 'goes to' }))
-        ];
-        for (const { ref, label } of dataflows) {
-          if (ref.translationUnitId !== translationUnit.id || ref.startLine < 1) continue;
-          marks.push({
-            line: ref.startLine,
-            lane: 3,
-            color: color('dataflow'),
-            label: `${label} ${ref.code || ref.name}`
-          });
-        }
-      }
-    }
-    for (const range of slice?.ranges ?? []) {
-      marks.push({
-        line: range.first,
-        lane: 5,
-        color: range.id === slice?.selectedId ? '#2563eb' : '#93b4ea',
-        label: range.label
-      });
-    }
-    // While a path or the agent's thread is shown, the other layers step back
-    const faded = pathActive || threadActive;
-    if (layers.visible.concepts) {
-      for (const c of annotations.concepts) {
-        marks.push({
-          line: c.line,
-          lane: 0,
-          color: color('concepts'),
-          label: describeConcept(c),
-          faded
-        });
-      }
-    }
-    for (const call of annotations.calls) {
-      if (call.status === 'EXTERNAL' && layers.visible.external) {
-        marks.push({
-          line: call.startLine,
-          lane: 1,
-          color: color('external'),
-          label: `external call ${call.name}()`,
-          faded
-        });
-      } else if (call.status === 'UNRESOLVED' && layers.visible.uncertain) {
-        marks.push({
-          line: call.startLine,
-          lane: 2,
-          color: color('uncertain'),
-          label: `unresolved call ${call.name}()`,
-          faded
-        });
-      }
-    }
-    return marks;
-  });
+  // The lines of the findings, while their layer is shown (0-based, like the highlighted line)
+  const findingLines = $derived(
+    findings && layers.visible.findings
+      ? findings.flatMap((f) =>
+          Array.from(
+            { length: Math.max(f.endLine - f.startLine, 0) + 1 },
+            (_, i) => f.startLine - 1 + i
+          )
+        )
+      : []
+  );
 
   // The lines of the inspected node, if it is in this file
   const selectedLines = $derived.by(() => {
@@ -821,7 +771,7 @@
   $effect(() => {
     if (codeContainerElement) return codeViewport.track(codeContainerElement);
   });
-  // The lines that are actually visible (1-based, inclusive), for the overview ruler
+  // The lines that are actually visible (1-based, inclusive)
   const viewportLines = $derived.by(() => {
     const rem = remInPx();
     const first = (codeViewport.scrollTop / rem - offsetTop) / lineHeight;
@@ -857,7 +807,7 @@
     const end = offsetLeft + charWidth * (lineColumns(line) + 3);
     const fn = annotations?.functions.find((f) => f.function.startLine === line);
     if (!fn) return end;
-    const lens = `${fn.callers} callers · calls ${fn.callees} · ${fn.externalCalls} external · ${fn.unresolvedCalls} unresolved`;
+    const lens = `${fn.callers} ${fn.callers === 1 ? 'caller' : 'callers'} · calls ${fn.callees} · ${fn.externalCalls} external`;
     return end + charWidth + lens.length * 0.42;
   }
 
@@ -888,29 +838,8 @@
     );
   });
 
-  // The evidence of the agent's active thread in this file, and whether it is shown at all
+  // Whether the agent's active thread is shown, rather than a path
   const threadActive = $derived(sequence === 'thread');
-  const agentMarkers = $derived.by((): StepMarker[] => {
-    if (!threadActive) return [];
-    return focus.thread.flatMap(({ ref, step, claimed }) =>
-      ref.translationUnitId === translationUnit.id && ref.startLine >= 1
-        ? [
-            {
-              index: step - 1,
-              line: ref.startLine,
-              title: `${claimed ? 'only cited in the answer, no tool returned it: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
-              current: ref.id === inspected?.node.id,
-              dashed: claimed,
-              // The nodes of the step the user points at stand out
-              faded: focus.highlightedStep !== null && focus.highlightedStep !== step,
-              // Nodes only cited in the answer are no step of the agent
-              label: claimed ? '?' : undefined,
-              nodeId: ref.id
-            }
-          ]
-        : []
-    );
-  });
 
   $effect(() => {
     if (highlightLine && codeContainerElement) {
@@ -923,7 +852,7 @@
 <div class="flex h-full w-full overflow-hidden rounded-[inherit]">
   <!-- Code display -->
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-    <!-- Header: where the file is, and below it the layer toggles -->
+    <!-- Header: where the file is, and at the right what the analysis found in it -->
     <div class="shrink-0 border-b border-gray-200 bg-white">
       <div
         class="flex min-h-[1.875rem] items-center justify-between gap-3 border-b border-gray-100 px-3 py-0.5"
@@ -939,8 +868,14 @@
             >
           {/if}
         </div>
-        {#if headerActions || onClose}
+        {#if annotations || layerActions || headerActions || onClose}
           <div class="flex shrink-0 items-center gap-2">
+            {#if annotations}
+              {@render layerSummaryButton()}
+            {/if}
+            {#if layerActions}
+              {@render layerActions()}
+            {/if}
             {#if headerActions}
               {@render headerActions()}
             {/if}
@@ -965,36 +900,6 @@
           </div>
         {/if}
       </div>
-      {#if annotations}
-        <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
-        <div
-          class="flex h-9 items-center gap-1.5 overflow-x-auto px-3 whitespace-nowrap"
-          role="group"
-          aria-label="Layers"
-        >
-          {#each shownLayers as layer (layer.id)}
-            {@const summary = layerSummary(layer.id)}
-            <button
-              type="button"
-              class="flex h-6 items-center gap-1 rounded-full border px-2 text-[11.5px] {layers
-                .visible[layer.id]
-                ? layer.activeClass
-                : 'border-gray-200 text-gray-400 hover:text-gray-600'}"
-              aria-pressed={layers.visible[layer.id]}
-              title="{summary.title}. Click to {layers.visible[layer.id] ? 'hide' : 'show'}."
-              onclick={() => layers.toggle(layer.id)}
-            >
-              <span>{layer.icon}</span>
-              {layer.label}
-              <span class="tabular-nums opacity-70">{summary.count}</span>
-            </button>
-          {/each}
-          {#if layerActions}
-            <span class="flex-1"></span>
-            {@render layerActions()}
-          {/if}
-        </div>
-      {/if}
     </div>
 
     <div class="relative flex min-h-0 flex-1" bind:this={codeAreaElement}>
@@ -1026,7 +931,7 @@
                 {highlighted}
                 start={visibleLines.start}
                 end={visibleLines.end}
-                highlightedLines={allHighlightLines}
+                highlightedLines={[...allHighlightLines, ...findingLines]}
                 {maxColumns}
                 {lineHeight}
                 {charWidth}
@@ -1038,7 +943,11 @@
                 sliceLines={slice?.ranges.flatMap((r) =>
                   Array.from({ length: r.last - r.first + 1 }, (_, i) => r.first + i)
                 )}
-                sliceHover={slice?.ranges.find((r) => r.id === slice.hoveredId) ?? null}
+                sliceHover={citedLines
+                  ? null
+                  : (slice?.ranges.find((r) => r.id === slice.hoveredId) ?? null)}
+                citedHover={citedLines}
+                {citedFlash}
               />
             </Highlight>
           </div>
@@ -1106,20 +1015,6 @@
                 onSelect={(marker) => selectRef(focus.path[marker.index])}
               />
             {/if}
-          {:else if agentMarkers.length > 0}
-            <StepMarkers
-              markers={agentMarkers}
-              startLine={visibleLines.start}
-              endLine={visibleLines.end}
-              {lineHeight}
-              {offsetTop}
-              left={(markerLaneWidth - 1) / 2}
-              shape="square"
-              onSelect={(marker) => {
-                const node = focus.thread.find((n) => n.ref.id === marker.nodeId);
-                if (node) selectRef(node.ref);
-              }}
-            />
           {/if}
 
           <!-- The selected node: a tint without a frame behind it, if it fits on one line. Larger nodes
@@ -1177,19 +1072,6 @@
           <HoverCard details={hover.details} />
         </div>
       {/if}
-
-      {#if annotations}
-        <OverviewRuler
-          marks={rulerMarks}
-          {totalLines}
-          lanes={lanes ? (slice ? 6 : 5) : 3}
-          viewport={viewportLines}
-          selectionLine={inspected?.node.translationUnitId === translationUnit.id
-            ? inspected.node.startLine
-            : undefined}
-          onScrollTo={(line) => scrollToLine(line)}
-        />
-      {/if}
     </div>
   </div>
 
@@ -1246,6 +1128,40 @@
     </CollapsiblePanel>
   {/if}
 </div>
+
+<!-- The layers as a row of toggles: first what the analysis found in the file, one count per
+category with its icon in the color of its marks, then the dataflows and the agent's evidence. What a
+layer shows is its tooltip -->
+{#snippet layerSummaryButton()}
+  <div
+    class="flex items-center gap-0.5 text-[11.5px] tabular-nums"
+    role="group"
+    aria-label="Layers"
+  >
+    {#each shownLayers as layer, i (layer.id)}
+      {@const summary = layerSummary(layer.id)}
+      {@const on = layers.visible[layer.id]}
+      {#if i > 0 && !layer.category && shownLayers[i - 1].category}
+        <span class="mx-1 h-3.5 border-l border-gray-200" aria-hidden="true"></span>
+      {/if}
+      <button
+        type="button"
+        class="flex h-6 items-center gap-1 rounded-md px-1.5 hover:bg-gray-100 {on
+          ? 'text-gray-600'
+          : 'text-gray-400'}"
+        aria-pressed={on}
+        title="{layer.label}: {summary.title}. Click to {on ? 'hide' : 'show'}."
+        onclick={() => layers.toggle(layer.id)}
+      >
+        <span class={on ? layer.iconClass : 'opacity-50'} aria-hidden="true">{layer.icon}</span>
+        <span class="sr-only">{layer.label}</span>
+        {#if layer.category || summary.count > 0}
+          <span class={on ? '' : 'line-through decoration-gray-300'}>{summary.count}</span>
+        {/if}
+      </button>
+    {/each}
+  </div>
+{/snippet}
 
 {#if showConceptDialog && conceptTarget}
   <AddConceptDialog

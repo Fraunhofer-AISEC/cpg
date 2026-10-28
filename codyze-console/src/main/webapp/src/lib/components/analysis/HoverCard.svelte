@@ -50,9 +50,7 @@
         <span class="text-purple-700">◆ {details.overlays.length} concepts</span>
       {/if}
       {#if details.warnings.length > 0}
-        <span class="text-red-600" title={details.warnings.join('\n')}
-          >⚠ analysis is uncertain here</span
-        >
+        <span class="text-amber-700" title={details.warnings.join('\n')}>⚠ Note</span>
       {/if}
     </div>
   {/if}
