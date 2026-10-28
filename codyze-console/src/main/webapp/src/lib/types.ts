@@ -267,6 +267,14 @@ export interface ToolResult {
   toolName?: string;
   content: any;
   isError?: boolean;
+  /** The arguments the model called the tool with, if they are known */
+  arguments?: Record<string, unknown>;
+}
+
+/** A tool call of the agent that is running, before its result is known. */
+export interface ToolActivity {
+  toolName: string;
+  arguments: Record<string, unknown>;
 }
 
 export interface ChatMessage {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { NodePathsJSON, NodeRefJSON, NodeSliceJSON, ToolResult } from '$lib/types';
+  import type { ToolCallLabel } from '$lib/toolLabels';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -9,6 +10,11 @@
    */
   interface Props {
     toolResult: ToolResult;
+    /**
+     * The call with its main argument; without it, only the tool is named. How it was called, e.g.
+     * the graph of a slice, is part of the summary
+     */
+    label?: ToolCallLabel;
     step: number;
     /** The nodes the tool returned, resolved to their locations */
     nodes: NodeRefJSON[];
@@ -24,8 +30,18 @@
     onHover: (hovered: boolean) => void;
   }
 
-  let { toolResult, step, nodes, paths, slice, selectedId, onSelect, onActivate, onHover }: Props =
-    $props();
+  let {
+    toolResult,
+    label,
+    step,
+    nodes,
+    paths,
+    slice,
+    selectedId,
+    onSelect,
+    onActivate,
+    onHover
+  }: Props = $props();
 
   let expanded = $state(false);
   let showAll = $state(false);
@@ -113,9 +129,15 @@
         ? 'text-red-600'
         : 'text-gray-700'}"
       aria-expanded={expanded}
+      title={toolName}
       onclick={() => (expanded = !expanded)}
     >
       <span class="shrink-0 font-mono">{toolName}</span>
+      {#if label?.argument}
+        <span class="max-w-[60%] min-w-0 shrink-0 truncate font-mono text-gray-900"
+          >{label.argument}</span
+        >
+      {/if}
       <span class="min-w-0 truncate text-gray-400" title={summary}>{summary}</span>
       <svg
         class="ml-auto h-3 w-3 shrink-0 text-gray-300 transition-transform {expanded

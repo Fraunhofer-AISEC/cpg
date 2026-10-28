@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.ai.ChatService
 import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 
 const val SYSTEM_PROMPT =
@@ -91,6 +93,24 @@ object Events {
         )
 
     fun keepalive(): String = Json.encodeToString(buildJsonObject { put("type", "keepalive") })
+
+    /**
+     * A tool call that starts, before its result is known, so that the frontend can show what the
+     * agent is doing. The arguments are the ones the model passed, or an empty object if they are
+     * no valid JSON object.
+     */
+    fun toolCall(toolName: String, arguments: String): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "tool_call")
+                put("toolName", toolName)
+                put(
+                    "arguments",
+                    runCatching { Json.parseToJsonElement(arguments).jsonObject }
+                        .getOrDefault(JsonObject(emptyMap())),
+                )
+            }
+        )
 
     fun toolResult(toolName: String, content: JsonElement): String =
         Json.encodeToString(

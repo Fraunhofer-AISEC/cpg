@@ -5,7 +5,8 @@
     LLMMessage,
     ConceptSuggestionItem,
     LLMConcept,
-    Model
+    Model,
+    ToolActivity
   } from '$lib/types';
   import {
     ChatInterface,
@@ -141,6 +142,8 @@
   let isLoading = $state(false);
   let streamingContent = $state('');
   let streamingReasoning = $state('');
+  // The tool call the agent is running, until its result arrives
+  let activity = $state<ToolActivity | null>(null);
   let selectedClient = $state<string | null>(persisted.selectedClient);
   let selectedModelName = $state<string | null>(persisted.selectedModel);
   let abortController: AbortController | null = null;
@@ -196,6 +199,7 @@
     streamingContent = '';
     streamingReasoning = '';
     suggestions = [];
+    activity = null;
     isLoading = false;
   }
 
@@ -217,32 +221,26 @@
             streamingContent += event.content;
           } else if (event.type === 'reasoning') {
             streamingReasoning += event.content;
+          } else if (event.type === 'tool_call') {
+            keepNarration();
+            activity = { toolName: event.toolName, arguments: event.arguments ?? {} };
           } else if (event.type === 'tool_result') {
             if (isConceptSuggestion(event.toolName, event.content)) {
               addSuggestion(event.content);
             }
-            // What the model wrote before the tool call belongs to its steps, not to its answer
-            const narration = streamingContent.trim();
-            streamingContent = '';
+            // Without the event of the call, e.g. from an older server, the text before the call is
+            // kept when its result arrives
+            keepNarration();
+            const args = activity?.toolName === event.toolName ? activity?.arguments : undefined;
+            activity = null;
             chatMessages = [
               ...chatMessages,
-              ...(narration
-                ? [
-                    {
-                      id: `${Date.now()}-narration`,
-                      role: 'assistant' as const,
-                      content: narration,
-                      contentType: 'narration' as const,
-                      timestamp: new Date()
-                    }
-                  ]
-                : []),
               {
                 id: Date.now().toString(),
                 role: 'assistant' as const,
                 content: '',
                 contentType: 'tool-result',
-                toolResult: { toolName: event.toolName, content: event.content },
+                toolResult: { toolName: event.toolName, content: event.content, arguments: args },
                 timestamp: new Date()
               }
             ];
@@ -262,6 +260,7 @@
             timestamp: new Date()
           }
         ];
+        activity = null;
         isLoading = false;
         streamingContent = '';
       },
@@ -272,9 +271,27 @@
     };
   }
 
+  // What the model wrote before a tool call belongs to its steps, not to its answer
+  function keepNarration() {
+    const narration = streamingContent.trim();
+    streamingContent = '';
+    if (!narration) return;
+    chatMessages = [
+      ...chatMessages,
+      {
+        id: `${Date.now()}-narration`,
+        role: 'assistant' as const,
+        content: narration,
+        contentType: 'narration' as const,
+        timestamp: new Date()
+      }
+    ];
+  }
+
   // Keeps what the agent wrote for the current question as its answer, with the reasoning of the
   // model at its first tool call or else at the answer
   function finishAnswer() {
+    activity = null;
     const reasoning = streamingReasoning || undefined;
     const start = chatMessages.findLastIndex((m) => m.role === 'user') + 1;
     const firstToolIdx = chatMessages.findIndex(
@@ -434,6 +451,7 @@
       {isLoading}
       {streamingContent}
       isThinking={streamingReasoning.length > 0}
+      {activity}
       {models}
       {selectedModel}
       {analysisResult}

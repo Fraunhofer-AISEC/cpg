@@ -134,4 +134,21 @@ class ChatServiceTest {
         assertIs<JsonArray>(json["content"])
         assertEquals(0, json["content"]?.jsonArray?.size)
     }
+
+    @Test
+    fun eventsToolCallTest() {
+        val event = Events.toolCall("cpg_list_calls_to", """{"name":"net_send"}""")
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("tool_call", json["type"]?.jsonPrimitive?.content)
+        assertEquals("cpg_list_calls_to", json["toolName"]?.jsonPrimitive?.content)
+        assertEquals("net_send", json["arguments"]?.jsonObject?.get("name")?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun eventsToolCallWithInvalidArgumentsTest() {
+        val event = Events.toolCall("cpg_get_node", "not json")
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("tool_call", json["type"]?.jsonPrimitive?.content)
+        assertEquals(0, json["arguments"]?.jsonObject?.size)
+    }
 }

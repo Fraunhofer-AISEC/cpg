@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { slide } from 'svelte/transition';
+  import { fade, slide } from 'svelte/transition';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
@@ -22,6 +22,7 @@
   import {
     checkTrust,
     citationLabel,
+    citationName,
     extractCitations,
     extractNodeIds,
     extractToolPaths,
@@ -64,8 +65,10 @@
     NodeRefJSON,
     FileAnnotationsJSON,
     TrustIssueJSON,
+    ToolActivity,
     CodeSelection
   } from '$lib/types';
+  import { toolCallLabel, toolNodeIds, type ToolCallLabel } from '$lib/toolLabels';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
@@ -351,6 +354,8 @@
     isLoading: boolean;
     streamingContent: string;
     isThinking: boolean;
+    /** The tool call the agent is running, until its result arrives */
+    activity?: ToolActivity | null;
     models?: Model[];
     selectedModel?: Model | null;
     analysisResult?: AnalysisResultJSON | null;
@@ -377,6 +382,7 @@
     isLoading,
     streamingContent,
     isThinking,
+    activity = null,
     models = [],
     selectedModel = null,
     analysisResult,
@@ -1217,12 +1223,12 @@
   // Whether the limits of the evidence of a block are listed below its answer
   let limitsOpen = $state<Record<number, boolean>>({});
 
-  // Whether the steps of a block are listed, by block. Without a choice of the user, they are
-  // listed while the agent works on them and fold away once it has answered
+  // Whether the steps of a block are listed, by block. Without a choice of the user, only the line
+  // above them is shown: what the agent does right now, or how many steps it took
   let stepsOpen = $state<Record<number, boolean>>({});
 
   function stepsShown(b: number): boolean {
-    return stepsOpen[b] ?? (b === timeline.length - 1 && isLoading);
+    return stepsOpen[b] ?? false;
   }
 
   // A new chat starts without the choices made for the blocks of the last one
@@ -1267,6 +1273,81 @@
       return ref && ref.startLine >= 1 ? [ref] : [];
     });
   }
+
+  // The nodes among the arguments of the tool calls, to name them in the labels of the calls
+  let argRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  const argKey = $derived(
+    [
+      ...new Set([
+        ...toolNodeIds(activity?.arguments),
+        ...messages.flatMap((m) => toolNodeIds(m.toolResult?.arguments))
+      ])
+    ]
+      .sort()
+      .join(',')
+  );
+
+  $effect(() => {
+    const key = argKey;
+    if (!key) return;
+    resolveNodes(key.split(',')).then((refs) => {
+      if (key === argKey) argRefs = refs;
+    });
+  });
+
+  // A tool call with its main argument, e.g. `cpg_list_calls_to net_send`
+  function labelOf(toolName: string, args: Record<string, unknown> | undefined): ToolCallLabel {
+    return toolCallLabel(toolName, args, (id) => {
+      const ref = argRefs.get(id);
+      return ref ? citationName(ref) : undefined;
+    });
+  }
+
+  // Whether two labels show the same, so that the row only fades when the call changes
+  function labelKey(label: ToolCallLabel | string): string {
+    return typeof label === 'string'
+      ? label
+      : `${label.tool} ${label.argument ?? ''} ${label.detail ?? ''}`;
+  }
+
+  // The calls of the running question, in their order
+  const runningCalls = $derived.by((): ToolCallLabel[] => {
+    if (!isLoading) return [];
+    return (timeline.at(-1)?.entries ?? []).flatMap((e) => {
+      const call = e.message.toolResult;
+      return call ? [labelOf(call.toolName ?? '', call.arguments)] : [];
+    });
+  });
+
+  // The call the row shows. The tools take milliseconds and the model often calls several at once,
+  // so the row shows each call for a moment, skipping ahead if it falls too far behind
+  let shownCall = $state(0);
+  const callDwell = 450;
+  const maxBehind = 6;
+  $effect(() => {
+    const count = runningCalls.length;
+    if (count === 0) {
+      shownCall = 0;
+      return;
+    }
+    if (shownCall >= count - 1) return;
+    if (reducedMotion || count - 1 - shownCall > maxBehind) {
+      shownCall = reducedMotion ? count - 1 : count - 1 - maxBehind;
+      return;
+    }
+    const timer = setTimeout(() => (shownCall += 1), callDwell);
+    return () => clearTimeout(timer);
+  });
+
+  // What the agent does right now, in the row above its answer: the calls one after the other, a
+  // call that takes longer while it runs, writing, or else thinking about the last call
+  const liveLabel = $derived.by((): ToolCallLabel | string => {
+    const caughtUp = shownCall >= runningCalls.length - 1;
+    if (!caughtUp) return runningCalls[shownCall];
+    if (activity) return labelOf(activity.toolName, activity.arguments);
+    if (displayContent) return 'Writing';
+    return runningCalls.at(-1) ?? 'Thinking';
+  });
 
   // Steps through the places the answer of a block cites, in the code and the bar above it
   function stepThrough(b: number) {
@@ -1676,6 +1757,20 @@
       {q.label}
     </button>
   {/each}
+{/snippet}
+
+<!-- What the agent does: a tool call with its main argument, or else e.g. "Writing". Its parts only
+set their font, so that the light running over the row covers them -->
+{#snippet labelText(label: ToolCallLabel | string)}
+  {#if typeof label === 'string'}{label}{:else}<span class="font-mono">{label.tool}</span
+    >{#if label.argument}&nbsp;<span class="font-mono">{label.argument}</span
+      >{/if}{#if label.detail}&nbsp;· {label.detail}{/if}{/if}
+{/snippet}
+
+<!-- What the model wrote before a tool call, with code between backticks in a mono font -->
+{#snippet narrationText(text: string)}
+  {#each text.split('`') as part, i (i)}{#if i % 2 === 1}<span class="font-mono">{part}</span
+      >{:else}{part}{/if}{/each}
 {/snippet}
 
 <!-- The end of an answer: how many places it cites, to step through them or see them in a graph, and
@@ -2348,37 +2443,43 @@ where its evidence reaches the limits of the analysis -->
               {/if}
               <div class="px-3 py-1.5">
                 {#if stepEntries.length > 0 || running}
-                  <!-- The steps of the agent: listed while it works, folded into one line after -->
+                  <!-- The steps of the agent: while it works, one line with what it does right now,
+                  which changes with each tool call. Once it has answered, the line sums up the
+                  steps, which it unfolds -->
                   <button
                     type="button"
-                    class="-mx-1 flex w-[calc(100%+0.5rem)] items-center gap-1.5 rounded px-1 py-1 text-left text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+                    class="-mx-1 flex w-[calc(100%+0.5rem)] min-w-0 items-center gap-1.5 rounded px-1 py-1 text-left text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-800"
                     aria-expanded={showSteps}
                     onclick={() => (stepsOpen = { ...stepsOpen, [b]: !showSteps })}
                   >
-                    {#if running}
-                      <span class="relative flex h-2 w-2 shrink-0" aria-hidden="true">
-                        <span
-                          class="absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-60 motion-safe:animate-ping"
-                        ></span>
-                        <span class="relative inline-flex h-2 w-2 rounded-full bg-teal-600"></span>
-                      </span>
-                      <span class="text-gray-700">Working</span>
-                    {:else}
-                      <svg
-                        class="h-3 w-3 shrink-0 transition-transform {showSteps ? 'rotate-90' : ''}"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        aria-hidden="true"
-                      >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    {/if}
-                    <span class="tabular-nums"
-                      >{running ? '· ' : ''}{stepCount}
-                      {stepCount === 1 ? 'step' : 'steps'} · {duration(b)}</span
+                    <svg
+                      class="h-3 w-3 shrink-0 transition-transform {showSteps ? 'rotate-90' : ''}"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
                     >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                    {#if running}
+                      {@const label = liveLabel}
+                      <span class="relative min-w-0 flex-1 truncate">
+                        {#key labelKey(label)}
+                          <span class="activity block truncate" in:fade={{ duration: motion(150) }}
+                            >{@render labelText(label)}</span
+                          >
+                        {/key}
+                      </span>
+                      <span class="shrink-0 text-gray-400 tabular-nums"
+                        >{stepCount} {stepCount === 1 ? 'step' : 'steps'} · {duration(b)}</span
+                      >
+                    {:else}
+                      <span class="tabular-nums"
+                        >{stepCount}
+                        {stepCount === 1 ? 'step' : 'steps'} · {duration(b)}</span
+                      >
+                    {/if}
                   </button>
                   {#if showSteps}
                     <div class="pb-1" transition:slide={{ duration: motion(200) }}>
@@ -2388,7 +2489,7 @@ where its evidence reaches the limits of the analysis -->
                         {#if message.contentType === 'narration'}
                           <!-- What the model wrote before its next tool call -->
                           <p class="py-0.5 pl-5.5 text-xs leading-snug text-gray-500">
-                            {message.content}
+                            {@render narrationText(message.content)}
                           </p>
                         {:else if message.toolResult}
                           <!-- A tool call: a numbered step of the evidence trail -->
@@ -2399,6 +2500,12 @@ where its evidence reaches the limits of the analysis -->
                           {@const toolSlice = extractToolSlice(message.toolResult.content)}
                           <ToolStep
                             toolResult={message.toolResult}
+                            label={message.toolResult.arguments
+                              ? labelOf(
+                                  message.toolResult.toolName ?? '',
+                                  message.toolResult.arguments
+                                )
+                              : undefined}
                             paths={toolPaths}
                             slice={toolSlice}
                             step={entry.step ?? 0}
@@ -2449,18 +2556,29 @@ where its evidence reaches the limits of the analysis -->
                   </div>
                 {/each}
 
-                {#if running && displayContent}
-                  <!-- What the agent writes right now: the start of its answer, or what it is about
-                  to do, which joins its steps once it calls a tool -->
-                  <div class="max-w-none min-w-0 py-1.5 text-gray-800">
-                    <MarkdownRenderer
-                      content={displayContent}
-                      citations={citedRefs}
-                      onCite={openCitation}
-                      onCiteHover={hoverCitation}
-                      compact
-                    />
-                  </div>
+                {#if running}
+                  <!-- Below the line of what the agent does: what it writes right now, the start of
+                  its answer or what it is about to do, or else what it last said it is about to do.
+                  The latter joins its steps -->
+                  {@const said = stepEntries.findLast((e) => e.message.contentType === 'narration')}
+                  {#if displayContent}
+                    <div class="max-w-none min-w-0 py-1.5 text-gray-800">
+                      <MarkdownRenderer
+                        content={displayContent}
+                        citations={citedRefs}
+                        onCite={openCitation}
+                        onCiteHover={hoverCitation}
+                        compact
+                      />
+                    </div>
+                  {:else if said}
+                    <p
+                      class="py-1 text-xs leading-snug text-gray-500"
+                      in:fade={{ duration: motion(150) }}
+                    >
+                      {@render narrationText(said.message.content)}
+                    </p>
+                  {/if}
                 {/if}
 
                 {#if !running && answers.some((e) => e.message.contentType === 'text')}
@@ -2585,3 +2703,37 @@ where its evidence reaches the limits of the analysis -->
     <div class="px-2.5 py-1 text-[10.5px] text-gray-400">Click to show it in the code</div>
   </div>
 {/if}
+
+<style>
+  /* The tool call the agent is running: a light that runs over the text, as long as it runs */
+  .activity {
+    color: rgb(55, 65, 81);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .activity {
+      background: linear-gradient(
+          90deg,
+          rgb(75, 85, 99) 0%,
+          rgb(75, 85, 99) 40%,
+          rgb(209, 213, 219) 50%,
+          rgb(75, 85, 99) 60%,
+          rgb(75, 85, 99) 100%
+        )
+        0 0 / 250% 100%;
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      animation: activity-shimmer 2.2s linear infinite;
+    }
+  }
+
+  @keyframes activity-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -150% 0;
+    }
+  }
+</style>
