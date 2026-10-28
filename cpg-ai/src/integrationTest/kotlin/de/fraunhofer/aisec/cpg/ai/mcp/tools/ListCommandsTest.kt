@@ -25,28 +25,33 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getAllArgs
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getArgByIndexOrName
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getNode
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listAvailableConcepts
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listAvailableOperations
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCalls
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCallsTo
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listConceptsAndOperations
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listRecords
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addGetNodeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListAvailableConceptsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListAvailableOperationsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallArgByNameOrIndexTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallArgsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsToTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListConceptsAndOperationsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListFunctionsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListRecordsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.RecordInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
@@ -56,6 +61,8 @@ import org.junit.jupiter.api.assertThrows
 class ListCommandsTest {
     @BeforeEach
     fun setAnalysisResult() {
+        // The sessions are global, so drop the ones previous tests left behind
+        analysisSessions.clear()
         val payload =
             CpgAnalyzePayload(
                 content =
@@ -67,45 +74,170 @@ class ListCommandsTest {
 
     @Test
     fun listFunctionsTest() =
-        withClient(registerTools = { listFunctions() }) { client ->
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
             val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
 
             assertNotNull(result, "Result should not be null")
             assertEquals(2, result.content.size, "Should return two function declarations")
-            val functionNames =
+            // Decoding strictly fails if an entry carries more than nodeId, signature and location.
+            val entries =
                 result.content.map {
                     assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionInfo>(it.text).name
+                    Json.decodeFromString<SignatureInfo>(it.text)
                 }
-            assertNotNull(
-                functionNames.singleOrNull { it == "print" },
-                "There is exactly one function declaration with name print",
-            )
-            assertNotNull(
-                functionNames.singleOrNull { it.endsWith("hello") },
-                "There is exactly one function declaration with local name hello",
+            val print =
+                assertNotNull(
+                    entries.singleOrNull { it.signature.startsWith("print") },
+                    "There is exactly one function declaration with name print",
+                )
+            assertNull(print.location, "The inferred print has no location: $print")
+            val hello =
+                assertNotNull(
+                    entries.singleOrNull { it.signature.contains("hello") },
+                    "There is exactly one function declaration with local name hello",
+                )
+            assertFalse(hello.signature.contains("@"), "No location in the signature: $hello")
+            assertTrue(
+                assertNotNull(hello.location).endsWith(":3"),
+                "hello is defined in line 3: $hello",
             )
         }
 
     @Test
+    fun listFunctionsFilterTest() =
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
+            val byPattern =
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("pattern" to "^pri", "detail" to true),
+                )
+            assertEquals(
+                listOf("print"),
+                byPattern.content.map {
+                    Json.decodeFromString<FunctionInfo>((it as TextContent).text).name
+                },
+            )
+
+            val byCallee =
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("calls" to "print", "detail" to true),
+                )
+            assertEquals(
+                listOf("hello"),
+                byCallee.content.map {
+                    Json.decodeFromString<FunctionInfo>((it as TextContent).text)
+                        .name
+                        .substringAfterLast('.')
+                },
+            )
+
+            val byOtherFile =
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("file" to "no-such-file.c"),
+                )
+            assertTrue(byOtherFile.content.isEmpty(), "No function is in that file")
+        }
+
+    @Test
+    fun anInvalidPatternIsReportedToTheCaller() =
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
+            val result =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("pattern" to "(["))
+
+            val text = (result.content.single() as TextContent).text
+            assertContains(text, "pattern is not a valid regular expression")
+        }
+
+    @Test
+    fun listFunctionsPagingTest() =
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
+            val firstPage =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("limit" to 1))
+            assertEquals(2, firstPage.content.size, "Should return one function and a paging note")
+            val note = (firstPage.content.last() as TextContent).text
+            assertContains(note, "Showing 1 of 2")
+            assertContains(note, "offset=1")
+
+            val secondPage =
+                client.callTool(
+                    name = "cpg_list_functions",
+                    arguments = mapOf("limit" to 1, "offset" to 1),
+                )
+            assertEquals(1, secondPage.content.size, "The last page has no paging note")
+            assertFalse((secondPage.content.single() as TextContent).text.contains("Showing"))
+        }
+
+    @Test
+    fun listRecordsFilterTest() =
+        withClient(registerTools = { addListRecordsTool() }) { client ->
+            val match =
+                client.callTool(name = "cpg_list_records", arguments = mapOf("pattern" to "foo"))
+            assertEquals(1, match.content.size, "pattern is case-insensitive: Foo matches foo")
+
+            val noMatch =
+                client.callTool(name = "cpg_list_records", arguments = mapOf("pattern" to "Bar"))
+            assertTrue(noMatch.content.isEmpty())
+        }
+
+    @Test
+    fun listCallsFilterTest() =
+        withClient(registerTools = { addListCallsTool() }) { client ->
+            val match =
+                client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "^print$"))
+            val entry =
+                Json.decodeFromString<SignatureInfo>((match.content.single() as TextContent).text)
+            // The string literal has no name, so it is shown as _.
+            assertEquals("print(_)", entry.signature)
+            assertTrue(
+                assertNotNull(entry.location).endsWith(":4"),
+                "print is called in line 4: $entry",
+            )
+
+            val detailed =
+                client.callTool(
+                    name = "cpg_list_calls",
+                    arguments = mapOf("pattern" to "^print$", "detail" to true),
+                )
+            assertEquals(
+                "print",
+                Json.decodeFromString<CallInfo>((detailed.content.single() as TextContent).text)
+                    .name,
+            )
+
+            val noMatch =
+                client.callTool(name = "cpg_list_calls", arguments = mapOf("pattern" to "nothing"))
+            assertTrue(noMatch.content.isEmpty())
+        }
+
+    @Test
     fun listRecordsTest() =
-        withClient(registerTools = { listRecords() }) { client ->
+        withClient(registerTools = { addListRecordsTool() }) { client ->
             val result = client.callTool(name = "cpg_list_records", arguments = emptyMap())
             assertNotNull(result)
             assertTrue(
                 result.content.isNotEmpty(),
                 "There is a record declaration \"Foo\" in the test code",
             )
-            assertDoesNotThrow {
-                Json.decodeFromString<RecordInfo>(
-                    (result.content.singleOrNull() as? TextContent)?.text.orEmpty()
-                )
-            }
+            val entry =
+                Json.decodeFromString<SignatureInfo>((result.content.single() as TextContent).text)
+            assertTrue(entry.signature.endsWith("Foo"), entry.signature)
+            assertTrue(
+                assertNotNull(entry.location).endsWith(":1"),
+                "Foo is defined in line 1: $entry",
+            )
+
+            val detailed =
+                client.callTool(name = "cpg_list_records", arguments = mapOf("detail" to true))
+            val info =
+                Json.decodeFromString<RecordInfo>((detailed.content.single() as TextContent).text)
+            assertEquals(listOf("secretKey"), info.fieldNames)
         }
 
     @Test
     fun listCallsTest() =
-        withClient(registerTools = { listCalls() }) { client ->
+        withClient(registerTools = { addListCallsTool() }) { client ->
             val result = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertNotNull(result)
             assertEquals(1, result.content.size, "Should return one call expression")
@@ -113,7 +245,7 @@ class ListCommandsTest {
 
     @Test
     fun listCallsToTest() =
-        withClient(registerTools = { listCallsTo() }) { client ->
+        withClient(registerTools = { addListCallsToTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls_to", arguments = mapOf("name" to "print"))
             assertNotNull(result)
@@ -124,13 +256,15 @@ class ListCommandsTest {
     fun getAllArgsTest() =
         withClient(
             registerTools = {
-                listCalls()
-                getAllArgs()
+                addListCallsTool()
+                addListCallArgsTool()
             }
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                Json.decodeFromString<SignatureInfo>(
+                        (callsResult.content.first() as TextContent).text
+                    )
                     .nodeId
 
             val argsResult =
@@ -158,13 +292,15 @@ class ListCommandsTest {
     fun getArgByIndexOrNameTest() =
         withClient(
             registerTools = {
-                listCalls()
-                getArgByIndexOrName()
+                addListCallsTool()
+                addListCallArgByNameOrIndexTool()
             }
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                Json.decodeFromString<SignatureInfo>(
+                        (callsResult.content.first() as TextContent).text
+                    )
                     .nodeId
 
             val argResultByIndex =
@@ -199,7 +335,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableConceptsTest() =
-        withClient(registerTools = { listAvailableConcepts() }) { client ->
+        withClient(registerTools = { addListAvailableConceptsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_concepts", arguments = emptyMap())
             assertNotNull(result)
@@ -208,7 +344,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableOperationsTest() =
-        withClient(registerTools = { listAvailableOperations() }) { client ->
+        withClient(registerTools = { addListAvailableOperationsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_operations", arguments = emptyMap())
             assertNotNull(result)
@@ -217,7 +353,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableConceptsAndOperationsTest() =
-        withClient(registerTools = { listConceptsAndOperations() }) { client ->
+        withClient(registerTools = { addListConceptsAndOperationsTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_concepts_and_operations", arguments = emptyMap())
             assertNotNull(result)
@@ -231,8 +367,8 @@ class ListCommandsTest {
     fun getNodeTest() =
         withClient(
             registerTools = {
-                listFunctions()
-                getNode()
+                addListFunctionsTool()
+                addGetNodeTool()
             }
         ) { client ->
             val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
@@ -240,7 +376,7 @@ class ListCommandsTest {
             assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
 
             val functionInfo =
-                Json.decodeFromString<FunctionInfo>(
+                Json.decodeFromString<SignatureInfo>(
                     (listResult.content.first() as TextContent).text
                 )
 

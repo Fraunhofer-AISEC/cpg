@@ -31,12 +31,109 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
 
 class CXXDeclarationTest {
+    /**
+     * C and C++ include headers textually, so a header included by several translation units is
+     * parsed once per unit and yields one node per declaration *per unit*. All of those copies are
+     * registered under the same symbol, so without further ado a lookup of such a symbol returns
+     * one candidate per including translation unit - even though they denote a single entity. A
+     * lookup has to collapse them back down to one.
+     *
+     * The copies themselves remain in their own translation unit's AST, and therefore in the symbol
+     * table, which is why this asserts on what a *lookup* returns rather than on
+     * [de.fraunhofer.aisec.cpg.graph.scopes.Scope.symbols] directly.
+     */
+    @Test
+    fun testDeclarationsFromSharedHeaderResolveToOne() {
+        val topLevel = File("src/test/resources/cxx/duplicate_header")
+        val result =
+            analyze(
+                listOf(File(topLevel, "a.cpp"), File(topLevel, "b.cpp")),
+                topLevel.toPath(),
+                true,
+            ) {
+                it.registerLanguage<CLanguage>()
+                it.registerLanguage<CPPLanguage>()
+                it.loadIncludes(true)
+                it.addIncludesToGraph(true)
+            }
+
+        val scopeManager = result.finalCtx.scopeManager
+        val language = assertNotNull(result.finalCtx.availableLanguage<CPPLanguage>())
+        fun lookup(symbol: String, scope: Scope) =
+            scopeManager.lookupSymbolByName(Name(symbol), language, startScope = scope)
+
+        // The record, the inline function and the typedef all come from common.h, which both
+        // translation units include.
+        val globalScope = scopeManager.globalScope
+        assertEquals(1, lookup("Shared", globalScope).size, "record from a shared header")
+        assertEquals(
+            1,
+            lookup("shared_helper", globalScope).size,
+            "inline function from a shared header",
+        )
+        assertEquals(1, lookup("my_uint32", globalScope).size, "typedef from a shared header")
+
+        // The record's members must become unambiguous too, not just the record itself.
+        val shared = assertNotNull(result.records["Shared"])
+        val sharedScope = assertNotNull(scopeManager.lookupScope(shared))
+        assertEquals(1, lookup("get", sharedScope).size, "method from a shared header")
+        assertEquals(1, lookup("value", sharedScope).size, "field from a shared header")
+
+        // Both call sites must resolve, and both to the same single, non-inferred declaration.
+        val calls = result.calls { it.name.localName == "shared_helper" }
+        assertEquals(2, calls.size)
+        val invoked = calls.flatMap { it.invokes }.distinct()
+        assertEquals(1, invoked.size, "both calls must invoke the same declaration")
+        assertFalse(invoked.single().isInferred)
+    }
+
+    /**
+     * The counterpart to [testDeclarationsFromSharedHeaderResolveToOne]: a shared location is *not*
+     * on its own enough to call two declarations the same one. C and C++ expand macros before
+     * parsing, so one line of a header can declare genuinely different things in different
+     * translation units - here `void macro_fn(MY_TYPE x)` with `MY_TYPE` defined as `int` in one
+     * unit and as `double` in the other. Both must survive, or one unit's calls resolve against the
+     * other unit's signature.
+     */
+    @Test
+    fun testMacroDependentHeaderDeclarationsAreKeptApart() {
+        val topLevel = File("src/test/resources/cxx/macro_dup")
+        val result =
+            analyze(
+                listOf(File(topLevel, "a.cpp"), File(topLevel, "b.cpp")),
+                topLevel.toPath(),
+                true,
+            ) {
+                it.registerLanguage<CPPLanguage>()
+                it.loadIncludes(true)
+                it.addIncludesToGraph(true)
+            }
+
+        val scopeManager = result.finalCtx.scopeManager
+        val language = assertNotNull(result.finalCtx.availableLanguage<CPPLanguage>())
+        val candidates =
+            scopeManager.lookupSymbolByName(
+                Name("macro_fn"),
+                language,
+                startScope = scopeManager.globalScope,
+            )
+
+        assertEquals(
+            setOf(listOf("int"), listOf("double")),
+            candidates.filterIsInstance<Function>().mapTo(mutableSetOf()) { function ->
+                function.parameters.map { it.type.name.toString() }
+            },
+            "both macro expansions of the declaration must remain resolvable",
+        )
+    }
+
     @Test
     fun testDefinitionDeclaration() {
         val file = File("src/test/resources/cxx/definition.cpp")

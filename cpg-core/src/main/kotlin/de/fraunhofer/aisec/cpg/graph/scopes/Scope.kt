@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Typedef
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
@@ -45,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.LookupScope
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -59,6 +62,40 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 typealias Symbol = String
 
 typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
+
+/**
+ * A reusable, stateless filter that can be passed wherever a symbol lookup accepts a `predicate`
+ * (see [Scope.lookupSymbol] and [de.fraunhofer.aisec.cpg.ScopeManager.lookupSymbolByName]).
+ *
+ * The point of naming these filters instead of writing them as lambdas at the call site is that
+ * they can serve as part of a cache key, which an arbitrary lambda cannot: a fresh lambda instance
+ * is a different object on every call, and even a shared one says nothing about what it selects.
+ * [de.fraunhofer.aisec.cpg.ScopeManager.lookupSymbolByName] therefore refuses to cache a lookup
+ * with an arbitrary `predicate`, but can cache one filtered by a [SymbolFilter].
+ *
+ * Caching such a lookup *as its own entry* - rather than caching the unfiltered lookup and applying
+ * the filter to its result afterwards - is not an optimization detail but a correctness
+ * requirement. [Scope.lookupSymbol] applies the predicate while walking up the scope chain and
+ * stops at the first scope that yields a non-empty result, so the filter decides *which scope
+ * wins*: a filtered lookup legitimately walks past a nearer scope whose only entry for the symbol
+ * was filtered out, and ends up with a declaration from an outer scope that the unfiltered lookup
+ * would never have reached (and which post-filtering could therefore never recover).
+ */
+enum class SymbolFilter : (Declaration) -> Boolean {
+    /** Selects declarations that declare a type, i.e. are a [DeclaresType]. */
+    DECLARES_TYPE {
+        override fun invoke(declaration: Declaration) = declaration is DeclaresType
+    },
+
+    /**
+     * Selects declarations that introduce a named scope which [Scope.name] lookups can descend
+     * into - a [Namespace], a [Record] or a [Typedef] (whose aliased type may name one).
+     */
+    DECLARES_SCOPE {
+        override fun invoke(declaration: Declaration) =
+            declaration is Namespace || declaration is Record || declaration is Typedef
+    },
+}
 
 /**
  * Represent semantic scopes in the language. Depending on the language scopes can have visibility
@@ -98,7 +135,7 @@ sealed class Scope(
     @DoNotPersist var wildcardImports: MutableSet<Import> = mutableSetOf()
 
     /**
-     * This set of edges is used to store [Import] edges that denotes foreign [NamespaceScope]
+     * This set of edges is used to store [Import] edges that denotes foreign [NameScope]
      * information that is imported into this scope. The edge holds information about the "style" of
      * the import (see [ImportStyle]) and the [Import] that is responsible for this. The property is
      * populated by the [ImportResolver].
@@ -106,7 +143,7 @@ sealed class Scope(
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(ImportResolver::class)
     val importedScopeEdges =
-        Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
+        Imports(this, mirrorProperty = NameScope::importedByEdges, outgoing = true)
 
     /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedScopes by unwrapping(Scope::importedScopeEdges)
@@ -225,6 +262,13 @@ sealed class Scope(
      *   [Scope] kind so its (non-flow-sensitive) symbols are read the usual, cheap way. Every other
      *   part of this algorithm (shadowing, [predefinedLookupScopes], wildcard imports, the
      *   [HasBuiltins] fallback) stays identical.
+     * @param fileScope The [FileScope] of the file in which the lookup takes place. If it is set,
+     *   an unqualified lookup also considers the symbols (e.g., the imports) of this file scope,
+     *   right before it leaves the file-level code, i.e., before the first [NamespaceScope] or the
+     *   [GlobalScope]. This is needed because a [NamespaceScope] (e.g., a Java or Go package) is
+     *   shared between all files that declare it, but has only one parent. Therefore, the file
+     *   scope of the current file is not necessarily part of its parent chain. Any other
+     *   [FileScope] in the parent chain is skipped, since it belongs to a different file.
      * @param predicate An optional predicate which should be used in the lookup. Kept as the last
      *   parameter (after [localSymbols]) so existing trailing-lambda call sites keep binding to
      *   this one.
@@ -236,6 +280,7 @@ sealed class Scope(
         qualifiedLookup: Boolean = false,
         replaceImports: Boolean = true,
         localSymbols: ((Scope, Symbol) -> List<Declaration>?)? = null,
+        fileScope: FileScope? = null,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         val languageOnlyClass = languageOnly?.javaClass
@@ -246,6 +291,17 @@ sealed class Scope(
         var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
+
+        // If we have a file scope, we need to visit it once before we leave the file-level code
+        // (see [fileScope]). We then resume with the scope that we would have visited instead.
+        val visitFileScope = fileScope != null && !qualifiedLookup && modifiedScoped == null
+        var fileScopeVisited = !visitFileScope
+        var resume: Scope? = null
+        if (visitFileScope && (scope is NamespaceScope || scope is GlobalScope)) {
+            resume = scope
+            scope = fileScope
+            fileScopeVisited = true
+        }
 
         while (scope != null) {
             list = (localSymbols?.invoke(scope, symbol) ?: scope.symbols[symbol])?.toMutableList()
@@ -285,9 +341,13 @@ sealed class Scope(
             // If we do not have a hit, we can go up one scope, unless [qualifiedLookup] is set to
             // true
             // (or we had a modified scope)
-            scope =
+            var next =
                 if (qualifiedLookup || modifiedScoped != null) {
                     break
+                } else if (scope == fileScope && resume != null) {
+                    // We visited the file scope of the current file, now we can resume where we
+                    // left off
+                    resume.also { resume = null }
                 } else {
                     // If our language needs explicit lookup for fields (and other class members),
                     // we need to skip record scopes unless we are in a qualified lookup
@@ -298,6 +358,24 @@ sealed class Scope(
                         scope.parent
                     }
                 }
+
+            if (visitFileScope) {
+                // File scopes of other files are not visible in the current file
+                while (next is FileScope && next != fileScope) {
+                    next = next.parent
+                }
+
+                // Visit the file scope of the current file before we leave the file-level code
+                if (!fileScopeVisited && (next is NamespaceScope || next is GlobalScope)) {
+                    resume = next
+                    next = fileScope
+                }
+                if (next == fileScope) {
+                    fileScopeVisited = true
+                }
+            }
+
+            scope = next
         }
 
         // If the symbol was still not resolved, and we are performing an unqualified resolution, we
@@ -382,14 +460,28 @@ sealed class Scope(
  * list.
  */
 private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
+    // This runs for every scope visited by every single symbol lookup, so the (by far dominant)
+    // case of a candidate list that contains no Import at all has to stay free: bail out before
+    // allocating anything. Languages without an import mechanism never get past this line.
+    if (this.none { it is Import }) {
+        return
+    }
+
     val imports = this.filterIsInstance<Import>()
+
+    // Remove the imports by identity. MutableList.remove(element) would compare with equals(),
+    // which for a Declaration is a structural comparison of name, code, comment and location -
+    // needlessly expensive over a long candidate list, and outright wrong when the list holds
+    // several structurally equal declarations (as it does when the same header was parsed once per
+    // translation unit), since it would then drop whichever equal declaration happens to come
+    // first rather than the import itself.
+    this.removeAll { it is Import }
+
     for (import in imports) {
         val set = import.importedSymbols[symbol]
         if (set != null) {
             this.addAll(set)
         }
-
-        this.remove(import)
     }
 }
 

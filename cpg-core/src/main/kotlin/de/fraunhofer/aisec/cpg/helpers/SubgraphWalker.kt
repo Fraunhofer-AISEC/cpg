@@ -57,6 +57,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerReference
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
@@ -585,10 +587,7 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
                 } else {
                     false
                 }
-            is Return -> {
-                parent.returnValue = new
-                true
-            }
+            is Return -> parent.returnValueEdges.replace(old, new)
             is Subscription ->
                 if (parent.arrayExpression == old) {
                     parent.arrayExpression = new
@@ -611,10 +610,26 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
                     }
                     else -> false
                 }
+            // Setting the input of these nodes already propagates their access value to the new
+            // input (see exchangeTypeObserverWithAccessPropagation), so we do not need to do it
+            // here
             is UnaryOperator ->
                 if (parent.input == old) {
                     parent.input = new
-                    parent.input.access = parent.access
+                    true
+                } else {
+                    false
+                }
+            is PointerDereference ->
+                if (parent.input == old) {
+                    parent.input = new
+                    true
+                } else {
+                    false
+                }
+            is PointerReference ->
+                if (parent.input == old) {
+                    parent.input = new
                     true
                 } else {
                     false
@@ -678,8 +693,12 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
             eogPass.cleanup()
         }
 
-        // Also move over any type observers
-        old.typeObservers.forEach {
+        // Also move over any type observers. We need to iterate over a snapshot (copy) of the
+        // observers here, since unregisterTypeObserver structurally mutates the very
+        // (IdentityHashMap-backed) typeObservers set we would otherwise be iterating over directly,
+        // which throws a ConcurrentModificationException as soon as there is more than one
+        // observer.
+        old.typeObservers.toList().forEach {
             old.unregisterTypeObserver(it)
             new.registerTypeObserver(it)
         }
