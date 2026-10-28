@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack, type Snippet } from 'svelte';
-  import type { TranslationUnitJSON, NodeJSON } from '$lib/types';
+  import type { TranslationUnitJSON, NodeJSON, CodeSelection } from '$lib/types';
   import { TabNavigation } from '$lib/components/navigation';
   import { CollapsiblePanel } from '$lib/components/ui';
   import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
@@ -8,6 +8,8 @@
   import CodeAnnotations from './CodeAnnotations.svelte';
   import OverviewRuler, { type RulerMark } from './OverviewRuler.svelte';
   import HoverCard from './HoverCard.svelte';
+  import AskPopup from './AskPopup.svelte';
+  import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
   import { getAnnotations } from '$lib/annotations';
@@ -109,6 +111,15 @@
      * one between the line numbers and the code for the dataflow arcs of the inspected node
      */
     lanes?: boolean;
+    /**
+     * Enables asking about code: a small input appears next to selected text (and with Ctrl/Cmd+K),
+     * which calls this with the question and the selection
+     */
+    onAsk?: (question: string, selection: CodeSelection) => void;
+    /** Why asking is not possible right now, e.g. while the agent is busy */
+    askDisabledReason?: string | null;
+    /** Incremented to open the input for the selection (or else the inspected node) */
+    askRequest?: number;
   }
 
   let {
@@ -132,7 +143,10 @@
     onInspect,
     scrollPositions,
     annotations = $bindable(null),
-    lanes = false
+    lanes = false,
+    onAsk,
+    askDisabledReason = null,
+    askRequest = 0
   }: Props = $props();
 
   // The focus and the placement of the inspector never change for a viewer
@@ -182,6 +196,8 @@
 
   function rememberScrollPosition() {
     hideHover();
+    // The input stays while it is used, as the code is not scrolled by typing
+    if (!askFocused) ask = null;
     if (codeContainerElement)
       scrollPositions?.set(translationUnit.id, codeContainerElement.scrollTop);
   }
@@ -211,7 +227,7 @@
   // Inspect the initially selected node, and again whenever a deep link selects another one
   $effect(() => {
     const id = selectedNodeId;
-    if (componentName && id) inspect(() => getNodeDetails(id));
+    if (componentName && id) inspect(() => getNodeDetails(id), true);
   });
 
   // The position in the code under the mouse: a 1-based line and a CPG column (1 is the first
@@ -224,6 +240,200 @@
     if (line < 1 || line > totalLines || column < 0) return null;
     return { line, column };
   }
+
+  // Asking about code: the selection of the user (or the inspected node) with the place of the
+  // input. The position is relative to the code area
+  type CodeRange = Omit<CodeSelection, 'node'>;
+  let ask = $state.raw<{
+    selection: CodeRange;
+    x: number;
+    y: number;
+    above: boolean;
+    /** Incremented to focus the input, which is not focused when it appears next to a selection */
+    focus: number;
+  } | null>(null);
+  let askFocused = $state(false);
+  $effect(() => {
+    if (!ask) askFocused = false;
+  });
+  // Whether the mouse was pressed in the code, to open the input once a selection is made
+  let codeMouseDown = false;
+  const askWidth = 352;
+
+  // The 1-based line and column of a position in the DOM selection, if it is in a rendered line
+  function positionOf(container: Node, offset: number): { line: number; column: number } | null {
+    const element = container instanceof Element ? container : container.parentElement;
+    const lineElement = element?.closest<HTMLElement>('[data-line]');
+    const codeElement = lineElement?.querySelector<HTMLElement>('[data-code]');
+    if (!lineElement || !codeElement) return null;
+    const range = document.createRange();
+    range.setStart(codeElement, 0);
+    try {
+      range.setEnd(container, offset);
+    } catch {
+      return null;
+    }
+    return { line: Number(lineElement.dataset.line), column: range.toString().length + 1 };
+  }
+
+  // The text of a range of the code, with an exclusive end column
+  function textOf(r: Omit<CodeRange, 'text' | 'unitId' | 'fileName'>): string {
+    const lines = codeLines.slice(r.startLine - 1, r.endLine);
+    if (lines.length === 0) return '';
+    lines[lines.length - 1] = lines[lines.length - 1].slice(0, r.endColumn - 1);
+    lines[0] = lines[0].slice(r.startColumn - 1);
+    return lines.join('\n');
+  }
+
+  function rangeOfNode(node: NodeRefJSON): CodeRange | null {
+    if (node.translationUnitId !== translationUnit.id || node.startLine < 1) return null;
+    const range = {
+      startLine: node.startLine,
+      startColumn: node.startColumn,
+      endLine: Math.max(node.endLine, node.startLine),
+      endColumn: node.endColumn
+    };
+    return {
+      unitId: translationUnit.id,
+      fileName: translationUnit.name,
+      text: textOf(range),
+      ...range
+    };
+  }
+
+  // Where to show the input: below the end of the selection, or above it near the bottom
+  function placeAsk(rect: DOMRect): { x: number; y: number; above: boolean } | null {
+    if (!codeAreaElement) return null;
+    const area = codeAreaElement.getBoundingClientRect();
+    const x = Math.max(8, Math.min(rect.left - area.left, area.width - askWidth - 8));
+    const above = rect.bottom - area.top + 80 > area.height;
+    return {
+      x,
+      y: above ? rect.top - area.top - 6 : rect.bottom - area.top + 6,
+      above
+    };
+  }
+
+  // The text selected in the code, if there is one
+  function readSelection(): { selection: CodeRange; rect: DOMRect } | null {
+    const selected = window.getSelection();
+    if (!selected || selected.isCollapsed || selected.rangeCount === 0) return null;
+    const range = selected.getRangeAt(0);
+    if (!codeContainerElement?.contains(range.commonAncestorContainer)) return null;
+    const text = selected.toString();
+    if (!text.trim()) return null;
+    const start = positionOf(range.startContainer, range.startOffset);
+    let end = positionOf(range.endContainer, range.endOffset);
+    if (!start || !end) return null;
+    // A selection that ends at the start of a line (e.g. by a triple click) ends with the line before
+    if (end.column === 1 && end.line > start.line) {
+      end = { line: end.line - 1, column: (codeLines[end.line - 2]?.length ?? 0) + 1 };
+    }
+    const rects = range.getClientRects();
+    return {
+      selection: {
+        unitId: translationUnit.id,
+        fileName: translationUnit.name,
+        text,
+        startLine: start.line,
+        startColumn: start.column,
+        endLine: end.line,
+        endColumn: end.column
+      },
+      rect: rects.length > 0 ? rects[rects.length - 1] : range.getBoundingClientRect()
+    };
+  }
+
+  // Shows the input for the selected text and focuses it. Without a selection, it asks about the
+  // inspected node
+  function openAsk() {
+    if (!onAsk) return;
+    const current = readSelection();
+    if (current) {
+      const place = placeAsk(current.rect);
+      if (place) ask = { selection: current.selection, ...place, focus: 1 };
+    } else if (ask) {
+      ask = { ...ask, focus: ask.focus + 1 };
+    } else {
+      const range = inspected ? rangeOfNode(inspected.node) : null;
+      const area = codeAreaElement?.getBoundingClientRect();
+      if (range && area) {
+        ask = {
+          selection: range,
+          x: Math.max(8, area.width / 2 - askWidth / 2),
+          y: 8,
+          above: false,
+          focus: 1
+        };
+      }
+    }
+  }
+
+  function askLabel(range: CodeRange): string {
+    const lines =
+      range.startLine === range.endLine
+        ? `${range.startLine}`
+        : `${range.startLine}–${range.endLine}`;
+    return `${range.fileName}:${lines}`;
+  }
+
+  async function submitAsk(question: string) {
+    const current = ask?.selection;
+    if (!current || !onAsk) return;
+    ask = null;
+    // The innermost node containing the whole selection, which the agent can look at
+    const component = componentName;
+    const node = component
+      ? await getNodeDetailsAt(component, current.unitId, current.startLine, current.startColumn, {
+          line: current.endLine,
+          column: current.endColumn
+        })
+          .then((details) => details?.node ?? null)
+          .catch(() => null)
+      : null;
+    onAsk(question, { ...current, node });
+  }
+
+  // Once the mouse is released after selecting text, the input is shown next to it
+  function handleWindowMouseUp() {
+    if (!codeMouseDown) return;
+    codeMouseDown = false;
+    // The selection is final after the event
+    setTimeout(() => {
+      const current = onAsk ? readSelection() : null;
+      const place = current ? placeAsk(current.rect) : null;
+      if (current && place) ask = { selection: current.selection, ...place, focus: 0 };
+    }, 0);
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent) {
+    if (!onAsk) return;
+    if (event.key === 'Escape' && ask && !askFocused) {
+      ask = null;
+    } else if (
+      hasModifier(event) &&
+      !event.altKey &&
+      !event.shiftKey &&
+      event.key.toLowerCase() === 'k' &&
+      (!isTyping(event) || askFocused)
+    ) {
+      event.preventDefault();
+      if (!askFocused) openAsk();
+    }
+  }
+
+  // The input belongs to the file, and can be requested from outside (e.g. the command palette)
+  $effect(() => {
+    void translationUnit.id;
+    ask = null;
+  });
+  let handledAskRequest = 0;
+  $effect(() => {
+    const request = askRequest;
+    if (request === handledAskRequest) return;
+    handledAskRequest = request;
+    untrack(openAsk);
+  });
 
   function handleCodeClick(event: MouseEvent) {
     hideHover();
@@ -356,11 +566,20 @@
           title: inspected ? info.description : `${info.description} (nothing is selected)`
         };
       }
+      case 'agent':
+        return {
+          count: new Set(agentMarkers.map((m) => m.nodeId)).size,
+          title: focus.thread.length
+            ? info.description
+            : `${info.description} (the agent has not returned any nodes yet)`
+        };
     }
   }
 
-  // The dataflow layer needs the lanes in the gutter
-  const shownLayers = $derived(layerInfos.filter((l) => lanes || l.id !== 'dataflow'));
+  // The dataflow and agent layers need the lanes in the gutter
+  const shownLayers = $derived(
+    layerInfos.filter((l) => lanes || (l.id !== 'dataflow' && l.id !== 'agent'))
+  );
 
   // The marks of the visible layers in the overview ruler, one lane per layer. The steps of the
   // path and the dataflows of the inspected node share the last lane, with the steps on top
@@ -369,6 +588,14 @@
     const color = (layer: Layer) => layerInfos.find((l) => l.id === layer)!.color;
     const marks: RulerMark[] = [];
     if (lanes) {
+      for (const step of agentMarkers) {
+        marks.push({
+          line: step.line,
+          lane: 4,
+          color: color('agent'),
+          label: `${step.index + 1}. ${step.title}`
+        });
+      }
       for (const step of pathMarkers) {
         marks.push({ line: step.line, lane: 3, color: 'rgb(15, 23, 42)', label: step.title });
       }
@@ -388,8 +615,8 @@
         }
       }
     }
-    // While a path is shown, the other layers step back
-    const faded = pathActive;
+    // While a path or the agent's thread is shown, the other layers step back
+    const faded = pathActive || threadActive;
     if (layers.visible.concepts) {
       for (const c of annotations.concepts) {
         const kind = c.isOperation ? 'Operation' : 'Concept';
@@ -424,6 +651,13 @@
     return marks;
   });
 
+  // The lines of the inspected node, if it is in this file
+  const selectedLines = $derived.by(() => {
+    const node = inspected?.node;
+    if (!node || node.translationUnitId !== translationUnit.id || node.startLine < 1) return null;
+    return { first: node.startLine, last: Math.max(node.endLine, node.startLine) };
+  });
+
   // Box around the inspected node, if it is in this file
   const selectionBox = $derived.by(() => {
     const node = inspected?.node;
@@ -435,6 +669,7 @@
           .slice(node.startLine - 1, node.endLine)
           .reduce((max, line) => Math.max(max, line.length), 0) * charWidth;
     return {
+      singleLine,
       top: (node.startLine - 1) * lineHeight + offsetTop,
       left: (singleLine ? node.startColumn * charWidth : 0) + offsetLeft,
       width: Math.max(width, 0.5),
@@ -494,13 +729,16 @@
   const codeLines = $derived(code.split('\n'));
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
-  // The lanes of the gutter: the step markers before the line numbers, the arcs after them
+  // The lanes of the gutter: the markers of the agent's steps and of the path before the line
+  // numbers, the arcs after them
+  // svelte-ignore state_referenced_locally
+  const agentLaneWidth = lanes ? 1.2 : 0;
   // svelte-ignore state_referenced_locally
   const markerLaneWidth = lanes ? 1.2 : 0;
   // svelte-ignore state_referenced_locally
   const arcLaneWidth = lanes ? 2.4 : 0;
   const offsetLeft = $derived(
-    baseOffsetLeft + markerLaneWidth + lineNumberWidth * charWidth + arcLaneWidth
+    baseOffsetLeft + agentLaneWidth + markerLaneWidth + lineNumberWidth * charWidth + arcLaneWidth
   );
   // The arc lane ends shortly before the first character of a line (see CodeLines)
   const arcLaneRight = $derived(offsetLeft + charWidth - 0.35);
@@ -574,6 +812,28 @@
               line: ref.startLine,
               title: `${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
               current: index === focus.pathIndex
+            }
+          ]
+        : []
+    );
+  });
+
+  // The evidence of the agent's active thread in this file, and whether it is shown at all
+  const threadActive = $derived(lanes && layers.visible.agent && focus.thread.length > 0);
+  const agentMarkers = $derived.by((): StepMarker[] => {
+    if (!threadActive) return [];
+    return focus.thread.flatMap(({ ref, step, claimed }) =>
+      ref.translationUnitId === translationUnit.id && ref.startLine >= 1
+        ? [
+            {
+              index: step - 1,
+              line: ref.startLine,
+              title: `${claimed ? 'only cited in the answer, no tool returned it: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
+              current: ref.id === inspected?.node.id,
+              dashed: claimed,
+              // Nodes only cited in the answer are no step of the agent
+              label: claimed ? '?' : undefined,
+              nodeId: ref.id
             }
           ]
         : []
@@ -666,6 +926,10 @@
         <div
           class="relative inline-block w-max min-w-full align-top"
           class:cursor-pointer={!!componentName}
+          onmousedown={() => {
+            codeMouseDown = true;
+            ask = null;
+          }}
           onclick={handleCodeClick}
           onmousemove={handleCodeMouseMove}
           onmouseleave={hideHover}
@@ -683,6 +947,7 @@
                 {offsetTop}
                 {offsetLeft}
                 gutterPadding={0.75 + arcLaneWidth}
+                selection={selectedLines}
               />
             </Highlight>
           </div>
@@ -699,7 +964,7 @@
 
           {#if annotations}
             <CodeAnnotations
-              dimmed={pathActive}
+              dimmed={pathActive || threadActive}
               {annotations}
               layers={layers.visible}
               {codeLines}
@@ -741,14 +1006,32 @@
               endLine={visibleLines.end}
               {lineHeight}
               {offsetTop}
-              left={baseOffsetLeft - 0.3}
-              onSelect={(index) => selectRef(focus.path[index])}
+              left={baseOffsetLeft - 0.3 + agentLaneWidth}
+              onSelect={(marker) => selectRef(focus.path[marker.index])}
             />
           {/if}
 
-          {#if selectionBox}
+          {#if agentMarkers.length > 0}
+            <StepMarkers
+              markers={agentMarkers}
+              startLine={visibleLines.start}
+              endLine={visibleLines.end}
+              {lineHeight}
+              {offsetTop}
+              left={baseOffsetLeft - 0.3}
+              shape="square"
+              onSelect={(marker) => {
+                const node = focus.thread.find((n) => n.ref.id === marker.nodeId);
+                if (node) selectRef(node.ref);
+              }}
+            />
+          {/if}
+
+          <!-- The selected node: a tint without a frame behind it, if it fits on one line. Larger nodes
+          are only shown by their tinted lines (see CodeLines), so they do not cover the code -->
+          {#if selectionBox?.singleLine}
             <div
-              class="pointer-events-none absolute z-20 rounded-sm border-2 border-blue-600 bg-blue-500/10"
+              class="pointer-events-none absolute z-20 rounded bg-blue-600/[0.13]"
               style:top="{selectionBox.top}rem"
               style:left="{selectionBox.left}rem"
               style:width="{selectionBox.width}rem"
@@ -775,6 +1058,20 @@
         </div>
       </div>
 
+      {#if ask && onAsk}
+        <AskPopup
+          label={askLabel(ask.selection)}
+          disabledReason={askDisabledReason}
+          x={ask.x}
+          y={ask.y}
+          above={ask.above}
+          focusRequest={ask.focus}
+          onSubmit={submitAsk}
+          onClose={() => (ask = null)}
+          onFocusChange={(focused) => (askFocused = focused)}
+        />
+      {/if}
+
       {#if hover}
         <div
           class="pointer-events-none absolute z-40"
@@ -790,7 +1087,7 @@
         <OverviewRuler
           marks={rulerMarks}
           {totalLines}
-          lanes={lanes ? 4 : 3}
+          lanes={lanes ? 5 : 3}
           viewport={viewportLines}
           selectionLine={inspected?.node.translationUnitId === translationUnit.id
             ? inspected.node.startLine
@@ -862,3 +1159,9 @@
     conceptGroups={conceptGroups || []}
   />
 {/if}
+
+<svelte:window
+  onmouseup={handleWindowMouseUp}
+  onmousedown={() => (ask = null)}
+  onkeydown={handleWindowKeydown}
+/>
