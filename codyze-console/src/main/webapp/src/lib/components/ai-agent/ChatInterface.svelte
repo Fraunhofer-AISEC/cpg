@@ -1861,7 +1861,11 @@ set their font, so that the light running over the row covers them -->
 where its evidence reaches the limits of the analysis -->
 {#snippet evidenceRow(b: number)}
   {@const places = citedPlaces(b)}
-  {@const limits = (blockTrust[b]?.length ?? 0) + (blockEvidence[b]?.claimed.length ?? 0)}
+  <!-- What the analysis could not resolve and what no tool returned are warnings; code outside of
+  the analysis is a note -->
+  {@const issues = blockTrust[b] ?? []}
+  {@const notes = issues.filter((i) => i.kind === 'EXTERNAL_CODE').length}
+  {@const warnings = issues.length - notes + (blockEvidence[b]?.claimed.length ?? 0)}
   {@const hasGraph = graphSteps(timeline[b]).length > 0}
   <div class="mt-1 border-t border-gray-100 pt-1.5 pb-0.5">
     <div class="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs">
@@ -1900,18 +1904,33 @@ where its evidence reaches the limits of the analysis -->
           >No places cited</span
         >
       {/if}
-      {#if limits > 0}
+      {#if warnings + notes > 0}
         <button
           type="button"
-          class="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-amber-700 hover:bg-amber-50"
+          class="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 {warnings
+            ? 'hover:bg-amber-50'
+            : 'hover:bg-gray-100'}"
           aria-expanded={!!limitsOpen[b]}
+          title="Where the evidence reaches the limits of the analysis"
           onclick={() => (limitsOpen = { ...limitsOpen, [b]: !limitsOpen[b] })}
         >
-          <span aria-hidden="true">⚠</span>
-          {limits}
-          {limits === 1 ? 'limit' : 'limits'}
+          {#if warnings}
+            <span class="text-amber-700"
+              ><span aria-hidden="true">⚠</span>
+              {warnings}
+              {warnings === 1 ? 'warning' : 'warnings'}</span
+            >
+          {/if}
+          {#if warnings && notes}<span class="text-gray-300" aria-hidden="true">·</span>{/if}
+          {#if notes}
+            <span class="text-gray-500"
+              ><span class="text-orange-600" aria-hidden="true">↗</span>
+              {notes}
+              {notes === 1 ? 'external call' : 'external calls'}</span
+            >
+          {/if}
           <svg
-            class="h-3 w-3 transition-transform {limitsOpen[b] ? 'rotate-180' : ''}"
+            class="h-3 w-3 text-gray-400 transition-transform {limitsOpen[b] ? 'rotate-180' : ''}"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -1931,7 +1950,10 @@ where its evidence reaches the limits of the analysis -->
 
 <!-- Where the analysis is uncertain for the evidence of a block, in the color of uncertainty -->
 {#snippet trustNotes(b: number)}
-  {@const issues = blockTrust[b] ?? []}
+  <!-- The warnings first, then the calls to external code -->
+  {@const issues = (blockTrust[b] ?? []).toSorted(
+    (x, y) => Number(x.kind === 'EXTERNAL_CODE') - Number(y.kind === 'EXTERNAL_CODE')
+  )}
   {@const claimed = stepNodes(blockEvidence[b]?.claimed ?? [])}
   {#if issues.length > 0 || claimed.length > 0}
     <!-- Where the evidence reaches the limits of the analysis: code outside of it is a note, what the
