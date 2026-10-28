@@ -39,11 +39,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DataflowResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.calls
-import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
-import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
 import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -90,17 +86,6 @@ class BoundedOutputToolsTest {
         assertEquals(3, listCallsTo(session, CpgListCallsToPayload("f")).content.size)
     }
 
-    /** Applies a concept named [name] to [node], the way the dataflow tool looks concepts up. */
-    private fun applyConcept(node: Node, name: String) {
-        GenericLLMConcept(
-                underlyingNode = node,
-                conceptName = name,
-                description = name,
-                properties = GenericProperties(emptyMap()),
-            )
-            .name = Name(name)
-    }
-
     @Test
     fun dataflowIsPaginated(@TempDir dir: Path) {
         val session =
@@ -114,12 +99,12 @@ class BoundedOutputToolsTest {
         listOf("a", "b", "c").forEach { name ->
             val variable = result.variables.singleOrNull { it.name.localName == name }
             assertNotNull(variable)
-            applyConcept(variable, "Src")
+            applyGenericConcept(variable, "Src")
         }
         val argument =
             result.calls.singleOrNull { it.name.localName == "sink" }?.arguments?.singleOrNull()
         assertNotNull(argument)
-        applyConcept(argument, "Dst")
+        applyGenericConcept(argument, "Dst")
 
         fun foundPaths(content: List<TextContent>) =
             Json.decodeFromString<DataflowResult>(content.first().text).foundPaths

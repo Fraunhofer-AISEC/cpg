@@ -37,6 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Intraprocedural
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -52,8 +54,8 @@ fun Server.addCpgDataflowTool() {
         This tool performs data flow analysis to find paths between source 
         and target concepts that have been applied to nodes in the graph.
         
-        You must first apply concepts to nodes using cpg_apply_concepts 
-        before running data flow analysis.
+        You must first apply concepts to nodes, using cpg_apply_concepts or
+        cpg_add_llm_concept_and_operations, before running data flow analysis.
 
         It returns one path per source node that reaches a target, in pages of at most
         $DEFAULT_LIST_LIMIT paths; use the limit/offset parameters to page through more.
@@ -80,14 +82,17 @@ fun Server.addCpgDataflowTool() {
  */
 internal fun dataflow(session: CpgSession, payload: CpgDataflowPayload): CallToolResult {
     val allOverlayNodes = session.translationResult.allChildrenWithOverlays<OverlayNode>()
-    val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
-    val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
+    val sourceNodes = allOverlayNodes.filter { it.isNamed(payload.from) }
+    val targetNodes = allOverlayNodes.filter { it.isNamed(payload.to) }
 
     if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
         return CallToolResult(
             content =
                 listOf(
-                    TextContent("No concept found. Apply concepts first using cpg_apply_concepts.")
+                    TextContent(
+                        "No concept found. Apply concepts first using cpg_apply_concepts or " +
+                            "cpg_add_llm_concept_and_operations."
+                    )
                 )
         )
     }
@@ -120,3 +125,17 @@ internal fun dataflow(session: CpgSession, payload: CpgDataflowPayload): CallToo
                 listOfNotNull(page.summary?.let { TextContent(it) })
     )
 }
+
+/**
+ * Whether this overlay is the concept or operation called [conceptName]: one of the fixed catalog
+ * by its node name (e.g. `ReadData`), or one defined via cpg_add_llm_concept_and_operations by the
+ * name given there, since its node name is `GenericLLMConcept[<name>]` or
+ * `GenericLLMOperation[<name>]`.
+ */
+private fun OverlayNode.isNamed(conceptName: String): Boolean =
+    name.localName == conceptName ||
+        when (this) {
+            is GenericLLMConcept -> this.conceptName == conceptName
+            is GenericLLMOperation -> operationName == conceptName
+            else -> false
+        }

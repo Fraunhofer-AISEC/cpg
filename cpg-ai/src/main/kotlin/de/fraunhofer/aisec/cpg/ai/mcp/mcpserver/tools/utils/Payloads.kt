@@ -212,9 +212,14 @@ data class ConceptAssignment(
  */
 @Serializable
 data class CpgDataflowPayload(
-    @Description("Source concept type (e.g., 'ReadData', 'Data', 'Authentication')")
+    @Description(
+        "Source concept or operation: a catalog type (e.g., 'ReadData', 'Data', 'Authentication') or the name of one defined with cpg_add_llm_concept_and_operations."
+    )
     val from: String,
-    @Description("Target concept type (e.g., 'HttpRequest', 'Call')") val to: String,
+    @Description(
+        "Target concept or operation: a catalog type (e.g., 'HttpRequest', 'Call') or the name of one defined with cpg_add_llm_concept_and_operations."
+    )
+    val to: String,
     @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
     @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
     @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
