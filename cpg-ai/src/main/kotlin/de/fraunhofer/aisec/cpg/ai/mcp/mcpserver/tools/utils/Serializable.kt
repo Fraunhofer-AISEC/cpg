@@ -142,6 +142,10 @@ data class FunctionInfo(
     val endLine: Int?,
     val translationUnitId: String?,
 ) {
+    /**
+     * [includeCode] false omits [code], which can be an entire function body, as bulk listings do:
+     * `cpg_get_node` fetches the full details (code included) once a function is picked.
+     */
     constructor(
         functionDeclaration: Function,
         includeCode: Boolean = true,
@@ -205,6 +209,7 @@ data class CallInfo(
     val endLine: Int?,
     val translationUnitId: String?,
 ) {
+    /** [includeCode] false omits [code], as for [FunctionInfo]. */
     constructor(
         callExpression: Call,
         includeCode: Boolean = true,

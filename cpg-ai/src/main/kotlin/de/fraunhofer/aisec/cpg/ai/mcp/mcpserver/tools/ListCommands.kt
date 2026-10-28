@@ -78,7 +78,7 @@ fun Server.listFunctions() {
                         function.calls.any { it.name.localName == payload.calls })
             }
         matching.toPagedResult(payload.limit, payload.offset) {
-            if (payload.detail) Json.encodeToString(it.toInfo(includeCode = false))
+            if (payload.detail) Json.encodeToString(FunctionInfo(it, includeCode = false))
             else Json.encodeToString(it.toSignatureInfo())
         }
     }
@@ -108,7 +108,7 @@ fun Server.listRecords() {
         val matching =
             session.translationResult.records.filter { it.matches(pattern, payload.file) }
         matching.toPagedResult(payload.limit, payload.offset) {
-            if (payload.detail) Json.encodeToString(it.toInfo())
+            if (payload.detail) Json.encodeToString(RecordInfo(it))
             else Json.encodeToString(it.toSignatureInfo())
         }
     }
@@ -156,7 +156,7 @@ fun Server.listCalls() {
         val pattern = compilePattern(payload.pattern)
         val matching = session.translationResult.calls.filter { it.matches(pattern, payload.file) }
         matching.toPagedResult(payload.limit, payload.offset) {
-            if (payload.detail) Json.encodeToString(it.toInfo(includeCode = false))
+            if (payload.detail) Json.encodeToString(CallInfo(it, includeCode = false))
             else Json.encodeToString(it.toSignatureInfo())
         }
     }
@@ -189,7 +189,7 @@ internal fun listCallsTo(session: CpgSession, payload: CpgListCallsToPayload): C
         payload.limit,
         payload.offset,
     ) {
-        Json.encodeToString(it.toInfo(includeCode = false))
+        Json.encodeToString(CallInfo(it, includeCode = false))
     }
 }
 

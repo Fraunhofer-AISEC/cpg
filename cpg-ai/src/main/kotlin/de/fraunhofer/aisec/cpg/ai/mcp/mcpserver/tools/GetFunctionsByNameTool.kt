@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamesPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.paginate
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toInfo
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.functions
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -82,7 +82,7 @@ internal fun getFunctionsByName(session: CpgSession, payload: CpgNamesPayload): 
     val page = paginate(functionsByName.values.flatten(), payload.limit, payload.offset)
     val found =
         page.items.map {
-            TextContent(Json.encodeToString(it.toInfo(includeCode = payload.includeCode)))
+            TextContent(Json.encodeToString(FunctionInfo(it, includeCode = payload.includeCode)))
         }
     val notFound = functionsByName.filterValues { it.isEmpty() }.keys
     val notFoundNotice =

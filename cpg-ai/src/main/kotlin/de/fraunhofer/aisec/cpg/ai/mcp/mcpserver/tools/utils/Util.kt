@@ -363,18 +363,6 @@ fun Node.toJson() = Json.encodeToString(this.toJSON())
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
 /**
- * Converts to a [FunctionInfo], omitting the (often large - can be an entire function body)
- * [FunctionInfo.code] field when [includeCode] is false, as bulk listings do: `cpg_get_node`
- * fetches the full details (code included) for a specific function once picked.
- */
-fun Function.toInfo(includeCode: Boolean = true) = FunctionInfo(this, includeCode)
-
-fun Record.toInfo() = RecordInfo(this)
-
-/** See [Function.toInfo] - the same reasoning applies to [Call]/[CallInfo.code]. */
-fun Call.toInfo(includeCode: Boolean = true) = CallInfo(this, includeCode)
-
-/**
  * The compact entry of a function listing, e.g. `parse(char*)` at `parser.c:40`. The location tells
  * apart functions with the same signature, such as a declaration and its definition.
  */
