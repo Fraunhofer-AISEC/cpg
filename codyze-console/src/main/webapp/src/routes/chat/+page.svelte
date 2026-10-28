@@ -221,8 +221,22 @@
             if (isConceptSuggestion(event.toolName, event.content)) {
               addSuggestion(event.content);
             }
+            // What the model wrote before the tool call belongs to its steps, not to its answer
+            const narration = streamingContent.trim();
+            streamingContent = '';
             chatMessages = [
               ...chatMessages,
+              ...(narration
+                ? [
+                    {
+                      id: `${Date.now()}-narration`,
+                      role: 'assistant' as const,
+                      content: narration,
+                      contentType: 'narration' as const,
+                      timestamp: new Date()
+                    }
+                  ]
+                : []),
               {
                 id: Date.now().toString(),
                 role: 'assistant' as const,
@@ -253,35 +267,49 @@
       },
       onComplete: () => {
         if (signal.aborted) return;
-        const reasoning = streamingReasoning || undefined;
-        if (reasoning) {
-          const firstToolIdx = chatMessages.findIndex((m) => m.contentType === 'tool-result');
-          if (firstToolIdx !== -1 && !chatMessages[firstToolIdx].reasoning) {
-            const updated = [...chatMessages];
-            updated[firstToolIdx] = { ...updated[firstToolIdx], reasoning };
-            chatMessages = updated;
-          }
-        }
-        const content = streamingContent;
-        if (content && content.trim().length > 0) {
-          const hasToolResults = chatMessages.some((m) => m.contentType === 'tool-result');
-          chatMessages = [
-            ...chatMessages,
-            {
-              id: (Date.now() + 1).toString(),
-              role: 'assistant' as const,
-              content,
-              contentType: 'text',
-              reasoning: !hasToolResults ? reasoning : undefined,
-              timestamp: new Date()
-            }
-          ];
-        }
-        isLoading = false;
-        streamingContent = '';
-        streamingReasoning = '';
+        finishAnswer();
       }
     };
+  }
+
+  // Keeps what the agent wrote for the current question as its answer, with the reasoning of the
+  // model at its first tool call or else at the answer
+  function finishAnswer() {
+    const reasoning = streamingReasoning || undefined;
+    const start = chatMessages.findLastIndex((m) => m.role === 'user') + 1;
+    const firstToolIdx = chatMessages.findIndex(
+      (m, i) => i >= start && m.contentType === 'tool-result'
+    );
+    if (reasoning && firstToolIdx !== -1 && !chatMessages[firstToolIdx].reasoning) {
+      const updated = [...chatMessages];
+      updated[firstToolIdx] = { ...updated[firstToolIdx], reasoning };
+      chatMessages = updated;
+    }
+    const content = streamingContent;
+    if (content && content.trim().length > 0) {
+      chatMessages = [
+        ...chatMessages,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant' as const,
+          content,
+          contentType: 'text',
+          reasoning: firstToolIdx === -1 ? reasoning : undefined,
+          timestamp: new Date()
+        }
+      ];
+    }
+    isLoading = false;
+    streamingContent = '';
+    streamingReasoning = '';
+  }
+
+  // Stops the running question, keeping its steps and what the agent wrote so far
+  function stopAnswer() {
+    if (!isLoading) return;
+    abortController?.abort();
+    abortController = null;
+    finishAnswer();
   }
 
   async function handlePromptSelect(name: string, args: Record<string, string>) {
@@ -339,7 +367,7 @@
     }
   }
 
-  async function sendMessage(context?: string) {
+  async function sendMessage(context?: string, contextLabel?: string) {
     if (!currentMessage.trim() || !selectedModel) return;
 
     chatMessages = [
@@ -349,6 +377,7 @@
         role: 'user' as const,
         content: currentMessage,
         context,
+        contextLabel,
         timestamp: new Date()
       }
     ];
@@ -358,11 +387,11 @@
     streamingReasoning = '';
 
     try {
-      // The earlier questions and answers, without the results of their tool calls: sent as text,
-      // the model takes them for its own words and writes tool calls as text instead of calling
-      // the tools. The answers cite the nodes they rely on
+      // The earlier questions and answers, without the steps that led to them: the results of the
+      // tool calls, sent as text, are taken by the model for its own words, and it writes tool
+      // calls as text instead of calling the tools. The answers cite the nodes they rely on
       const llmMessages: LLMMessage[] = chatMessages
-        .filter((msg) => msg.contentType !== 'tool-result')
+        .filter((msg) => msg.contentType !== 'tool-result' && msg.contentType !== 'narration')
         .map((msg) => ({
           role: msg.role as 'user' | 'assistant',
           content: msg.context
@@ -412,6 +441,7 @@
       onApplySuggestions={handleApplySuggestions}
       onSendMessage={sendMessage}
       onReset={resetChat}
+      onStop={stopAnswer}
       onMessageChange={(message) => (currentMessage = message)}
       onModelSelect={selectModel}
       onPromptSelect={handlePromptSelect}

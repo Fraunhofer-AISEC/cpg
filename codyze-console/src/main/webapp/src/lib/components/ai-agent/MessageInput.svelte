@@ -12,6 +12,9 @@
     prompts?: McpPromptInfo[];
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
     onNewChat?: () => void;
+    /** Whether the agent is answering: the text can be written, but not sent, and the agent stopped */
+    running?: boolean;
+    onStop?: () => void;
     /** Controls in the row under the text, e.g. to choose the model */
     toolbar?: Snippet;
   }
@@ -25,6 +28,8 @@
     prompts,
     onPromptSelect,
     onNewChat,
+    running = false,
+    onStop,
     toolbar
   }: Props = $props();
 
@@ -85,7 +90,8 @@
       }
     }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Enter while an input method composes a word confirms the word, it does not send
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -103,7 +109,7 @@
   }
 
   function handleSend() {
-    if (value.trim() && !disabled) {
+    if (value.trim() && !disabled && !running) {
       onSend();
     }
   }
@@ -188,24 +194,38 @@
           </svg>
         </button>
       {/if}
-      <button
-        type="button"
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
-        onclick={handleSend}
-        disabled={!value.trim() || disabled}
-        aria-label="Send message"
-        title="Send (Enter)"
-      >
-        <svg
-          class="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          stroke-width="2.5"
+      {#if running && onStop}
+        <button
+          type="button"
+          class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-gray-800 text-white hover:bg-gray-950"
+          onclick={onStop}
+          aria-label="Stop the agent"
+          title="Stop the agent and keep what it found so far"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-6 6m6-6l6 6" />
-        </svg>
-      </button>
+          <svg class="h-2.5 w-2.5" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
+            <rect width="10" height="10" rx="1.5" />
+          </svg>
+        </button>
+      {:else}
+        <button
+          type="button"
+          class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+          onclick={handleSend}
+          disabled={!value.trim() || disabled}
+          aria-label="Send message"
+          title="Send (Enter)"
+        >
+          <svg
+            class="h-3.5 w-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="2.5"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-6 6m6-6l6 6" />
+          </svg>
+        </button>
+      {/if}
     </div>
   </div>
 </div>

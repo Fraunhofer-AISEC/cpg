@@ -12,9 +12,11 @@
     onCite?: (nodeId: string) => void;
     /** Called when the mouse enters a citation, with its chip, and with `null` when it leaves it */
     onCiteHover?: (nodeId: string | null, chip: HTMLElement | null) => void;
+    /** Headings at the size of the text, for a narrow column like the agent's answers */
+    compact?: boolean;
   }
 
-  let { content, citations, onCite, onCiteHover }: Props = $props();
+  let { content, citations, onCite, onCiteHover, compact = false }: Props = $props();
 
   const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -22,15 +24,46 @@
   const codeIcon =
     '<svg class="node-cite-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/></svg>';
 
-  // Replaces the citations of nodes with chips, which are labeled once the nodes are resolved
+  // A citation, optionally with the code right before it, e.g. `report_key(key);` [[node:<id>]]
+  const codeCitationPattern = new RegExp(
+    '(?:`([^`\\n]+)`[ \\t]*)?' + citationPattern.source,
+    citationPattern.flags
+  );
+
+  // Moves the citations out of inline code, where they would be shown as text, behind it
+  function citationsOutOfCode(text: string): string {
+    return text.replace(/`([^`\n]*)`/g, (code, inner: string) => {
+      const cited = inner.match(citationPattern);
+      if (!cited) return code;
+      return `\`${inner.replace(citationPattern, '').trim()}\` ${cited.join(' ')}`;
+    });
+  }
+
+  // Whether the code an answer writes is the code of the node it cites. Only then may the chip be
+  // labeled with it: a citation of another node must stay visible as such
+  function namesNode(code: string, ref: NodeRefJSON): boolean {
+    const normalize = (text: string) => text.replace(/\s+/g, ' ').replace(/;$/, '').trim();
+    const written = normalize(code);
+    const own = normalize(ref.code);
+    // A function is also named with its parentheses, e.g. `net_open()`
+    const name = written.replace(/\(\)$/, '');
+    return !!written && (own.includes(written) || name === ref.name);
+  }
+
+  // Replaces the citations of nodes with chips, which are labeled once the nodes are resolved. The
+  // code the answer writes right before a citation becomes the label of its chip if it is the code
+  // of the cited node, instead of naming the same place twice
   function renderCitations(text: string): string {
     if (!onCite) return text;
-    return text.replace(citationPattern, (_, id: string) => {
+    return citationsOutOfCode(text).replace(codeCitationPattern, (_, code: string, id: string) => {
       const ref = citations?.get(id.toLowerCase());
-      const name = ref ? citationName(ref) : `node …${id.slice(-6)}`;
+      const merged = !!code && !!ref && namesNode(code, ref);
+      const before = code && !merged ? `\`${code}\` ` : '';
+      const name = merged ? code.trim() : ref ? citationName(ref) : `node …${id.slice(-6)}`;
       const where = ref && ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : '';
       const title = ref ? `${ref.type} ${ref.code}` : 'Cited node';
       return (
+        before +
         `<button type="button" class="node-cite" data-node-id="${id.toLowerCase()}" title="${escapeHtml(title)}">` +
         codeIcon +
         `<span class="node-cite-name">${escapeHtml(name)}</span>` +
@@ -79,7 +112,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_mouse_events_have_key_events -->
 <div
-  class="prose prose-sm prose-gray max-w-none min-w-0"
+  class="prose prose-sm prose-gray max-w-none min-w-0 {compact ? 'compact' : ''}"
   onclick={handleClick}
   onmouseover={handleMouseOver}
   onmouseleave={handleMouseLeave}
@@ -118,6 +151,26 @@
     font-weight: 600;
     margin-top: 1rem;
     margin-bottom: 0.5rem;
+  }
+
+  /* In a narrow column, headings structure the answer without shouting */
+  :global(.prose.compact h1, .prose.compact h2) {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 1rem;
+    margin-bottom: 0.375rem;
+  }
+
+  :global(.prose.compact h3, .prose.compact h4) {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  :global(.prose.compact > :first-child) {
+    margin-top: 0;
   }
 
   :global(.prose ul, .prose ol) {
@@ -246,7 +299,10 @@
     color: rgb(100, 116, 139);
   }
 
+  /* The name needs the full height of its line, or the descenders of letters like g and y are cut */
   :global(.prose .node-cite-name) {
+    max-width: 16rem;
+    line-height: 1.25rem;
     overflow: hidden;
     text-overflow: ellipsis;
     font-family: 'Noto Sans Mono', monospace;

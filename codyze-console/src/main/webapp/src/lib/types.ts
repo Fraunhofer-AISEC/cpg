@@ -273,11 +273,17 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  contentType?: 'text' | 'tool-result';
+  /**
+   * What an assistant message is: its answer, the result of a tool call, or what the model wrote
+   * before a tool call, e.g. what it is about to do
+   */
+  contentType?: 'text' | 'tool-result' | 'narration';
   toolResult?: ToolResult;
   reasoning?: string;
   /** For user messages: the selected code the question refers to, which is sent along with it */
   context?: string;
+  /** A short name of the context, e.g. `log_debug main.c:10`, shown with the question */
+  contextLabel?: string;
   timestamp: Date;
 }
 
