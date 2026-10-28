@@ -66,6 +66,9 @@ internal val transientFailureRetryConfig =
  */
 internal const val DEFAULT_CONTEXT_LENGTH = 128_000L
 
+/** Timeout of the model-metadata requests (`/v1/models`, Gemini's `/models`). */
+private const val METADATA_TIMEOUT_MILLIS = 2_000L
+
 /**
  * Accepts every server certificate chain and host, for [ClientConfig.insecureTls]. No chain
  * validation and no hostname check - intended only for trusted internal networks.
@@ -190,13 +193,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     private suspend fun contextLengthFor(config: ClientConfig, model: String): Long? {
         if (config.provider != ClientProvider.OPENAI_COMPATIBLE) return null
         return try {
-            val response =
-                metadataClientFor(config).get("${config.baseUrl}/v1/models") {
-                    timeout { requestTimeoutMillis = 2_000L }
-                    config.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
-                }
-            if (!response.status.isSuccess()) return null
-            response.body<OpenAiModelsResponse>().data.firstOrNull { it.id == model }?.maxModelLen
+            fetchOpenAiModelList(config).firstOrNull { it.id == model }?.maxModelLen
         } catch (e: Exception) {
             log.debug("Could not fetch context length for {}/{}: {}", config.name, model, e.message)
             null
@@ -221,14 +218,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
      * filter the GPT-5 chat models. For local servers (vLLM, mlx, etc.) we return all models.
      */
     private suspend fun fetchOpenAiModels(clientConf: ClientConfig): List<String> {
-        val response: HttpResponse =
-            metadataClientFor(clientConf).get("${clientConf.baseUrl}/v1/models") {
-                timeout { requestTimeoutMillis = 2_000L }
-                clientConf.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
-            }
-        if (!response.status.isSuccess()) return emptyList()
-
-        val ids = response.body<OpenAiModelsResponse>().data.map { it.id }
+        val ids = fetchOpenAiModelList(clientConf).map { it.id }
         // OpenAI returns all models (also image and audio models), so we filter to get only the
         // GPT-5-series models.
         return if (clientConf.name == "openai") {
@@ -241,11 +231,26 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
         }
     }
 
+    /**
+     * The models [config]'s OpenAI-compatible `/v1/models` endpoint lists, or an empty list if it
+     * answers with an error status. Network and parse errors are not caught here: each caller
+     * decides what such a failure means for it.
+     */
+    private suspend fun fetchOpenAiModelList(config: ClientConfig): List<OpenAiModel> {
+        val response: HttpResponse =
+            metadataClientFor(config).get("${config.baseUrl}/v1/models") {
+                timeout { requestTimeoutMillis = METADATA_TIMEOUT_MILLIS }
+                config.apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
+            }
+        if (!response.status.isSuccess()) return emptyList()
+        return response.body<OpenAiModelsResponse>().data
+    }
+
     /** Queries the Gemini `/models` endpoint and keeps only the `gemini-*` chat models. */
     private suspend fun fetchGeminiModels(cfg: ClientConfig): List<String> {
         val response: HttpResponse =
             metadataClientFor(cfg).get("${cfg.baseUrl}/models?key=${cfg.apiKey}") {
-                timeout { requestTimeoutMillis = 2_000L }
+                timeout { requestTimeoutMillis = METADATA_TIMEOUT_MILLIS }
             }
         if (!response.status.isSuccess()) return emptyList()
 
