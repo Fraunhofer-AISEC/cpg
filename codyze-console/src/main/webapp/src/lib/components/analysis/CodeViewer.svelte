@@ -118,12 +118,14 @@
      * which calls this with the question and the selection
      */
     onAsk?: (question: string, selection: CodeSelection) => void;
+    /** The lines of a node the agent's answer cites, while its citation is hovered */
+    citedLines?: { first: number; last: number } | null;
+    /** The lines of a citation that was just followed, which light up once, see CodeLines */
+    citedFlash?: { first: number; last: number; key: number } | null;
     /**
      * A slice of the program dependence graph shown in the code, as tinted lines. [onHover] is
      * called with the statement under the mouse
      */
-    /** The lines of a node the agent's answer cites, while its citation is hovered */
-    citedLines?: { first: number; last: number } | null;
     slice?: {
       ranges: { id: string; first: number; last: number; label: string }[];
       selectedId: string | null;
@@ -171,6 +173,7 @@
     onAsk,
     slice,
     citedLines = null,
+    citedFlash = null,
     onCodeContextMenu,
     layerActions,
     askDisabledReason = null,
@@ -940,9 +943,11 @@
                 sliceLines={slice?.ranges.flatMap((r) =>
                   Array.from({ length: r.last - r.first + 1 }, (_, i) => r.first + i)
                 )}
-                sliceHover={citedLines ??
-                  slice?.ranges.find((r) => r.id === slice.hoveredId) ??
-                  null}
+                sliceHover={citedLines
+                  ? null
+                  : (slice?.ranges.find((r) => r.id === slice.hoveredId) ?? null)}
+                citedHover={citedLines}
+                {citedFlash}
               />
             </Highlight>
           </div>

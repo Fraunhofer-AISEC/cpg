@@ -926,7 +926,32 @@
   // Inspects a node cited by the agent and shows it in the code
   function openCitation(nodeId: string) {
     citeHover = null;
-    revealFromAgent(nodeId);
+    followCited(nodeId);
+  }
+
+  // The lines of the citation that was followed last, which light up once in the code
+  let citedFlash = $state.raw<{
+    first: number;
+    last: number;
+    key: number;
+    unitId: string;
+  } | null>(null);
+  let flashTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Shows a node the answer cites in the code and lights up its lines, so that the eye finds it
+  // after the jump. The light is gone after a moment, so that it does not light up again when the
+  // file is opened later
+  async function followCited(nodeId: string) {
+    await revealFromAgent(nodeId);
+    const ref = citedRefs.get(nodeId) ?? evidenceRefs.get(nodeId);
+    if (!ref?.translationUnitId || ref.startLine < 1) return;
+    citedFlash = {
+      ...citedRange(ref),
+      key: (citedFlash?.key ?? 0) + 1,
+      unitId: ref.translationUnitId
+    };
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => (citedFlash = null), 2000);
   }
 
   // The citation under the mouse in an answer: its node is shown in a preview next to it, its
@@ -1390,7 +1415,7 @@
 
   function goToThreadStep(index: number) {
     const step = threadSteps[index];
-    if (step) revealFromAgent(step.nodes[0].id);
+    if (step) followCited(step.nodes[0].id);
   }
 
   // The evidence of the active block, shown as numbered markers in the code
@@ -1938,7 +1963,7 @@ where its evidence reaches the limits of the analysis -->
 {/snippet}
 
 {#snippet workingDot()}
-  <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" title="The agent is working"
+  <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-500" title="The agent is working"
   ></span>
 {/snippet}
 
@@ -2151,6 +2176,7 @@ where its evidence reaches the limits of the analysis -->
     <!-- One bar for the steps shown in the code: the path or the agent's thread -->
     {#if sequence === 'thread' && threadSteps.length > 0}
       <StepBar
+        agent
         title="Answer"
         steps={threadSteps.map((s) => ({ label: s.label, title: s.title }))}
         index={threadStepIndex}
@@ -2198,6 +2224,7 @@ where its evidence reaches the limits of the analysis -->
           {askRequest}
           slice={graphSlice}
           {citedLines}
+          citedFlash={citedFlash?.unitId === openedUnit.id ? citedFlash : null}
           findings={openFindings}
           onCodeContextMenu={openCodeMenu}
         >
@@ -2348,7 +2375,7 @@ where its evidence reaches the limits of the analysis -->
               aria-expanded={!askCollapsed}
               onclick={() => setAskCollapsed(!askCollapsed)}
             >
-              <span class="text-[11px] text-blue-600" aria-hidden="true">✦</span>
+              <span class="text-[11px] text-teal-600" aria-hidden="true">✦</span>
               Ask the agent
               <span class="ml-auto text-gray-400" aria-hidden="true"
                 >{askCollapsed ? '▸' : '▾'}</span
@@ -2377,7 +2404,7 @@ where its evidence reaches the limits of the analysis -->
                 {#each starterQuestions as question (question)}
                   <button
                     type="button"
-                    class="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-xs text-gray-700 hover:border-purple-300 hover:bg-purple-50 disabled:opacity-50"
+                    class="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-xs text-gray-700 hover:border-teal-300 hover:bg-teal-50 disabled:opacity-50"
                     disabled={!selectedModel}
                     onclick={() => ask(question)}
                   >
@@ -2691,7 +2718,7 @@ where its evidence reaches the limits of the analysis -->
     {#if previewLines.length > 0}
       <pre
         class="m-0 overflow-hidden bg-gray-50 py-1 font-mono text-[11px] leading-[1.15rem]">{#each previewLines as line (line.number)}<div
-            class="flex px-2 {line.cited ? 'bg-blue-50 text-gray-900' : 'text-gray-500'}"><span
+            class="flex px-2 {line.cited ? 'bg-teal-50 text-gray-900' : 'text-gray-500'}"><span
               class="mr-2 w-6 shrink-0 text-right text-gray-400 select-none">{line.number}</span
             ><span class="overflow-hidden text-ellipsis whitespace-pre">{line.text}</span
             ></div>{/each}</pre>

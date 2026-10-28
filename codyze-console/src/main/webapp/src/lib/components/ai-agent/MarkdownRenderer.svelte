@@ -268,7 +268,7 @@
     font-style: italic;
   }
 
-  /* A cited node, see renderCitations */
+  /* A cited node, see renderCitations. It has the color of the agent's evidence */
   :global(.prose .node-cite) {
     display: inline-flex;
     align-items: center;
@@ -278,8 +278,8 @@
     padding: 0 0.5rem 0 0.375rem;
     height: 1.25rem;
     border-radius: 9999px;
-    background-color: rgb(241, 245, 249);
-    color: rgb(51, 65, 85);
+    background-color: rgb(240, 253, 250);
+    color: rgb(19, 78, 74);
     font-size: 0.6875rem;
     line-height: 1;
     white-space: nowrap;
@@ -289,14 +289,14 @@
   }
 
   :global(.prose .node-cite:hover) {
-    background-color: rgb(226, 232, 240);
+    background-color: rgb(204, 251, 241);
   }
 
   :global(.prose .node-cite-icon) {
     width: 0.75rem;
     height: 0.75rem;
     flex-shrink: 0;
-    color: rgb(100, 116, 139);
+    color: rgb(13, 148, 136);
   }
 
   /* The name needs the full height of its line, or the descenders of letters like g and y are cut */
@@ -311,6 +311,6 @@
 
   :global(.prose .node-cite-where) {
     flex-shrink: 0;
-    color: rgb(148, 163, 184);
+    color: rgba(15, 118, 110, 0.65);
   }
 </style>

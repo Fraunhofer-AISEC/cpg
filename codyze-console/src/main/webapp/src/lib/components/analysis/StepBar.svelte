@@ -20,6 +20,8 @@
     shape?: 'round' | 'square';
     /** Switches to another sequence of steps that shares the bar, e.g. from the path to the agent */
     other?: { label: string; onSwitch: () => void };
+    /** Steps of the agent's answer are in its color, teal; other steps are neutral */
+    agent?: boolean;
   }
 
   let {
@@ -30,7 +32,8 @@
     onClose,
     closeTitle = 'Close',
     shape = 'round',
-    other
+    other,
+    agent = false
   }: Props = $props();
 
   let stepElements: HTMLButtonElement[] = $state([]);
@@ -72,7 +75,7 @@
           bind:this={stepElements[i]}
           class="flex items-center gap-1 rounded border px-1.5 py-px font-mono text-[11px] {i ===
           index
-            ? 'border-blue-500 bg-white text-gray-900'
+            ? `${agent ? 'border-teal-600' : 'border-blue-500'} bg-white text-gray-900`
             : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-white'}"
           title={step.title}
           aria-current={i === index ? 'step' : undefined}
@@ -81,7 +84,9 @@
           <span
             class="flex h-3.5 min-w-3.5 items-center justify-center {shape === 'round'
               ? 'rounded-full'
-              : 'rounded-sm'} bg-slate-700 px-0.5 font-sans text-[9px] font-semibold text-white"
+              : 'rounded-sm'} {agent
+              ? 'bg-teal-700'
+              : 'bg-slate-700'} px-0.5 font-sans text-[9px] font-semibold text-white"
             >{step.number ?? i + 1}</span
           >
           <span class="max-w-40 truncate">{step.label}</span>
