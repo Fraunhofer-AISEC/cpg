@@ -504,7 +504,8 @@ internal fun mergeConceptSchemas(applied: List<LLMConceptDescription>, file: Fil
 
 /**
  * Writes [schemas] into [file], each combined with the stored schema of the same name (`null` if
- * there is none) by [combine]; a concept not stored yet is appended.
+ * there is none) by [combine]. Stored concepts keep their position, one not stored yet is appended,
+ * and of several stored concepts with the same name only the first is kept.
  */
 private fun updateConceptSchemas(
     schemas: List<LLMConceptDescription>,
@@ -514,17 +515,10 @@ private fun updateConceptSchemas(
 ) {
     synchronized(conceptsFileLock) {
         val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
-        var updated = loadPersistedConceptsAndOperations(file)
-        schemas.forEach { schema ->
-            val stored = updated.find { it.name == schema.name }
-            val combined = combine(stored, schema)
-            updated =
-                if (stored != null) {
-                    updated.map { if (it.name == schema.name) combined else it }
-                } else {
-                    updated + combined
-                }
-        }
+        val byName = LinkedHashMap<String, LLMConceptDescription>()
+        loadPersistedConceptsAndOperations(file).forEach { byName.putIfAbsent(it.name, it) }
+        schemas.forEach { schema -> byName[schema.name] = combine(byName[schema.name], schema) }
+        val updated = byName.values.toList()
         writeAtomically(file) { mapper.writeValue(it, updated) }
         // Update the cache directly instead of relying on the new last-modified timestamp, since
         // filesystem mtime resolution (often 1 second) could otherwise make a write within the

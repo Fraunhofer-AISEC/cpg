@@ -128,6 +128,20 @@ class ConceptsSchemaFileTest {
     }
 
     @Test
+    fun persistingKeepsTheOrderAndTheFirstOfSeveralSameNamedConcepts(@TempDir dir: Path) {
+        val file = dir.resolve("concepts.yaml").toFile()
+        ObjectMapper(YAMLFactory())
+            .registerKotlinModule()
+            .writeValue(file, listOf(schema("A", "first"), schema("B"), schema("A", "second")))
+
+        persistConceptSchemas(listOf(schema("C")), file)
+
+        val stored = loadPersistedConceptsAndOperations(file)
+        assertEquals(listOf("A", "B", "C"), stored.map { it.name })
+        assertEquals("first", stored.first().properties.single().fixedValue)
+    }
+
+    @Test
     fun readersNeverSeeAnEmptyOrPartialSchemaFileWhileItIsRewritten(@TempDir dir: Path) {
         val file = dir.resolve("concepts.yaml").toFile()
         persistConceptSchemas(listOf(schema("Seed")), file)
