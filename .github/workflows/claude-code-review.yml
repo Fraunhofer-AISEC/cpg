@@ -34,5 +34,10 @@ jobs:
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # Temporarily show the full output, so that we can see what the review actually does.
+          # TODO: remove again once the review is confirmed to work, it may leak output.
+          show_full_output: true
+          # The reviewer needs to read the code around the diff and to spawn sub-agents,
+          # otherwise it only sees the diff and rarely reports anything.
           claude_args: >-
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(git diff:*),Bash(git log:*)"
+            --allowedTools "Read,Grep,Glob,Task,Agent,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(git diff:*),Bash(git log:*)"
