@@ -223,7 +223,11 @@
             streamingReasoning += event.content;
           } else if (event.type === 'tool_call') {
             keepNarration();
-            activity = { toolName: event.toolName, arguments: event.arguments ?? {} };
+            activity = {
+              toolName: event.toolName,
+              arguments: event.arguments ?? {},
+              round: event.round
+            };
           } else if (event.type === 'tool_result') {
             if (isConceptSuggestion(event.toolName, event.content)) {
               addSuggestion(event.content);
@@ -231,7 +235,7 @@
             // Without the event of the call, e.g. from an older server, the text before the call is
             // kept when its result arrives
             keepNarration();
-            const args = activity?.toolName === event.toolName ? activity?.arguments : undefined;
+            const call = activity?.toolName === event.toolName ? activity : null;
             activity = null;
             chatMessages = [
               ...chatMessages,
@@ -240,7 +244,12 @@
                 role: 'assistant' as const,
                 content: '',
                 contentType: 'tool-result',
-                toolResult: { toolName: event.toolName, content: event.content, arguments: args },
+                toolResult: {
+                  toolName: event.toolName,
+                  content: event.content,
+                  arguments: call?.arguments,
+                  round: call?.round
+                },
                 timestamp: new Date()
               }
             ];

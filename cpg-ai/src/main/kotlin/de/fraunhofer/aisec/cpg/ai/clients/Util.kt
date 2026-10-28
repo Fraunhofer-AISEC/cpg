@@ -97,13 +97,15 @@ object Events {
     /**
      * A tool call that starts, before its result is known, so that the frontend can show what the
      * agent is doing. The arguments are the ones the model passed, or an empty object if they are
-     * no valid JSON object.
+     * no valid JSON object. The [round] counts the responses of the model with tool calls, starting
+     * at 1: the calls of one response share it.
      */
-    fun toolCall(toolName: String, arguments: String): String =
+    fun toolCall(toolName: String, arguments: String, round: Int): String =
         Json.encodeToString(
             buildJsonObject {
                 put("type", "tool_call")
                 put("toolName", toolName)
+                put("round", round)
                 put(
                     "arguments",
                     runCatching { Json.parseToJsonElement(arguments).jsonObject }

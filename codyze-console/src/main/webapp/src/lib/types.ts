@@ -269,12 +269,15 @@ export interface ToolResult {
   isError?: boolean;
   /** The arguments the model called the tool with, if they are known */
   arguments?: Record<string, unknown>;
+  /** The response of the model that called the tool, counted from 1, if it is known */
+  round?: number;
 }
 
 /** A tool call of the agent that is running, before its result is known. */
 export interface ToolActivity {
   toolName: string;
   arguments: Record<string, unknown>;
+  round?: number;
 }
 
 export interface ChatMessage {

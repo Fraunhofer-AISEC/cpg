@@ -1309,18 +1309,14 @@
   // Whether the limits of the evidence of a block are listed below its answer
   let limitsOpen = $state<Record<number, boolean>>({});
 
-  // Whether the steps of a block are listed, by block. Without a choice of the user, only the line
-  // above them is shown: what the agent does right now, or how many steps it took
-  let stepsOpen = $state<Record<number, boolean>>({});
-
-  function stepsShown(b: number): boolean {
-    return stepsOpen[b] ?? false;
-  }
+  // Whether the tool calls of a group are listed, by block and group, see segmentsOf. Without a
+  // choice of the user, a group is only its line: the call the agent runs, or how many it ran
+  let groupsOpen = $state<Record<string, boolean>>({});
 
   // A new chat starts without the choices made for the blocks of the last one
   $effect(() => {
     if (messages.length > 0) return;
-    stepsOpen = {};
+    groupsOpen = {};
     limitsOpen = {};
   });
 
@@ -1398,22 +1394,69 @@
       : `${label.tool} ${label.argument ?? ''} ${label.detail ?? ''}`;
   }
 
-  // The calls of the running question, in their order
-  const runningCalls = $derived.by((): ToolCallLabel[] => {
-    if (!isLoading) return [];
-    return (timeline.at(-1)?.entries ?? []).flatMap((e) => {
-      const call = e.message.toolResult;
-      return call ? [labelOf(call.toolName ?? '', call.arguments)] : [];
-    });
+  // The steps of a block in their order: the tool calls of one response of the model are a group,
+  // and what the model wrote before its next calls stands between the groups
+  type Segment =
+    | { kind: 'tools'; key: string; round?: number; entries: TimelineEntry[] }
+    | { kind: 'narration'; key: string; entry: TimelineEntry };
+
+  function segmentsOf(block: (typeof timeline)[number]): Segment[] {
+    const segments: Segment[] = [];
+    for (const entry of block.entries) {
+      const message = entry.message;
+      if (message.contentType === 'narration') {
+        segments.push({ kind: 'narration', key: `n${entry.index}`, entry });
+      } else if (message.contentType === 'tool-result') {
+        const last = segments.at(-1);
+        // Calls without a known response, e.g. from an older server, are only parted by text
+        if (last?.kind === 'tools' && last.round === message.toolResult?.round) {
+          last.entries.push(entry);
+        } else {
+          segments.push({
+            kind: 'tools',
+            key: `t${entry.index}`,
+            round: message.toolResult?.round,
+            entries: [entry]
+          });
+        }
+      }
+    }
+    return segments;
+  }
+
+  // The group of calls the agent works on: the last one of the running question, as long as the
+  // agent neither writes nor runs a call of its next response
+  const runningGroup = $derived.by(() => {
+    if (!isLoading || displayContent) return null;
+    const block = timeline.at(-1);
+    const last = block ? segmentsOf(block).at(-1) : undefined;
+    if (last?.kind !== 'tools') return null;
+    if (activity?.round !== undefined && activity.round !== last.round) return null;
+    return last;
   });
+
+  // The calls of the running group, in their order
+  const runningCalls = $derived(
+    (runningGroup?.entries ?? []).map((e) =>
+      labelOf(e.message.toolResult?.toolName ?? '', e.message.toolResult?.arguments)
+    )
+  );
 
   // The call the row shows. The tools take milliseconds and the model often calls several at once,
   // so the row shows each call for a moment, skipping ahead if it falls too far behind
   let shownCall = $state(0);
+  let pacedGroup = '';
   const callDwell = 450;
   const maxBehind = 6;
   $effect(() => {
     const count = runningCalls.length;
+    // A new group starts with its first call
+    const key = runningGroup?.key ?? '';
+    if (key !== pacedGroup) {
+      pacedGroup = key;
+      shownCall = 0;
+      return;
+    }
     if (count === 0) {
       shownCall = 0;
       return;
@@ -1427,13 +1470,12 @@
     return () => clearTimeout(timer);
   });
 
-  // What the agent does right now, in the row above its answer: the calls one after the other, a
-  // call that takes longer while it runs, writing, or else thinking about the last call
+  // What the agent does right now: the calls of its group one after the other, a call that takes
+  // longer while it runs, or else thinking, about the last call or before its first one
   const liveLabel = $derived.by((): ToolCallLabel | string => {
     const caughtUp = shownCall >= runningCalls.length - 1;
     if (!caughtUp) return runningCalls[shownCall];
     if (activity) return labelOf(activity.toolName, activity.arguments);
-    if (displayContent) return 'Writing';
     return runningCalls.at(-1) ?? 'Thinking';
   });
 
@@ -1854,6 +1896,56 @@ set their font, so that the light running over the row covers them -->
   {#if typeof label === 'string'}{label}{:else}<span class="font-mono">{label.tool}</span
     >{#if label.argument}&nbsp;<span class="font-mono">{label.argument}</span
       >{/if}{#if label.detail}&nbsp;· {label.detail}{/if}{/if}
+{/snippet}
+
+<!-- The line of a group of tool calls: what the agent does right now, with a light running over it,
+or how many calls it ran. [toggle] lists the calls; without it, the line is no button -->
+{#snippet groupLine(
+  line: { label: ToolCallLabel | string; right?: string },
+  open: boolean,
+  toggle: (() => void) | null
+)}
+  {@const live = !!line.right}
+  {#snippet content()}
+    <svg
+      class="h-3 w-3 shrink-0 transition-transform {open ? 'rotate-90' : ''} {toggle
+        ? ''
+        : 'invisible'}"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+    {#if live}
+      <span class="relative min-w-0 flex-1 truncate">
+        {#key labelKey(line.label)}
+          <span class="activity block truncate" in:fade={{ duration: motion(150) }}
+            >{@render labelText(line.label)}</span
+          >
+        {/key}
+      </span>
+      <span class="shrink-0 text-gray-400 tabular-nums">{line.right}</span>
+    {:else}
+      <span class="min-w-0 flex-1 truncate">{@render labelText(line.label)}</span>
+    {/if}
+  {/snippet}
+  {#if toggle}
+    <button
+      type="button"
+      class="-mx-1 flex w-[calc(100%+0.5rem)] min-w-0 items-center gap-1.5 rounded px-1 py-1 text-left text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-800"
+      aria-expanded={open}
+      onclick={toggle}
+    >
+      {@render content()}
+    </button>
+  {:else}
+    <div class="-mx-1 flex min-w-0 items-center gap-1.5 px-1 py-1 text-xs text-gray-500">
+      {@render content()}
+    </div>
+  {/if}
 {/snippet}
 
 <!-- What the model wrote before a tool call, with code between backticks in a mono font -->
@@ -2523,18 +2615,13 @@ where its evidence reaches the limits of the analysis -->
             {@const evidence = blockEvidence[b]}
             {@const hasEvidence =
               evidence.steps.some((s) => s.ids.length) || evidence.claimed.length > 0}
-            {@const stepEntries = block.entries.filter(
-              (e) =>
-                e.message.contentType === 'tool-result' || e.message.contentType === 'narration'
-            )}
+            {@const segments = segmentsOf(block)}
             {@const answers = block.entries.filter(
               (e) =>
                 e.message.contentType !== 'tool-result' &&
                 e.message.contentType !== 'narration' &&
                 e.message.content
             )}
-            {@const stepCount = stepEntries.filter((e) => e.step).length}
-            {@const showSteps = stepsShown(b)}
             <section
               class="mx-2 my-2 rounded-md border bg-white {isActive && hasEvidence
                 ? 'border-slate-400'
@@ -2570,92 +2657,82 @@ where its evidence reaches the limits of the analysis -->
                 </header>
               {/if}
               <div class="px-3 py-1.5">
-                {#if stepEntries.length > 0 || running}
-                  <!-- The steps of the agent: while it works, one line with what it does right now,
-                  which changes with each tool call. Once it has answered, the line sums up the
-                  steps, which it unfolds -->
-                  <button
-                    type="button"
-                    class="-mx-1 flex w-[calc(100%+0.5rem)] min-w-0 items-center gap-1.5 rounded px-1 py-1 text-left text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-                    aria-expanded={showSteps}
-                    onclick={() => (stepsOpen = { ...stepsOpen, [b]: !showSteps })}
-                  >
-                    <svg
-                      class="h-3 w-3 shrink-0 transition-transform {showSteps ? 'rotate-90' : ''}"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      aria-hidden="true"
-                    >
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                    {#if running}
-                      {@const label = liveLabel}
-                      <span class="relative min-w-0 flex-1 truncate">
-                        {#key labelKey(label)}
-                          <span class="activity block truncate" in:fade={{ duration: motion(150) }}
-                            >{@render labelText(label)}</span
-                          >
-                        {/key}
-                      </span>
-                      <span class="shrink-0 text-gray-400 tabular-nums"
-                        >{stepCount} {stepCount === 1 ? 'step' : 'steps'} · {duration(b)}</span
+                <!-- The steps of the agent: per response of the model a group of tool calls, which is
+                one line, and what the model wrote in between. The line of the group the agent works
+                on shows its calls one after the other; done, it tells how many it ran -->
+                {#each segments as segment (segment.key)}
+                  {#if segment.kind === 'narration'}
+                    <p class="py-1 text-xs leading-snug text-gray-500">
+                      {@render narrationText(segment.entry.message.content)}
+                    </p>
+                  {:else}
+                    {@const groupKey = `${b}:${segment.key}`}
+                    {@const open = groupsOpen[groupKey] ?? false}
+                    {@const live = runningGroup?.key === segment.key && running}
+                    {@const count = segment.entries.length}
+                    {@render groupLine(
+                      live
+                        ? {
+                            label: liveLabel,
+                            right: `${count} ${count === 1 ? 'tool' : 'tools'} · ${duration(b)}`
+                          }
+                        : { label: `Ran ${count} ${count === 1 ? 'tool' : 'tools'}` },
+                      open,
+                      () => (groupsOpen = { ...groupsOpen, [groupKey]: !open })
+                    )}
+                    {#if open}
+                      <div
+                        class="mb-1 divide-y divide-gray-100 rounded-md border border-gray-200 px-1.5 py-0.5"
+                        transition:slide={{ duration: motion(200) }}
                       >
-                    {:else}
-                      <span class="tabular-nums"
-                        >{stepCount}
-                        {stepCount === 1 ? 'step' : 'steps'} · {duration(b)}</span
-                      >
+                        {#each segment.entries as entry (entry.index)}
+                          {@const message = entry.message}
+                          {#if message.toolResult}
+                            <!-- A tool call: a numbered step of the evidence trail -->
+                            {@const nodes = stepNodes(
+                              evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
+                            )}
+                            {@const toolPaths = extractToolPaths(message.toolResult.content)}
+                            {@const toolSlice = extractToolSlice(message.toolResult.content)}
+                            <div class="py-0.5">
+                              {@render reasoning(message)}
+                              <ToolStep
+                                toolResult={message.toolResult}
+                                label={message.toolResult.arguments
+                                  ? labelOf(
+                                      message.toolResult.toolName ?? '',
+                                      message.toolResult.arguments
+                                    )
+                                  : undefined}
+                                paths={toolPaths}
+                                slice={toolSlice}
+                                step={entry.step ?? 0}
+                                {nodes}
+                                selectedId={focus.details?.node.id}
+                                onSelect={(ref) => revealFromAgent(ref.id)}
+                                onActivate={() => {
+                                  chosenBlock = b;
+                                  focus.showing = 'thread';
+                                  if (!showToolGraph(message.toolResult?.content) && nodes[0])
+                                    revealFromAgent(nodes[0].id);
+                                }}
+                                onHover={(hovered) => {
+                                  // Only the steps of the thread in the code can stand out there
+                                  focus.highlightedStep =
+                                    hovered && isActive ? (entry.step ?? null) : null;
+                                }}
+                              />
+                            </div>
+                          {/if}
+                        {/each}
+                      </div>
                     {/if}
-                  </button>
-                  {#if showSteps}
-                    <div class="pb-1" transition:slide={{ duration: motion(200) }}>
-                      {#each stepEntries as entry (entry.index)}
-                        {@const message = entry.message}
-                        {@render reasoning(message)}
-                        {#if message.contentType === 'narration'}
-                          <!-- What the model wrote before its next tool call -->
-                          <p class="py-0.5 pl-5.5 text-xs leading-snug text-gray-500">
-                            {@render narrationText(message.content)}
-                          </p>
-                        {:else if message.toolResult}
-                          <!-- A tool call: a numbered step of the evidence trail -->
-                          {@const nodes = stepNodes(
-                            evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
-                          )}
-                          {@const toolPaths = extractToolPaths(message.toolResult.content)}
-                          {@const toolSlice = extractToolSlice(message.toolResult.content)}
-                          <ToolStep
-                            toolResult={message.toolResult}
-                            label={message.toolResult.arguments
-                              ? labelOf(
-                                  message.toolResult.toolName ?? '',
-                                  message.toolResult.arguments
-                                )
-                              : undefined}
-                            paths={toolPaths}
-                            slice={toolSlice}
-                            step={entry.step ?? 0}
-                            {nodes}
-                            selectedId={focus.details?.node.id}
-                            onSelect={(ref) => revealFromAgent(ref.id)}
-                            onActivate={() => {
-                              chosenBlock = b;
-                              focus.showing = 'thread';
-                              if (!showToolGraph(message.toolResult?.content) && nodes[0])
-                                revealFromAgent(nodes[0].id);
-                            }}
-                            onHover={(hovered) => {
-                              // Only the steps of the thread in the code can stand out there
-                              focus.highlightedStep =
-                                hovered && isActive ? (entry.step ?? null) : null;
-                            }}
-                          />
-                        {/if}
-                      {/each}
-                    </div>
                   {/if}
+                {/each}
+                {#if running && !runningGroup && !displayContent}
+                  <!-- The agent thinks before its first call, or runs the first call of its next
+                  response -->
+                  {@render groupLine({ label: liveLabel, right: duration(b) }, false, null)}
                 {/if}
 
                 {#if block.entries.some((e) => e.index === suggestionAnchorIndex)}
@@ -2684,29 +2761,18 @@ where its evidence reaches the limits of the analysis -->
                   </div>
                 {/each}
 
-                {#if running}
-                  <!-- Below the line of what the agent does: what it writes right now, the start of
-                  its answer or what it is about to do, or else what it last said it is about to do.
-                  The latter joins its steps -->
-                  {@const said = stepEntries.findLast((e) => e.message.contentType === 'narration')}
-                  {#if displayContent}
-                    <div class="max-w-none min-w-0 py-1.5 text-gray-800">
-                      <MarkdownRenderer
-                        content={displayContent}
-                        citations={citedRefs}
-                        onCite={openCitation}
-                        onCiteHover={hoverCitation}
-                        compact
-                      />
-                    </div>
-                  {:else if said}
-                    <p
-                      class="py-1 text-xs leading-snug text-gray-500"
-                      in:fade={{ duration: motion(150) }}
-                    >
-                      {@render narrationText(said.message.content)}
-                    </p>
-                  {/if}
+                {#if running && displayContent}
+                  <!-- What the agent writes right now: the start of its answer, or what it is about
+                  to do, which stands between its groups once it calls a tool -->
+                  <div class="max-w-none min-w-0 py-1.5 text-gray-800">
+                    <MarkdownRenderer
+                      content={displayContent}
+                      citations={citedRefs}
+                      onCite={openCitation}
+                      onCiteHover={hoverCitation}
+                      compact
+                    />
+                  </div>
                 {/if}
 
                 {#if !running && answers.some((e) => e.message.contentType === 'text')}
