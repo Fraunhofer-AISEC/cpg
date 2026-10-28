@@ -244,7 +244,8 @@ class NodeLinkRenderer(
                     }
                 } else if (value.isNotEmpty() && value.all { it is Dataflow }) {
                     // Dataflow path edges: extract call sites from ContextSensitiveDataflow edges'
-                    // callingContext.calls. For paths through PointsToPass's abstract memory cells
+                    // callingContexts' calls. For paths through PointsToPass's abstract memory
+                    // cells
                     // this is the only way to recover the actual per-path call chain
                     // (`free@13 → printf@15` for uaf_simple, `free@24 → printf@26` for uaf_aliased)
                     // — the node sequence alone is just shared ParameterMemoryValues with no
@@ -252,7 +253,7 @@ class NodeLinkRenderer(
                     val pathCalls = LinkedHashSet<Call>()
                     value.forEach { e ->
                         if (e is ContextSensitiveDataflow) {
-                            pathCalls.addAll(e.callingContext.calls)
+                            e.callingContexts.forEach { context -> pathCalls.addAll(context.calls) }
                         }
                     }
                     if (pathCalls.isEmpty()) {
