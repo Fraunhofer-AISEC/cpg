@@ -28,22 +28,31 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDataflowPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgBackwardPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamesPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DataflowResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
 import de.fraunhofer.aisec.cpg.graph.refs
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyze
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.nio.file.Path
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.io.TempDir
@@ -79,6 +88,55 @@ class BoundedOutputToolsTest {
         assertEquals(1, lastPage.size, "1 remaining call and no summary")
 
         assertEquals(3, listCallsTo(session, CpgListCallsToPayload("f")).content.size)
+    }
+
+    /** Applies a concept named [name] to [node], the way the dataflow tool looks concepts up. */
+    private fun applyConcept(node: Node, name: String) {
+        GenericLLMConcept(
+                underlyingNode = node,
+                conceptName = name,
+                description = name,
+                properties = GenericProperties(emptyMap()),
+            )
+            .name = Name(name)
+    }
+
+    @Test
+    fun dataflowIsPaginated(@TempDir dir: Path) {
+        val session =
+            analyze(
+                dir,
+                "int sink(int v) { return v; } " +
+                    "int main() { int a = 1; int b = 2; int c = 3; return sink(a + b + c); }",
+                passes = true,
+            )
+        val result = session.translationResult
+        listOf("a", "b", "c").forEach { name ->
+            val variable = result.variables.singleOrNull { it.name.localName == name }
+            assertNotNull(variable)
+            applyConcept(variable, "Src")
+        }
+        val argument =
+            result.calls.singleOrNull { it.name.localName == "sink" }?.arguments?.singleOrNull()
+        assertNotNull(argument)
+        applyConcept(argument, "Dst")
+
+        fun foundPaths(content: List<TextContent>) =
+            Json.decodeFromString<DataflowResult>(content.first().text).foundPaths
+
+        val firstPage =
+            dataflow(session, CpgDataflowPayload("Src", "Dst", limit = 2))
+                .content
+                .filterIsInstance<TextContent>()
+        assertEquals(2, foundPaths(firstPage).size)
+        assertTrue(firstPage.last().text.contains("offset=2"), "the summary says how to go on")
+
+        val lastPage =
+            dataflow(session, CpgDataflowPayload("Src", "Dst", limit = 2, offset = 2))
+                .content
+                .filterIsInstance<TextContent>()
+        assertEquals(1, lastPage.size, "one result, no summary")
+        assertEquals(1, foundPaths(lastPage).size)
     }
 
     @Test

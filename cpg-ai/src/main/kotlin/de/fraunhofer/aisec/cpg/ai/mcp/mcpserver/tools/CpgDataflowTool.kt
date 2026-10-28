@@ -27,9 +27,10 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDataflowPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DataflowResult
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.QueryTreeNode
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.paginate
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toQueryTreeNode
 import de.fraunhofer.aisec.cpg.graph.Forward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
@@ -53,6 +54,9 @@ fun Server.addCpgDataflowTool() {
         
         You must first apply concepts to nodes using cpg_apply_concepts 
         before running data flow analysis.
+
+        It returns one path per source node that reaches a target, in pages of at most
+        $DEFAULT_LIST_LIMIT paths; use the limit/offset parameters to page through more.
         
         Example usage:
         - Is there a data flow from sensitive data to HTTP Request?
@@ -64,49 +68,55 @@ fun Server.addCpgDataflowTool() {
         readOnly = true,
         name = "cpg_dataflow",
         description = toolDescription,
-    ) { session: CpgSession, payload: CpgDataflowPayload ->
-        val allOverlayNodes = session.translationResult.allChildrenWithOverlays<OverlayNode>()
-        val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
-        val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
+        handler = ::dataflow,
+    )
+}
 
-        if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
-            return@addTool CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            "No concept found. Apply concepts first using cpg_apply_concepts."
-                        )
-                    )
-            )
-        }
+/**
+ * The paths from the nodes the concept [CpgDataflowPayload.from] is applied to, to those of
+ * [CpgDataflowPayload.to], as one [DataflowResult] holding the page of paths selected by its
+ * limit/offset (see [paginate]), followed by the note on how to fetch more. Only the paths of the
+ * page are serialized.
+ */
+internal fun dataflow(session: CpgSession, payload: CpgDataflowPayload): CallToolResult {
+    val allOverlayNodes = session.translationResult.allChildrenWithOverlays<OverlayNode>()
+    val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
+    val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
 
-        val qTrees = mutableListOf<QueryTreeNode>()
-
-        sourceNodes.forEach { sourceOverlay ->
-            val sourceNode = sourceOverlay.underlyingNode
-            if (sourceNode != null) {
-                val queryTree =
-                    dataFlow(
-                        startNode = sourceNode,
-                        direction = Forward(GraphToFollow.DFG),
-                        type = May,
-                        scope = Intraprocedural(),
-                        predicate = { node ->
-                            targetNodes.any { targetOverlay ->
-                                targetOverlay.underlyingNode == node
-                            }
-                        },
-                    )
-
-                if (queryTree.value) {
-                    qTrees.add(queryTree.toQueryTreeNode())
-                }
-            }
-        }
-
-        val dataflowResult =
-            DataflowResult(fromConcept = payload.from, toConcept = payload.to, foundPaths = qTrees)
-
-        CallToolResult(content = listOf(TextContent(Json.encodeToString(dataflowResult))))
+    if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
+        return CallToolResult(
+            content =
+                listOf(
+                    TextContent("No concept found. Apply concepts first using cpg_apply_concepts.")
+                )
+        )
     }
+
+    val targets = targetNodes.mapNotNullTo(mutableSetOf()) { it.underlyingNode }
+    val paths =
+        sourceNodes.mapNotNull { sourceOverlay ->
+            val sourceNode = sourceOverlay.underlyingNode ?: return@mapNotNull null
+            dataFlow(
+                    startNode = sourceNode,
+                    direction = Forward(GraphToFollow.DFG),
+                    type = May,
+                    scope = Intraprocedural(),
+                    predicate = { node -> node in targets },
+                )
+                .takeIf { it.value }
+        }
+
+    val page = paginate(paths, payload.limit, payload.offset)
+    val dataflowResult =
+        DataflowResult(
+            fromConcept = payload.from,
+            toConcept = payload.to,
+            foundPaths = page.items.map { it.toQueryTreeNode() },
+        )
+
+    return CallToolResult(
+        content =
+            listOf(TextContent(Json.encodeToString(dataflowResult))) +
+                listOfNotNull(page.summary?.let { TextContent(it) })
+    )
 }

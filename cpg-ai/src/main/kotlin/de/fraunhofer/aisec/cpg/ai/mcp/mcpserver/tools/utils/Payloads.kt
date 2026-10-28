@@ -215,6 +215,8 @@ data class CpgDataflowPayload(
     @Description("Source concept type (e.g., 'ReadData', 'Data', 'Authentication')")
     val from: String,
     @Description("Target concept type (e.g., 'HttpRequest', 'Call')") val to: String,
+    @Description(LIMIT_DESCRIPTION) val limit: Int? = null,
+    @Description(OFFSET_DESCRIPTION) val offset: Int? = null,
     @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
 ) : HasProjectNamePayload
 
