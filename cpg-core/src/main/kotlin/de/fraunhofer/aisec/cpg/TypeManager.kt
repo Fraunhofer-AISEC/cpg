@@ -196,9 +196,16 @@ class TypeManager {
         return resolvedTypes.any { type: Type -> type.root.name == name }
     }
 
+    /**
+     * Returns the target of a typedef for [alias] if one is visible, otherwise [alias]. A built-in
+     * type is one instance per language without a scope, so for it the typedef is looked up in the
+     * current scope: a typedef that the code declares with the name of a built-in type (e.g.
+     * `size_t`) takes precedence over the built-in type.
+     */
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
-        val applicable = scopeManager.typedefFor(finalToCheck.name, alias.scope)
+        val applicable =
+            scopeManager.typedefFor(finalToCheck.name, alias.scope ?: scopeManager.currentScope)
         return applicable ?: alias
     }
 
@@ -346,14 +353,15 @@ val Collection<Type>.commonType: Type?
  */
 context(pass: Pass<*>)
 fun Reference.nameIsType(): Type? {
-    // First, check if it is a simple type
-    var type = language.getSimpleTypeOf(name)
+    // A typedef comes first: the code can declare one with the name of a built-in type (e.g.
+    // size_t), and then the typedef applies
+    var type = pass.scopeManager.typedefFor(name, scope)
     if (type != null) {
         return type
     }
 
-    // This could also be a typedef
-    type = pass.scopeManager.typedefFor(name, scope)
+    // Then a simple type
+    type = language.getSimpleTypeOf(name)
     if (type != null) {
         return type
     }

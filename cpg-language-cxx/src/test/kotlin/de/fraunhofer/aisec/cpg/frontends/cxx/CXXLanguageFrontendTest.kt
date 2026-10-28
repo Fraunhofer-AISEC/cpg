@@ -1310,7 +1310,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         var cast = count.initializer
         assertIs<Cast>(cast)
-        assertLocalName("size_t", cast.castType)
+        assertLocalName("int", cast.castType)
         assertLiteralValue(42, cast.expression)
 
         val addr = tu.variables["addr"]
@@ -1807,6 +1807,31 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val cast = assign.rhs.singleOrNull()
         assertIs<Cast>(cast)
         assertLocalName("mytype", cast.castType)
+    }
+
+    @Test
+    fun testDeclaredTypedefTakesPrecedenceOverBuiltInType() {
+        val files =
+            listOf(
+                File("src/test/resources/c/typedef_over_builtin.c"),
+                File("src/test/resources/cxx/typedef_over_builtin.cpp"),
+            )
+        for (file in files) {
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                    it.registerLanguage<CLanguage>()
+                    it.registerLanguage<CPPLanguage>()
+                }
+            assertNotNull(tu)
+
+            assertLocalName("int", tu.variables["declared"]?.type, file.name)
+            assertLocalName("long int", tu.variables["alsoDeclared"]?.type, file.name)
+            assertLocalName("uint64_t", tu.variables["untouched"]?.type, file.name)
+
+            val casts = tu.allChildren<Cast>()
+            assertEquals(2, casts.size, file.name)
+            casts.forEach { assertLocalName("int", it.castType, "${file.name}: ${it.code}") }
+        }
     }
 
     @Test
