@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { fade, slide } from 'svelte/transition';
+  import { fade, fly, slide } from 'svelte/transition';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
@@ -319,6 +319,12 @@
       return;
     }
     if (isTyping(event)) return;
+    // The column over the graph closes first, then the graph
+    if (event.key === 'Escape' && graph.open && !contextCollapsed) {
+      event.preventDefault();
+      contextCollapsed = true;
+      return;
+    }
     if (event.key === 'Escape' && !graph.open) {
       // Deselects, unless something else used the key (e.g. closing a popup). That is only known
       // once all listeners have run
@@ -688,18 +694,26 @@
 
   // The graph needs the width: while it is open, the navigation and the sidebar are collapsed. When
   // it closes, what it collapsed is opened again, unless it was toggled in between
-  let collapsedForGraph = { navigation: false, sidebar: false };
+  // The column of the inspector and the agent folds into its strip as well; opened from there, it
+  // lies over the graph, so that the code keeps its width
+  let collapsedForGraph = { navigation: false, sidebar: false, context: false };
   $effect(() => {
     const open = graph.open;
     untrack(() => {
       if (open) {
-        collapsedForGraph = { navigation: !navigation.collapsed, sidebar: sidebarOpen };
+        collapsedForGraph = {
+          navigation: !navigation.collapsed,
+          sidebar: sidebarOpen,
+          context: !contextCollapsed
+        };
         navigation.collapsed = true;
         sidebarOpen = false;
+        contextCollapsed = true;
       } else {
         if (collapsedForGraph.navigation && navigation.collapsed) navigation.collapsed = false;
         if (collapsedForGraph.sidebar && !sidebarOpen) sidebarOpen = true;
-        collapsedForGraph = { navigation: false, sidebar: false };
+        if (collapsedForGraph.context && contextCollapsed) contextCollapsed = false;
+        collapsedForGraph = { navigation: false, sidebar: false, context: false };
       }
     });
   });
@@ -1571,7 +1585,8 @@
     // A node the user inspects is the context of the next question again, also if the agent
     // revealed it before
     dismissedContextId = null;
-    if (isLoading && contextTab === 'agent') {
+    // While the graph is shown, the inspector does not open over it by itself
+    if ((isLoading && contextTab === 'agent') || (graph.open && contextCollapsed)) {
       markInspectorUnseen();
       return;
     }
@@ -2073,7 +2088,7 @@ where its evidence reaches the limits of the analysis -->
   onOpenFile={(unit) => handleFileSelect(unit)}
 />
 
-<div class="flex h-full min-h-0 bg-white">
+<div class="relative flex h-full min-h-0 bg-white">
   <!-- Activity bar: switches the view of the sidebar -->
   <div class="flex w-11 shrink-0 flex-col items-center border-r border-gray-200 bg-gray-100">
     {#each sidebarViews as view (view.id)}
@@ -2302,17 +2317,23 @@ where its evidence reaches the limits of the analysis -->
     </div>
   {/if}
 
-  <!-- Context column: inspector and agent -->
-  {#if contextCollapsed}
+  <!-- Context column: inspector and agent. While the graph is shown, it is a strip, and opened from
+  there it lies over the graph -->
+  {#if contextCollapsed || graph.open}
+    {@const floating = graph.open && !contextCollapsed}
     <div
       class="flex w-9 shrink-0 flex-col items-center gap-3 border-l border-gray-200 bg-gray-50 pt-3"
     >
       {#each [{ id: 'inspector', label: 'Inspector' }, { id: 'agent', label: 'Agent' }] as tab (tab.id)}
+        {@const shown = floating && contextTab === tab.id}
         <button
           type="button"
-          class="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-900"
-          onclick={() => openTab(tab.id as ContextTab)}
-          aria-label="Show {tab.label}"
+          class="flex flex-col items-center gap-1.5 {shown
+            ? 'text-gray-900'
+            : 'text-gray-500 hover:text-gray-900'}"
+          onclick={() => (shown ? (contextCollapsed = true) : openTab(tab.id as ContextTab))}
+          aria-label={shown ? `Hide ${tab.label}` : `Show ${tab.label}`}
+          aria-pressed={shown}
         >
           <span
             class="text-[10px] font-semibold tracking-widest uppercase"
@@ -2326,15 +2347,24 @@ where its evidence reaches the limits of the analysis -->
         </button>
       {/each}
     </div>
-  {:else}
-    <!-- Resize handle -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
+  {/if}
+  {#if !contextCollapsed}
+    {#if !graph.open}
+      <!-- Resize handle -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="w-1 shrink-0 cursor-col-resize border-l border-gray-200 hover:bg-blue-200"
+        onpointerdown={startResize}
+        title="Drag to resize"
+      ></div>
+    {/if}
     <div
-      class="w-1 shrink-0 cursor-col-resize border-l border-gray-200 hover:bg-blue-200"
-      onpointerdown={startResize}
-      title="Drag to resize"
-    ></div>
-    <div class="flex min-h-0 shrink-0 flex-col" style:width="{contextWidth}px">
+      class="flex min-h-0 shrink-0 flex-col {graph.open
+        ? 'absolute top-0 right-9 bottom-0 z-30 border-l border-gray-200 bg-white shadow-xl'
+        : ''}"
+      style:width="{contextWidth}px"
+      transition:fly={{ x: 24, duration: graph.open ? motion(150) : 0 }}
+    >
       <!-- Tabs -->
       <div class="flex h-9 shrink-0 items-stretch border-b border-gray-200 px-1" role="tablist">
         {#each [{ id: 'inspector', label: 'Inspector' }, { id: 'agent', label: 'Agent' }] as tab (tab.id)}
