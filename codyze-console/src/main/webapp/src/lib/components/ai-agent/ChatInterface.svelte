@@ -1121,19 +1121,42 @@
         e.message.contentType === 'text' ? extractCitations(e.message.content) : []
       )
     );
-    return [...ids].flatMap((id) => {
+    const refs = [...ids].flatMap((id) => {
       const ref = citedRefs.get(id) ?? evidenceRefs.get(id);
-      if (!ref || ref.startLine < 1) return [];
+      return ref && ref.startLine >= 1 ? [ref] : [];
+    });
+    return placesOf(refs).map((nodes) => {
+      // The most complete code of the place, e.g. the statement rather than a part of it
+      const ref = nodes.reduce((a, b) =>
+        (b.code || b.name).length > (a.code || a.name).length ? b : a
+      );
       const code = ref.code || ref.name;
-      return [
-        {
-          nodes: [ref],
-          label: code.length > 32 ? `${code.slice(0, 31)}…` : code,
-          title: `${code} · ${ref.fileName ?? ''}:${ref.startLine}`
-        }
-      ];
+      return {
+        nodes,
+        label: code.length > 32 ? `${code.slice(0, 31)}…` : code,
+        title: `${code} · ${ref.fileName ?? ''}:${ref.startLine}`
+      };
     });
   });
+
+  // The places of cited nodes, in the order of their citations: nodes cited one after the other on
+  // the same line, e.g. a call and the variable it is assigned to, are one place
+  function placesOf(refs: NodeRefJSON[]): NodeRefJSON[][] {
+    const places: NodeRefJSON[][] = [];
+    for (const ref of refs) {
+      const last = places.at(-1)?.[0];
+      if (
+        last &&
+        last.translationUnitId === ref.translationUnitId &&
+        last.startLine === ref.startLine
+      ) {
+        places.at(-1)!.push(ref);
+      } else {
+        places.push([ref]);
+      }
+    }
+    return places;
+  }
 
   // Shows paths a tool returned: a single path as the path in the code, several ones as a graph next
   // to the code
@@ -1322,14 +1345,16 @@
   }
 
   // The places in the code the answer of a block cites, in the order it cites them
-  function citedPlaces(b: number): NodeRefJSON[] {
+  function citedPlaces(b: number): NodeRefJSON[][] {
     const ids = (timeline[b]?.entries ?? []).flatMap((e) =>
       e.message.contentType === 'text' ? extractCitations(e.message.content) : []
     );
-    return [...new Set(ids)].flatMap((id) => {
-      const ref = citedRefs.get(id) ?? evidenceRefs.get(id);
-      return ref && ref.startLine >= 1 ? [ref] : [];
-    });
+    return placesOf(
+      [...new Set(ids)].flatMap((id) => {
+        const ref = citedRefs.get(id) ?? evidenceRefs.get(id);
+        return ref && ref.startLine >= 1 ? [ref] : [];
+      })
+    );
   }
 
   // The nodes among the arguments of the tool calls, to name them in the labels of the calls
