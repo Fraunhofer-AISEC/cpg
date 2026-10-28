@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -92,7 +91,8 @@ class PointsToPassConvergenceTest {
         val result = analyzeSemantics()
         val function = result.function("shallow")
 
-        val read = function.allChildren<Call> { it.name.localName == "sink" }.single().arguments[0]
+        val read = function.calls["sink"]?.arguments?.get(0)
+        assertNotNull(read)
         assertTrue(read.reaches(function.argumentRef("a")))
         assertFalse(
             read.reaches(function.argumentRef("b")),
@@ -109,7 +109,7 @@ class PointsToPassConvergenceTest {
     }
 
     private fun TranslationResult.function(name: String): Function {
-        val function = functions.singleOrNull { it.name.localName == name && it.body != null }
+        val function = functions(name).singleOrNull { it.body != null }
         assertNotNull(function)
         return function
     }

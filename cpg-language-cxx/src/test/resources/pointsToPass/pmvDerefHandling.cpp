@@ -67,21 +67,25 @@ undefined1 sgx_cw(i32 *param_1)
 undefined1 sgx_read(i32 *param_1)
 
 {
-  long lVar1;
-  c_void *session;
+  u8 *lVar1;
+  void *session;
   undefined1 uVar2;
   int iVar3;
   int iVar4;
   i32 iVar5;
-  i8 *buf;
+  u64 buf;
   size_t __nmemb;
   
-        iVar5 = client::client::read(session,buf,iVar3);
-        iVar3 = memcpy_s(lVar1,__nmemb,buf,__nmemb);
-        dlfree(buf);
-        return iVar3 != 0;
-    iVar5 = client::client::read(session,(i8 *)0x0,iVar3);
+  buf = *param_1;
+  iVar3 = memcpy_s(lVar1,__nmemb,buf,__nmemb);
+  dlfree(buf);
+  
+  iVar5 = read(lVar1);
   return uVar2;
+}
+
+void read(void* l) {
+  println(*l);
 }
 
 // WARNING: Removing unreachable block (ram,0x00134999)
