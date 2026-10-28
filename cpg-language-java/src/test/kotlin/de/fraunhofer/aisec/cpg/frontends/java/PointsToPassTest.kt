@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.test.*
@@ -91,8 +90,11 @@ internal class PointsToPassTest : BaseTest() {
                 .filter {
                     (it.granularity as? PartialDataflowGranularity<String>)?.partialTarget ==
                         "add" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            addCall1 &&
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == addCall1 &&
                         it.start == listAddParam
                 }
                 .size,
@@ -103,8 +105,11 @@ internal class PointsToPassTest : BaseTest() {
                 .filter {
                     (it.granularity as? PartialDataflowGranularity<String>)?.partialTarget ==
                         "add" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            addCall1 &&
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() == addCall1 &&
                         it.start == stringListAddParam
                 }
                 .size,
@@ -120,8 +125,11 @@ internal class PointsToPassTest : BaseTest() {
                 .filter {
                     (it.granularity as? PartialDataflowGranularity<String>)?.partialTarget ==
                         "add" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() in
-                            setOf(addCall1, addCall2) &&
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() in setOf(addCall1, addCall2) &&
                         it.start == listAddParam
                 }
                 .size,
@@ -132,8 +140,11 @@ internal class PointsToPassTest : BaseTest() {
                 .filter {
                     (it.granularity as? PartialDataflowGranularity<String>)?.partialTarget ==
                         "add" &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() in
-                            setOf(addCall1, addCall2) &&
+                        (it as? ContextSensitiveDataflow)
+                            ?.callingContexts
+                            ?.singleOrNull()
+                            ?.calls
+                            ?.single() in setOf(addCall1, addCall2) &&
                         it.start == stringListAddParam
                 }
                 .size,

@@ -2076,6 +2076,45 @@ fun <T> Collection<T>.splitInto(
 }
 
 /**
+ * Like [forEachMaybeParallel], but [action] does not perform its work directly: it appends it to
+ * the `collect` list it is given, which belongs to its chunk alone and therefore needs no
+ * synchronization. The chunks' lists are returned concatenated, in chunk order.
+ *
+ * Use this when the result of the parallel phase has to be written into a single shared, locked
+ * data structure: collecting first lets the caller apply everything in one batch instead of
+ * contending for that structure's lock once per element.
+ */
+suspend fun <T, R> Collection<T>.collectMaybeParallel(
+    parallelism: Int = CPU_CORES,
+    minChunkSize: Int = MIN_CHUNK_SIZE,
+    action: suspend (T, MutableList<R>) -> Unit,
+): List<R> {
+    if (size < minChunkSize || parallelism <= 1) {
+        val collected = mutableListOf<R>()
+        for (item in this) {
+            currentCoroutineContext().ensureActive()
+            action(item, collected)
+        }
+        return collected
+    }
+    return coroutineScope {
+        this@collectMaybeParallel.splitInto(maxParts = parallelism, minPartSize = minChunkSize)
+            .map { chunk ->
+                async(Dispatchers.Default) {
+                    val collected = mutableListOf<R>()
+                    chunk.forEach {
+                        currentCoroutineContext().ensureActive()
+                        action(it, collected)
+                    }
+                    collected
+                }
+            }
+            .awaitAll()
+            .flatten()
+    }
+}
+
+/**
  * Runs [action] for every element in the collection.
  *
  * • If the collection has less than [MIN_CHUNK_SIZE] items _or_ [parallelism] is 1 – run the loop

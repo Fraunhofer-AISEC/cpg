@@ -220,6 +220,21 @@ private constructor(
                     }
                 }
             if (ctx.config.useUnityBuild) {
+                // A unity build replaces all source files with a single generated file that does
+                // nothing but `#include` them. Every declaration therefore reaches the frontend
+                // through an inclusion, and frontends skip included content unless
+                // TranslationConfiguration.loadIncludes is set - which would leave us with an
+                // essentially empty graph. Since that combination is never what anyone wants, and
+                // its symptom (an analysis that silently finds nothing) is needlessly hard to
+                // diagnose, say so explicitly.
+                if (!ctx.config.loadIncludes) {
+                    log.warn(
+                        "A unity build was requested, but loadIncludes is disabled. Since a unity build " +
+                            "consists only of include directives, the resulting graph will be empty. " +
+                            "Enable loadIncludes to use a unity build."
+                    )
+                }
+
                 // If we only have C files in the list, we need to make sure that our unity build is
                 // also a .c file
                 val cFiles = list.filter { it.extension == "c" }
