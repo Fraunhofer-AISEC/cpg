@@ -1184,7 +1184,7 @@
 
   // Shows the evidence of a question as one graph next to the code: the paths and slices of all of
   // its steps, with the statements its answer cites marked
-  async function showEvidence(b: number) {
+  async function showEvidence(b: number, reveal = true) {
     const block = timeline[b];
     if (!block) return;
     const steps = graphSteps(block);
@@ -1208,18 +1208,37 @@
       }
     );
     const first = evidence.graph.nodes.find((n) => evidence.cited.includes(n.id));
-    if (first) revealFromAgent(first.node.id);
+    if (reveal && first) revealFromAgent(first.node.id);
   }
 
-  // Once the agent has answered, the evidence of the question is shown as a graph
+  // Once the agent has answered, the page stays as it is: the answer offers to step through its
+  // places and to show its graph. Only a graph that shows the evidence of an earlier answer follows
+  // the new one, or closes if the new one has none, so that it does not show something else than
+  // the answer. Without an open file, the first place the answer cites is opened
   let wasLoading = false;
   $effect(() => {
     const loading = isLoading;
-    if (wasLoading && !loading) {
-      untrack(() => showEvidence(timeline.length - 1));
-    }
+    if (wasLoading && !loading) untrack(afterAnswer);
     wasLoading = loading;
   });
+
+  function afterAnswer() {
+    const last = timeline.length - 1;
+    const block = timeline[last];
+    if (!block) return;
+    if (graph.open && graph.evidence) {
+      if (graphSteps(block).length > 0) showEvidence(last, false);
+      else graph.close();
+    }
+    if (!openedUnit) {
+      const first = block.entries
+        .flatMap((e) =>
+          e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+        )
+        .at(0);
+      if (first) followCited(first);
+    }
+  }
 
   // The steps shown in the code and in the bar above it: the path or the agent's thread
   const sequence = $derived(focus.sequence(layers.visible.agent));
