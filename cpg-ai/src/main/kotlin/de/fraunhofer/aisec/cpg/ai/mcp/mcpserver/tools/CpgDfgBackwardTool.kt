@@ -31,12 +31,12 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.noNodeFoundResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.paginate
 import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGNodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import kotlin.uuid.Uuid
 import kotlinx.serialization.json.Json
 
 fun Server.addDfgBackwardTool() {
@@ -63,24 +63,7 @@ fun Server.addDfgBackwardTool() {
 }
 
 internal fun dfgBackward(session: CpgSession, payload: CpgDfgBackwardPayload): CallToolResult {
-    val normalizedId =
-        try {
-            Uuid.parse(payload.id).toString()
-        } catch (_: IllegalArgumentException) {
-            return CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            "No node found with id '${payload.id}'. Node ids are UUIDs returned by other tools (e.g. cpg_list_functions, cpg_get_node) — copy one exactly."
-                        )
-                    )
-            )
-        }
-    val startNode =
-        session.findNodeById(normalizedId)
-            ?: return CallToolResult(
-                content = listOf(TextContent("No node found with id '${payload.id}'."))
-            )
+    val startNode = session.findNodeById(payload.id) ?: return noNodeFoundResult(payload.id)
 
     // One JSON array per call, sliced to a page, so that a node with a huge backward slice cannot
     // flood the context by itself; the summary says how to fetch the rest. Only the nodes of the

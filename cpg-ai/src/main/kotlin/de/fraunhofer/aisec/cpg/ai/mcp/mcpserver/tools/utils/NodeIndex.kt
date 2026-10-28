@@ -28,6 +28,9 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.nodes
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import kotlin.uuid.Uuid
 
 /**
  * Finds a node of this session's graph by its id, via an index that is built on first use.
@@ -42,8 +45,23 @@ import de.fraunhofer.aisec.cpg.graph.nodes
  * (applying concepts). Whatever can add or remove AST nodes - running a pass, replacing the graph -
  * must call [NodeIndex.invalidate] (`session.nodeIndex`); the tools in this module do.
  */
-fun CpgSession.findNodeById(id: String): AstNode? =
-    translationResult?.let { nodeIndex.find(it, id) }
+fun CpgSession.findNodeById(id: String): AstNode? {
+    // Ids come from the model as typed text, the index holds the canonical (lowercase) form.
+    val canonicalId = Uuid.parseOrNull(id.trim())?.toString() ?: return null
+    return translationResult?.let { nodeIndex.find(it, canonicalId) }
+}
+
+/** The result of a tool that found no node for [id], with a hint on where valid ids come from. */
+fun noNodeFoundResult(id: String): CallToolResult =
+    CallToolResult(
+        content =
+            listOf(
+                TextContent(
+                    "No node found with id '$id'. Node ids are UUIDs returned by other tools " +
+                        "(e.g. cpg_list_functions, cpg_get_node) — copy one exactly."
+                )
+            )
+    )
 
 /** The id index of one [CpgSession]; see [findNodeById]. */
 class NodeIndex {

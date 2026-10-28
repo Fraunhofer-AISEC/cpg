@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayloa
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.noNodeFoundResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -283,11 +284,7 @@ fun Server.getNode() {
         name = "cpg_get_node",
         description = toolDescription,
     ) { session: CpgSession, payload: CpgIdPayload ->
-        val node = session.findNodeById(payload.id)
-        if (node != null) {
-            CallToolResult(content = listOf(TextContent(node.toJson())))
-        } else {
-            CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
-        }
+        val node = session.findNodeById(payload.id) ?: return@addTool noNodeFoundResult(payload.id)
+        CallToolResult(content = listOf(TextContent(node.toJson())))
     }
 }

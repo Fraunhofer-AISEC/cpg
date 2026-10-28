@@ -75,6 +75,17 @@ class NodeIndexTest {
     }
 
     @Test
+    fun theIdIsNormalizedBeforeTheLookup(@TempDir dir: Path) {
+        val session = analyzeSnippet(dir, "int main() { return 0; }")
+        val node = session.translationResult.nodes.first()
+        val id = node.id.toString()
+
+        assertSame(node, session.findNodeById(id.uppercase()), "upper case")
+        assertSame(node, session.findNodeById("  $id\n"), "surrounding whitespace")
+        assertNull(session.findNodeById(id.drop(1)), "not a UUID")
+    }
+
+    @Test
     fun theIndexIsBuiltOncePerSession(@TempDir dir: Path) {
         val session = analyzeSnippet(dir, code)
         val before = session.nodeIndex.buildCount
