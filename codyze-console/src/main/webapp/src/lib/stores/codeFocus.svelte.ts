@@ -3,6 +3,9 @@ import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
 /** A section of the inspector that can be revealed, e.g. from the code lens of a function. */
 export type InspectorSection = 'callers' | 'callees' | 'callTargets';
 
+/** Which of the calls in a function to list: only those to external code or unresolved ones. */
+export type CallFilter = 'EXTERNAL' | 'UNRESOLVED';
+
 /** A place in the code that was visited: a file, or a node in it. */
 export interface CodeLocation {
   unitId: string;
@@ -54,6 +57,8 @@ export class CodeFocus {
    * revealed again
    */
   revealSection = $state<{ section: InspectorSection; request: number } | null>(null);
+  /** The calls of the inspected function that are listed, or null for all of them */
+  callFilter = $state<CallFilter | null>(null);
 
   /** The visited locations, oldest first, for going back and forward like in an editor */
   history = $state.raw<CodeLocation[]>([]);
@@ -61,8 +66,8 @@ export class CodeFocus {
   historyIndex = $state(-1);
 
   /**
-   * The dataflow path the user followed, from the source to the sink, like the code-flow steps of
-   * CodeQL. It is built by following dataflows hop by hop (in the inspector or along the arcs in
+   * The dataflow path the user followed, from the source to the sink. It is built by following
+   * dataflows hop by hop (in the inspector or along the arcs in
    * the code) and stays until it is cleared, so the user can step through it
    */
   path = $state.raw<NodeRefJSON[]>([]);
@@ -75,7 +80,28 @@ export class CodeFocus {
    */
   thread = $state.raw<ThreadNode[]>([]);
 
+  /**
+   * The path and the thread share the lane of the steps in the code and the bar above it, so only
+   * one of them is shown: the one the user turned to last
+   */
+  showing = $state<'path' | 'thread'>('thread');
+
+  /** The step of the thread the user points at (e.g. in the timeline), whose nodes stand out */
+  highlightedStep = $state<number | null>(null);
+
   private request = 0;
+
+  /**
+   * The sequence of steps that is shown: the one the user turned to last, or else the other one if
+   * only that exists. [threadVisible] is false while the agent's evidence is hidden
+   */
+  sequence(threadVisible: boolean): 'path' | 'thread' | null {
+    const hasPath = this.path.length >= 2;
+    const hasThread = threadVisible && this.thread.length > 0;
+    if (this.showing === 'path' && hasPath) return 'path';
+    if (hasThread) return 'thread';
+    return hasPath ? 'path' : null;
+  }
 
   get canGoBack(): boolean {
     return this.historyIndex > 0;
@@ -120,7 +146,8 @@ export class CodeFocus {
     load: () => Promise<NodeDetailsJSON | null>,
     reveal = false,
     section?: InspectorSection,
-    record = true
+    record = true,
+    filter?: CallFilter
   ) {
     const request = ++this.request;
     this.loading = true;
@@ -132,6 +159,7 @@ export class CodeFocus {
         this.details = details;
         if (reveal) this.revealCount++;
         this.revealSection = section ? { section, request } : null;
+        this.callFilter = filter ?? null;
         const node = details.node;
         this.pathIndex = this.path.findIndex((step) => step.id === node.id);
         if (record && node.translationUnitId) {
@@ -171,6 +199,15 @@ export class CodeFocus {
     const end = path.findIndex((step, i) => path.findIndex((s) => s.id === step.id) < i);
     if (end >= 0) path = path.slice(0, end);
     this.path = path.slice(0, maxPathSteps);
+    this.showing = 'path';
+  }
+
+  /** Shows the given nodes as the path, e.g. a dataflow a tool of the agent returned. */
+  setPath(path: NodeRefJSON[]) {
+    const unique = path.filter((step, i) => path.findIndex((s) => s.id === step.id) === i);
+    this.path = unique.slice(0, maxPathSteps);
+    this.pathIndex = this.path.findIndex((step) => step.id === this.details?.node.id);
+    this.showing = 'path';
   }
 
   /**
@@ -187,6 +224,7 @@ export class CodeFocus {
   clearPath() {
     this.path = [];
     this.pathIndex = -1;
+    this.showing = 'thread';
   }
 
   /** Marks the analysis result as changed, see [revision]. */
@@ -194,10 +232,14 @@ export class CodeFocus {
     this.revision++;
   }
 
+  /** Deselects the inspected node, e.g. after a click into empty space. The path stays. */
   clear() {
     this.request++;
     this.details = null;
     this.loading = false;
     this.error = null;
+    this.revealSection = null;
+    this.callFilter = null;
+    this.pathIndex = -1;
   }
 }

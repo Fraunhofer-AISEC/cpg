@@ -19,8 +19,8 @@
   import { fuzzyMatch } from '$lib/utils/fuzzy';
 
   /**
-   * A quick open for files and a palette for commands in one dialog, like in VS Code: the query
-   * searches the files, and a query starting with `>` searches the commands.
+   * A quick open for files and a palette for commands in one dialog: the query searches the files,
+   * and a query starting with `>` searches the commands.
    */
   interface Props {
     /** The query; set it to `''` to open the files or to `'>'` to open the commands, null closes */

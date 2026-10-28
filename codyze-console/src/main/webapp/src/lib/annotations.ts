@@ -1,4 +1,8 @@
-import type { FileAnnotationsJSON, FunctionAnnotationJSON } from '$lib/types';
+import type {
+  ConceptAnnotationJSON,
+  FileAnnotationsJSON,
+  FunctionAnnotationJSON
+} from '$lib/types';
 
 /** The number of concepts and operations in a function. */
 export function conceptsInFunction(
@@ -10,23 +14,14 @@ export function conceptsInFunction(
   ).length;
 }
 
-const categoryIcons: Record<string, string> = {
-  crypto: '🔒',
-  file: '📄',
-  http: '🌐',
-  network: '🌐',
-  auth: '🔑',
-  logging: '📝',
-  memory: '🧠',
-  config: '⚙️',
-  flows: '🚪',
-  diskEncryption: '💽',
-  policy: '📋'
-};
-
-/** An icon for the category (package) of a concept. */
-export function conceptIcon(category: string): string {
-  return categoryIcons[category] ?? '◆';
+/**
+ * Describes a concept (a thing, e.g. a secret) or an operation (what the code does with it, e.g.
+ * getting the secret) and the node it is attached to.
+ */
+export function describeConcept(c: ConceptAnnotationJSON): string {
+  return c.isOperation
+    ? `Operation ${c.type}${c.concept ? ` (of ${c.concept})` : ''} · ${c.target}`
+    : `Concept ${c.type} · ${c.target}`;
 }
 
 /** Fetches the number of concepts and operations per translation unit (by ID) of a component. */

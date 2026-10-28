@@ -12,7 +12,7 @@
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
-  import { getAnnotations } from '$lib/annotations';
+  import { describeConcept, getAnnotations } from '$lib/annotations';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import type { FileAnnotationsJSON } from '$lib/types';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
@@ -22,7 +22,8 @@
   import {
     CodeFocus,
     type FlowDirection,
-    type InspectorSection
+    type InspectorSection,
+    type CallFilter
   } from '$lib/stores/codeFocus.svelte';
   import { flattenNodes } from '$lib/flatten';
   import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
@@ -106,6 +107,8 @@
     scrollPositions?: Map<string, number>;
     /** The annotations of the file, loaded by the viewer; bind it to use them outside */
     annotations?: FileAnnotationsJSON | null;
+    /** The first visible line (1-based); bind it to know where in the file the user is */
+    topLine?: number;
     /**
      * Adds lanes to the gutter: one for the numbered steps of the path (see [CodeFocus.path]) and
      * one between the line numbers and the code for the dataflow arcs of the inspected node
@@ -116,6 +119,20 @@
      * which calls this with the question and the selection
      */
     onAsk?: (question: string, selection: CodeSelection) => void;
+    /**
+     * A slice of the program dependence graph shown in the code, as tinted lines and marks in the
+     * ruler. [onHover] is called with the statement under the mouse
+     */
+    slice?: {
+      ranges: { id: string; first: number; last: number; label: string }[];
+      selectedId: string | null;
+      hoveredId: string | null;
+      onHover: (id: string | null) => void;
+    };
+    /** Called on a right click in the code, with the node there and the place on the screen */
+    onCodeContextMenu?: (target: { details: NodeDetailsJSON; x: number; y: number }) => void;
+    /** Buttons at the end of the row of the layers, e.g. to open a panel next to the code */
+    layerActions?: Snippet;
     /** Why asking is not possible right now, e.g. while the agent is busy */
     askDisabledReason?: string | null;
     /** Incremented to open the input for the selection (or else the inspected node) */
@@ -143,8 +160,12 @@
     onInspect,
     scrollPositions,
     annotations = $bindable(null),
+    topLine = $bindable(1),
     lanes = false,
     onAsk,
+    slice,
+    onCodeContextMenu,
+    layerActions,
     askDisabledReason = null,
     askRequest = 0
   }: Props = $props();
@@ -176,14 +197,15 @@
   function inspect(
     load: () => Promise<NodeDetailsJSON | null>,
     reveal = false,
-    section?: InspectorSection
+    section?: InspectorSection,
+    filter?: CallFilter
   ) {
     if (inspectorInPanel) {
       activeTab = 'inspector';
       nodePanelCollapsed = false;
     }
     onInspect?.();
-    focus.inspect(load, reveal, section);
+    focus.inspect(load, reveal, section, true, filter);
   }
 
   // When another file is shown in the same viewer (e.g. by switching tabs), go back to where it was
@@ -409,6 +431,8 @@
   function handleWindowKeydown(event: KeyboardEvent) {
     if (!onAsk) return;
     if (event.key === 'Escape' && ask && !askFocused) {
+      // Other things that close with Escape (e.g. a panel) leave it to the input then
+      event.preventDefault();
       ask = null;
     } else if (
       hasModifier(event) &&
@@ -441,7 +465,12 @@
     // Do not interfere with selecting text
     if (window.getSelection()?.toString()) return;
     const position = positionAt(event);
-    if (!position) return;
+    // A click into empty space (whitespace, after the end of a line, below the code) deselects
+    const char = position ? codeLines[position.line - 1]?.[position.column - 1] : undefined;
+    if (!position || !char || /\s/.test(char)) {
+      focus.clear();
+      return;
+    }
     const component = componentName;
     inspect(() => getNodeDetailsAt(component, translationUnit.id, position.line, position.column));
   }
@@ -473,8 +502,33 @@
     return !(line === node.endLine && column >= node.endColumn);
   }
 
+  // The statement of the slice at a line, if there is one
+  const sliceRangeAt = (line: number) =>
+    slice?.ranges.find((r) => line >= r.first && line <= r.last);
+
+  async function handleCodeContextMenu(event: MouseEvent) {
+    if (!onCodeContextMenu || !componentName) return;
+    const position = positionAt(event);
+    if (!position) return;
+    event.preventDefault();
+    hideHover();
+    const [x, y] = [event.clientX, event.clientY];
+    const details = await getNodeDetailsAt(
+      componentName,
+      translationUnit.id,
+      position.line,
+      position.column
+    ).catch(() => null);
+    if (details) onCodeContextMenu({ details, x, y });
+  }
+
   function handleCodeMouseMove(event: MouseEvent) {
-    if (!componentName || event.buttons !== 0) return hideHover();
+    if (slice) {
+      const position = positionAt(event);
+      slice.onHover((position && sliceRangeAt(position.line)?.id) || null);
+    }
+    // Hover cards are a feature of the agent page, the unit page keeps its own panel
+    if (!componentName || !externalInspector || event.buttons !== 0) return hideHover();
     const position = positionAt(event);
     // Only over the code itself, not over whitespace or after the end of a line
     const char = position ? codeLines[position.line - 1]?.[position.column - 1] : undefined;
@@ -593,7 +647,8 @@
           line: step.line,
           lane: 4,
           color: color('agent'),
-          label: `${step.index + 1}. ${step.title}`
+          label: `${step.index + 1}. ${step.title}`,
+          faded: step.faded
         });
       }
       for (const step of pathMarkers) {
@@ -615,16 +670,23 @@
         }
       }
     }
+    for (const range of slice?.ranges ?? []) {
+      marks.push({
+        line: range.first,
+        lane: 5,
+        color: range.id === slice?.selectedId ? '#2563eb' : '#93b4ea',
+        label: range.label
+      });
+    }
     // While a path or the agent's thread is shown, the other layers step back
     const faded = pathActive || threadActive;
     if (layers.visible.concepts) {
       for (const c of annotations.concepts) {
-        const kind = c.isOperation ? 'Operation' : 'Concept';
         marks.push({
           line: c.line,
           lane: 0,
           color: color('concepts'),
-          label: `${kind} ${c.type}`,
+          label: describeConcept(c),
           faded
         });
       }
@@ -720,29 +782,30 @@
   // The highlighted line, 0-based
   const allHighlightLines = $derived(highlightLine ? [highlightLine - 1] : []);
 
-  const lineHeight = 1.5;
-  const charWidth = 0.60015625;
-  const offsetTop = 1;
-  const baseOffsetLeft = 2.4;
+  // The code is set in 13px, and a monospace character is 0.6em wide
+  const fontSize = 0.8125;
+  const lineHeight = 1.25;
+  const charWidth = 0.60015625 * fontSize;
+  const offsetTop = 0.5;
 
   const code = $derived(translationUnit.code ?? '');
   const codeLines = $derived(code.split('\n'));
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
-  // The lanes of the gutter: the markers of the agent's steps and of the path before the line
-  // numbers, the arcs after them
+  // The gutter, from left to right: a lane for the numbered steps (of the path or the agent's
+  // thread), the line numbers, a narrow lane for the concept icons, and the space for the dataflow
+  // arcs
   // svelte-ignore state_referenced_locally
-  const agentLaneWidth = lanes ? 1.2 : 0;
+  const markerLaneWidth = lanes ? 1.25 : 0.5;
+  const glyphLaneLeft = 0.1;
+  const glyphLaneWidth = 0.75;
   // svelte-ignore state_referenced_locally
-  const markerLaneWidth = lanes ? 1.2 : 0;
-  // svelte-ignore state_referenced_locally
-  const arcLaneWidth = lanes ? 2.4 : 0;
-  const offsetLeft = $derived(
-    baseOffsetLeft + agentLaneWidth + markerLaneWidth + lineNumberWidth * charWidth + arcLaneWidth
-  );
-  // The arc lane ends shortly before the first character of a line (see CodeLines)
+  const gutterPadding = lanes ? 2.25 : 1;
+  const lineNumbersRight = $derived(markerLaneWidth + lineNumberWidth * charWidth);
+  const offsetLeft = $derived(lineNumbersRight + gutterPadding - charWidth);
+  // The arcs lie between the concept icons and the first character of a line (see CodeLines)
   const arcLaneRight = $derived(offsetLeft + charWidth - 0.35);
-  const arcLaneLeft = $derived(arcLaneRight - arcLaneWidth + 0.2);
+  const arcLaneLeft = $derived(lineNumbersRight + glyphLaneLeft + glyphLaneWidth);
   const maxColumns = $derived.by(() => {
     let max = 0;
     for (const line of codeLines) {
@@ -767,6 +830,10 @@
       first: Math.max(1, Math.floor(first) + 1),
       last: Math.min(totalLines, Math.ceil(last))
     };
+  });
+
+  $effect(() => {
+    topLine = viewportLines.first;
   });
 
   const visibleLines = $derived.by(() => {
@@ -801,7 +868,10 @@
   }
 
   // The steps of the path in this file, and whether a path is shown at all
-  const pathActive = $derived(lanes && focus.path.length >= 2);
+  // The path and the agent's thread share the lane of the steps; only the one the user turned to
+  // last is shown (see [CodeFocus.sequence])
+  const sequence = $derived(lanes ? focus.sequence(layers.visible.agent) : null);
+  const pathActive = $derived(sequence === 'path');
   const pathMarkers = $derived.by((): StepMarker[] => {
     if (!pathActive) return [];
     return focus.path.flatMap((ref, index) =>
@@ -819,7 +889,7 @@
   });
 
   // The evidence of the agent's active thread in this file, and whether it is shown at all
-  const threadActive = $derived(lanes && layers.visible.agent && focus.thread.length > 0);
+  const threadActive = $derived(sequence === 'thread');
   const agentMarkers = $derived.by((): StepMarker[] => {
     if (!threadActive) return [];
     return focus.thread.flatMap(({ ref, step, claimed }) =>
@@ -831,6 +901,8 @@
               title: `${claimed ? 'only cited in the answer, no tool returned it: ' : ''}${ref.code || ref.name} · ${ref.fileName}:${ref.startLine}`,
               current: ref.id === inspected?.node.id,
               dashed: claimed,
+              // The nodes of the step the user points at stand out
+              faded: focus.highlightedStep !== null && focus.highlightedStep !== step,
               // Nodes only cited in the answer are no step of the agent
               label: claimed ? '?' : undefined,
               nodeId: ref.id
@@ -852,8 +924,10 @@
   <!-- Code display -->
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
     <!-- Header: where the file is, and below it the layer toggles -->
-    <div class="shrink-0 border-b border-gray-200 bg-white px-4 py-1.5">
-      <div class="flex min-h-6 items-center justify-between gap-3">
+    <div class="shrink-0 border-b border-gray-200 bg-white">
+      <div
+        class="flex min-h-[1.875rem] items-center justify-between gap-3 border-b border-gray-100 px-3 py-0.5"
+      >
         <div class="flex min-w-0 items-center gap-3">
           {#if headerStart}
             {@render headerStart()}
@@ -893,12 +967,16 @@
       </div>
       {#if annotations}
         <!-- Layer toggles: each one shows or hides one kind of marks in the code -->
-        <div class="mt-1 flex flex-wrap items-center gap-1" role="group" aria-label="Layers">
+        <div
+          class="flex h-9 items-center gap-1.5 overflow-x-auto px-3 whitespace-nowrap"
+          role="group"
+          aria-label="Layers"
+        >
           {#each shownLayers as layer (layer.id)}
             {@const summary = layerSummary(layer.id)}
             <button
               type="button"
-              class="flex items-center gap-1 rounded-full border px-2 py-px text-[11px] {layers
+              class="flex h-6 items-center gap-1 rounded-full border px-2 text-[11.5px] {layers
                 .visible[layer.id]
                 ? layer.activeClass
                 : 'border-gray-200 text-gray-400 hover:text-gray-600'}"
@@ -911,6 +989,10 @@
               <span class="tabular-nums opacity-70">{summary.count}</span>
             </button>
           {/each}
+          {#if layerActions}
+            <span class="flex-1"></span>
+            {@render layerActions()}
+          {/if}
         </div>
       {/if}
     </div>
@@ -932,7 +1014,11 @@
           }}
           onclick={handleCodeClick}
           onmousemove={handleCodeMouseMove}
-          onmouseleave={hideHover}
+          oncontextmenu={handleCodeContextMenu}
+          onmouseleave={() => {
+            hideHover();
+            slice?.onHover(null);
+          }}
         >
           <div class="font-mono">
             <Highlight language={getLanguage(translationUnit.name)} {code} let:highlighted>
@@ -946,8 +1032,13 @@
                 {charWidth}
                 {offsetTop}
                 {offsetLeft}
-                gutterPadding={0.75 + arcLaneWidth}
+                {fontSize}
+                {gutterPadding}
                 selection={selectedLines}
+                sliceLines={slice?.ranges.flatMap((r) =>
+                  Array.from({ length: r.last - r.first + 1 }, (_, i) => r.first + i)
+                )}
+                sliceHover={slice?.ranges.find((r) => r.id === slice.hoveredId) ?? null}
               />
             </Highlight>
           </div>
@@ -974,7 +1065,10 @@
               {charWidth}
               {offsetTop}
               {offsetLeft}
-              onInspect={(id, section) => inspect(() => getNodeDetails(id), true, section)}
+              glyphLeft={lineNumbersRight + glyphLaneLeft}
+              glyphWidth={glyphLaneWidth}
+              onInspect={(id, section, filter) =>
+                inspect(() => getNodeDetails(id), true, section, filter)}
             />
           {/if}
 
@@ -999,26 +1093,27 @@
             />
           {/if}
 
-          {#if pathMarkers.length > 0}
-            <StepMarkers
-              markers={pathMarkers}
-              startLine={visibleLines.start}
-              endLine={visibleLines.end}
-              {lineHeight}
-              {offsetTop}
-              left={baseOffsetLeft - 0.3 + agentLaneWidth}
-              onSelect={(marker) => selectRef(focus.path[marker.index])}
-            />
-          {/if}
-
-          {#if agentMarkers.length > 0}
+          <!-- The path and the agent's thread share the lane of the steps -->
+          {#if pathActive}
+            {#if pathMarkers.length > 0}
+              <StepMarkers
+                markers={pathMarkers}
+                startLine={visibleLines.start}
+                endLine={visibleLines.end}
+                {lineHeight}
+                {offsetTop}
+                left={(markerLaneWidth - 1) / 2}
+                onSelect={(marker) => selectRef(focus.path[marker.index])}
+              />
+            {/if}
+          {:else if agentMarkers.length > 0}
             <StepMarkers
               markers={agentMarkers}
               startLine={visibleLines.start}
               endLine={visibleLines.end}
               {lineHeight}
               {offsetTop}
-              left={baseOffsetLeft - 0.3}
+              left={(markerLaneWidth - 1) / 2}
               shape="square"
               onSelect={(marker) => {
                 const node = focus.thread.find((n) => n.ref.id === marker.nodeId);
@@ -1087,7 +1182,7 @@
         <OverviewRuler
           marks={rulerMarks}
           {totalLines}
-          lanes={lanes ? 5 : 3}
+          lanes={lanes ? (slice ? 6 : 5) : 3}
           viewport={viewportLines}
           selectionLine={inspected?.node.translationUnitId === translationUnit.id
             ? inspected.node.startLine

@@ -14,14 +14,15 @@
     nodeId?: string;
     /** Shown instead of the number, e.g. for a marker that is no step */
     label?: string;
+    /** Drawn faintly, e.g. while another step is pointed at */
+    faded?: boolean;
   }
 </script>
 
 <script lang="ts">
   /**
-   * Numbered badges for the steps of a path in a lane of the gutter, like the code-flow steps of
-   * CodeQL. Several steps in the same line share one badge, which shows the current or the first
-   * of them. Clicking a badge goes to its step.
+   * Numbered badges for the steps of a path in a lane of the gutter. Several steps in the same line
+   * share one badge, which shows the current step, else one that is not faded, else the first. Clicking a badge goes to its step.
    */
   interface Props {
     markers: StepMarker[];
@@ -58,7 +59,7 @@
     return Object.entries(lines).map(([line, steps]) => ({
       line: Number(line),
       steps,
-      shown: steps.find((s) => s.current) ?? steps[0]
+      shown: steps.find((s) => s.current) ?? steps.find((s) => !s.faded) ?? steps[0]
     }));
   });
 </script>
@@ -73,7 +74,9 @@
         ? 'rounded-full'
         : 'rounded-sm'} px-0.5 font-sans text-[10px] leading-none font-semibold tabular-nums {marker.dashed
         ? 'border border-dashed border-slate-500 bg-white text-slate-700'
-        : 'bg-slate-700 text-white'} {marker.current ? 'ring-2 ring-blue-500' : ''}"
+        : 'bg-slate-700 text-white'} {marker.current ? 'ring-2 ring-blue-500' : ''} {marker.faded
+        ? 'opacity-30'
+        : ''}"
       style:top="{offsetTop + (entry.line - 0.5) * lineHeight}rem"
       style:left="{left}rem"
       title={entry.steps.map((s) => `${s.label ?? s.index + 1}. ${s.title}`).join('\n')}
