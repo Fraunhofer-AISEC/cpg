@@ -76,12 +76,14 @@ graph. Expanding by double click is a shortcut, the button at the border does th
     : card.faded && !card.selected
       ? 'opacity-60'
       : ''}"
-  title="{statement.node.type} · {locationOf(statement)}"
+  title="{statement.code} · {statement.node.type} · {locationOf(statement)}"
   ondblclick={() => statement.more > 0 && card.onExpand(statement.id)}
 >
   <Handle type="target" position={Position.Top} class="statement-handle" />
   <div
-    class="flex h-4 items-center gap-1 text-[10.5px] leading-none text-gray-500 group-[.graph-far]/flow:h-full group-[.graph-far]/flow:justify-center group-[.graph-far]/flow:gap-2"
+    class="flex h-4 items-center gap-1 text-[10.5px] leading-none text-gray-500 group-[.graph-far]/flow:h-full group-[.graph-far]/flow:content-center group-[.graph-far]/flow:justify-center group-[.graph-far]/flow:gap-x-2 group-[.graph-far]/flow:gap-y-1 {card.otherFile
+      ? 'group-[.graph-far]/flow:flex-wrap'
+      : ''}"
   >
     {#if stub}
       <span class="hidden text-4xl text-gray-500 group-[.graph-far]/flow:inline"
@@ -99,11 +101,17 @@ graph. Expanding by double click is a shortcut, the button at the border does th
       >
     {:else}
       <span
-        class="font-medium tabular-nums group-[.graph-far]/flow:text-4xl group-[.graph-far]/flow:font-semibold group-[.graph-far]/flow:text-gray-700"
-        >L{statement.startLine}</span
+        class="font-medium tabular-nums group-[.graph-far]/flow:font-semibold group-[.graph-far]/flow:text-gray-700 {card.otherFile
+          ? 'group-[.graph-far]/flow:text-2xl'
+          : 'group-[.graph-far]/flow:text-4xl'}">L{statement.startLine}</span
       >
       {#if card.otherFile}
-        <span class="truncate text-gray-400 group-[.graph-far]/flow:hidden">{card.otherFile}</span>
+        <!-- Zoomed far out, the file tells statements of other files apart from the ones on the
+        same line of the root's file -->
+        <span
+          class="truncate text-gray-400 group-[.graph-far]/flow:order-last group-[.graph-far]/flow:basis-full group-[.graph-far]/flow:text-center group-[.graph-far]/flow:text-lg"
+          >{card.otherFile}</span
+        >
       {/if}
       {#if branch}
         <span

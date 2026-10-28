@@ -59,6 +59,9 @@
 
   // Zoomed far out, the cards show only their line number
   let zoom = $state(1);
+  // The size of the view, to show a large graph at a readable size, see FitView
+  let viewWidth = $state(0);
+  let viewHeight = $state(0);
   const far = $derived(zoom < 0.4);
 
   const selectedId = $derived(panel.selectedId);
@@ -184,7 +187,11 @@
   }
 </script>
 
-<div class="group/flow relative h-full min-h-0 w-full {far ? 'graph-far' : ''}">
+<div
+  class="group/flow relative h-full min-h-0 w-full {far ? 'graph-far' : ''}"
+  bind:clientWidth={viewWidth}
+  bind:clientHeight={viewHeight}
+>
   {#if layout}
     <SvelteFlow
       {nodes}
@@ -219,7 +226,12 @@
         position="bottom-right"
         class="!h-24 !w-36 opacity-0 transition-opacity group-hover/flow:opacity-100"
       />
-      <FitView trigger={layout} />
+      <FitView
+        trigger={layout}
+        positions={layout.laid.positions}
+        width={viewWidth}
+        height={viewHeight}
+      />
     </SvelteFlow>
   {/if}
 
