@@ -277,6 +277,14 @@ open class CLanguage :
             return ImplicitCast
         }
 
+        // In C (but not in C++, see CPPLanguage.tryCast), void* can also be implicitly cast to any
+        // other object pointer, including pointers to pointers, e.g. the result of malloc or NULL.
+        // Function pointers are excluded, as in the C standard: they are a FunctionPointerType, not
+        // a PointerType.
+        if (isVoidPointerToOtherPointer(type, targetType)) {
+            return ImplicitCast
+        }
+
         // The integer literal 0 is a null pointer constant, which can be implicitly cast to any
         // pointer (also in C++, whose tryCast delegates to this one first)
         if (targetType is PointerType && hint.isZeroLiteral()) {
@@ -285,6 +293,12 @@ open class CLanguage :
 
         return CastNotPossible
     }
+
+    protected fun isVoidPointerToOtherPointer(type: Type, targetType: Type): Boolean =
+        type is PointerType &&
+            type.elementType is IncompleteType &&
+            targetType is PointerType &&
+            targetType.elementType !is IncompleteType
 
     private fun HasType?.isZeroLiteral(): Boolean {
         val literal = this as? Literal<*> ?: return false
