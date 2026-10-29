@@ -1921,6 +1921,33 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testStdlibProfileSummariesModelDestinationAndAppend() {
+        val file = File("src/test/resources/c/stdlib_profile_summaries.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+                it.profile(StdlibProfile)
+            }
+        assertNotNull(tu)
+
+        fun literalsReaching(variable: String): Set<Any?> {
+            val reached = mutableSetOf<Node>()
+            val worklist = ArrayDeque<Node>(listOfNotNull(tu.variables[variable]?.initializer))
+            while (worklist.isNotEmpty()) {
+                val node = worklist.removeFirst()
+                if (reached.add(node)) worklist.addAll(node.prevDFG)
+            }
+            return reached.filterIsInstance<Literal<*>>().map { it.value }.toSet()
+        }
+
+        // strcpy returns its destination, so *p reads what was copied there.
+        assertEquals(setOf<Any?>('b'), literalsReaching("viaReturn"))
+        // strcat appends: the destination keeps what it held before.
+        assertEquals(setOf<Any?>('a', 'b'), literalsReaching("afterAppend"))
+    }
+
+    @Test
     fun testStdlibProfileSummariesSkipFunctionsWithCode() {
         val file = File("src/test/resources/c/stdlib_profile_own_definition.c")
         val tu =
