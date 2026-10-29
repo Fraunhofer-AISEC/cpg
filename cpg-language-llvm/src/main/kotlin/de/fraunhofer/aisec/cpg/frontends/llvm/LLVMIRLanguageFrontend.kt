@@ -82,39 +82,17 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         // these will be filled by our create and parse functions later and will be passed as
         // pointer
         val mod = LLVMModuleRef()
-        val buf = LLVMMemoryBufferRef()
 
-        // create a new LLVM context
-        ctxRef = LLVMContextCreate()
-
-        // Enable opaque pointers. LLVM auto-upgrades typed-pointer IR/bitcode parsed into an
-        // opaque-pointer context, so this supports both older (typed pointer) and newer (opaque
-        // pointer) IR. See https://llvm.org/docs/OpaquePointers.html
-        LLVMContextSetOpaquePointers(ctxRef, 1)
-
-        // allocate a buffer for a possible error message
-        val errorMessage = ByteBuffer.allocate(10000)
-
-        var result =
-            LLVMCreateMemoryBufferWithContentsOfFile(
-                BytePointer(file.toPath().toString()),
-                buf,
-                errorMessage,
-            )
-        if (result != 0) {
-            // something went wrong
-            val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctxRef)
-            throw TranslationException("Could not create memory buffer: $errorMsg")
-        }
-
-        result = LLVMParseIRInContext(ctxRef, buf, mod, errorMessage)
-        if (result != 0) {
-            // something went wrong
-            val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctxRef)
-            throw TranslationException("Could not parse IR: $errorMsg")
-        }
+        // Parse the module. We first try to parse it with typed pointers (LLVM's classic
+        // representation), since that retains the pointee type of every pointer (in function
+        // signatures, struct fields, bitcasts, ...), not just the ones that are reachable from an
+        // explicit type operand. IR/bitcode that already uses the opaque pointer syntax (`ptr`)
+        // fails to parse in a typed-pointer context, so we fall back to an opaque-pointer context
+        // for it. There, pointee types are only recovered where LLVM exposes an explicit type
+        // operand (alloca's allocated type, a global's/function's value type, a GEP's source
+        // element type, a load's result type); everywhere else the pointee type is lost and
+        // becomes [UnknownType]. See https://llvm.org/docs/OpaquePointers.html
+        ctxRef = parseModuleWithFallback(file, mod)
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
@@ -161,6 +139,56 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         bench.addMeasurement()
 
         return tu
+    }
+
+    /**
+     * Parses [file] into [mod], preferring a typed-pointer context (see [parse]). Returns the
+     * [LLVMContextRef] that the module was successfully parsed in.
+     */
+    private fun parseModuleWithFallback(file: File, mod: LLVMModuleRef): LLVMContextRef {
+        val typedCtx = LLVMContextCreate()
+        LLVMContextSetOpaquePointers(typedCtx, 0)
+        if (tryParseIRInContext(typedCtx, file, mod) == null) {
+            return typedCtx
+        }
+        LLVMContextDispose(typedCtx)
+
+        val opaqueCtx = LLVMContextCreate()
+        LLVMContextSetOpaquePointers(opaqueCtx, 1)
+        val opaqueError = tryParseIRInContext(opaqueCtx, file, mod)
+        if (opaqueError != null) {
+            LLVMContextDispose(opaqueCtx)
+            throw TranslationException("Could not parse IR: $opaqueError")
+        }
+
+        return opaqueCtx
+    }
+
+    /** Tries to parse [file] into [mod] using [ctxRef]. Returns an error message, or `null`. */
+    private fun tryParseIRInContext(
+        ctxRef: LLVMContextRef,
+        file: File,
+        mod: LLVMModuleRef,
+    ): String? {
+        val buf = LLVMMemoryBufferRef()
+        val errorMessage = ByteBuffer.allocate(10000)
+
+        var result =
+            LLVMCreateMemoryBufferWithContentsOfFile(
+                BytePointer(file.toPath().toString()),
+                buf,
+                errorMessage,
+            )
+        if (result != 0) {
+            return String(errorMessage.array())
+        }
+
+        result = LLVMParseIRInContext(ctxRef, buf, mod, errorMessage)
+        if (result != 0) {
+            return String(errorMessage.array())
+        }
+
+        return null
     }
 
     override fun typeOf(type: LLVMTypeRef): Type {

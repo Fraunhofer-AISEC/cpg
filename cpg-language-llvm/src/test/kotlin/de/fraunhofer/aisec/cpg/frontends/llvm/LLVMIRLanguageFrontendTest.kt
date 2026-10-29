@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -130,8 +131,20 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
 
+        // The IR uses typed pointers (`i32* @foo(%struct.ST* %s)`), so the pointee type of the
+        // return type and of every parameter is available from the declaration itself, without
+        // having to look at any instruction's explicit type operands.
+        val fooType = foo.type
+        assertIs<PointerType>(fooType)
+        assertLocalName("i32", fooType.elementType)
+
         val s = foo.parameters.firstOrNull { it.name.localName == "s" }
         assertNotNull(s)
+
+        val sType = s.type
+        assertIs<PointerType>(sType)
+        assertLocalName("struct.ST", sType.elementType)
+        assertSame(st, (sType.elementType as? ObjectType)?.recordDeclaration)
 
         val arrayidx = foo.variables["arrayidx"]
         assertNotNull(arrayidx)
@@ -219,8 +232,17 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
 
+        // Unlike in testIdentifiedStruct, the IR here uses opaque pointers (`ptr @foo(ptr %s)`),
+        // so the pointee type of the return type and of the parameters is nowhere to be found in
+        // the declaration itself: LLVM genuinely discards it, there is no explicit type operand
+        // to recover it from (unlike alloca, GEP, load or global/function value types). The best
+        // we can do is fall back to an unknown pointer.
+        val fooType = foo.type
+        assertIs<UnknownType>(fooType)
+
         val s = foo.parameters.firstOrNull { it.name.localName == "s" }
         assertNotNull(s)
+        assertIs<UnknownType>(s.type)
 
         val arrayidx = foo.variables["arrayidx"]
         assertNotNull(arrayidx)
