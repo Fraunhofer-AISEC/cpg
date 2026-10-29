@@ -111,10 +111,9 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * Translates a [GenericNameSyntax][Csharp.AST.GenericNameSyntax] (e.g. `Foo<int>`) into a
      * [Reference] to its [identifier][Csharp.AST.GenericNameSyntax.identifier], i.e. `Foo`.
      *
-     * C# allows a type wherever an expression is expected, so Roslyn models a generic name as an
-     * `ExpressionSyntax`. In that case it is most often the callee of a generic method invocation
-     * such as `Create<Foo>(x)`, so it becomes a [Reference]. That name is the bare identifier,
-     * since `Foo<int>` would never match the declaration of `Foo`.
+     * Roslyn models a generic name in an expression as an `ExpressionSyntax`. Most often it is the
+     * callee of a generic method invocation such as `Create<Foo>(x)`. The [Reference] has the bare
+     * identifier as its name.
      *
      * Note: Currently, the type arguments are dropped. We may want to model them in the future.
      *
@@ -354,10 +353,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                 newLiteral(null, unknownType(), rawNode = node)
 
             // A `u8` literal is a `ReadOnlySpan<byte>` holding the UTF-8 bytes of the string, not a
-            // `string`. We keep the characters as the value, since it is what we get from Roslyn.
-            // The `byte` must be a generic of the type rather than part of its name, or the literal
-            // would never match a declaration of `ReadOnlySpan`, see
-            // [CSharpLanguageFrontend.typeOf].
+            // `string`. The characters are kept as the value.
             is Csharp.AST.Utf8StringLiteralExpressionSyntax ->
                 newLiteral(
                     node.value,
@@ -368,7 +364,6 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                     rawNode = node,
                 )
 
-            // TODO: Return unknownType()?
             else -> newProblemExpression("Unknown literal type: ${node.csharpType}", rawNode = node)
         }
     }
@@ -498,15 +493,13 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * tmp is Foo;
      * ```
      *
-     * `f`'s conversion is the safe, non-throwing one `as` performs, since a failed pattern match
-     * does not throw (unlike a `(Foo)` cast). `f` is only guaranteed to hold a meaningful value
-     * where the type check is known to have succeeded (e.g. inside the `if`), the same as C#'s own
-     * definite-assignment rule for pattern variables.
+     * `f` is assigned with `as`, which yields `null` instead of throwing if the type does not
+     * match. Like in C#, it only holds a meaningful value where the type check succeeded.
      *
-     * `tmp` is an implicit temporary that the value being tested (`x`) is evaluated into once,
-     * since a pattern may test it more than once (e.g. both sides of `x is Foo or Bar`). It is
-     * wrapped, together with the boolean [Expression] [translatePattern] builds for
-     * [Csharp.AST.IsPatternExpressionSyntax.pattern], in an implicit [ExpressionList].
+     * `tmp` is an implicit temporary that the tested value `x` is evaluated into once, as a pattern
+     * may test it several times. It is wrapped, together with the boolean [Expression]
+     * [translatePattern] builds for [Csharp.AST.IsPatternExpressionSyntax.pattern], in an implicit
+     * [ExpressionList].
      *
      * C# spec:
      * [Pattern matching](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/patterns)
@@ -544,9 +537,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * x is Foo;
      * ```
      *
-     * and modeled as an implicit [ExpressionList] of a [DeclarationStatement] declaring `f` (unlike
-     * [variable], it is real and user-visible and therefore not implicit) followed by the boolean
-     * type check.
+     * and modeled as an implicit [ExpressionList] of a [DeclarationStatement] declaring `f` (which,
+     * unlike [variable], is not implicit) followed by the boolean type check.
      *
      * `RecursivePatternSyntax` (property/positional patterns, e.g. `x is { Prop: 0 }` or `x is (a,
      * b)`) and `ListPatternSyntax`/`SlicePatternSyntax` (`x is [1, 2, ..]`) are not supported yet
@@ -601,11 +593,10 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         }
 
         return when (pattern) {
-            // A bare identifier is syntactically ambiguous between a constant and a type: Roslyn
-            // produces this pattern kind for `Foo` in `x is not Foo` even when `Foo` names a type.
-            // Without semantic binding we model the type check, which is what it means in the vast
-            // majority of cases, rather than `==` against a class that is never assigned. A literal
-            // (`null`, `5`, ...) can only be a value though, so it is compared with `==`.
+            // A bare identifier is ambiguous between a constant and a type, which cannot be told
+            // apart without semantic binding. It is modeled as a type check. A literal (`null`,
+            // `5`,
+            // ...) can only be a value and is compared with `==`.
             is Csharp.AST.ConstantPatternSyntax -> {
                 val operand = pattern.expression
                 val isLiteral = operand is Csharp.AST.LiteralExpressionSyntax
@@ -658,7 +649,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                     )
                     .apply { this.input = translatePattern(pattern.pattern, variable) }
 
-            // x is Foo or Bar, x is > 0 and < 100
+            // x is Foo or Bar, x is > 0 and < 100. `and` and `or` short-circuit like `&&` and `||`.
             is Csharp.AST.BinaryPatternSyntax ->
                 newBinaryOperator(operatorCode = pattern.operatorToken, rawNode = pattern).apply {
                     this.lhs = translatePattern(pattern.left, variable)
@@ -697,10 +688,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * Translates a [DefaultExpressionSyntax][Csharp.AST.DefaultExpressionSyntax] (e.g.
      * `default(int)`) into a [Literal].
      *
-     * Unlike the bare `default`, this form names the type it stands for, so we can type the literal
-     * even though we still do not know the value: it is `0` for the numeric types, `null` for the
-     * reference types and an all-zero value for a struct, which depends on the type's declaration
-     * rather than on the syntax.
+     * The type is known from the syntax, but the value (`0`, `null` or an all-zero struct) is not
+     * modeled and stays `null`.
      *
      * C# spec:
      * [Default value expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12820-default-value-expressions)
@@ -711,9 +700,9 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
 
     /**
      * Translates a [ParenthesizedExpressionSyntax][Csharp.AST.ParenthesizedExpressionSyntax] (e.g.
-     * `(a + b)`) into the [Expression] of the enclosed expression.
-     *
-     * TODO: Double-check the handling of parentheses
+     * `(a + b)`) into the [Expression] of the enclosed expression. The parentheses only group, the
+     * precedence they express is already part of the structure of the tree, so they leave no node
+     * of their own.
      *
      * C# spec:
      * [Parenthesized expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1287-parenthesized-expressions)
@@ -791,8 +780,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * [whenNotNull][Csharp.AST.ConditionalAccessExpressionSyntax.whenNotNull] (`.b` above) starts
      * with a [MemberBindingExpressionSyntax][Csharp.AST.MemberBindingExpressionSyntax] or
      * [ElementBindingExpressionSyntax][Csharp.AST.ElementBindingExpressionSyntax] instead of
-     * repeating `a`, since it's implicitly the same, already-null-checked target again.
-     * [translateWhenNotNull] passes `tmp` in for that missing receiver as an explicit parameter
+     * repeating `a`. [translateWhenNotNull] passes `tmp` in for that missing receiver as an
+     * explicit parameter.
      *
      * Note: chained null-conditional operators such as `a?.b?.c` are not supported yet.
      *
@@ -927,9 +916,9 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * Like `this`, `base` refers to the current instance, but views it as its base class so that
      * `base.M()` calls the inherited rather than the overriding member.
      *
-     * The type is left unknown here, since the base class may be declared in a file that has not
-     * been parsed yet. Both the type and the reference to the enclosing method's receiver are set
-     * once all records are known, in [handleSuperExpression][CSharpLanguage.handleSuperExpression].
+     * The type is left unknown here. Both the type and the reference to the enclosing method's
+     * receiver are set once all records are known, in
+     * [handleSuperExpression][CSharpLanguage.handleSuperExpression].
      *
      * C# spec:
      * [Base access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12815-base-access)

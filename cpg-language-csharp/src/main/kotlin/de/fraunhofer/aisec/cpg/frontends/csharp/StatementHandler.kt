@@ -517,9 +517,8 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
     /**
      * Translates the statements of a block.
      *
-     * This is more than a loop over [handle], because a using declaration (`using var f = ...;`)
-     * disposes its resource at the end of the *enclosing* block and therefore needs the statements
-     * that follow it, see [handleUsing]. Blocks without a using declaration are unaffected.
+     * A using declaration (`using var f = ...;`) disposes its resource at the end of the
+     * *enclosing* block and therefore takes the statements that follow it, see [handleUsing].
      */
     private fun handleStatements(statements: List<Csharp.AST.StatementSyntax>): List<Expression> {
         val result = mutableListOf<Expression>()
@@ -572,10 +571,8 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      * 2. The body of the `using` as its [Try.tryBlock]
      * 3. An implicit `f.Dispose()` [MemberCall] as its [Try.finallyBlock]
      *
-     * Modeling the [Try.resources] instead of as a statement preceding the [Try] keeps the C#
-     * semantics that an exception thrown *while acquiring* a resource skips both the body and the
-     * disposal. Putting the disposal in the [Try.finallyBlock] puts it on every path leaving the
-     * body, including `return`, `break` and exceptions.
+     * The resource is modeled as [Try.resources], not as a statement preceding the [Try], and the
+     * disposal as [Try.finallyBlock].
      *
      * The declaration form has no body of its own, it disposes at the end of the *enclosing* block.
      * So everything following it becomes the [Try.tryBlock], see [handleStatements]:
@@ -758,9 +755,8 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
          * }
          * ```
          *
-         * The nesting is what gives us the reverse disposal order, `b` before `a`. The resources
-         * are declared in the scope of their own [Try], matching C#, where a resource is not
-         * visible after its `using`.
+         * The nesting gives the reverse disposal order, `b` before `a`. Each resource is declared
+         * in the scope of its own [Try].
          */
         fun generateTry(declarators: List<Csharp.AST.VariableDeclaratorSyntax>, type: Type): Try {
             val tryStmt = newTry(rawNode = node)

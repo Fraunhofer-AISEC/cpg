@@ -61,6 +61,16 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`SyntaxTrivia`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.syntaxtrivia)
+         * struct: whitespace, comments and directives that the parser keeps in front of or behind a
+         * token. In Roslyn, trivia is not a `SyntaxNode` but a struct, like `SyntaxToken`. We still
+         * model it as a [Node] to get its code and location, which we need to match comments to
+         * nodes. The code of a comment is the comment as it is written, including its markers.
+         */
+        class SyntaxTrivia(p: Pointer? = Pointer.NULL) : Node(p)
+
+        /**
+         * Represents the Roslyn
          * [`TypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax)
          * class.
          */
@@ -194,6 +204,14 @@ interface Csharp : Library {
          * class.
          */
         class CompilationUnitSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            /**
+             * All comments of the file in the order of the source. Roslyn does not have nodes for
+             * them, a comment is [SyntaxTrivia] of a token.
+             */
+            val comments: List<SyntaxTrivia> by lazy {
+                val count = INSTANCE.GetCompilationUnitCommentsCount(this)
+                (0 until count).map { i -> INSTANCE.GetCompilationUnitComment(this, i) }
+            }
             val members: List<MemberDeclarationSyntax> by lazy {
                 val count = INSTANCE.GetCompilationUnitMembersCount(this)
                 (0 until count).map { i -> INSTANCE.GetCompilationUnitMember(this, i) }
@@ -1694,7 +1712,8 @@ interface Csharp : Library {
     /**
      * Represents the Roslyn `CSharpSyntaxTree` class.
      *
-     * See: TODO(link)
+     * See:
+     * [`CSharpSyntaxTree`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxtree)
      */
     object CSharpSyntaxTree {
         fun parseText(source: String): AST.CompilationUnitSyntax {
@@ -1707,6 +1726,10 @@ interface Csharp : Library {
     fun GetKind(handle: Pointer): String
 
     fun GetType(handle: Pointer): String
+
+    fun GetCompilationUnitCommentsCount(handle: AST.CompilationUnitSyntax): Int
+
+    fun GetCompilationUnitComment(handle: AST.CompilationUnitSyntax, index: Int): AST.SyntaxTrivia
 
     fun GetCompilationUnitMembersCount(handle: AST.CompilationUnitSyntax): Int
 

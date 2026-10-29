@@ -11,10 +11,50 @@ public static class Library
     private static readonly Dictionary<IntPtr, CSharpSyntaxNode> Nodes = new();
     private static int _nextId = 1;
 
+    // Trivia, such as comments, is a struct in Roslyn and not a syntax node. It shares its handles
+    // with [Nodes].
+    private static readonly Dictionary<IntPtr, SyntaxTrivia> Trivia = new();
+
+    // The handles of the comments of each compilation unit, in the order of the source.
+    private static readonly Dictionary<IntPtr, List<IntPtr>> Comments = new();
+
+    private static List<IntPtr> CommentsOf(IntPtr handlePtr)
+    {
+        if (!Comments.TryGetValue(handlePtr, out var comments))
+        {
+            comments = Nodes[handlePtr]
+                .DescendantTrivia()
+                .Where(trivia =>
+                    trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
+                    || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia)
+                    || trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia)
+                    || trivia.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia)
+                )
+                .Select(Register)
+                .ToList();
+            Comments[handlePtr] = comments;
+        }
+        return comments;
+    }
+
+    private static FileLinePositionSpan LineSpanOf(IntPtr handlePtr)
+    {
+        return Nodes.TryGetValue(handlePtr, out var node)
+            ? node.GetLocation().GetLineSpan()
+            : Trivia[handlePtr].GetLocation().GetLineSpan();
+    }
+
     private static IntPtr Register(CSharpSyntaxNode node)
     {
         var ptr = new IntPtr(_nextId++);
         Nodes[ptr] = node;
+        return ptr;
+    }
+
+    private static IntPtr Register(SyntaxTrivia trivia)
+    {
+        var ptr = new IntPtr(_nextId++);
+        Trivia[ptr] = trivia;
         return ptr;
     }
 
@@ -40,14 +80,18 @@ public static class Library
     [UnmanagedCallersOnly(EntryPoint = "GetKind")]
     public static IntPtr GetKind(IntPtr handlePtr)
     {
-        var kind = Nodes[handlePtr].Kind().ToString();
+        var kind = Nodes.TryGetValue(handlePtr, out var node)
+            ? node.Kind().ToString()
+            : Trivia[handlePtr].Kind().ToString();
         return Marshal.StringToCoTaskMemUTF8(kind);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetType")]
     public static IntPtr GetType(IntPtr handlePtr)
     {
-        return Marshal.StringToCoTaskMemUTF8(Nodes[handlePtr].GetType().Name);
+        return Marshal.StringToCoTaskMemUTF8(
+            Nodes.TryGetValue(handlePtr, out var node) ? node.GetType().Name : nameof(SyntaxTrivia)
+        );
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitUsingsCount")]
@@ -278,31 +322,48 @@ public static class Library
     [UnmanagedCallersOnly(EntryPoint = "GetCode")]
     public static IntPtr GetCode(IntPtr handlePtr)
     {
-        return Marshal.StringToCoTaskMemUTF8(Nodes[handlePtr].ToString());
+        // The full string, as the text of a documentation comment lacks its first `///`
+        return Marshal.StringToCoTaskMemUTF8(
+            Nodes.TryGetValue(handlePtr, out var node)
+                ? node.ToString()
+                : Trivia[handlePtr].ToFullString().Trim()
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitCommentsCount")]
+    public static int GetCompilationUnitCommentsCount(IntPtr handlePtr)
+    {
+        return CommentsOf(handlePtr).Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitComment")]
+    public static IntPtr GetCompilationUnitComment(IntPtr handlePtr, int index)
+    {
+        return CommentsOf(handlePtr)[index];
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetNodeStartLine")]
     public static int GetNodeStartLine(IntPtr handlePtr)
     {
-        return Nodes[handlePtr].GetLocation().GetLineSpan().StartLinePosition.Line + 1;
+        return LineSpanOf(handlePtr).StartLinePosition.Line + 1;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetNodeStartColumn")]
     public static int GetNodeStartColumn(IntPtr handlePtr)
     {
-        return Nodes[handlePtr].GetLocation().GetLineSpan().StartLinePosition.Character + 1;
+        return LineSpanOf(handlePtr).StartLinePosition.Character + 1;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetNodeEndLine")]
     public static int GetNodeEndLine(IntPtr handlePtr)
     {
-        return Nodes[handlePtr].GetLocation().GetLineSpan().EndLinePosition.Line + 1;
+        return LineSpanOf(handlePtr).EndLinePosition.Line + 1;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetNodeEndColumn")]
     public static int GetNodeEndColumn(IntPtr handlePtr)
     {
-        return Nodes[handlePtr].GetLocation().GetLineSpan().EndLinePosition.Character + 1;
+        return LineSpanOf(handlePtr).EndLinePosition.Character + 1;
     }
     [UnmanagedCallersOnly(EntryPoint = "GetFieldDeclaration")]
     public static IntPtr GetFieldDeclaration(IntPtr handlePtr)

@@ -113,18 +113,26 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
      * [Using directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/namespaces#146-using-directives)
      */
     fun handleUsingDirective(node: Csharp.AST.UsingDirectiveSyntax): Import {
-        val import = parseName(node.name)
+        val name = parseName(node.name)
         val alias = node.alias
-        return if (alias != null) {
-            newImport(
-                import,
-                style = ImportStyle.IMPORT_NAMESPACE,
-                alias = parseName(alias.name),
-                rawNode = node,
-            )
-        } else {
-            newImport(import, style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, rawNode = node)
-        }
+        val import =
+            if (alias != null) {
+                newImport(
+                    name,
+                    style = ImportStyle.IMPORT_NAMESPACE,
+                    alias = parseName(alias.name),
+                    rawNode = node,
+                )
+            } else {
+                newImport(
+                    name,
+                    style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    rawNode = node,
+                )
+            }
+        import.modifiers = if (node.staticKeyword.isNotEmpty()) setOf("static") else setOf()
+        language.applyModifiers(import, frontend.scopeManager.currentScope)
+        return import
     }
 
     /**
@@ -136,6 +144,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     private fun handleClassDeclaration(node: Csharp.AST.ClassDeclarationSyntax): Declaration {
         val record = newRecord(node.identifier, "class", rawNode = node)
         record.modifiers = node.modifiers.toSet()
+        language.applyModifiers(record, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(record)
 
         node.baseList?.let {
@@ -154,26 +163,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         for (member in node.members) {
             when (member) {
                 is Csharp.AST.FieldDeclarationSyntax -> {
-                    val declaration = member.declaration
-                    val fieldType = frontend.typeOf(declaration.type)
-                    for (variable in declaration.variables) {
-                        val field = newField(variable.identifier, rawNode = member)
-                        field.type = fieldType
-                        variable.initializer?.let {
-                            field.initializer = frontend.expressionHandler.handle(it)
-                        }
-                        // TODO: Not sure if this is correct: For implicit constructor calls (e.g.
-                        // new()), we need to
-                        //  propagate the field type to the "New" and "Construction" nodes
-                        val newExpr = field.initializer as? New
-                        if (newExpr != null) {
-                            newExpr.type = fieldType
-                            val construction = newExpr.initializer as? Construction
-                            if (construction != null) {
-                                construction.type = fieldType
-                                construction.name = parseName(fieldType.name.localName)
-                            }
-                        }
+                    for (field in handleFieldDeclaration(member)) {
                         frontend.scopeManager.addDeclaration(field)
                         record.addDeclaration(field)
                     }
@@ -199,6 +189,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     private fun handleStructDeclaration(node: Csharp.AST.StructDeclarationSyntax): Declaration {
         val record = newRecord(node.identifier, "struct", rawNode = node)
         record.modifiers = node.modifiers.toSet()
+        language.applyModifiers(record, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(record)
 
         // A struct cannot inherit, so every entry here is an implemented interface.
@@ -218,25 +209,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         for (member in node.members) {
             when (member) {
                 is Csharp.AST.FieldDeclarationSyntax -> {
-                    val declaration = member.declaration
-                    val fieldType = frontend.typeOf(declaration.type)
-                    for (variable in declaration.variables) {
-                        val field = newField(variable.identifier, rawNode = member)
-                        field.type = fieldType
-                        variable.initializer?.let {
-                            field.initializer = frontend.expressionHandler.handle(it)
-                        }
-                        // An implicit `new()` initializer has no type of its own, so it takes the
-                        // field's type. Same as in handleClassDeclaration.
-                        val newExpr = field.initializer as? New
-                        if (newExpr != null) {
-                            newExpr.type = fieldType
-                            val construction = newExpr.initializer as? Construction
-                            if (construction != null) {
-                                construction.type = fieldType
-                                construction.name = parseName(fieldType.name.localName)
-                            }
-                        }
+                    for (field in handleFieldDeclaration(member)) {
                         frontend.scopeManager.addDeclaration(field)
                         record.addDeclaration(field)
                     }
@@ -265,6 +238,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     ): Declaration {
         val record = newRecord(node.identifier, "interface", rawNode = node)
         record.modifiers = node.modifiers.toSet()
+        language.applyModifiers(record, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(record)
 
         // An interface can only extend other interfaces, so every entry here is one.
@@ -302,6 +276,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         val enumeration = newEnumeration(node.identifier, rawNode = node)
         enumeration.kind = "enum"
         enumeration.modifiers = node.modifiers.toSet()
+        language.applyModifiers(enumeration, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(enumeration)
 
         val enumType = enumeration.toType()
@@ -331,6 +306,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     private fun handleMethodDeclaration(node: Csharp.AST.MethodDeclarationSyntax): Declaration {
         val method = newMethod(node.identifier, rawNode = node)
         method.modifiers = node.modifiers.toSet()
+        language.applyModifiers(method, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(method)
 
         createMethodReceiver(method)
@@ -367,6 +343,8 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         val propertyType = frontend.typeOf(node.type)
 
         val field = newField(node.identifier, rawNode = node).implicit()
+        field.modifiers = node.modifiers.toSet()
+        language.applyModifiers(field, frontend.scopeManager.currentScope)
         field.type = propertyType
 
         node.initializer?.let { field.initializer = frontend.expressionHandler.handle(it) }
@@ -383,9 +361,16 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
                         code = frontend.codeOf(accessor),
                         location = frontend.locationOf(accessor),
                     )
-            method.modifiers =
-                if (accessor.modifiers.isNotEmpty()) accessor.modifiers.toSet()
-                else node.modifiers.toSet()
+            // An accessor may narrow the access of its property (`private set`), but is static
+            // if the property is.
+            val accessorModifiers =
+                if (accessor.modifiers.any { it in language.accessModifiers }) {
+                    node.modifiers.filter { it !in language.accessModifiers } + accessor.modifiers
+                } else {
+                    node.modifiers + accessor.modifiers
+                }
+            method.modifiers = accessorModifiers.toSet()
+            language.applyModifiers(method, frontend.scopeManager.currentScope)
             frontend.scopeManager.enterScope(method)
             createMethodReceiver(method)
 
@@ -482,6 +467,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
                 newMethod(accessorName, recordDeclaration = record, rawNode = node)
                     .implicit(code = frontend.codeOf(node), location = frontend.locationOf(node))
             method.modifiers = node.modifiers.toSet()
+            language.applyModifiers(method, frontend.scopeManager.currentScope)
             frontend.scopeManager.enterScope(method)
             createMethodReceiver(method)
             method.returnTypes = listOf(propertyType)
@@ -524,7 +510,10 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         val record = frontend.scopeManager.currentRecord
         val constructor = newConstructor(node.identifier, record, rawNode = node)
         constructor.modifiers = node.modifiers.toSet()
+        language.applyModifiers(constructor, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(constructor)
+
+        createMethodReceiver(constructor)
 
         for (parameter in node.parameterList.parameters) {
             val param =
@@ -575,8 +564,43 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         return block
     }
 
-    /** Creates an implicit `this` receiver variable for the given [method]. */
+    /**
+     * Translates a [FieldDeclarationSyntax][Csharp.AST.FieldDeclarationSyntax] into a [Field] for
+     * each of its variables, e.g. two for `int a, b;`.
+     *
+     * C# spec:
+     * [Fields](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#155-fields)
+     */
+    private fun handleFieldDeclaration(node: Csharp.AST.FieldDeclarationSyntax): List<Field> {
+        val declaration = node.declaration
+        val fieldType = frontend.typeOf(declaration.type)
+        return declaration.variables.map { variable ->
+            val field = newField(variable.identifier, rawNode = node)
+            field.modifiers = node.modifiers.toSet()
+            language.applyModifiers(field, frontend.scopeManager.currentScope)
+            field.type = fieldType
+            variable.initializer?.let { field.initializer = frontend.expressionHandler.handle(it) }
+            // An implicit `new()` initializer has no type of its own, so it takes the field's type.
+            val newExpr = field.initializer as? New
+            if (newExpr != null) {
+                newExpr.type = fieldType
+                val construction = newExpr.initializer as? Construction
+                if (construction != null) {
+                    construction.type = fieldType
+                    construction.name = parseName(fieldType.name.localName)
+                }
+            }
+            field
+        }
+    }
+
+    /**
+     * Creates an implicit `this` receiver variable for the given [method]. A static method has no
+     * instance and therefore no receiver.
+     */
     private fun createMethodReceiver(method: Method) {
+        if (method.isStatic) return
+
         val record = frontend.scopeManager.currentRecord
         val receiver = newVariable("this", record?.toType() ?: unknownType()).implicit("this")
         frontend.scopeManager.addDeclaration(receiver)

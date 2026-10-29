@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.array
+import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.newProblemType
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
@@ -39,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -76,6 +78,16 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
         }
 
         scopeManager.leaveScope(tu)
+
+        if (config.matchCommentsToNodes) {
+            val commentMatcher = CommentMatcher()
+            for (comment in root.comments) {
+                locationOf(comment)?.let {
+                    commentMatcher.matchCommentToNode(codeOf(comment), it.region, tu)
+                }
+            }
+        }
+
         return tu
     }
 
@@ -84,21 +96,17 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
             is Csharp.AST.ArrayTypeSyntax -> typeOf(type.elementType).array()
             // `string?` or `int?`
             is Csharp.AST.NullableTypeSyntax -> typeOf(type.elementType)
-            // `scoped Span<byte>`. The `scoped` modifier promises that the reference does not
-            // escape the current method. That is a lifetime constraint the compiler checks, so we
-            // simply continue with the type it is
-            // attached to.
+            // `scoped Span<byte>`. The `scoped` lifetime constraint is not modeled, the type is the
+            // one it is attached to.
             is Csharp.AST.ScopedTypeSyntax -> typeOf(type.type)
             // The empty spot in an unbound generic name such as `List<>`.
             is Csharp.AST.OmittedTypeArgumentSyntax -> unknownType()
-            // `List<int>`. The type arguments must not become part of the name, because a type
-            // named `List<int>` would never be matched with the declaration of `List`. They become
-            // the generics of the type instead, which is what [Csharp.AST.TypeSyntax.name] does.
+            // `List<int>`. The type arguments are the generics of the type, not part of its name.
             is Csharp.AST.GenericNameSyntax ->
                 objectType(type.identifier, type.typeArguments.map { typeOf(it) })
-            // `System.Collections.Generic.List<int>`. Only the right half states the type and can
-            // carry type arguments, the left half is the namespace it lives in and becomes the
-            // parent of the name.
+            // `System.Collections.Generic.List<int>`. The left part is the namespace and becomes
+            // the
+            // parent of the name, the right part is the type.
             is Csharp.AST.QualifiedNameSyntax -> {
                 val right = typeOf(type.right)
                 objectType(
@@ -106,14 +114,18 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
                     (right as? ObjectType)?.generics ?: listOf(),
                 )
             }
-            // `Foo` and `int`. These are the only two kinds whose source text really is a name, so
-            // they are the only ones we may take [Csharp.AST.TypeSyntax.name] from as it is.
+            // `Foo` and `int`. The source text is the name.
             is Csharp.AST.IdentifierNameSyntax,
-            is Csharp.AST.PredefinedTypeSyntax -> objectType(type.name)
-            // Every other kind of type still writes its modifiers, punctuation and type arguments
-            // into its source text, so using that as a name would invent a type such as `byte*` or
-            // `(int, string)` that can never be matched with any declaration. We report that
-            // instead of inventing a new type.
+            is Csharp.AST.PredefinedTypeSyntax ->
+                when (type.name) {
+                    // `var` takes the type of its initializer
+                    "var" -> autoType()
+                    // `dynamic` is only resolved at runtime
+                    in (language as CSharpLanguage).unknownTypeString -> unknownType()
+                    else -> objectType(type.name)
+                }
+            // Types that are not handled yet, such as `byte*` or `(int, string)`, are reported as a
+            // problem type.
             else -> {
                 Util.warnWithFileLocation(
                     locationOf(type),
@@ -141,5 +153,6 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
         )
     }
 
+    /** Comments are matched by the [CommentMatcher] (see [parse]). */
     override fun setComment(node: Node, astNode: Csharp.AST.Node) {}
 }

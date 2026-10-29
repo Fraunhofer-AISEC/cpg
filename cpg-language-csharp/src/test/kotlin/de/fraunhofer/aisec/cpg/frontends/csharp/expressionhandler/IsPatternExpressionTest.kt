@@ -455,7 +455,8 @@ class IsPatternExpressionTest : BaseTest() {
         assertIs<Variable>(tmpVar)
 
         val and = outer.expressions[1]
-        assertIs<BinaryOperator>(and)
+        // the right pattern is only tested if the left one matched
+        assertIs<ShortCircuitOperator>(and)
         assertEquals("and", and.operatorCode)
         assertLocalName("bool", and.type)
 
@@ -503,7 +504,7 @@ class IsPatternExpressionTest : BaseTest() {
         assertIs<Variable>(tmpVar)
 
         val or = outer.expressions[1]
-        assertIs<BinaryOperator>(or)
+        assertIs<ShortCircuitOperator>(or)
         assertEquals("or", or.operatorCode)
         assertLocalName("bool", or.type)
 
@@ -524,9 +525,8 @@ class IsPatternExpressionTest : BaseTest() {
 
     /**
      * A bare identifier in a pattern is a [Csharp.AST.ConstantPatternSyntax] for Roslyn, even when
-     * it names a type (`e is not Foo`). Since the two cannot be told apart without semantic
-     * binding, such a pattern is modeled as the type check, not as `== Foo`: the latter would make
-     * the operand a [Reference] to a class that is never assigned.
+     * it names a type (`e is not Foo`). Such a pattern is modeled as the type check, not as `==
+     * Foo`.
      */
     @Test
     fun testNotTypeCheck() {
@@ -586,7 +586,7 @@ class IsPatternExpressionTest : BaseTest() {
         val outer = ret.returnValue
         assertIs<ExpressionList>(outer)
         val or = outer.expressions[1]
-        assertIs<BinaryOperator>(or)
+        assertIs<ShortCircuitOperator>(or)
         assertEquals("or", or.operatorCode)
         assertLocalName("bool", or.type)
 
@@ -600,9 +600,8 @@ class IsPatternExpressionTest : BaseTest() {
     }
 
     /**
-     * Two patterns in the same file must get distinct implicit temporaries. [Name.temporary]
-     * derives its UUID from the hash of the nodes it is seeded with, so seeding it with a
-     * location-less [ExpressionList] makes every pattern collide in both name and node `id`.
+     * Two patterns in the same file must get distinct implicit temporaries, both in their name and
+     * in their node `id`.
      */
     @Test
     fun testTwoPatternsDoNotShareTemporary() {

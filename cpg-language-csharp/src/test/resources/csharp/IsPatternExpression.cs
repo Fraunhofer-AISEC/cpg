@@ -60,14 +60,13 @@ namespace Test
 
         bool OrPattern(object o)
         {
-            // Predefined types are unambiguously types, unlike a identifier such as `Foo`
+            // Predefined types are unambiguously types, unlike an identifier such as `Foo`
             // (see ConstantPatternSyntax handling).
             return o is int or string;
         }
 
         // A bare identifier in a pattern is a ConstantPattern for Roslyn, even when it names a
-        // type. Without semantic binding, these can only be modeled as the type checks they almost
-        // always are -- never as a comparison against a value.
+        // type. It is modeled as a type check.
         bool NotTypeCheck(object e)
         {
             return e is not Foo;

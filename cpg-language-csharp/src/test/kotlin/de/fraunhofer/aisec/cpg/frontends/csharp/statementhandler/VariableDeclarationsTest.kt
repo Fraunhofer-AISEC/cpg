@@ -93,8 +93,8 @@ class VariableDeclarationsTest : BaseTest() {
         val c = varIntDecl.singleDeclaration
         assertIs<Variable>(c)
         assertEquals("c", c.name.localName)
-        assertEquals("var", c.type.name.localName)
-        assertIs<IntegerType>(c.assignedTypes.elementAt(1))
+        assertIs<IntegerType>(c.type)
+        assertEquals("int", c.type.name.localName)
 
         // var d = "Hello";
         val varStringDecl = barBody.statements[3]
@@ -102,8 +102,8 @@ class VariableDeclarationsTest : BaseTest() {
         val d = varStringDecl.singleDeclaration
         assertIs<Variable>(d)
         assertEquals("d", d.name.localName)
-        assertEquals("var", d.type.name.localName)
-        assertIs<StringType>(d.assignedTypes.elementAt(1))
+        assertIs<StringType>(d.type)
+        assertEquals("string", d.type.name.localName)
     }
 
     @Test
