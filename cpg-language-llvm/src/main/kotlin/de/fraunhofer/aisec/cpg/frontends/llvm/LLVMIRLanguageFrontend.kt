@@ -148,7 +148,8 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
     private fun parseModuleWithFallback(file: File, mod: LLVMModuleRef): LLVMContextRef {
         val typedCtx = LLVMContextCreate()
         LLVMContextSetOpaquePointers(typedCtx, 0)
-        if (tryParseIRInContext(typedCtx, file, mod) == null) {
+        val typedError = tryParseIRInContext(typedCtx, file, mod)
+        if (typedError == null) {
             return typedCtx
         }
         LLVMContextDispose(typedCtx)
@@ -158,7 +159,14 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         val opaqueError = tryParseIRInContext(opaqueCtx, file, mod)
         if (opaqueError != null) {
             LLVMContextDispose(opaqueCtx)
-            throw TranslationException("Could not parse IR: $opaqueError")
+            // Neither attempt succeeded, so this is not just a typed-vs-opaque mismatch but
+            // genuinely invalid IR. Report both error messages: whichever context the file was
+            // "meant" for, the other context's message is usually noise (e.g. complaining about
+            // `ptr` for a typed-pointer file with an unrelated syntax error), but we cannot tell
+            // which one that is from here.
+            throw TranslationException(
+                "Could not parse IR: $opaqueError\nAlso failed in a typed-pointer context: $typedError"
+            )
         }
 
         return opaqueCtx
@@ -242,6 +250,20 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
                         // system. The actual pointee type has to be resolved at each use site
                         // instead (e.g. from a GEP's source element type, a global's value
                         // type, an alloca's allocated type, or a load's result type).
+                        //
+                        // `unknownType().pointer()` here collapses to plain UnknownType, not
+                        // PointerType(UnknownType): UnknownType.reference() (which .pointer()
+                        // calls) returns the receiver unchanged, since cpg-core has no way to
+                        // express "a pointer to an unknown type". We cannot build a real
+                        // PointerType(UnknownType) instead: doing so makes this (purely opaque,
+                        // no-information) type look "concrete" to cpg-core's type-propagation
+                        // system, which then actively pushes it through type observers (e.g.
+                        // PointerDereference.typeChanged) and overrides the pointee types that
+                        // the alloca/load/global/function/GEP handlers above deliberately
+                        // recovered from their explicit type operands. Callers that need to tell
+                        // "a known pointer" from "an opaque pointer with lost pointee type" apart
+                        // (e.g. the GEP handler in ExpressionHandler) check `is UnknownType` in
+                        // addition to `is PointerType`.
                         unknownType().pointer()
                     } else {
                         val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)

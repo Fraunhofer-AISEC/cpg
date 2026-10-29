@@ -440,6 +440,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // of `PointerType(UnknownType)`, because `UnknownType.reference()` returns itself. We
             // still need to treat this index as an array/pointer access, not a struct field
             // access, otherwise we wrongly try to resolve it as a member and fail below.
+            //
+            // This is not as broad a condition as it looks: within this loop, `baseType` can only
+            // become `UnknownType` through `typeOf(...)` (directly here, or via a struct field's
+            // type a few lines below, which was itself computed the same way), and `typeOf` only
+            // ever returns `UnknownType` for an opaque pointer or for `LLVMFunctionTypeKind` (not
+            // a valid GEP element/field type to begin with) -- every other LLVM type kind maps to
+            // a `PointerType`, an `ObjectType`, or a generic `ObjectType` fallback. So in practice
+            // this branch only fires for the opaque-pointer case described above.
             if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base

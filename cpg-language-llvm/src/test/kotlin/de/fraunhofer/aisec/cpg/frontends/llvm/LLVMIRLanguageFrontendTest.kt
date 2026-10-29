@@ -51,6 +51,11 @@ class LLVMIRLanguageFrontendTest {
                 frontend.parse(topLevel.resolve("main-broken.ll").toFile())
             }
         assertTrue(exception.message?.startsWith("Could not parse IR: ") == true)
+
+        // main-broken.ll has a genuine syntax error (a typo'd "prvate"), independent of typed vs.
+        // opaque pointers, so both parse attempts fail. The exception should report both error
+        // messages, not just the one from the (here, less informative) opaque-pointer attempt.
+        assertTrue(exception.message?.contains("Also failed in a typed-pointer context:") == true)
     }
 
     @Test
