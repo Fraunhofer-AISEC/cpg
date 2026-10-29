@@ -1,7 +1,8 @@
 # Codyze Console
 
 A web application for Codyze with an optional AI chat, which is enhanced by an MCP client that acts as an agent.
-The agent uses the tools of the CPG MCP server to analyze code and answer questions.
+The agent uses the tools of the CPG MCP server to analyze code and answer questions. The module also ships
+`codyze repl`, an interactive Kotlin REPL for ad-hoc CPG queries - see [REPL](#repl) below.
 
 > [!IMPORTANT]
 > codyze-console has a hard, unconditional build dependency on the `cpg-ai` module (see [AI Chat Features](#ai-chat-features) below). Enabling `enableCodyzeConsole=true` in `gradle.properties` always enables `cpg-ai` too - no separate step needed, and even an explicit `enableAIModule=false` is overridden while `enableCodyzeConsole=true`.
@@ -25,6 +26,51 @@ Alternatively, starting the application from the command line:
 ```
 
 The web console is available at `http://localhost:8080`.
+
+## REPL
+
+`codyze repl` starts an interactive Kotlin REPL - JLine-based line editing, syntax highlighting, and
+semantic (TAB) completion - against an already-analyzed `TranslationResult`. It's the fastest way to
+poke at the CPG query API without writing a whole script file.
+
+```bash
+# codyze-console is an optional module (see Getting Started above) - pass the flags directly if
+# you haven't already set them in gradle.properties:
+./gradlew -PenableCodyzeConsole=true -PenableAIModule=true :codyze:run --args="repl <source-dir>"
+
+# or, build once and run the installed binary directly (faster startup, a real TTY for JLine):
+./gradlew -PenableCodyzeConsole=true -PenableAIModule=true :codyze:installDist
+./codyze/build/install/codyze/bin/codyze repl <source-dir>
+```
+
+Once at the `codyze>` prompt, `result` is bound to the `TranslationResult`, and the usual CPG query
+API (`de.fraunhofer.aisec.cpg.query.*`, graph extension functions, etc.) is imported by default -
+see `:imports`. Type `:help` for the full command list, including:
+
+- `:reload [<dir>]` - re-analyze (defaults to the previous source dir/options)
+- `:flow [<expr>]` - export the last `QueryTree` result as SARIF and open it (best with VS Code's SARIF Viewer extension)
+- `:dfg [<expr>]` - show a Node's data-flow graph as a Mermaid diagram
+
+### Inline DFG rendering
+
+`:dfg` tries to render the Mermaid graph directly inside the terminal instead of writing a file, if
+both of these are true:
+
+1. **Your terminal supports inline images.** Currently detected: iTerm2, WezTerm (shares iTerm2's
+   protocol), Kitty, and Ghostty (shares Kitty's protocol). Anything else always falls back to a
+   file.
+2. **[`mmdc`](https://github.com/mermaid-js/mermaid-cli) (mermaid-cli) is installed and working**,
+   including its headless-Chrome runtime:
+   ```bash
+   npm install -g @mermaid-js/mermaid-cli   # or: brew install mermaid-cli
+   npx puppeteer browsers install chrome-headless-shell
+   ```
+   The second step is easy to miss - without it, `mmdc` is on your `$PATH` but fails to actually
+   render anything.
+
+If either condition isn't met, or `mmdc` fails for any reason, `:dfg` falls back to writing a
+`.mermaid` file and tells you why - open it with VS Code's Mermaid extension, or paste it into
+<https://mermaid.live>.
 
 ## AI Chat Features
 
