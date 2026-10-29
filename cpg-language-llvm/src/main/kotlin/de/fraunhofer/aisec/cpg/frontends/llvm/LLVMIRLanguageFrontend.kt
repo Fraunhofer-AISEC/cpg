@@ -188,12 +188,12 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
                 errorMessage,
             )
         if (result != 0) {
-            return String(errorMessage.array())
+            return errorMessage.toErrorString()
         }
 
         result = LLVMParseIRInContext(ctxRef, buf, mod, errorMessage)
         if (result != 0) {
-            return String(errorMessage.array())
+            return errorMessage.toErrorString()
         }
 
         return null
@@ -362,3 +362,14 @@ inline val LLVMValueRef.opCode: Int
     get() {
         return LLVMGetInstructionOpcode(this)
     }
+
+/**
+ * Decodes an LLVM error message buffer as a string, cutting it off at the first NUL byte. LLVM
+ * writes a short, NUL-terminated message into a fixed-size buffer; decoding the whole buffer
+ * verbatim would include thousands of trailing NUL bytes.
+ */
+private fun ByteBuffer.toErrorString(): String {
+    val message = String(array())
+    val nulIndex = message.indexOf('\u0000')
+    return if (nulIndex >= 0) message.substring(0, nulIndex) else message
+}

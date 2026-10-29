@@ -443,11 +443,18 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             //
             // This is not as broad a condition as it looks: within this loop, `baseType` can only
             // become `UnknownType` through `typeOf(...)` (directly here, or via a struct field's
-            // type a few lines below, which was itself computed the same way), and `typeOf` only
-            // ever returns `UnknownType` for an opaque pointer or for `LLVMFunctionTypeKind` (not
-            // a valid GEP element/field type to begin with) -- every other LLVM type kind maps to
-            // a `PointerType`, an `ObjectType`, or a generic `ObjectType` fallback. So in practice
-            // this branch only fires for the opaque-pointer case described above.
+            // type a few lines below, which was itself computed the same way). `typeOf` returns
+            // `UnknownType` in exactly three cases: an opaque pointer (the case described above),
+            // `LLVMFunctionTypeKind` (not a valid GEP element/field type to begin with), and a
+            // self-referential struct's own field, while that struct is still being constructed
+            // (the cycle guard in `typeOf` returns `UnknownType` there to avoid infinite
+            // recursion, independently of typed vs. opaque pointers -- see
+            // gep_recursive_struct.ll). The third case is also safe to treat as an array/pointer
+            // access here: a self-pointer field is, structurally, a pointer, and -- just like the
+            // opaque-pointer case -- GEP cannot validly index past such a field within a single
+            // instruction anyway, so this branch is never reached with a genuinely wrong base
+            // type for it. Every other LLVM type kind maps to a `PointerType`, an `ObjectType`, or
+            // a generic `ObjectType` fallback.
             if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base

@@ -56,6 +56,12 @@ class LLVMIRLanguageFrontendTest {
         // opaque pointers, so both parse attempts fail. The exception should report both error
         // messages, not just the one from the (here, less informative) opaque-pointer attempt.
         assertTrue(exception.message?.contains("Also failed in a typed-pointer context:") == true)
+
+        // LLVM writes a short, NUL-terminated message into a fixed-size (10000 byte) buffer; the
+        // message must be cut off there, not decoded (and concatenated, since there are two of
+        // them here) verbatim including the thousands of trailing NUL bytes.
+        assertFalse(exception.message?.contains('\u0000') == true)
+        assertTrue((exception.message?.length ?: 0) < 1000)
     }
 
     @Test
@@ -1267,6 +1273,41 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Throw>(innerCatchThrows)
         assertNotNull(innerCatchThrows.exception)
         assertRefersTo(innerCatchThrows.exception, innerTry.catchClauses[0].parameter)
+    }
+
+    @Test
+    fun testGetElementPtrThroughRecursiveStruct() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("gep_recursive_struct.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+        assertNotNull(tu)
+
+        // The self-pointer field's type cannot be resolved during the struct's own construction
+        // (cycle guard), so it falls back to UnknownType. This is unrelated to opaque pointers:
+        // the IR here uses typed pointers throughout.
+        val rec = tu.records["struct.Node"]
+        assertNotNull(rec)
+        val field1 = rec.fields["field_1"]
+        assertNotNull(field1)
+        assertIs<UnknownType>(field1.type)
+
+        // %p = getelementptr %struct.Node, %struct.Node* %n, i64 0, i32 1
+        //
+        // Indexing into the (UnknownType) self-pointer field must not crash, even though the
+        // UnknownType here has nothing to do with opaque pointers.
+        val func = tu.functions["getNext"]
+        assertNotNull(func)
+        val p = func.variables["p"]
+        assertNotNull(p)
+        val unary = p.initializer
+        assertIs<PointerReference>(unary)
+        assertIs<MemberAccess>(unary.input)
     }
 
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
