@@ -172,9 +172,9 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         return opaqueCtx
     }
 
-    /** Tries to parse [file] into [mod] using [ctxRef]. Returns an error message, or `null`. */
+    /** Tries to parse [file] into [mod] using [context]. Returns an error message, or `null`. */
     private fun tryParseIRInContext(
-        ctxRef: LLVMContextRef,
+        context: LLVMContextRef,
         file: File,
         mod: LLVMModuleRef,
     ): String? {
@@ -191,7 +191,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
             return errorMessage.toErrorString()
         }
 
-        result = LLVMParseIRInContext(ctxRef, buf, mod, errorMessage)
+        result = LLVMParseIRInContext(context, buf, mod, errorMessage)
         if (result != 0) {
             return errorMessage.toErrorString()
         }

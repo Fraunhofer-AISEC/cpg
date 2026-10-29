@@ -944,6 +944,33 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
+    fun testInsertvalueOpaquePointerField() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("insertvalue_opaque_ptr_field.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertNotNull(tu)
+
+        // %a = insertvalue { i32, ptr } undef, ptr %v, 1
+        //
+        // Unlike the literal struct {i32, i8} in testUndefInsertvalue, field_1 here is an opaque
+        // pointer, so its type is UnknownType. Setting it must not hit the "could not find
+        // structure type" failure mode that insertvalue's loop shares with GEP/extractvalue.
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        val a = foo.variables["a"]
+        assertNotNull(a)
+        assertIs<Construction>(a.initializer)
+    }
+
+    @Test
     fun testTryCatch() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =

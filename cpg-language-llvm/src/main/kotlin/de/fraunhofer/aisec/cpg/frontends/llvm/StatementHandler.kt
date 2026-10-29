@@ -656,7 +656,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     return declarationOrNot(operand, instr)
                 }
                 base = base.arguments[index]
-            } else if (baseType is PointerType) {
+            }
+            // `baseType is UnknownType` is included for the same reason as in the GEP/
+            // extractvalue loop in ExpressionHandler.handleGetElementPtr: a field or element can
+            // be an opaque pointer, or a self-referential struct's own pointer field (unresolvable
+            // while that struct is still being constructed), either of which collapses to
+            // `UnknownType`. Insertvalue cannot validly index past such a field within a single
+            // instruction either way, so treating it as an array/pointer access here is always
+            // safe.
+            else if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
