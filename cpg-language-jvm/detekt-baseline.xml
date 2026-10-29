@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$override fun handle(ctx: Value): Expression</ID>
+    <ID>EmptyFunctionBlock:JVMLanguageFrontend.kt$JVMLanguageFrontend${}</ID>
+    <ID>ForbiddenComment:JVMLanguageFrontend.kt$JVMLanguageFrontend$// TODO: Add the android.jar path and files</ID>
+    <ID>LargeClass:JVMLanguageFrontendTest.kt$JVMLanguageFrontendTest</ID>
+    <ID>LongMethod:ExpressionHandler.kt$ExpressionHandler$override fun handle(ctx: Value): Expression</ID>
+    <ID>LongMethod:JVMLanguageFrontend.kt$JVMLanguageFrontend$override fun parse(file: File): TranslationUnit</ID>
+    <ID>LongMethod:JVMLanguageFrontendTest.kt$JVMLanguageFrontendTest$@Test fun testInheritanceClass()</ID>
+    <ID>LongMethod:JVMLanguageFrontendTest.kt$JVMLanguageFrontendTest$@Test fun testPositionsAndSourceFileFromApk()</ID>
+    <ID>LongMethod:JVMLanguageFrontendTest.kt$JVMLanguageFrontendTest$@Test fun testValueAndStatementPositions()</ID>
+    <ID>MagicNumber:JVMLanguage.kt$JVMLanguage$16</ID>
+    <ID>MagicNumber:JVMLanguage.kt$JVMLanguage$32</ID>
+    <ID>MagicNumber:JVMLanguage.kt$JVMLanguage$64</ID>
+    <ID>MagicNumber:JVMLanguage.kt$JVMLanguage$8</ID>
+    <ID>ReturnCount:JVMLanguage.kt$fun File.isApk(): Boolean</ID>
+    <ID>ReturnCount:JVMLanguage.kt$fun File.isJar(): Boolean</ID>
+    <ID>ReturnCount:JVMLanguageFrontend.kt$JVMLanguageFrontend$internal fun &lt;T> withMethodPositions(sootMethod: SootMethod, block: (SootMethod) -> T): T</ID>
+    <ID>ReturnCount:JVMLanguageFrontend.kt$JVMLanguageFrontend$override fun codeOf(astNode: Any): String?</ID>
+    <ID>TooGenericExceptionCaught:DeclarationHandler.kt$DeclarationHandler$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ExpressionHandler.kt$ExpressionHandler$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:JVMLanguageFrontend.kt$JVMLanguageFrontend$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:StatementHandler.kt$StatementHandler$e: Exception</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : Handler</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -1,0 +1,670 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:AnalysisConfiguration.kt$InterproceduralWithDfgTermination$currentNode != nextNode &amp;&amp; edge is Invoke &amp;&amp; currentNode !is Call &amp;&amp; ctx.callStack.isEmpty()</ID>
+    <ID>ComplexCondition:BasicBlockCollectorPass.kt$BasicBlockCollectorPass$shortCircuit != null &amp;&amp; language is HasShortCircuitOperators &amp;&amp; !splitOnShortCircuitOperator &amp;&amp; currentStartNode.nextEOGEdges.size > 1</ID>
+    <ID>ComplexCondition:BasicLatticesRedesign.kt$Lattice$currentBBEdgesList.isNotEmpty() || nextBranchEdgesList.isNotEmpty() || mergePointsEdgesMap.isNotEmpty() || sccEdgesQueue.isNotEmpty()</ID>
+    <ID>ComplexCondition:BasicLatticesRedesign.kt$Lattice$it !in currentBBEdgesList &amp;&amp; it !in nextBranchEdgesList &amp;&amp; (isNoBranchingPoint || oldGlobalIt == null || // If we deal with PointsToState Elements, we use their special // parallelCompare function, otherwise, we resort to the // traditional compare ((newGlobalIt as? PointsToState.Element)?.parallelCompare( oldGlobalIt ) ?: (newGlobalIt as? ConcurrentMapLattice.Element&lt;*, *>) ?.parallelCompare(oldGlobalIt) ?: newGlobalIt.compare(oldGlobalIt)) in setOf(Order.GREATER, Order.UNEQUAL))</ID>
+    <ID>ComplexCondition:BasicLatticesRedesign.kt$Lattice$nextEdge.end.isBranchOf&lt;Loop>() &amp;&amp; (strategy == Strategy.WIDENING || strategy == Strategy.WIDENING_NARROWING) &amp;&amp; oldGlobalIt != null</ID>
+    <ID>ComplexCondition:BasicLatticesRedesign.kt$Lattice$nextEdge.end.nextEOGEdges.isEmpty() || (currentBBEdgesList.isEmpty() &amp;&amp; nextBranchEdgesList.isEmpty() &amp;&amp; mergePointsEdgesMap.isEmpty() &amp;&amp; sccEdgesQueue.isEmpty())</ID>
+    <ID>ComplexCondition:CXXCallResolverHelper.kt$notMatches &amp;&amp; !(callArgument.type.isPrimitive &amp;&amp; functionDeclarationSignature[i].isPrimitive &amp;&amp; functionDeclaration.parameters[i].type in explicitInstantiation)</ID>
+    <ID>ComplexCondition:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$(currentNode as? Reference)?.access == AccessValues.READ &amp;&amp; (currentNode.refersTo is Variable || currentNode.refersTo is Parameter) &amp;&amp; currentNode.refersTo !is Field &amp;&amp; (currentNode.refersTo as? Variable)?.isGlobal != true</ID>
+    <ID>ComplexCondition:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$(currentNode as? Reference)?.access == AccessValues.READWRITE &amp;&amp; (currentNode.refersTo is Variable || currentNode.refersTo is Parameter) &amp;&amp; currentNode.refersTo !is Field</ID>
+    <ID>ComplexCondition:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$(currentNode as? Reference)?.access == AccessValues.WRITE &amp;&amp; (currentNode.refersTo is Variable || currentNode.refersTo is Parameter) &amp;&amp; currentNode.refersTo !is Field</ID>
+    <ID>ComplexCondition:DFGPass.kt$DFGPass$astParent is Assign &amp;&amp; node in astParent.lhs || astParent is Comprehension &amp;&amp; node == astParent.variable</ID>
+    <ID>ComplexCondition:Dataflow.kt$Dataflows$thisRef is Reference &amp;&amp; !outgoing &amp;&amp; start != thisRef &amp;&amp; start is HasType</ID>
+    <ID>ComplexCondition:DynamicInvokeResolver.kt$DynamicInvokeResolver$call.invokes.isEmpty() &amp;&amp; (callee.type is FunctionPointerType || ((callee as? Reference)?.refersTo is Parameter || (callee as? Reference)?.refersTo is Variable))</ID>
+    <ID>ComplexCondition:Extensions.kt$((operator.rhs.name.localName == "NULL" || (operator.rhs as? Literal&lt;*>)?.value == 0 || // Hack for now until the CPG correctly parses '\0' (operator.rhs as? Literal&lt;*>)?.value == '\\') &amp;&amp; (operator.lhs as? Reference)?.refersTo == refersTo) || // the same for the other way round (((operator.lhs as? Literal&lt;*>)?.value == '\\' || operator.lhs.name.localName == "NULL" || (operator.lhs as? Literal&lt;*>)?.value == 0) &amp;&amp; (operator.lhs as? Reference)?.refersTo == refersTo)</ID>
+    <ID>ComplexCondition:Extensions.kt$(direction is Forward || direction is Backward) &amp;&amp; sensitivities.toSet() == setOf&lt;AnalysisSensitivity>(ContextSensitive) &amp;&amp; scope is Interprocedural &amp;&amp; earlyTermination === noEarlyTermination</ID>
+    <ID>ComplexCondition:Extensions.kt$(direction is Forward || direction is Backward) &amp;&amp; sensitivities.toSet() == setOf&lt;AnalysisSensitivity>(ContextSensitive) &amp;&amp; scope is Interprocedural &amp;&amp; earlyTermination === noEarlyTermination &amp;&amp; ctx.callStack.isEmpty()</ID>
+    <ID>ComplexCondition:ImportResolver.kt$ImportResolver$namespaceTu == null || namespaceComponent == null || importTu == null || namespaceTu == importTu</ID>
+    <ID>ComplexCondition:MermaidPrinter.kt$((isForward &amp;&amp; (selector(endNode) || endNode == this)) || (!isForward &amp;&amp; (selector(startNode) || startNode == this))) &amp;&amp; startNode != endNode</ID>
+    <ID>ComplexCondition:PassHelper.kt$callee is MemberAccess || callee is Reference &amp;&amp; !call.callee.name.isQualified() &amp;&amp; call.language is HasImplicitReceiver</ID>
+    <ID>ComplexCondition:PassHelper.kt$ref.language is HasImplicitReceiver &amp;&amp; !ref.name.isQualified() &amp;&amp; !ref.isStaticAccess &amp;&amp; currentRecordType != null</ID>
+    <ID>ComplexCondition:PointsToPass.kt$PointsToPass$(argument is PointerReference || argument is Reference &amp;&amp; (argument.type as? PointerType)?.pointerOrigin?.name == "ARRAY") &amp;&amp; isGlobal(argument) &amp;&amp; argument.refersTo != null</ID>
+    <ID>ComplexCondition:PointsToPass.kt$PointsToPass$(invoke.functionSummary.isNotEmpty() &amp;&amp; invoke.body != null) &amp;&amp; invoke.functionSummary.keys.any { it in invoke.parameters || it in invoke.returns }</ID>
+    <ID>ComplexCondition:PointsToPass.kt$PointsToPass$(node.functionSummary.isNotEmpty() &amp;&amp; node.body != null) &amp;&amp; node.functionSummary.keys.any { it in node.parameters || it in node.returns || // We already analyzed the function, but it doesn't affect any // parameters or return values (it as? Literal&lt;*>)?.value == "dummy" }</ID>
+    <ID>ComplexCondition:PointsToPass.kt$PointsToPass$param.type is PointerType || forceDerefPMVCreation || // If the type is unknown we also // initialize all levels to be sure param.type is UnknownType || // Another guess we take: If the length is the same as the // addressLength, again, to be sure we initialize all levels (param.type as? NumericType)?.bitWidth == // TODO: passConfig&lt;Configuration> should never be null? (passConfig&lt;Configuration>()?.addressLength ?: 64)</ID>
+    <ID>ComplexCondition:PointsToPass.kt$PointsToPass$value.name != param.name &amp;&amp; /*Filter the PMVs from this parameter*/ !(value is ParameterMemoryValue &amp;&amp; value.name.localName.contains("derefvalue") &amp;&amp; value.name.parent?.localName == param.name.localName) /* Filter the unknownMemoryValues that weren't written to*/ &amp;&amp; !(value is UnknownMemoryValue &amp;&amp; lastWrites.isEmpty())</ID>
+    <ID>ComplexCondition:PointsToPass.kt$noDestinationWithBody &amp;&amp; (sources.any { src -> src.first === lw.node &amp;&amp; src.second in lw.properties } || lw.node in destinations)</ID>
+    <ID>ComplexCondition:PointsToPass.kt$value is BinaryOperator &amp;&amp; value.operatorCode == "+" &amp;&amp; (value.lhs is Reference || value.lhs is Cast) &amp;&amp; value.rhs is Literal&lt;*></ID>
+    <ID>ComplexCondition:SymbolResolver.kt$SymbolResolver$ex.language is HasOperatorOverloading &amp;&amp; ex is MemberAccess &amp;&amp; ex.operatorCode == "->" &amp;&amp; ex.base.type !is PointerType</ID>
+    <ID>ComplexCondition:SymbolResolver.kt$SymbolResolver$language is HasImplicitReceiver &amp;&amp; candidates.isEmpty() &amp;&amp; !ref.name.isQualified() &amp;&amp; record != null</ID>
+    <ID>ComplexCondition:SymbolResolver.kt$SymbolResolver$language is HasSuperClasses &amp;&amp; record != null &amp;&amp; base is Reference &amp;&amp; base.name.localName == language.superClassKeyword</ID>
+    <ID>ComplexCondition:SymbolResolver.kt$SymbolResolver$template is RecordTemplate &amp;&amp; recordDeclaration != null &amp;&amp; recordDeclaration in template.realizations &amp;&amp; (constructExpression.templateArguments.size &lt;= template.parameters.size)</ID>
+    <ID>ComplexCondition:SymbolResolver.kt$source is MemberCall &amp;&amp; (source.base?.type is DynamicType || source.base?.type is UnknownType || source.base?.type is AutoType)</ID>
+    <ID>ComplexCondition:Template.kt$Template$(declaration is TypeParameter &amp;&amp; declaration.default != null) || (declaration is Parameter &amp;&amp; declaration.default != null)</ID>
+    <ID>CyclomaticComplexMethod:AnalysisConfiguration.kt$InterproceduralWithDfgTermination$override fun followEdge( currentNode: Node, edge: Edge&lt;Node>, ctx: Context, path: List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, loopingPaths: MutableSet&lt;NodePath>, analysisDirection: AnalysisDirection, interproceduralEdgesExist: Boolean, ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:BasicBlockCollectorPass.kt$BasicBlockCollectorPass$fun collectBasicBlocks(startNode: Node, splitOnShortCircuitOperator: Boolean): BasicBlock</ID>
+    <ID>CyclomaticComplexMethod:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$@OptIn(ExperimentalAtomicApi::class) suspend fun parallelCompare(other: Lattice.Element): Order</ID>
+    <ID>CyclomaticComplexMethod:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>CyclomaticComplexMethod:BasicLatticesRedesign.kt$HashMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>CyclomaticComplexMethod:BasicLatticesRedesign.kt$Lattice$private suspend fun iterateEogWorklist( startEdges: List&lt;EvaluationOrder>, startState: T, transformation: suspend (Lattice&lt;T>, EvaluationOrder, T) -> T, strategy: Strategy, timeout: Duration, maxStateEntries: Long?, statistics: IterationStatistics, ): Pair&lt;T, Boolean></ID>
+    <ID>CyclomaticComplexMethod:BasicLatticesRedesign.kt$PowersetLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>CyclomaticComplexMethod:CommentMatcher.kt$CommentMatcher$fun matchCommentToNode( comment: String, location: Region, tu: TranslationUnit, artifactLocation: PhysicalLocation.ArtifactLocation? = null, )</ID>
+    <ID>CyclomaticComplexMethod:CompilationDatabase.kt$CompilationDatabase.Companion$private fun parseCommandLineArgs(command: List&lt;String>): ParsedCompilationDatabaseEntry</ID>
+    <ID>CyclomaticComplexMethod:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$override fun accept(startNode: Node)</ID>
+    <ID>CyclomaticComplexMethod:ControlDependenceGraphPass.kt$private fun EvaluationOrder.isConditionalBranch(): Boolean</ID>
+    <ID>CyclomaticComplexMethod:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$override fun accept(node: Node)</ID>
+    <ID>CyclomaticComplexMethod:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$protected fun collectFlowsToClear(node: AstNode): Triple&lt;Set&lt;Dataflow>, Set&lt;Node>, Set&lt;Node>></ID>
+    <ID>CyclomaticComplexMethod:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$protected open fun transfer( currentEdge: Edge&lt;Node>, state: State&lt;Node, Set&lt;Node>>, worklist: Worklist&lt;Edge&lt;Node>, Node, Set&lt;Node>>, ): State&lt;Node, Set&lt;Node>></ID>
+    <ID>CyclomaticComplexMethod:DFGFunctionSummaries.kt$DFGFunctionSummaries$fun applyDfgEntryToFunction(functionDeclaration: Function, dfgEntries: List&lt;DFGEntry>)</ID>
+    <ID>CyclomaticComplexMethod:DFGFunctionSummaries.kt$DFGFunctionSummaries$private fun DFGPass.findFunctionDeclarationEntry(functionDecl: Function): List&lt;DFGEntry>?</ID>
+    <ID>CyclomaticComplexMethod:DFGPass.kt$DFGPass$protected open fun handle( node: Node?, parent: Node?, inferDfgForUnresolvedSymbols: Boolean, functionSummaries: DFGFunctionSummaries, )</ID>
+    <ID>CyclomaticComplexMethod:DynamicInvokeResolver.kt$DynamicInvokeResolver$private fun handleCallee(call: Call, expr: Expression)</ID>
+    <ID>CyclomaticComplexMethod:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$fun handleEOG(node: Node?)</ID>
+    <ID>CyclomaticComplexMethod:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$protected fun handleTry(node: Try)</ID>
+    <ID>CyclomaticComplexMethod:Extensions.kt$fun Node.isNullCheck(refersTo: Declaration?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:FrontendUtils.kt$FrontendUtils.Companion$fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnit)</ID>
+    <ID>CyclomaticComplexMethod:Function.kt$fun Expression.cyclomaticComplexity(depth: Int = 1): Long</ID>
+    <ID>CyclomaticComplexMethod:GraphTraversal.kt$fun Node.followXUntilHit( x: ( Node, Context, List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, MutableSet&lt;NodePath>, ) -> Collection&lt;Triple&lt;Node, Edge&lt;Node>, Context>>, collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, ctx: Context = Context(steps = 0), earlyTermination: (Node, Context) -> Boolean, predicate: (Node) -> Boolean, ): FulfilledAndFailedPaths</ID>
+    <ID>CyclomaticComplexMethod:ImportResolver.kt$ImportResolver$private fun collectImportDependencies(import: Import)</ID>
+    <ID>CyclomaticComplexMethod:Inference.kt$Inference$fun inferFunctionDeclaration( name: CharSequence?, code: String?, isStatic: Boolean, signature: List&lt;Type?>, incomingReturnType: Type?, hint: Call? = null, ): Function?</ID>
+    <ID>CyclomaticComplexMethod:Inference.kt$Inference$fun inferReturnType(hint: Call): Type?</ID>
+    <ID>CyclomaticComplexMethod:Language.kt$Language$private fun arithmeticOpTypePropagation(lhsType: Type, rhsType: Type): Type</ID>
+    <ID>CyclomaticComplexMethod:MermaidPrinter.kt$fun &lt;EdgeType : Edge&lt;out Node>> Node.printGraphNew( maxConnections: Int = 25, selector: (Node) -> Boolean = { true }, vararg strategies: (Node) -> Iterator&lt;EdgeType>, ): String</ID>
+    <ID>CyclomaticComplexMethod:MultiValueEvaluator.kt$MultiValueEvaluator$private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection&lt;Any?></ID>
+    <ID>CyclomaticComplexMethod:NodeBuilder.kt$fun Node.applyMetadata( provider: MetadataProvider?, name: CharSequence? = EMPTY_NAME, rawNode: Any? = null, doNotPrependNamespace: Boolean = false, defaultNamespace: Name? = null, )</ID>
+    <ID>CyclomaticComplexMethod:NodeBuilder.kt$fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: Int = 1)</ID>
+    <ID>CyclomaticComplexMethod:PersistentLattices.kt$PersistentMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private fun addEntryToMap( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, addEntryToMapCache: AddEntryToMapCache, destinationAddresses: IdentitySet&lt;Pair&lt;Node, String?>>, destinations: IdentitySet&lt;Node>, srcNode: Node?, shortFS: Boolean, srcValueDepth: Int, propertySet: EqualLinkedHashSet&lt;Any>, currentNode: Call, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, param: Node, shortFsPrevEdges: LinkedHashSet&lt;NodeWithPropertiesKey>, ): ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>></ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private fun addParameterInfoToFS( node: Function, param: Parameter, dstValueDepth: Int, value: Node, shortFS: Boolean, subAccessName: String, lastWrites: PowersetLattice.Element&lt;NodeWithPropertiesKey>, )</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private fun calculateCallDestinations( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, dstValueDepth: Int, subAccessName: String, argument: Node, properties: EqualLinkedHashSet&lt;Any>, param: Node, ): Pair&lt;IdentitySet&lt;Pair&lt;Node, String?>>, IdentitySet&lt;Node>></ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private suspend fun calculateFunctionSummaries(invoke: Function): Function?</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private suspend fun handleCall( lattice: PointsToState, currentNode: Call, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private suspend fun handleDeclaration( lattice: PointsToState, currentNode: Node, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private suspend fun handleEmptyFunction( lattice: PointsToState, startState: PointsToState.Element, function: Function, ): PointsToState.Element</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private suspend fun initializeParameter( lattice: PointsToState, function: Function, param: Parameter, doubleState: PointsToState.Element, // Until which depth do we create ParameterMemoryValues depth: Int = 2, // Create the PMVs independent of the parameter type forceDerefPMVCreation: Boolean = false, ): PointsToState.Element</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$private suspend fun storeFunctionSummary(node: Function, doubleState: PointsToState.Element)</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$protected suspend fun handleForEach( lattice: PointsToState, currentNode: Expression, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$protected suspend fun transferInternal( lattice: PointsToState, currentNode: Node, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$PointsToPass$suspend fun acceptInternal(node: Node)</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$fun PointsToState.Element.fetchValueFromDeclarationState( node: Node, fetchFields: Boolean = false, excludeShortFSValues: Boolean = false, ): IdentitySet&lt;FetchElementFromDeclarationStateEntry></ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet&lt;Node></ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$fun PointsToState.Element.getLastWrites( node: Node ): PowersetLattice.Element&lt;NodeWithPropertiesKey></ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$fun PointsToState.Element.getNestedValues( node: Node, nestingDepth: Int, fetchFields: Boolean = false, onlyFetchExistingEntries: Boolean = false, excludeShortFSValues: Boolean = false, ): PowersetLattice.Element&lt;Pair&lt;Node, Boolean>></ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$fun PointsToState.Element.getValues( node: Node, startNode: Node, ): PowersetLattice.Element&lt;Pair&lt;Node, Boolean>></ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$private fun addDynamicInvokesEdges(call: Call, doubleState: PointsToState.Element)</ID>
+    <ID>CyclomaticComplexMethod:PointsToPass.kt$suspend fun PointsToState.Element.updateValues( lattice: PointsToState, doubleState: PointsToState.Element, sources: PowersetLattice.Element&lt;Triple&lt;Node?, Boolean, Any?>>, destinations: IdentitySet&lt;Node>, // Node and short FS yes or no destinationAddresses: IdentitySet&lt;Node>, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, // In some cases, we want to remove the old generalState (for example for assigns), in others, // we want to keep it (in handeCall for example) overwriteGeneralState: Boolean = true, ): PointsToState.Element</ID>
+    <ID>CyclomaticComplexMethod:Project.kt$ProjectBuilder$internal fun resolve(): Project</ID>
+    <ID>CyclomaticComplexMethod:Record.kt$Record$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:SccPass.kt$SccPass$fun tarjan(bb: Node)</ID>
+    <ID>CyclomaticComplexMethod:SccPass.kt$SccPass$private fun handleSccRoot( bb: Node, currentInfo: TarjanInfo, level: Int, workStack: ArrayDeque&lt;WorkItem>, )</ID>
+    <ID>CyclomaticComplexMethod:Scope.kt$Scope$fun lookupSymbol( symbol: Symbol, languageOnly: Language&lt;*>? = null, qualifiedLookup: Boolean = false, replaceImports: Boolean = true, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, predicate: ((Declaration) -> Boolean)? = null, ): List&lt;Declaration></ID>
+    <ID>CyclomaticComplexMethod:ScopeManager.kt$ScopeManager$fun lookupSymbolByName( name: Name, language: Language&lt;*>, location: PhysicalLocation? = null, startScope: Scope? = currentScope, replaceImports: Boolean = true, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, predicate: ((Declaration) -> Boolean)? = null, ): List&lt;Declaration></ID>
+    <ID>CyclomaticComplexMethod:SubgraphWalker.kt$fun SubgraphWalker.ScopedWalker&lt;Node>.replace( parent: AstNode?, old: Expression, new: Expression, ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:SymbolResolver.kt$SymbolResolver$protected open fun handleReference(ref: Reference)</ID>
+    <ID>CyclomaticComplexMethod:TranslationManager.kt$TranslationManager$@Throws(TranslationException::class) fun runFrontends( ctx: TranslationContext, result: TranslationResult, ): Set&lt;LanguageFrontend&lt;*, *>></ID>
+    <ID>CyclomaticComplexMethod:Util.kt$Util$fun eogConnect( quantifier: Quantifier = Quantifier.ALL, connectStart: Connect = Connect.SUBTREE, edgeDirection: Edge, startNode: AstNode?, connectEnd: Connect = Connect.SUBTREE, predicate: ((EvaluationOrder) -> Boolean)? = null, endNodes: List&lt;AstNode?>, ): Boolean</ID>
+    <ID>CyclomaticComplexMethod:ValueEvaluator.kt$ValueEvaluator$open fun evaluateInternal(node: Node?, depth: Int): Any?</ID>
+    <ID>CyclomaticComplexMethod:ValueEvaluator.kt$ValueEvaluator$protected open fun computeBinaryOpEffect( lhsValue: Any?, rhsValue: Any?, has: HasOperatorCode?, ): Any?</ID>
+    <ID>CyclomaticComplexMethod:ValueEvaluator.kt$fun &lt;T : Number> Number.compareTo(other: T): Int</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:PointsToPass.kt$PointsToPass$( dstValueDepth, srcNode, srcValueDepth, subAccessName, lastWrites, properties, )</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:PointsToPass.kt$PointsToPass$(value, shortFS, subAccessName, lastWrites)</ID>
+    <ID>EmptyDefaultConstructor:BasicBlock.kt$BasicBlock$()</ID>
+    <ID>EmptyDefaultConstructor:BasicLatticesRedesign.kt$PowersetLattice$()</ID>
+    <ID>EmptyDefaultConstructor:DistinctLanguageBlock.kt$DistinctLanguageBlock$()</ID>
+    <ID>EmptyDefaultConstructor:Edge.kt$Edge.Delegate$()</ID>
+    <ID>EmptyDefaultConstructor:EdgeSingletonList.kt$EdgeSingletonList.UnwrapDelegate$()</ID>
+    <ID>EmptyDefaultConstructor:ExclusionTest.kt$TestFileLanguage$()</ID>
+    <ID>EmptyDefaultConstructor:GlobalScope.kt$GlobalScope$()</ID>
+    <ID>EmptyDefaultConstructor:Language.kt$Language$()</ID>
+    <ID>EmptyDefaultConstructor:Node.kt$Node$()</ID>
+    <ID>EmptyDefaultConstructor:OverlayNode.kt$OverlayNode$()</ID>
+    <ID>EmptyDefaultConstructor:ReplaceTest.kt$ReplaceTest.ReplaceTestLanguage$()</ID>
+    <ID>EmptyDefaultConstructor:UnwrappedEdgeList.kt$UnwrappedEdgeList.Delegate$()</ID>
+    <ID>EmptyDefaultConstructor:UnwrappedEdgeList.kt$UnwrappedEdgeList.IncomingDelegate$()</ID>
+    <ID>EmptyDefaultConstructor:UnwrappedEdgeSet.kt$UnwrappedEdgeSet.Delegate$()</ID>
+    <ID>EmptyDefaultConstructor:UnwrappedEdgeSet.kt$UnwrappedEdgeSet.IncomingDelegate$()</ID>
+    <ID>EmptyFunctionBlock:DirtyCleanTest.kt$LoopingPass1${}</ID>
+    <ID>EmptyFunctionBlock:DirtyCleanTest.kt$LoopingPass2${}</ID>
+    <ID>EmptyFunctionBlock:ExclusionTest.kt$TestFileLanguageFrontend${}</ID>
+    <ID>EmptyFunctionBlock:TranslationProgressCallbackTest.kt$CallbackRecordingPass${}</ID>
+    <ID>EmptyFunctionBlock:TranslationProgressCallbackTest.kt$CallbackTestLanguageFrontend${}</ID>
+    <ID>EqualsWithHashCodeExist:BasicLatticesRedesign.kt$ConcurrentIdentityHashMap$&lt;no name provided> : AbstractMutableSet</ID>
+    <ID>EqualsWithHashCodeExist:Empty.kt$Empty : Expression</ID>
+    <ID>EqualsWithHashCodeExist:PersistentIdentityMap.kt$PersistentIdentityMap$EntrySetView : AbstractMutableSet</ID>
+    <ID>EqualsWithHashCodeExist:PersistentIdentityMap.kt$PersistentIdentityMap$KeySetView : AbstractMutableSet</ID>
+    <ID>EqualsWithHashCodeExist:UnwrappedEdgeList.kt$UnwrappedEdgeList&lt;NodeType : Node, EdgeType : Edge&lt;NodeType>> : UnwrappedEdgeCollectionMutableList</ID>
+    <ID>EqualsWithHashCodeExist:UnwrappedEdgeSet.kt$UnwrappedEdgeSet&lt;NodeType : Node, EdgeType : Edge&lt;NodeType>> : UnwrappedEdgeCollectionMutableSet</ID>
+    <ID>ExplicitItLambdaParameter:DFGPass.kt$DFGPass${ idx, it -> val astParent = node.astParent if ( astParent is Assign &amp;&amp; node in astParent.lhs || astParent is Comprehension &amp;&amp; node == astParent.variable ) { // If we're the target of an assignment or the variable of a comprehension // expression, the DFG flows from the node to the initializers. node.nextDFGEdges.add(it) { granularity = indexed(idx) } } else { node.prevDFGEdges.add(it) { granularity = indexed(idx) } } }</ID>
+    <ID>ForbiddenComment:CXXCallResolverHelper.kt$// TODO: Could be replaced with functionDeclaration.parameters.size</ID>
+    <ID>ForbiddenComment:CXXCallResolverHelper.kt$// TODO: Somehow, this should be the ParametrizedType but it's an ObjectType</ID>
+    <ID>ForbiddenComment:Call.kt$Call$// TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields</ID>
+    <ID>ForbiddenComment:CompilationDatabase.kt$CompilationDatabase.Companion$* Split a command into its separate arguments. The current implementation uses the naive * approach to split by " ". This will fail if escaping is used. * * TODO: Use escaping aware split</ID>
+    <ID>ForbiddenComment:ControlDependenceGraphPassTest.kt$ControlDependenceGraphPassTest$// TODO: Once we update the ShortCircuitOperator to a better EOG description, this should</ID>
+    <ID>ForbiddenComment:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$// TODO: What's the purpose of these two filters? One of them is unnecessary.</ID>
+    <ID>ForbiddenComment:DFGFunctionSummaries.kt$DFGFunctionSummaries$// TODO: It would be nice if we could model the index. Not sure how this is done</ID>
+    <ID>ForbiddenComment:DFGFunctionSummaries.kt$DFGFunctionSummaries$// TODO: It would make sense to model properties here. Could be the index of a return</ID>
+    <ID>ForbiddenComment:DFGPass.kt$DFGPass$* Adds the DFG edges for an [KeyValue]. The value flows to this expression. TODO: Check with * python and JS implementation</ID>
+    <ID>ForbiddenComment:DFGPass.kt$DFGPass$// TODO: Doesn't the node also contain the key?? Should the value be "partial" or "full"?</ID>
+    <ID>ForbiddenComment:DFGPass.kt$DFGPass$// TODO: This should be handled by the PointsToPass</ID>
+    <ID>ForbiddenComment:DFGTest.kt$DFGTest$// TODO: IMHO this test is quite useless and can be merged into another one (e.g.</ID>
+    <ID>ForbiddenComment:DynamicInvokeResolver.kt$DynamicInvokeResolver$// TODO: This is only a workaround!</ID>
+    <ID>ForbiddenComment:Edge.kt$Edge.Delegate$// TODO: trigger some update hook</ID>
+    <ID>ForbiddenComment:Extensions.kt$// TODO: I'm not sure if it wouldn't be more intuitive to use</ID>
+    <ID>ForbiddenComment:GraphTraversal.kt$// TODO: How to determine if this path is really at the end or if it exceeded the</ID>
+    <ID>ForbiddenComment:Inference.kt$// TODO: Is the call's type the return value's type?</ID>
+    <ID>ForbiddenComment:Invoke.kt$Invokes$// TODO: Make thisRef generic :(</ID>
+    <ID>ForbiddenComment:Language.kt$Language$// TODO: Move this code somewhere else once we have a proper template expansion pass</ID>
+    <ID>ForbiddenComment:MeasurementHolder.kt$// TODO: Add pretty printing for objects (e.g. List, Map)</ID>
+    <ID>ForbiddenComment:MemoryAddress.kt$MemoryAddress$// TODO: What else do we need to compare?</ID>
+    <ID>ForbiddenComment:MemoryAddress.kt$UnknownMemoryValue$// TODO: What else do we need to compare?</ID>
+    <ID>ForbiddenComment:MermaidPrinter.kt$// TODO: Might be useful to propagate/configure edge labels.</ID>
+    <ID>ForbiddenComment:OrderingHelpers.kt$// TODO: A more sophisticated approach could improve the results here. E.g. least</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: Check if the boolean should be true sometimes</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: Do we also need to fetch some properties here?</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: In C(++), there should be a difference for Subscriptions if the</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: Should we skip dereferencing if the base is not a pointer (The C(++) compiler</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: This should work for all HasMemoryAddresses</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: Unsure if this is consistent?</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: handle globals</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$// TODO: this should be fields, but for now we deal with the names</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: Also add possible dereference values to the input?</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: Check out cases where the input is no Reference</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: Do we need the synchronized? Can we be more efficient in finding matching</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: If the expression is global, the DFG-Edges should have already been drawn by the</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: Indicate somehow if this has already been done?</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: This does make sense for C(++), but how about other languages?</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: This probably can be optimized</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: This will cause us to handle the call twice (also afterwards in the</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: add functionSummary flag for contextSensitive DFs</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: if detailedShortFS is false, create an overapproximated FS</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: passConfig&lt;Configuration> should never be null?</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: what if argVal is global?</ID>
+    <ID>ForbiddenComment:PointsToPass.kt$PointsToPass$// TODO: would this make sense for everything in the lhs?</ID>
+    <ID>ForbiddenComment:Record.kt$Record$// TODO: Which fields can be safely added?</ID>
+    <ID>ForbiddenComment:SubgraphWalker.kt$// TODO: It may be necessary for some nodes to also add properties (e.g. branches)</ID>
+    <ID>ForbiddenComment:SymbolResolver.kt$SymbolResolver$// TODO: Needs a special trait?</ID>
+    <ID>ForbiddenComment:SymbolResolver.kt$SymbolResolver$// TODO: move this to refineMethodResolution of CXXLanguage</ID>
+    <ID>ForbiddenComment:TypePropagationTest.kt$TypePropagationTest$// TODO: For some reason, the element is not found in the set. This is strange because the</ID>
+    <ID>ForbiddenComment:TypeReference.kt$TypeReference$* Models C++ operations that inspect types. These are `typeof`, `sizeof`, `typeid`, `alignof`and * are stored as string in their operator code. * * TODO: Is such a class really necessary??</ID>
+    <ID>ForbiddenComment:Util.kt$Util$// TODO: this function needs a major overhaul because it was</ID>
+    <ID>ForbiddenComment:VisitorTest.kt$VisitorTest$// TODO: It seems to expect a Field for "System" but that's contrary to other</ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun AST_EDGES_BACKWARD(x: AstNode): Iterator&lt;AstEdge&lt;out AstNode>></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun AST_EDGES_FORWARD(x: AstNode): Iterator&lt;AstEdge&lt;out AstNode>></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun AST_FORWARD(x: AstNode): Iterator&lt;AstNode></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun COMPONENTS_LEAST_IMPORTS(x: TranslationResult): Iterator&lt;Component></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun DFG_BACKWARD(x: Node): Iterator&lt;Node></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun DFG_EDGES_BACKWARD(x: Node): Iterator&lt;Dataflow></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun DFG_EDGES_FORWARD(x: Node): Iterator&lt;Dataflow></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun DFG_FORWARD(x: Node): Iterator&lt;Node></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun EOG_BACKWARD(x: Node): Iterator&lt;Node></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun EOG_EDGES_BACKWARD(x: Node): Iterator&lt;EvaluationOrder></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun EOG_EDGES_FORWARD(x: Node): Iterator&lt;EvaluationOrder></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun EOG_FORWARD(x: Node): Iterator&lt;Node></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun MEMORY_VALUES_BACKWARD(x: Node): Iterator&lt;Dataflow></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun MEMORY_VALUES_FORWARD(x: Node): Iterator&lt;Dataflow></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun NO_STRATEGY(x: Node): Iterator&lt;Node></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun REACHABLE_EOG_FORWARD(x: Node): Iterator&lt;Node></ID>
+    <ID>FunctionNaming:Strategy.kt$Strategy$fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator&lt;TranslationUnit></ID>
+    <ID>ImplicitDefaultLocale:Handler.kt$Handler$String.format("Parsing of type ${ctx.javaClass} is not supported (yet)")</ID>
+    <ID>ImplicitDefaultLocale:Util.kt$Util$String.format( "%s: %s", PhysicalLocation.locationLink(lang.locationOf(astNode)), format, )</ID>
+    <ID>ImplicitDefaultLocale:Util.kt$Util$String.format("%s: %s", PhysicalLocation.locationLink(location), format)</ID>
+    <ID>ImplicitDefaultLocale:Util.kt$Util$String.format("%s: %s", PhysicalLocation.locationLink(node.location), format)</ID>
+    <ID>ImplicitDefaultLocale:Util.kt$Util$String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format)</ID>
+    <ID>LargeClass:BasicLatticesRedesignTest.kt$BasicLatticesRedesignTest</ID>
+    <ID>LargeClass:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass : TranslationUnitPass</ID>
+    <ID>LargeClass:PointsToPass.kt$PointsToPass : EOGStarterPass</ID>
+    <ID>LargeClass:ValueEvaluationTests.kt$ValueEvaluationTests$Companion</ID>
+    <ID>LongMethod:AnalysisConfiguration.kt$Backward$override fun pickNextStep( currentNode: Node, scope: AnalysisScope, ctx: Context, path: List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, loopingPaths: MutableSet&lt;NodePath>, vararg sensitivities: AnalysisSensitivity, ): Collection&lt;Triple&lt;Node, Edge&lt;Node>, Context>></ID>
+    <ID>LongMethod:AnalysisConfiguration.kt$Forward$override fun pickNextStep( currentNode: Node, scope: AnalysisScope, ctx: Context, path: List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, loopingPaths: MutableSet&lt;NodePath>, vararg sensitivities: AnalysisSensitivity, ): Collection&lt;Triple&lt;Node, Edge&lt;Node>, Context>></ID>
+    <ID>LongMethod:BasicBlockCollectorPass.kt$BasicBlockCollectorPass$fun collectBasicBlocks(startNode: Node, splitOnShortCircuitOperator: Boolean): BasicBlock</ID>
+    <ID>LongMethod:BasicLatticesRedesign.kt$ConcurrentMapLattice$override suspend fun lub( one: Element&lt;K, V>, two: Element&lt;K, V>, allowModify: Boolean, widen: Boolean, concurrencyCounter: Int, ): Element&lt;K, V></ID>
+    <ID>LongMethod:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$@OptIn(ExperimentalAtomicApi::class) suspend fun parallelCompare(other: Lattice.Element): Order</ID>
+    <ID>LongMethod:BasicLatticesRedesign.kt$Lattice$private suspend fun iterateEogWorklist( startEdges: List&lt;EvaluationOrder>, startState: T, transformation: suspend (Lattice&lt;T>, EvaluationOrder, T) -> T, strategy: Strategy, timeout: Duration, maxStateEntries: Long?, statistics: IterationStatistics, ): Pair&lt;T, Boolean></ID>
+    <ID>LongMethod:BasicLatticesRedesignTest.kt$BasicLatticesRedesignTest$@Test fun testConcurrentMapLattice()</ID>
+    <ID>LongMethod:BasicLatticesRedesignTest.kt$BasicLatticesRedesignTest$@Test fun testHashMapLattice()</ID>
+    <ID>LongMethod:BasicLatticesRedesignTest.kt$BasicLatticesRedesignTest$@Test fun testPairLattice()</ID>
+    <ID>LongMethod:BasicLatticesRedesignTest.kt$BasicLatticesRedesignTest$@Test fun testPowersetLattice()</ID>
+    <ID>LongMethod:BasicLatticesRedesignTest.kt$BasicLatticesRedesignTest$@Test fun testTripleLattice()</ID>
+    <ID>LongMethod:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$override fun accept(startNode: Node)</ID>
+    <ID>LongMethod:ControlDependenceGraphPassTest.kt$ControlDependenceGraphPassTest.Companion$private fun LanguageFrontend&lt;*, *>.buildIfTestBody(tuName: String): TranslationResult</ID>
+    <ID>LongMethod:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$override fun accept(node: Node)</ID>
+    <ID>LongMethod:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$protected open fun transfer( currentEdge: Edge&lt;Node>, state: State&lt;Node, Set&lt;Node>>, worklist: Worklist&lt;Edge&lt;Node>, Node, Set&lt;Node>>, ): State&lt;Node, Set&lt;Node>></ID>
+    <ID>LongMethod:ControlFlowSensitiveDFGPassTest.kt$ControlFlowSensitiveDFGPassTest$@Test fun testSimpleFieldDataflow()</ID>
+    <ID>LongMethod:DFGFunctionSummaries.kt$DFGFunctionSummaries$fun applyDfgEntryToFunction(functionDeclaration: Function, dfgEntries: List&lt;DFGEntry>)</ID>
+    <ID>LongMethod:DFGFunctionSummaries.kt$DFGFunctionSummaries$private fun DFGPass.findFunctionDeclarationEntry(functionDecl: Function): List&lt;DFGEntry>?</ID>
+    <ID>LongMethod:DFGFunctionSummariesTest.kt$DFGFunctionSummariesTest$@Test fun testMatching()</ID>
+    <ID>LongMethod:DFGFunctionSummariesTest.kt$DFGFunctionSummariesTest$@Test fun testPropagateArguments()</ID>
+    <ID>LongMethod:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$fun handleEOG(node: Node?)</ID>
+    <ID>LongMethod:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$protected fun handleTry(node: Try)</ID>
+    <ID>LongMethod:EvaluationOrderGraphPassTest.kt$EvaluationOrderGraphPassTest$@Test fun testCollectionComprehensionStatement()</ID>
+    <ID>LongMethod:FrontendUtils.kt$FrontendUtils.Companion$fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnit)</ID>
+    <ID>LongMethod:GraphTraversal.kt$fun Node.followXUntilHit( x: ( Node, Context, List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, MutableSet&lt;NodePath>, ) -> Collection&lt;Triple&lt;Node, Edge&lt;Node>, Context>>, collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, ctx: Context = Context(steps = 0), earlyTermination: (Node, Context) -> Boolean, predicate: (Node) -> Boolean, ): FulfilledAndFailedPaths</ID>
+    <ID>LongMethod:Handler.kt$Handler$open fun handle(ctx: HandlerNode): ResultNode?</ID>
+    <ID>LongMethod:Inference.kt$Inference$fun inferFunctionDeclaration( name: CharSequence?, code: String?, isStatic: Boolean, signature: List&lt;Type?>, incomingReturnType: Type?, hint: Call? = null, ): Function?</ID>
+    <ID>LongMethod:Inference.kt$Inference$fun inferReturnType(hint: Call): Type?</ID>
+    <ID>LongMethod:MermaidPrinter.kt$fun &lt;EdgeType : Edge&lt;out Node>> Node.printGraphNew( maxConnections: Int = 25, selector: (Node) -> Boolean = { true }, vararg strategies: (Node) -> Iterator&lt;EdgeType>, ): String</ID>
+    <ID>LongMethod:MultiValueEvaluator.kt$MultiValueEvaluator$private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection&lt;Any?></ID>
+    <ID>LongMethod:MultiValueEvaluatorTest.kt$MultiValueEvaluatorTest$@Test fun testSingleValue()</ID>
+    <ID>LongMethod:NodeBuilder.kt$fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: Int = 1)</ID>
+    <ID>LongMethod:NodeBuilderTest.kt$NodeBuilderTest$@Test fun testCollectionComprehensionsWithTwoDeclarations()</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private fun addEntryToMap( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, addEntryToMapCache: AddEntryToMapCache, destinationAddresses: IdentitySet&lt;Pair&lt;Node, String?>>, destinations: IdentitySet&lt;Node>, srcNode: Node?, shortFS: Boolean, srcValueDepth: Int, propertySet: EqualLinkedHashSet&lt;Any>, currentNode: Call, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, param: Node, shortFsPrevEdges: LinkedHashSet&lt;NodeWithPropertiesKey>, ): ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>></ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private fun addParameterInfoToFS( node: Function, param: Parameter, dstValueDepth: Int, value: Node, shortFS: Boolean, subAccessName: String, lastWrites: PowersetLattice.Element&lt;NodeWithPropertiesKey>, )</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private fun calculateCallDestinations( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, dstValueDepth: Int, subAccessName: String, argument: Node, properties: EqualLinkedHashSet&lt;Any>, param: Node, ): Pair&lt;IdentitySet&lt;Pair&lt;Node, String?>>, IdentitySet&lt;Node>></ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun calculateIncomingCallingContexts( lattice: PointsToState, function: Function, call: Call, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun handleAssign( lattice: PointsToState, currentNode: Assign, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun handleCall( lattice: PointsToState, currentNode: Call, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun handleDeclaration( lattice: PointsToState, currentNode: Node, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun handleEmptyFunction( lattice: PointsToState, startState: PointsToState.Element, function: Function, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun handleExpression( lattice: PointsToState, currentNode: Expression, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun handleReturn( lattice: PointsToState, currentNode: Return, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun initializeParameter( lattice: PointsToState, function: Function, param: Parameter, doubleState: PointsToState.Element, // Until which depth do we create ParameterMemoryValues depth: Int = 2, // Create the PMVs independent of the parameter type forceDerefPMVCreation: Boolean = false, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun innerCalculateIncomingCallingContexts( arg: Expression, doubleState: PointsToState.Element, getNestedValuesCache: ConcurrentHashMap&lt; Triple&lt;Node, Int, Boolean>, PowersetLattice.Element&lt;Pair&lt;Node, Boolean>>, >, argVal: Node, callingContext: CallingContextIn, derefPMVs: List&lt;Node>, lattice: PointsToState, derefderefPMVs: List&lt;Node>, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$private suspend fun storeFunctionSummary(node: Function, doubleState: PointsToState.Element)</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$protected suspend fun handleForEach( lattice: PointsToState, currentNode: Expression, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>LongMethod:PointsToPass.kt$PointsToPass$suspend fun acceptInternal(node: Node)</ID>
+    <ID>LongMethod:PointsToPass.kt$fun PointsToState.Element.fetchValueFromDeclarationState( node: Node, fetchFields: Boolean = false, excludeShortFSValues: Boolean = false, ): IdentitySet&lt;FetchElementFromDeclarationStateEntry></ID>
+    <ID>LongMethod:PointsToPass.kt$fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet&lt;Node></ID>
+    <ID>LongMethod:PointsToPass.kt$fun PointsToState.Element.getLastWrites( node: Node ): PowersetLattice.Element&lt;NodeWithPropertiesKey></ID>
+    <ID>LongMethod:PointsToPass.kt$fun PointsToState.Element.getValues( node: Node, startNode: Node, ): PowersetLattice.Element&lt;Pair&lt;Node, Boolean>></ID>
+    <ID>LongMethod:PointsToPass.kt$suspend fun PointsToState.Element.updateValues( lattice: PointsToState, doubleState: PointsToState.Element, sources: PowersetLattice.Element&lt;Triple&lt;Node?, Boolean, Any?>>, destinations: IdentitySet&lt;Node>, // Node and short FS yes or no destinationAddresses: IdentitySet&lt;Node>, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, // In some cases, we want to remove the old generalState (for example for assigns), in others, // we want to keep it (in handeCall for example) overwriteGeneralState: Boolean = true, ): PointsToState.Element</ID>
+    <ID>LongMethod:ProgramDependenceGraphPassTest.kt$ProgramDependenceGraphPassTest.Companion$private fun getWhileLoopTest()</ID>
+    <ID>LongMethod:SccPass.kt$SccPass$private fun handleSccRoot( bb: Node, currentInfo: TarjanInfo, level: Int, workStack: ArrayDeque&lt;WorkItem>, )</ID>
+    <ID>LongMethod:Scope.kt$Scope$fun lookupSymbol( symbol: Symbol, languageOnly: Language&lt;*>? = null, qualifiedLookup: Boolean = false, replaceImports: Boolean = true, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, predicate: ((Declaration) -> Boolean)? = null, ): List&lt;Declaration></ID>
+    <ID>LongMethod:ScopeManager.kt$ScopeManager$fun lookupSymbolByName( name: Name, language: Language&lt;*>, location: PhysicalLocation? = null, startScope: Scope? = currentScope, replaceImports: Boolean = true, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, predicate: ((Declaration) -> Boolean)? = null, ): List&lt;Declaration></ID>
+    <ID>LongMethod:ScopeManagerTest.kt$ScopeManagerTest$@Test fun testMerge()</ID>
+    <ID>LongMethod:ShortcutsTest.kt$ShortcutsTest$@Test fun testControls()</ID>
+    <ID>LongMethod:SubgraphWalker.kt$fun SubgraphWalker.ScopedWalker&lt;Node>.replace( parent: AstNode?, old: Expression, new: Expression, ): Boolean</ID>
+    <ID>LongMethod:SymbolResolver.kt$SymbolResolver$protected open fun acceptWithIterateEOG(t: Node)</ID>
+    <ID>LongMethod:SymbolResolver.kt$SymbolResolver$protected open fun handleReference(ref: Reference)</ID>
+    <ID>LongMethod:SymbolResolver.kt$internal fun Pass&lt;*>.resolveWithArguments( candidates: Collection&lt;Declaration>, arguments: List&lt;Expression>, source: Expression, ): CallResolutionResult</ID>
+    <ID>LongMethod:TranslationManager.kt$TranslationManager$@Throws(TranslationException::class) fun runFrontends( ctx: TranslationContext, result: TranslationResult, ): Set&lt;LanguageFrontend&lt;*, *>></ID>
+    <ID>LongMethod:TupleTest.kt$TupleTest$@Test fun testFunctionLevelTuple()</ID>
+    <ID>LongMethod:TupleTest.kt$TupleTest$@Test fun testTopLevelTuple()</ID>
+    <ID>LongMethod:TypePropagationTest.kt$TypePropagationTest$@Test fun testAssignTypePropagation()</ID>
+    <ID>LongMethod:TypePropagationTest.kt$TypePropagationTest$@Test fun testBinopTypePropagation()</ID>
+    <ID>LongMethod:TypePropagationTest.kt$TypePropagationTest$@Test fun testComplexPropagation()</ID>
+    <ID>LongMethod:UnresolvedDFGPassTest.kt$UnresolvedDFGPassTest.Companion$fun getDfgUnresolvedCalls( inferUnresolved: Boolean, inferFunctions: Boolean, ): TranslationResult</ID>
+    <ID>LongMethod:Util.kt$Util$fun eogConnect( quantifier: Quantifier = Quantifier.ALL, connectStart: Connect = Connect.SUBTREE, edgeDirection: Edge, startNode: AstNode?, connectEnd: Connect = Connect.SUBTREE, predicate: ((EvaluationOrder) -> Boolean)? = null, endNodes: List&lt;AstNode?>, ): Boolean</ID>
+    <ID>LongMethod:ValueEvaluationTests.kt$ValueEvaluationTests.Companion$fun getCfExample( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:ValueEvaluationTests.kt$ValueEvaluationTests.Companion$fun getComplexExample( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:ValueEvaluationTests.kt$ValueEvaluationTests.Companion$fun getExample( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:ValueEvaluationTests.kt$ValueEvaluationTests.Companion$fun getSizeExample( config: TranslationConfiguration = TranslationConfiguration.builder() .defaultPasses() .registerLanguage&lt;TestLanguage>() .build() )</ID>
+    <ID>LongMethod:ValueEvaluatorTest.kt$ValueEvaluatorTest$@Test fun test()</ID>
+    <ID>LongMethod:ValueEvaluatorTest.kt$ValueEvaluatorTest$@Test fun testHandlePlus()</ID>
+    <ID>LongMethod:ValueEvaluatorTest.kt$ValueEvaluatorTest$@Test fun testHandleTimes()</ID>
+    <ID>LongParameterList:AnalysisConfiguration.kt$AnalysisDirection$( currentNode: Node, edges: Collection&lt;Edge&lt;Node>>, ctx: Context, scope: AnalysisScope, path: List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, loopingPaths: MutableSet&lt;NodePath>, vararg sensitivities: AnalysisSensitivity, )</ID>
+    <ID>LongParameterList:AnalysisConfiguration.kt$AnalysisDirection$( currentNode: Node, edges: Collection&lt;Edge&lt;Node>>, ctx: Context, scope: AnalysisScope, path: List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, loopingPaths: MutableSet&lt;NodePath>, vararg sensitivities: AnalysisSensitivity, nextStep: (Node) -> Collection&lt;Edge&lt;Node>>, nodeStart: (Edge&lt;Node>) -> Node, )</ID>
+    <ID>LongParameterList:AnalysisConfiguration.kt$AnalysisDirection$( currentNode: Node, scope: AnalysisScope, ctx: Context, path: List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, loopingPaths: MutableSet&lt;NodePath>, vararg sensitivities: AnalysisSensitivity, )</ID>
+    <ID>LongParameterList:AnalysisConfiguration.kt$StepSelector$( currentNode: Node, edge: Edge&lt;Node>, ctx: Context, path: List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, loopingPaths: MutableSet&lt;NodePath>, analysisDirection: AnalysisDirection, interproceduralEdgesExist: Boolean = false, )</ID>
+    <ID>LongParameterList:Assumption.kt$Assumption$( val assumptionType: AssumptionType, var message: String, @Convert(LocationConverter::class) var assumptionLocation: PhysicalLocation, node: Node? = null, @DoNotPersist var edge: Edge&lt;*>? = null, @Relationship(value = "ASSUMPTION_SCOPE", direction = Relationship.Direction.OUTGOING) var assumptionScope: Node? = node, var status: AssumptionStatus = AssumptionStatus.Undecided, )</ID>
+    <ID>LongParameterList:BasicLatticesRedesign.kt$Lattice$( startEdges: List&lt;EvaluationOrder>, startState: T, transformation: suspend (Lattice&lt;T>, EvaluationOrder, T) -> T, strategy: Strategy = Strategy.PRECISE, timeout: Duration = Duration.INFINITE, maxStateEntries: Long? = null, )</ID>
+    <ID>LongParameterList:BasicLatticesRedesign.kt$Lattice$( startEdges: List&lt;EvaluationOrder>, startState: T, transformation: suspend (Lattice&lt;T>, EvaluationOrder, T) -> T, strategy: Strategy, timeout: Duration, maxStateEntries: Long? = null, )</ID>
+    <ID>LongParameterList:BasicLatticesRedesign.kt$Lattice$( startEdges: List&lt;EvaluationOrder>, startState: T, transformation: suspend (Lattice&lt;T>, EvaluationOrder, T) -> T, strategy: Strategy, timeout: Duration, maxStateEntries: Long?, statistics: IterationStatistics, )</ID>
+    <ID>LongParameterList:CXXCallResolverHelper.kt$( templateCall: Call, functionTemplateDeclaration: FunctionTemplate?, function: Function, initializationSignature: Map&lt;Declaration?, AstNode?>, initializationType: Map&lt;AstNode?, Template.TemplateInitialization?>, orderedInitializationSignature: Map&lt;Declaration, Int>, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( import: Name, style: ImportStyle, alias: Name? = null, rawNode: Any? = null, holder: DeclarationHolder? = null, init: ((Import) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence, kind: String, rawNode: Any? = null, holder: DeclarationHolder? = null, enterScope: Boolean = false, init: ((Record) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence, operatorCode: String, recordDeclaration: Record? = null, rawNode: Any? = null, holder: DeclarationHolder? = null, enterScope: Boolean = false, init: ((Operator) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence?, isStatic: Boolean = false, recordDeclaration: Record? = null, rawNode: Any? = null, holder: DeclarationHolder? = null, enterScope: Boolean = false, init: ((Method) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence?, localNameOnly: Boolean = false, rawNode: Any? = null, holder: DeclarationHolder? = null, enterScope: Boolean = false, init: ((Function) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence?, recordDeclaration: Record?, rawNode: Any? = null, holder: DeclarationHolder? = null, enterScope: Boolean = false, init: ((Constructor) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence?, type: Type = this.unknownType(), implicitInitializerAllowed: Boolean = false, rawNode: Any? = null, holder: DeclarationHolder? = null, init: ((Variable) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence?, type: Type = this.unknownType(), modifiers: Set&lt;String> = setOf(), isStatic: Boolean = false, initializer: Expression? = null, implicitInitializerAllowed: Boolean = false, rawNode: Any? = null, holder: DeclarationHolder? = null, init: ((Field) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:DeclarationBuilder.kt$( name: CharSequence?, type: Type = this.unknownType(), variadic: Boolean = false, rawNode: Any? = null, holder: DeclarationHolder? = null, init: ((Parameter) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:ExpressionBuilder.kt$( condition: Expression, thenExpression: Expression? = null, elseExpression: Expression? = null, type: Type = unknownType(), rawNode: Any? = null, init: ((Conditional) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:ExpressionBuilder.kt$( name: CharSequence?, base: Expression, memberType: Type = unknownType(), operatorCode: String? = ".", rawNode: Any? = null, init: ((MemberAccess) -> Unit)? = null, )</ID>
+    <ID>LongParameterList:Extensions.kt$( collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, direction: AnalysisDirection = Forward(GraphToFollow.DFG), vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive, scope: AnalysisScope = Interprocedural(), ctx: Context = Context(steps = 0), earlyTermination: (Node, Context) -> Boolean = { _, _ -> false }, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:Extensions.kt$( collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, direction: AnalysisDirection = Forward(GraphToFollow.EOG), vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive, scope: AnalysisScope = Interprocedural(), earlyTermination: (Node, Context) -> Boolean = { _, _ -> false }, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:Extensions.kt$( collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, interproceduralAnalysis: Boolean = false, earlyTermination: (Node, Context) -> Boolean = { _, _ -> false }, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:Extensions.kt$( collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, interproceduralAnalysis: Boolean = false, interproceduralMaxDepth: Int? = null, earlyTermination: (Node, Context) -> Boolean = { _, _ -> false }, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:Extensions.kt$( direction: AnalysisDirection = Forward(GraphToFollow.DFG), vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive, scope: AnalysisScope = Interprocedural(), ctx: Context = Context(steps = 0), earlyTermination: (Node, Context) -> Boolean = noEarlyTermination, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:GraphTraversal.kt$( x: ( Node, Context, List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, MutableSet&lt;NodePath>, ) -> Collection&lt;Triple&lt;Node, Edge&lt;Node>, Context>>, collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, ctx: Context = Context(steps = 0), earlyTermination: (Node, Context) -> Boolean, predicate: (Node) -> Boolean, )</ID>
+    <ID>LongParameterList:Inference.kt$Inference$( name: CharSequence?, code: String?, isStatic: Boolean, signature: List&lt;Type?>, incomingReturnType: Type?, hint: Call? = null, )</ID>
+    <ID>LongParameterList:InferenceConfiguration.kt$InferenceConfiguration$( /** Enables or disables the inference system as a whole. */ val enabled: Boolean, /** Enables the inference of namespace declarations. */ val inferNamespaces: Boolean, /** Enables the inference of record declarations. */ val inferRecords: Boolean, /** Enables the inference of function declarations. */ val inferFunctions: Boolean, /** Enables the inference of field declarations. */ val inferFields: Boolean, /** Enables the inference of variables, such as global variables. */ val inferVariables: Boolean, /** * A very EXPERIMENTAL feature. If this is enabled, we will try to infer return types of * functions based on the context of the call it originated out of. This is disabled by default. */ val inferReturnTypes: Boolean, /** * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e., * functions not implemented in the given source code). */ val inferDfgForUnresolvedSymbols: Boolean, )</ID>
+    <ID>LongParameterList:InferenceConfiguration.kt$InferenceConfiguration.Builder$( private var enabled: Boolean = true, private var inferNamespaces: Boolean = true, private var inferRecords: Boolean = true, private var inferFields: Boolean = true, private var inferFunctions: Boolean = true, private var inferVariables: Boolean = true, private var inferReturnTypes: Boolean = false, private var inferDfgForUnresolvedCalls: Boolean = true, )</ID>
+    <ID>LongParameterList:LanguageTraits.kt$HasTemplates$( curClass: Record?, templateCall: Call, applyInference: Boolean, ctx: TranslationContext, currentTU: TranslationUnit?, needsExactMatch: Boolean, )</ID>
+    <ID>LongParameterList:PointsToPass.kt$( lattice: PointsToState, doubleState: PointsToState.Element, sources: PowersetLattice.Element&lt;Triple&lt;Node?, Boolean, Any?>>, destinations: IdentitySet&lt;Node>, // Node and short FS yes or no destinationAddresses: IdentitySet&lt;Node>, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, // In some cases, we want to remove the old generalState (for example for assigns), in others, // we want to keep it (in handeCall for example) overwriteGeneralState: Boolean = true, )</ID>
+    <ID>LongParameterList:PointsToPass.kt$PointsToPass$( arg: Expression, doubleState: PointsToState.Element, getNestedValuesCache: ConcurrentHashMap&lt; Triple&lt;Node, Int, Boolean>, PowersetLattice.Element&lt;Pair&lt;Node, Boolean>>, >, argVal: Node, callingContext: CallingContextIn, derefPMVs: List&lt;Node>, lattice: PointsToState, derefderefPMVs: List&lt;Node>, )</ID>
+    <ID>LongParameterList:PointsToPass.kt$PointsToPass$( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, addEntryToMapCache: AddEntryToMapCache, destinationAddresses: IdentitySet&lt;Pair&lt;Node, String?>>, destinations: IdentitySet&lt;Node>, srcNode: Node?, shortFS: Boolean, srcValueDepth: Int, propertySet: EqualLinkedHashSet&lt;Any>, currentNode: Call, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, param: Node, shortFsPrevEdges: LinkedHashSet&lt;NodeWithPropertiesKey>, )</ID>
+    <ID>LongParameterList:PointsToPass.kt$PointsToPass$( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, dstValueDepth: Int, subAccessName: String, argument: Node, properties: EqualLinkedHashSet&lt;Any>, param: Node, )</ID>
+    <ID>LongParameterList:PointsToPass.kt$PointsToPass$( lastWrites: MutableSet&lt;NodeWithPropertiesKey>, shortFS: Boolean, currentNode: Call, invoke: Function, srcNode: Any?, dstValueDepth: Int, dst: Expression, doubleState: PointsToState.Element, )</ID>
+    <ID>LongParameterList:PointsToPass.kt$PointsToPass$( lattice: PointsToState, function: Function, param: Parameter, doubleState: PointsToState.Element, // Until which depth do we create ParameterMemoryValues depth: Int = 2, // Create the PMVs independent of the parameter type forceDerefPMVCreation: Boolean = false, )</ID>
+    <ID>LongParameterList:PointsToPass.kt$PointsToPass$( node: Function, param: Parameter, dstValueDepth: Int, value: Node, shortFS: Boolean, subAccessName: String, lastWrites: PowersetLattice.Element&lt;NodeWithPropertiesKey>, )</ID>
+    <ID>LongParameterList:Scope.kt$Scope$( symbol: Symbol, languageOnly: Language&lt;*>? = null, qualifiedLookup: Boolean = false, replaceImports: Boolean = true, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, predicate: ((Declaration) -> Boolean)? = null, )</ID>
+    <ID>LongParameterList:ScopeManager.kt$ScopeManager$( name: Name, language: Language&lt;*>, location: PhysicalLocation? = null, startScope: Scope? = currentScope, replaceImports: Boolean = true, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, predicate: ((Declaration) -> Boolean)? = null, )</ID>
+    <ID>LongParameterList:TranslationConfiguration.kt$TranslationConfiguration$( /** Definition of additional symbols, mostly useful for C++. */ val symbols: Map&lt;String, String>, /** Source code files to parse. */ val softwareComponents: Map&lt;String, List&lt;File>>, val topLevels: MutableMap&lt;String, File>, /** Set to true to generate debug output for the parser. */ val debugParser: Boolean, /** * Should parser/translation fail on parse/resolving errors (true) or try to continue in a * best-effort manner (false). */ val failOnError: Boolean, /** * Set to true to transitively load include files into the CPG. * * If this value is set to false but includePaths are given, the parser will resolve * symbols/templates from these include, but do not load the parse tree into the CPG */ val loadIncludes: Boolean, /** * Paths to look for include files. * * It is recommended to set proper include paths as otherwise unresolved symbols/templates will * result in subsequent parser mistakes, such as treating "&amp;lt;" as a BinaryOperator in the * following example: &amp;lt;code&amp;gt; std::unique_ptr&amp;lt;Botan::Cipher_Mode&amp;gt; bla; &amp;lt;/code&amp;gt; * * As long as loadIncludes is set to false, include files will only be parsed, but not loaded * into the CPG. * */ val includePaths: List&lt;Path>, /** * This acts as a white list for include files, if the array is not empty. Only the specified * includes files will be parsed and processed in the CPG, unless it is a port of the blacklist, * in which it will be ignored. */ val includeWhitelist: List&lt;Path>, /** * This acts as a block list for include files, if the array is not empty. The specified include * files will be excluded from being parsed and processed in the CPG. The blocklist entries * always take priority over those in the whitelist. */ val includeBlocklist: List&lt;Path>, passes: List&lt;List&lt;KClass&lt;out Pass&lt;out Node>>>>, /** * This map offers the possibility to replace certain passes for specific languages with other * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass] * annotation on a [LanguageFrontend]. */ @JsonIgnore val replacedPasses: Map&lt;Pair&lt;KClass&lt;out Pass&lt;out Node>>, KClass&lt;out Language&lt;*>>>, KClass&lt;out Pass&lt;out Node>>>, /** This list contains the files with function summaries which should be considered. */ val functionSummaries: DFGFunctionSummaries, languages: Set&lt;KClass&lt;out Language&lt;*>>>, codeInNodes: Boolean, processAnnotations: Boolean, disableCleanup: Boolean, useUnityBuild: Boolean, useParallelFrontends: Boolean, inferenceConfiguration: InferenceConfiguration, compilationDatabase: CompilationDatabase?, matchCommentsToNodes: Boolean, addIncludesToGraph: Boolean, passConfigurations: Map&lt;KClass&lt;out Pass&lt;*>>, PassConfiguration>, frontendConfigurations: Map&lt;KClass&lt;out LanguageFrontend&lt;*, *>>, FrontendConfiguration&lt;out LanguageFrontend&lt;*, *>>>, /** The maximum number a pass will get executed, in order to prevent loops. */ val maxPassExecutions: Int, /** A list of exclusion patterns used to filter files and directories. */ val exclusionPatternsByString: List&lt;String>, /** A list of exclusion patterns using regular expressions to filter files and directories. */ val exclusionPatternsByRegex: List&lt;Regex>, /** Whether the type propagation system using [TypeObserver] should be disabled. */ val disableTypeObserver: Boolean, /** * The external environment (operating system, architecture, environment variables) the analyzed * project is assumed to run on. Language frontends can use this to configure * environment-specific behaviour, such as built-in preprocessor macros (C/C++) or build * constraints (Go). Defaults to the environment of the current host. */ val targetEnvironment: TargetEnvironment, )</ID>
+    <ID>LongParameterList:Util.kt$Util$( quantifier: Quantifier = Quantifier.ALL, connectStart: Connect = Connect.SUBTREE, edgeDirection: Edge, startNode: AstNode?, connectEnd: Connect = Connect.SUBTREE, predicate: ((EvaluationOrder) -> Boolean)? = null, endNodes: List&lt;AstNode?>, )</ID>
+    <ID>LoopWithTooManyJumpStatements:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$for</ID>
+    <ID>LoopWithTooManyJumpStatements:DeclarationHolder.kt$DeclarationHolder$for</ID>
+    <ID>LoopWithTooManyJumpStatements:DynamicInvokeResolver.kt$DynamicInvokeResolver$while</ID>
+    <ID>LoopWithTooManyJumpStatements:GraphTraversal.kt$for</ID>
+    <ID>LoopWithTooManyJumpStatements:GraphTraversal.kt$while</ID>
+    <ID>LoopWithTooManyJumpStatements:ImportResolver.kt$ImportDependencies.WorkList$while</ID>
+    <ID>LoopWithTooManyJumpStatements:Pass.kt$while</ID>
+    <ID>LoopWithTooManyJumpStatements:Scope.kt$Scope$while</ID>
+    <ID>LoopWithTooManyJumpStatements:ScopeManager.kt$for</ID>
+    <ID>LoopWithTooManyJumpStatements:Util.kt$Util$for</ID>
+    <ID>MagicNumber:BasicLatticesRedesign.kt$100</ID>
+    <ID>MagicNumber:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$32</ID>
+    <ID>MagicNumber:BasicLatticesRedesign.kt$HashMapLattice.Element$32</ID>
+    <ID>MagicNumber:BasicLatticesRedesign.kt$PowersetLattice.Element$1.5</ID>
+    <ID>MagicNumber:Cast.kt$Cast$3</ID>
+    <ID>MagicNumber:Cast.kt$Cast$4</ID>
+    <ID>MagicNumber:Dataflow.kt$31</ID>
+    <ID>MagicNumber:EdgeCollection.kt$31</ID>
+    <ID>MagicNumber:FrontendUtils.kt$FrontendUtils.Companion$10000</ID>
+    <ID>MagicNumber:MeasurementHolder.kt$3</ID>
+    <ID>MagicNumber:MeasurementHolder.kt$80</ID>
+    <ID>MagicNumber:NameCache.kt$NameCache$4096</ID>
+    <ID>MagicNumber:PersistentIdentityMap.kt$PersistentIdentityMap$20</ID>
+    <ID>MagicNumber:PointsToPass.kt$3</ID>
+    <ID>MagicNumber:PointsToPass.kt$PointsToPass$200</ID>
+    <ID>MagicNumber:PointsToPass.kt$PointsToPass$3</ID>
+    <ID>MagicNumber:PointsToPass.kt$PointsToPass$4</ID>
+    <ID>MagicNumber:PointsToPass.kt$PointsToPass$64</ID>
+    <ID>MagicNumber:TargetEnvironment.kt$Architecture.ARM$32</ID>
+    <ID>MagicNumber:TargetEnvironment.kt$Architecture.ARM64$64</ID>
+    <ID>MagicNumber:TargetEnvironment.kt$Architecture.RISCV64$64</ID>
+    <ID>MagicNumber:TargetEnvironment.kt$Architecture.UNKNOWN$64</ID>
+    <ID>MagicNumber:TargetEnvironment.kt$Architecture.X86$32</ID>
+    <ID>MagicNumber:TargetEnvironment.kt$Architecture.X86_64$64</ID>
+    <ID>MagicNumber:TranslationConfiguration.kt$TranslationConfiguration.Builder$5</ID>
+    <ID>MatchingDeclarationName:PersistentLattices.kt$PersistentMapLattice&lt;K, V : Lattice.Element> : Lattice</ID>
+    <ID>MaxLineLength:Assumption.kt$Assumption$"An assumption must be created with only one of the following arguments/properties: node or edge. But multiple of those are provided"</ID>
+    <ID>MaxLineLength:BasicBlock.kt$BasicBlock$return "BasicBlock from ${startNode!!::class.simpleName} ${startNode?.name} to ${(endNode ?: startNode!!)::class.simpleName} ${endNode?.name} in $location"</ID>
+    <ID>MaxLineLength:BasicLatticesRedesign.kt$IterationStatistics$"Iterated the EOG of {} in {} steps, keeping up to {} states of up to {} entries alive ({} entries in total)."</ID>
+    <ID>MaxLineLength:BasicLatticesRedesign.kt$IterationStatistics$"The analysis of {} is keeping {} states of about {} entries alive at the same time ({} entries in total). This may exhaust the heap."</ID>
+    <ID>MaxLineLength:BasicLatticesRedesign.kt$IterationStatistics$"The analysis of {} kept up to {} states of up to {} entries alive at the same time ({} entries in total) before it was aborted. This may exhaust the heap."</ID>
+    <ID>MaxLineLength:BenchmarkTest.kt$BenchmarkTest$"This is a very long value that definitely exceeds the maximum column width of 80 characters and should be truncated with ellipsis at the end"</ID>
+    <ID>MaxLineLength:BinaryOperator.kt$BinaryOperator$"Creating a BinaryOperator with an assignment operator code is not allowed. The class Assign must be used instead."</ID>
+    <ID>MaxLineLength:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$"Adds CDG edges to the graph. These represent control dependence graph and thus show if executing code depends on a condition of a control-flow controlling statement."</ID>
+    <ID>MaxLineLength:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$"Ignoring function ${startNode.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"</ID>
+    <ID>MaxLineLength:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$"[CDG] Analyzing function ${startNode.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"</ID>
+    <ID>MaxLineLength:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$/* * For a branching node, we identify which path(s) have to be found to be in a "merging point". * There are two options: * 1) There's a path which is executed independent of the branch (e.g. this is the case for an if-statement without an else-branch). * 2) A node can be reached from all conditional branches. * * This method collects the merging points. It also includes the function declaration itself. */</ID>
+    <ID>MaxLineLength:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$"Enhances the Data Flow Graph (DFG) by considering control flow information, leading to more accurate (i.e., flow-sensitive) data flow representation."</ID>
+    <ID>MaxLineLength:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$"Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"</ID>
+    <ID>MaxLineLength:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$/* Also here, we want/have to filter out variables in ForEachStatements because this must be handled separately. */</ID>
+    <ID>MaxLineLength:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$/* This branch collects all READWRITE accesses which are not handled separately as compoundAssignment or inc/dec unary operation. This could for example be a pointer passed to an unknown function which is modified in this function but other things are also possible. */</ID>
+    <ID>MaxLineLength:DFGFunctionSummaries.kt$DFGFunctionSummaries$/* There are multiple matching entries. We use the following routine: * First, we filter for existing signatures. * Second, we filter for the most precise class. * If there are still multiple options, we take the longest signature. * If this also didn't help to get a precise result, we iterate through the parameters and take the most precise one. We start with index 0 and count upwards, so if param0 leads to a single result, we're done and other entries won't be considered even if all the remaining parameters are more precise or whatever. * If nothing helped to get a unique entry, we pick the first remaining entry and hope it's the most precise one. */</ID>
+    <ID>MaxLineLength:DFGFunctionSummariesTest.kt$DFGFunctionSummariesTest$"We keep this ignored for now as the DFGPass does not draw these edges anymore, this should be done by the PointsToPass. In the future, the DFGPass could still draw the edges and the PtP could remove them again to have a more lightweight but less precise version of the DFG"</ID>
+    <ID>MaxLineLength:DFGFunctionSummariesTest.kt$DFGFunctionSummariesTest$/* The flows should be as follows: Variable["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] } Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (argument of call)] -> Variable["a"] */</ID>
+    <ID>MaxLineLength:DFGFunctionSummariesTest.kt$DFGFunctionSummariesTest$/* The flows should be as follows: Variable["a"] -CallingContextIn-> ParameterMemoryvalue["memcpy.param0.derefvalue"] -CallingContextOut-> Reference["a" (return)] */</ID>
+    <ID>MaxLineLength:DFGPass.kt$DFGPass$"To verify this assumption, we need to check if the last Variable of the variable is indeed the one where we assign the iterable's elements to."</ID>
+    <ID>MaxLineLength:DFGPass.kt$DFGPass$"We assume that the last Variable in the statement kept in \"variable\" is the variable we care about in the ForEach if there is no DeclarationStatement related to the iterable.\n\n"</ID>
+    <ID>MaxLineLength:DynamicInvokeResolver.kt$DynamicInvokeResolver$"Resolves dynamic method invocations and calls of function pointers in the CPG, enhancing the accuracy of call relationships within the graph."</ID>
+    <ID>MaxLineLength:EdgesTest.kt$EdgesTest$"Record[name=myRecord,location=&lt;null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[Method[name=myFunc,location=&lt;null>,parameters=[]]],constructors=[],records=[]]"</ID>
+    <ID>MaxLineLength:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$"Adds EOG edges to the graph. These represent the execution order of statements or expressions and is similar to a fine-grained version of a control flow graph."</ID>
+    <ID>MaxLineLength:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$"Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."</ID>
+    <ID>MaxLineLength:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass.Companion$"Violation to EOG invariant found: Node $node does not have a back-reference from his EOG-successor $next."</ID>
+    <ID>MaxLineLength:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass.Companion$"Violation to EOG invariant found: Node $node does not have a reference from his EOG-predecessor $prev."</ID>
+    <ID>MaxLineLength:Handler.kt$Handler$"ctx is NULL. This can happen when ast children are optional in ${this.javaClass}. Called by ${Thread.currentThread().stackTrace[2]}"</ID>
+    <ID>MaxLineLength:ImportResolver.kt$ImportDependencies.WorkList$"We still have {} items with import dependency problems. We will just pick the one with the least dependencies"</ID>
+    <ID>MaxLineLength:Inference.kt$Inference$"To verify this assumption, we should check if the function is indeed part of the parent where it was inferred in external code."</ID>
+    <ID>MaxLineLength:Inference.kt$Inference$"Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?"</ID>
+    <ID>MaxLineLength:LocationConverterTest.kt$LocationConverterTest.CustomNumber$"Direct conversion to Char is deprecated. Use toInt().toChar() or Char constructor instead.\nIf you override toChar() function in your Number inheritor, it's recommended to gradually deprecate the overriding function and then remove it.\nSee https://youtrack.jetbrains.com/issue/KT-46465 for details about the migration"</ID>
+    <ID>MaxLineLength:MermaidPrinter.kt$"${startNode.hashCode()}[\"${startNode.nodeLabel}\"]-->|${edge.label()}|${endNode.hashCode()}[\"${endNode.nodeLabel}\"]\n"</ID>
+    <ID>MaxLineLength:Pass.kt$"We assume that after $numExec repeated executions of the ${pass.simpleName} no new information is obtained and skip further executions."</ID>
+    <ID>MaxLineLength:PassOrderingHelper.kt$PassOrderingHelper$"The first pass \"${firstPass.passClass}\" has a hard dependency: \"${firstPass.passClass.hardDependencies}\"."</ID>
+    <ID>MaxLineLength:PassOrderingHelper.kt$PassOrderingHelper$"The last pass \"${lastPass.passClass}\" is supposed to be executed before another pass: \"${lastPass.passClass.hardExecuteBefore}\"."</ID>
+    <ID>MaxLineLength:PassOrderingHelper.kt$PassOrderingHelper$"The last pass \"${lastPass.passClass}\" is supposed to be executed before another pass: \"${lastPass.passClass.softExecuteBefore}\"."</ID>
+    <ID>MaxLineLength:PointsToPass.kt$/* * For MemberAccesss, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$/* Given a set of fieldAddresses, either fetch the values of those, or if there are none in the state, get the one from the base */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$/* If the node is not the same as the startNode, we should have already assigned a value to the reference, so we fetch it from the generalstate */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$/* If the node is not the same as the startNode, we should have already assigned a value, so we fetch it from the generalstate */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$/* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a Function. So let's do this here */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$/* To find the value for PointerDereferences, we first fetch the values form its input from the generalstate, which is probably a MemoryAddress * Then we look up the current value at this MemoryAddress */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$"Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$"Increased remaining timeout to consider time spent in acceptInternal. New remaining timeout: ${budget.remaining}"</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$"Not calling acceptInternal on ${invoke.name} because we already have a functionSummary."</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$"Skipping function ${node.name} because we already have a function Summary. (Function $analyzedFunctionCount / $totalFunctionCount)"</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$"finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$/* If the assignment is within a BinaryOperator, some languages treat this as DF from the rhs to the BinaryOperator, so we draw a DFG-Edge to the Assign to link the path */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$/* If the lhs is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here */</ID>
+    <ID>MaxLineLength:PointsToPass.kt$PointsToPass$/* Update MemberAccess or a Subscription listed in [destinations] to set the last write to the base/arrayExpression here * Make sure to catch nested MemberAccesses/Subscriptions too */</ID>
+    <ID>MaxLineLength:ProgramDependenceGraphPass.kt$ProgramDependenceGraphPass$"Combines the Data Flow Graph (DFG) and Control Dependence Graph (CDG) into a Program Dependence Graph (PDG), providing a comprehensive view of both data and control dependencies within the program."</ID>
+    <ID>MaxLineLength:ResolveCallAmbiguityPass.kt$ResolveCallAmbiguityPass$"Tries to identify and resolve ambiguous Calls that could also be Casts or Constructs. The initial translation cannot distinguish between these expression types in some languages (having the trait HasCallAmbiguity) in the CPG and try to fix these issues by this pass."</ID>
+    <ID>MaxLineLength:ResolveMemberAmbiguityPass.kt$ResolveMemberAmbiguityPass$"A translation unit pass that resolves ambiguities in member expressions within a translation unit. This pass checks whether the base or member name in a member expression refers to an import and, if so, replaces the member expression with a reference using the fully qualified name."</ID>
+    <ID>MaxLineLength:ScopeManager.kt$ScopeManager$"Lookup of type {} returned more than one symbol which declares a type, this is an ambiguity and the following analysis might not be correct."</ID>
+    <ID>MaxLineLength:Strategy.kt$Strategy$"Strategy for components with least import dependencies was requested, but no import dependency information is available."</ID>
+    <ID>MaxLineLength:Strategy.kt$Strategy$"Strategy for translation units with least import dependencies was requested, but no import dependency information is available."</ID>
+    <ID>MaxLineLength:SubgraphWalker.kt$"Parent AST node is not an argument or statement holder. Cannot replace node. Further analysis might not be entirely accurate."</ID>
+    <ID>MaxLineLength:SymbolResolver.kt$"Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"</ID>
+    <ID>MaxLineLength:SymbolResolver.kt$"Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"</ID>
+    <ID>MaxLineLength:SymbolResolver.kt$SymbolResolver$"Resolves symbols in the CPG, linking variable and function usages (i.e., refersTo and calledBy/invokes edges) to their respective declarations. Generates the call graph."</ID>
+    <ID>MaxLineLength:TranslationConfiguration.kt$TranslationConfiguration.Builder$"Failed casting supposed language class '$className'. It does not seem to be an implementation of Language&lt;*>."</ID>
+    <ID>MaxLineLength:TranslationConfiguration.kt$TranslationConfiguration.Builder$"Registered an extra (frontend dependent) default dependency, which replaced an existing pass: {}"</ID>
+    <ID>MaxLineLength:TranslationContext.kt$TranslationContext$"Multiple languages match for file extension ${this.extension}, the first registered language will be used."</ID>
+    <ID>MaxLineLength:TranslationManager.kt$TranslationManager$"Parallel frontends are not yet supported for the language frontend ${frontendClass.simpleName}"</ID>
+    <ID>MaxLineLength:TypeBuilder.kt$"Cannot find primitive type $name in language ${language.name}. This is either an error in the language frontend or the language definition is missing a type definition."</ID>
+    <ID>MaxLineLength:TypeHierarchyResolver.kt$TypeHierarchyResolver$"Builds the type hierarchy within the CPG, establishing relationships between types such as inheritance and interface implementation."</ID>
+    <ID>MaxLineLength:TypeManager.kt$"Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed."</ID>
+    <ID>MaxLineLength:TypeResolver.kt$TypeResolver$"Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed."</ID>
+    <ID>MaxLineLength:TypeResolver.kt$TypeResolver$"Resolves and infers types for nodes in the CPG, enhancing the semantic understanding of the code represented in the graph."</ID>
+    <ID>MaxLineLength:ValueDeclaration.kt$ValueDeclaration$"A declaration should have only a single address but we have ${this.memoryAddressEdges.size}."</ID>
+    <ID>MaxLineLength:ValueEvaluator.kt$ValueEvaluator$"We cannot evaluate {}: It has more than 1 previous DFG edges, meaning that the value is probably affected by a branch."</ID>
+    <ID>MayBeConst:BasicLatticesRedesign.kt$val MIN_CHUNK_SIZE = 100</ID>
+    <ID>MemberNameEqualsClassName:CommonPath.kt$CommonPath$fun commonPath(paths: Collection&lt;File>): File?</ID>
+    <ID>MemberNameEqualsClassName:Import.kt$Import$/** * The imported symbol: This usually refers to a [Namespace] / its [NameScope] or a * [Declaration] within this namespace. This will always refer to the original name of the * imported symbol, even though an alias is used. * * If no alias is used, the [name] of this declaration is also set to the same name as the * imported symbol. * * If an alias is used, the [name] of this declaration is set to the value of [alias]. */ @Convert(value = SimpleNameConverter::class) var import: Name = Name(EMPTY_NAME)</ID>
+    <ID>MemberNameEqualsClassName:Label.kt$Label$/** Label in the form of a String */ var label: String? = null</ID>
+    <ID>ModifierOrder:DFGPass.kt$DFGPass$override open</ID>
+    <ID>NestedBlockDepth:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>NestedBlockDepth:BasicLatticesRedesign.kt$HashMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>NestedBlockDepth:CXXCallResolverHelper.kt$fun checkArgumentValidity( functionDeclaration: Function, functionDeclarationSignature: List&lt;Type>, templateCall: Call, explicitInstantiation: List&lt;ParameterizedType>, needsExactMatch: Boolean, ): Boolean</ID>
+    <ID>NestedBlockDepth:CXXCallResolverHelper.kt$fun constructTemplateInitializationSignatureFromTemplateParameters( functionTemplateDeclaration: FunctionTemplate, templateCall: Call, instantiationType: MutableMap&lt;AstNode?, Template.TemplateInitialization?>, orderedInitializationSignature: MutableMap&lt;Declaration, Int>, explicitInstantiated: MutableList&lt;ParameterizedType>, ): MutableMap&lt;Declaration?, AstNode?>?</ID>
+    <ID>NestedBlockDepth:CollectionUtils.kt$fun &lt;T, R> Iterable&lt;T>.flatMapNotNull(transform: (T) -> Collection&lt;R>?): List&lt;R></ID>
+    <ID>NestedBlockDepth:CompilationDatabase.kt$CompilationDatabase.Companion$private fun parseCommandLineArgs(command: List&lt;String>): ParsedCompilationDatabaseEntry</ID>
+    <ID>NestedBlockDepth:CompilationDatabase.kt$CompilationDatabase.Companion$private fun parseSymbols(command: List&lt;String>): MutableMap&lt;String, String></ID>
+    <ID>NestedBlockDepth:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$override fun accept(startNode: Node)</ID>
+    <ID>NestedBlockDepth:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$private fun naturalLoop(latch: BasicBlock, header: BasicBlock): Set&lt;BasicBlock></ID>
+    <ID>NestedBlockDepth:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$protected open fun transfer( currentEdge: Edge&lt;Node>, state: State&lt;Node, Set&lt;Node>>, worklist: Worklist&lt;Edge&lt;Node>, Node, Set&lt;Node>>, ): State&lt;Node, Set&lt;Node>></ID>
+    <ID>NestedBlockDepth:DFGFunctionSummaries.kt$DFGFunctionSummaries$fun applyDfgEntryToFunction(functionDeclaration: Function, dfgEntries: List&lt;DFGEntry>)</ID>
+    <ID>NestedBlockDepth:DFGPass.kt$DFGPass$protected open fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries)</ID>
+    <ID>NestedBlockDepth:DFGPass.kt$DFGPass$protected open fun handleDeclarationStatement(node: DeclarationStatement)</ID>
+    <ID>NestedBlockDepth:EOGWorklist.kt$inline fun &lt;reified K : Edge&lt;Node>, N : Any, V> iterateEogInternal( startEdges: List&lt;K>, startState: State&lt;N, V>, crossinline transformation: (K, State&lt;N, V>, Worklist&lt;K, N, V>) -> State&lt;N, V>, ): State&lt;N, V>?</ID>
+    <ID>NestedBlockDepth:EOGWorklist.kt$inline fun &lt;reified K : Node, V> iterateEogInternal( startNode: K, startState: State&lt;K, V>, transformation: (K, State&lt;K, V>, Worklist&lt;K, K, V>) -> State&lt;K, V>, ): State&lt;K, V>?</ID>
+    <ID>NestedBlockDepth:EdgeWalker.kt$inline fun &lt;reified EdgeType : Edge&lt;out Node>> Node.edges( noinline predicate: ((EdgeType) -> Boolean) = { true } ): Collection&lt;EdgeType></ID>
+    <ID>NestedBlockDepth:Extensions.kt$@Suppress("UNCHECKED_CAST") private fun Node.prevCDGStep( ctx: Context, interproceduralAnalysis: Boolean, interproceduralMaxDepth: Int?, ): List&lt;Triple&lt;Node, Edge&lt;Node>, Context>></ID>
+    <ID>NestedBlockDepth:Extensions.kt$@Suppress("UNCHECKED_CAST") private fun Node.prevPDGStep( ctx: Context, interproceduralAnalysis: Boolean, interproceduralMaxDepth: Int?, ): List&lt;Triple&lt;Node, Edge&lt;Node>, Context>></ID>
+    <ID>NestedBlockDepth:GraphTraversal.kt$fun Node.followXUntilHit( x: ( Node, Context, List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, MutableSet&lt;NodePath>, ) -> Collection&lt;Triple&lt;Node, Edge&lt;Node>, Context>>, collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, ctx: Context = Context(steps = 0), earlyTermination: (Node, Context) -> Boolean, predicate: (Node) -> Boolean, ): FulfilledAndFailedPaths</ID>
+    <ID>NestedBlockDepth:IfdsReachingSources.kt$IfdsReachingSourcesSolver$private fun handleReturn(ctx: IfdsNode?, step: ReturnStep)</ID>
+    <ID>NestedBlockDepth:IfdsReachingSourcesTest.kt$IfdsReachingSourcesTest$@Test fun multiOperationEdgeBalances()</ID>
+    <ID>NestedBlockDepth:IfdsSummaryCache.kt$IfdsSummaryCache$private fun pureReturn(ctx: IfdsNode?, step: ReturnStep)</ID>
+    <ID>NestedBlockDepth:ImportResolver.kt$ImportDependencies.WorkList$fun resolveDependencies(): List&lt;T></ID>
+    <ID>NestedBlockDepth:MultiValueEvaluator.kt$MultiValueEvaluator$private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection&lt;Any?></ID>
+    <ID>NestedBlockDepth:NodeBuilderTest.kt$NodeBuilderTest$@Test fun testLocationIntegrity()</ID>
+    <ID>NestedBlockDepth:PersistentLattices.kt$PersistentMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private fun addEntryToMap( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, addEntryToMapCache: AddEntryToMapCache, destinationAddresses: IdentitySet&lt;Pair&lt;Node, String?>>, destinations: IdentitySet&lt;Node>, srcNode: Node?, shortFS: Boolean, srcValueDepth: Int, propertySet: EqualLinkedHashSet&lt;Any>, currentNode: Call, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, param: Node, shortFsPrevEdges: LinkedHashSet&lt;NodeWithPropertiesKey>, ): ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private fun addParameterInfoToFS( node: Function, param: Parameter, dstValueDepth: Int, value: Node, shortFS: Boolean, subAccessName: String, lastWrites: PowersetLattice.Element&lt;NodeWithPropertiesKey>, )</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private fun calculateCallDestinations( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, dstValueDepth: Int, subAccessName: String, argument: Node, properties: EqualLinkedHashSet&lt;Any>, param: Node, ): Pair&lt;IdentitySet&lt;Pair&lt;Node, String?>>, IdentitySet&lt;Node>></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private fun calculatePrevDFGs( lastWrites: MutableSet&lt;NodeWithPropertiesKey>, shortFS: Boolean, currentNode: Call, invoke: Function, srcNode: Any?, dstValueDepth: Int, dst: Expression, doubleState: PointsToState.Element, ): MutableSet&lt;NodeWithPropertiesKey></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private suspend fun calculateFunctionSummaries(invoke: Function): Function?</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private suspend fun handleDeclaration( lattice: PointsToState, currentNode: Node, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private suspend fun handleEmptyFunction( lattice: PointsToState, startState: PointsToState.Element, function: Function, ): PointsToState.Element</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private suspend fun handleExpression( lattice: PointsToState, currentNode: Expression, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$private suspend fun handleReturn( lattice: PointsToState, currentNode: Return, doubleState: PointsToState.Element, ): PointsToState.Element</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$PointsToPass$suspend fun acceptInternal(node: Node)</ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$fun PointsToState.Element.fetchValueFromDeclarationState( node: Node, fetchFields: Boolean = false, excludeShortFSValues: Boolean = false, ): IdentitySet&lt;FetchElementFromDeclarationStateEntry></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet&lt;Node></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$fun PointsToState.Element.getLastWrites( node: Node ): PowersetLattice.Element&lt;NodeWithPropertiesKey></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$fun PointsToState.Element.getNestedValues( node: Node, nestingDepth: Int, fetchFields: Boolean = false, onlyFetchExistingEntries: Boolean = false, excludeShortFSValues: Boolean = false, ): PowersetLattice.Element&lt;Pair&lt;Node, Boolean>></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$fun PointsToState.Element.getValues( node: Node, startNode: Node, ): PowersetLattice.Element&lt;Pair&lt;Node, Boolean>></ID>
+    <ID>NestedBlockDepth:PointsToPass.kt$private fun PointsToState.Element.getFieldValueOrBase( fieldAddresses: IdentitySet&lt;Node>, baseAddresses: IdentitySet&lt;Node>, node: Node, fieldName: Name, ): PowersetLattice.Element&lt;Pair&lt;Node, Boolean>></ID>
+    <ID>NestedBlockDepth:ProgramDependenceGraphPass.kt$ProgramDependenceGraphPass.&lt;no name provided>$override fun visit(t: AstNode)</ID>
+    <ID>NestedBlockDepth:SccPass.kt$SccPass$fun tarjan(bb: Node)</ID>
+    <ID>NestedBlockDepth:SccPass.kt$SccPass$private fun handleSccRoot( bb: Node, currentInfo: TarjanInfo, level: Int, workStack: ArrayDeque&lt;WorkItem>, )</ID>
+    <ID>NestedBlockDepth:ScopeManager.kt$ScopeManager$fun mergeFrom(toMerge: Collection&lt;ScopeManager>)</ID>
+    <ID>NestedBlockDepth:ScopeManager.kt$fun Function.matchesSignature( signature: List&lt;Type>, arguments: List&lt;Expression>? = null, useDefaultArguments: Boolean = false, ): SignatureResult</ID>
+    <ID>NestedBlockDepth:SymbolResolver.kt$SymbolResolver$protected open fun handleConstruction(constructExpression: Construction)</ID>
+    <ID>NestedBlockDepth:TemplateCallResolverHelper.kt$fun SymbolResolver.applyMissingParams( template: RecordTemplate, constructExpression: Construction, templateParametersExplicitInitialization: Map&lt;Node, AstNode>, templateParameterRealDefaultInitialization: Map&lt;Node, AstNode?>, )</ID>
+    <ID>NestedBlockDepth:TranslationManager.kt$TranslationManager$@Throws(TranslationException::class) fun runFrontends( ctx: TranslationContext, result: TranslationResult, ): Set&lt;LanguageFrontend&lt;*, *>></ID>
+    <ID>NestedBlockDepth:Util.kt$Util$fun matchArgumentsToCallParameters(target: Function, call: Call): MutableMap&lt;Node, Parameter></ID>
+    <ID>NestedBlockDepth:Util.kt$Util$fun splitLeavingParenthesisContents(toSplit: String, delimiters: String): List&lt;String></ID>
+    <ID>ReturnCount:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$@OptIn(ExperimentalAtomicApi::class) suspend fun parallelCompare(other: Lattice.Element): Order</ID>
+    <ID>ReturnCount:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>ReturnCount:BasicLatticesRedesign.kt$HashMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>ReturnCount:BasicLatticesRedesign.kt$Lattice$private suspend fun iterateEogWorklist( startEdges: List&lt;EvaluationOrder>, startState: T, transformation: suspend (Lattice&lt;T>, EvaluationOrder, T) -> T, strategy: Strategy, timeout: Duration, maxStateEntries: Long?, statistics: IterationStatistics, ): Pair&lt;T, Boolean></ID>
+    <ID>ReturnCount:BasicLatticesRedesign.kt$PowersetLattice.Element$suspend fun parallelEquals(other: Any?): Boolean</ID>
+    <ID>ReturnCount:CXXCallResolverHelper.kt$fun checkArgumentValidity( functionDeclaration: Function, functionDeclarationSignature: List&lt;Type>, templateCall: Call, explicitInstantiation: List&lt;ParameterizedType>, needsExactMatch: Boolean, ): Boolean</ID>
+    <ID>ReturnCount:CodeSpan.kt$internal fun tryInternCode(location: PhysicalLocation, rawCode: String): CodeSpan?</ID>
+    <ID>ReturnCount:CompilationDatabase.kt$CompilationDatabase.Companion$private fun parseStd(std: String?): Pair&lt;String, String>?</ID>
+    <ID>ReturnCount:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$override fun accept(startNode: Node)</ID>
+    <ID>ReturnCount:ControlDependenceGraphPass.kt$private fun IfElse.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean</ID>
+    <ID>ReturnCount:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass$override fun accept(node: Node)</ID>
+    <ID>ReturnCount:Dataflow.kt$private fun callsEqualByIdentity(left: List&lt;Call>, right: List&lt;Call>): Boolean</ID>
+    <ID>ReturnCount:Detector.kt$DirectoryComponentDetector$override fun detect(root: Path, environment: TargetEnvironment): DetectionResult?</ID>
+    <ID>ReturnCount:EOGWorklist.kt$State$open fun push(newNode: K, newLatticeElement: LatticeElement&lt;V>?): Boolean</ID>
+    <ID>ReturnCount:Edge.kt$Edge$fun propertyEquals(obj: Any?): Boolean</ID>
+    <ID>ReturnCount:Edge.kt$Edge.Companion$@JvmStatic fun &lt;E : Node> propertyEqualsList(edges: List&lt;Edge&lt;E>>?, edges2: List&lt;Edge&lt;E>>?): Boolean</ID>
+    <ID>ReturnCount:Extensions.kt$fun &lt;T> Collection&lt;T>.splitInto( maxParts: Int = CPU_CORES, minPartSize: Int = MIN_CHUNK_SIZE, ): List&lt;List&lt;T>></ID>
+    <ID>ReturnCount:Extensions.kt$fun Node.followNextEOG(predicate: (Edge&lt;*>) -> Boolean): List&lt;Edge&lt;*>>?</ID>
+    <ID>ReturnCount:Extensions.kt$fun Node.followPrevEOG(predicate: (Edge&lt;*>) -> Boolean): List&lt;Edge&lt;*>>?</ID>
+    <ID>ReturnCount:Extensions.kt$fun Node.isNullCheck(refersTo: Declaration?): Boolean</ID>
+    <ID>ReturnCount:Extensions.kt$inline fun &lt;reified T : Expression> Function.bodyOrNull(n: Int = 0): T?</ID>
+    <ID>ReturnCount:Extensions.kt$inline fun &lt;reified T : Node> Node.firstParentOrNull( noinline predicate: ((T) -> Boolean)? = null ): T?</ID>
+    <ID>ReturnCount:Extensions.kt$operator fun Function.get(n: Int): Expression?</ID>
+    <ID>ReturnCount:GraphTraversal.kt$fun Node.followXUntilHit( x: ( Node, Context, List&lt;Triple&lt;Node, Edge&lt;Node>?, Context>>, MutableSet&lt;NodePath>, ) -> Collection&lt;Triple&lt;Node, Edge&lt;Node>, Context>>, collectFailedPaths: Boolean = true, findAllPossiblePaths: Boolean = true, continueAfterHit: Boolean = true, ctx: Context = Context(steps = 0), earlyTermination: (Node, Context) -> Boolean, predicate: (Node) -> Boolean, ): FulfilledAndFailedPaths</ID>
+    <ID>ReturnCount:GraphTraversal.kt$private fun contextExplosion(ctx: Context): Boolean</ID>
+    <ID>ReturnCount:Handler.kt$Handler$private fun getBaseClass(type: Type): Class&lt;*>?</ID>
+    <ID>ReturnCount:HasType.kt$HasType$fun informObservers(changeType: TypeObserver.ChangeType)</ID>
+    <ID>ReturnCount:IfdsReachingSources.kt$internal fun ifdsTokensMatch(callerToken: List&lt;Call>, returnToken: List&lt;Call>, k: Int): Boolean</ID>
+    <ID>ReturnCount:IfdsReachingSources.kt$private fun dfgStepAt(from: IfdsNode, edge: Dataflow, index: Int, backward: Boolean): IfdsStep</ID>
+    <ID>ReturnCount:IfdsReachingSources.kt$private fun eogStepsBackward(node: Node): List&lt;IfdsStep></ID>
+    <ID>ReturnCount:IfdsReachingSources.kt$private fun eogStepsForward(node: Node): List&lt;IfdsStep></ID>
+    <ID>ReturnCount:Inference.kt$Inference$fun inferRecordDeclaration( type: Type, kind: String = "class", locationHint: Node? = null, ): Record?</ID>
+    <ID>ReturnCount:Inference.kt$Inference$fun inferReturnType(hint: Call): Type?</ID>
+    <ID>ReturnCount:Language.kt$Language$open fun bestViableResolution( result: CallResolutionResult ): Pair&lt;Set&lt;Function>, CallResolutionResult.SuccessKind></ID>
+    <ID>ReturnCount:Language.kt$Language$open fun tryCast( type: Type, targetType: Type, hint: HasType? = null, targetHint: HasType? = null, ): CastResult</ID>
+    <ID>ReturnCount:LocationConverter.kt$LocationConverter$override fun toEntityAttribute(value: Map&lt;String, *>?): PhysicalLocation?</ID>
+    <ID>ReturnCount:MultiValueEvaluator.kt$MultiValueEvaluator$override fun evaluateInternal(node: Node?, depth: Int): Any?</ID>
+    <ID>ReturnCount:MultiValueEvaluator.kt$MultiValueEvaluator$override fun handleAssign(node: Assign, depth: Int): Any?</ID>
+    <ID>ReturnCount:MultiValueEvaluator.kt$MultiValueEvaluator$override fun handlePrevDFG(node: Node, depth: Int): Collection&lt;Any?></ID>
+    <ID>ReturnCount:MultiValueEvaluator.kt$MultiValueEvaluator$private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection&lt;Any?></ID>
+    <ID>ReturnCount:Name.kt$internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name</ID>
+    <ID>ReturnCount:Pass.kt$Pass$fun runsWithLanguageTrait(language: Language&lt;*>?): Boolean</ID>
+    <ID>ReturnCount:Pass.kt$Pass$fun runsWithTargetLanguage(language: Language&lt;*>?): Boolean</ID>
+    <ID>ReturnCount:PassHelper.kt$internal fun Pass&lt;*>.tryFieldInference(ref: Reference, targetType: ObjectType): Variable?</ID>
+    <ID>ReturnCount:PersistentLattices.kt$PersistentMapLattice.Element$override fun compare(other: Lattice.Element): Order</ID>
+    <ID>ReturnCount:PointsToPass.kt$PointsToPass$fun skipIfSaturated( existingSources: ConcurrentIdentitySet&lt;Node?>, candidates: Collection&lt;Node?>, ): Boolean</ID>
+    <ID>ReturnCount:PointsToPass.kt$PointsToPass$private fun addEntryToMap( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, addEntryToMapCache: AddEntryToMapCache, destinationAddresses: IdentitySet&lt;Pair&lt;Node, String?>>, destinations: IdentitySet&lt;Node>, srcNode: Node?, shortFS: Boolean, srcValueDepth: Int, propertySet: EqualLinkedHashSet&lt;Any>, currentNode: Call, lastWrites: MutableSet&lt;NodeWithPropertiesKey>, param: Node, shortFsPrevEdges: LinkedHashSet&lt;NodeWithPropertiesKey>, ): ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>></ID>
+    <ID>ReturnCount:PointsToPass.kt$PointsToPass$private fun calculateCallDestinations( doubleState: PointsToState.Element, mapDstToSrc: ConcurrentIdentityHashMap&lt;Node, ConcurrentIdentitySet&lt;MapDstToSrcEntry>>, dstValueDepth: Int, subAccessName: String, argument: Node, properties: EqualLinkedHashSet&lt;Any>, param: Node, ): Pair&lt;IdentitySet&lt;Pair&lt;Node, String?>>, IdentitySet&lt;Node>></ID>
+    <ID>ReturnCount:PointsToPass.kt$PointsToPass$private fun createPropertySet( propertySet: EqualLinkedHashSet&lt;Any>, shortFS: Boolean, partialWrite: String?, ): EqualLinkedHashSet&lt;Any></ID>
+    <ID>ReturnCount:PointsToPass.kt$PointsToState.Element$suspend fun parallelCompare(other: Lattice.Element): Order</ID>
+    <ID>ReturnCount:PointsToPass.kt$fun PointsToState.Element.getLastWrites( node: Node ): PowersetLattice.Element&lt;NodeWithPropertiesKey></ID>
+    <ID>ReturnCount:PointsToPass.kt$fun PointsToState.Element.getNestedValues( node: Node, nestingDepth: Int, fetchFields: Boolean = false, onlyFetchExistingEntries: Boolean = false, excludeShortFSValues: Boolean = false, ): PowersetLattice.Element&lt;Pair&lt;Node, Boolean>></ID>
+    <ID>ReturnCount:PointsToPass.kt$private fun addDynamicInvokesEdges(call: Call, doubleState: PointsToState.Element)</ID>
+    <ID>ReturnCount:Project.kt$ProjectBuilder$private fun detectLanguages(): Set&lt;KClass&lt;out Language&lt;*>>></ID>
+    <ID>ReturnCount:Region.kt$Region$override fun compareTo(other: Region): Int</ID>
+    <ID>ReturnCount:ResolveCallAmbiguityPass.kt$ResolveCallAmbiguityPass$private fun handleCall(call: Call)</ID>
+    <ID>ReturnCount:ScopeManager.kt$ScopeManager$fun extractScope( name: Name, language: Language&lt;*>, location: PhysicalLocation? = null, scope: Scope? = currentScope, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, ): ScopeExtraction?</ID>
+    <ID>ReturnCount:ScopeManager.kt$ScopeManager$fun getLabel(labelString: String?): Label?</ID>
+    <ID>ReturnCount:ScopeManager.kt$ScopeManager$fun leaveScope(nodeToLeave: Node): Scope?</ID>
+    <ID>ReturnCount:ScopeManager.kt$ScopeManager$fun lookupSymbolByName( name: Name, language: Language&lt;*>, location: PhysicalLocation? = null, startScope: Scope? = currentScope, replaceImports: Boolean = true, localSymbols: ((Scope, Symbol) -> List&lt;Declaration>?)? = null, predicate: ((Declaration) -> Boolean)? = null, ): List&lt;Declaration></ID>
+    <ID>ReturnCount:ScopeManager.kt$ScopeManager$fun typedefFor( alias: Name, scope: Scope? = currentScope, prefix: Name? = currentNamespace, ): Type?</ID>
+    <ID>ReturnCount:ScopeManager.kt$fun Function.matchesSignature( signature: List&lt;Type>, arguments: List&lt;Expression>? = null, useDefaultArguments: Boolean = false, ): SignatureResult</ID>
+    <ID>ReturnCount:SubgraphWalker.kt$SubgraphWalker$fun getAllEdgeFields(classType: Class&lt;*>): Collection&lt;Field></ID>
+    <ID>ReturnCount:SubgraphWalker.kt$fun SubgraphWalker.ScopedWalker&lt;Node>.replace( parent: AstNode?, old: Expression, new: Expression, ): Boolean</ID>
+    <ID>ReturnCount:SymbolResolver.kt$SymbolResolver$private fun isWithinStarter(scope: Scope, starterScope: Scope?): Boolean</ID>
+    <ID>ReturnCount:SymbolResolver.kt$SymbolResolver$private fun resolveOperator(op: HasOverloadedOperation): CallResolutionResult?</ID>
+    <ID>ReturnCount:SymbolResolver.kt$SymbolResolver$private fun seedPlanFor(declaration: Declaration, starterRoot: Node): SeedPlan</ID>
+    <ID>ReturnCount:SymbolResolver.kt$SymbolResolver$protected open fun handleCall(call: Call)</ID>
+    <ID>ReturnCount:SymbolResolver.kt$SymbolResolver$protected open fun handleReference(ref: Reference)</ID>
+    <ID>ReturnCount:SymbolResolver.kt$internal fun Pass&lt;*>.resolveWithArguments( candidates: Collection&lt;Declaration>, arguments: List&lt;Expression>, source: Expression, ): CallResolutionResult</ID>
+    <ID>ReturnCount:TypeBuilder.kt$@JvmOverloads fun LanguageProvider.objectType( name: CharSequence, generics: List&lt;Type> = listOf(), rawNode: Any? = null, ): Type</ID>
+    <ID>ReturnCount:TypeManager.kt$fun Reference.nameIsType(): Type?</ID>
+    <ID>ReturnCount:TypeResolver.kt$TypeResolver$fun resolveType(type: Type): Boolean</ID>
+    <ID>ReturnCount:Util.kt$Util$fun eogConnect( quantifier: Quantifier = Quantifier.ALL, connectStart: Connect = Connect.SUBTREE, edgeDirection: Edge, startNode: AstNode?, connectEnd: Connect = Connect.SUBTREE, predicate: ((EvaluationOrder) -> Boolean)? = null, endNodes: List&lt;AstNode?>, ): Boolean</ID>
+    <ID>ReturnCount:ValueEvaluator.kt$ValueEvaluator$open fun evaluateInternal(node: Node?, depth: Int): Any?</ID>
+    <ID>ReturnCount:ValueEvaluator.kt$ValueEvaluator$protected fun handleSubscription(expr: Subscription, depth: Int): Any?</ID>
+    <ID>ReturnCount:ValueEvaluator.kt$ValueEvaluator$protected open fun handleAssign(node: Assign, depth: Int): Any?</ID>
+    <ID>SerialVersionUIDInSerializableClass:BasicLatticesRedesign.kt$TripleLattice$Element&lt;R : Lattice.Element, S : Lattice.Element, T : Lattice.Element> : SerializableElement</ID>
+    <ID>SerialVersionUIDInSerializableClass:BasicLatticesRedesign.kt$TupleLattice$Element&lt;S : Lattice.Element, T : Lattice.Element> : SerializableElement</ID>
+    <ID>SpreadOperator:AnalysisConfiguration.kt$AnalysisSensitivity$(*other, this)</ID>
+    <ID>SpreadOperator:AnalysisConfiguration.kt$AnalysisSensitivity$(*this.toTypedArray(), other)</ID>
+    <ID>SpreadOperator:Assumption.kt$(*haveAssumptions.toTypedArray())</ID>
+    <ID>SpreadOperator:CXXCallResolverHelper.kt$( *templateCall.arguments.toTypedArray() )</ID>
+    <ID>SpreadOperator:CXXCallResolverHelper.kt$(*orderedInitializationSignature.keys.toTypedArray())</ID>
+    <ID>SpreadOperator:CompilationDatabase.kt$CompilationDatabase.Companion$(*command.split(" ").toTypedArray())</ID>
+    <ID>SpreadOperator:ControlDependenceGraphPass.kt$ControlDependenceGraphPass$( // For the function declaration, there's only the path through the function declaration // itself. Pair(functionDeclaration, setOfNotNull(nodeToBBMap[functionDeclaration])), *allBasicBlocks .mapNotNull { it.branchingNode?.let { branchingNode -> val mergingPoints = if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) { // There's an unconditional path (case 1), so when reaching this // branch, we're done. Collect all (=1) unconditional branches. branchingNode.nextEOGEdges.mapFilteredTo( identitySetOf(), { !it.isConditionalBranch() }, ) { it.end } } else { // All branches are executed based on some condition (case 2), so we // collect all these branches. branchingNode.nextEOGEdges.mapTo(identitySetOf()) { it.end } } branchingNode to mergingPoints.mapNotNull { nodeToBBMap[it] } } } .toTypedArray(), )</ID>
+    <ID>SpreadOperator:OrderingHelpers.kt$( *functionCalleesMap.map { (k, v) -> Pair(k, v.toIdentitySet()) }.toTypedArray() )</ID>
+    <ID>SpreadOperator:PointsToPass.kt$PointsToPass$( PointerDataflowGranularity( PointerAccess.CURRENT_DEREF_DEREF_VALUE ), // Here again, filter the // FullDataflowGranularity since // we indicate a // currentDerefDerefValue *it.properties .filter { it !is FullDataflowGranularity } .toTypedArray(), )</ID>
+    <ID>SpreadOperator:PointsToPass.kt$PointsToPass$( PointerDataflowGranularity( PointerAccess.CURRENT_DEREF_VALUE ), // Remove the FullDataGranularity, since here we only // want to indicate derefValues *it.properties .filter { it !is FullDataflowGranularity } .toTypedArray(), )</ID>
+    <ID>SpreadOperator:Project.kt$ProjectBuilder$(*excludesByRegex.toTypedArray())</ID>
+    <ID>SpreadOperator:Project.kt$ProjectBuilder$(*excludesByString.toTypedArray())</ID>
+    <ID>SpreadOperator:SymbolResolver.kt$SymbolResolver$(*decls.toTypedArray())</ID>
+    <ID>SpreadOperator:SymbolResolver.kt$SymbolResolver$(*possibleTypes.toTypedArray())</ID>
+    <ID>SpreadOperator:TemplateCallResolverHelper.kt$(it, *type.generics.toTypedArray())</ID>
+    <ID>SwallowedException:IVisitor.kt$IVisitor$e: IllegalAccessException</ID>
+    <ID>SwallowedException:IVisitor.kt$IVisitor$e: InvocationTargetException</ID>
+    <ID>SwallowedException:IVisitor.kt$IVisitor$e: NoSuchMethodException</ID>
+    <ID>SwallowedException:LocationConverter.kt$LocationConverter$e: NullPointerException</ID>
+    <ID>SwallowedException:MeasurementHolder.kt$ex: IllegalArgumentException</ID>
+    <ID>SwallowedException:Project.kt$ProjectBuilder$e: Exception</ID>
+    <ID>SwallowedException:TranslationConfiguration.kt$TranslationConfiguration.Builder$e: ConfigurationException</ID>
+    <ID>ThrowingExceptionsWithoutMessageOrCause:IdentitySet.kt$EmptyMutableIterator$IllegalStateException()</ID>
+    <ID>ThrowsCount:PassOrderingHelper.kt$PassOrderingHelper$private fun sanityCheck()</ID>
+    <ID>TooGenericExceptionCaught:FrontendUtils.kt$FrontendUtils.Companion$e: ArrayIndexOutOfBoundsException</ID>
+    <ID>TooGenericExceptionCaught:LocationConverter.kt$LocationConverter$e: NullPointerException</ID>
+    <ID>TooGenericExceptionCaught:Project.kt$ProjectBuilder$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TranslationManager.kt$TranslationManager$e: Exception</ID>
+    <ID>TooGenericExceptionThrown:TranslationManager.kt$TranslationManager$throw RuntimeException("Error parsing $sourceLocation", e)</ID>
+    <ID>TooManyFunctions:BasicLatticesRedesign.kt$ConcurrentIdentityHashMap&lt;K, V> : Map</ID>
+    <ID>TooManyFunctions:Call.kt$Call : ExpressionHasOverloadedOperationTypeObserverHasSecondaryTypeEdge</ID>
+    <ID>TooManyFunctions:CollectionUtils.kt$de.fraunhofer.aisec.cpg.helpers.CollectionUtils.kt</ID>
+    <ID>TooManyFunctions:ControlFlowSensitiveDFGPass.kt$ControlFlowSensitiveDFGPass : EOGStarterPass</ID>
+    <ID>TooManyFunctions:DFGPass.kt$DFGPass : ComponentPass</ID>
+    <ID>TooManyFunctions:DeclarationBuilder.kt$de.fraunhofer.aisec.cpg.graph.DeclarationBuilder.kt</ID>
+    <ID>TooManyFunctions:EdgeCollection.kt$EdgeCollection&lt;NodeType : Node, EdgeType : Edge&lt;NodeType>> : MutableCollection</ID>
+    <ID>TooManyFunctions:EdgeList.kt$EdgeList&lt;NodeType : Node, EdgeType : Edge&lt;NodeType>> : ArrayListEdgeCollection</ID>
+    <ID>TooManyFunctions:EdgeSet.kt$EdgeSet&lt;NodeType : Node, EdgeType : Edge&lt;NodeType>> : AbstractMutableSetEdgeCollection</ID>
+    <ID>TooManyFunctions:EdgeSingletonList.kt$EdgeSingletonList&lt;NodeType : Node, NullableNodeType : NodeType?, EdgeType : Edge&lt;NodeType>> : EdgeCollection</ID>
+    <ID>TooManyFunctions:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass : TranslationUnitPass</ID>
+    <ID>TooManyFunctions:ExpressionBuilder.kt$de.fraunhofer.aisec.cpg.graph.ExpressionBuilder.kt</ID>
+    <ID>TooManyFunctions:Extensions.kt$de.fraunhofer.aisec.cpg.graph.Extensions.kt</ID>
+    <ID>TooManyFunctions:Function.kt$Function : ValueDeclarationDeclarationHolderEOGStarterHolderTypeObserverHasSecondaryTypeEdge</ID>
+    <ID>TooManyFunctions:IdentitySet.kt$AbstractConcurrentSet&lt;T, K : Any> : MutableSet</ID>
+    <ID>TooManyFunctions:IdentitySet.kt$IdentitySet&lt;T> : MutableSet</ID>
+    <ID>TooManyFunctions:IfdsReachingSources.kt$de.fraunhofer.aisec.cpg.graph.IfdsReachingSources.kt</ID>
+    <ID>TooManyFunctions:Inference.kt$Inference : LanguageProviderScopeProviderIsInferredProviderContextProviderRawNodeTypeProvider</ID>
+    <ID>TooManyFunctions:Language.kt$Language&lt;T : LanguageFrontend&lt;*, *>> : Node</ID>
+    <ID>TooManyFunctions:MultiValueEvaluator.kt$MultiValueEvaluator : ValueEvaluator</ID>
+    <ID>TooManyFunctions:Name.kt$Name : CloneableComparableCharSequence</ID>
+    <ID>TooManyFunctions:NodeBuilder.kt$de.fraunhofer.aisec.cpg.graph.NodeBuilder.kt</ID>
+    <ID>TooManyFunctions:NumberExtensions.kt$de.fraunhofer.aisec.cpg.evaluation.NumberExtensions.kt</ID>
+    <ID>TooManyFunctions:PersistentIdentityMap.kt$PersistentIdentityMap&lt;K, V> : Map</ID>
+    <ID>TooManyFunctions:PointsToPass.kt$PointsToPass : EOGStarterPass</ID>
+    <ID>TooManyFunctions:PointsToPass.kt$de.fraunhofer.aisec.cpg.passes.PointsToPass.kt</ID>
+    <ID>TooManyFunctions:Project.kt$ProjectBuilder</ID>
+    <ID>TooManyFunctions:ScopeManager.kt$ScopeManager : ScopeProviderContextProvider</ID>
+    <ID>TooManyFunctions:SmallMutableSet.kt$SmallMutableSet&lt;T : Any> : MutableSet</ID>
+    <ID>TooManyFunctions:StatementBuilder.kt$de.fraunhofer.aisec.cpg.graph.StatementBuilder.kt</ID>
+    <ID>TooManyFunctions:Strategy.kt$Strategy</ID>
+    <ID>TooManyFunctions:SymbolResolver.kt$SymbolResolver : EOGStarterPass</ID>
+    <ID>TooManyFunctions:TranslationConfiguration.kt$TranslationConfiguration$Builder</ID>
+    <ID>TooManyFunctions:TypeBuilder.kt$de.fraunhofer.aisec.cpg.graph.TypeBuilder.kt</ID>
+    <ID>TooManyFunctions:UnwrappedEdgeCollection.kt$UnwrappedEdgeCollection&lt;NodeType : Node, EdgeType : Edge&lt;NodeType>> : MutableCollection</ID>
+    <ID>TooManyFunctions:UnwrappedEdgeList.kt$UnwrappedEdgeList&lt;NodeType : Node, EdgeType : Edge&lt;NodeType>> : UnwrappedEdgeCollectionMutableList</ID>
+    <ID>TooManyFunctions:Util.kt$Util</ID>
+    <ID>TooManyFunctions:ValueEvaluator.kt$ValueEvaluator</ID>
+    <ID>UnusedParameter:CXXCallResolverHelper.kt$call: Call</ID>
+    <ID>UnusedParameter:CXXCallResolverHelper.kt$needsExactMatch: Boolean</ID>
+    <ID>UnusedParameter:EvaluationExtensions.kt$useCache: Boolean = false</ID>
+    <ID>UnusedParameter:OverlayNode.kt$OverlayNode$oldEdge: OverlayEdge?</ID>
+    <ID>UnusedParameter:Pass.kt$executedFrontends: Collection&lt;LanguageFrontend&lt;*, *>></ID>
+    <ID>UnusedParameter:ProgramDependenceGraphPassTest.kt$ProgramDependenceGraphPassTest$name: String</ID>
+    <ID>UnusedParameter:Strategy.kt$Strategy$x: Node</ID>
+    <ID>UnusedParameter:SubgraphWalker.kt$SubgraphWalker$stopAtNode: (AstNode) -> Boolean = { false }</ID>
+    <ID>UnusedParameter:TranslationConfiguration.kt$TranslationConfiguration.Builder$language: Language&lt;*></ID>
+    <ID>UnusedPrivateMember:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$private fun handleEmpty(node: Empty)</ID>
+    <ID>UnusedPrivateMember:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$private fun handleLiteral(node: Literal&lt;*>)</ID>
+    <ID>UnusedPrivateMember:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$private fun handleReference(node: Reference)</ID>
+    <ID>UnusedPrivateMember:EvaluationOrderGraphPass.kt$EvaluationOrderGraphPass$private fun handleTypeReference(node: TypeReference)</ID>
+    <ID>UnusedPrivateProperty:PointsToPass.kt$PointsToPass$val newPrev = doubleState.getNestedValues(dst, dstValueDepth)</ID>
+    <ID>UseCheckOrError:EdgeSet.kt$EdgeSet.EdgeSetIterator$throw IllegalStateException("next() has not been called")</ID>
+    <ID>UseCheckOrError:IdentitySet.kt$EmptyMutableIterator$throw IllegalStateException()</ID>
+    <ID>UseCheckOrError:SmallMutableSet.kt$SmallMutableSet.SmallMutableSetIterator$throw IllegalStateException("next() has not been called")</ID>
+    <ID>UseRequire:BasicLatticesRedesign.kt$ConcurrentMapLattice.Element$throw IllegalArgumentException( "$other should be of type ConcurrentMapLattice.Element&lt;K, V> but is of type ${other.javaClass}" )</ID>
+    <ID>UseRequire:BasicLatticesRedesign.kt$HashMapLattice.Element$throw IllegalArgumentException( "$other should be of type HashMapLattice.Element&lt;K, V> but is of type ${other.javaClass}" )</ID>
+    <ID>UseRequire:BasicLatticesRedesign.kt$PowersetLattice.Element$throw IllegalArgumentException( "$other should be of type PowersetLattice.Element&lt;T> but is of type ${other.javaClass}" )</ID>
+    <ID>UseRequire:BasicLatticesRedesign.kt$TripleLattice.Element$throw IllegalArgumentException( "$other should be of type TripleLattice.Element&lt;R, S, T> but is of type ${other.javaClass}" )</ID>
+    <ID>UseRequire:BasicLatticesRedesign.kt$TupleLattice.Element$throw IllegalArgumentException( "$other should be of type TupleLattice.Element&lt;S, T> but is of type ${other.javaClass}" )</ID>
+    <ID>UseRequire:PersistentLattices.kt$PersistentMapLattice.Element$throw IllegalArgumentException( "$other should be of type PersistentMapLattice.Element&lt;K, V> but is of type ${other.javaClass}" )</ID>
+    <ID>UseRequire:PointsToPass.kt$DeclarationStateEntry.Element$throw IllegalArgumentException( "$other should be of type Element but is of type ${other.javaClass}" )</ID>
+    <ID>UseRequire:PointsToPass.kt$PointsToState.Element$throw IllegalArgumentException( "$other should be of type Element but is of type ${other.javaClass}" )</ID>
+    <ID>UtilityClassWithPublicConstructor:FrontendUtils.kt$FrontendUtils</ID>
+    <ID>UtilityClassWithPublicConstructor:ValueEvaluationTests.kt$ValueEvaluationTests</ID>
+    <ID>VariableNaming:ControlFlowSensitiveDFGPassTest.kt$ControlFlowSensitiveDFGPassTest$val `in` = test.records["outer"].fields["in"]</ID>
+  </CurrentIssues>
+</SmellBaseline>

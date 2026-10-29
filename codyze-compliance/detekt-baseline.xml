@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>EmptyFunctionBlock:Command.kt$ComplianceCommand${}</ID>
+    <ID>MagicNumber:ConsoleServiceHelper.kt$ConsoleServiceHelper$3</ID>
+    <ID>MagicNumber:ConsoleServiceHelper.kt$ConsoleServiceHelper$8080</ID>
+    <ID>TooGenericExceptionCaught:ConsoleServiceHelper.kt$ConsoleServiceHelper$e: Exception</ID>
+  </CurrentIssues>
+</SmellBaseline>

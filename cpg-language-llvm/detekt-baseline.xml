@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$internal fun handleGetElementPtr(instr: LLVMValueRef): Expression</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleValue(value: LLVMValueRef): Expression</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$private fun handleBinaryInstruction(instr: LLVMValueRef): Expression</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$private fun handleFloatComparison(instr: LLVMValueRef): Expression</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$private fun handleInstruction(instr: LLVMValueRef): Expression</ID>
+    <ID>ForbiddenComment:DeclarationHandler.kt$DeclarationHandler$// TODO: support variardic</ID>
+    <ID>ForbiddenComment:LLVMIRLanguage.kt$LLVMIRLanguage$// TODO: In theory, the integers can have any bit-width from 1 to 1^32 bits. It's not known if</ID>
+    <ID>ForbiddenComment:LLVMIRLanguageFrontendTest.kt$LLVMIRLanguageFrontendTest$// TODO: This doesn't match but it doesn't seem to be our mistake</ID>
+    <ID>ForbiddenComment:LLVMIRLanguageFrontendTest.kt$LLVMIRLanguageFrontendTest$// TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: Is this correct??</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: Probably we should make a proper copy of the array</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: This doesn't work for multiple types to catch</ID>
+    <ID>ForbiddenComment:StatementHandler.kt$StatementHandler$// TODO: filter not handled yet</ID>
+    <ID>LargeClass:LLVMIRLanguageFrontendTest.kt$LLVMIRLanguageFrontendTest</ID>
+    <ID>LargeClass:StatementHandler.kt$StatementHandler : Handler</ID>
+    <ID>LargeClass:StatementHandlerTest.kt$StatementHandlerTest</ID>
+    <ID>LongMethod:ExpressionHandler.kt$ExpressionHandler$internal fun handleGetElementPtr(instr: LLVMValueRef): Expression</ID>
+    <ID>LongMethod:ExpressionHandlerTest.kt$ExpressionHandlerTest$@Test fun testConstantExpr()</ID>
+    <ID>LongMethod:LLVMIRLanguageFrontendTest.kt$LLVMIRLanguageFrontendTest$@Test fun testBrStatements()</ID>
+    <ID>LongMethod:LLVMIRLanguageFrontendTest.kt$LLVMIRLanguageFrontendTest$@Test fun testExceptions()</ID>
+    <ID>LongMethod:LLVMIRLanguageFrontendTest.kt$LLVMIRLanguageFrontendTest$@Test fun testIdentifiedStruct()</ID>
+    <ID>LongMethod:LLVMIRLanguageFrontendTest.kt$LLVMIRLanguageFrontendTest$@Test fun testVectorOperations()</ID>
+    <ID>LongMethod:StatementHandler.kt$StatementHandler$@FunctionReplacement(["llvm.catchswitch", "llvm.matchesCatchpad"], "catchswitch") private fun handleCatchswitch(instr: LLVMValueRef): Expression</ID>
+    <ID>LongMethod:StatementHandler.kt$StatementHandler$fun handlePhi(instr: LLVMValueRef, tu: TranslationUnit, flatAST: MutableList&lt;AstNode>)</ID>
+    <ID>LongMethod:StatementHandler.kt$StatementHandler$private fun handleAtomicrmw(instr: LLVMValueRef): Expression</ID>
+    <ID>LongMethod:StatementHandler.kt$StatementHandler$private fun handleInsertValue(instr: LLVMValueRef): Expression</ID>
+    <ID>LongMethod:StatementHandler.kt$StatementHandler$private fun handleInstruction(instr: LLVMValueRef): Expression</ID>
+    <ID>LongMethod:StatementHandlerTest.kt$StatementHandlerTest$@Test fun testAtomicrmw()</ID>
+    <ID>LongMethod:StatementHandlerTest.kt$StatementHandlerTest$@Test fun testFloatingpoingOps()</ID>
+    <ID>LongMethod:StatementHandlerTest.kt$StatementHandlerTest$@Test fun testFloatingpointComparisons()</ID>
+    <ID>LongMethod:StatementHandlerTest.kt$StatementHandlerTest$@Test fun testIntegerComparisons()</ID>
+    <ID>LongMethod:StatementHandlerTest.kt$StatementHandlerTest$@Test fun testIntegerOps()</ID>
+    <ID>MagicNumber:CompressLLVMPass.kt$CompressLLVMPass$3</ID>
+    <ID>MagicNumber:CompressLLVMPass.kt$CompressLLVMPass$4</ID>
+    <ID>MagicNumber:LLVMIRLanguage.kt$LLVMIRLanguage$128</ID>
+    <ID>MagicNumber:LLVMIRLanguage.kt$LLVMIRLanguage$16</ID>
+    <ID>MagicNumber:LLVMIRLanguage.kt$LLVMIRLanguage$32</ID>
+    <ID>MagicNumber:LLVMIRLanguage.kt$LLVMIRLanguage$64</ID>
+    <ID>MagicNumber:LLVMIRLanguage.kt$LLVMIRLanguage$8</ID>
+    <ID>MagicNumber:LLVMIRLanguage.kt$LLVMIRLanguage$80</ID>
+    <ID>MagicNumber:LLVMIRLanguageFrontend.kt$LLVMIRLanguageFrontend$10000</ID>
+    <ID>MagicNumber:StatementHandler.kt$StatementHandler$3</ID>
+    <ID>MaxLineLength:CompressLLVMPass.kt$CompressLLVMPass$"Re-organizes some nodes in the CPG if they originate from LLVM IR code, removing redundant nodes and edges to optimize the graph structure for analysis."</ID>
+    <ID>MaxLineLength:StatementHandler.kt$StatementHandler$"${functions.size} functions match the name of the one where the phi instruction is inserted. Can't handle this case."</ID>
+    <ID>MaxLineLength:StatementHandler.kt$StatementHandler$"Invoke expression: Usually continues at ${tryContinue.labelName}, exception continues at ${gotoCatch.labelName}"</ID>
+    <ID>MaxLineLength:StatementHandler.kt$StatementHandler$/* Get the number of clauses on the landingpad instruction and iterate through the clauses to get all types for the catch clauses */</ID>
+    <ID>NestedBlockDepth:ExpressionHandler.kt$ExpressionHandler$internal fun handleGetElementPtr(instr: LLVMValueRef): Expression</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleValue(value: LLVMValueRef): Expression</ID>
+    <ID>ReturnCount:LLVMIRLanguageFrontend.kt$LLVMIRLanguageFrontend$internal fun typeOf( typeRef: LLVMTypeRef, alreadyVisited: MutableMap&lt;LLVMTypeRef, Type?> = mutableMapOf(), ): Type</ID>
+    <ID>ReturnCount:LLVMIRLanguageFrontend.kt$LLVMIRLanguageFrontend$override fun codeOf(astNode: Pointer): String?</ID>
+    <ID>ReturnCount:StatementHandler.kt$StatementHandler$private fun handleFloatComparison(instr: LLVMValueRef): Expression</ID>
+    <ID>ReturnCount:StatementHandler.kt$StatementHandler$private fun handleInstruction(instr: LLVMValueRef): Expression</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : Handler</ID>
+    <ID>TooManyFunctions:LLVMIRLanguageFrontend.kt$LLVMIRLanguageFrontend : LanguageFrontend</ID>
+    <ID>TooManyFunctions:StatementHandler.kt$StatementHandler : Handler</ID>
+  </CurrentIssues>
+</SmellBaseline>

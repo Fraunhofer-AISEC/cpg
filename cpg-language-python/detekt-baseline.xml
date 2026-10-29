@@ -1,0 +1,285 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:SystemInformation.kt$VersionInfo$thisMajor &lt; otherMajor || (thisMajor == otherMajor &amp;&amp; (thisMinor &lt; otherMinor || thisMinor == otherMinor &amp;&amp; thisMicro &lt; otherMicro))</ID>
+    <ID>CyclomaticComplexMethod:ExpressionHandler.kt$ExpressionHandler$override fun handleNode(node: Python.AST.BaseExpr): Expression</ID>
+    <ID>CyclomaticComplexMethod:PythonAddDeclarationsPass.kt$PythonAddDeclarationsPass$private fun handleWriteToReference(ref: Reference): Variable?</ID>
+    <ID>CyclomaticComplexMethod:PythonLanguageFrontend.kt$PythonLanguageFrontend$private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnit</ID>
+    <ID>CyclomaticComplexMethod:PythonLanguageFrontend.kt$fun fromPython(pyObject: Any?): Python.BaseObject</ID>
+    <ID>CyclomaticComplexMethod:StatementHandler.kt$StatementHandler$override fun handleNode(node: Python.AST.BaseStmt): Expression</ID>
+    <ID>CyclomaticComplexMethod:SystemInformation.kt$VersionInfo$override fun compareTo(other: VersionInfo): Int</ID>
+    <ID>ExplicitItLambdaParameter:WithStatementTest.kt$WithStatementTest${ it -> it.name.contains("test_function") }</ID>
+    <ID>ExplicitItLambdaParameter:WithStatementTest.kt$WithStatementTest${ it -> it.name.contains("test_multiple") }</ID>
+    <ID>ForbiddenComment:ExceptionsTest.kt$ExceptionsTest$// TODO: This doesn't work yet. Needs fix in the EOG pass!</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$* Handles an `ast.Call` Python node. This can be one of * - [MemberCall] * - [Construction] * - [Cast] * - [Call] * * TODO: cast, memberexpression, magic</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$// TODO: keys longer than values possible?</ID>
+    <ID>ForbiddenComment:ExpressionHandler.kt$ExpressionHandler$// TODO: this is ugly</ID>
+    <ID>ForbiddenComment:JepSingleton.kt$JepSingleton$// TODO: is this still needed?</ID>
+    <ID>ForbiddenComment:PythonFrontendTest.kt$PythonFrontendTest$/* TODO: foo = Foo() foo.classFieldNoInitializer = 345 foo.classFieldWithInit = 678 */</ID>
+    <ID>ForbiddenComment:PythonFrontendTest.kt$PythonFrontendTest$// TODO: When developing the new python frontend, remove the type specifier from the field</ID>
+    <ID>ForbiddenComment:PythonFrontendTest.kt$PythonFrontendTest$// assertEquals("(3+5j)", (c.firstAssignment as? Literal&lt;*>)?.value) // TODO: this is</ID>
+    <ID>ForbiddenComment:PythonFrontendTest.kt$PythonFrontendTest$// assertEquals(tu.primitiveType("complex"), c.type) TODO: this is currently "UNKNOWN"</ID>
+    <ID>ForbiddenComment:PythonLanguageFrontend.kt$PythonLanguageFrontend$// TODO: This might create problem with nested classes</ID>
+    <ID>LargeClass:CollectionComprehensionTest.kt$CollectionComprehensionTest</ID>
+    <ID>LargeClass:DFGTest.kt$DFGTest</ID>
+    <ID>LargeClass:PythonFrontendTest.kt$PythonFrontendTest : BaseTest</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Ignore( "This test is ignored because the variable \"a\" in the tuple's first element is incorrectly resolved to the variable in the tuple's second element. This adds refersTo edges which should not exist and also causes the DFG to contain additional edges." ) @Test fun testComprehensionWithListAssignmentAndIndexVariableReversed()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testCompBindingListAssignment()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testComprehensionTuple()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testComprehensionWithListAssignmentAndIndexVariable()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testComprehensionWithListAssignmentAndLocalIndexVariable()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testDictComprehensions()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testListComprehensionToField()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testListComprehensionToListIndex()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testListComprehensions()</ID>
+    <ID>LongMethod:CollectionComprehensionTest.kt$CollectionComprehensionTest$@Test fun testSetComprehensions()</ID>
+    <ID>LongMethod:DFGTest.kt$DFGTest$@Test fun testDictAccess()</ID>
+    <ID>LongMethod:DFGTest.kt$DFGTest$@Test fun testListAccess()</ID>
+    <ID>LongMethod:DFGTest.kt$DFGTest$@Test fun testMemberAccess()</ID>
+    <ID>LongMethod:DeclarationHandler.kt$DeclarationHandler$fun handleDeclaratorList( node: Python.AST.WithLocation, decoratorList: List&lt;Python.AST.BaseExpr>, ): List&lt;Annotation></ID>
+    <ID>LongMethod:DeclarationHandler.kt$DeclarationHandler$private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): Function</ID>
+    <ID>LongMethod:ExpressionHandler.kt$ExpressionHandler$private fun handleFormattedValue(node: Python.AST.FormattedValue): Expression</ID>
+    <ID>LongMethod:ExpressionHandlerTest.kt$ExpressionHandlerTest$@Test fun testBoolOps()</ID>
+    <ID>LongMethod:FormattedValueHandlerTest.kt$FormattedValueHandlerTest$@Test fun testFormattedValues()</ID>
+    <ID>LongMethod:MatchTest.kt$MatchTest$@Test fun testMatchCombined()</ID>
+    <ID>LongMethod:PythonAddDeclarationsPass.kt$PythonAddDeclarationsPass$private fun handleWriteToReference(ref: Reference): Variable?</ID>
+    <ID>LongMethod:PythonFrontendTest.kt$PythonFrontendTest$@Test fun testArithmetics()</ID>
+    <ID>LongMethod:PythonFrontendTest.kt$PythonFrontendTest$@Test fun testDataTypes()</ID>
+    <ID>LongMethod:PythonFrontendTest.kt$PythonFrontendTest$@Test fun testFunctionDeclaration()</ID>
+    <ID>LongMethod:PythonFrontendTest.kt$PythonFrontendTest$@Test fun testIssue432()</ID>
+    <ID>LongMethod:PythonFrontendTest.kt$PythonFrontendTest$@Test fun testIssue615()</ID>
+    <ID>LongMethod:PythonFrontendTest.kt$PythonFrontendTest$@Test fun testVarsAndFields()</ID>
+    <ID>LongMethod:PythonLanguageFrontend.kt$PythonLanguageFrontend$private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnit</ID>
+    <ID>LongMethod:PythonLanguageFrontend.kt$fun fromPython(pyObject: Any?): Python.BaseObject</ID>
+    <ID>LongMethod:StatementHandler.kt$StatementHandler$private fun handleWithStatement(node: Python.AST.NormalOrAsyncWith): Block</ID>
+    <ID>LongMethod:WithStatementTest.kt$WithStatementTest$@Test fun testMultiple()</ID>
+    <ID>LongMethod:WithStatementTest.kt$WithStatementTest$@Test fun testWithContextManager()</ID>
+    <ID>LongMethod:WithStatementTest.kt$WithStatementTest$@Test fun testWithSingleStatement()</ID>
+    <ID>LongParameterList:DeclarationHandler.kt$DeclarationHandler$( func: Function, node: Python.AST.arg, isPosOnly: Boolean = false, isVariadic: Boolean = false, isKwoOnly: Boolean = false, defaultValue: Expression? = null, )</ID>
+    <ID>LoopWithTooManyJumpStatements:CodeInterningTest.kt$CodeInterningTest$for</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$114L</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$115L</ID>
+    <ID>MagicNumber:ExpressionHandler.kt$ExpressionHandler$97L</ID>
+    <ID>MagicNumber:PythonLanguageFrontend.kt$PythonLanguageFrontend$3</ID>
+    <ID>MagicNumber:PythonLanguageFrontend.kt$PythonLanguageFrontend$5</ID>
+    <ID>MagicNumber:PythonValueEvaluator.kt$PythonValueEvaluator$512L</ID>
+    <ID>MagicNumber:PythonValueEvaluator.kt$PythonValueEvaluator$64L</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"Expected three usages: one for the initial assignment, one for the comprehension and one for the usage in \"print(x)\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"Expected two variables. One for the \"outside\" x, one for the \"temp\" inside the comprehension and one for the \"a\" inside the comprehension."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"[foo(i) for i in x if i == 10 if i &lt; 20]\" has exactly one comprehensionExpressions which is \"for i in x if i == 10 if i &lt; 20\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"[foo(i) for i in x if i == 10]\" has exactly one comprehensionExpressions which is \"for i in x if i == 10\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"[foo(i) for i in x]\" has exactly one comprehensionExpressions which is \"for i in x\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"[foo(i) for z in y if z in x for i in z if i == 10 ]\" has two comprehension expressions which are \"for z in y if z in x\" and \"for i in z if i == 10\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{foo(i) for i in x if i == 10 if i &lt; 20}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10 if i &lt; 20\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{foo(i) for i in x if i == 10}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{foo(i) for i in x}\" has exactly one comprehensionExpressions which is \"for i in x\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{foo(i) for z in y if z in x for i in z if i == 10 }\" has two comprehension expressions which are \"for z in y if z in x\" and \"for i in z if i == 10\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{i: foo(i) for i in x if i == 10 if i &lt; 20}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10 if i &lt; 20\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{i: foo(i) for i in x if i == 10}\" has exactly one comprehensionExpressions which is \"for i in x if i == 10\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{i: foo(i) for i in x}\" has exactly one comprehensionExpressions which is \"for i in x\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension \"{i: foo(i) for z in y if z in x for i in z if i == 10 }\" has two comprehension expressions which are \"for z in y if z in x\" and \"for i in z if i == 10\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension has the statement \"foo(i)\" which is expected to be modeled as a Call with localName \"foo\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The CollectionComprehension has the statement \"i: foo(i)\" which is expected to be modeled as a KeyValue."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment_and_index_variable\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment_and_index_variable_reversed\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"comprehension_with_list_assignment_and_local_index_variable\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"dict_comp\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"generator\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comp\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comprehension_to_field\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"list_comprehension_to_list_index\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"set_comp\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The body of each function is modeled as a Block in the CPG. This must also apply to the function \"tuple_comp\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The control variable \"b.a\" is expected to be represented by a MemberAccess in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberAccess is \"a\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The control variable \"b[0]\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal&lt;Int> with value \"0\" (with kotlin type Long )."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The control variable of the Comprehension is \"b[0]\" which is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal&lt;Int> with value \"0\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first element of the tuple \"(a, b[0])\" is expected to be represented by a Reference with localName \"a\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first element of the tuple \"(a, b[a])\" is expected to be represented by a Reference with localName \"a\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement in the body is \"a = [foo(i) for i in x if i == 10}^\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement in the body is \"a = {foo(i) for i in x if i == 10}^\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement in the body is \"a = {i: foo(i) for i in x if i == 10}^\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"comprehension_with_list_assignment\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"comprehension_with_list_assignment_and_index_variable\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\" is expected to be the initialization of the local variable \"a\" by the statement \"a = 1\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be the initialization of the local variable \"c\" by the statement \"c = 1\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"list_comprehension_to_field\" is expected to be the initialization of list \"b\" by the statement \"b = Magic()\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The first statement of the function \"list_comprehension_to_list_index\" is expected to be the initialization of list \"b\" by the statement \"b = [0, 1, 2]\" which is expected to be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The iterable of the comprehension expression \"for i in x if i == 10 if i &lt; 20\" is expected to be a Reference with localName \"x\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The iterable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"x\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The iterable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"x\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The key of the CollectionComprehension of the KeyValue \"i: foo(i)\" is expected to be a Reference with localName \"i\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The left hand side of the assignment \"a = 1\" is expected to be represented by a Reference with localName \"a\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The left hand side of the assignment \"b = Magic())\" is expected to be represented by a Reference with localName \"b\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The left hand side of the assignment \"b = Magic()\" is expected to be represented by a Reference with localName \"b\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The left hand side of the assignment \"c = 1\" is expected to be represented by a Reference with localName \"c\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The reference of \"x\" inside the inner comprehension's statement refers to the variable declared outside the comprehensions."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side must be a CollectionComprehension representing python's list comprehension \"[bar(k, v) for (k, v) in x]\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"a = [foo(i) for i in x if i == 10]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for i in x if i == 10]\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"a = {foo(i) for i in x if i == 10}\" is expected to be modeled as a CollectionComprehension \"{foo(i) for i in x if i == 10}\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"a = {i: foo(i) for i in x if i == 10}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x if i == 10}\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"b = [foo(i) for i in x]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for i in x]\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"b = {foo(i) for i in x}\" is expected to be modeled as a CollectionComprehension \"{foo(i) for i in x}\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"b = {i: foo(i) for i in x}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x}\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"c = [foo(i) for i in x if i == 10 if i &lt; 20]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for i in x if i == 10 if i &lt; 20]\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"c = {foo(i) for i in x if i == 10 if i &lt; 20}\" is expected to be modeled as a CollectionComprehension \"{foo(i) for i in x if i == 10 if i &lt; 20}\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"c = {i: foo(i) for i in x if i == 10 if i &lt; 20}\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for i in x if i == 10 if i &lt; 20}\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"d = [foo(i) for z in y if z in x for i in z if i == 10 ]\" is expected to be modeled as a CollectionComprehension \"[foo(i) for z in y if z in x for i in z if i == 10 ]\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"d = {foo(i) for z in y if z in x for i in z if i == 10 }\" is expected to be modeled as a CollectionComprehension \"{foo(i) for z in y if z in x for i in z if i == 10 }\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The right hand side of the assignment \"d = {i: foo(i) for z in y if z in x for i in z if i == 10 }\" is expected to be modeled as a CollectionComprehension \"{i: foo(i) for z in y if z in x for i in z if i == 10 }\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The scope of the variable is the local scope belonging to the list comprehension. In particular, it is not the FunctionScope."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal&lt;Int> with value \"0\" (with kotlin type Long )."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal&lt;Int> with value \"0\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is Reference \"a\" which refers to the same variable as the tuple's first element."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal&lt;Int> with value \"0\" (with kotlin type Long )."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"a\" which refers to the same variable as the tuple's first element."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second element of the tuple \"(b[a], a)\" is expected to be represented by a Reference with localName \"a\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second element of the tuple \"(b[c], a)\" is expected to be represented by a Reference with localName \"a\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second statement in the body is \"b = [foo(i) for i in x]\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second statement in the body is \"b = {foo(i) for i in x}\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second statement in the body is \"b = {i: foo(i) for i in x}\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second statement of the function \"comprehension_with_list_assignment\" is expected to be python's list comprehension \"[a for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]]\" which is represented by a CollectionComprehension in the CPG"</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second statement of the function \"comprehension_with_list_assignment_and_index_variable\" is expected to be python's list comprehension \"[a for (a, b[a]) in [(0, 'this'), (1, 'is'), (2, 'fun')]]\" which is represented by a CollectionComprehension in the CPG"</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second statement of the function \"list_comprehension_to_field\" is expected to be python's list comprehension \"[b.a for b.a in ['this', 'is', 'fun']]\" which is represented by a CollectionComprehension in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The second statement of the function \"list_comprehension_to_list_index\" is expected to be python's list comprehension \"[b[0] for b[0] in ['this', 'is', 'fun']]\" which is represented by a CollectionComprehension in the CPG"</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement in the body is \"c = [foo(i) for i in x if i == 10 if i &lt; 20]\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement in the body is \"c = {foo(i) for i in x if i == 10 if i &lt; 20}\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement in the body is \"c = {i: foo(i) for i in x if i == 10 if i &lt; 20}\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement in the body is \"d = [foo(i) for z in y if z in x for i in z if i == 10 ]\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement in the body is \"d = {foo(i) for z in y if z in x for i in z if i == 10 }\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement in the body is \"d = {i: foo(i) for z in y if z in x for i in z if i == 10 }\" which should be represented by an Assign in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\" is expected to be python's list comprehension \"[a for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]]\" which is represented by a CollectionComprehension in the CPG"</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The third statement of the function \"comprehension_with_list_assignment_and_local_index_variable\" is expected to be python's list comprehension \"[a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]\" which is represented by a CollectionComprehension in the CPG"</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The tuple \"(a, b[0])\" represented by an InitializerList in the CPG is expected to have exactly two elements."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The tuple \"(a, b[a])\" represented by an InitializerList in the CPG is expected to have exactly two elements."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The tuple \"(b[a], a)\" represented by an InitializerList in the CPG is expected to have exactly two elements."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The tuple \"(b[c], a)\" represented by an InitializerList in the CPG is expected to have exactly two elements."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The two predicates \"if i == 10 if i &lt; 20\" are expected to be connected with the binary operator \"and\" in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The value of the CollectionComprehension of the KeyValue \"i: foo(i)\" is expected to be a Call with localName \"foo\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The variable of the Comprehension is the tuple \"(a, b[0])\" which is expected to be represented by an InitializerList in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The variable of the Comprehension is the tuple \"(a, b[a])\" which is expected to be represented by an InitializerList in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The variable of the Comprehension is the tuple \"(b[a], a)\" which is expected to be represented by an InitializerList in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The variable of the Comprehension is the tuple \"(b[c], a)\" which is expected to be represented by an InitializerList in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The variable of the comprehension expression \"for i in x if i == 10 if i &lt; 20\" is expected to be a Reference with localName \"i\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The variable of the comprehension expression \"for i in x if i == 10\" is expected to be a Reference with localName \"i\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"The variable of the comprehension expression \"for i in x\" is expected to be a Reference with localName \"i\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one CollectionComprehension in the list comprehension \"[a for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]]\". It represents the code's part \"for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one CollectionComprehension in the list comprehension \"[a for (a, b[a]) in [(0, 'this'), (1, 'is'), (2, 'fun')]]\". It represents the code's part \"for (a, b[a]) in [(0, 'this'), (1, 'is'), (2, 'fun')]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one CollectionComprehension in the list comprehension \"[a for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]]\". It represents the code's part \"for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one CollectionComprehension in the list comprehension \"[a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]\". It represents the code's part \"for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one CollectionComprehension in the list comprehension \"[b.a for b.a in ['this', 'is', 'fun']]\". It represents the code's part \"for b.a in ['this', 'is', 'fun']\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one CollectionComprehension in the list comprehension \"[b[0] for b[0] in ['this', 'is', 'fun']]\". It represents the code's part \"for b[0] in ['this', 'is', 'fun']\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one Comprehension in the list comprehension \"[a for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]]\". It represents the code's part \"for (a, b[0]) in [(1, 2), (2, 4), (3, 6)]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one Comprehension in the list comprehension \"[a for (a, b[a]) in [(0, 'this'), (1, 'is'), (2, 'fun')]]\". It represents the code's part \"for (a, b[a]) in [(0, 'this'), (1, 'is'), (2, 'fun')]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one Comprehension in the list comprehension \"[a for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]]\". It represents the code's part \"for (b[a], a) in [('this', 0), ('is', 1), ('fun', 2)]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one Comprehension in the list comprehension \"[a for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]]\". It represents the code's part \"for (b[c], a) in [('this', 0), ('is', 1), ('fun', 2)]\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one Comprehension in the list comprehension \"[b.a for b.a in ['this', 'is', 'fun']]\". It represents the code's part \"for b.a in ['this', 'is', 'fun']\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There is expected to be exactly one Comprehension in the list comprehension \"[b[0] for b[0] in ['this', 'is', 'fun']]\". It represents the code's part \"for b[0] in ['this', 'is', 'fun']\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"a\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"b\" inside the first statement of the function \"list_comprehension_to_field\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"b\" inside the first statement of the function \"list_comprehension_to_list_index\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a Variable with the local name \"c\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a class called \"Magic\" in the file. It must be neither null nor any other class than a Record which is expected to model python classes in the CPG."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"comp_binding\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"comp_binding_assign_expr\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"comp_binding_assign_expr_nested\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"comprehension_with_list_assignment\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"comprehension_with_list_assignment_and_index_variable\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"comprehension_with_list_assignment_and_index_variable_reversed\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"comprehension_with_list_assignment_and_local_index_variable\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"dict_comp\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"generator\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"list_comp\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"list_comprehension_to_field\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"list_comprehension_to_list_index\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"set_comp\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be a function called \"tuple_comp\" in the file. It must be neither null nor any other class than a Function."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"There must be exactly one CollectionComprehension (the list comprehension) in the statement of the body. Note: The inner collection comprehension would be reached by the extension function Node::statements which does not apply here."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"This test is ignored because the variable \"a\" in the tuple's first element is incorrectly resolved to the variable in the tuple's second element. This adds refersTo edges which should not exist and also causes the DFG to contain additional edges."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect exactly one field inside the record declaration representing the class \"Magic\" and that's the field which we expect to represent the class' attribute \"a\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the member expression \"b.a\" used as control variable refers to the Field \"a\" of the class \"Magic\"."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"a\" in the first element of the tuple refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"a\" in the second element of the tuple refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"a\" in the second element of the tuple refers to the same Variable as the first element of the tuple."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"a\" used as an index in the first element of the tuple does not have any incoming data flows which somewhat simulates that it's not initialized at this point in time which is also why python crashes."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same Variable as the second element of the tuple nor to the local variable nor does it have an own Variable since python would just crash."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"b\" in the control variable refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0)."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"b\" in the tuple refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0)."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"b\" used in the control variable refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0)."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that the reference \"c\" used as an index in the first element of the tuple refers to the local variable \"c\" (in statement 1)."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that there's one DFG edge flowing into the control variable \"b.a\". The DFG should come from the iterable."</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerList and have the index \"0\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that there's one DFG edge flowing into the reference \"b[0]\" in the tuple. It should come from the InitializerList and have the index \"1\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerList and have the index \"0\""</ID>
+    <ID>MaxLineLength:CollectionComprehensionTest.kt$CollectionComprehensionTest$"We expect that there's one DFG edge flowing into the reference \"b[a]\" in the tuple. It should come from the InitializerList and have the index \"1\""</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"0\"."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect a single incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\"."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect a single partial incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"a\"."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect an incoming DFG edge: The partial edge from the reference \"d\" with partial granularity and index \"a\"."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there are two DFG edges to the reference \"d\" line 9: The partial flow and the full flow from line 2."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there is a full DFG edge between the access \"d\" in line 9 and the initialization in line 2."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there is a full DFG edge between the literal 1 and the access \"d.b\" in line 9 of the file."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there is a full DFG edge between the literal 1 and the access \"d['b']\" in line 9 of the file."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there is a full DFG edge between the literal 1 and the access \"d[1]\" in line 9 of the file."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there is a partial DFG edge between the access \"d.b\" in line 9 of the file and its reference \"d\" with granularity StringIndexedGranularity and index \"b\"."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there is a partial DFG edge between the access \"d['b']\" in line 9 of the file and its reference \"d\" with granularity StringIndexedGranularity and index \"b\"."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect that there is a partial DFG edge between the access \"d[1]\" in line 9 of the file and its reference \"d\" with granularity IndexedGranularity and index 1."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect two incoming DFG edges The partial edge from the reference \"d\" with partial granularity and index 1 and the full edge from the assignment in line 9."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect two incoming DFG edges The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 9."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index 1 and the full edge from the assignment in line 9."</ID>
+    <ID>MaxLineLength:DFGTest.kt$DFGTest$"We expect two incoming DFG edges: The partial edge from the reference \"d\" with partial granularity and index \"b\" and the full edge from the assignment in line 9."</ID>
+    <ID>MaxLineLength:JepSingleton.kt$JepSingleton$"Failed to create Jep interpreter. Did you set up Jep correctly? Note: the Jep module has to be rebuild after a Python upgrade. Consult [the README](https://github.com/Fraunhofer-AISEC/cpg/?tab=readme-ov-file#virtual-env) for detailed instructions."</ID>
+    <ID>MaxLineLength:Python.kt$Python.AST.AsyncFunctionDef$*</ID>
+    <ID>MaxLineLength:Python.kt$Python.AST.BaseOperator$*</ID>
+    <ID>MaxLineLength:Python.kt$Python.AST.BaseStmt$*</ID>
+    <ID>MaxLineLength:Python.kt$Python.AST.FunctionDef$*</ID>
+    <ID>MaxLineLength:Python.kt$Python.AST.arguments$*</ID>
+    <ID>MaxLineLength:PythonLanguage.kt$PythonLanguage$"Argument type of call to {} ({}) does not match type annotation on the function parameter ({}), but since Python does have runtime checks, we ignore this"</ID>
+    <ID>MaxLineLength:StatementHandler.kt$StatementHandler$"handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope."</ID>
+    <ID>MemberNameEqualsClassName:Python.kt$Python.AST.arg$val arg: String by lazy { "arg" of pyObject }</ID>
+    <ID>NestedBlockDepth:DeclarationHandler.kt$DeclarationHandler$private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): Function</ID>
+    <ID>NestedBlockDepth:PythonAddDeclarationsPass.kt$PythonAddDeclarationsPass$private fun handleComprehension(comprehensionExpression: Comprehension)</ID>
+    <ID>NestedBlockDepth:PythonLanguageFrontend.kt$PythonLanguageFrontend$private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnit</ID>
+    <ID>ReturnCount:ExpressionHandler.kt$ExpressionHandler$private fun handleConstant(node: Python.AST.Constant): Expression</ID>
+    <ID>ReturnCount:PythonAddDeclarationsPass.kt$PythonAddDeclarationsPass$private fun handleWriteToReference(ref: Reference): Variable?</ID>
+    <ID>ReturnCount:PythonLanguage.kt$PythonLanguage$override fun propagateTypeOfBinaryOperation( operatorCode: String?, lhsType: Type, rhsType: Type, hint: BinaryOperator?, ): Type</ID>
+    <ID>TooGenericExceptionThrown:JepSingleton.kt$JepSingleton$throw RuntimeException( "CPG_JEP_LIBRARY environment variable defined as '${library}' but it does not exist." )</ID>
+    <ID>TooManyFunctions:ExpressionHandler.kt$ExpressionHandler : PythonHandler</ID>
+    <ID>TooManyFunctions:PythonLanguageFrontend.kt$PythonLanguageFrontend : LanguageFrontend</ID>
+    <ID>TooManyFunctions:PythonValueEvaluator.kt$PythonValueEvaluator : ValueEvaluator</ID>
+    <ID>TooManyFunctions:StatementHandler.kt$StatementHandler : PythonHandler</ID>
+    <ID>UnusedParameter:DeclarationHandler.kt$DeclarationHandler$node: Python.AST.WithLocation</ID>
+    <ID>UnusedPrivateProperty:StatementHandler.kt$StatementHandler$i</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.Assign$val type_comment: String? by lazy { "type_comment" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.ClassDef$val decorator_list: kotlin.collections.List&lt;BaseExpr> by lazy { "decorator_list" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.FormattedValue$val format_spec: BaseExpr? by lazy { "format_spec" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.MatchClass$val kwd_attrs: kotlin.collections.List&lt;String> by lazy { "kwd_attrs" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.MatchClass$val kwd_patterns: kotlin.collections.List&lt;BasePattern> by lazy { "kwd_patterns" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.Module$val type_ignores: kotlin.collections.List&lt;type_ignore> by lazy { "type_ignores" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.NormalOrAsyncFor$val type_comment: String?</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.NormalOrAsyncFunctionDef$val decorator_list: kotlin.collections.List&lt;BaseExpr></ID>
+    <ID>VariableNaming:Python.kt$Python.AST.NormalOrAsyncFunctionDef$val type_comment: String?</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.NormalOrAsyncWith$val type_comment: String?</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.WithLocation$/** Maps to the `col_offset` filed from Python's ast. */ val col_offset: Int? get() { return (pyObject.getAttr("col_offset") as? Long)?.toInt() }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.WithLocation$/** Maps to the `end_col_offset` filed from Python's ast. */ val end_col_offset: Int? get() { return (pyObject.getAttr("end_col_offset") as? Long)?.toInt() }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.WithLocation$/** Maps to the `end_lineno` filed from Python's ast. */ val end_lineno: Int? get() { return (pyObject.getAttr("end_lineno") as? Long)?.toInt() }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.arg$val type_comment: String? by lazy { "type_comment" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.arguments$val kw_defaults: kotlin.collections.List&lt;BaseExpr> by lazy { "kw_defaults" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.comprehension$val is_async: Long by lazy { "is_async" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.withitem$val context_expr: BaseExpr by lazy { "context_expr" of pyObject }</ID>
+    <ID>VariableNaming:Python.kt$Python.AST.withitem$val optional_vars: BaseExpr? by lazy { "optional_vars" of pyObject }</ID>
+    <ID>VariableNaming:PythonFrontendTest.kt$PythonFrontendTest$val `if` = body.statements[1]</ID>
+    <ID>VariableNaming:SystemInformationTest.kt$SystemInformationTest$val v123_2 = VersionInfo(1, 2, 3)</ID>
+  </CurrentIssues>
+</SmellBaseline>
