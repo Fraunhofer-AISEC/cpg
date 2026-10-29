@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.SizeTPointer
@@ -432,8 +433,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
             // check, if the current base type is a pointer -> then we need to handle this as an
-            // array access
-            if (baseType is PointerType) {
+            // array access. An unknown type is treated the same way: it can occur here when the
+            // source element type of the GEP (or an intermediate element) is itself an opaque
+            // pointer (e.g. `getelementptr ptr, ptr %arr, i64 %idx`, indexing through an array of
+            // opaque pointers). In that case `typeOf(...).pointer()` yields `UnknownType` instead
+            // of `PointerType(UnknownType)`, because `UnknownType.reference()` returns itself. We
+            // still need to treat this index as an array/pointer access, not a struct field
+            // access, otherwise we wrongly try to resolve it as a member and fail below.
+            if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())

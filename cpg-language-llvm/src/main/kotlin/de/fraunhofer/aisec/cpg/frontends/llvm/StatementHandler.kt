@@ -1442,7 +1442,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // the instruction's own value type (e.g. for alloca or getelementptr results) is
             // just an untyped "ptr" that carries no pointee information, whereas the individual
             // instruction handlers already resolved the correct pointee type from explicit type
-            // operands (allocated type, GEP source element type, ...).
+            // operands (allocated type, GEP source element type, ...). This is not limited to
+            // alloca/getelementptr: declarationOrNot is shared by every instruction that can have
+            // a left-hand side, so this fallback applies to all of them. It is a no-op unless the
+            // handler already set a more specific, non-unknown type on the expression it built
+            // (as alloca and load do), since rhs.type otherwise still defaults to UnknownType.
             var type = frontend.typeOf(valueRef)
             val rhsType = rhs.type
             if (type is UnknownType && rhsType !is UnknownType) {

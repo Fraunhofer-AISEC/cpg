@@ -1266,4 +1266,63 @@ class LLVMIRLanguageFrontendTest {
 
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
     // be found in client.ll.
+
+    @Test
+    fun testGetElementPtrThroughOpaquePointerArray() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("gep_opaque_ptr_array.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["getElem"]
+        assertNotNull(func)
+
+        // %p = getelementptr ptr, ptr %arr, i64 %idx
+        //
+        // The GEP's source element type is itself an opaque pointer, so `typeOf(ptr).pointer()`
+        // collapses to `UnknownType` instead of `PointerType(UnknownType)` (UnknownType.pointer()
+        // is a no-op). Indexing through it must still be treated as an array/pointer access
+        // (Subscription), not misinterpreted as a struct field access.
+        val p = func.variables["p"]
+        assertNotNull(p)
+
+        val unary = p.initializer
+        assertIs<PointerReference>(unary)
+        assertIs<Subscription>(unary.input)
+    }
+
+    @Test
+    fun testGetElementPtrConstantExpression() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("gep_const_expr_opaque_ptr.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+        assertNotNull(tu)
+
+        // @gp = global ptr getelementptr (%struct.ST, ptr @g, i64 0, i32 1)
+        //
+        // The GEP here is a constant expression used as a global initializer, not an instruction.
+        // LLVMGetGEPSourceElementType must work on both.
+        val gp = tu.variables["gp"]
+        assertNotNull(gp)
+
+        val unary = gp.initializer
+        assertIs<PointerReference>(unary)
+
+        val field = unary.input
+        assertIs<MemberAccess>(field)
+        assertLocalName("field_1", field)
+        assertLocalName("i32", field.type)
+    }
 }
