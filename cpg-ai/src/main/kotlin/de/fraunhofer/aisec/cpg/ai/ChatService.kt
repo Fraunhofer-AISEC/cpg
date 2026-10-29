@@ -170,7 +170,10 @@ class ChatService(
     /** A new id for [ChatRequestJSON.sessionId], to start a conversation with fresh memory. */
     fun createSession(): String = UUID.randomUUID().toString()
 
-    /** Drop the stored ChatMemory history for [sessionId]; a no-op if it was never used. */
+    /**
+     * Drop the stored ChatMemory history for [sessionId]; a no-op if it was never used. Histories
+     * are kept until evicted (see [SessionChatHistoryProvider]), so call this when a session ends.
+     */
     fun evictSession(sessionId: String) {
         chatHistoryProvider.evict(sessionId)
     }

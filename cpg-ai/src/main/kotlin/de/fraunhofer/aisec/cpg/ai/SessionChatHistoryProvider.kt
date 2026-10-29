@@ -32,6 +32,10 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * [ChatHistoryProvider] for Koog's `ChatMemory` in [ChatService], keeping the history per
  * `sessionId` of [ChatRequestJSON] in memory (including tool-call/tool-result messages).
+ *
+ * The store has no size or age limit: a session's history stays until [evict] removes it (via
+ * [ChatService.evictSession]) or the process ends. A host that runs several sessions on one
+ * [ChatService] must evict each session once it is done with it.
  */
 class SessionChatHistoryProvider : ChatHistoryProvider {
     private val storage = ConcurrentHashMap<String, List<Message>>()
