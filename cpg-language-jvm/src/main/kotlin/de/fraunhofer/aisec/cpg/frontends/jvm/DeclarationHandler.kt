@@ -77,6 +77,15 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 record.addSuperClass(frontend.typeOf(o.get()))
             }
 
+            // Map the class' access flags onto the canonical visibility model. The class is not
+            // yet on the scope stack, so the current scope reflects its enclosing (declaration)
+            // context.
+            record.applyAccessFlags(
+                sootClass.modifiers.mapTo(mutableSetOf()) {
+                    it.name.lowercase(java.util.Locale.ROOT)
+                }
+            )
+
             // Collect implemented interfaces
             for (i in sootClass.interfaces) {
                 record.implementedInterfaces += frontend.typeOf(i)
@@ -118,6 +127,11 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                     rawNode = sootMethod,
                 )
             }
+
+        // Map the method's access flags onto the canonical visibility model.
+        method.applyAccessFlags(
+            sootMethod.modifiers.mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
+        )
 
         // Enter method scope
         frontend.scopeManager.enterScope(method)
@@ -161,15 +175,30 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     }
 
     fun handleField(field: SootField): Field {
-        return newField(
-            field.name,
-            frontend.typeOf(field.type),
-            field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
-            rawNode = field,
+        val declaration = newField(field.name, frontend.typeOf(field.type), rawNode = field)
+
+        // Map the field's access flags onto the canonical visibility model. A field is always a
+        // record member.
+        declaration.applyAccessFlags(
+            field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
         )
+
+        return declaration
     }
 
     private fun handleLocal(local: Local): Variable {
         return newVariable(local.name, frontend.typeOf(local.type), rawNode = local)
+    }
+
+    /**
+     * Records the JVM bytecode access flags [rawModifiers] (including ones without a canonical
+     * meaning, such as `final` or `volatile`) losslessly on [Declaration.modifiers] and lets the
+     * language project them onto the canonical properties via
+     * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which sets
+     * [Declaration.visibility] and, where applicable, [ValueDeclaration.isStatic].
+     */
+    private fun Declaration.applyAccessFlags(rawModifiers: Set<String>) {
+        modifiers = modifiers + rawModifiers
+        frontend.language.applyModifiers(this, frontend.scopeManager.currentScope)
     }
 }

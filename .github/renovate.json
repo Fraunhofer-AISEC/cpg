@@ -5,6 +5,9 @@
     ":enableVulnerabilityAlerts",
     "security:minimumReleaseAgeNpm"
   ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
   "patch": {
     "enabled": false
   },

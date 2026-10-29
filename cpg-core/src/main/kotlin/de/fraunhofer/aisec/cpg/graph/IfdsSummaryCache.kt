@@ -66,16 +66,16 @@ class IfdsSummaryCache(val direction: AnalysisDirection) {
     private val graph = direction.graphToFollow
 
     // ---- predicate-free ("pure") tabulation state, shared/incremental across all queries ----
-    private val pureSummaries: MutableMap<Node, MutableSet<SummaryRecord>> = IdentityHashMap()
-    private val pureCallers: MutableMap<Node, MutableList<CallerRecord>> = IdentityHashMap()
+    private val pureSummaries: MutableMap<IfdsNode, MutableSet<SummaryRecord>> = HashMap()
+    private val pureCallers: MutableMap<IfdsNode, MutableList<CallerRecord>> = HashMap()
     private val pureVisited = HashSet<PathEdge>()
     private val pureWorklist = ArrayDeque<PathEdge>()
 
     /** Callee entries whose pure summary set is fully tabulated (complete). */
-    private val pureComplete: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
+    private val pureComplete: MutableSet<IfdsNode> = HashSet()
 
     /** Callee entries seeded during the in-progress drain; all become complete once it finishes. */
-    private val seededThisDrain: MutableSet<Node> = Collections.newSetFromMap(IdentityHashMap())
+    private val seededThisDrain: MutableSet<IfdsNode> = HashSet()
 
     // ---- dirtiness ----
     private val dirty: MutableSet<Function> = Collections.newSetFromMap(IdentityHashMap())
@@ -87,10 +87,10 @@ class IfdsSummaryCache(val direction: AnalysisDirection) {
      * the pure summary on first use.
      */
     internal fun replayCleanCallee(
-        calleeEntry: Node,
+        calleeEntry: IfdsNode,
         callerToken: List<Call>,
         k: Int,
-        emit: (Node) -> Unit,
+        emit: (IfdsNode) -> Unit,
     ) {
         ensurePure(calleeEntry)
         pureSummaries[calleeEntry]?.toList()?.forEach { sum ->
@@ -99,7 +99,7 @@ class IfdsSummaryCache(val direction: AnalysisDirection) {
     }
 
     /** Ensures [calleeEntry] has a complete pure summary set, tabulating it on demand. */
-    private fun ensurePure(calleeEntry: Node) {
+    private fun ensurePure(calleeEntry: IfdsNode) {
         if (calleeEntry in pureComplete) return
         seededThisDrain.clear()
         seedPure(calleeEntry, calleeEntry)
@@ -113,44 +113,48 @@ class IfdsSummaryCache(val direction: AnalysisDirection) {
         pureComplete.addAll(seededThisDrain)
     }
 
-    private fun seedPure(ctx: Node?, node: Node) {
+    private fun seedPure(ctx: IfdsNode?, node: IfdsNode) {
         // No predicate: the pure tabulation treats no node as a sink.
         if (pureVisited.add(PathEdge(ctx, node))) pureWorklist.addLast(PathEdge(ctx, node))
     }
 
     /** Advances the predicate-free tabulation one step past [node] in context [ctx]. */
-    private fun expandPure(ctx: Node?, node: Node) {
+    private fun expandPure(ctx: IfdsNode?, node: IfdsNode) {
         for (step in ifdsStepsOf(node, backward, graph)) {
             when (step) {
                 is IntraStep -> seedPure(ctx, step.target)
-                is CallStep -> {
-                    val callee = step.calleeEntry
-                    seededThisDrain.add(callee)
-                    pureCallers
-                        .getOrPut(callee) { mutableListOf() }
-                        .add(CallerRecord(ctx, step.callSite, step.token))
-                    seedPure(callee, callee)
-                    pureSummaries[callee]?.toList()?.forEach { sum ->
-                        if (ifdsTokensMatch(step.token, sum.token.calls, Int.MAX_VALUE)) {
-                            seedPure(ctx, sum.target)
-                        }
-                    }
-                }
-                is ReturnStep -> {
-                    if (ctx == null) {
-                        for (t in step.targets) seedPure(null, t)
-                        continue
-                    }
-                    val tokenKey = TokenKey(step.token)
-                    for (t in step.targets) {
-                        val sr = SummaryRecord(tokenKey, t)
-                        if (pureSummaries.getOrPut(ctx) { HashSet() }.add(sr)) {
-                            pureCallers[ctx]?.toList()?.forEach { cr ->
-                                if (ifdsTokensMatch(cr.token, step.token, Int.MAX_VALUE)) {
-                                    seedPure(cr.callerCtx, t)
-                                }
-                            }
-                        }
+                is CallStep -> pureCall(ctx, step)
+                is ReturnStep -> pureReturn(ctx, step)
+            }
+        }
+    }
+
+    private fun pureCall(ctx: IfdsNode?, step: CallStep) {
+        val callee = step.calleeEntry
+        seededThisDrain.add(callee)
+        pureCallers
+            .getOrPut(callee) { mutableListOf() }
+            .add(CallerRecord(ctx, step.callSite, step.token))
+        seedPure(callee, callee)
+        pureSummaries[callee]?.toList()?.forEach { sum ->
+            if (ifdsTokensMatch(step.token, sum.token.calls, Int.MAX_VALUE)) {
+                seedPure(ctx, sum.target)
+            }
+        }
+    }
+
+    private fun pureReturn(ctx: IfdsNode?, step: ReturnStep) {
+        if (ctx == null) {
+            for (t in step.targets) seedPure(null, t)
+            return
+        }
+        val tokenKey = TokenKey(step.token)
+        for (t in step.targets) {
+            val sr = SummaryRecord(tokenKey, t)
+            if (pureSummaries.getOrPut(ctx) { HashSet() }.add(sr)) {
+                pureCallers[ctx]?.toList()?.forEach { cr ->
+                    if (ifdsTokensMatch(cr.token, step.token, Int.MAX_VALUE)) {
+                        seedPure(cr.callerCtx, t)
                     }
                 }
             }
@@ -183,6 +187,10 @@ class IfdsSummaryCache(val direction: AnalysisDirection) {
         val f = functionOf(calleeEntry) ?: return true
         return f in dirty
     }
+
+    /** As [isDirty], but for a tabulation vertex. Synthetic split vertices are always dirty. */
+    internal fun isDirty(calleeEntry: IfdsNode): Boolean =
+        calleeEntry !is RealNode || isDirty(calleeEntry.node)
 
     /**
      * The [Function] a node belongs to (via AST for program nodes, via underlying for overlays).

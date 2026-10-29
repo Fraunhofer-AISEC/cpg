@@ -968,7 +968,7 @@ private fun attachStandardDfgEdges(
     }
     call.prevDFGEdges.addContextSensitive(
         candidate,
-        callingContext = CallingContextOut(mutableListOf(call)),
+        callingContexts = listOf(CallingContextOut(mutableListOf(call))),
     )
 }
 
@@ -1012,13 +1012,13 @@ private fun attachFunctionSummaryDerivedDfgEdges(candidate: Function, call: Call
                 ?.prevDFGEdges
                 ?.addContextSensitive(
                     param,
-                    callingContext = CallingContextOut(mutableListOf(call)),
+                    callingContexts = listOf(CallingContextOut(mutableListOf(call))),
                 )
         } else if (param is Parameter) {
             val arg = call.arguments.getOrNull(param.argumentIndex) ?: continue
             arg.prevDFGEdges.addContextSensitive(
                 param,
-                callingContext = CallingContextOut(mutableListOf(call)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(call))),
             )
             arg.access = AccessValues.READWRITE
             (arg as? Reference)?.refersTo?.let { arg.nextDFGEdges += it }
@@ -1160,7 +1160,8 @@ private fun tearDownPointsToPassCallEdges(call: Call) {
     val caller = call.firstParentOrNull<Function>() ?: return
     for (node in caller.allChildren<Node>()) {
         node.prevDFGEdges.removeIf {
-            it is ContextSensitiveDataflow && it.callingContext.calls.any { c -> c === call }
+            it is ContextSensitiveDataflow &&
+                it.callingContexts.any { cc -> cc.calls.any { c -> c === call } }
         }
     }
 }

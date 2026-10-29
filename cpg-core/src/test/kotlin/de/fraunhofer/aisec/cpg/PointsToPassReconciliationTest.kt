@@ -66,7 +66,7 @@ class PointsToPassReconciliationTest {
      */
     private fun contextSensitiveEdgesFor(call: de.fraunhofer.aisec.cpg.graph.expressions.Call) =
         call.prevDFGEdges.filterIsInstance<ContextSensitiveDataflow>().filter {
-            it.callingContext.calls.any { c -> c === call }
+            it.callingContexts.any { cc -> cc.calls.any { c -> c === call } }
         }
 
     @Test
