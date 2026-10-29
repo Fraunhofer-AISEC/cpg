@@ -50,12 +50,13 @@ class LLVMIRLanguageFrontendTest {
             assertThrows<TranslationException> {
                 frontend.parse(topLevel.resolve("main-broken.ll").toFile())
             }
-        assertTrue(exception.message?.startsWith("Could not parse IR: ") == true)
+        assertTrue(exception.message?.startsWith("Could not parse IR.") == true)
 
         // main-broken.ll has a genuine syntax error (a typo'd "prvate"), independent of typed vs.
         // opaque pointers, so both parse attempts fail. The exception should report both error
-        // messages, not just the one from the (here, less informative) opaque-pointer attempt.
-        assertTrue(exception.message?.contains("Also failed in a typed-pointer context:") == true)
+        // messages, neither one implied to be more authoritative than the other.
+        assertTrue(exception.message?.contains("Typed-pointer context:") == true)
+        assertTrue(exception.message?.contains("Opaque-pointer context:") == true)
 
         // LLVM writes a short, NUL-terminated message into a fixed-size (10000 byte) buffer; the
         // message must be cut off there, not decoded (and concatenated, since there are two of
@@ -1335,6 +1336,50 @@ class LLVMIRLanguageFrontendTest {
         val unary = p.initializer
         assertIs<PointerReference>(unary)
         assertIs<MemberAccess>(unary.input)
+
+        // %next = load %struct.Node*, %struct.Node** %p
+        //
+        // Loading the self-pointer field back out is unaffected by the field declaration's
+        // UnknownType: by the time the load instruction is processed, struct.Node's own type is
+        // already fully resolved and cached, so `%struct.Node*` resolves correctly here, not to
+        // UnknownType. (The cycle guard only ever affects the one Field declaration built while
+        // the record was still under construction, not later references to the same type string.)
+        val next = func.variables["next"]
+        assertNotNull(next)
+        val nextType = next.type
+        assertIs<PointerType>(nextType)
+        assertIs<ObjectType>(nextType.elementType)
+        assertSame(rec, (nextType.elementType as ObjectType).recordDeclaration)
+    }
+
+    @Test
+    fun testGetElementPtrPastPointerFieldIsInvalidIR() {
+        // Confirms the invariant that the GEP loop's `baseType is UnknownType` handling in
+        // ExpressionHandler relies on: LLVM's own parser rejects indexing past a pointer-typed
+        // field (here, a self-referential struct's own pointer field) within a single
+        // getelementptr instruction, so that branch is never reached with more indices to go.
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val ctx = TranslationContext(TranslationConfiguration.builder().build())
+        val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage())
+        val exception =
+            assertThrows<TranslationException> {
+                frontend.parse(topLevel.resolve("gep_invalid_past_pointer.ll").toFile())
+            }
+        assertTrue(exception.message?.contains("invalid getelementptr indices") == true)
+    }
+
+    @Test
+    fun testInsertvaluePastPointerFieldIsInvalidIR() {
+        // Same invariant as testGetElementPtrPastPointerFieldIsInvalidIR, for the analogous
+        // insertvalue loop in StatementHandler.handleInsertValue.
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val ctx = TranslationContext(TranslationConfiguration.builder().build())
+        val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage())
+        val exception =
+            assertThrows<TranslationException> {
+                frontend.parse(topLevel.resolve("insertvalue_invalid_past_pointer.ll").toFile())
+            }
+        assertTrue(exception.message?.contains("invalid indices for insertvalue") == true)
     }
 
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already

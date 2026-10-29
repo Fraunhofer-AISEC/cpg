@@ -144,6 +144,13 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
     /**
      * Parses [file] into [mod], preferring a typed-pointer context (see [parse]). Returns the
      * [LLVMContextRef] that the module was successfully parsed in.
+     *
+     * This relies on the bundled LLVM (currently 16.0.x, see `libs.versions.toml`) still supporting
+     * typed pointers via [LLVMContextSetOpaquePointers]. LLVM 17 removed typed pointers entirely;
+     * on such a version, `LLVMContextSetOpaquePointers(ctx, 0)` would have no effect (or may not
+     * exist), the typed-pointer attempt would behave like the opaque one, and every file would
+     * effectively be parsed twice for no benefit. [testIdentifiedStruct] (which asserts real,
+     * non-opaque pointee types) acts as the regression check for this in CI.
      */
     private fun parseModuleWithFallback(file: File, mod: LLVMModuleRef): LLVMContextRef {
         val typedCtx = LLVMContextCreate()
@@ -160,12 +167,13 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         if (opaqueError != null) {
             LLVMContextDispose(opaqueCtx)
             // Neither attempt succeeded, so this is not just a typed-vs-opaque mismatch but
-            // genuinely invalid IR. Report both error messages: whichever context the file was
-            // "meant" for, the other context's message is usually noise (e.g. complaining about
-            // `ptr` for a typed-pointer file with an unrelated syntax error), but we cannot tell
-            // which one that is from here.
+            // genuinely invalid IR. Report both error messages side by side, without implying
+            // either one is the "real" one: whichever context the file was actually meant for,
+            // the other context's message is usually noise (e.g. complaining about `ptr` for a
+            // typed-pointer file with an unrelated syntax error), but we cannot tell which one
+            // that is from here.
             throw TranslationException(
-                "Could not parse IR: $opaqueError\nAlso failed in a typed-pointer context: $typedError"
+                "Could not parse IR.\nTyped-pointer context: $typedError\nOpaque-pointer context: $opaqueError"
             )
         }
 
