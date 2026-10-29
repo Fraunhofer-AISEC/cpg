@@ -126,7 +126,20 @@ private val summaryNodes = ConcurrentHashMap<SummaryKey, MemoryAddress>()
  * The number of synthetic nodes a chain may consist of before [syntheticNodeFor] summarizes the
  * rest of it.
  */
-private const val MAX_SYNTHETIC_CHAIN_DEPTH = 6
+/**
+ * The configuration of the [PointsToPass] currently running.
+ *
+ * [syntheticNodeFor] and [normalizeFieldAccessPath] need limits from it, but they are top-level
+ * helpers reached through a chain of [PointsToState.Element] extensions which never sees the pass,
+ * and threading a parameter through all of them would change a dozen public signatures for a value
+ * that is the same for a whole run. So it is kept here, next to the caches which are scoped the
+ * same way: set in [PointsToPass.accept], reset in [PointsToPass.finalCleanup].
+ *
+ * It defaults to a [PointsToPass.Configuration] with its declared defaults rather than to "no
+ * limits": these two limits are what stops a loop over a recursive data structure from producing a
+ * new name on every iteration, and a pass which was never handed a configuration still needs them.
+ */
+@Volatile internal var activePointsToConfiguration = PointsToPass.Configuration()
 
 /**
  * Returns the synthetic [MemoryAddress] or [UnknownMemoryValue] for [name] relative to [base], i.e.
@@ -135,10 +148,10 @@ private const val MAX_SYNTHETIC_CHAIN_DEPTH = 6
  *
  * Every such node can be the [base] of another one, e.g. in a loop like `p = &p->next;`, which
  * reaches a new field address in every iteration. To make such loops reach a fixpoint, we count how
- * many synthetic nodes a chain consists of. Once it exceeds [MAX_SYNTHETIC_CHAIN_DEPTH], we return
- * one summary node per chain root and [name] instead of a new node (k-limiting). A summary node
- * stands for many memory locations, so writes to it must not replace its previous values (see
- * [isSummaryNode]).
+ * many synthetic nodes a chain consists of. Once it exceeds
+ * [PointsToPass.Configuration.maxSyntheticChainDepth], we return one summary node per chain root
+ * and [name] instead of a new node (k-limiting). A summary node stands for many memory locations,
+ * so writes to it must not replace its previous values (see [isSummaryNode]).
  */
 private fun syntheticNodeFor(
     base: Node,
@@ -150,7 +163,8 @@ private fun syntheticNodeFor(
     val root = baseOrigin?.root ?: base
     val depth = (baseOrigin?.depth ?: 0) + 1
 
-    if (depth <= MAX_SYNTHETIC_CHAIN_DEPTH) {
+    val maxChainDepth = activePointsToConfiguration.maxSyntheticChainDepth
+    if (maxChainDepth == null || depth <= maxChainDepth) {
         return nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(base, name)) {
             create().also {
                 syntheticOrigins[PointsToPass.IdKey(it)] = SyntheticOrigin(root, depth, false)
@@ -161,8 +175,7 @@ private fun syntheticNodeFor(
     return summaryNodes.computeIfAbsent(SummaryKey(UnknownValueKey(root, name), isValue)) {
         create().also {
             // Everything derived from a summary node is summarized as well
-            syntheticOrigins[PointsToPass.IdKey(it)] =
-                SyntheticOrigin(root, MAX_SYNTHETIC_CHAIN_DEPTH, true)
+            syntheticOrigins[PointsToPass.IdKey(it)] = SyntheticOrigin(root, maxChainDepth, true)
         }
     }
 }
@@ -192,14 +205,6 @@ var totalFunctionCount = 0
  */
 var analyzedFunctionCount = 0
 
-/**
- * The multiple of the configured [PointsToPass.Configuration.timeout] which the analysis of a
- * single function may take in total, including the analyses of the callees it triggers. See
- * [PointsToPass.calculateFunctionSummaries] for why the budget grows at all.
- */
-private const val MAX_TIMEOUT_EXTENSION_FACTOR = 4
-
-private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
 private const val FIELD_ACCESS_SUMMARY_SEGMENT = "<summary>"
 
 typealias GeneralStateEntry =
@@ -458,14 +463,15 @@ private fun Name.pathDepth(): Int {
 }
 
 private fun normalizeFieldAccessPath(name: Name): Name {
-    if (name.pathDepth() <= MAX_FIELD_ACCESS_PATH_DEPTH) {
+    val maxDepth = activePointsToConfiguration.maxFieldAccessPathDepth ?: return name
+    if (name.pathDepth() <= maxDepth) {
         return name
     }
 
     val segments = mutableListOf<Name>()
     name.splitTo(segments)
     val rootToLeaf = segments.asReversed()
-    val keep = (MAX_FIELD_ACCESS_PATH_DEPTH - 1).coerceAtLeast(1)
+    val keep = (maxDepth - 1).coerceAtLeast(1)
 
     var normalized: Name? = null
     for (i in 0 until minOf(keep, rootToLeaf.size)) {
@@ -589,6 +595,92 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          */
         var maxStateEntries: Long? = null,
 
+        /**
+         * The number of write-sites ([FSEntry.lastWrites]) a single entry of a
+         * [Function.functionSummary] may record before we describe them in a coarser way. `null`
+         * means unlimited, matching [maxComplexity]'s convention.
+         *
+         * Every write-site becomes one `prevDFG` edge at every call site of the function, so this
+         * is what a summary actually costs: measured on wolfssh, `wolfSSH_connect` recorded 2,354
+         * relationships but **329,573** write-sites for them, up to 404 for a single relationship -
+         * and a summary that says "any of these 404 places may have written it" is barely more
+         * informative than saying "this function wrote it", while costing 404 times as much to
+         * apply.
+         *
+         * Going over the limit does not drop flows, it only describes them less precisely; see
+         * [coarsenLastWrites] for the two steps it takes.
+         */
+        var maxLastWritesPerSummaryEntry: Int? = null,
+
+        /**
+         * The number of elements of an initializer list we analyze individually. `null` means
+         * unlimited, matching [maxComplexity]'s convention. The default is the cutoff that used to
+         * be hard-coded here, so a pass which is not configured keeps the limit it always had.
+         *
+         * Every element we look at adds a field address (and its value) to the state, so a large
+         * array literal costs state without usually telling us much that its first few elements did
+         * not already.
+         */
+        var maxArrayInitializers: Int? = 200,
+
+        /**
+         * The number of calls a [CallingContextOut] may name - the `k` of a k-CFA call-string
+         * abstraction. `null` means unlimited, matching [maxComplexity]'s convention, and is what
+         * this analysis did before the option existed.
+         *
+         * A calling context is part of a write-site's properties, and properties take part in
+         * [NodeWithPropertiesKey.equals], so **every distinct call-string stores its own copy of
+         * the same fact**. With no limit that is an unbounded context abstraction, and it is the
+         * dominant multiplier on state size: measured on wolfssh, states above 20k powerset members
+         * had 90% of their records carrying a context, averaging 2.9 calls, at 26 members per key -
+         * while states below 5k had 48%, averaging 1.1 calls, at 2.4 members per key.
+         *
+         * Truncating keeps the *most recent* `k` calls, i.e. the ones nearest the program point the
+         * record belongs to, which is what makes records collapse: they tend to share the calls
+         * they came through last and to differ in the deeper chains they came from. It is applied
+         * wherever a context is built, so pushes and pops are truncated alike and still match each
+         * other (see [de.fraunhofer.aisec.cpg.graph.IfdsReachingSources], which compares a whole
+         * call-string token for equality). Two contexts that differ only in the dropped outer calls
+         * become one, which lets a flow match a return it could not have taken - an
+         * over-approximation, so the result keeps every flow it had and may add some.
+         */
+        var maxCallStringLength: Int? = null,
+
+        /**
+         * How deep a field access path may be before we widen it to a single summary segment.
+         * `null` means unlimited, matching [maxComplexity]'s convention.
+         *
+         * A loop like `p = p->next->next` reaches a new, longer path on every iteration, so without
+         * a bound the analysis keeps producing names it has never seen and never reaches its
+         * fixpoint. Beyond the limit every path collapses onto the same summary name, which is
+         * applied when the name is *looked up* as well as when it is written, so a read still finds
+         * what a sibling path wrote - an over-approximation rather than a lost flow.
+         */
+        var maxFieldAccessPathDepth: Int? = 6,
+
+        /**
+         * How many synthetic nodes a chain may consist of before we summarize the rest of it.
+         * `null` means unlimited, matching [maxComplexity]'s convention.
+         *
+         * Same problem as [maxFieldAccessPathDepth] one level down: a loop like `p = &p->next`
+         * reaches a new field address every iteration. Beyond the limit we hand out one summary
+         * node per root and name instead. A summary node stands for many memory locations, so
+         * writing to it must not replace its previous values - see `isSummaryNode`.
+         */
+        var maxSyntheticChainDepth: Int? = 6,
+
+        /**
+         * The multiple of [timeout] that the analysis of a single function may take in total,
+         * including the analyses of the callees it triggers. `null` means unlimited, matching
+         * [maxComplexity]'s convention.
+         *
+         * Analyzing a callee credits its time back to the caller's budget, so without a cap a
+         * function with many callees - each with callees of their own - extends its budget over and
+         * over and can run for an arbitrary multiple of [timeout]. This cap is what keeps the wall
+         * clock time of one analysis bounded.
+         */
+        var maxTimeoutExtensionFactor: Int? = 4,
+
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
 
@@ -631,10 +723,58 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * The index is keyed by [FSEntry] itself, using its `lastWrites`-excluding equals/hashCode, so
      * finding the existing entry (if any) is an O(1) lookup rather than a scan.
      */
+    /**
+     * Keeps [entry]'s write-sites within [Configuration.maxLastWritesPerSummaryEntry] by describing
+     * them more coarsely, in two steps, so that we lose precision rather than whole dataflows:
+     * 1. Forget *which field* each write targeted, i.e. record that the write went through `x`
+     *    rather than through `x.field`, and let the write-sites which only differed in that
+     *    collapse into one. A caller then draws one edge per write-site instead of one per
+     *    (write-site, field) pair.
+     * 2. If that is still not enough, replace the lot with the single statement that [owner] wrote
+     *    it. This is the same description [calculatePrevDFGs] already falls back to for an entry
+     *    with no write-sites at all, so callers need not learn anything new to handle it.
+     *
+     * A concurrent [mergeFSEntry] can add a write-site while we are replacing the set and have it
+     * dropped. That is the same kind of loss we are deliberately taking here anyway, and the next
+     * merge pushes the entry over the limit again and re-coarsens it, so the set stays bounded
+     * either way.
+     */
+    private fun coarsenLastWrites(entry: FSEntry, owner: Function) {
+        val limit = passConfig<Configuration>()?.maxLastWritesPerSummaryEntry ?: return
+        if (entry.lastWrites.size <= limit) return
+
+        synchronized(entry) {
+            if (entry.lastWrites.size <= limit) return
+
+            val withoutFields =
+                entry.lastWrites.mapTo(mutableSetOf()) { (node, properties) ->
+                    if (properties.none { it is PartialDataflowGranularity<*> }) {
+                        NodeWithPropertiesKey(node, properties)
+                    } else {
+                        NodeWithPropertiesKey(
+                            node,
+                            properties.filterNotTo(equalLinkedHashSetOf()) {
+                                it is PartialDataflowGranularity<*>
+                            },
+                        )
+                    }
+                }
+
+            val replacement =
+                if (withoutFields.size <= limit) withoutFields
+                else setOf(NodeWithPropertiesKey(owner, equalLinkedHashSetOf()))
+
+            entry.lastWrites.clear()
+            entry.lastWrites.addAll(replacement)
+        }
+    }
+
     private fun mergeFSEntry(
         functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>,
         key: Node,
         newEntry: FSEntry,
+        /** The [Function] whose summary this is; the coarsest description of any of its writes. */
+        owner: Function,
         // Whether newEntry.lastWrites is shared with other entries; if so, a new entry gets a copy
         // that later merges may modify
         copyLastWritesOnInsert: Boolean = false,
@@ -663,6 +803,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         } else {
             stored.lastWrites.addAll(newEntry.lastWrites)
         }
+        coarsenLastWrites(stored, owner)
     }
 
     override fun cleanup() {
@@ -684,9 +825,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         globalDerefs.clear()
         totalFunctionCount = 0
         analyzedFunctionCount = 0
+        activePointsToConfiguration = Configuration()
     }
 
     override fun accept(node: Node) {
+        // The top-level helpers below cannot reach our configuration on their own; see
+        // [activePointsToConfiguration].
+        activePointsToConfiguration = passConfig<Configuration>() ?: Configuration()
         functionSummaryAnalysisChain.clear()
         if (node !is EOGStarterHolder || node.eogStarters.isEmpty()) {
             return
@@ -1241,28 +1386,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         mergeFSEntry(
             node.functionSummary,
             param,
-            FSEntry(
-                dstValueDepth,
-                v,
-                srcValueDepth,
-                subAccessName,
-                filteredLastWrites,
-                equalLinkedHashSetOf(shortFS),
-            ),
+            owner = node,
+            newEntry =
+                FSEntry(
+                    dstValueDepth,
+                    v,
+                    srcValueDepth,
+                    subAccessName,
+                    filteredLastWrites,
+                    equalLinkedHashSetOf(shortFS),
+                ),
         )
         // Additionally, we store this as a shortFunctionSummary
         // where the function writes to the parameter
         mergeFSEntry(
             node.functionSummary,
             param,
-            FSEntry(
-                dstValueDepth,
-                node,
-                0,
-                subAccessName,
-                PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf())),
-                equalLinkedHashSetOf(true),
-            ),
+            owner = node,
+            newEntry =
+                FSEntry(
+                    dstValueDepth,
+                    node,
+                    0,
+                    subAccessName,
+                    PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf())),
+                    equalLinkedHashSetOf(true),
+                ),
         )
         val propertySet = identitySetOf<Any>(true)
         if (subAccessName != "") propertySet.add(Field().apply { name = Name(subAccessName) })
@@ -1317,27 +1466,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         mergeFSEntry(
                             node.functionSummary,
                             param,
-                            FSEntry(
-                                dstValueDepth,
-                                matchingDeclarations,
-                                stringToDepth(sourceParamValue.name.localName),
-                                subAccessName,
-                                // mergeFSEntry may fold this into an existing entry and then call
-                                // .addAll() on its lastWrites concurrently with other mergeFSEntry
-                                // calls for the same key, so this has to be a thread-safe set
-                                // rather
-                                // than a plain mutableSetOf().
-                                PowersetLattice.Element(
-                                    NodeWithPropertiesKey(
-                                        matchingDeclarations,
-                                        // Add the parameter index to indicate to the
-                                        // calculatePrevDFGs function that we need to
-                                        // replace the value of the call argument
-                                        equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
-                                    )
+                            owner = node,
+                            newEntry =
+                                FSEntry(
+                                    dstValueDepth,
+                                    matchingDeclarations,
+                                    stringToDepth(sourceParamValue.name.localName),
+                                    subAccessName,
+                                    // mergeFSEntry may fold this into an existing entry and then
+                                    // call
+                                    // .addAll() on its lastWrites concurrently with other
+                                    // mergeFSEntry
+                                    // calls for the same key, so this has to be a thread-safe set
+                                    // rather
+                                    // than a plain mutableSetOf().
+                                    PowersetLattice.Element(
+                                        NodeWithPropertiesKey(
+                                            matchingDeclarations,
+                                            // Add the parameter index to indicate to the
+                                            // calculatePrevDFGs function that we need to
+                                            // replace the value of the call argument
+                                            equalLinkedHashSetOf(matchingDeclarations.argumentIndex),
+                                        )
+                                    ),
+                                    equalLinkedHashSetOf(true),
                                 ),
-                                equalLinkedHashSetOf(true),
-                            ),
                         )
                     }
                 }
@@ -1772,6 +1925,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 parentFD.functionSummary,
                                 currentNode,
                                 FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false)),
+                                owner = parentFD,
                                 copyLastWritesOnInsert = depthLastWrites != null,
                             )
                         }
@@ -1821,6 +1975,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * Add the data flows from the Call's arguments to the Function's ParameterMemoryValues to the
      * doubleState
      */
+    /**
+     * Shortens [calls] to the innermost [Configuration.maxCallStringLength] of them, the `k` of a
+     * k-CFA call-string abstraction. The innermost calls are the ones nearest the write, which are
+     * also the ones that distinguish the flows we care about; the outer ones mostly separate paths
+     * that reconverge anyway.
+     *
+     * Every site which builds a [CallingContextOut] goes through this, so a push and the pop it
+     * belongs to are shortened the same way and still match.
+     */
+    private fun truncateCallString(calls: MutableList<Call>): MutableList<Call> {
+        val limit = passConfig<Configuration>()?.maxCallStringLength ?: return calls
+        if (calls.size <= limit) return calls
+        // The list is built by appending the call we are handling to the ones the callee's summary
+        // already carried, so it ends with the call at the current program point and starts with
+        // the deepest one. k-CFA keeps the most recent calls, which are the ones at the end: two
+        // records of the same fact at the same point tend to share the calls they came through
+        // last and to differ in the deep chains they came from, so keeping the end is what lets
+        // them collapse into one. Keeping the start would retain exactly what tells them apart.
+        return calls.subList(calls.size - limit, calls.size).toMutableList()
+    }
+
     private suspend fun calculateIncomingCallingContexts(
         lattice: PointsToState,
         function: Function,
@@ -2609,7 +2784,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // the time it took back to our own (enclosing) budget, if any, so that we
                         // aren't unfairly penalized for time spent in a callee that has already
                         // been charged against its own budget. The credit is capped at
-                        // MAX_TIMEOUT_EXTENSION_FACTOR times the configured timeout: a function
+                        // maxTimeoutExtensionFactor times the configured timeout: a function
                         // with many callees, each of which has callees of its own, would otherwise
                         // extend its budget over and over and could run for an arbitrary multiple
                         // of the configured timeout. The cap is what makes the wall clock time of
@@ -2621,11 +2796,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 log.trace("Old remaining timeout: ${budget.remaining}")
                             }
                             val configuredTimeout = passConfig<Configuration>()?.timeout
-                            if (configuredTimeout != null) {
-                                budget.creditUpTo(
-                                    elapsed,
-                                    configuredTimeout * MAX_TIMEOUT_EXTENSION_FACTOR,
-                                )
+                            // A factor below 1 would cap the budget below the timeout the caller
+                            // was granted in the first place, and a factor of 0 would zero it and
+                            // abort the analysis on the first credit, so refuse to go under 1.
+                            val extensionFactor =
+                                activePointsToConfiguration.maxTimeoutExtensionFactor
+                                    ?.coerceAtLeast(1)
+                            if (configuredTimeout != null && extensionFactor != null) {
+                                budget.creditUpTo(elapsed, configuredTimeout * extensionFactor)
                             } else {
                                 budget.credit(elapsed)
                             }
@@ -2727,8 +2905,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             newCalls.isEmpty() -> existingChain
                             last is CallingContextOut ->
                                 existingChain.dropLast(1) +
-                                    CallingContextOut((last.calls + newCalls).toMutableList())
-                            else -> existingChain + CallingContextOut(newCalls.toMutableList())
+                                    CallingContextOut(
+                                        truncateCallString((last.calls + newCalls).toMutableList())
+                                    )
+                            else ->
+                                existingChain +
+                                    CallingContextOut(truncateCallString(newCalls.toMutableList()))
                         }
                     if (chain.isNotEmpty()) lwPropertySet.add(CallingContextChain(chain))
                 }
@@ -3657,6 +3839,26 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
+        // A local variable that is declared without an initializer has no value, so an
+        // UnknownMemoryValue is created.
+        // Otherwise, a read before the first write would find nothing.
+        // Static and global variables are skipped, they are initialized implicitly.
+        if (
+            currentNode is Variable &&
+                !currentNode.isStatic &&
+                currentNode.initializer == null &&
+                !isGlobal(currentNode)
+        ) {
+            val unknown =
+                nodesCreatingUnknownValues.computeIfAbsent(
+                    UnknownValueKey(currentNode, getNodeName(currentNode))
+                ) {
+                    UnknownMemoryValue(getNodeName(currentNode))
+                }
+            declEntriesMap[currentNode]?.second?.add(Pair(unknown, false))
+            addresses.forEach { addr -> declEntriesMap[addr]?.second?.add(Pair(unknown, false)) }
+        }
+
         (currentNode as? HasInitializer)?.initializer?.let { initializer ->
             if (initializer is Literal<*>) {
                 values.add(NodeWithPropertiesKey(initializer, equalLinkedHashSetOf()))
@@ -3696,9 +3898,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // Create a field for every initializer, i.e. at offset 0 we store the first
                         // element, at offset 1 the second, etc...
                         val fieldAddresses = identitySetOf<Node>()
-                        // We only analyze the first 200 elements in order not to have a too large
-                        // state
-                        for (i in 0..<ini.initializers.size.coerceAtMost(200)) {
+                        // We only analyze the first elements in order not to have a too large state
+                        val analyzedInitializers =
+                            activePointsToConfiguration.maxArrayInitializers?.let {
+                                ini.initializers.size.coerceAtMost(it)
+                            } ?: ini.initializers.size
+                        for (i in 0..<analyzedInitializers) {
                             val fieldVal = ini.initializers[i]
                             val parentName = getNodeName(currentNode)
                             val newName = Name(i.toString(), parentName)

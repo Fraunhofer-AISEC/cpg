@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.GraphExamples
@@ -122,6 +124,62 @@ internal class SubgraphWalkerTest : BaseTest() {
 
             val ref = newPointerReference("&old")
             assertReplacesInput(ref, { ref.input }, { ref.input = it })
+        }
+    }
+
+    /**
+     * Regression test for a bug where [SubgraphWalker.replace] threw a
+     * [java.util.ConcurrentModificationException] while migrating [HasType.typeObservers] from the
+     * replaced node to the replacement: the old node's `typeObservers` is an [IdentitySet] backed
+     * by an [java.util.IdentityHashMap], and the migration loop used to call
+     * `old.typeObservers.forEach { old.unregisterTypeObserver(it); ... }`, mutating the very set it
+     * was iterating over. This only manifests once a node has 2 or more observers, since
+     * [java.util.IdentityHashMap]'s iterator only detects the comodification on the *next* call to
+     * `next()`.
+     *
+     * This test does not reliably reproduce an actual data race (there isn't one - the exception is
+     * fully deterministic and single-threaded), it just exercises the previously-broken code path
+     * with multiple observers registered.
+     */
+    @Test
+    fun testReplaceMigratesMultipleTypeObservers() {
+        with(testFrontend { it.registerLanguage<TestLanguage>() }) {
+            val walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
+
+            class RecordingObserver : HasType.TypeObserver {
+                var lastType: Type? = null
+
+                override fun typeChanged(newType: Type, src: HasType) {
+                    lastType = newType
+                }
+
+                override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {}
+            }
+
+            val unary = newUnaryOperator("-", postfix = false, prefix = true)
+            val old = newReference("old")
+            unary.input = old
+
+            // Register (at least) two observers on the old node. A single observer would not have
+            // triggered the bug.
+            val observer1 = RecordingObserver()
+            val observer2 = RecordingObserver()
+            old.registerTypeObserver(observer1)
+            old.registerTypeObserver(observer2)
+
+            val new = newReference("new")
+
+            // This must not throw a ConcurrentModificationException.
+            assertTrue(walker.replace(unary, old, new))
+
+            // Neither observer must still be registered on the old (now disconnected) node...
+            assertFalse(old.typeObservers.contains(observer1))
+            assertFalse(old.typeObservers.contains(observer2))
+            // ... and both must have been migrated to the new node. (new.typeObservers may also
+            // contain further observers, e.g. "unary" itself, which started observing "new" as a
+            // side effect of "parent.input = new" above; that is unrelated existing behavior.)
+            assertTrue(new.typeObservers.contains(observer1))
+            assertTrue(new.typeObservers.contains(observer2))
         }
     }
 }
