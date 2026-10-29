@@ -1,0 +1,62 @@
+name: codeql
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - "docs/**"
+  schedule:
+    # Catch newly published CodeQL queries against unchanged code.
+    - cron: "30 3 * * 1"
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    timeout-minutes: 30
+    runs-on: [self-hosted, Linux, ARM64]
+    steps:
+      - uses: actions/checkout@v6
+      - run: cp gradle.properties.example gradle.properties
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "corretto"
+          java-version: "21"
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+      - name: Compile all modules
+        run: |
+          # CodeQL only needs the extractor to observe a compile; skip tests, distributions and
+          # publishing. Excludes mirror build.yml's rationale for distZip/distTar/shadow tasks.
+          EXCLUDES="-x distZip -x distTar"
+          if grep -q '^enableCodyzeConsole=true' gradle.properties; then
+            EXCLUDES="$EXCLUDES -x shadowJar -x shadowDistZip -x shadowDistTar"
+          fi
+          #
+          # CodeQL traces the processes started by the build. A Gradle or Kotlin daemon that is
+          # still running from an earlier job on this self-hosted runner is reused by Gradle, but
+          # compiles outside of the tracer, so CodeQL would see no code ("could not process any
+          # code written in Java/Kotlin"). Therefore, neither use a Gradle daemon nor the Kotlin
+          # compile daemon.
+          ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process --parallel assemble $EXCLUDES
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:java-kotlin"
