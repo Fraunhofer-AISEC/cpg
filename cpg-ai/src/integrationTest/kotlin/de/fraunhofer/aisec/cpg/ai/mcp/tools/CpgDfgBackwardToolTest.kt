@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
+import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
@@ -49,7 +50,7 @@ class CpgDfgBackwardToolTest {
                 content = "def hello():\n    foo = bar\n    print(foo)",
                 extension = "py",
             )
-        runCpgAnalyze(payload, runPasses = true, cleanup = true)
+        testServer().runCpgAnalyze(payload, runPasses = true, cleanup = true)
     }
 
     @Test

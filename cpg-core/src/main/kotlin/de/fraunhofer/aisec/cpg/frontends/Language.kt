@@ -173,7 +173,12 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     open fun handlesFile(file: File): Boolean {
-        return file.extension in fileExtensions
+        return handlesExtension(file.extension)
+    }
+
+    /** Returns true if the [extension] can be handled by the frontend of this language. */
+    open fun handlesExtension(extension: String): Boolean {
+        return extension in fileExtensions
     }
 
     /**
