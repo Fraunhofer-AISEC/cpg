@@ -30,6 +30,12 @@ class LLMAgent {
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     return (await response.json()).sessionId;
   }
+  async deleteSession(sessionId: string): Promise<void> {
+    const response = await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
 }
 
 export const llmAgent = new LLMAgent();

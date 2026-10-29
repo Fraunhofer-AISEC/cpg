@@ -331,6 +331,13 @@ fun Route.chatRoutes(chatService: ChatService) {
 
         post("/sessions") { call.respond(mapOf("sessionId" to chatService.createSession())) }
 
+        // The chat histories are kept until evicted, so the frontend ends a session explicitly.
+        delete("/sessions/{id}") {
+            val id = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+            chatService.evictSession(id)
+            call.respond(HttpStatusCode.NoContent)
+        }
+
         get("/providers") { call.respond(chatService.listAvailableProviders()) }
 
         get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }

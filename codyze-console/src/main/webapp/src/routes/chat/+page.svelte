@@ -171,6 +171,12 @@
       abortController.abort();
       abortController = null;
     }
+    // The server keeps a session's history until it is deleted.
+    if (sessionId) {
+      llmAgent
+        .deleteSession(sessionId)
+        .catch((e) => console.warn('Could not delete the chat session on the server:', e));
+    }
     sessionId = null;
     showWelcome = true;
     chatMessages = [];
