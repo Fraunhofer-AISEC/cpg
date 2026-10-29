@@ -668,6 +668,7 @@ class ChatService(
                 }
 
             val toolRegistry = mcpToolRegistry + skillFileToolRegistry
+            val usage = TokenUsage()
 
             val agent =
                 AIAgent(
@@ -726,26 +727,19 @@ class ChatService(
                             send(Events.toolResult(ctx.toolName, args, content))
                         }
                         onToolCallFailed { ctx -> send(Events.text("Tool failed: ${ctx.message}")) }
+                        countTokenUsage(usage)
                         onAgentCompleted { ctx ->
+                            // Koog's OpenAI client never populates ResponseMetaInfo.modelId, so
+                            // fall back to the configured model id.
+                            send(
+                                Events.usage(
+                                    usage.modelId ?: chatLlm.model.id,
+                                    usage.input,
+                                    usage.output,
+                                    usage.total,
+                                )
+                            )
                             val allMessages = ctx.context.llm.readSession { prompt.messages }
-                            val assistantMessages =
-                                allMessages.filterIsInstance<Message.Assistant>()
-                            var inputTokens = 0
-                            var outputTokens = 0
-                            var totalTokens = 0
-                            var modelId: String? = null
-                            for (message in assistantMessages) {
-                                val usage = message.metaInfo
-                                inputTokens += usage.inputTokensCount ?: 0
-                                outputTokens += usage.outputTokensCount ?: 0
-                                totalTokens += usage.totalTokensCount ?: 0
-                                usage.modelId?.let { modelId = it }
-                            }
-                            // Koog 1.1.1 never populates ResponseMetaInfo.modelId (the OpenAI
-                            // client's createMetaInfo hardcodes it to null), so fall back to the
-                            // configured model id.
-                            if (modelId == null) modelId = chatLlm.model.id
-                            send(Events.usage(modelId, inputTokens, outputTokens, totalTokens))
                             send(
                                 Events.finalHistory(
                                     allMessages.mapNotNull { it.toChatMessageJsonOrNull() }
