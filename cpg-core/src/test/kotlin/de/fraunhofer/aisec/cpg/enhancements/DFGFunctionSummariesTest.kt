@@ -462,6 +462,70 @@ class DFGFunctionSummariesTest {
         )
     }
 
+    @Test
+    fun testEntriesWithoutSignatureUseTheFirst() {
+        val config =
+            TranslationConfiguration.builder()
+                .registerLanguage<TestLanguageWithColon>()
+                .registerFunctionSummaries(
+                    File("src/test/resources/function-dfg-without-signature.yml")
+                )
+                .inferenceConfiguration(
+                    InferenceConfiguration.builder()
+                        .inferDfgForUnresolvedCalls(true)
+                        .inferFunctions(true)
+                        .build()
+                )
+                .defaultPasses()
+                .build()
+
+        val dfgTest =
+            testFrontend(config).build {
+                singleTranslationUnit("DfgInferredCall.c") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { declStmtA ->
+                                    newVariable("a", objectType("int"), holder = declStmtA) {
+                                        it.initializer = newLiteral(7, objectType("char"))
+                                    }
+                                }
+
+                                block.statements += newDeclarationStatement { declStmtB ->
+                                    newVariable("b", objectType("int"), holder = declStmtB) {
+                                        it.initializer = newLiteral(5, objectType("char"))
+                                    }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("memcpy")) {
+                                        it.arguments +=
+                                            newPointerReference("a").also { ref ->
+                                                ref.input = newReference("a")
+                                            }
+                                        it.arguments +=
+                                            newPointerReference("b").also { ref ->
+                                                ref.input = newReference("b")
+                                            }
+                                        it.arguments += newLiteral(1, objectType("int"))
+                                    }
+
+                                block.statements += newReturn { it.returnValue = newReference("a") }
+                            }
+                    }
+                }
+            }
+
+        // Without a signature, nothing ranks one entry above the other, so the first one is used
+        val memcpy = dfgTest.functions["memcpy"]
+        assertNotNull(memcpy)
+        val sources = memcpy.functionSummary[memcpy.parameters[0]].orEmpty().map { it.srcNode }
+        assertEquals(listOf<Any?>(memcpy.parameters[1]), sources)
+    }
+
     @Ignore(
         "We keep this ignored for now as the DFGPass does not draw these edges anymore, this should be done by the PointsToPass. In the future, the DFGPass could still draw the edges and the PtP could remove them again to have a more lightweight but less precise version of the DFG"
     )

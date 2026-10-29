@@ -213,6 +213,16 @@ class DFGFunctionSummaries {
         } else if (matchingEntries.filter { it.signature != null }.size == 1) {
             // Only one entry with a matching signature => We take this one.
             functionToDFGEntryMap[matchingEntries.single { it.signature != null }]
+        } else if (matchingEntries.isNotEmpty() && matchingEntries.all { it.signature == null }) {
+            // Multiple entries without a signature => Nothing ranks one above the others, so we
+            // take the first one (e.g. entries for a language and for one derived from it).
+            log.warn(
+                "Found {} function summaries without a signature for {}, using the first one: {}",
+                matchingEntries.size,
+                functionDecl.name,
+                matchingEntries.first(),
+            )
+            functionToDFGEntryMap[matchingEntries.first()]
         } else if (matchingEntries.isNotEmpty()) {
             /* There are multiple matching entries. We use the following routine:
              * First, we filter for existing signatures.
