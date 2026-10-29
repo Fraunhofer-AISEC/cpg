@@ -54,6 +54,7 @@ import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class ExpressionHandler(frontend: CSharpLanguageFrontend) :
@@ -66,6 +67,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.IsExpressionSyntax -> handleIsExpression(node)
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
             is Csharp.AST.ConditionalExpressionSyntax -> handleConditionalExpression(node)
+            is Csharp.AST.IsPatternExpressionSyntax -> handleIsPatternExpression(node)
             is Csharp.AST.PrefixUnaryExpressionSyntax -> handlePrefixUnaryExpression(node)
             is Csharp.AST.PostfixUnaryExpressionSyntax -> handlePostfixUnaryExpression(node)
             is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
@@ -478,6 +480,202 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         return newCast(rawNode = node).apply {
             this.expression = handle(node.left)
             this.castType = frontend.typeOf(node.right)
+        }
+    }
+
+    /**
+     * Translates an [IsPatternExpressionSyntax][Csharp.AST.IsPatternExpressionSyntax] into a
+     * boolean [Expression]. `is`-pattern matching has no direct representation in the graph, so we
+     * destructure it into an equivalent form. For example:
+     * ```csharp
+     * x is Foo f
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * var tmp = x;
+     * Foo f = tmp as Foo;
+     * tmp is Foo;
+     * ```
+     *
+     * `f`'s conversion is the safe, non-throwing one `as` performs, since a failed pattern match
+     * does not throw (unlike a `(Foo)` cast). `f` is only guaranteed to hold a meaningful value
+     * where the type check is known to have succeeded (e.g. inside the `if`), the same as C#'s own
+     * definite-assignment rule for pattern variables.
+     *
+     * `tmp` is an implicit temporary that the value being tested (`x`) is evaluated into once,
+     * since a pattern may test it more than once (e.g. both sides of `x is Foo or Bar`). It is
+     * wrapped, together with the boolean [Expression] [translatePattern] builds for
+     * [Csharp.AST.IsPatternExpressionSyntax.pattern], in an implicit [ExpressionList].
+     *
+     * C# spec:
+     * [Pattern matching](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/patterns)
+     */
+    private fun handleIsPatternExpression(node: Csharp.AST.IsPatternExpressionSyntax): Expression {
+        val exprList = newExpressionList()
+
+        val target = handle(node.expression)
+        val tmpName = Name.temporary(prefix = "isPattern", separatorChar = '_', target)
+        val tmpVar = newVariable(name = tmpName, type = target.type).implicit()
+        tmpVar.initializer = target
+        frontend.scopeManager.addDeclaration(tmpVar)
+
+        val declStmt = newDeclarationStatement().implicit()
+        declStmt.declarations += tmpVar
+        exprList.expressions += declStmt
+        exprList.expressions += translatePattern(node.pattern, tmpVar)
+
+        return exprList
+    }
+
+    /**
+     * Translates a [PatternSyntax][Csharp.AST.PatternSyntax] into a boolean [Expression] that tests
+     * [variable]. Used by [handleIsPatternExpression].
+     *
+     * A pattern that binds a variable, e.g.
+     *
+     * ```csharp
+     * x is Foo f
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * Foo f = x as Foo;
+     * x is Foo;
+     * ```
+     *
+     * and modeled as an implicit [ExpressionList] of a [DeclarationStatement] declaring `f` (unlike
+     * [variable], it is real and user-visible and therefore not implicit) followed by the boolean
+     * type check.
+     *
+     * `RecursivePatternSyntax` (property/positional patterns, e.g. `x is { Prop: 0 }` or `x is (a,
+     * b)`) and `ListPatternSyntax`/`SlicePatternSyntax` (`x is [1, 2, ..]`) are not supported yet
+     * and are recorded as a problem instead.
+     *
+     * C# spec:
+     * [Patterns](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/patterns)
+     */
+    private fun translatePattern(
+        pattern: Csharp.AST.PatternSyntax,
+        variable: Variable,
+    ): Expression {
+        val bool = frontend.language.builtInTypes.getValue("bool")
+
+        // A fresh reference to the temporary being tested.
+        fun newTemporaryReference() =
+            newReference(name = variable.name).implicit().apply { refersTo = variable }
+
+        fun typeExpression(type: Csharp.AST.TypeSyntax) =
+            frontend.typeOf(type).let { newTypeExpression(it.name, it, rawNode = type) }
+
+        // `tmp is T`
+        fun typeCheck(type: Csharp.AST.TypeSyntax) =
+            newBinaryOperator(operatorCode = "is", rawNode = pattern).apply {
+                this.lhs = newTemporaryReference()
+                this.rhs = typeExpression(type)
+            }
+
+        // Declares the variable of [designation], initialized with [init], followed by [test].
+        fun bind(
+            designation: Csharp.AST.VariableDesignationSyntax,
+            type: Type,
+            init: Expression,
+            test: Expression,
+        ): Expression {
+            // Nested tuple designations `(a, b)` are not supported yet.
+            val name =
+                (designation as? Csharp.AST.SingleVariableDesignationSyntax)?.identifier
+                    ?: return ProblemExpression(
+                        "Variable designation type not yet supported: ${designation.csharpType}"
+                    )
+            val binding =
+                newVariable(name = name, type = type, rawNode = designation).apply {
+                    initializer = init
+                }
+            frontend.scopeManager.addDeclaration(binding)
+            return newExpressionList().apply {
+                expressions +=
+                    newDeclarationStatement(rawNode = pattern).apply { declarations += binding }
+                expressions += test
+            }
+        }
+
+        return when (pattern) {
+            // A bare identifier is syntactically ambiguous between a constant and a type: Roslyn
+            // produces this pattern kind for `Foo` in `x is not Foo` even when `Foo` names a type.
+            // Without semantic binding we model the type check, which is what it means in the vast
+            // majority of cases, rather than `==` against a class that is never assigned. A literal
+            // (`null`, `5`, ...) can only be a value though, so it is compared with `==`.
+            is Csharp.AST.ConstantPatternSyntax -> {
+                val operand = pattern.expression
+                val isLiteral = operand is Csharp.AST.LiteralExpressionSyntax
+                newBinaryOperator(operatorCode = if (isLiteral) "==" else "is", rawNode = pattern)
+                    .apply {
+                        this.lhs = newTemporaryReference()
+                        this.rhs =
+                            if (operand is Csharp.AST.TypeSyntax) typeExpression(operand)
+                            else handle(operand)
+                    }
+            }
+
+            // x is int (no binding). Only syntactically unambiguous types (predefined types,
+            // generics, arrays, ...) parse as this.
+            is Csharp.AST.TypePatternSyntax -> typeCheck(pattern.type)
+
+            // x is Foo f, which also covers x is Foo _ (nothing is bound)
+            is Csharp.AST.DeclarationPatternSyntax ->
+                if (pattern.designation is Csharp.AST.DiscardDesignationSyntax) {
+                    typeCheck(pattern.type)
+                } else {
+                    val type = frontend.typeOf(pattern.type)
+                    val cast =
+                        newCast(rawNode = pattern).apply {
+                            this.expression = newTemporaryReference()
+                            this.castType = type
+                        }
+                    bind(pattern.designation, type, cast, typeCheck(pattern.type).implicit())
+                }
+
+            // x is var y (always matches, binds the value as-is)
+            is Csharp.AST.VarPatternSyntax ->
+                bind(
+                    pattern.designation,
+                    unknownType(),
+                    newTemporaryReference(),
+                    newLiteral(true, bool).implicit(),
+                )
+
+            // x is _ (always matches, no binding)
+            is Csharp.AST.DiscardPatternSyntax -> newLiteral(true, bool, rawNode = pattern)
+
+            // x is not Foo
+            is Csharp.AST.UnaryPatternSyntax ->
+                newUnaryOperator(
+                        operatorCode = "!",
+                        postfix = false,
+                        prefix = true,
+                        rawNode = pattern,
+                    )
+                    .apply { this.input = translatePattern(pattern.pattern, variable) }
+
+            // x is Foo or Bar, x is > 0 and < 100
+            is Csharp.AST.BinaryPatternSyntax ->
+                newBinaryOperator(operatorCode = pattern.operatorToken, rawNode = pattern).apply {
+                    this.lhs = translatePattern(pattern.left, variable)
+                    this.rhs = translatePattern(pattern.right, variable)
+                }
+
+            // x is > 0
+            is Csharp.AST.RelationalPatternSyntax ->
+                newBinaryOperator(operatorCode = pattern.operatorToken, rawNode = pattern).apply {
+                    this.lhs = newTemporaryReference()
+                    this.rhs = handle(pattern.expression)
+                }
+
+            // x is (Foo or Bar)
+            is Csharp.AST.ParenthesizedPatternSyntax -> translatePattern(pattern.pattern, variable)
+
+            else -> ProblemExpression("Pattern type not yet supported: ${pattern.csharpType}")
         }
     }
 

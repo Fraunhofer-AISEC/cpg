@@ -92,11 +92,13 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      * [IfStatement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1382-the-if-statement)
      */
     private fun handleIf(node: Csharp.AST.IfStatementSyntax): IfElse {
-        return newIfElse(rawNode = node).apply {
-            this.condition = frontend.expressionHandler.handle(node.condition)
-            this.thenStatement = handle(node.statement)
-            node.elseClause?.let { this.elseStatement = handle(it.statement) }
-        }
+        val ifStmt = newIfElse(rawNode = node)
+        frontend.scopeManager.enterScope(ifStmt)
+        ifStmt.condition = frontend.expressionHandler.handle(node.condition)
+        ifStmt.thenStatement = handle(node.statement)
+        node.elseClause?.let { ifStmt.elseStatement = handle(it.statement) }
+        frontend.scopeManager.leaveScope(ifStmt)
+        return ifStmt
     }
 
     /**
@@ -157,8 +159,10 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleWhile(node: Csharp.AST.WhileStatementSyntax): While {
         val whileStmt = newWhile(rawNode = node)
+        frontend.scopeManager.enterScope(whileStmt)
         whileStmt.condition = frontend.expressionHandler.handle(node.condition)
         whileStmt.statement = handle(node.statement)
+        frontend.scopeManager.leaveScope(whileStmt)
         return whileStmt
     }
 

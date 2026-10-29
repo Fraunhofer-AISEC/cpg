@@ -156,11 +156,9 @@ class CSharpLanguage :
         rhsType: Type,
         hint: BinaryOperator?,
     ): Type {
-        // The `is` operator is a type check and therefore always yields a `bool`, no matter which
-        // types its operands have.
-        // See
-        // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12123-the-is-operator
-        return if (operatorCode == "is") {
+        // `is` is a type check and always yields a `bool`, regardless of its operands. The pattern
+        // combinators `and` and `or` yield a `bool` as well.
+        return if (operatorCode == "is" || operatorCode == "and" || operatorCode == "or") {
             builtInTypes.getValue("bool")
         } else super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
     }

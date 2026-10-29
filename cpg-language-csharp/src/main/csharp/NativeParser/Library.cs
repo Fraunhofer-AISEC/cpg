@@ -1103,6 +1103,90 @@ public static class Library
         );
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetIsPatternExpressionExpression")]
+    public static IntPtr GetIsPatternExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((IsPatternExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetIsPatternExpressionPattern")]
+    public static IntPtr GetIsPatternExpressionPattern(IntPtr handlePtr)
+    {
+        return Register(((IsPatternExpressionSyntax)Nodes[handlePtr]).Pattern);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConstantPatternExpression")]
+    public static IntPtr GetConstantPatternExpression(IntPtr handlePtr)
+    {
+        return Register(((ConstantPatternSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetTypePatternType")]
+    public static IntPtr GetTypePatternType(IntPtr handlePtr)
+    {
+        return Register(((TypePatternSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetDeclarationPatternType")]
+    public static IntPtr GetDeclarationPatternType(IntPtr handlePtr)
+    {
+        return Register(((DeclarationPatternSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetDeclarationPatternDesignation")]
+    public static IntPtr GetDeclarationPatternDesignation(IntPtr handlePtr)
+    {
+        return Register(((DeclarationPatternSyntax)Nodes[handlePtr]).Designation);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetUnaryPatternOperator")]
+    public static IntPtr GetUnaryPatternOperator(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((UnaryPatternSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetUnaryPatternPattern")]
+    public static IntPtr GetUnaryPatternPattern(IntPtr handlePtr)
+    {
+        return Register(((UnaryPatternSyntax)Nodes[handlePtr]).Pattern);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBinaryPatternLeft")]
+    public static IntPtr GetBinaryPatternLeft(IntPtr handlePtr)
+    {
+        return Register(((BinaryPatternSyntax)Nodes[handlePtr]).Left);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBinaryPatternOperator")]
+    public static IntPtr GetBinaryPatternOperator(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((BinaryPatternSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBinaryPatternRight")]
+    public static IntPtr GetBinaryPatternRight(IntPtr handlePtr)
+    {
+        return Register(((BinaryPatternSyntax)Nodes[handlePtr]).Right);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetRelationalPatternOperator")]
+    public static IntPtr GetRelationalPatternOperator(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((RelationalPatternSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetRelationalPatternExpression")]
+    public static IntPtr GetRelationalPatternExpression(IntPtr handlePtr)
+    {
+        return Register(((RelationalPatternSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetParenthesizedPatternPattern")]
+    public static IntPtr GetParenthesizedPatternPattern(IntPtr handlePtr)
+    {
+        return Register(((ParenthesizedPatternSyntax)Nodes[handlePtr]).Pattern);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionExpression")]
     public static IntPtr GetInvocationExpressionExpression(IntPtr handlePtr)
     {

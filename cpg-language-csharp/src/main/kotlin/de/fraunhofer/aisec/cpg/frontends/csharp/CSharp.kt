@@ -937,6 +937,14 @@ interface Csharp : Library {
                 }
                 return when (INSTANCE.GetType(nativeValue)) {
                     "VarPatternSyntax" -> VarPatternSyntax(nativeValue)
+                    "ConstantPatternSyntax" -> ConstantPatternSyntax(nativeValue)
+                    "TypePatternSyntax" -> TypePatternSyntax(nativeValue)
+                    "DeclarationPatternSyntax" -> DeclarationPatternSyntax(nativeValue)
+                    "UnaryPatternSyntax" -> UnaryPatternSyntax(nativeValue)
+                    "BinaryPatternSyntax" -> BinaryPatternSyntax(nativeValue)
+                    "RelationalPatternSyntax" -> RelationalPatternSyntax(nativeValue)
+                    "DiscardPatternSyntax" -> DiscardPatternSyntax(nativeValue)
+                    "ParenthesizedPatternSyntax" -> ParenthesizedPatternSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -955,6 +963,7 @@ interface Csharp : Library {
                 return when (INSTANCE.GetType(nativeValue)) {
                     "SingleVariableDesignationSyntax" ->
                         SingleVariableDesignationSyntax(nativeValue)
+                    "DiscardDesignationSyntax" -> DiscardDesignationSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -972,6 +981,13 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`DiscardDesignationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.discarddesignationsyntax)
+         * class. Used for the `_` in e.g. `x is Foo _`, which binds nothing.
+         */
+        class DiscardDesignationSyntax(p: Pointer? = Pointer.NULL) : VariableDesignationSyntax(p)
+
+        /**
+         * Represents the Roslyn
          * [`VarPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.varpatternsyntax)
          * class. Used for `case var o:` patterns where the type is inferred.
          */
@@ -979,6 +995,87 @@ interface Csharp : Library {
             val designation: VariableDesignationSyntax by lazy {
                 INSTANCE.GetVarPatternDesignation(this)
             }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ConstantPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constantpatternsyntax)
+         * class. Used for a pattern that matches a constant, e.g. `x is null` or `x is 5`.
+         */
+        class ConstantPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val expression: ExpressionSyntax by lazy { INSTANCE.GetConstantPatternExpression(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`TypePatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typepatternsyntax)
+         * class. Used for a pattern that only tests a type without binding it, e.g. the `Foo` in `x
+         * is Foo or Bar`.
+         */
+        class TypePatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetTypePatternType(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`DeclarationPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.declarationpatternsyntax)
+         * class. Used for a pattern that tests a type and binds it to a variable, e.g. `Foo f` in
+         * `x is Foo f`.
+         */
+        class DeclarationPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetDeclarationPatternType(this) }
+            val designation: VariableDesignationSyntax by lazy {
+                INSTANCE.GetDeclarationPatternDesignation(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`UnaryPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.unarypatternsyntax)
+         * class. Currently only used for the `not` pattern, e.g. `x is not null`.
+         */
+        class UnaryPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val operatorToken: String by lazy { INSTANCE.GetUnaryPatternOperator(this) }
+            val pattern: PatternSyntax by lazy { INSTANCE.GetUnaryPatternPattern(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`BinaryPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.binarypatternsyntax)
+         * class. Used for the `and`/`or` pattern combinators, e.g. `x is Foo or Bar`.
+         */
+        class BinaryPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val left: PatternSyntax by lazy { INSTANCE.GetBinaryPatternLeft(this) }
+            val operatorToken: String by lazy { INSTANCE.GetBinaryPatternOperator(this) }
+            val right: PatternSyntax by lazy { INSTANCE.GetBinaryPatternRight(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`RelationalPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.relationalpatternsyntax)
+         * class. Used for a comparison pattern, e.g. `x is > 0`.
+         */
+        class RelationalPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val operatorToken: String by lazy { INSTANCE.GetRelationalPatternOperator(this) }
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetRelationalPatternExpression(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`DiscardPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.discardpatternsyntax)
+         * class. Used for the discard pattern `_`, which always matches without binding anything.
+         */
+        class DiscardPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`ParenthesizedPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parenthesizedpatternsyntax)
+         * class, e.g. the parentheses in `x is (Foo or Bar) and not null`.
+         */
+        class ParenthesizedPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val pattern: PatternSyntax by lazy { INSTANCE.GetParenthesizedPatternPattern(this) }
         }
 
         /**
@@ -1028,6 +1125,7 @@ interface Csharp : Library {
                             else -> BinaryExpressionSyntax(nativeValue)
                         }
                     "ConditionalExpressionSyntax" -> ConditionalExpressionSyntax(nativeValue)
+                    "IsPatternExpressionSyntax" -> IsPatternExpressionSyntax(nativeValue)
                     "TypeOfExpressionSyntax" -> TypeOfExpressionSyntax(nativeValue)
                     "InterpolatedStringExpressionSyntax" ->
                         InterpolatedStringExpressionSyntax(nativeValue)
@@ -1241,6 +1339,20 @@ interface Csharp : Library {
          * `IsPatternExpressionSyntax`.
          */
         class IsExpressionSyntax(p: Pointer? = Pointer.NULL) : BinaryExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`IsPatternExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.ispatternexpressionsyntax)
+         * class, i.e. the pattern-matching form of the `is` operator (e.g. `x is Foo f`, `x is
+         * null`, `x is > 0 and < 100`), as opposed to the plain type test represented by
+         * [IsExpressionSyntax].
+         */
+        class IsPatternExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetIsPatternExpressionExpression(this)
+            }
+            val pattern: PatternSyntax by lazy { INSTANCE.GetIsPatternExpressionPattern(this) }
+        }
 
         /**
          * Represents the Roslyn
@@ -2014,6 +2126,38 @@ interface Csharp : Library {
     fun GetVarPatternDesignation(handle: AST.VarPatternSyntax): AST.VariableDesignationSyntax
 
     fun GetSingleVariableDesignationIdentifier(handle: AST.SingleVariableDesignationSyntax): String
+
+    fun GetIsPatternExpressionExpression(
+        handle: AST.IsPatternExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetIsPatternExpressionPattern(handle: AST.IsPatternExpressionSyntax): AST.PatternSyntax
+
+    fun GetConstantPatternExpression(handle: AST.ConstantPatternSyntax): AST.ExpressionSyntax
+
+    fun GetTypePatternType(handle: AST.TypePatternSyntax): AST.TypeSyntax
+
+    fun GetDeclarationPatternType(handle: AST.DeclarationPatternSyntax): AST.TypeSyntax
+
+    fun GetDeclarationPatternDesignation(
+        handle: AST.DeclarationPatternSyntax
+    ): AST.VariableDesignationSyntax
+
+    fun GetUnaryPatternOperator(handle: AST.UnaryPatternSyntax): String
+
+    fun GetUnaryPatternPattern(handle: AST.UnaryPatternSyntax): AST.PatternSyntax
+
+    fun GetBinaryPatternLeft(handle: AST.BinaryPatternSyntax): AST.PatternSyntax
+
+    fun GetBinaryPatternOperator(handle: AST.BinaryPatternSyntax): String
+
+    fun GetBinaryPatternRight(handle: AST.BinaryPatternSyntax): AST.PatternSyntax
+
+    fun GetRelationalPatternOperator(handle: AST.RelationalPatternSyntax): String
+
+    fun GetRelationalPatternExpression(handle: AST.RelationalPatternSyntax): AST.ExpressionSyntax
+
+    fun GetParenthesizedPatternPattern(handle: AST.ParenthesizedPatternSyntax): AST.PatternSyntax
 
     fun GetInvocationExpressionExpression(
         handle: AST.InvocationExpressionSyntax
