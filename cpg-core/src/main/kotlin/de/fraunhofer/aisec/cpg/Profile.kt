@@ -56,7 +56,9 @@ abstract class Profile(
     /**
      * The class path resources of function summary files (JSON or YAML, in the format described in
      * the documentation) of this profile. Summaries registered explicitly by the user with
-     * [TranslationConfiguration.Builder.registerFunctionSummaries] take precedence.
+     * [TranslationConfiguration.Builder.registerFunctionSummaries] take precedence. Use a path
+     * specific to the frontend, e.g., `profiles/cxx/stdlib.yml`: the frontends usually share one
+     * class path, so a resource of the same name in another module would be found instead.
      */
     open val functionSummaries: List<String> = emptyList()
 

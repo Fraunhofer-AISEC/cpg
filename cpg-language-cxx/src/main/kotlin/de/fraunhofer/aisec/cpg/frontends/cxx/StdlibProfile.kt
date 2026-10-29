@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  *   unknown type and calls with parameters of these types do not resolve. A typedef that the code
  *   or a loaded header declares takes precedence over them.
  * - It provides data flow summaries for common functions, such as `memcpy` or `strcpy` (see
- *   `profiles/stdlib.yml`), which are used for all calls to a function of this name that has no
+ *   `profiles/cxx/stdlib.yml`), which are used for all calls to a function of this name that has no
  *   body.
  *
  * To get the precise behavior, turn the profile off (see
@@ -67,5 +67,5 @@ object StdlibProfile : Profile("stdlib") {
         }
     }
 
-    override val functionSummaries = listOf("profiles/stdlib.yml")
+    override val functionSummaries = listOf("profiles/cxx/stdlib.yml")
 }
