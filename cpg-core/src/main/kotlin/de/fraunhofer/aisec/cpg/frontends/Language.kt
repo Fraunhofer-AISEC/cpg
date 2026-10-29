@@ -119,10 +119,12 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /**
      * Additional types contributed by the active [Profile]s. They are not part of the language
-     * itself, so [builtInTypes] always takes precedence. This is filled by the [TranslationContext]
-     * right after the language was created.
+     * itself, so [builtInTypes] always takes precedence. The [TranslationContext] sets them right
+     * after creating the language; a language created elsewhere has none.
      */
-    @get:JsonIgnore val profileTypes: MutableMap<String, Type> = mutableMapOf()
+    @get:JsonIgnore
+    var profileTypes: Map<String, Type> = emptyMap()
+        internal set
 
     /** The built-in types of this language. */
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
@@ -214,7 +216,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         result = 31 * result + fileExtensions.hashCode()
         result = 31 * result + namespaceDelimiter.hashCode()
         result = 31 * result + frontend.hashCode()
-        result = 31 * result + primitiveTypeNames.hashCode()
+        // Not primitiveTypeNames: equal languages can have different profile types.
+        result = 31 * result + builtInTypes.keys.hashCode()
         result = 31 * result + accessModifiers.hashCode()
         return result
     }

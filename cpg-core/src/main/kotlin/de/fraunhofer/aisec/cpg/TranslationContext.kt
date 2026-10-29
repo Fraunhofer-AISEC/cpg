@@ -158,8 +158,8 @@ open class TranslationContext(
             if (language == null) {
                 log.error("Could not create language instance for {}", it.simpleName)
             } else {
-                config.profiles.forEach { profile ->
-                    language.profileTypes.putAll(profile.builtInTypes(language))
+                language.profileTypes = buildMap {
+                    config.profiles.forEach { profile -> putAll(profile.builtInTypes(language)) }
                 }
             }
             language
