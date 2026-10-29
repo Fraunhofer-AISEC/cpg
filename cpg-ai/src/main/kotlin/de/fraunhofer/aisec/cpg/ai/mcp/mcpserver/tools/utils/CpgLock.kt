@@ -74,7 +74,11 @@ class CpgLock {
         }
     }
 
-    /** [write] if [mutating], else [read]. */
+    /**
+     * [write] if [mutating], else [read]. [mutating] is the inverse of [addTool]'s `readOnly`
+     * parameter (`mutating = !readOnly`): a tool registered with `readOnly = false` runs here with
+     * [mutating] = true, i.e. under the exclusive [write] lock.
+     */
     fun <T> withAccess(mutating: Boolean, block: () -> T): T =
         if (mutating) write(block) else read(block)
 }
