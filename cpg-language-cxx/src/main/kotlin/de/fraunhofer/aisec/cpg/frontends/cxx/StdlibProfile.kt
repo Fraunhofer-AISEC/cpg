@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
- * A [Profile] for the C and C++ standard library. It can be activated using
- * [de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder.profile] and saves us from parsing the
- * standard library headers:
+ * A [Profile] for the C and C++ standard library. It is active by default for C and C++ (see
+ * [de.fraunhofer.aisec.cpg.RegisterDefaultProfile]) and saves us from parsing the standard library
+ * headers:
  * - It provides the types which the headers define, but which are not part of the language itself:
  *   `size_t`, `ssize_t` (POSIX), `ptrdiff_t`, `intptr_t` and `uintptr_t`. Without the headers (or
  *   this profile), they would be inferred as unknown record types, so arithmetic on them has an
@@ -44,8 +44,9 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  *   `profiles/stdlib.yml`), which are used for all calls to a function of this name that has no
  *   body.
  *
- * To get the precise behavior, leave the profile out and load the real headers (see
- * [de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder.loadIncludes]).
+ * To get the precise behavior, turn the profile off (see
+ * [de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder.useDefaultProfiles]) and load the real
+ * headers (see [de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder.loadIncludes]).
  */
 object StdlibProfile : Profile("stdlib") {
     override fun builtInTypes(language: Language<*>): Map<String, Type> {

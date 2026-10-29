@@ -32,10 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * A [Profile] bundles knowledge about code that is *not* part of the analyzed project, e.g., the
  * standard library of a language, so that it does not have to be parsed (or inferred) every time.
  *
- * A profile is opt-in (see [TranslationConfiguration.Builder.profile]) and can be left out at any
- * time to get the precise behavior of parsing the real sources, e.g., the headers of the standard
- * library. It is meant as a shortcut and as a fallback for missing sources: whatever the analyzed
- * code (or a loaded header) declares itself takes precedence over what a profile provides.
+ * A frontend can make a profile active by default ([RegisterDefaultProfile]); other profiles are
+ * activated with [TranslationConfiguration.Builder.profile]. The default profiles can be turned off
+ * ([TranslationConfiguration.Builder.useDefaultProfiles]) to get the precise behavior of parsing
+ * the real sources, e.g., the headers of the standard library. A profile is meant as a shortcut and
+ * as a fallback for missing sources: whatever the analyzed code (or a loaded header) declares
+ * itself takes precedence over what a profile provides.
  *
  * A profile can contribute
  * - [builtInTypes], i.e., types which the language does not know itself, and

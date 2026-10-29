@@ -122,15 +122,16 @@ Note: If multiple function summaries match a method/function declaration (after 
 5. If nothing helped to get a unique entry, we pick the first remaining entry and hope it's the most precise one.
 ## Profiles
 
-A `Profile` bundles function summaries (and types) of code that is not part of the analyzed project, such as a standard library. It is activated with `TranslationConfiguration.Builder.profile(...)` and is opt-in. Summaries registered with `registerFunctionSummaries` take precedence over the ones of a profile. The summaries of a profile only apply to functions whose code is not part of the analysis: a function that is defined in the analyzed code (or whose definition is) keeps what the analysis of its body finds, while summaries registered with `registerFunctionSummaries` apply to every matching function.
+A `Profile` bundles function summaries (and types) of code that is not part of the analyzed project, such as a standard library. A frontend can register profiles that are active by default; other profiles are activated with `TranslationConfiguration.Builder.profile(...)`. Summaries registered with `registerFunctionSummaries` take precedence over the ones of a profile. The summaries of a profile only apply to functions whose code is not part of the analysis: a function that is defined in the analyzed code (or whose definition is) keeps what the analysis of its body finds, while summaries registered with `registerFunctionSummaries` apply to every matching function.
 
-The C/C++ frontend ships the `stdlib` profile (`StdlibProfile`). It provides `size_t`, `ssize_t`, `ptrdiff_t`, `intptr_t` and `uintptr_t` as types (a typedef declared by the code takes precedence) and summaries for `memcpy`, `memmove`, `memset`, `strcpy`, `strncpy`, `strcat`, `strncat` and `strlen`:
+The C/C++ frontend ships the `stdlib` profile (`StdlibProfile`), which is active by default for C and C++. It provides `size_t`, `ssize_t`, `ptrdiff_t`, `intptr_t` and `uintptr_t` as types (a typedef declared by the code takes precedence) and summaries for `memcpy`, `memmove`, `memset`, `strcpy`, `strncpy`, `strcat`, `strncat` and `strlen`.
+
+To get the precise behavior of parsing the real headers, turn the default profiles off:
 
 ```kotlin
 TranslationConfiguration.builder()
     .registerLanguage<CLanguage>()
-    .profile(StdlibProfile)
+    .useDefaultProfiles(false)
+    .loadIncludes(true)
     .build()
 ```
-
-Leave the profile out to get the precise behavior of parsing the real headers.

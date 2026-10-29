@@ -1821,7 +1821,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                     it.registerLanguage<CLanguage>()
                     it.registerLanguage<CPPLanguage>()
-                    it.profile(StdlibProfile)
                 }
             assertNotNull(tu)
 
@@ -1847,7 +1846,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                     it.registerLanguage<CLanguage>()
                     it.registerLanguage<CPPLanguage>()
-                    it.profile(StdlibProfile)
                 }
             assertNotNull(tu)
 
@@ -1868,18 +1866,26 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testWithoutStdlibProfileTypesAreNotBuiltIn() {
+    fun testStdlibProfileIsActiveByDefault() {
         val file = File("src/test/resources/c/stdlib_profile.c")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CLanguage>()
-            }
-        assertNotNull(tu)
+        // (default profiles, explicitly activated profile) -> whether size_t is an integer type
+        val cases =
+            mapOf((true to false) to true, (false to false) to false, (false to true) to true)
+        for ((case, isInteger) in cases) {
+            val (defaultProfiles, explicitProfile) = case
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                    it.registerLanguage<CLanguage>()
+                    it.useDefaultProfiles(defaultProfiles)
+                    if (explicitProfile) it.profile(StdlibProfile)
+                }
+            assertNotNull(tu)
 
-        // The profile is opt-in: size_t is unknown without the headers
-        val type = tu.functions["copy"]?.parameters["n"]?.type
-        assertNotNull(type)
-        assertFalse(type is IntegerType)
+            // Without the profile, size_t is unknown, as the headers are not available
+            val type = tu.functions["copy"]?.parameters["n"]?.type
+            assertNotNull(type)
+            assertEquals(isInteger, type is IntegerType, "$case")
+        }
     }
 
     @Test
@@ -1896,7 +1902,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                         it.registerLanguage<CLanguage>()
                         it.registerLanguage<CPPLanguage>()
                         it.registerPass<PointsToPass>()
-                        if (useProfile) it.profile(StdlibProfile)
+                        it.useDefaultProfiles(useProfile)
                     }
                 assertNotNull(tu)
 
@@ -1928,7 +1934,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
                 it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
-                it.profile(StdlibProfile)
             }
         assertNotNull(tu)
 
@@ -1947,7 +1952,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
                 it.registerPass<PointsToPass>()
-                it.profile(StdlibProfile)
             }
         assertNotNull(tu)
 
@@ -1974,7 +1978,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
                 it.registerPass<PointsToPass>()
-                it.profile(StdlibProfile)
             }
         assertNotNull(tu)
 
