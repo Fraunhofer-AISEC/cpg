@@ -1921,6 +1921,38 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testStdlibProfileSummariesSkipFunctionsWithCode() {
+        val file = File("src/test/resources/c/stdlib_profile_own_definition.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+                it.profile(StdlibProfile)
+            }
+        assertNotNull(tu)
+
+        // The profile describes strlen's return value as coming from the memory behind its
+        // parameter. The code's own strlen keeps the summary from analyzing its body instead, and
+        // so does its prototype.
+        val strlens = tu.functions { it.name.localName == "strlen" }
+        assertEquals(2, strlens.size)
+        for (strlen in strlens) {
+            val fromParameter =
+                strlen.functionSummary.values.flatten().filter { it.srcNode is Parameter }
+            assertTrue(fromParameter.isEmpty(), "isDefinition: ${strlen.isDefinition}")
+        }
+
+        // memcpy has no code, so the profile's summary applies.
+        val memcpy = tu.calls["memcpy"]?.invokes?.singleOrNull()
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary[memcpy.parameters[0]].orEmpty().any {
+                it.srcNode == memcpy.parameters[1]
+            }
+        )
+    }
+
+    @Test
     fun testGoto() {
         val file = File("src/test/resources/c/goto.c")
         val tu =

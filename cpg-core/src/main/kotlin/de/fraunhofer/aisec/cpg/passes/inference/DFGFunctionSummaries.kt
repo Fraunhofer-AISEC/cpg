@@ -77,6 +77,13 @@ class DFGFunctionSummaries {
     /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
+    /**
+     * The entries of [functionToDFGEntryMap] that come from a [Profile]. They only describe
+     * functions whose code is not available, so they are not applied to a function with a body (see
+     * [findFunctionDeclarationEntry]).
+     */
+    private val profileEntries = mutableSetOf<FunctionDeclarationEntry>()
+
     fun hasSummary(function: Function) = function.functionSummary.isNotEmpty()
 
     fun getLastWrites(function: Function): Map<Node, Set<Function.FSEntry>> =
@@ -90,11 +97,12 @@ class DFGFunctionSummaries {
     /**
      * Reads the [DataflowEntry]s from [input]. The format is derived from the [extension] (`yaml`
      * or `yml`, everything else is treated as JSON). Entries for an already known function replace
-     * the previous ones.
+     * the previous ones. [fromProfile] marks the entries as those of a [Profile].
      */
     private fun addEntries(
         input: InputStream,
         extension: String,
+        fromProfile: Boolean = false,
     ): Map<FunctionDeclarationEntry, List<DFGEntry>> {
         val mapper =
             if (extension.lowercase() in listOf("yaml", "yml")) {
@@ -106,6 +114,11 @@ class DFGFunctionSummaries {
         val entries = mapper.readValue<List<DataflowEntry>>(input)
         for (entry in entries) {
             functionToDFGEntryMap[entry.functionDeclaration] = entry.dataFlows
+            if (fromProfile) {
+                profileEntries += entry.functionDeclaration
+            } else {
+                profileEntries -= entry.functionDeclaration
+            }
         }
         return functionToDFGEntryMap
     }
@@ -162,6 +175,10 @@ class DFGFunctionSummaries {
      * 4) If it's a method (i.e., invoked on an object), we also consider which type of the
      *    receiver/base is the most precise one
      *
+     * Entries of a [Profile] ([profileEntries]) are left out if the function or its definition has
+     * a body: the code describes the function itself, and a summary would replace what the analysis
+     * of that code finds.
+     *
      * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
      * matches.
      */
@@ -170,11 +187,13 @@ class DFGFunctionSummaries {
 
         val language = functionDecl.language
         val methodName = functionDecl.name
+        val hasCode = (functionDecl.definition ?: functionDecl).hasBody()
 
         // The language and the method name have to match. If a signature is specified, it also has
         // to match to the one of the Function, null indicates that we accept everything.
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
+                if (hasCode && it in profileEntries) return@filter false
                 // The language has to match otherwise the remaining comparison is useless
                 if (language.matchesOrDerivesFrom(it.language)) {
                     // Split the name if we have a FQN
@@ -460,7 +479,11 @@ class DFGFunctionSummaries {
                         continue
                     }
                     stream.use {
-                        dfgFunctionSummaries.addEntries(it, resource.substringAfterLast('.'))
+                        dfgFunctionSummaries.addEntries(
+                            it,
+                            resource.substringAfterLast('.'),
+                            fromProfile = true,
+                        )
                     }
                 }
             }
