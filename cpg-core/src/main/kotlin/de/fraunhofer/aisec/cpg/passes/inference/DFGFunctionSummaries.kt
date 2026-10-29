@@ -177,7 +177,8 @@ class DFGFunctionSummaries {
      *
      * Entries of a [Profile] ([profileEntries]) are left out if the function or its definition has
      * a body: the code describes the function itself, and a summary would replace what the analysis
-     * of that code finds.
+     * of that code finds. They are also left out if a registered entry matches, since registered
+     * summaries take precedence.
      *
      * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
      * matches.
@@ -191,7 +192,7 @@ class DFGFunctionSummaries {
 
         // The language and the method name have to match. If a signature is specified, it also has
         // to match to the one of the Function, null indicates that we accept everything.
-        val matchingEntries =
+        val candidates =
             functionToDFGEntryMap.keys.filter {
                 if (hasCode && it in profileEntries) return@filter false
                 // The language has to match otherwise the remaining comparison is useless
@@ -231,6 +232,7 @@ class DFGFunctionSummaries {
                     false
                 }
             }
+        val matchingEntries = candidates.filter { it !in profileEntries }.ifEmpty { candidates }
 
         log.debug(
             "Found {} matching entries for function declaration {} with parameter types {} in {}",

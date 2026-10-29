@@ -1921,6 +1921,26 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testRegisteredSummariesTakePrecedenceOverProfile() {
+        val file = File("src/test/resources/cxx/stdlib_profile.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.profile(StdlibProfile)
+            }
+        assertNotNull(tu)
+
+        // Both describe memcpy (for CPPLanguage and CLanguage, respectively), but differ in its
+        // return value: the registered file returns the memory behind param0, the profile param0.
+        val memcpy = tu.calls["memcpy"]?.invokes?.singleOrNull()
+        assertNotNull(memcpy)
+        val returned = memcpy.functionSummary[memcpy].orEmpty()
+        assertEquals(setOf(2), returned.map { it.srcValueDepth }.toSet())
+    }
+
+    @Test
     fun testStdlibProfileSummariesModelDestinationAndAppend() {
         val file = File("src/test/resources/c/stdlib_profile_summaries.c")
         val tu =
