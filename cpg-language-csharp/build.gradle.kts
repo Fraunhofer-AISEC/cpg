@@ -1,28 +1,67 @@
-plugins { id("cpg.frontend-conventions") }
+import de.undercouch.gradle.tasks.download.Download
 
-dependencies { implementation("net.java.dev.jna:jna:5.18.1") }
+plugins {
+    id("cpg.frontend-conventions")
+    alias(libs.plugins.download)
+}
 
-val publishNativeParser by
-    tasks.registering(Exec::class) {
-        // TODO: Check again https://learn.microsoft.com/en-us/dotnet/core/rid-catalog
-        val osName = System.getProperty("os.name")
-        val os = if (osName.startsWith("Mac")) "osx" else "linux"
-        val arch = System.getProperty("os.arch").replace("aarch64", "arm64").replace("amd64", "x64")
-        val rid = "$os-$arch"
-        workingDir = file("src/main/csharp/NativeParser")
-        val dotnet =
-            listOf(
-                    "/opt/homebrew/opt/dotnet@8/bin/dotnet",
-                    "/usr/local/bin/dotnet",
-                    "/usr/bin/dotnet",
+dependencies { implementation(libs.jna) }
+
+tasks {
+    val downloadLibCSharpAST by
+        registering(Download::class) {
+            val version = "v0.0.11"
+
+            src(
+                listOf(
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/libcsharpast-arm64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/libcsharpast-amd64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/libcsharpast-arm64.so",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/libcsharpast-amd64.so",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/libcsharpast-amd64.dll",
                 )
-                .map { file(it) }
-                .firstOrNull { it.exists() }
-                ?.absolutePath ?: "dotnet"
-        commandLine(dotnet, "publish", "-c", "Release", "-r", rid)
-    }
+            )
+            dest(projectDir.resolve("build/downloads/csharpast"))
+            onlyIfModified(true)
+        }
 
-tasks.named("compileKotlin") { dependsOn(publishNativeParser) }
+    // JNA finds the library by its name in the resource folder of the current platform
+    val prepareCSharpAstResources by
+        registering(Copy::class) {
+            dependsOn(downloadLibCSharpAST)
+
+            into(projectDir.resolve("src/main/resources"))
+
+            from("build/downloads/csharpast/libcsharpast-amd64.so") {
+                into("linux-x86-64")
+                rename { "libcsharpast.so" }
+            }
+
+            from("build/downloads/csharpast/libcsharpast-arm64.so") {
+                into("linux-aarch64")
+                rename { "libcsharpast.so" }
+            }
+
+            from("build/downloads/csharpast/libcsharpast-amd64.dylib") {
+                into("darwin-x86-64")
+                rename { "libcsharpast.dylib" }
+            }
+
+            from("build/downloads/csharpast/libcsharpast-arm64.dylib") {
+                into("darwin-aarch64")
+                rename { "libcsharpast.dylib" }
+            }
+
+            from("build/downloads/csharpast/libcsharpast-amd64.dll") {
+                into("win32-x86-64")
+                rename { "csharpast.dll" }
+            }
+        }
+
+    processResources { dependsOn(prepareCSharpAstResources) }
+
+    sourcesJar { dependsOn(prepareCSharpAstResources) }
+}
 
 mavenPublishing {
     pom {

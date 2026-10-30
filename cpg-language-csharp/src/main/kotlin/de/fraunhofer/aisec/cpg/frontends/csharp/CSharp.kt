@@ -30,7 +30,6 @@ import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.PointerType
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 
 /** This interface encapsulates C# <-> Kotlin translation objects. */
@@ -2384,23 +2383,9 @@ interface Csharp : Library {
     companion object {
         val INSTANCE: Csharp by lazy {
             try {
-                val osName = System.getProperty("os.name")
-                val os = if (osName.startsWith("Mac")) "osx" else "linux"
-                val arch =
-                    System.getProperty("os.arch")
-                        .replace("aarch64", "arm64")
-                        .replace("amd64", "x64")
-                val rid = "$os-$arch"
-                val ext = if (osName.startsWith("Mac")) ".dylib" else ".so"
-
-                val dylib =
-                    java.io.File(
-                        "src/main/csharp/NativeParser/bin/Release/net8.0/$rid/publish/NativeParser$ext"
-                    )
-
-                LanguageFrontend.log.info("Loading NativeParser from ${dylib.absolutePath}")
-
-                Native.load(dylib.absolutePath, Csharp::class.java)
+                // JNA extracts the library of the current platform from the resources, see
+                // build.gradle.kts
+                Native.load("csharpast", Csharp::class.java)
             } catch (ex: Exception) {
                 throw TranslationException("Error loading C# native library: $ex")
             }
