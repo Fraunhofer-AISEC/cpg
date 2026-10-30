@@ -64,6 +64,8 @@ answerJVM=$(ask "Do you want to enable the JVM frontend? (currently $(getPropert
 setProperty "enableJVMFrontend" $answerJVM
 answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getProperty "enableINIFrontend"))")
 setProperty "enableINIFrontend" $answerINI
+answerCsharp=$(ask "Do you want to enable the C# frontend? (currently $(getProperty "enableCSharpFrontend"))")
+setProperty "enableCSharpFrontend" $answerCsharp
 answerCodyzeConsole=$(ask "Do you want to enable codyze-console? (currently $(getProperty "enableCodyzeConsole"))")
 setProperty "enableCodyzeConsole" $answerCodyzeConsole
 answerAI=$(ask "Do you want to enable the AI module (MCP server, skills, chat integration)? Required for codyze-console's AI chat. (currently $(getProperty "enableAIModule"))")
