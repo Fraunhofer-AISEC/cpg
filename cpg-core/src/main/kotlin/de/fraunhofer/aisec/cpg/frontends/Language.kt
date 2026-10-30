@@ -115,7 +115,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** The primitive type names of this language. */
     @get:JsonIgnore
     val primitiveTypeNames: Set<String>
-        get() = builtInTypes.keys + profileTypes.keys
+        get() = primitiveTypeNamesWithProfiles ?: builtInTypes.keys
 
     /**
      * Additional types contributed by the active [Profile]s. They are not part of the language
@@ -124,7 +124,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      */
     @get:JsonIgnore
     var profileTypes: Map<String, Type> = emptyMap()
-        internal set
+        internal set(value) {
+            field = value
+            // Combined once here, since primitiveTypeNames is read for every operator expression
+            primitiveTypeNamesWithProfiles = builtInTypes.keys + value.keys
+        }
+
+    /** The [primitiveTypeNames] including the [profileTypes], set together with them. */
+    @DoNotPersist @JsonIgnore private var primitiveTypeNamesWithProfiles: Set<String>? = null
 
     /** The built-in types of this language. */
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>

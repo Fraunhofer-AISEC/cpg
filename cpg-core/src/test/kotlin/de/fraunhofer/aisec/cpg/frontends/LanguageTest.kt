@@ -85,6 +85,18 @@ class LanguageTest {
     }
 
     @Test
+    fun testPrimitiveTypeNamesIncludeProfileTypes() {
+        val language = TestLanguage()
+        assertEquals(language.builtInTypes.keys, language.primitiveTypeNames)
+
+        language.profileTypes =
+            mapOf("size_t" to IntegerType("size_t", 64, language, NumericType.Modifier.UNSIGNED))
+        assertEquals(language.builtInTypes.keys + "size_t", language.primitiveTypeNames)
+        // The combined set is computed once, not on every access.
+        assertSame(language.primitiveTypeNames, language.primitiveTypeNames)
+    }
+
+    @Test
     fun testMultiLanguage() {
         class OtherLanguage(ctx: TranslationContext) : TestLanguage()
 
