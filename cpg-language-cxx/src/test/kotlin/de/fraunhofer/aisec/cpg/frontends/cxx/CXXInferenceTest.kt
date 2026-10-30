@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
+import de.fraunhofer.aisec.cpg.frontends.ImplicitCast
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -309,23 +311,21 @@ class CXXInferenceTest {
             }
         assertNotNull(tu)
 
-        val nullPointers = tu.calls("take_pointer")
-        assertEquals(4, nullPointers.size)
-        for (call in nullPointers) {
-            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
-            assertTrue(
-                call.invokes.none { it.isInferred },
-                "${call.code} invokes an inferred function",
-            )
-        }
+        val calls = tu.calls("take_pointer") + tu.calls("take_other_pointer")
+        assertEquals(6, calls.size)
+        for (call in calls) {
+            // In C, the name alone determines the function, so every call resolves
+            val target = call.invokes.singleOrNull()
+            assertNotNull(target, "${call.code} is not resolved to one function")
+            assertFalse(target.isInferred, "${call.code} invokes an inferred function")
 
-        val others = tu.calls("take_other_pointer")
-        assertEquals(2, others.size)
-        for (call in others) {
-            assertTrue(
-                call.invokes.all { it.isInferred },
-                "${call.code} resolves to the definition",
-            )
+            // Only the null pointer constants can be converted to the pointer parameter
+            val argument = call.arguments.single()
+            val parameter = target.parameters.single()
+            val cast = call.language.tryCast(argument.type, parameter.type, argument, parameter)
+            val expected =
+                if (call.name.localName == "take_pointer") ImplicitCast else CastNotPossible
+            assertEquals(expected, cast, call.code)
         }
     }
 
@@ -407,14 +407,37 @@ class CXXInferenceTest {
             }
         }
 
-        // A declared record is known, so an incompatible argument still is incompatible
+        // A declared record is known, so the argument is incompatible. But in C, the name alone
+        // determines the function.
         val takeKnown = tu.calls["take_known"]
         assertNotNull(takeKnown)
-        assertTrue(takeKnown.invokes.all { it.isInferred })
+        assertTrue(takeKnown.invokes.isNotEmpty())
+        assertTrue(takeKnown.invokes.none { it.isInferred })
     }
 
     @Test
-    fun testUnknownArgumentTypeDoesNotPickAnOverloadInCpp() {
+    fun testArgumentCountDoesNotChooseTheFunctionInC() {
+        val file = File("src/test/resources/c/argument_count.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        for (name in listOf("old_style", "two")) {
+            val call = tu.calls[name]
+            assertNotNull(call, name)
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.none { it.isInferred },
+                "${call.code} invokes an inferred function",
+            )
+        }
+        assertTrue(tu.functions.none { it.isInferred })
+    }
+
+    @Test
+    fun testUnknownArgumentTypeIsAmbiguousBetweenOverloadsInCpp() {
         val file = File("src/test/resources/cxx/inference/unknown_argument_type.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
@@ -422,11 +445,44 @@ class CXXInferenceTest {
             }
         assertNotNull(tu)
 
-        // An unknown argument type would fit every overload, so C++ must not silently pick one of
-        // the declared overloads. This documents the current behavior: it infers a new function.
+        // An unknown argument type may be convertible to both overloads, so the call is ambiguous
+        // between them, and C++ does not silently pick one
         val call = tu.calls["grow"]
         assertNotNull(call)
-        assertTrue(call.invokes.isNotEmpty())
-        assertTrue(call.invokes.all { it.isInferred })
+        assertEquals(tu.functions("grow").toSet(), call.invokes.toSet())
+        assertEquals(2, call.invokes.size)
+        assertTrue(call.invokes.none { it.isInferred })
+    }
+
+    @Test
+    fun testOnlyCandidateWithUnknownArgumentTypeInCpp() {
+        val file = File("src/test/resources/cxx/inference/single_candidate.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // An unknown type may be convertible, so the only candidate is the target, whether the
+        // argument or the parameter has the unknown type
+        for (name in listOf("grow", "take")) {
+            val call = tu.calls[name]
+            assertNotNull(call, name)
+            val target = call.invokes.singleOrNull()
+            assertNotNull(target, "${call.code} is not resolved to one function")
+            assertFalse(target.isInferred, "${call.code} invokes an inferred function")
+        }
+
+        // A known type that cannot be converted, or a number of arguments that does not fit, means
+        // that the target is a function we do not know
+        for (name in listOf("log", "two")) {
+            val call = tu.calls[name]
+            assertNotNull(call, name)
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.all { it.isInferred },
+                "${call.code} resolves to the definition",
+            )
+        }
     }
 }

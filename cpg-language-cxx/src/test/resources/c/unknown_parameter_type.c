@@ -11,7 +11,7 @@ int caller(mystery_t *p, int i, long *l) {
     int b = take(*p);
     int c = take_pointer(&i);
     int d = take_pointer(p);
-    // Not an unknown type: a long* is still incompatible with a struct known*
+    // A long* is incompatible with a struct known*, but in C, the name alone determines the function
     int e = take_known(l);
     return a + b + c + d + e;
 }
