@@ -78,14 +78,25 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
      * Translates a [BaseNamespaceDeclarationSyntax][Csharp.AST.BaseNamespaceDeclarationSyntax] into
      * a [Namespace]. Handles both block-scoped and file-scoped namespaces.
      *
+     * A qualified name such as `namespace A.B` is shorthand for `namespace A { namespace B }`, so
+     * it becomes one nested [Namespace] per part. Otherwise, `A` would not be declared and a
+     * qualified name like `A.B.C` could not be resolved part by part. The outermost [Namespace] is
+     * returned.
+     *
      * C# spec:
      * [Namespace declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/namespaces#143-namespace-declarations)
      */
     private fun handleNamespaceDeclaration(
         node: Csharp.AST.BaseNamespaceDeclarationSyntax
     ): Declaration {
-        val namespace = newNamespace(node.name, rawNode = node)
-        frontend.scopeManager.enterScope(namespace)
+        val namespaces = mutableListOf<Namespace>()
+        for (part in node.name.split(frontend.language.namespaceDelimiter)) {
+            val outer = namespaces.lastOrNull()
+            val namespace = newNamespace(part, rawNode = node, holder = outer)
+            frontend.scopeManager.enterScope(namespace)
+            namespaces += namespace
+        }
+        val namespace = namespaces.last()
 
         for (using in node.usings) {
             val import = handleUsingDirective(using)
@@ -99,8 +110,8 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             namespace.addDeclaration(decl)
         }
 
-        frontend.scopeManager.leaveScope(namespace)
-        return namespace
+        namespaces.asReversed().forEach { frontend.scopeManager.leaveScope(it) }
+        return namespaces.first()
     }
 
     /**

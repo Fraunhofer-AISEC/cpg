@@ -82,7 +82,11 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val baz = bar.records["Baz"]
         assertNotNull(baz)
 
-        val dottedNameSpace = tu.namespaces["Dotted.NameSpace"]
+        // `namespace Dotted.NameSpace` is nested into `Dotted`, just like `Bar` into `Foo`
+        val dotted = tu.namespaces["Dotted"]
+        assertNotNull(dotted)
+
+        val dottedNameSpace = dotted.namespaces["Dotted.NameSpace"]
         assertNotNull(dottedNameSpace)
     }
 
