@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.ai.ChatService
+import de.fraunhofer.aisec.cpg.ai.mcp.DEFAULT_MCP_HOST
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.configureDefaultServer
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
 import de.fraunhofer.aisec.cpg.ai.mcp.runHttpMcpServerUsingKtorPlugin
@@ -61,7 +62,12 @@ private suspend fun ConsoleService.initChatService(): ChatService? {
 
     return try {
         log.info("Starting MCP server with streamable HTTP on port {}...", 8081)
-        runHttpMcpServerUsingKtorPlugin(port = 8081, server = configureDefaultServer())
+        runHttpMcpServerUsingKtorPlugin(
+            port = 8081,
+            host = DEFAULT_MCP_HOST,
+            server = configureDefaultServer(),
+            wait = false,
+        )
 
         val analysisResult = getTranslationResult()?.analysisResult
         if (analysisResult != null) {
