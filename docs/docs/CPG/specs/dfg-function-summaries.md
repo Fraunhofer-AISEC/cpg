@@ -120,6 +120,7 @@ Note: If multiple function summaries match a method/function declaration (after 
 3. If there are still multiple options, we take the longest signature.
 4. If this also didn't help to get a precise result, we iterate through the parameters and for index `i`, we pick the entry with the most precise matching type. We start with index 0 and count upwards, so if param0 leads to a single result, we're done and other entries won't be considered even if all the remaining parameters are more precise or whatever.
 5. If nothing helped to get a unique entry, we pick the first remaining entry and hope it's the most precise one.
+
 ## Profiles
 
 A `Profile` bundles function summaries (and types) of code that is not part of the analyzed project, such as a standard library. A frontend can register profiles that are active by default; other profiles are activated with `TranslationConfiguration.Builder.profile(...)`. Summaries registered with `registerFunctionSummaries` take precedence over the ones of a profile. The summaries of a profile only apply to functions whose code is not part of the analysis: a function that is defined in the analyzed code (or whose definition is) keeps what the analysis of its body finds, while summaries registered with `registerFunctionSummaries` apply to every matching function. A profile's summaries also only apply to functions (not methods) that are declared globally or in one of the profile's `summaryNamespaces`: a function with the same name that the code declares in another namespace, or a method, is a different function.
