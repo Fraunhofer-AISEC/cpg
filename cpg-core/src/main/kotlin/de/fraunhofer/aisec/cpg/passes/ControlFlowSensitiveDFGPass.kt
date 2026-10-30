@@ -535,15 +535,20 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 for (invoked in functionsWithSummaries) {
                     val changedParams = ctx.config.functionSummaries.getLastWrites(invoked)
                     for ((param, _) in changedParams) {
+                        // A call can have fewer arguments than parameters (e.g. default arguments,
+                        // or a C call that does not fit its function)
+                        if (
+                            param is Parameter && param.argumentIndex >= currentNode.arguments.size
+                        ) {
+                            continue
+                        }
+
                         val arg =
                             when (param) {
                                 (invoked as? Method)?.receiver ->
                                     (currentNode as? MemberCall)?.base as? Reference
-                                // A call can have fewer arguments than parameters (e.g. default
-                                // arguments, or a C call that does not fit its function)
                                 is Parameter ->
-                                    currentNode.arguments.getOrNull(param.argumentIndex)
-                                        as? Reference
+                                    currentNode.arguments[param.argumentIndex] as? Reference
                                 else -> null
                             }
                         doubleState.declarationsState[arg?.refersTo] =
