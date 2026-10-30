@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.ImplicitCast
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -505,6 +506,31 @@ class CXXInferenceTest {
         assertEquals(tu.functions("grow").toSet(), call.invokes.toSet())
         assertEquals(2, call.invokes.size)
         assertTrue(call.invokes.none { it.isInferred })
+    }
+
+    @Test
+    fun testTemplatesAndConstructorsWithUnknownArgumentTypeInCpp() {
+        val file = File("src/test/resources/cxx/inference/unknown_argument_templates.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // The template handling resolves the call to the template before the fallback runs
+        val tmpl = tu.calls["tmpl"]
+        assertNotNull(tmpl)
+        val target = tmpl.invokes.singleOrNull()
+        assertNotNull(target)
+        assertFalse(target.isInferred)
+        assertLocalName("tmpl", tmpl.templateInstantiation)
+
+        // Constructors are resolved apart from bestViableResolution, so the fallback does not apply
+        // to them: the constructor is still inferred
+        val construction = tu.allChildren<Construction>().singleOrNull()
+        assertNotNull(construction)
+        assertTrue(construction.invokes.isNotEmpty())
+        assertTrue(construction.invokes.all { it.isInferred })
     }
 
     @Test
