@@ -543,8 +543,10 @@ class CXXInferenceTest {
         assertNotNull(tu)
 
         // An unknown type may be convertible, so the only candidate is the target, whether the
-        // argument or the parameter has the unknown type
-        for (name in listOf("grow", "take")) {
+        // argument or the parameter has the unknown type, and also for a class whose definition we
+        // do
+        // not know, behind a pointer level, with a default argument, or with variadic parameters
+        for (name in listOf("grow", "take", "take_foo", "take_pp", "with_default", "vararg")) {
             val call = tu.calls[name]
             assertNotNull(call, name)
             val target = call.invokes.singleOrNull()
