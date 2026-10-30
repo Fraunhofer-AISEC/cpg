@@ -81,6 +81,8 @@
       to: return
       dfgType: full
 
+# strlen's length is derived from the contents of the string (like the result of a + b from its
+# operands), so the contents flow to the return value.
 - functionDeclaration:
     language: CLanguage
     methodName: strlen
