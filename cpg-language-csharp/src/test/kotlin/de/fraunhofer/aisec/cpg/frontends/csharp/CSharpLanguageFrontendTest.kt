@@ -141,6 +141,39 @@ class CSharpLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testUsingDoesNotShadowNamespaceMember() {
+        val topLevel = Path.of("src", "test", "resources", "csharp", "usingprecedence")
+        val result = analyze(".cs", topLevel, true) { it.registerLanguage<CSharpLanguage>() }
+
+        // `App.Core.Logger` is declared in the surrounding namespace, so it wins over the
+        // `App.Logging.Logger` imported by `using App.Logging;`
+        val logger = result.records["App.Core.UsesCoreLogger"]?.fields["logger"]
+        assertNotNull(logger)
+        assertFullName("App.Core.Logger", logger.type)
+    }
+
+    @Test
+    fun testInferredTypeDoesNotShadowUsing() {
+        val topLevel = Path.of("src", "test", "resources", "csharp", "usingprecedence")
+        val result = analyze(".cs", topLevel, true) { it.registerLanguage<CSharpLanguage>() }
+
+        // The `Logger` of a file that imports a namespace which is not part of the analyzed
+        // sources is inferred
+        val external = result.records["App.External.UsesExternalLogger"]?.fields["logger"]
+        assertNotNull(external)
+        val inferred = external.type.recordDeclaration
+        assertNotNull(inferred)
+        assertTrue(inferred.isInferred)
+
+        // The inferred `Logger` must not shadow the one imported by `using App.Logging;` in
+        // another file
+        val internal = result.records["App.Internal.UsesInternalLogger"]?.fields["logger"]
+        assertNotNull(internal)
+        assertFullName("App.Logging.Logger", internal.type)
+        assertEquals(false, internal.type.recordDeclaration?.isInferred)
+    }
+
+    @Test
     fun testFieldDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
