@@ -87,7 +87,7 @@
     }
 
     const id = `${item.id?.toString() || item.nodeId || 'item'}-${index}`;
-    const title = item.name || item.nodeId || 'Unknown';
+    const title = item.name || item.signature || item.nodeId || 'Unknown';
     const subtitle = item.overlay ? getShortName(item.overlay) : (item.returnType || item.kind || item.overlayClass || item.type || '');
     const location = formatLocation(item);
     const extraProps = buildDynamicExtraProps(item);
