@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -151,6 +152,8 @@ class CSharpLanguage :
             // String Type
             "string" to StringType("string", this),
             "object" to ObjectType("object", listOf(), false, true, this),
+            // `void` is not a real type, a method returning it returns nothing
+            "void" to IncompleteType(language = this),
         )
 
     /**

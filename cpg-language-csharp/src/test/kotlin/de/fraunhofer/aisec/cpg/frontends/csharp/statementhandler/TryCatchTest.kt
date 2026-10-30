@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.csharp.statementhandler
 
 import de.fraunhofer.aisec.cpg.frontends.csharp.CSharpLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -40,30 +39,21 @@ import kotlin.test.assertTrue
 
 class TryCatchTest : BaseTest() {
 
-    private fun analyze(): TranslationUnit {
+    @Test
+    fun testTryCatch() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)
-        return tu
-    }
 
-    /** Returns the single [Try] in the body of the method called [name]. */
-    private fun tryOf(tu: TranslationUnit, name: String): Try {
-        val method = tu.methods[name]
+        val method = tu.methods["TryCatchStmt"]
         assertNotNull(method)
         val body = method.body
         assertIs<Block>(body)
         val tryStmt = body.statements.firstOrNull()
         assertIs<Try>(tryStmt)
-        return tryStmt
-    }
-
-    @Test
-    fun testTryCatch() {
-        val tryStmt = tryOf(analyze(), "TryCatchStmt")
 
         // try { return Convert(s); }
         val tryBlock = tryStmt.tryBlock
@@ -91,7 +81,19 @@ class TryCatchTest : BaseTest() {
 
     @Test
     fun testTryCatchFinally() {
-        val tryStmt = tryOf(analyze(), "TryCatchFinally")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["TryCatchFinally"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+        val tryStmt = body.statements.firstOrNull()
+        assertIs<Try>(tryStmt)
 
         assertNotNull(tryStmt.tryBlock)
         assertEquals(1, tryStmt.catchClauses.size)
@@ -106,7 +108,19 @@ class TryCatchTest : BaseTest() {
 
     @Test
     fun testTryFinally() {
-        val tryStmt = tryOf(analyze(), "TryFinally")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["TryFinally"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+        val tryStmt = body.statements.firstOrNull()
+        assertIs<Try>(tryStmt)
 
         assertNotNull(tryStmt.tryBlock)
         assertTrue(tryStmt.catchClauses.isEmpty())
@@ -115,7 +129,19 @@ class TryCatchTest : BaseTest() {
 
     @Test
     fun testMultipleCatches() {
-        val tryStmt = tryOf(analyze(), "MultipleCatches")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["MultipleCatches"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+        val tryStmt = body.statements.firstOrNull()
+        assertIs<Try>(tryStmt)
         assertEquals(3, tryStmt.catchClauses.size)
 
         // catch (FormatException e)
@@ -137,7 +163,19 @@ class TryCatchTest : BaseTest() {
 
     @Test
     fun testCatchFilter() {
-        val tryStmt = tryOf(analyze(), "CatchFilter")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["CatchFilter"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+        val tryStmt = body.statements.firstOrNull()
+        assertIs<Try>(tryStmt)
 
         // catch (IOException e) when (e.Message == "retry") { Retry(); }
         val catchClause = tryStmt.catchClauses.single()
@@ -147,9 +185,9 @@ class TryCatchTest : BaseTest() {
 
         // The filter has no direct equivalent in the CPG, so the body is wrapped in an implicit
         // if-else guarded by the filter expression.
-        val body = catchClause.body
-        assertIs<Block>(body)
-        val guard = body.statements.single()
+        val catchBody = catchClause.body
+        assertIs<Block>(catchBody)
+        val guard = catchBody.statements.single()
         assertIs<IfElse>(guard)
 
         val condition = guard.condition
@@ -171,7 +209,12 @@ class TryCatchTest : BaseTest() {
 
     @Test
     fun testThrowStatement() {
-        val tu = analyze()
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val method = tu.methods["ThrowStmt"]
         assertNotNull(method)
         val body = method.body
@@ -187,7 +230,19 @@ class TryCatchTest : BaseTest() {
 
     @Test
     fun testRethrow() {
-        val tryStmt = tryOf(analyze(), "Rethrow")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["Rethrow"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+        val tryStmt = body.statements.firstOrNull()
+        assertIs<Try>(tryStmt)
 
         // catch (IOException) { throw; }
         val catchBlock = tryStmt.catchClauses.single().body
@@ -199,7 +254,12 @@ class TryCatchTest : BaseTest() {
 
     @Test
     fun testThrowExpression() {
-        val tu = analyze()
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("TryCatch.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val method = tu.methods["ThrowExpr"]
         assertNotNull(method)
         val body = method.body

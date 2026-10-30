@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
@@ -36,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.incompleteType
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newConstruction
 import de.fraunhofer.aisec.cpg.graph.newConstructor
 import de.fraunhofer.aisec.cpg.graph.newEnumConstant
 import de.fraunhofer.aisec.cpg.graph.newEnumeration
@@ -45,11 +47,14 @@ import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
 import de.fraunhofer.aisec.cpg.graph.newParameter
+import de.fraunhofer.aisec.cpg.graph.newProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newRecord
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -65,7 +70,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.PropertyDeclarationSyntax -> handlePropertyDeclaration(node)
             is Csharp.AST.ConstructorDeclarationSyntax -> handleConstructorDeclaration(node)
             is Csharp.AST.InterfaceDeclarationSyntax -> handleInterfaceDeclaration(node)
-            else -> ProblemDeclaration("Not supported: ${node.csharpType}")
+            else -> newProblemDeclaration("Not supported: ${node.csharpType}", rawNode = node)
         }
     }
 
@@ -311,21 +316,18 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
 
         createMethodReceiver(method)
 
-        for (parameter in node.parameterList.parameters) {
-            val param =
-                newParameter(
-                    name = parameter.identifier,
-                    type = frontend.typeOf(parameter.type),
-                    rawNode = parameter,
-                )
-            parameter.default?.let { param.default = frontend.expressionHandler.handle(it) }
-            frontend.scopeManager.addDeclaration(param)
-            method.parameters += param
-        }
+        handleParameters(method, node.parameterList.parameters)
         method.returnTypes = listOf(frontend.typeOf(node.returnType))
+        // The type of the method is the type of every call invoking it
+        method.type = computeType(method)
         node.body?.let { method.body = frontend.statementHandler.handle(it) }
         node.expressionBody?.let {
-            method.body = expressionBody(it, node, returnsValue = node.returnType.name != "void")
+            method.body =
+                expressionBody(
+                    it,
+                    node,
+                    returnsValue = method.returnTypes.singleOrNull() !is IncompleteType,
+                )
         }
         frontend.scopeManager.leaveScope(method)
         return method
@@ -383,6 +385,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             } else {
                 method.returnTypes = listOf(propertyType)
             }
+            method.type = computeType(method)
 
             val body = accessor.body
             val expressionBody = accessor.expressionBody
@@ -471,6 +474,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             frontend.scopeManager.enterScope(method)
             createMethodReceiver(method)
             method.returnTypes = listOf(propertyType)
+            method.type = computeType(method)
             val block =
                 newBlock()
                     .implicit(code = frontend.codeOf(node), location = frontend.locationOf(node))
@@ -515,24 +519,80 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
 
         createMethodReceiver(constructor)
 
-        for (parameter in node.parameterList.parameters) {
-            val param =
-                newParameter(
-                    name = parameter.identifier,
-                    type = frontend.typeOf(parameter.type),
-                    rawNode = parameter,
-                )
-            parameter.default?.let { param.default = frontend.expressionHandler.handle(it) }
-            frontend.scopeManager.addDeclaration(param)
-            constructor.parameters += param
-        }
+        handleParameters(constructor, node.parameterList.parameters)
         node.body?.let { constructor.body = frontend.statementHandler.handle(it) }
         node.expressionBody?.let {
             constructor.body = expressionBody(it, node, returnsValue = false)
         }
+        // The `: base(...)` or `: this(...)` runs before the body, so it becomes its first
+        // statement
+        node.initializer?.let { initializer ->
+            val body =
+                constructor.body as? Block
+                    ?: newBlock()
+                        .implicit(
+                            code = frontend.codeOf(node),
+                            location = frontend.locationOf(node),
+                        )
+            body.statements.add(0, handleConstructorInitializer(initializer))
+            constructor.body = body
+        }
 
         frontend.scopeManager.leaveScope(constructor)
         return constructor
+    }
+
+    /**
+     * Translates a [ConstructorInitializerSyntax][Csharp.AST.ConstructorInitializerSyntax] into a
+     * [Construction] of either the current record (`: this(...)`) or its base class (`:
+     * base(...)`).
+     *
+     * Note: Without semantic information we cannot tell a base class from an interface in the base
+     * list, so we assume the first entry is the base class, as C# requires it to be listed first.
+     *
+     * C# spec:
+     * [Constructor initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#15112-constructor-initializers)
+     */
+    private fun handleConstructorInitializer(
+        node: Csharp.AST.ConstructorInitializerSyntax
+    ): Construction {
+        val record = frontend.scopeManager.currentRecord
+        val type =
+            if (node.keyword == "this") {
+                record?.toType()
+            } else {
+                record?.superClasses?.firstOrNull()
+            } ?: unknownType()
+
+        val construction = newConstruction(type.name.localName, rawNode = node)
+        construction.type = type
+        construction.callee = newReference(type.name).implicit(code = node.keyword)
+        for (arg in node.argumentList.arguments) {
+            construction.addArgument(frontend.expressionHandler.handle(arg.expression))
+        }
+        return construction
+    }
+
+    /**
+     * Translates the [parameters] of a method, constructor, local function or lambda into
+     * [Parameter]s of [function] and adds them to the current scope. A lambda parameter without a
+     * type, such as `x` in `x => x + 1`, gets an unknown type.
+     */
+    internal fun handleParameters(
+        function: Function,
+        parameters: List<Csharp.AST.ParameterSyntax>,
+    ) {
+        for (parameter in parameters) {
+            val param =
+                newParameter(
+                    name = parameter.identifier,
+                    type = parameter.type?.let { frontend.typeOf(it) } ?: unknownType(),
+                    rawNode = parameter,
+                )
+            parameter.default?.let { param.default = frontend.expressionHandler.handle(it) }
+            frontend.scopeManager.addDeclaration(param)
+            function.parameters += param
+        }
     }
 
     /**
@@ -545,7 +605,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
      * C# spec:
      * [Expression body](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#15612-method-body)
      */
-    private fun expressionBody(
+    internal fun expressionBody(
         expression: Csharp.AST.ExpressionSyntax,
         node: Csharp.AST.Node,
         returnsValue: Boolean,

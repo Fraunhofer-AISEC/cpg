@@ -489,6 +489,7 @@ interface Csharp : Library {
                     "UsingStatementSyntax" -> UsingStatementSyntax(nativeValue)
                     "FixedStatementSyntax" -> FixedStatementSyntax(nativeValue)
                     "EmptyStatementSyntax" -> EmptyStatementSyntax(nativeValue)
+                    "LocalFunctionStatementSyntax" -> LocalFunctionStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -810,12 +811,49 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`LocalFunctionStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.localfunctionstatementsyntax)
+         * class, i.e. a function declared inside the body of another function.
+         */
+        class LocalFunctionStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetLocalFunctionStatementIdentifier(this) }
+            val returnType: TypeSyntax by lazy {
+                INSTANCE.GetLocalFunctionStatementReturnType(this)
+            }
+            val parameterList: ParameterListSyntax by lazy {
+                INSTANCE.GetLocalFunctionStatementParameterList(this)
+            }
+            val body: BlockSyntax? by lazy { INSTANCE.GetLocalFunctionStatementBody(this) }
+            val expressionBody: ExpressionSyntax? by lazy {
+                INSTANCE.GetLocalFunctionStatementExpressionBody(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
          * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax)
          * class.
          */
         class ConstructorDeclarationSyntax(p: Pointer? = Pointer.NULL) :
             BaseMethodDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetConstructorDeclarationIdentifier(this) }
+
+            /** The `: base(...)` or `: this(...)` in front of the body, if any. */
+            val initializer: ConstructorInitializerSyntax? by lazy {
+                INSTANCE.GetConstructorDeclarationInitializer(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ConstructorInitializerSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructorinitializersyntax)
+         * class, i.e. the `: base(...)` or `: this(...)` of a constructor.
+         */
+        class ConstructorInitializerSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            /** Either `base` or `this`. */
+            val keyword: String by lazy { INSTANCE.GetConstructorInitializerKeyword(this) }
+            val argumentList: BaseArgumentListSyntax by lazy {
+                INSTANCE.GetConstructorInitializerArgumentList(this)
+            }
         }
 
         /**
@@ -1171,6 +1209,11 @@ interface Csharp : Library {
                     "BaseExpressionSyntax" -> BaseExpressionSyntax(nativeValue)
                     "ThrowExpressionSyntax" -> ThrowExpressionSyntax(nativeValue)
                     "CheckedExpressionSyntax" -> CheckedExpressionSyntax(nativeValue)
+                    "SimpleLambdaExpressionSyntax" -> SimpleLambdaExpressionSyntax(nativeValue)
+                    "ParenthesizedLambdaExpressionSyntax" ->
+                        ParenthesizedLambdaExpressionSyntax(nativeValue)
+                    "AnonymousMethodExpressionSyntax" ->
+                        AnonymousMethodExpressionSyntax(nativeValue)
                     "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
                     "ImplicitObjectCreationExpressionSyntax" ->
                         ImplicitObjectCreationExpressionSyntax(nativeValue)
@@ -1534,6 +1577,48 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`AnonymousFunctionExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.anonymousfunctionexpressionsyntax)
+         * class, the common base of lambdas and anonymous methods. Its body is either a [block] or
+         * an [expressionBody].
+         */
+        open class AnonymousFunctionExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            ExpressionSyntax(p) {
+            val parameters: List<ParameterSyntax> by lazy {
+                val count = INSTANCE.GetAnonymousFunctionParameterCount(this)
+                (0 until count).map { i -> INSTANCE.GetAnonymousFunctionParameter(this, i) }
+            }
+            val block: BlockSyntax? by lazy { INSTANCE.GetAnonymousFunctionBlock(this) }
+            val expressionBody: ExpressionSyntax? by lazy {
+                INSTANCE.GetAnonymousFunctionExpressionBody(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`SimpleLambdaExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.simplelambdaexpressionsyntax)
+         * class, i.e. a lambda with a single parameter without parentheses, such as `x => x + 1`.
+         */
+        class SimpleLambdaExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            AnonymousFunctionExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`ParenthesizedLambdaExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parenthesizedlambdaexpressionsyntax)
+         * class, such as `(int a, int b) => a + b` or `() => { ... }`.
+         */
+        class ParenthesizedLambdaExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            AnonymousFunctionExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`AnonymousMethodExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.anonymousmethodexpressionsyntax)
+         * class, such as `delegate (int x) { return x; }`.
+         */
+        class AnonymousMethodExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            AnonymousFunctionExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
          * [`ParameterListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parameterlistsyntax)
          * class.
          */
@@ -1551,7 +1636,8 @@ interface Csharp : Library {
          */
         class ParameterSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val identifier: String by lazy { INSTANCE.GetParameterIdentifier(this) }
-            val type: TypeSyntax by lazy { INSTANCE.GetParameterType(this) }
+            /** The type of the parameter, or `null` for a lambda parameter without a type. */
+            val type: TypeSyntax? by lazy { INSTANCE.GetParameterType(this) }
 
             /**
              * The default value of an optional parameter, i.e. `5` for `int x = 5`, or `null` if
@@ -1862,7 +1948,7 @@ interface Csharp : Library {
 
     fun GetParameterIdentifier(handle: AST.ParameterSyntax): String
 
-    fun GetParameterType(handle: AST.ParameterSyntax): AST.TypeSyntax
+    fun GetParameterType(handle: AST.ParameterSyntax): AST.TypeSyntax?
 
     fun GetParameterDefault(handle: AST.ParameterSyntax): AST.ExpressionSyntax?
 
@@ -1911,6 +1997,45 @@ interface Csharp : Library {
     fun GetQualifiedNameRight(handle: AST.QualifiedNameSyntax): AST.TypeSyntax
 
     fun GetConstructorDeclarationIdentifier(handle: AST.ConstructorDeclarationSyntax): String
+
+    fun GetAnonymousFunctionParameterCount(handle: AST.AnonymousFunctionExpressionSyntax): Int
+
+    fun GetAnonymousFunctionParameter(
+        handle: AST.AnonymousFunctionExpressionSyntax,
+        index: Int,
+    ): AST.ParameterSyntax
+
+    fun GetAnonymousFunctionBlock(handle: AST.AnonymousFunctionExpressionSyntax): AST.BlockSyntax?
+
+    fun GetAnonymousFunctionExpressionBody(
+        handle: AST.AnonymousFunctionExpressionSyntax
+    ): AST.ExpressionSyntax?
+
+    fun GetLocalFunctionStatementIdentifier(handle: AST.LocalFunctionStatementSyntax): String
+
+    fun GetLocalFunctionStatementReturnType(
+        handle: AST.LocalFunctionStatementSyntax
+    ): AST.TypeSyntax
+
+    fun GetLocalFunctionStatementParameterList(
+        handle: AST.LocalFunctionStatementSyntax
+    ): AST.ParameterListSyntax
+
+    fun GetLocalFunctionStatementBody(handle: AST.LocalFunctionStatementSyntax): AST.BlockSyntax?
+
+    fun GetLocalFunctionStatementExpressionBody(
+        handle: AST.LocalFunctionStatementSyntax
+    ): AST.ExpressionSyntax?
+
+    fun GetConstructorDeclarationInitializer(
+        handle: AST.ConstructorDeclarationSyntax
+    ): AST.ConstructorInitializerSyntax?
+
+    fun GetConstructorInitializerKeyword(handle: AST.ConstructorInitializerSyntax): String
+
+    fun GetConstructorInitializerArgumentList(
+        handle: AST.ConstructorInitializerSyntax
+    ): AST.BaseArgumentListSyntax
 
     fun GetBaseMethodDeclarationBody(handle: AST.BaseMethodDeclarationSyntax): AST.BlockSyntax?
 

@@ -26,4 +26,21 @@ class Bar
     {
         Offset(1);
     }
+
+    void nestedCall()
+    {
+        var sum = Add(1, 2);
+        Add(Add(sum, 3), 4);
+    }
+
+    int localFunctions(int a)
+    {
+        int Twice(int v) => v * 2;
+        return Square(a) + Twice(a);
+
+        int Square(int v)
+        {
+            return v * v;
+        }
+    }
 }

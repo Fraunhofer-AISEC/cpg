@@ -32,6 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.test.*
@@ -222,5 +224,77 @@ class VariableDeclarationsTest : BaseTest() {
         assertIs<BinaryOperator>(bInit)
         assertEquals("+", bInit.operatorCode)
         assertIs<IntegerType>(b.type)
+    }
+
+    @Test
+    fun testSiblingBlocks() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Variables.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["siblingBlocks"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+
+        // { int x = 1; use(x); } and { int x = 2; use(x); } each declare their own `x`
+        val blocks = body.statements.filterIsInstance<Block>()
+        assertEquals(2, blocks.size)
+        for ((block, value) in blocks.zip(listOf(1, 2))) {
+            val x = block.variables["x"]
+            assertNotNull(x)
+            assertIs<LocalScope>(x.scope)
+            val initializer = x.initializer
+            assertIs<Literal<*>>(initializer)
+            assertEquals(value, initializer.value)
+
+            val ref = block.calls["use"]?.arguments?.singleOrNull()
+            assertIs<Reference>(ref)
+            assertEquals(x, ref.refersTo)
+        }
+    }
+
+    @Test
+    fun testNestedBlock() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Variables.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["nestedBlock"]
+        assertNotNull(method)
+
+        val y = method.variables["y"]
+        assertNotNull(y)
+        val z = method.variables["z"]
+        assertNotNull(z)
+        assertIs<LocalScope>(z.scope)
+
+        // `y` of the enclosing block is visible in the nested one: int z = y;
+        val init = z.initializer
+        assertIs<Reference>(init)
+        assertEquals(y, init.refersTo)
+
+        val uses = method.calls("use").map { it.arguments.singleOrNull() }
+        assertEquals(2, uses.size)
+        val useOfZ = uses[0]
+        assertIs<Reference>(useOfZ)
+        assertEquals(z, useOfZ.refersTo)
+        val useOfY = uses[1]
+        assertIs<Reference>(useOfY)
+        assertEquals(y, useOfY.refersTo)
     }
 }

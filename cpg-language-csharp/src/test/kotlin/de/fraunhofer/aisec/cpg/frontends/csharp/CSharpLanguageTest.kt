@@ -36,16 +36,18 @@ import kotlin.test.*
 
 class CSharpLanguageTest : BaseTest() {
 
-    private fun translate(file: String) =
-        Path.of("src", "test", "resources", "csharp").let { topLevel ->
-            analyzeAndGetFirstTU(listOf(topLevel.resolve(file).toFile()), topLevel, true) {
-                it.registerLanguage<CSharpLanguage>()
-            }
-        }
-
     @Test
     fun testFieldVisibility() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val record = tu.records["Modifiers"]
         assertNotNull(record)
 
@@ -75,7 +77,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testStatic() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val record = tu.records["Modifiers"]
         assertNotNull(record)
 
@@ -99,7 +110,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testAccessorKeepsPropertyStaticAndNarrowsAccess() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val record = tu.records["Modifiers"]
         assertNotNull(record)
 
@@ -119,7 +139,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testConstructorHasReceiver() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val constructor = tu.records["Modifiers"]?.constructors?.singleOrNull()
         assertNotNull(constructor)
         val receiver = constructor.receiver
@@ -136,7 +165,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testStaticUsing() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val imports = tu.imports
         val system = imports.single { it.import.toString() == "System" }
         val math = imports.single { it.import.toString() == "System.Math" }
@@ -147,7 +185,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testVarHasUnknownTypeAndResolvesOverload() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val call = tu.records["Modifiers"]?.methods["Call"]
         assertNotNull(call)
 
@@ -165,7 +212,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testIntIs32Bit() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val add = tu.records["Modifiers"]?.methods["Add"]
         assertNotNull(add)
         val sum = add.nodes.filterIsInstance<BinaryOperator>().single()
@@ -175,7 +231,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testShortCircuitOperators() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val method = tu.records["Modifiers"]?.methods["ShortCircuit"]
         assertNotNull(method)
 
@@ -195,7 +260,16 @@ class CSharpLanguageTest : BaseTest() {
 
     @Test
     fun testNullCoalescingIsShortCircuiting() {
-        val tu = translate("Modifiers.cs")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Modifiers.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val method = tu.records["Modifiers"]?.methods["Coalesce"]
         assertNotNull(method)
         val coalesce = method.nodes.filterIsInstance<BinaryOperator>().single()

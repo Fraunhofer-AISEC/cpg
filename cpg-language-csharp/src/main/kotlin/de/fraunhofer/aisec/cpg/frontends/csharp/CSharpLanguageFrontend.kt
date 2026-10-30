@@ -59,7 +59,7 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
         currentFile = file
         val source = file.readText()
         val root = Csharp.CSharpSyntaxTree.parseText(source)
-        val tu = newTranslationUnit(file.name, rawNode = root)
+        val tu = newTranslationUnit(file.absolutePath, rawNode = root)
 
         scopeManager.resetToGlobal(tu)
         currentTU = tu

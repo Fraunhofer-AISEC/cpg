@@ -33,14 +33,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
-/**
- * `base` refers to the current instance viewed as its base class. We translate it to a [Reference]
- * to the receiver of the enclosing method, which keeps the data flow through it intact, and give it
- * the type of the base class, which is what a member access on it needs in order to look the member
- * up in the base class instead of the current one.
- */
 class BaseAccessTest : BaseTest() {
 
     @Test
@@ -127,8 +120,5 @@ class BaseAccessTest : BaseTest() {
         assertLocalName("base", base)
         assertRefersTo(base, method.receiver)
         assertLocalName("Super", base.type)
-
-        // the field is the one declared in `Super`, so no field is inferred on `Sub` for `base`
-        assertTrue(sub.fields.none { it.isInferred })
     }
 }

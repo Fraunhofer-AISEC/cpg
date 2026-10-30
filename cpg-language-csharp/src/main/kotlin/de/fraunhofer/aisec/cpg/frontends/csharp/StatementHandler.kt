@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
@@ -43,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.newEmpty
 import de.fraunhofer.aisec.cpg.graph.newExpressionList
 import de.fraunhofer.aisec.cpg.graph.newFor
 import de.fraunhofer.aisec.cpg.graph.newForEach
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newIfElse
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMemberCall
@@ -54,6 +56,8 @@ import de.fraunhofer.aisec.cpg.graph.newThrow
 import de.fraunhofer.aisec.cpg.graph.newTry
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.newWhile
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: CSharpLanguageFrontend) :
@@ -81,7 +85,8 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.UnsafeStatementSyntax -> handleUnsafeStatement(node)
             is Csharp.AST.UsingStatementSyntax -> handleUsing(node)
             is Csharp.AST.EmptyStatementSyntax -> handleEmptyStatement(node)
-            else -> ProblemExpression("Not supported: ${node.csharpType}")
+            is Csharp.AST.LocalFunctionStatementSyntax -> handleLocalFunction(node)
+            else -> newProblemExpression("Not supported: ${node.csharpType}", rawNode = node)
         }
     }
 
@@ -137,6 +142,40 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             declStmt.declarations += v
         }
 
+        return declStmt
+    }
+
+    /**
+     * Translates a [LocalFunctionStatementSyntax][Csharp.AST.LocalFunctionStatementSyntax] into a
+     * [Function], wrapped in a [DeclarationStatement]. The function is added to the enclosing
+     * scope, so calls in the same block resolve to it.
+     *
+     * C# spec:
+     * [Local function declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1364-local-function-declarations)
+     */
+    private fun handleLocalFunction(
+        node: Csharp.AST.LocalFunctionStatementSyntax
+    ): DeclarationStatement {
+        val function = newFunction(node.identifier, localNameOnly = true, rawNode = node)
+        frontend.scopeManager.enterScope(function)
+        frontend.declarationHandler.handleParameters(function, node.parameterList.parameters)
+        function.returnTypes = listOf(frontend.typeOf(node.returnType))
+        // The type of the function is the type of every call invoking it
+        function.type = computeType(function)
+        node.body?.let { function.body = handle(it) }
+        node.expressionBody?.let {
+            function.body =
+                frontend.declarationHandler.expressionBody(
+                    it,
+                    node,
+                    returnsValue = function.returnTypes.singleOrNull() !is IncompleteType,
+                )
+        }
+        frontend.scopeManager.leaveScope(function)
+        frontend.scopeManager.addDeclaration(function)
+
+        val declStmt = newDeclarationStatement(rawNode = node)
+        declStmt.declarations += function
         return declStmt
     }
 
@@ -316,8 +355,9 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
                         when (val designation = pattern.designation) {
                             is Csharp.AST.SingleVariableDesignationSyntax -> designation.identifier
                             else ->
-                                return ProblemExpression(
-                                    "Variable designation type not yet supported: ${designation.csharpType}"
+                                return newProblemExpression(
+                                    "Variable designation type not yet supported: ${designation.csharpType}",
+                                    rawNode = designation,
                                 )
                         }
                     val variable = newVariable(name = identifier, rawNode = pattern)
@@ -327,7 +367,10 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
                     declStmt
                 }
                 else -> {
-                    ProblemExpression("Pattern type not yet supported: ${pattern.csharpType}")
+                    newProblemExpression(
+                        "Pattern type not yet supported: ${pattern.csharpType}",
+                        rawNode = pattern,
+                    )
                 }
             }
 
@@ -510,7 +553,9 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleBlock(node: Csharp.AST.BlockSyntax): Block {
         val block = newBlock(rawNode = node)
+        frontend.scopeManager.enterScope(block)
         block.statements += handleStatements(node.statements)
+        frontend.scopeManager.leaveScope(block)
         return block
     }
 

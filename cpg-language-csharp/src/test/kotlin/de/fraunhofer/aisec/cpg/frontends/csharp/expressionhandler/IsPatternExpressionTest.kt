@@ -36,14 +36,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-/**
- * `x is Foo f` has no direct representation in the graph. The scrutinee is destructured into an
- * implicit temporary (as for `a?.b`, see
- * [de.fraunhofer.aisec.cpg.frontends.csharp.ExpressionHandler.handleConditionalAccessExpression]),
- * and the pattern itself becomes a boolean expression tree over that temporary. See
- * [de.fraunhofer.aisec.cpg.frontends.csharp.ExpressionHandler.handleIsPatternExpression] and
- * [de.fraunhofer.aisec.cpg.frontends.csharp.ExpressionHandler.translatePattern].
- */
 class IsPatternExpressionTest : BaseTest() {
 
     @Test
@@ -154,11 +146,6 @@ class IsPatternExpressionTest : BaseTest() {
         assertLocalName("int", checkRhs.type)
     }
 
-    /**
-     * The tested value is not always a plain reference: `GetObject()` must be evaluated exactly
-     * once (into the implicit temporary), not once for the type check and once more for the value
-     * bound to `f`.
-     */
     @Test
     fun testDeclarationPatternWithSideEffect() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
@@ -197,7 +184,6 @@ class IsPatternExpressionTest : BaseTest() {
         val inner = outer.expressions[1]
         assertIs<ExpressionList>(inner)
 
-        // Foo f = tmp as Foo; -- refers to tmp, does not call GetObject() again
         val fDecl = inner.expressions[0]
         assertIs<DeclarationStatement>(fDecl)
         val fVar = fDecl.singleDeclaration
@@ -208,7 +194,6 @@ class IsPatternExpressionTest : BaseTest() {
         assertIs<Reference>(castInput)
         assertRefersTo(castInput, tmpVar)
 
-        // tmp is Foo -- also refers to tmp, not a second call
         val check = inner.expressions[1]
         assertIs<BinaryOperator>(check)
         val checkLhs = check.lhs
@@ -248,7 +233,6 @@ class IsPatternExpressionTest : BaseTest() {
         val fVar = fDecl.singleDeclaration
         assertIs<Variable>(fVar)
 
-        // Handle(f); -- must refer to the variable the pattern declared
         val thenBlock = ifStmt.thenStatement
         assertIs<Block>(thenBlock)
         val call = thenBlock.statements.single()
@@ -293,8 +277,6 @@ class IsPatternExpressionTest : BaseTest() {
         val lhs = check.lhs
         assertIs<Reference>(lhs)
         assertRefersTo(lhs, tmpVar)
-        // `null` is not a type name, so it is a value and compared with `==`. Only a bare
-        // identifier is ambiguous without semantic binding (see `translatePattern`).
         val rhs = check.rhs
         assertIs<Literal<*>>(rhs)
         assertEquals(null, rhs.value)
@@ -455,7 +437,6 @@ class IsPatternExpressionTest : BaseTest() {
         assertIs<Variable>(tmpVar)
 
         val and = outer.expressions[1]
-        // the right pattern is only tested if the left one matched
         assertIs<ShortCircuitOperator>(and)
         assertEquals("and", and.operatorCode)
         assertLocalName("bool", and.type)
@@ -523,11 +504,6 @@ class IsPatternExpressionTest : BaseTest() {
         assertLocalName("string", rightRhs.type)
     }
 
-    /**
-     * A bare identifier in a pattern is a [Csharp.AST.ConstantPatternSyntax] for Roslyn, even when
-     * it names a type (`e is not Foo`). Such a pattern is modeled as the type check, not as `==
-     * Foo`.
-     */
     @Test
     fun testNotTypeCheck() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
@@ -599,10 +575,6 @@ class IsPatternExpressionTest : BaseTest() {
         }
     }
 
-    /**
-     * Two patterns in the same file must get distinct implicit temporaries, both in their name and
-     * in their node `id`.
-     */
     @Test
     fun testTwoPatternsDoNotShareTemporary() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
@@ -628,7 +600,8 @@ class IsPatternExpressionTest : BaseTest() {
         assertEquals(2, temporaries.map { it.id }.toSet().size)
     }
 
-    private fun returnedExpression(methodName: String): Expression {
+    @Test
+    fun testDiscardDesignation() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -638,7 +611,9 @@ class IsPatternExpressionTest : BaseTest() {
             ) {
                 it.registerLanguage<CSharpLanguage>()
             }
-        val method = tu.records["IsPatternExpression"]?.methods[methodName]
+        assertNotNull(tu)
+
+        val method = tu.records["IsPatternExpression"]?.methods["DiscardDesignation"]
         assertNotNull(method)
         val body = method.body
         assertIs<Block>(body)
@@ -646,13 +621,7 @@ class IsPatternExpressionTest : BaseTest() {
         assertIs<Return>(ret)
         val outer = ret.returnValue
         assertIs<ExpressionList>(outer)
-        return outer.expressions[1]
-    }
-
-    /** `o is Foo _` binds nothing, so it is just the type check (no declaration, no problem). */
-    @Test
-    fun testDiscardDesignation() {
-        val check = returnedExpression("DiscardDesignation")
+        val check = outer.expressions[1]
         assertIs<BinaryOperator>(check)
         assertEquals("is", check.operatorCode)
         val rhs = check.rhs
@@ -662,7 +631,26 @@ class IsPatternExpressionTest : BaseTest() {
 
     @Test
     fun testParenthesizedPattern() {
-        val and = returnedExpression("ParenthesizedPattern")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("IsPatternExpression.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.records["IsPatternExpression"]?.methods["ParenthesizedPattern"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+        val ret = body.statements.single()
+        assertIs<Return>(ret)
+        val outer = ret.returnValue
+        assertIs<ExpressionList>(outer)
+        val and = outer.expressions[1]
         assertIs<BinaryOperator>(and)
         assertEquals("and", and.operatorCode)
         // The parentheses leave no trace: the left side is the `or` directly.
@@ -675,7 +663,26 @@ class IsPatternExpressionTest : BaseTest() {
 
     @Test
     fun testUnsupportedPatternIsProblem() {
-        val problem = returnedExpression("RecursivePattern")
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("IsPatternExpression.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.records["IsPatternExpression"]?.methods["RecursivePattern"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+        val ret = body.statements.single()
+        assertIs<Return>(ret)
+        val outer = ret.returnValue
+        assertIs<ExpressionList>(outer)
+        val problem = outer.expressions[1]
         assertIs<ProblemExpression>(problem)
     }
 
@@ -690,6 +697,8 @@ class IsPatternExpressionTest : BaseTest() {
             ) {
                 it.registerLanguage<CSharpLanguage>()
             }
+        assertNotNull(tu)
+
         val method = tu.records["IsPatternExpression"]?.methods["TwoIfsSameName"]
         assertNotNull(method)
 
@@ -703,7 +712,6 @@ class IsPatternExpressionTest : BaseTest() {
             val fVar = (inner.expressions[0] as DeclarationStatement).singleDeclaration
             assertIs<Variable>(fVar)
 
-            // Handle(f) must refer to the variable of *its own* if, not to an inferred field
             val thenBlock = ifStmt.thenStatement
             assertIs<Block>(thenBlock)
             val arg = (thenBlock.statements.single() as Call).arguments.single()

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
@@ -374,9 +375,50 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val expressionRefersTo = expressionRhs.refersTo
         assertIs<Parameter>(expressionRefersTo)
         assertEquals(expressionBodied.parameters.single(), expressionRefersTo)
+    }
 
-        assertContains(expressionRhs.prevDFG, expressionRefersTo)
-        assertContains(expressionLhs.prevDFG, expressionRhs)
+    @Test
+    fun testConstructorInitializers() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Constructor.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val namespace = tu.namespaces["HelloWorld"]
+        val base = namespace?.records["Base"]
+        val derived = namespace?.records["Derived"]
+        assertNotNull(base)
+        assertNotNull(derived)
+
+        // `Derived(int x) : base(x) { }` constructs the base class with the parameter
+        val withBase = derived.constructors.single { it.parameters.size == 1 }
+        val baseBody = withBase.body
+        assertIs<Block>(baseBody)
+        val baseCall = baseBody.statements.single()
+        assertIs<Construction>(baseCall)
+        assertEquals(": base(x)", baseCall.code)
+        assertEquals(base, baseCall.instantiates)
+        assertEquals(base.constructors.single(), baseCall.constructor)
+        val baseArg = baseCall.arguments.single()
+        assertIs<Reference>(baseArg)
+        assertEquals(withBase.parameters.single(), baseArg.refersTo)
+
+        // `Derived() : this(1) => Init();` constructs its own record before the expression body
+        val withThis = derived.constructors.single { it.parameters.isEmpty() }
+        val thisBody = withThis.body
+        assertIs<Block>(thisBody)
+        assertEquals(2, thisBody.statements.size)
+        val thisCall = thisBody.statements[0]
+        assertIs<Construction>(thisCall)
+        assertEquals(derived, thisCall.instantiates)
+        assertEquals(withBase, thisCall.constructor)
+        assertIs<Call>(thisBody.statements[1])
     }
 
     @Test

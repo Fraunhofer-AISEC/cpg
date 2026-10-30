@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp.expressionhandler
 
 import de.fraunhofer.aisec.cpg.frontends.csharp.CSharpLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -34,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -41,6 +44,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class CallTest : BaseTest() {
 
@@ -166,5 +170,70 @@ class CallTest : BaseTest() {
         // the call passes fewer arguments than the method has parameters, which is only a match
         // because the missing one has a default value
         assertInvokes(call, offsetMethod)
+    }
+
+    @Test
+    fun testNestedCall() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Calls.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val addMethod = tu.methods["Add"]
+        assertNotNull(addMethod)
+        val type = addMethod.type
+        assertIs<FunctionType>(type)
+        assertIs<IntegerType>(type.returnTypes.singleOrNull())
+
+        val method = tu.methods["nestedCall"]
+        assertNotNull(method)
+
+        // var sum = Add(1, 2); and Add(Add(sum, 3), 4); each call takes the return type of `Add`,
+        // so a call or `var` as argument still resolves to the declared method
+        val calls = method.calls("Add")
+        assertEquals(3, calls.size)
+        for (call in calls) {
+            assertInvokes(call, addMethod)
+            assertIs<IntegerType>(call.type)
+        }
+    }
+
+    @Test
+    fun testLocalFunctionCall() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Calls.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["localFunctions"]
+        assertNotNull(method)
+
+        // Both local functions are declared in the body of the method and are not methods of the
+        // record
+        val twice = method.functions["Twice"]
+        val square = method.functions["Square"]
+        assertNotNull(twice)
+        assertNotNull(square)
+        assertTrue(twice !is Method)
+        assertTrue(square !is Method)
+        assertIs<IntegerType>((twice.type as? FunctionType)?.returnTypes?.singleOrNull())
+
+        // `int Twice(int v) => v * 2;` returns its expression body
+        val twiceBody = twice.body
+        assertIs<Block>(twiceBody)
+        val twiceReturn = twiceBody.statements.singleOrNull()
+        assertIs<Return>(twiceReturn)
+        val v = twiceReturn.returnValue?.refs?.singleOrNull()
+        assertNotNull(v)
+        assertEquals(twice.parameters.single(), v.refersTo)
+
+        // A local function is visible in its whole block, so `Square` is resolved although it is
+        // declared after the call
+        assertInvokes(method.calls["Twice"], twice)
+        assertInvokes(method.calls["Square"], square)
     }
 }

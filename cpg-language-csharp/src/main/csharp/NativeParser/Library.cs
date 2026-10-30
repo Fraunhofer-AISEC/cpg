@@ -319,6 +319,80 @@ public static class Library
         return Register(((MethodDeclarationSyntax)Nodes[handlePtr]).ReturnType);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalFunctionStatementIdentifier")]
+    public static IntPtr GetLocalFunctionStatementIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((LocalFunctionStatementSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalFunctionStatementReturnType")]
+    public static IntPtr GetLocalFunctionStatementReturnType(IntPtr handlePtr)
+    {
+        return Register(((LocalFunctionStatementSyntax)Nodes[handlePtr]).ReturnType);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalFunctionStatementParameterList")]
+    public static IntPtr GetLocalFunctionStatementParameterList(IntPtr handlePtr)
+    {
+        return Register(((LocalFunctionStatementSyntax)Nodes[handlePtr]).ParameterList);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalFunctionStatementBody")]
+    public static IntPtr GetLocalFunctionStatementBody(IntPtr handlePtr)
+    {
+        var body = ((LocalFunctionStatementSyntax)Nodes[handlePtr]).Body;
+        return body != null ? Register(body) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalFunctionStatementExpressionBody")]
+    public static IntPtr GetLocalFunctionStatementExpressionBody(IntPtr handlePtr)
+    {
+        var expressionBody = ((LocalFunctionStatementSyntax)Nodes[handlePtr]).ExpressionBody;
+        return expressionBody != null ? Register(expressionBody.Expression) : IntPtr.Zero;
+    }
+
+    // The parameters of a lambda or anonymous method. A simple lambda (`x => ...`) has a single
+    // parameter without a list, and an anonymous method may omit its list (`delegate { ... }`).
+    private static IReadOnlyList<ParameterSyntax> AnonymousFunctionParameters(IntPtr handlePtr)
+    {
+        return Nodes[handlePtr] switch
+        {
+            SimpleLambdaExpressionSyntax lambda => [lambda.Parameter],
+            ParenthesizedLambdaExpressionSyntax lambda => lambda.ParameterList.Parameters,
+            AnonymousMethodExpressionSyntax method =>
+                method.ParameterList?.Parameters ?? (IReadOnlyList<ParameterSyntax>)[],
+            _ => [],
+        };
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAnonymousFunctionParameterCount")]
+    public static int GetAnonymousFunctionParameterCount(IntPtr handlePtr)
+    {
+        return AnonymousFunctionParameters(handlePtr).Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAnonymousFunctionParameter")]
+    public static IntPtr GetAnonymousFunctionParameter(IntPtr handlePtr, int index)
+    {
+        return Register(AnonymousFunctionParameters(handlePtr)[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAnonymousFunctionBlock")]
+    public static IntPtr GetAnonymousFunctionBlock(IntPtr handlePtr)
+    {
+        var block = ((AnonymousFunctionExpressionSyntax)Nodes[handlePtr]).Block;
+        return block != null ? Register(block) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAnonymousFunctionExpressionBody")]
+    public static IntPtr GetAnonymousFunctionExpressionBody(IntPtr handlePtr)
+    {
+        var expressionBody = ((AnonymousFunctionExpressionSyntax)Nodes[handlePtr]).ExpressionBody;
+        return expressionBody != null ? Register(expressionBody) : IntPtr.Zero;
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetCode")]
     public static IntPtr GetCode(IntPtr handlePtr)
     {
@@ -479,7 +553,9 @@ public static class Library
     [UnmanagedCallersOnly(EntryPoint = "GetParameterType")]
     public static IntPtr GetParameterType(IntPtr handlePtr)
     {
-        return Register(((ParameterSyntax)Nodes[handlePtr]).Type);
+        // The parameters of a lambda, such as `x` in `x => x + 1`, may have no type
+        var type = ((ParameterSyntax)Nodes[handlePtr]).Type;
+        return type != null ? Register(type) : IntPtr.Zero;
     }
 
     // The default value of an optional parameter, i.e. "5" for "int x = 5". We skip the
@@ -498,6 +574,27 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(
             ((ConstructorDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
         );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConstructorDeclarationInitializer")]
+    public static IntPtr GetConstructorDeclarationInitializer(IntPtr handlePtr)
+    {
+        var initializer = ((ConstructorDeclarationSyntax)Nodes[handlePtr]).Initializer;
+        return initializer != null ? Register(initializer) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConstructorInitializerKeyword")]
+    public static IntPtr GetConstructorInitializerKeyword(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((ConstructorInitializerSyntax)Nodes[handlePtr]).ThisOrBaseKeyword.Text
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConstructorInitializerArgumentList")]
+    public static IntPtr GetConstructorInitializerArgumentList(IntPtr handlePtr)
+    {
+        return Register(((ConstructorInitializerSyntax)Nodes[handlePtr]).ArgumentList);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetParameterListCount")]
@@ -647,10 +744,6 @@ public static class Library
     public static IntPtr GetLiteralExpressionValue(IntPtr handlePtr)
     {
         var value = ((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value;
-        // A char is sent as its numeric code point. Otherwise '\0' would terminate the marshalled
-        // C string right away and arrive in Kotlin as an empty string.
-        // Numbers are formatted with the invariant culture, so that a double stays "1.5" and does
-        // not become "1,5" on a machine with a different locale.
         var text = value is char c
             ? ((int)c).ToString(CultureInfo.InvariantCulture)
             : Convert.ToString(value, CultureInfo.InvariantCulture);
@@ -660,9 +753,6 @@ public static class Library
     [UnmanagedCallersOnly(EntryPoint = "GetLiteralExpressionValueType")]
     public static IntPtr GetLiteralExpressionValueType(IntPtr handlePtr)
     {
-        // Roslyn boxes the literal's value in its .NET runtime type, e.g. System.Int64 for 1L. That
-        // is the only place where the literal's C# type is available, since the syntax kind is
-        // NumericLiteralExpression for every number.
         var value = ((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value;
         return Marshal.StringToCoTaskMemUTF8(value?.GetType().Name ?? "");
     }

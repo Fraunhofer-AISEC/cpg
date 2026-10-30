@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.csharp.statementhandler
 
 import de.fraunhofer.aisec.cpg.frontends.csharp.CSharpLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
@@ -41,7 +40,8 @@ import kotlin.test.assertTrue
 
 class UsingTest : BaseTest() {
 
-    private fun analyze(): TranslationUnit {
+    @Test
+    fun testUsingDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -52,12 +52,8 @@ class UsingTest : BaseTest() {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)
-        return tu
-    }
 
-    @Test
-    fun testUsingDeclaration() {
-        val body = analyze().methods["UsingDeclaration"]?.body
+        val body = tu.methods["UsingDeclaration"]?.body
         assertIs<Block>(body)
         val tryStmt = body.statements.single()
         assertIs<Try>(tryStmt)
@@ -97,7 +93,16 @@ class UsingTest : BaseTest() {
 
     @Test
     fun testUsingExpression() {
-        val tu = analyze()
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("UsingStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
         val body = tu.methods["UsingExpression"]?.body
         assertIs<Block>(body)
         val tryStmt = body.statements.single()
@@ -130,7 +135,18 @@ class UsingTest : BaseTest() {
 
     @Test
     fun testUsingWithoutBlock() {
-        val body = analyze().methods["UsingWithoutBlock"]?.body
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("UsingStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val body = tu.methods["UsingWithoutBlock"]?.body
         assertIs<Block>(body)
         val tryStmt = body.statements.single()
         assertIs<Try>(tryStmt)
@@ -158,7 +174,18 @@ class UsingTest : BaseTest() {
 
     @Test
     fun testMultipleResources() {
-        val body = analyze().methods["MultipleResources"]?.body
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("UsingStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val body = tu.methods["MultipleResources"]?.body
         assertIs<Block>(body)
         val outer = body.statements.single()
         assertIs<Try>(outer)
@@ -207,7 +234,18 @@ class UsingTest : BaseTest() {
 
     @Test
     fun testUsingDeclarationStatement() {
-        val body = analyze().methods["UsingDeclarationStatement"]?.body
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("UsingStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val body = tu.methods["UsingDeclarationStatement"]?.body
         assertIs<Block>(body)
 
         // A using declaration only covers the statements that follow it, so the declaration of
@@ -242,7 +280,18 @@ class UsingTest : BaseTest() {
 
     @Test
     fun testMultipleUsingDeclarations() {
-        val body = analyze().methods["MultipleUsingDeclarations"]?.body
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("UsingStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val body = tu.methods["MultipleUsingDeclarations"]?.body
         assertIs<Block>(body)
         val outer = body.statements.single()
         assertIs<Try>(outer)
@@ -286,7 +335,18 @@ class UsingTest : BaseTest() {
     @Test
     fun testUsingDeclarationInTry() {
         // A using declaration is lowered in every kind of block, not just in a method body.
-        val body = analyze().methods["UsingDeclarationInTry"]?.body
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("UsingStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val body = tu.methods["UsingDeclarationInTry"]?.body
         assertIs<Block>(body)
         val outer = body.statements.single()
         assertIs<Try>(outer)
@@ -315,7 +375,18 @@ class UsingTest : BaseTest() {
 
     @Test
     fun testNestedUsings() {
-        val body = analyze().methods["NestedUsings"]?.body
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("UsingStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val body = tu.methods["NestedUsings"]?.body
         assertIs<Block>(body)
         val outer = body.statements.single()
         assertIs<Try>(outer)

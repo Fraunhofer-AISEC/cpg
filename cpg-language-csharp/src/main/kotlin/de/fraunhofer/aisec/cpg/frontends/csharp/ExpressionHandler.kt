@@ -39,7 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.newConditional
 import de.fraunhofer.aisec.cpg.graph.newConstruction
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newExpressionList
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newInitializerList
+import de.fraunhofer.aisec.cpg.graph.newLambda
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMemberCall
@@ -93,7 +95,37 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.TypeOfExpressionSyntax -> handleTypeOfExpression(node)
             is Csharp.AST.InterpolatedStringExpressionSyntax ->
                 handleInterpolatedStringExpression(node)
-            else -> ProblemExpression("Not supported: ${node.csharpType}")
+            is Csharp.AST.AnonymousFunctionExpressionSyntax -> handleAnonymousFunction(node)
+            else -> newProblemExpression("Not supported: ${node.csharpType}", rawNode = node)
+        }
+    }
+
+    /**
+     * Translates a lambda (`x => x + 1`, `(a, b) => { ... }`) or an anonymous method (`delegate
+     * (int x) { ... }`), i.e. an
+     * [AnonymousFunctionExpressionSyntax][Csharp.AST.AnonymousFunctionExpressionSyntax], into a
+     * [Lambda] that holds an unnamed [Function].
+     *
+     * Without semantic information we do not know whether the lambda is converted to a delegate
+     * that returns a value (`Func<...>`) or not (`Action<...>`), so an expression body is always
+     * returned.
+     *
+     * C# spec:
+     * [Anonymous functions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1221-anonymous-function-expressions)
+     */
+    private fun handleAnonymousFunction(
+        node: Csharp.AST.AnonymousFunctionExpressionSyntax
+    ): Lambda {
+        return newLambda(rawNode = node) { lambda ->
+            lambda.function =
+                newFunction(name = "", rawNode = node, enterScope = true) { function ->
+                    frontend.declarationHandler.handleParameters(function, node.parameters)
+                    node.block?.let { function.body = frontend.statementHandler.handle(it) }
+                    node.expressionBody?.let {
+                        function.body =
+                            frontend.declarationHandler.expressionBody(it, it, returnsValue = true)
+                    }
+                }
         }
     }
 
@@ -213,8 +245,9 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                         value
                     }
                     else ->
-                        ProblemExpression(
-                            "Not supported in an interpolated string: ${content.csharpType}"
+                        newProblemExpression(
+                            "Not supported in an interpolated string: ${content.csharpType}",
+                            rawNode = content,
                         )
                 }
             }
@@ -577,8 +610,9 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             // Nested tuple designations `(a, b)` are not supported yet.
             val name =
                 (designation as? Csharp.AST.SingleVariableDesignationSyntax)?.identifier
-                    ?: return ProblemExpression(
-                        "Variable designation type not yet supported: ${designation.csharpType}"
+                    ?: return newProblemExpression(
+                        "Variable designation type not yet supported: ${designation.csharpType}",
+                        rawNode = designation,
                     )
             val binding =
                 newVariable(name = name, type = type, rawNode = designation).apply {
@@ -666,7 +700,11 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             // x is (Foo or Bar)
             is Csharp.AST.ParenthesizedPatternSyntax -> translatePattern(pattern.pattern, variable)
 
-            else -> ProblemExpression("Pattern type not yet supported: ${pattern.csharpType}")
+            else ->
+                newProblemExpression(
+                    "Pattern type not yet supported: ${pattern.csharpType}",
+                    rawNode = pattern,
+                )
         }
     }
 
@@ -869,8 +907,9 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                                     .apply { this.initializers = arguments.toMutableList() }
                     }
                 else ->
-                    ProblemExpression(
-                        "Not supported in a null-conditional access: ${whenNotNull.csharpType}"
+                    newProblemExpression(
+                        "Not supported in a null-conditional access: ${whenNotNull.csharpType}",
+                        rawNode = whenNotNull,
                     )
             }
         }

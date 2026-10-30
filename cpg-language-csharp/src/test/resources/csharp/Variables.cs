@@ -29,4 +29,29 @@ class Foo
         int b = a + 2;
     }
 
+    static void use(int v) { }
+
+    void siblingBlocks()
+    {
+        // each block declares its own variable
+        {
+            int x = 1;
+            use(x);
+        }
+        {
+            int x = 2;
+            use(x);
+        }
+    }
+
+    void nestedBlock(bool c)
+    {
+        int y = 0;
+        if (c)
+        {
+            int z = y;
+            use(z);
+        }
+        use(y);
+    }
 }
