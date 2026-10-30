@@ -1810,6 +1810,238 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testDeclaredTypedefTakesPrecedenceOverBuiltInType() {
+        val files =
+            listOf(
+                File("src/test/resources/c/typedef_over_builtin.c"),
+                File("src/test/resources/cxx/typedef_over_builtin.cpp"),
+            )
+        for (file in files) {
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                    it.registerLanguage<CLanguage>()
+                    it.registerLanguage<CPPLanguage>()
+                }
+            assertNotNull(tu)
+
+            assertLocalName("int", tu.variables["declared"]?.type, file.name)
+            assertLocalName("long int", tu.variables["alsoDeclared"]?.type, file.name)
+            assertLocalName("uint64_t", tu.variables["untouched"]?.type, file.name)
+
+            val casts = tu.allChildren<Cast>()
+            assertEquals(2, casts.size, file.name)
+            casts.forEach { assertLocalName("int", it.castType, "${file.name}: ${it.code}") }
+        }
+    }
+
+    @Test
+    fun testStdlibProfileProvidesTypes() {
+        val files =
+            listOf(
+                File("src/test/resources/c/stdlib_profile.c"),
+                File("src/test/resources/cxx/stdlib_profile.cpp"),
+            )
+        for (file in files) {
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                    it.registerLanguage<CLanguage>()
+                    it.registerLanguage<CPPLanguage>()
+                }
+            assertNotNull(tu)
+
+            val copy = tu.functions["copy"]
+            assertNotNull(copy)
+            val size = copy.parameters["n"]
+            assertNotNull(size)
+            val type = size.type
+            assertIs<IntegerType>(type, file.name)
+            assertLocalName("size_t", type)
+            assertEquals(64, type.bitWidth)
+            assertEquals(NumericType.Modifier.UNSIGNED, type.modifier)
+
+            val sum = tu.functions["next"].allChildren<BinaryOperator>().singleOrNull()
+            assertNotNull(sum)
+            assertIs<IntegerType>(sum.type, "${file.name}: ${sum.code}")
+        }
+    }
+
+    @Test
+    fun testStdlibProfileIsActiveByDefault() {
+        val file = File("src/test/resources/c/stdlib_profile.c")
+        // (default profiles, explicitly activated profile) -> whether size_t is an integer type
+        val cases =
+            mapOf((true to false) to true, (false to false) to false, (false to true) to true)
+        for ((case, isInteger) in cases) {
+            val (defaultProfiles, explicitProfile) = case
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                    it.registerLanguage<CLanguage>()
+                    it.useDefaultProfiles(defaultProfiles)
+                    if (explicitProfile) it.profile(StdlibProfile)
+                }
+            assertNotNull(tu)
+
+            // Without the profile, size_t is unknown, as the headers are not available
+            val type = tu.functions["copy"]?.parameters["n"]?.type
+            assertNotNull(type)
+            assertEquals(isInteger, type is IntegerType, "$case")
+        }
+    }
+
+    @Test
+    fun testStdlibProfileProvidesFunctionSummaries() {
+        val files =
+            listOf(
+                File("src/test/resources/c/stdlib_profile.c"),
+                File("src/test/resources/cxx/stdlib_profile.cpp"),
+            )
+        for (file in files) {
+            for (useProfile in listOf(true, false)) {
+                val tu =
+                    analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                        it.registerLanguage<CLanguage>()
+                        it.registerLanguage<CPPLanguage>()
+                        it.registerPass<PointsToPass>()
+                        it.useDefaultProfiles(useProfile)
+                    }
+                assertNotNull(tu)
+
+                val memcpy = tu.calls["memcpy"]?.invokes?.singleOrNull()
+                assertNotNull(memcpy, file.name)
+                assertTrue(memcpy.isInferred, file.name)
+
+                val dst = tu.functions["copy"].parameters["dst"]
+                val src = tu.functions["copy"].parameters["src"]
+                assertNotNull(dst)
+                assertNotNull(src)
+
+                // The summary says: the memory behind param1 flows to the memory behind param0.
+                // Without the profile, we know nothing about memcpy.
+                val flowsToDestination =
+                    memcpy.functionSummary[memcpy.parameters[0]].orEmpty().any {
+                        it.srcNode == memcpy.parameters[1]
+                    }
+                assertEquals(useProfile, flowsToDestination, "${file.name}, profile: $useProfile")
+            }
+        }
+    }
+
+    @Test
+    fun testRegisteredSummariesTakePrecedenceOverProfile() {
+        val file = File("src/test/resources/cxx/stdlib_profile.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Both describe memcpy (for CPPLanguage and CLanguage, respectively), but differ in its
+        // return value: the registered file returns the memory behind param0, the profile param0.
+        val memcpy = tu.calls["memcpy"]?.invokes?.singleOrNull()
+        assertNotNull(memcpy)
+        val returned = memcpy.functionSummary[memcpy].orEmpty()
+        assertEquals(setOf(2), returned.map { it.srcValueDepth }.toSet())
+    }
+
+    @Test
+    fun testStdlibProfileSummariesModelDestinationAndAppend() {
+        val file = File("src/test/resources/c/stdlib_profile_summaries.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        fun literalsReaching(variable: String): Set<Any?> {
+            val reached = mutableSetOf<Node>()
+            val worklist = ArrayDeque<Node>(listOfNotNull(tu.variables[variable]?.initializer))
+            while (worklist.isNotEmpty()) {
+                val node = worklist.removeFirst()
+                if (reached.add(node)) worklist.addAll(node.prevDFG)
+            }
+            return reached.filterIsInstance<Literal<*>>().map { it.value }.toSet()
+        }
+
+        // strcpy returns its destination, so *p reads what was copied there.
+        assertEquals(setOf<Any?>('b'), literalsReaching("viaReturn"))
+        // strcat appends: the destination keeps what it held before.
+        assertEquals(setOf<Any?>('a', 'b'), literalsReaching("afterAppend"))
+    }
+
+    @Test
+    fun testStdlibProfileSummariesSkipFunctionsWithCode() {
+        val file = File("src/test/resources/c/stdlib_profile_own_definition.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // The profile describes strlen's return value as coming from the memory behind its
+        // parameter. The code's own strlen keeps the summary from analyzing its body instead, and
+        // so does its prototype.
+        val strlens = tu.functions { it.name.localName == "strlen" }
+        assertEquals(2, strlens.size)
+        for (strlen in strlens) {
+            val fromParameter =
+                strlen.functionSummary.values.flatten().filter { it.srcNode is Parameter }
+            assertTrue(fromParameter.isEmpty(), "isDefinition: ${strlen.isDefinition}")
+        }
+
+        // memcpy has no code, so the profile's summary applies.
+        val memcpy = tu.calls["memcpy"]?.invokes?.singleOrNull()
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary[memcpy.parameters[0]].orEmpty().any {
+                it.srcNode == memcpy.parameters[1]
+            }
+        )
+    }
+
+    @Test
+    fun testStdlibProfileSummariesOnlyApplyToItsNamespaces() {
+        val file = File("src/test/resources/cxx/stdlib_profile_namespaces.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+
+        fun function(name: String) = result.functions { it.name.toString() == name }.singleOrNull()
+
+        // A function without a summary only gets the PointsToPass' dummy entries.
+        fun Function.hasSummary() = functionSummary.values.flatten().any { !it.isDummy }
+
+        // The code's own functions with stdlib names are different functions.
+        for (name in listOf("mylib::memcpy", "Buf::strlen")) {
+            val own = function(name)
+            assertNotNull(own, name)
+            assertFalse(own.hasSummary(), name)
+        }
+
+        // The stdlib functions get the profile's summaries, globally and in std.
+        val memcpy = function("std::memcpy")
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary[memcpy.parameters[0]].orEmpty().any {
+                it.srcNode == memcpy.parameters[1]
+            }
+        )
+        val strlen = function("strlen")
+        assertNotNull(strlen)
+        assertTrue(strlen.hasSummary())
+
+        val unqualified = result.functions["unqualified"]?.calls["memcpy"]?.invokes?.singleOrNull()
+        assertNotNull(unqualified)
+        assertLocalName("memcpy", unqualified)
+        assertNull(unqualified.name.parent)
+        assertTrue(unqualified.hasSummary())
+    }
+
+    @Test
     fun testGoto() {
         val file = File("src/test/resources/c/goto.c")
         val tu =
