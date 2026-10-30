@@ -63,20 +63,22 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
 
         scopeManager.resetToGlobal(tu)
         currentTU = tu
-        scopeManager.enterScope(tu)
 
-        for (using in root.usings) {
-            val import = declarationHandler.handleUsingDirective(using)
-            scopeManager.addDeclaration(import)
-            tu.addDeclaration(import)
-        }
-
+        // Top-level declarations, such as namespaces and types in the global namespace, are
+        // visible in all files, so they belong to the global scope
         for (member in root.members) {
             val decl = declarationHandler.handle(member)
             scopeManager.addDeclaration(decl)
             tu.addDeclaration(decl)
         }
 
+        // A using directive is only visible in its own file, so it goes into the file scope
+        scopeManager.enterScope(tu)
+        for (using in root.usings) {
+            val import = declarationHandler.handleUsingDirective(using)
+            scopeManager.addDeclaration(import)
+            tu.addDeclaration(import)
+        }
         scopeManager.leaveScope(tu)
 
         if (config.matchCommentsToNodes) {
