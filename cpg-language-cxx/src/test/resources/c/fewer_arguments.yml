@@ -1,0 +1,15 @@
+- functionDeclaration:
+    language: CLanguage
+    methodName: fill
+  dataFlows:
+    - from: param0
+      to: param1.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: infer_fill
+  dataFlows:
+    - from: param0
+      to: param1.deref
+      dfgType: full

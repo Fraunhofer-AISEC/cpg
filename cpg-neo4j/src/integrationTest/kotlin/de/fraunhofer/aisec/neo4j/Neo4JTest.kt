@@ -60,8 +60,8 @@ class Neo4JTest {
     fun testPush() {
         val (_, result) = createTranslationResult()
 
-        // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, result.functions.size)
+        // 19 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
+        assertEquals(33, result.functions.size)
 
         result.pushToNeo4j()
     }

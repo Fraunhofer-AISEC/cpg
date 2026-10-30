@@ -26,17 +26,25 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import de.fraunhofer.aisec.cpg.CallResolutionResult
+import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.evaluation.CouldNotResolve
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.project.DetectionResult
 import de.fraunhofer.aisec.cpg.project.Detector
@@ -297,6 +305,71 @@ open class CLanguage :
         return CastNotPossible
     }
 
+    /**
+     * If no function is viable, this falls back to the functions that the call can still mean when
+     * we could not determine some types (e.g. because of missing headers):
+     * - Without overloading (C), the name alone determines the called function. The number and the
+     *   types of the arguments are constraints on the call (C11 6.5.2.2), they do not choose the
+     *   function. So the only candidate is the target, whatever the arguments are; inferring a
+     *   function instead would create a duplicate, body-less function next to the real one.
+     * - With overloading (C++), a candidate is viable if the number of arguments fits and each
+     *   argument can be converted to its parameter ([over.match.viable]). An argument of an unknown
+     *   type may or may not be convertible, so the candidates that are only not viable because of
+     *   unknown types can still be the target: one of them is taken, several make the call
+     *   ambiguous. If there is none, the target is a function that we do not know, and the call
+     *   stays unresolved, so that one is inferred.
+     */
+    context(provider: ContextProvider)
+    override fun bestViableResolution(
+        result: CallResolutionResult
+    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
+        val resolution = super.bestViableResolution(result)
+        if (
+            resolution.second != CallResolutionResult.SuccessKind.UNRESOLVED ||
+                result.source !is Call
+        ) {
+            return resolution
+        }
+
+        val targets =
+            if (this is HasFunctionOverloading) {
+                result.candidateFunctions.filterTo(identitySetOf()) {
+                    it.isViableWithUnknownTypes(result.arguments)
+                }
+            } else {
+                // Without overloading, there is exactly one candidate here: with several,
+                // resolveWithArguments already stops as PROBLEMATIC
+                result.candidateFunctions
+            }
+
+        return when (targets.size) {
+            0 -> resolution
+            1 -> Pair(targets, CallResolutionResult.SuccessKind.SUCCESSFUL)
+            else -> Pair(targets, CallResolutionResult.SuccessKind.AMBIGUOUS)
+        }
+    }
+
+    /**
+     * Checks whether this function would be viable for [arguments] if each argument whose type is
+     * unknown (see [isUnknownBehindPointers]) had the type of its parameter.
+     */
+    private fun Function.isViableWithUnknownTypes(arguments: List<Expression>): Boolean {
+        val types =
+            arguments.mapIndexed { i, argument ->
+                val parameterType = parameters.getOrNull(i)?.type
+                if (
+                    parameterType != null && isUnknownBehindPointers(argument.type, parameterType)
+                ) {
+                    parameterType
+                } else {
+                    argument.type
+                }
+            }
+
+        return matchesSignature(types, arguments, this@CLanguage is HasDefaultArguments) is
+            SignatureMatches
+    }
+
     protected fun isVoidPointerToOtherPointer(type: Type, targetType: Type): Boolean =
         type is PointerType &&
             type.elementType is IncompleteType &&
@@ -308,4 +381,26 @@ open class CLanguage :
         val value = literal.value
         return literal.type is IntegerType && value is Number && value.toLong() == 0L
     }
+
+    /**
+     * Strips the pointer levels [type] and [targetType] have in common and checks whether either of
+     * the remaining types is unknown: an [UnknownType], or an [ObjectType] whose record we
+     * inferred. An inferred record is only our guess that an undeclared type name (e.g. a typedef
+     * from a missing header) is a struct; it may as well be an integer or an enum. Pointer levels
+     * only one side has are not stripped, so a known non-pointer type still does not fit a pointer,
+     * even to an unknown type.
+     */
+    private fun isUnknownBehindPointers(type: Type, targetType: Type): Boolean {
+        var current = type
+        var target = targetType
+        while (current is PointerType && target is PointerType) {
+            current = current.elementType
+            target = target.elementType
+        }
+
+        return current.isUnknown() || target.isUnknown()
+    }
+
+    private fun Type.isUnknown(): Boolean =
+        this is UnknownType || (this is ObjectType && recordDeclaration?.isInferred == true)
 }
