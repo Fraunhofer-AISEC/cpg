@@ -264,4 +264,90 @@ class CXXInferenceTest {
         assertNotNull(funcBar)
         assertFalse(funcBar.isInferred)
     }
+
+    @Test
+    fun testVoidPointerArgumentResolvesInC() {
+        val file = File("src/test/resources/c/void_pointer.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val calls = tu.calls("take_pointer") + tu.calls("take_pointer_pointer")
+        assertEquals(4, calls.size)
+        for (call in calls) {
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.none { it.isInferred },
+                "${call.code} invokes an inferred function",
+            )
+        }
+    }
+
+    @Test
+    fun testVoidPointerArgumentDoesNotResolveInCpp() {
+        val file = File("src/test/resources/cxx/inference/void_pointer.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        val call = tu.calls["take_pointer"]
+        assertNotNull(call)
+        assertTrue(call.invokes.isNotEmpty())
+        assertTrue(call.invokes.all { it.isInferred })
+    }
+
+    @Test
+    fun testNullPointerConstantResolvesInC() {
+        val file = File("src/test/resources/c/null_pointer_constant.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val nullPointers = tu.calls("take_pointer")
+        assertEquals(4, nullPointers.size)
+        for (call in nullPointers) {
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.none { it.isInferred },
+                "${call.code} invokes an inferred function",
+            )
+        }
+
+        val others = tu.calls("take_other_pointer")
+        assertEquals(2, others.size)
+        for (call in others) {
+            assertTrue(
+                call.invokes.all { it.isInferred },
+                "${call.code} resolves to the definition",
+            )
+        }
+    }
+
+    @Test
+    fun testNullPointerConstantResolvesInCpp() {
+        val file = File("src/test/resources/cxx/inference/null_pointer_constant.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        val takePointer = tu.calls["take_pointer"]
+        assertNotNull(takePointer)
+        assertTrue(takePointer.invokes.isNotEmpty())
+        assertTrue(takePointer.invokes.none { it.isInferred })
+
+        val overloaded = tu.calls["overloaded"]
+        assertNotNull(overloaded)
+        val target = overloaded.invokes.singleOrNull()
+        assertNotNull(target)
+        assertFalse(target.isInferred)
+        assertLocalName("int", target.parameters.singleOrNull()?.type)
+    }
 }

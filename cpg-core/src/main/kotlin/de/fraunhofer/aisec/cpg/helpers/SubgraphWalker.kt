@@ -693,8 +693,12 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
             eogPass.cleanup()
         }
 
-        // Also move over any type observers
-        old.typeObservers.forEach {
+        // Also move over any type observers. We need to iterate over a snapshot (copy) of the
+        // observers here, since unregisterTypeObserver structurally mutates the very
+        // (IdentityHashMap-backed) typeObservers set we would otherwise be iterating over directly,
+        // which throws a ConcurrentModificationException as soon as there is more than one
+        // observer.
+        old.typeObservers.toList().forEach {
             old.unregisterTypeObserver(it)
             new.registerTypeObserver(it)
         }

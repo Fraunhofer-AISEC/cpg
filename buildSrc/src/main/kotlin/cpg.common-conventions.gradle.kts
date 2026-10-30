@@ -74,7 +74,8 @@ testing {
             targets {
                 all {
                     testTask.configure {
-                        maxHeapSize = "4048m"
+                        maxHeapSize =
+                            (project.findProperty("cpg.test.maxHeapSize") as String?) ?: "4048m"
                         // The test log4j2.xml files default to DEBUG, which is what you want while
                         // working on a test and tens of thousands of lines of noise in a CI log.
                         // -Pcpg.log.level raises it; the forked test JVM only sees it as a system
