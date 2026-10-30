@@ -62,6 +62,15 @@ abstract class Profile(
      */
     open val functionSummaries: List<String> = emptyList()
 
+    /**
+     * The namespaces, besides the global one, in which the functions of [functionSummaries] are
+     * declared, e.g., `std`. A summary of this profile only applies to a function (not a method)
+     * that is declared globally or in one of these namespaces. A function with the same local name
+     * that the code declares in another namespace, or a method, is a different function. The
+     * default is none, i.e., only global functions.
+     */
+    open val summaryNamespaces: Set<String> = emptySet()
+
     /** The class loader used to load [functionSummaries]. */
     open val classLoader: ClassLoader
         get() = this::class.java.classLoader

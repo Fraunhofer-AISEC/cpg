@@ -78,11 +78,12 @@ class DFGFunctionSummaries {
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
     /**
-     * The entries of [functionToDFGEntryMap] that come from a [Profile]. They only describe
-     * functions whose code is not available, so they are not applied to a function with a body (see
+     * The entries of [functionToDFGEntryMap] that come from a [Profile], with their profile. They
+     * only describe functions whose code is not available, so they are not applied to a function
+     * with a body, nor to a function that the profile does not declare (see
      * [findFunctionDeclarationEntry]).
      */
-    private val profileEntries = mutableSetOf<FunctionDeclarationEntry>()
+    private val profileEntries = mutableMapOf<FunctionDeclarationEntry, Profile>()
 
     fun hasSummary(function: Function) = function.functionSummary.isNotEmpty()
 
@@ -97,12 +98,12 @@ class DFGFunctionSummaries {
     /**
      * Reads the [DataflowEntry]s from [input]. The format is derived from the [extension] (`yaml`
      * or `yml`, everything else is treated as JSON). Entries for an already known function replace
-     * the previous ones. [fromProfile] marks the entries as those of a [Profile].
+     * the previous ones. [profile] marks the entries as those of a [Profile].
      */
     private fun addEntries(
         input: InputStream,
         extension: String,
-        fromProfile: Boolean = false,
+        profile: Profile? = null,
     ): Map<FunctionDeclarationEntry, List<DFGEntry>> {
         val mapper =
             if (extension.lowercase() in listOf("yaml", "yml")) {
@@ -114,8 +115,8 @@ class DFGFunctionSummaries {
         val entries = mapper.readValue<List<DataflowEntry>>(input)
         for (entry in entries) {
             functionToDFGEntryMap[entry.functionDeclaration] = entry.dataFlows
-            if (fromProfile) {
-                profileEntries += entry.functionDeclaration
+            if (profile != null) {
+                profileEntries[entry.functionDeclaration] = profile
             } else {
                 profileEntries -= entry.functionDeclaration
             }
@@ -194,7 +195,9 @@ class DFGFunctionSummaries {
         // to match to the one of the Function, null indicates that we accept everything.
         val candidates =
             functionToDFGEntryMap.keys.filter {
-                if (hasCode && it in profileEntries) return@filter false
+                val profile = profileEntries[it]
+                if (profile != null && (hasCode || !profile.declares(functionDecl)))
+                    return@filter false
                 // The language has to match otherwise the remaining comparison is useless
                 if (language.matchesOrDerivesFrom(it.language)) {
                     // Split the name if we have a FQN
@@ -484,7 +487,7 @@ class DFGFunctionSummaries {
                         dfgFunctionSummaries.addEntries(
                             it,
                             resource.substringAfterLast('.'),
-                            fromProfile = true,
+                            profile = profile,
                         )
                     }
                 }
@@ -496,6 +499,14 @@ class DFGFunctionSummaries {
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
     }
 }
+
+/**
+ * Returns `true` if [function] can be one of the functions that this profile summarizes: a function
+ * (not a method) that is declared globally or in one of the [Profile.summaryNamespaces].
+ */
+private fun Profile.declares(function: Function): Boolean =
+    function !is Method &&
+        function.name.parent.let { it == null || it.toString() in summaryNamespaces }
 
 /**
  * Returns `true` if this language class or one of its superclasses matches [targetLanguageName].

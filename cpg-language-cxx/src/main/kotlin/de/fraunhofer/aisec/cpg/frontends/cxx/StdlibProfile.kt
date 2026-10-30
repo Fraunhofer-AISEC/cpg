@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  *   or a loaded header declares takes precedence over them.
  * - It provides data flow summaries for common functions, such as `memcpy` or `strcpy` (see
  *   `profiles/cxx/stdlib.yml`), which are used for all calls to a function of this name that has no
- *   body.
+ *   body and is declared globally or in `std` (not a method).
  *
  * To get the precise behavior, turn the profile off (see
  * [de.fraunhofer.aisec.cpg.TranslationConfiguration.Builder.useDefaultProfiles]) and load the real
@@ -68,4 +68,6 @@ object StdlibProfile : Profile("stdlib") {
     }
 
     override val functionSummaries = listOf("profiles/cxx/stdlib.yml")
+
+    override val summaryNamespaces = setOf("std")
 }

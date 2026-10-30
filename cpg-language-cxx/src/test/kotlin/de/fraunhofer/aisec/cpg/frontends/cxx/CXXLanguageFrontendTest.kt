@@ -2003,6 +2003,45 @@ internal class CXXLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testStdlibProfileSummariesOnlyApplyToItsNamespaces() {
+        val file = File("src/test/resources/cxx/stdlib_profile_namespaces.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+
+        fun function(name: String) = result.functions { it.name.toString() == name }.singleOrNull()
+
+        // A function without a summary only gets the PointsToPass' dummy entries.
+        fun Function.hasSummary() = functionSummary.values.flatten().any { !it.isDummy }
+
+        // The code's own functions with stdlib names are different functions.
+        for (name in listOf("mylib::memcpy", "Buf::strlen")) {
+            val own = function(name)
+            assertNotNull(own, name)
+            assertFalse(own.hasSummary(), name)
+        }
+
+        // The stdlib functions get the profile's summaries, globally and in std.
+        val memcpy = function("std::memcpy")
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary[memcpy.parameters[0]].orEmpty().any {
+                it.srcNode == memcpy.parameters[1]
+            }
+        )
+        val strlen = function("strlen")
+        assertNotNull(strlen)
+        assertTrue(strlen.hasSummary())
+
+        val unqualified = result.functions["unqualified"]?.calls["memcpy"]?.invokes?.singleOrNull()
+        assertNotNull(unqualified)
+        assertLocalName("memcpy", unqualified)
+        assertNull(unqualified.name.parent)
+        assertTrue(unqualified.hasSummary())
+    }
+
+    @Test
     fun testGoto() {
         val file = File("src/test/resources/c/goto.c")
         val tu =
