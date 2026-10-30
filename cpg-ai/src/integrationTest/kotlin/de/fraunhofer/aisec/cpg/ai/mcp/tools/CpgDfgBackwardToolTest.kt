@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.*
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -56,7 +56,7 @@ class CpgDfgBackwardToolTest {
     fun dfgBackwardToolTest() =
         withClient(
             registerTools = {
-                listCalls()
+                addListCallsTool()
                 addDfgBackwardTool()
             }
         ) { client ->
@@ -65,7 +65,9 @@ class CpgDfgBackwardToolTest {
             assertTrue(callsResult.content.isNotEmpty())
 
             val callInfo =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                Json.decodeFromString<SignatureInfo>(
+                    (callsResult.content.first() as TextContent).text
+                )
 
             val result =
                 client.callTool(

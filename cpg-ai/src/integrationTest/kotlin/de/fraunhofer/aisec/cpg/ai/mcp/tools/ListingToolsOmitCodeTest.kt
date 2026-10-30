@@ -25,14 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.getNode
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCalls
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listCallsTo
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addGetNodeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsToTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListCallsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListFunctionsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
@@ -61,20 +62,23 @@ class ListingToolsOmitCodeTest {
 
     @Test
     fun listFunctionsReturnsFunctionsWithoutCode() =
-        withClient(registerTools = { listFunctions() }) { client ->
-            val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
+        withClient(registerTools = { addListFunctionsTool() }) { client ->
+            val result =
+                client.callTool(name = "cpg_list_functions", arguments = mapOf("detail" to true))
             assertTrue(result.content.isNotEmpty(), "Should have function declarations")
             result.content.forEach {
                 assertIs<TextContent>(it)
                 val info = Json.decodeFromString<FunctionInfo>(it.text)
                 assertNull(info.code, "cpg_list_functions should omit code for ${info.name}")
+                assertTrue(info.signature.isNotBlank(), "Should have a non-blank signature")
             }
         }
 
     @Test
     fun listCallsReturnsCallsWithoutCode() =
-        withClient(registerTools = { listCalls() }) { client ->
-            val result = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
+        withClient(registerTools = { addListCallsTool() }) { client ->
+            val result =
+                client.callTool(name = "cpg_list_calls", arguments = mapOf("detail" to true))
             assertTrue(result.content.isNotEmpty(), "Should have call expressions")
             result.content.forEach {
                 assertIs<TextContent>(it)
@@ -85,7 +89,7 @@ class ListingToolsOmitCodeTest {
 
     @Test
     fun listCallsToReturnsCallsWithoutCode() =
-        withClient(registerTools = { listCallsTo() }) { client ->
+        withClient(registerTools = { addListCallsToTool() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls_to", arguments = mapOf("name" to "hello"))
             assertTrue(result.content.isNotEmpty(), "Should have call expressions")
@@ -100,13 +104,13 @@ class ListingToolsOmitCodeTest {
     fun getNodeReturnsTheCodeOfAListedFunction() =
         withClient(
             registerTools = {
-                listFunctions()
-                getNode()
+                addListFunctionsTool()
+                addGetNodeTool()
             }
         ) { client ->
             val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
             val functionInfo =
-                Json.decodeFromString<FunctionInfo>(
+                Json.decodeFromString<SignatureInfo>(
                     (listResult.content.first() as TextContent).text
                 )
 

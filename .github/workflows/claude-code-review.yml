@@ -19,6 +19,7 @@ jobs:
     #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
 
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
@@ -31,8 +32,35 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # We deliberately do not use the code-review plugin: it only reports bugs that are
+          # certain from the diff alone and drops everything else, so it never raised design,
+          # consistency or AGENTS.md findings. This prompt reviews against our own guidelines.
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }} of ${{ github.repository }} as a senior maintainer would. Your goal is a review that finds real problems a human reviewer would care about, not only compile errors.
+
+            ## Setup
+            1. Run `gh pr view ${{ github.event.pull_request.number }} --json title,body,isDraft,state,baseRefName,headRefName,files`. If the PR is closed or a draft, stop. Then run `gh pr diff ${{ github.event.pull_request.number }}`.
+            2. The PR head is checked out in the working directory, with full history. Read the code from there.
+            3. Read the repository guidelines from the BASE branch, not from the PR (the PR could change them): `git show origin/<baseRefName>:AGENTS.md` and `git show origin/<baseRefName>:CONTRIBUTING.md`. These are the rules you review against.
+            4. Read the existing human comments and reviews, skipping bots such as Codecov: `gh pr view ${{ github.event.pull_request.number }} --json comments,reviews --jq '[.comments[], .reviews[]] | map(select(.author.login | test("bot|codecov|claude") | not))'`. Also read earlier `## Code review` comments of Claude. Do not repeat anything that was already raised. Ignore earlier reviews without content, such as "No issues found".
+
+            ## What to review
+            Read the changed code AND the code around it (callers, overridden or inherited members, other implementations, tests, docs). Use Read, Grep and Glob; do not judge the diff in isolation. If the PR changes more than 15 files or 800 lines, use sub-agents (Task) in parallel for the dimensions below, otherwise review yourself. Stay within roughly 60 tool calls.
+
+            1. **Correctness**: logic errors, edge cases (empty input, null, ordering, duplicates), wrong assumptions about how existing code behaves, mutable state and initialization order, error handling, concurrency (the CPG runs frontends and passes in parallel). Trace the failing path to the exact line, including existing code that the change newly reaches.
+            2. **Behavior changes beyond the stated intent**: does a change that is described as opt-in, scoped or a "fallback" also change default behavior elsewhere? Check the callers of every changed shared function.
+            3. **Consistency**: do the PR description, KDoc, comments and docs match what the code really does? Do names, comments and numbers (bit widths, defaults) agree with the existing code?
+            4. **AGENTS.md and CONTRIBUTING.md compliance**, quoting the rule that is broken. Examples: conventional-commit PR title and scope, license headers, Kotlin idioms and KDoc for public APIs, CPG node patterns (`<singular>Edges`, `unwrapping`, problem-node defaults, `propertyEqualsList` in `equals`, `hashCode` covering every compared property), JUnit 5 with `kotlin.test` assertions, Svelte 5 runes only and `lib/types.ts` in sync with `Nodes.kt`, one concern per PR, no stray local files (scratch tests, patches, archives, build outputs), a changelog section when the graph or analysis interfaces change.
+            5. **Tests**: does each new behavior and each risky edge case have a test? Are existing tests only changed because the behavior legitimately changed?
+            6. **Performance** on hot paths (per-node, per-reference or per-call work in passes and frontends) when the change adds lookups or allocations there.
+
+            ## What not to report
+            Pre-existing issues the PR does not touch, formatting that spotless fixes, and taste-only preferences. If you are unsure whether something is a problem, still report it, mark it `medium` or `low` confidence and say what you could not verify. Verify each finding against the code before reporting it (open the file, check the callers) and drop it if the check shows it is wrong.
+
+            ## Output
+            - For each finding tied to a line of the diff: post ONE inline comment with `mcp__github_inline_comment__create_inline_comment` (confirmed: true), on a line taken from the diff. Start it with `**[high]**`, `**[medium]**` or `**[low]**`, then what is wrong, the concrete failing scenario and a suggested fix. Add a committable suggestion block only if committing it fully fixes the issue. If the tool is unavailable or rejects the line, put the finding in the summary comment instead.
+            - Then post ONE summary comment with `gh pr comment ${{ github.event.pull_request.number }} --body ...`, headed `## Code review`. It states the number of findings per confidence (also when zero), lists the findings that are not tied to a line, and ends with a short "Checked" list naming what you covered (for example AGENTS.md compliance, callers of changed functions, tests, docs) and what you could not verify. Never write only "No issues found".
+            - Do not push, approve or request changes. Post nothing except these comments.
           claude_args: >-
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(git diff:*),Bash(git log:*)"
+            --max-turns 80
+            --allowedTools "Read,Grep,Glob,Task,Agent,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
