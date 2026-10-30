@@ -51,7 +51,12 @@ class ApplicationTest {
         val port = findFreePort()
         val server = configureServer()
         val engine =
-            runSseMcpServerUsingKtorPlugin(port = port, server = server, host = "127.0.0.1")
+            runSseMcpServerUsingKtorPlugin(
+                port = port,
+                server = server,
+                wait = false,
+                host = "127.0.0.1",
+            )
 
         runBlocking {
             try {
@@ -79,7 +84,12 @@ class ApplicationTest {
         val port = findFreePort()
         val server = configureServer()
         val engine =
-            runHttpMcpServerUsingKtorPlugin(port = port, server = server, host = "127.0.0.1")
+            runHttpMcpServerUsingKtorPlugin(
+                port = port,
+                host = "127.0.0.1",
+                server = server,
+                wait = false,
+            )
 
         runBlocking {
             try {

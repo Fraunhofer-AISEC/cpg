@@ -3,23 +3,18 @@
   import DfgFlowWidget from './DfgFlowWidget.svelte';
   import type { ToolResult } from '$lib/types';
 
-  function extractSkillName(content: any): string | null {
-    const text = typeof content === 'string'
-      ? content
-      : Array.isArray(content) && typeof content[0]?.text === 'string'
-        ? content[0].text
-        : null;
-    if (!text) return null;
-    const match = text.match(/<skill_content\s+name="([^"]+)"/);
+  // Koog's file tool, which the model uses to "activate" a skill by reading its SKILL.md.
+  const READ_FILE_TOOL = '__read_file__';
+
+  /** The skill name if this call read a skill's SKILL.md (the name is its directory), else null. */
+  function getSkillName(toolName: string, args?: Record<string, unknown>): string | null {
+    if (toolName !== READ_FILE_TOOL || typeof args?.path !== 'string') return null;
+    const match = args.path.match(/([^/\\]+)[/\\]SKILL\.md$/);
     return match ? match[1] : null;
   }
 
   function getResultSummary(toolName: string, content: any, isError?: boolean): string {
     if (isError) return 'Error';
-    if (toolName === 'activate_skill') {
-      const name = extractSkillName(content);
-      if (name) return name;
-    }
     const items = getItemsArray(content);
     if (items.length > 0) {
       return `${items.length} result${items.length !== 1 ? 's' : ''}`;
@@ -44,7 +39,9 @@
   let expanded = $state(false);
 
   let toolName = $derived(toolResult.toolName || 'Tool');
-  let summary = $derived(getResultSummary(toolName, toolResult.content, toolResult.isError));
+  let skillName = $derived(getSkillName(toolName, toolResult.args));
+  let label = $derived(skillName ? 'skill' : toolName);
+  let summary = $derived(skillName ?? getResultSummary(toolName, toolResult.content, toolResult.isError));
   let isDfg = $derived(toolResult.toolName === 'cpg_dfg_backward');
   let isCodeItems = $derived(isCodeItemContent(toolResult.content));
   let hasExpandableContent = $derived(isDfg || isCodeItems || typeof toolResult.content === 'string' || toolResult.content != null);
@@ -60,7 +57,7 @@
     onclick={() => expanded = !expanded}
     type="button"
   >
-    <span class="font-mono font-medium">{toolName}</span>
+    <span class="font-mono font-medium">{label}</span>
     <span class="text-gray-400">{summary}</span>
 
     {#if hasExpandableContent}

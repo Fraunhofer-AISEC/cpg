@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -276,6 +277,20 @@ open class CLanguage :
             return ImplicitCast
         }
 
+        // In C (but not in C++, see CPPLanguage.tryCast), void* can also be implicitly cast to any
+        // other object pointer, including pointers to pointers, e.g. the result of malloc or NULL.
+        // Function pointers are excluded, as in the C standard: they are a FunctionPointerType, not
+        // a PointerType.
+        if (isVoidPointerToOtherPointer(type, targetType)) {
+            return ImplicitCast
+        }
+
+        // The integer literal 0 is a null pointer constant, which can be implicitly cast to any
+        // pointer (also in C++, whose tryCast delegates to this one first)
+        if (targetType is PointerType && hint.isZeroLiteral()) {
+            return ImplicitCast
+        }
+
         // An unknown type means we could not determine it (e.g. because of missing headers), not
         // that it does not fit. Without function overloading, there is no overload set to rank, so
         // the only function with this name is the right target; rejecting it would make the call
@@ -286,6 +301,18 @@ open class CLanguage :
         }
 
         return CastNotPossible
+    }
+
+    protected fun isVoidPointerToOtherPointer(type: Type, targetType: Type): Boolean =
+        type is PointerType &&
+            type.elementType is IncompleteType &&
+            targetType is PointerType &&
+            targetType.elementType !is IncompleteType
+
+    private fun HasType?.isZeroLiteral(): Boolean {
+        val literal = this as? Literal<*> ?: return false
+        val value = literal.value
+        return literal.type is IntegerType && value is Number && value.toLong() == 0L
     }
 
     /**

@@ -234,6 +234,12 @@ open class CPPLanguage :
         hint: HasType?,
         targetHint: HasType?,
     ): CastResult {
+        // Unlike C, C++ does not implicitly cast void* to other pointers. This needs to be checked
+        // before C's rules apply
+        if (isVoidPointerToOtherPointer(type, targetType)) {
+            return CastNotPossible
+        }
+
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {
             return match
