@@ -539,8 +539,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             when (param) {
                                 (invoked as? Method)?.receiver ->
                                     (currentNode as? MemberCall)?.base as? Reference
+                                // A call can have fewer arguments than parameters (e.g. default
+                                // arguments, or a C call that does not fit its function)
                                 is Parameter ->
-                                    currentNode.arguments[param.argumentIndex] as? Reference
+                                    currentNode.arguments.getOrNull(param.argumentIndex)
+                                        as? Reference
                                 else -> null
                             }
                         doubleState.declarationsState[arg?.refersTo] =

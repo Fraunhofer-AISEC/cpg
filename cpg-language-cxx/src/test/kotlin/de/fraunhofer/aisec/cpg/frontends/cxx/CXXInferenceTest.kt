@@ -26,12 +26,18 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.ImplicitCast
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
@@ -434,6 +440,44 @@ class CXXInferenceTest {
             )
         }
         assertTrue(tu.functions.none { it.isInferred })
+    }
+
+    @Test
+    fun testFewerArgumentsThanSummarizedParametersInC() {
+        val file = File("src/test/resources/c/fewer_arguments.c")
+        val summaries = File("src/test/resources/c/fewer_arguments.yml")
+        // The summary of a parameter without an argument is applied by the PointsToPass, by the
+        // ControlFlowSensitiveDFGPass (without the PointsToPass), and by the DFGPass alone
+        val configurations =
+            mapOf<String, (TranslationConfiguration.Builder) -> Unit>(
+                "PointsToPass" to { it.defaultPasses() },
+                "ControlFlowSensitiveDFGPass" to { it.disablePointsToAnalysis().defaultPasses() },
+                "DFGPass" to
+                    {
+                        it.registerPass<TypeHierarchyResolver>()
+                        it.registerPass<SymbolResolver>()
+                        it.registerPass<DFGPass>()
+                        it.registerPass<EvaluationOrderGraphPass>()
+                        it.registerPass<TypeResolver>()
+                    },
+            )
+        for ((name, configure) in configurations) {
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
+                    it.registerLanguage<CLanguage>()
+                    it.registerFunctionSummaries(summaries)
+                    configure(it)
+                }
+            assertNotNull(tu, name)
+
+            for (callee in listOf("fill", "infer_fill")) {
+                val calls = tu.calls(callee)
+                assertEquals(2, calls.size, "$name: $callee")
+                val target = calls.flatMap { it.invokes }.toSet().singleOrNull()
+                assertNotNull(target, "$name: the calls to $callee invoke different functions")
+                assertEquals(callee == "infer_fill", target.isInferred, "$name: $callee")
+            }
+        }
     }
 
     @Test
