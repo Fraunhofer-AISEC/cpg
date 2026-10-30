@@ -40,6 +40,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -102,6 +103,7 @@ class CollectionInitializerTest : BaseTest() {
         // __tmp.Add(1)
         val add1 = exprList.expressions[2]
         assertIs<MemberCall>(add1)
+        assertNotEquals(add0.location, add1.location)
         assertEquals("Add", add1.name.localName)
         assertEquals(1, add1.arguments.size)
         val arg1 = add1.arguments[0]

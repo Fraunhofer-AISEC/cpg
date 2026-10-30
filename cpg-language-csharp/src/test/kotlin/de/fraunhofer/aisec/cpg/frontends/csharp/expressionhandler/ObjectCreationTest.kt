@@ -43,7 +43,9 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertTrue
 
 class ObjectCreationTest : BaseTest() {
@@ -287,6 +289,7 @@ class ObjectCreationTest : BaseTest() {
         // Nested: tmpPoint.Y = 1
         val yAssign = p1Rhs.expressions[2]
         assertIs<Assign>(yAssign)
+        assertNotEquals(xAssign.location, yAssign.location)
         val yMemberAccess = yAssign.lhs.firstOrNull()
         assertIs<MemberAccess>(yMemberAccess)
         assertEquals("Y", yMemberAccess.name.localName)
@@ -379,6 +382,7 @@ class ObjectCreationTest : BaseTest() {
         val p1yAccess = p1yAssign.lhs.firstOrNull()
         assertIs<MemberAccess>(p1yAccess)
         assertEquals("Y", p1yAccess.name.localName)
+        assertNotSame(p1xAccess.base, p1yAccess.base)
         val p1yRhs = p1yAssign.rhs.firstOrNull()
         assertIs<Literal<*>>(p1yRhs)
         assertEquals(1, p1yRhs.value)

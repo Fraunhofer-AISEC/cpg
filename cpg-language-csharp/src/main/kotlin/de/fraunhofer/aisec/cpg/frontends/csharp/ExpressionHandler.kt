@@ -1159,11 +1159,12 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         for (expr in initializer.expressions) {
             if (expr is Csharp.AST.AssignmentExpressionSyntax) {
                 val memberName = (expr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
-                val baseRef = newReference(name = tmpName).implicit()
-                baseRef.refersTo = tmpVar
-                val memberAccess =
-                    newMemberAccess(name = memberName, base = baseRef)
-                        .implicit(code = newExpression.code, location = newExpression.location)
+                val memberAccess = {
+                    val baseRef = newReference(name = tmpName).implicit()
+                    baseRef.refersTo = tmpVar
+                    newMemberAccess(name = memberName, base = baseRef, rawNode = expr.left)
+                        .implicit()
+                }
 
                 if (expr.right is Csharp.AST.ObjectInitializerExpressionSyntax) {
                     // Nested object initializer: member = { X = 0, Y = 1 }
@@ -1172,7 +1173,6 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                         handleNestedObjectInitializer(
                             expr.right as Csharp.AST.ObjectInitializerExpressionSyntax,
                             memberAccess,
-                            newExpression,
                         )
                 } else if (expr.right is Csharp.AST.CollectionInitializerExpressionSyntax) {
                     // Nested collection initializer: member = { "a", "b" }
@@ -1181,16 +1181,16 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                         handleNestedCollectionInitializer(
                             expr.right as Csharp.AST.CollectionInitializerExpressionSyntax,
                             memberAccess,
-                            newExpression,
                         )
                 } else {
                     val assign =
                         newAssign(
                                 operatorCode = "=",
-                                lhs = listOf(memberAccess),
+                                lhs = listOf(memberAccess()),
                                 rhs = listOf(handle(expr.right)),
+                                rawNode = expr,
                             )
-                            .implicit(code = newExpression.code, location = newExpression.location)
+                            .implicit()
                     exprList.expressions += assign
                 }
             }
@@ -1222,23 +1222,27 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleNestedObjectInitializer(
         initializer: Csharp.AST.ObjectInitializerExpressionSyntax,
-        memberAccess: MemberAccess,
-        newExpression: New,
+        memberAccess: () -> MemberAccess,
     ): List<Assign> {
         val assigns = mutableListOf<Assign>()
         for (innerExpr in initializer.expressions) {
             if (innerExpr is Csharp.AST.AssignmentExpressionSyntax) {
                 val innerName = (innerExpr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
                 val innerAccess =
-                    newMemberAccess(name = innerName, base = memberAccess)
-                        .implicit(code = newExpression.code, location = newExpression.location)
+                    newMemberAccess(
+                            name = innerName,
+                            base = memberAccess(),
+                            rawNode = innerExpr.left,
+                        )
+                        .implicit()
                 val assign =
                     newAssign(
                             operatorCode = "=",
                             lhs = listOf(innerAccess),
                             rhs = listOf(handle(innerExpr.right)),
+                            rawNode = innerExpr,
                         )
-                        .implicit(code = newExpression.code, location = newExpression.location)
+                        .implicit()
                 assigns += assign
             }
         }
@@ -1297,10 +1301,10 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             baseRef.refersTo = tmpVar
             val addCall =
                 newMemberCall(
-                        newMemberAccess(name = "Add", base = baseRef)
-                            .implicit(code = newExpression.code, location = newExpression.location)
+                        newMemberAccess(name = "Add", base = baseRef, rawNode = expr).implicit(),
+                        rawNode = expr,
                     )
-                    .implicit(code = newExpression.code, location = newExpression.location)
+                    .implicit()
             if (expr is Csharp.AST.ComplexElementInitializerExpressionSyntax) {
                 // For example { "a", 1 } -> Add("a", 1)
                 for (arg in expr.expressions) {
@@ -1337,17 +1341,17 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleNestedCollectionInitializer(
         initializer: Csharp.AST.CollectionInitializerExpressionSyntax,
-        memberAccess: MemberAccess,
-        newExpression: New,
+        memberAccess: () -> MemberAccess,
     ): List<MemberCall> {
         val calls = mutableListOf<MemberCall>()
         for (expr in initializer.expressions) {
             val addCall =
                 newMemberCall(
-                        newMemberAccess(name = "Add", base = memberAccess)
-                            .implicit(code = newExpression.code, location = newExpression.location)
+                        newMemberAccess(name = "Add", base = memberAccess(), rawNode = expr)
+                            .implicit(),
+                        rawNode = expr,
                     )
-                    .implicit(code = newExpression.code, location = newExpression.location)
+                    .implicit()
             if (expr is Csharp.AST.ComplexElementInitializerExpressionSyntax) {
                 for (arg in expr.expressions) {
                     addCall.addArgument(handle(arg))
