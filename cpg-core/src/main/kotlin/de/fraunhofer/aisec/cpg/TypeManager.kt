@@ -200,7 +200,10 @@ class TypeManager {
      * Returns the target of a typedef for [alias] if one is visible, otherwise [alias]. A built-in
      * type is one instance per language without a scope, so for it the typedef is looked up in the
      * current scope: a typedef that the code declares with the name of a built-in type (e.g.
-     * `size_t`) takes precedence over the built-in type.
+     * `size_t`) takes precedence over the built-in type. This follows the scoping rules of the
+     * languages, in which the innermost visible declaration of a name wins and the built-in types
+     * are the outermost fallback. Therefore, this must be called while the frontend is at the
+     * position where [alias] is used.
      */
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
