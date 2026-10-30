@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listFunctions
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAnalyzeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListFunctionsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
@@ -74,10 +74,10 @@ class CpgAnalysisSessionsTest {
         return Json.decodeFromString<CpgAnalysisResult>(text).projectName
     }
 
-    private fun CallToolResult.functionNames() =
+    private fun CallToolResult.functionSignatures() =
         content.map {
             assertIs<TextContent>(it)
-            Json.decodeFromString<FunctionInfo>(it.text).name
+            Json.decodeFromString<SignatureInfo>(it.text).signature
         }
 
     private fun CallToolResult.text(): String {
@@ -88,7 +88,7 @@ class CpgAnalysisSessionsTest {
 
     @Test
     fun identifiesAnAnalyzedProjectByItsDirectoryName() =
-        withClient(registerTools = { addCpgAnalyzeTool() }) { client ->
+        withClient(registerTools = { addAnalyzeTool() }) { client ->
             assertEquals("first", client.analyze(project("first", "def foo():\n    print('X')")))
             assertNotNull(getSession("first"))
         }
@@ -97,8 +97,8 @@ class CpgAnalysisSessionsTest {
     fun routesToolCallsToTheNamedProject() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             val first = client.analyze(project("first", "def foo():\n    print('X')"))
@@ -110,9 +110,9 @@ class CpgAnalysisSessionsTest {
                         name = "cpg_list_functions",
                         arguments = mapOf("projectName" to first),
                     )
-                    .functionNames()
-            assertTrue(firstNames.any { it.endsWith("foo") }, "expected foo in '$first'")
-            assertFalse(firstNames.any { it.endsWith("bar") }, "expected no bar in '$first'")
+                    .functionSignatures()
+            assertTrue(firstNames.any { "foo" in it }, "expected foo in '$first'")
+            assertFalse(firstNames.any { "bar" in it }, "expected no bar in '$first'")
 
             val secondNames =
                 client
@@ -120,32 +120,34 @@ class CpgAnalysisSessionsTest {
                         name = "cpg_list_functions",
                         arguments = mapOf("projectName" to second),
                     )
-                    .functionNames()
-            assertTrue(secondNames.any { it.endsWith("bar") }, "expected bar in '$second'")
-            assertFalse(secondNames.any { it.endsWith("foo") }, "expected no foo in '$second'")
+                    .functionSignatures()
+            assertTrue(secondNames.any { "bar" in it }, "expected bar in '$second'")
+            assertFalse(secondNames.any { "foo" in it }, "expected no foo in '$second'")
         }
 
     @Test
     fun routesToolCallsWithoutAProjectNameToTheOnlyProject() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             client.analyze(project("first", "def foo():\n    print('X')"))
 
             val names =
-                client.callTool(name = "cpg_list_functions", arguments = emptyMap()).functionNames()
-            assertTrue(names.any { it.endsWith("foo") }, "expected foo, got $names")
+                client
+                    .callTool(name = "cpg_list_functions", arguments = emptyMap())
+                    .functionSignatures()
+            assertTrue(names.any { "foo" in it }, "expected foo, got $names")
         }
 
     @Test
     fun reportsTheAvailableProjectsForAnUnknownProjectName() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             client.analyze(project("first", "def foo():\n    print('X')"))
@@ -165,8 +167,8 @@ class CpgAnalysisSessionsTest {
     fun requiresAProjectNameWhenSeveralProjectsAreAnalyzed() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
-                listFunctions()
+                addAnalyzeTool()
+                addListFunctionsTool()
             }
         ) { client ->
             client.analyze(project("first", "def foo():\n    print('X')"))

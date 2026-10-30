@@ -61,7 +61,19 @@
     return null;
   }
 
-  function handleNodeClick(node: NodeJSON) {
+  async function handleNodeClick(node: NodeJSON) {
+    // Compact tool results (nodeId, signature, file:line) carry no translation unit, so look the node up by its ID
+    if (!node.translationUnitId && !node.fileName) {
+      const id = (node as any).nodeId ?? node.id;
+      if (!id) return;
+      const [resolved]: NodeJSON[] = await fetch('/api/nodes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([id])
+      }).then(r => (r.ok ? r.json() : [])).catch(() => []);
+      if (!resolved) return;
+      node = resolved;
+    }
     const tu = findTranslationUnit(node);
     if (!tu) return;
     selectedNode = node;

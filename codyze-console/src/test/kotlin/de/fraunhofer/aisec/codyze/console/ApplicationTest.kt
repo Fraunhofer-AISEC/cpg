@@ -31,6 +31,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ai.ChatService
+import de.fraunhofer.aisec.cpg.ai.clients.LlmProviderConfig
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
@@ -42,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.github.detekt.sarif4k.*
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -169,6 +172,22 @@ class ApplicationTest {
 
         val findings = result.findings
         assertEquals(1, findings.size)
+    }
+
+    @Test
+    fun testChatSessionCanBeDeleted() = testApplication {
+        val httpClient = HttpClient()
+        val chatService =
+            ChatService(httpClient, LlmProviderConfig(httpClient, emptyList()), "http://localhost")
+        application { configureWebconsole(mockService, chatService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+
+        val sessionId = client.post("/api/chat/sessions").body<Map<String, String>>()["sessionId"]
+        assertNotNull(sessionId)
+
+        val response = client.delete("/api/chat/sessions/$sessionId")
+        assertEquals(HttpStatusCode.NoContent, response.status)
+        chatService.close()
     }
 
     @Test
