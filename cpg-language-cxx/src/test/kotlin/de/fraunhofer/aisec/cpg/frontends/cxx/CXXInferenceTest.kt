@@ -440,6 +440,15 @@ class CXXInferenceTest {
             )
         }
         assertTrue(tu.functions.none { it.isInferred })
+
+        // The argument of two(1) flows to the first parameter, and the second one gets nothing
+        val twoCall = tu.calls["two"]
+        assertNotNull(twoCall)
+        val (a, b) = tu.functions["two"]?.parameters ?: listOf()
+        assertNotNull(a)
+        assertNotNull(b)
+        assertContains(a.prevDFG, twoCall.arguments.single())
+        assertTrue(b.prevDFG.none { it in twoCall.arguments })
     }
 
     @Test
@@ -525,7 +534,7 @@ class CXXInferenceTest {
             assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
             assertTrue(
                 call.invokes.all { it.isInferred },
-                "${call.code} resolves to the definition",
+                "${call.code} should invoke an inferred function",
             )
         }
     }
