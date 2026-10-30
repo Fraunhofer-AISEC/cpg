@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import org.bytedeco.javacpp.IntPointer
 import org.bytedeco.javacpp.SizeTPointer
@@ -371,6 +372,17 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * the accessed variable is a struct or an array. Furthermore, since `getelementptr` allows an
      * (infinite) chain of sub-element access within a single instruction, we need to unwrap those
      * into individual expressions.
+     *
+     * The loop below picks the array/pointer branch for `UnknownType` base types in addition to
+     * `PointerType` ones. Within this loop (and the analogous loop in
+     * [StatementHandler.handleInsertValue]), that happens for exactly two reasons: an opaque
+     * pointer (see [LLVMIRLanguageFrontend.typeOf]), or a self-referential struct's own field,
+     * unresolvable while that struct is still being constructed (`typeOf`'s cycle guard). Both are
+     * safe to treat as an array/pointer access: in both cases the field or element genuinely is a
+     * pointer, and LLVM's own parser already rejects a GEP/insertvalue that indexes past a pointer
+     * within a single instruction (verified by `gep_invalid_past_pointer.ll` and
+     * `insertvalue_invalid_past_pointer.ll`), so this branch is never reached with a wrong base
+     * type or more indices to go.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
         val isGetElementPtr =
@@ -391,8 +403,16 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             indices = LLVMGetIndices(instr)
         }
 
-        // the first operand is always type that is the basis for the calculation
-        var baseType = frontend.typeOf(LLVMGetOperand(instr, 0))
+        // The first operand is the pointer that is the basis for the calculation. Under opaque
+        // pointers, the pointer's LLVM type no longer carries its pointee type, so we instead
+        // use the GEP instruction's explicit source element type to seed the base type. This
+        // also works for typed pointers, since the source element type is always present.
+        var baseType =
+            if (isGetElementPtr) {
+                frontend.typeOf(LLVMGetGEPSourceElementType(instr)).pointer()
+            } else {
+                frontend.typeOf(LLVMGetOperand(instr, 0))
+            }
         var operand = frontend.getOperandValueAtIndex(instr, 0)
 
         // the start
@@ -424,8 +444,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
             // check, if the current base type is a pointer -> then we need to handle this as an
-            // array access
-            if (baseType is PointerType) {
+            // array access. UnknownType is treated the same way; see the KDoc on this function for
+            // why, and why that's always safe.
+            if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())

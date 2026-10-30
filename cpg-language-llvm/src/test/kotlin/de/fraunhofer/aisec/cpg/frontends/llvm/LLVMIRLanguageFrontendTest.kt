@@ -32,6 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
@@ -48,7 +50,19 @@ class LLVMIRLanguageFrontendTest {
             assertThrows<TranslationException> {
                 frontend.parse(topLevel.resolve("main-broken.ll").toFile())
             }
-        assertTrue(exception.message?.startsWith("Could not parse IR: ") == true)
+        assertTrue(exception.message?.startsWith("Could not parse IR.") == true)
+
+        // main-broken.ll has a genuine syntax error (a typo'd "prvate"), independent of typed vs.
+        // opaque pointers, so both parse attempts fail. The exception should report both error
+        // messages, neither one implied to be more authoritative than the other.
+        assertTrue(exception.message?.contains("Typed-pointer context:") == true)
+        assertTrue(exception.message?.contains("Opaque-pointer context:") == true)
+
+        // LLVM writes a short, NUL-terminated message into a fixed-size (10000 byte) buffer; the
+        // message must be cut off there, not decoded (and concatenated, since there are two of
+        // them here) verbatim including the thousands of trailing NUL bytes.
+        assertFalse(exception.message?.contains('\u0000') == true)
+        assertTrue((exception.message?.length ?: 0) < 1000)
     }
 
     @Test
@@ -129,8 +143,20 @@ class LLVMIRLanguageFrontendTest {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
 
+        // The IR uses typed pointers (`i32* @foo(%struct.ST* %s)`), so the pointee type of the
+        // return type and of every parameter is available from the declaration itself, without
+        // having to look at any instruction's explicit type operands.
+        val fooType = foo.type
+        assertIs<PointerType>(fooType)
+        assertLocalName("i32", fooType.elementType)
+
         val s = foo.parameters.firstOrNull { it.name.localName == "s" }
         assertNotNull(s)
+
+        val sType = s.type
+        assertIs<PointerType>(sType)
+        assertLocalName("struct.ST", sType.elementType)
+        assertSame(st, (sType.elementType as? ObjectType)?.recordDeclaration)
 
         val arrayidx = foo.variables["arrayidx"]
         assertNotNull(arrayidx)
@@ -178,6 +204,309 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Reference>(ref)
         assertLocalName("s", ref)
         assertRefersTo(ref, s)
+    }
+
+    @Test
+    fun testIdentifiedStructOpaquePointers() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("struct_opaque_ptr.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertNotNull(tu)
+
+        val rt = tu.records["struct.RT"]
+        assertNotNull(rt)
+
+        val st = tu.records["struct.ST"]
+        assertNotNull(st)
+
+        assertEquals(3, st.fields.size)
+
+        var field = st.fields.firstOrNull()
+        assertNotNull(field)
+        assertLocalName("i32", field.type)
+
+        field = st.fields[1]
+        assertNotNull(field)
+        assertLocalName("double", field.type)
+
+        field = st.fields[2]
+        assertNotNull(field)
+        assertLocalName("struct.RT", field.type)
+        assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        // Unlike in testIdentifiedStruct, the IR here uses opaque pointers (`ptr @foo(ptr %s)`),
+        // so the pointee type of the return type and of the parameters is nowhere to be found in
+        // the declaration itself: LLVM genuinely discards it, there is no explicit type operand
+        // to recover it from (unlike alloca, GEP, load or global/function value types). The best
+        // we can do is fall back to an unknown pointer.
+        val fooType = foo.type
+        assertIs<UnknownType>(fooType)
+
+        val s = foo.parameters.firstOrNull { it.name.localName == "s" }
+        assertNotNull(s)
+        assertIs<UnknownType>(s.type)
+
+        val arrayidx = foo.variables["arrayidx"]
+        assertNotNull(arrayidx)
+
+        // arrayidx will be assigned to a chain of the following expressions:
+        // &s[1].field2.field1[5][13]
+        // we will check them in the reverse order (after the unary operator)
+        //
+        // This is the same chain as in testIdentifiedStruct, but here it is derived purely from
+        // the getelementptr instruction's explicit source element type, since the IR uses opaque
+        // pointers ("ptr") everywhere and the pointers themselves carry no pointee type.
+
+        val unary = arrayidx.initializer
+        assertIs<PointerReference>(unary)
+
+        var arrayExpr = unary.input
+        assertIs<Subscription>(arrayExpr)
+        assertLocalName("13", arrayExpr)
+        assertLiteralValue(13L, arrayExpr.subscriptExpression)
+
+        arrayExpr = arrayExpr.arrayExpression
+        assertIs<Subscription>(arrayExpr)
+        assertLocalName("5", arrayExpr)
+        assertLiteralValue(5L, arrayExpr.subscriptExpression)
+
+        var memberExpression = arrayExpr.arrayExpression
+        assertIs<MemberAccess>(memberExpression)
+        assertLocalName("field_1", memberExpression)
+
+        memberExpression = memberExpression.base
+        assertIs<MemberAccess>(memberExpression)
+        assertLocalName("field_2", memberExpression)
+
+        arrayExpr = memberExpression.base
+        assertIs<Subscription>(arrayExpr)
+        assertLocalName("1", arrayExpr)
+        assertLiteralValue(1L, arrayExpr.subscriptExpression)
+
+        val ref = arrayExpr.arrayExpression
+        assertIs<Reference>(ref)
+        assertLocalName("s", ref)
+        assertRefersTo(ref, s)
+    }
+
+    @Test
+    fun testAllocaOpaquePointers() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("alloca_opaque_ptr.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        // %ptr = alloca i32
+        //
+        // The alloca instruction's own value type is just an opaque "ptr", which carries no
+        // pointee type. The allocated type is recovered from the instruction's explicit allocated
+        // type (LLVMGetAllocatedType) instead.
+        val ptr = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        assertIs<Variable>(ptr)
+
+        val alloca = ptr.initializer
+        assertIs<ArrayConstruction>(alloca)
+        assertEquals("i32*", alloca.type.typeName)
+        // The declared type of %ptr is an opaque pointer, i.e. an unknown type. Since the
+        // initializer (the alloca) already has a concrete i32* type, declarationOrNot falls back
+        // to it, so the variable is typed i32* as well.
+        assertEquals("i32*", ptr.type.typeName)
+
+        // store i32 3, ptr %ptr
+        val store = main.assigns.firstOrNull()
+        assertNotNull(store)
+        assertEquals("=", store.operatorCode)
+
+        assertEquals(1, store.lhs.size)
+        val dereferencePtr = store.lhs.firstOrNull()
+        assertIs<PointerDereference>(dereferencePtr)
+        // The store's pointer operand refers to %ptr (typed i32*), so the dereference resolves to
+        // i32, even though the pointer operand is an opaque "ptr" in the IR.
+        assertEquals("i32", dereferencePtr.type.typeName)
+        assertRefersTo(dereferencePtr.input, ptr)
+
+        assertEquals(1, store.rhs.size)
+        val value = store.rhs.firstOrNull()
+        assertIs<Literal<*>>(value)
+        assertLiteralValue(3L, value)
+        assertEquals("i32", value.type.typeName)
+
+        // %val = load i32, ptr %ptr
+        //
+        // The loaded type is explicit in the load instruction, so %val is typed i32.
+        val valStatement = main.bodyOrNull<DeclarationStatement>(2)
+        assertNotNull(valStatement)
+        val valDecl = valStatement.singleDeclaration
+        assertIs<Variable>(valDecl)
+        assertLocalName("val", valDecl)
+        assertEquals("i32", valDecl.type.typeName)
+
+        val loadDeref = valDecl.initializer
+        assertIs<PointerDereference>(loadDeref)
+        assertEquals("i32", loadDeref.type.typeName)
+        assertRefersTo(loadDeref.input, ptr)
+    }
+
+    @Test
+    fun testVariableScopeOpaquePointers() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("global_local_var_opaque_ptr.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        // @a = global i32 8 and @x = constant i32 10
+        //
+        // Globals are always pointers to the type they specify. The global's value type
+        // (LLVMGlobalGetValueType) is used to recover the pointee type, since the global itself is
+        // just an opaque "ptr" in the IR.
+        val globalX = tu.variables["x"]
+        assertNotNull(globalX)
+        assertEquals("i32*", globalX.type.typeName)
+
+        val globalA = tu.variables["a"]
+        assertNotNull(globalA)
+        assertEquals("i32*", globalA.type.typeName)
+
+        // %locX = load i32, ptr @x
+        val loadXStatement = main.bodyOrNull<DeclarationStatement>(1)
+        assertNotNull(loadXStatement)
+        assertLocalName("locX", loadXStatement.singleDeclaration)
+        val initXOpDeclaration = loadXStatement.singleDeclaration
+        assertIs<Variable>(initXOpDeclaration)
+        // The loaded type is explicit, so %locX is typed i32.
+        assertEquals("i32", initXOpDeclaration.type.typeName)
+        val initXOp = initXOpDeclaration.initializer
+        assertIs<PointerDereference>(initXOp)
+
+        var ref = initXOp.input
+        assertIs<Reference>(ref)
+        assertLocalName("x", ref)
+        assertRefersTo(ref, globalX)
+
+        // %locA = load i32, ptr @a
+        val loadAStatement = main.bodyOrNull<DeclarationStatement>(2)
+        assertNotNull(loadAStatement)
+        val loadADeclaration = loadAStatement.singleDeclaration
+        assertIs<Variable>(loadADeclaration)
+        assertLocalName("locA", loadAStatement.singleDeclaration)
+        assertEquals("i32", loadADeclaration.type.typeName)
+        val initAOp = loadADeclaration.initializer
+        assertIs<PointerDereference>(initAOp)
+
+        ref = initAOp.input
+        assertIs<Reference>(ref)
+        assertLocalName("a", ref)
+        assertRefersTo(ref, globalA)
+    }
+
+    @Test
+    fun testFunctionOpaquePointers() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("function_opaque_ptr.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertNotNull(tu)
+
+        // define i32 @deref(ptr %p)
+        //
+        // The function's return type is recovered from the function's explicit value type
+        // (LLVMGlobalGetValueType) rather than the (now opaque) function pointer type.
+        val deref = tu.functions["deref"]
+        assertNotNull(deref)
+        assertLocalName("i32", deref.type)
+
+        val p = deref.parameters.firstOrNull { it.name.localName == "p" }
+        assertNotNull(p)
+        // A bare opaque pointer parameter carries no pointee type, so it resolves to an unknown
+        // type.
+        assertIs<UnknownType>(p.type)
+
+        // %v = load i32, ptr %p
+        val v = deref.variables["v"]
+        assertNotNull(v)
+        assertEquals("i32", v.type.typeName)
+        val loadDeref = v.initializer
+        assertIs<PointerDereference>(loadDeref)
+        assertEquals("i32", loadDeref.type.typeName)
+        assertRefersTo(loadDeref.input, p)
+
+        // define i64 @to_int(ptr %p) { %i = ptrtoint ptr %p to i64; ret i64 %i }
+        val toInt = tu.functions["to_int"]
+        assertNotNull(toInt)
+        assertLocalName("i64", toInt.type)
+
+        val pToInt = toInt.parameters.firstOrNull { it.name.localName == "p" }
+        assertNotNull(pToInt)
+        assertIs<UnknownType>(pToInt.type)
+
+        // %i = ptrtoint ptr %p to i64
+        //
+        // The cast's destination type is explicit in the instruction, so %i is typed i64.
+        val i = toInt.variables["i"]
+        assertNotNull(i)
+        assertEquals("i64", i.type.typeName)
+        val cast = i.initializer
+        assertIs<Cast>(cast)
+        assertLocalName("i64", cast.castType)
+        assertRefersTo(cast.expression, pToInt)
+
+        // declare ptr @malloc(i64)
+        // define ptr @alloc() { %p = call ptr @malloc(i64 16); ret ptr %p }
+        val malloc = tu.functions["malloc"]
+        assertNotNull(malloc)
+
+        val alloc = tu.functions["alloc"]
+        assertNotNull(alloc)
+        // A function returning a bare opaque pointer has no recoverable pointee type.
+        assertIs<UnknownType>(alloc.type)
+
+        // %p = call ptr @malloc(i64 16)
+        val callResult = alloc.variables["p"]
+        assertNotNull(callResult)
+        // The call result is an opaque "ptr", which resolves to an unknown type.
+        assertIs<UnknownType>(callResult.type)
+        val call = callResult.initializer
+        assertIs<Call>(call)
+        assertLocalName("malloc", call)
+        assertEquals(1, call.arguments.size)
+        assertLiteralValue(16L, call.arguments[0])
+        assertEquals("i64", call.arguments[0].type.typeName)
     }
 
     @Test
@@ -616,6 +945,33 @@ class LLVMIRLanguageFrontendTest {
     }
 
     @Test
+    fun testInsertvalueOpaquePointerField() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("insertvalue_opaque_ptr_field.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+
+        assertNotNull(tu)
+
+        // %a = insertvalue { i32, ptr } undef, ptr %v, 1
+        //
+        // Unlike the literal struct {i32, i8} in testUndefInsertvalue, field_1 here is an opaque
+        // pointer, so its type is UnknownType. Setting it must not hit the "could not find
+        // structure type" failure mode that insertvalue's loop shares with GEP/extractvalue.
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        val a = foo.variables["a"]
+        assertNotNull(a)
+        assertIs<Construction>(a.initializer)
+    }
+
+    @Test
     fun testTryCatch() {
         val topLevel = Path.of("src", "test", "resources", "llvm")
         val tu =
@@ -947,6 +1303,144 @@ class LLVMIRLanguageFrontendTest {
         assertRefersTo(innerCatchThrows.exception, innerTry.catchClauses[0].parameter)
     }
 
+    @Test
+    fun testGetElementPtrThroughRecursiveStruct() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("gep_recursive_struct.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+        assertNotNull(tu)
+
+        // The self-pointer field's type cannot be resolved during the struct's own construction
+        // (cycle guard), so it falls back to UnknownType. This is unrelated to opaque pointers:
+        // the IR here uses typed pointers throughout.
+        val rec = tu.records["struct.Node"]
+        assertNotNull(rec)
+        val field1 = rec.fields["field_1"]
+        assertNotNull(field1)
+        assertIs<UnknownType>(field1.type)
+
+        // %p = getelementptr %struct.Node, %struct.Node* %n, i64 0, i32 1
+        //
+        // Indexing into the (UnknownType) self-pointer field must not crash, even though the
+        // UnknownType here has nothing to do with opaque pointers.
+        val func = tu.functions["getNext"]
+        assertNotNull(func)
+        val p = func.variables["p"]
+        assertNotNull(p)
+        val unary = p.initializer
+        assertIs<PointerReference>(unary)
+        assertIs<MemberAccess>(unary.input)
+
+        // %next = load %struct.Node*, %struct.Node** %p
+        //
+        // Loading the self-pointer field back out is unaffected by the field declaration's
+        // UnknownType: by the time the load instruction is processed, struct.Node's own type is
+        // already fully resolved and cached, so `%struct.Node*` resolves correctly here, not to
+        // UnknownType. (The cycle guard only ever affects the one Field declaration built while
+        // the record was still under construction, not later references to the same type string.)
+        val next = func.variables["next"]
+        assertNotNull(next)
+        val nextType = next.type
+        assertIs<PointerType>(nextType)
+        assertIs<ObjectType>(nextType.elementType)
+        assertSame(rec, (nextType.elementType as ObjectType).recordDeclaration)
+    }
+
+    @Test
+    fun testGetElementPtrPastPointerFieldIsInvalidIR() {
+        // Confirms the invariant that the GEP loop's `baseType is UnknownType` handling in
+        // ExpressionHandler relies on: LLVM's own parser rejects indexing past a pointer-typed
+        // field (here, a self-referential struct's own pointer field) within a single
+        // getelementptr instruction, so that branch is never reached with more indices to go.
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val ctx = TranslationContext(TranslationConfiguration.builder().build())
+        val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage())
+        val exception =
+            assertThrows<TranslationException> {
+                frontend.parse(topLevel.resolve("gep_invalid_past_pointer.ll").toFile())
+            }
+        assertTrue(exception.message?.contains("invalid getelementptr indices") == true)
+    }
+
+    @Test
+    fun testInsertvaluePastPointerFieldIsInvalidIR() {
+        // Same invariant as testGetElementPtrPastPointerFieldIsInvalidIR, for the analogous
+        // insertvalue loop in StatementHandler.handleInsertValue.
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val ctx = TranslationContext(TranslationConfiguration.builder().build())
+        val frontend = LLVMIRLanguageFrontend(ctx, LLVMIRLanguage())
+        val exception =
+            assertThrows<TranslationException> {
+                frontend.parse(topLevel.resolve("insertvalue_invalid_past_pointer.ll").toFile())
+            }
+        assertTrue(exception.message?.contains("invalid indices for insertvalue") == true)
+    }
+
     // TODO: Write test for calling a vararg function (e.g. printf). LLVM code snippets can already
     // be found in client.ll.
+
+    @Test
+    fun testGetElementPtrThroughOpaquePointerArray() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("gep_opaque_ptr_array.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["getElem"]
+        assertNotNull(func)
+
+        // %p = getelementptr ptr, ptr %arr, i64 %idx
+        //
+        // The GEP's source element type is itself an opaque pointer, so `typeOf(ptr).pointer()`
+        // collapses to `UnknownType` instead of `PointerType(UnknownType)` (UnknownType.pointer()
+        // is a no-op). Indexing through it must still be treated as an array/pointer access
+        // (Subscription), not misinterpreted as a struct field access.
+        val p = func.variables["p"]
+        assertNotNull(p)
+
+        val unary = p.initializer
+        assertIs<PointerReference>(unary)
+        assertIs<Subscription>(unary.input)
+    }
+
+    @Test
+    fun testGetElementPtrConstantExpression() {
+        val topLevel = Path.of("src", "test", "resources", "llvm")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("gep_const_expr_opaque_ptr.ll").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+        assertNotNull(tu)
+
+        // @gp = global ptr getelementptr (%struct.ST, ptr @g, i64 0, i32 1)
+        //
+        // The GEP here is a constant expression used as a global initializer, not an instruction.
+        // LLVMGetGEPSourceElementType must work on both.
+        val gp = tu.variables["gp"]
+        assertNotNull(gp)
+
+        val unary = gp.initializer
+        assertIs<PointerReference>(unary)
+
+        val field = unary.input
+        assertIs<MemberAccess>(field)
+        assertLocalName("field_1", field)
+        assertLocalName("i32", field.type)
+    }
 }
