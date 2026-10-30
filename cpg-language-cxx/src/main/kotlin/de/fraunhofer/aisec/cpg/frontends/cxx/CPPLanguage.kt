@@ -214,6 +214,9 @@ open class CPPLanguage :
             // Convenience types, defined in headers. They are not part of the language per se, but
             // part of the standard library. We therefore also consider them to be "built-in" types,
             // because we often don't parse all the headers which define them internally.
+            // They are a fallback for missing headers: a typedef of the same name that the parsed
+            // code declares takes precedence (see TypeManager.resolvePossibleTypedef). Further
+            // standard library types, such as size_t, are provided by the [StdlibProfile].
             "std::string" to StringType("std::string", this),
             "int8_t" to IntegerType("int8_t", 8, this, NumericType.Modifier.SIGNED),
             "int16_t" to IntegerType("int16_t", 16, this, NumericType.Modifier.SIGNED),

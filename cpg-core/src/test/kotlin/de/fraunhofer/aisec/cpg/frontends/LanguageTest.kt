@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.newRecord
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.tryCast
 import kotlin.test.*
 
@@ -69,6 +71,29 @@ class LanguageTest {
             matches = myType.tryCast(baseType)
             assertIs<ImplicitCast>(matches)
         }
+    }
+
+    @Test
+    fun testProfileTypesDoNotChangeTheHashCode() {
+        val plain = TestLanguage()
+        val withProfile = TestLanguage()
+        withProfile.profileTypes =
+            mapOf("size_t" to IntegerType("size_t", 64, withProfile, NumericType.Modifier.UNSIGNED))
+
+        assertEquals(plain, withProfile)
+        assertEquals(plain.hashCode(), withProfile.hashCode())
+    }
+
+    @Test
+    fun testPrimitiveTypeNamesIncludeProfileTypes() {
+        val language = TestLanguage()
+        assertEquals(language.builtInTypes.keys, language.primitiveTypeNames)
+
+        language.profileTypes =
+            mapOf("size_t" to IntegerType("size_t", 64, language, NumericType.Modifier.UNSIGNED))
+        assertEquals(language.builtInTypes.keys + "size_t", language.primitiveTypeNames)
+        // The combined set is computed once, not on every access.
+        assertSame(language.primitiveTypeNames, language.primitiveTypeNames)
     }
 
     @Test
