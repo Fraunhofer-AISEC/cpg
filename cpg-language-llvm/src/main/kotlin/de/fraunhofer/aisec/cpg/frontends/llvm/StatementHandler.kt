@@ -615,7 +615,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`insertvalue`](https://llvm.org/docs/LangRef.html#insertvalue-instruction)
      * instruction.
      *
-     * We use it similar to a constructor and assign the individual sub-elements.
+     * We use it similar to a constructor and assign the individual sub-elements. The loop below
+     * mirrors [ExpressionHandler.handleGetElementPtr]'s array-vs-struct-field decision, including
+     * treating `UnknownType` base types the same as `PointerType` ones; see that function's KDoc
+     * for why.
      */
     private fun handleInsertValue(instr: LLVMValueRef): Expression {
         val numOps = LLVMGetNumIndices(instr)
@@ -657,13 +660,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
                 base = base.arguments[index]
             }
-            // `baseType is UnknownType` is included for the same reason as in the GEP/
-            // extractvalue loop in ExpressionHandler.handleGetElementPtr: a field or element can
-            // be an opaque pointer, or a self-referential struct's own pointer field (unresolvable
-            // while that struct is still being constructed), either of which collapses to
-            // `UnknownType`. Insertvalue cannot validly index past such a field within a single
-            // instruction either way, so treating it as an array/pointer access here is always
-            // safe.
+            // See this function's KDoc for why UnknownType is included here.
             else if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
@@ -1438,6 +1435,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * IR is SSA, we need to declare a new variable in this case, which is named according to
      * [valueRef]. In case the variable assignment is optional, and we directly return the
      * [Expression] associated with the instruction.
+     *
+     * If the instruction's own LLVM type maps to [UnknownType] (e.g. an opaque pointer result), the
+     * declared variable falls back to [rhs]'s type instead. This is shared by every instruction
+     * that can have a left-hand side, not just alloca/getelementptr/load, but it can only actually
+     * change the result for handlers that explicitly set `rhs.type` before calling this function
+     * (currently [handleAlloca] and [handleLoad]): [Expression.type] defaults to [UnknownType], and
+     * nothing else in this file assigns to it beforehand, so the fallback is a no-op for every
+     * other instruction (calls, casts, binary/phi/select results, ...), in both typed and opaque
+     * pointer mode.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Expression {
         val namePair = frontend.getNameOf(valueRef)
@@ -1446,16 +1452,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // if it is still empty, we probably do not have a left side
         return if (lhs != "") {
-            // Prefer the type already computed for the right-hand side if we could not derive
-            // one from the instruction's own LLVM type. This matters for opaque pointers, where
-            // the instruction's own value type (e.g. for alloca or getelementptr results) is
-            // just an untyped "ptr" that carries no pointee information, whereas the individual
-            // instruction handlers already resolved the correct pointee type from explicit type
-            // operands (allocated type, GEP source element type, ...). This is not limited to
-            // alloca/getelementptr: declarationOrNot is shared by every instruction that can have
-            // a left-hand side, so this fallback applies to all of them. It is a no-op unless the
-            // handler already set a more specific, non-unknown type on the expression it built
-            // (as alloca and load do), since rhs.type otherwise still defaults to UnknownType.
+            // See this function's KDoc for why this fallback is needed, and why it is a no-op
+            // outside alloca/load.
             var type = frontend.typeOf(valueRef)
             val rhsType = rhs.type
             if (type is UnknownType && rhsType !is UnknownType) {

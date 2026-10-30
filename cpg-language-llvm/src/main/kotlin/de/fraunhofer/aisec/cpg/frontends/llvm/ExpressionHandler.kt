@@ -372,6 +372,17 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * the accessed variable is a struct or an array. Furthermore, since `getelementptr` allows an
      * (infinite) chain of sub-element access within a single instruction, we need to unwrap those
      * into individual expressions.
+     *
+     * The loop below picks the array/pointer branch for `UnknownType` base types in addition to
+     * `PointerType` ones. Within this loop (and the analogous loop in
+     * [StatementHandler.handleInsertValue]), that happens for exactly two reasons: an opaque
+     * pointer (see [LLVMIRLanguageFrontend.typeOf]), or a self-referential struct's own field,
+     * unresolvable while that struct is still being constructed (`typeOf`'s cycle guard). Both are
+     * safe to treat as an array/pointer access: in both cases the field or element genuinely is a
+     * pointer, and LLVM's own parser already rejects a GEP/insertvalue that indexes past a pointer
+     * within a single instruction (verified by `gep_invalid_past_pointer.ll` and
+     * `insertvalue_invalid_past_pointer.ll`), so this branch is never reached with a wrong base
+     * type or more indices to go.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
         val isGetElementPtr =
@@ -433,28 +444,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 }
 
             // check, if the current base type is a pointer -> then we need to handle this as an
-            // array access. An unknown type is treated the same way: it can occur here when the
-            // source element type of the GEP (or an intermediate element) is itself an opaque
-            // pointer (e.g. `getelementptr ptr, ptr %arr, i64 %idx`, indexing through an array of
-            // opaque pointers). In that case `typeOf(...).pointer()` yields `UnknownType` instead
-            // of `PointerType(UnknownType)`, because `UnknownType.reference()` returns itself. We
-            // still need to treat this index as an array/pointer access, not a struct field
-            // access, otherwise we wrongly try to resolve it as a member and fail below.
-            //
-            // This is not as broad a condition as it looks: within this loop, `baseType` can only
-            // become `UnknownType` through `typeOf(...)` (directly here, or via a struct field's
-            // type a few lines below, which was itself computed the same way). `typeOf` returns
-            // `UnknownType` in exactly three cases: an opaque pointer (the case described above),
-            // `LLVMFunctionTypeKind` (not a valid GEP element/field type to begin with), and a
-            // self-referential struct's own field, while that struct is still being constructed
-            // (the cycle guard in `typeOf` returns `UnknownType` there to avoid infinite
-            // recursion, independently of typed vs. opaque pointers -- see
-            // gep_recursive_struct.ll). The third case is also safe to treat as an array/pointer
-            // access here: a self-pointer field is, structurally, a pointer, and -- just like the
-            // opaque-pointer case -- GEP cannot validly index past such a field within a single
-            // instruction anyway, so this branch is never reached with a genuinely wrong base
-            // type for it. Every other LLVM type kind maps to a `PointerType`, an `ObjectType`, or
-            // a generic `ObjectType` fallback.
+            // array access. UnknownType is treated the same way; see the KDoc on this function for
+            // why, and why that's always safe.
             if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base

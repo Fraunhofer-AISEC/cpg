@@ -231,6 +231,21 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         return typeOf(typeRef)
     }
 
+    /**
+     * Converts an [LLVMTypeRef] to a cpg-core [Type].
+     *
+     * An opaque pointer (see [parse]) maps to plain [UnknownType], not `PointerType(UnknownType)`:
+     * `UnknownType.reference()` (which [de.fraunhofer.aisec.cpg.graph.pointer] calls) returns the
+     * receiver unchanged, since cpg-core has no way to express "a pointer to an unknown type". We
+     * deliberately don't build a real `PointerType(UnknownType)` either: that would make this
+     * no-information type look concrete to cpg-core's type-propagation system, which would then
+     * push it through type observers (e.g. `PointerDereference.typeChanged`) and override pointee
+     * types that [DeclarationHandler]/[StatementHandler] deliberately recovered elsewhere from
+     * explicit type operands (allocated type, GEP source element type, global/function value type,
+     * load result type). Callers that need to tell a known pointer apart from an opaque pointer
+     * with a lost pointee type (e.g. the GEP loop in [ExpressionHandler]) check `is UnknownType` in
+     * addition to `is PointerType`.
+     */
     internal fun typeOf(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf(),
@@ -254,24 +269,8 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
                 }
                 LLVMPointerTypeKind -> {
                     if (LLVMPointerTypeIsOpaque(typeRef) != 0) {
-                        // Opaque pointers no longer carry a pointee type in the LLVM type
-                        // system. The actual pointee type has to be resolved at each use site
-                        // instead (e.g. from a GEP's source element type, a global's value
-                        // type, an alloca's allocated type, or a load's result type).
-                        //
-                        // `unknownType().pointer()` here collapses to plain UnknownType, not
-                        // PointerType(UnknownType): UnknownType.reference() (which .pointer()
-                        // calls) returns the receiver unchanged, since cpg-core has no way to
-                        // express "a pointer to an unknown type". We cannot build a real
-                        // PointerType(UnknownType) instead: doing so makes this (purely opaque,
-                        // no-information) type look "concrete" to cpg-core's type-propagation
-                        // system, which then actively pushes it through type observers (e.g.
-                        // PointerDereference.typeChanged) and overrides the pointee types that
-                        // the alloca/load/global/function/GEP handlers above deliberately
-                        // recovered from their explicit type operands. Callers that need to tell
-                        // "a known pointer" from "an opaque pointer with lost pointee type" apart
-                        // (e.g. the GEP handler in ExpressionHandler) check `is UnknownType` in
-                        // addition to `is PointerType`.
+                        // Opaque pointers no longer carry a pointee type; see the KDoc above for
+                        // why this collapses to UnknownType rather than PointerType(UnknownType).
                         unknownType().pointer()
                     } else {
                         val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
