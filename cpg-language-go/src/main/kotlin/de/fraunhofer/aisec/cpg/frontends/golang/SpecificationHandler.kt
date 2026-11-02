@@ -287,6 +287,17 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // reparse the raw AST expression, so that `iota` gets evaluated differently for
                 // each spec
                 if (frontend.declCtx.currentDecl?.tok == ExpressionHandler.CONST_TOKEN) {
+                    // Record that this is a constant. A Go constant declared without an explicit
+                    // type is *untyped* and converts implicitly to any type it is representable
+                    // in, so an argument such as `bpTagData` may be passed to a `uint8`
+                    // parameter. The declaration itself only carries the default type of its
+                    // initializer (`int` for `0x40`), which loses that property, so we mark it
+                    // here and let the language take it into account when matching a signature.
+                    decl.modifiers += CONST_MODIFIER
+                    if (valueSpec.type == null) {
+                        decl.modifiers += UNTYPED_CONST_MODIFIER
+                    }
+
                     var initializerExpr = valueSpec.values.getOrNull(nameIdx)
                     if (initializerExpr != null) {
                         // Set the current initializer

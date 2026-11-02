@@ -214,8 +214,14 @@ open class GoLanguage :
             }
         }
 
-        // We accept all kind of numbers if the literal is part of the call expression
-        if (targetHint is Parameter && hint is Literal<*>) {
+        // We accept all kind of numbers if the literal is part of the call expression.
+        //
+        // The same has to hold for a named untyped constant: `const bpTagData = 0x40` is untyped
+        // and converts implicitly to the parameter's type, so passing it to a `uint8` parameter is
+        // legal even though the declaration itself only carries the default type `int` of its
+        // initializer. Without this, such a call does not match its target and a stub is inferred
+        // instead.
+        if (targetHint is Parameter && hint.isUntypedConstant) {
             return if (type is NumericType && targetType is NumericType) {
                 DirectMatch
             } else {
@@ -379,6 +385,33 @@ open class GoLanguage :
         return super.bestViableReferenceCandidate(ref)
     }
 }
+
+/** Marks a declaration that was declared in a `const` block. */
+const val CONST_MODIFIER = "const"
+
+/**
+ * Marks a constant declared without an explicit type. Such a constant is *untyped* in Go and
+ * converts implicitly to any type it is representable in.
+ */
+const val UNTYPED_CONST_MODIFIER = "untyped"
+
+/**
+ * Whether this expression is an untyped constant in the sense of https://go.dev/ref/spec#Constants,
+ * i.e. a constant whose type is only determined by the context it is used in. That is the case for
+ * a literal, and for a reference to a constant that was declared without an explicit type.
+ */
+private val HasType?.isUntypedConstant: Boolean
+    get() =
+        when (this) {
+            is Literal<*> -> true
+            is Reference -> {
+                val target = this.refersTo
+                target != null &&
+                    CONST_MODIFIER in target.modifiers &&
+                    UNTYPED_CONST_MODIFIER in target.modifiers
+            }
+            else -> false
+        }
 
 /**
  * The directory a node is declared in, which for Go is the same thing as the package it belongs to.
