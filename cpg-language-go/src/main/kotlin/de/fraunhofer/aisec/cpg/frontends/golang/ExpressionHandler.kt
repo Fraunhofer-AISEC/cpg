@@ -184,6 +184,22 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                     }
                 }
             }
+            is GoStandardLibrary.Ast.StarExpr -> {
+                // A conversion to a pointer type, as in `(*[4]byte)(p)`. Syntactically this is
+                // indistinguishable from dereferencing a value and calling it, so we only treat
+                // it as a conversion if the operand is a type literal, which cannot denote a
+                // value. Were it handled as an expression, the type literal would reach the
+                // expression handler, which has no case for it.
+                if (unwrapped.x.isTypeLiteral) {
+                    return newCast(rawNode = callExpr) { cast ->
+                        cast.castType = frontend.typeOf(unwrapped)
+
+                        if (callExpr.args.isNotEmpty()) {
+                            cast.expression = frontend.expressionHandler.handle(callExpr.args[0])
+                        }
+                    }
+                }
+            }
         }
 
         val typeConstraints = mutableListOf<Node>()
@@ -514,3 +530,17 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             )
     }
 }
+
+/**
+ * Whether this expression is a type literal -- an array, struct, map, channel, function or
+ * interface type written out in place. Such an expression can only denote a type, never a value,
+ * which is what allows a conversion to be told apart from a call.
+ */
+private val GoStandardLibrary.Ast.Expr.isTypeLiteral: Boolean
+    get() =
+        this is GoStandardLibrary.Ast.ArrayType ||
+            this is GoStandardLibrary.Ast.StructType ||
+            this is GoStandardLibrary.Ast.MapType ||
+            this is GoStandardLibrary.Ast.ChanType ||
+            this is GoStandardLibrary.Ast.FuncType ||
+            this is GoStandardLibrary.Ast.InterfaceType

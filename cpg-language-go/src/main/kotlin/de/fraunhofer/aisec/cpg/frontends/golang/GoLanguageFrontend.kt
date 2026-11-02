@@ -491,7 +491,17 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
 val Type?.underlyingType: Type?
     get() {
         return if (namedType) {
-            this?.superTypes?.singleOrNull()
+            // The underlying type of a named type is kept among its super types. The interfaces
+            // the type satisfies are recorded there as well -- satisfaction in Go is structural,
+            // so it is established from the method sets rather than from the declaration -- and
+            // those must not be mistaken for the underlying type. We therefore skip interfaces
+            // instead of expecting the super types to hold exactly one entry.
+            //
+            // Note that a named type whose underlying type is itself an interface
+            // (`type MyReader io.Reader`) cannot be told apart this way.
+            this?.superTypes?.firstOrNull {
+                (it as? ObjectType)?.recordDeclaration?.kind != "interface"
+            }
         } else {
             this
         }
