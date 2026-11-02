@@ -26,10 +26,19 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
+import de.fraunhofer.aisec.cpg.frontends.ImplicitCast
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
@@ -309,23 +318,21 @@ class CXXInferenceTest {
             }
         assertNotNull(tu)
 
-        val nullPointers = tu.calls("take_pointer")
-        assertEquals(4, nullPointers.size)
-        for (call in nullPointers) {
-            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
-            assertTrue(
-                call.invokes.none { it.isInferred },
-                "${call.code} invokes an inferred function",
-            )
-        }
+        val calls = tu.calls("take_pointer") + tu.calls("take_other_pointer")
+        assertEquals(6, calls.size)
+        for (call in calls) {
+            // In C, the name alone determines the function, so every call resolves
+            val target = call.invokes.singleOrNull()
+            assertNotNull(target, "${call.code} is not resolved to one function")
+            assertFalse(target.isInferred, "${call.code} invokes an inferred function")
 
-        val others = tu.calls("take_other_pointer")
-        assertEquals(2, others.size)
-        for (call in others) {
-            assertTrue(
-                call.invokes.all { it.isInferred },
-                "${call.code} resolves to the definition",
-            )
+            // Only the null pointer constants can be converted to the pointer parameter
+            val argument = call.arguments.single()
+            val parameter = target.parameters.single()
+            val cast = call.language.tryCast(argument.type, parameter.type, argument, parameter)
+            val expected =
+                if (call.name.localName == "take_pointer") ImplicitCast else CastNotPossible
+            assertEquals(expected, cast, call.code)
         }
     }
 
@@ -349,5 +356,214 @@ class CXXInferenceTest {
         assertNotNull(target)
         assertFalse(target.isInferred)
         assertLocalName("int", target.parameters.singleOrNull()?.type)
+    }
+
+    @Test
+    fun testUnknownArgumentTypeResolvesInC() {
+        val file = File("src/test/resources/c/unknown_argument_type.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        // C has no overloading, so the only function with that name is the target, even if we
+        // cannot determine the type of an argument
+        for (name in listOf("grow", "forward_declared")) {
+            val calls = tu.calls(name)
+            assertTrue(calls.isNotEmpty())
+            for (call in calls) {
+                assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+                assertTrue(
+                    call.invokes.none { it.isInferred },
+                    "${call.code} invokes an inferred function",
+                )
+            }
+        }
+        // undeclared_fn is declared nowhere, so it is the only function we need to infer
+        assertEquals(
+            listOf("undeclared_fn"),
+            tu.functions.filter { it.isInferred }.map { it.name.localName },
+        )
+    }
+
+    @Test
+    fun testInferredRecordParameterTypeResolvesInC() {
+        val file = File("src/test/resources/c/unknown_parameter_type.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val mystery = tu.records["mystery_t"]
+        assertNotNull(mystery)
+        assertTrue(mystery.isInferred)
+
+        // We only guessed that mystery_t is a struct, so it must not make the real function
+        // incompatible, neither directly nor behind a pointer
+        for (name in listOf("take", "take_pointer")) {
+            val calls = tu.calls(name)
+            assertEquals(2, calls.size)
+            for (call in calls) {
+                assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+                assertTrue(
+                    call.invokes.none { it.isInferred },
+                    "${call.code} invokes an inferred function",
+                )
+            }
+        }
+
+        // A declared record is known, so the argument is incompatible. But in C, the name alone
+        // determines the function.
+        val takeKnown = tu.calls["take_known"]
+        assertNotNull(takeKnown)
+        assertTrue(takeKnown.invokes.isNotEmpty())
+        assertTrue(takeKnown.invokes.none { it.isInferred })
+    }
+
+    @Test
+    fun testArgumentCountDoesNotChooseTheFunctionInC() {
+        val file = File("src/test/resources/c/argument_count.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        for (name in listOf("old_style", "two")) {
+            val call = tu.calls[name]
+            assertNotNull(call, name)
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.none { it.isInferred },
+                "${call.code} invokes an inferred function",
+            )
+        }
+        assertTrue(tu.functions.none { it.isInferred })
+
+        // The argument of two(1) flows to the first parameter, and the second one gets nothing
+        val twoCall = tu.calls["two"]
+        assertNotNull(twoCall)
+        val (a, b) = tu.functions["two"]?.parameters ?: listOf()
+        assertNotNull(a)
+        assertNotNull(b)
+        assertContains(a.prevDFG, twoCall.arguments.single())
+        assertTrue(b.prevDFG.none { it in twoCall.arguments })
+    }
+
+    @Test
+    fun testFewerArgumentsThanSummarizedParametersInC() {
+        val file = File("src/test/resources/c/fewer_arguments.c")
+        val summaries = File("src/test/resources/c/fewer_arguments.yml")
+        // The summary of a parameter without an argument is applied by the PointsToPass, by the
+        // ControlFlowSensitiveDFGPass (without the PointsToPass), and by the DFGPass alone
+        val configurations =
+            mapOf<String, (TranslationConfiguration.Builder) -> Unit>(
+                "PointsToPass" to { it.defaultPasses() },
+                "ControlFlowSensitiveDFGPass" to { it.disablePointsToAnalysis().defaultPasses() },
+                "DFGPass" to
+                    {
+                        it.registerPass<TypeHierarchyResolver>()
+                        it.registerPass<SymbolResolver>()
+                        it.registerPass<DFGPass>()
+                        it.registerPass<EvaluationOrderGraphPass>()
+                        it.registerPass<TypeResolver>()
+                    },
+            )
+        for ((name, configure) in configurations) {
+            val tu =
+                analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), false) {
+                    it.registerLanguage<CLanguage>()
+                    it.registerFunctionSummaries(summaries)
+                    configure(it)
+                }
+            assertNotNull(tu, name)
+
+            for (callee in listOf("fill", "infer_fill")) {
+                val calls = tu.calls(callee)
+                assertEquals(2, calls.size, "$name: $callee")
+                val target = calls.flatMap { it.invokes }.toSet().singleOrNull()
+                assertNotNull(target, "$name: the calls to $callee invoke different functions")
+                assertEquals(callee == "infer_fill", target.isInferred, "$name: $callee")
+            }
+        }
+    }
+
+    @Test
+    fun testUnknownArgumentTypeIsAmbiguousBetweenOverloadsInCpp() {
+        val file = File("src/test/resources/cxx/inference/unknown_argument_type.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // An unknown argument type may be convertible to both overloads, so the call is ambiguous
+        // between them, and C++ does not silently pick one
+        val call = tu.calls["grow"]
+        assertNotNull(call)
+        assertEquals(tu.functions("grow").toSet(), call.invokes.toSet())
+        assertEquals(2, call.invokes.size)
+        assertTrue(call.invokes.none { it.isInferred })
+    }
+
+    @Test
+    fun testTemplatesAndConstructorsWithUnknownArgumentTypeInCpp() {
+        val file = File("src/test/resources/cxx/inference/unknown_argument_templates.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // The template handling resolves the call to the template before the fallback runs
+        val tmpl = tu.calls["tmpl"]
+        assertNotNull(tmpl)
+        val target = tmpl.invokes.singleOrNull()
+        assertNotNull(target)
+        assertFalse(target.isInferred)
+        assertLocalName("tmpl", tmpl.templateInstantiation)
+
+        // Constructors are resolved apart from bestViableResolution, so the fallback does not apply
+        // to them: the constructor is still inferred
+        val construction = tu.allChildren<Construction>().singleOrNull()
+        assertNotNull(construction)
+        assertTrue(construction.invokes.isNotEmpty())
+        assertTrue(construction.invokes.all { it.isInferred })
+    }
+
+    @Test
+    fun testOnlyCandidateWithUnknownArgumentTypeInCpp() {
+        val file = File("src/test/resources/cxx/inference/single_candidate.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // An unknown type may be convertible, so the only candidate is the target, whether the
+        // argument or the parameter has the unknown type, and also for a class whose definition we
+        // do
+        // not know, behind a pointer level, with a default argument, or with variadic parameters
+        for (name in listOf("grow", "take", "take_foo", "take_pp", "with_default", "vararg")) {
+            val call = tu.calls[name]
+            assertNotNull(call, name)
+            val target = call.invokes.singleOrNull()
+            assertNotNull(target, "${call.code} is not resolved to one function")
+            assertFalse(target.isInferred, "${call.code} invokes an inferred function")
+        }
+
+        // A known type that cannot be converted, or a number of arguments that does not fit, means
+        // that the target is a function we do not know
+        for (name in listOf("log", "two")) {
+            val call = tu.calls[name]
+            assertNotNull(call, name)
+            assertTrue(call.invokes.isNotEmpty(), "${call.code} is not resolved")
+            assertTrue(
+                call.invokes.all { it.isInferred },
+                "${call.code} should invoke an inferred function",
+            )
+        }
     }
 }
