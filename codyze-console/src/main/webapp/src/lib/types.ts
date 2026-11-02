@@ -244,7 +244,11 @@ export interface McpCapabilities {
 export interface SkillInfo {
   name: string;
   description: string;
-  body: string;
+  location: string;
+  license?: string | null;
+  compatibility?: string | null;
+  metadata?: Record<string, string>;
+  allowedTools?: string | null;
 }
 
 // AI Agent / Chat interfaces
@@ -265,18 +269,23 @@ export interface LLMMessage {
 
 export interface ToolResult {
   toolName?: string;
+  /** The arguments the model called the tool with, if they are known */
+  args?: Record<string, unknown>;
   content: any;
   isError?: boolean;
-  /** The arguments the model called the tool with, if they are known */
-  arguments?: Record<string, unknown>;
-  /** The response of the model that called the tool, counted from 1, if it is known */
+  /**
+   * The response of the model that called the tool, if it is known. The calls of one response share
+   * it, a later response has a higher one; the rounds are not consecutive
+   */
   round?: number;
 }
 
 /** A tool call of the agent that is running, before its result is known. */
 export interface ToolActivity {
+  /** Identifies the call; its result carries the same ID */
+  toolCallId?: string;
   toolName: string;
-  arguments: Record<string, unknown>;
+  args: Record<string, unknown>;
   round?: number;
 }
 

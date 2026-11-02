@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.*
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.SignatureInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodePaths
@@ -58,7 +58,7 @@ class CpgDfgPathsToolTest {
     fun dfgPathsToolTest() =
         withClient(
             registerTools = {
-                listCalls()
+                addListCallsTool()
                 addDfgBackwardTool()
                 addDfgForwardTool()
             }
@@ -66,7 +66,9 @@ class CpgDfgPathsToolTest {
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertNotNull(callsResult)
             val callInfo =
-                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                Json.decodeFromString<SignatureInfo>(
+                    (callsResult.content.first() as TextContent).text
+                )
 
             // print(foo) gets its value from bar, through foo
             val backward = callTool(client, "cpg_dfg_backward", callInfo.nodeId)

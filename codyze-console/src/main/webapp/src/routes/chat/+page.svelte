@@ -110,11 +110,23 @@
   // Load persisted state from sessionStorage
   function loadPersistedState() {
     if (typeof window === 'undefined') {
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     }
     const stored = sessionStorage.getItem('codyze-agent-state');
     if (!stored)
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     try {
       const parsed = JSON.parse(stored);
       const messages = parsed.messages.map((msg: any) => ({
@@ -125,10 +137,17 @@
         messages,
         suggestions: parsed.suggestions ?? [],
         selectedClient: parsed.selectedClient ?? null,
-        selectedModel: parsed.selectedModel ?? null
+        selectedModel: parsed.selectedModel ?? null,
+        sessionId: parsed.sessionId ?? null
       };
     } catch {
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     }
   }
 
@@ -142,10 +161,14 @@
   let isLoading = $state(false);
   let streamingContent = $state('');
   let streamingReasoning = $state('');
-  // The tool call the agent is running, until its result arrives
-  let activity = $state<ToolActivity | null>(null);
+  // The tool calls the agent is running, in the order they started, until their results arrive.
+  // The calls of one response of the model can run in parallel
+  let running = $state<ToolActivity[]>([]);
+  // The call the agent waits for: the earliest one that is still running
+  const activity = $derived(running[0] ?? null);
   let selectedClient = $state<string | null>(persisted.selectedClient);
   let selectedModelName = $state<string | null>(persisted.selectedModel);
+  let sessionId = $state<string | null>(persisted.sessionId);
   let abortController: AbortController | null = null;
 
   const selectedModel = $derived.by((): Model | null => {
@@ -178,7 +201,8 @@
           messages: chatMessages,
           suggestions,
           selectedClient,
-          selectedModel: selectedModelName
+          selectedModel: selectedModelName,
+          sessionId
         })
       );
     }
@@ -194,12 +218,19 @@
       abortController.abort();
       abortController = null;
     }
+    // The server keeps a session's history until it is deleted.
+    if (sessionId) {
+      llmAgent
+        .deleteSession(sessionId)
+        .catch((e) => console.warn('Could not delete the chat session on the server:', e));
+    }
+    sessionId = null;
     chatMessages = [];
     currentMessage = '';
     streamingContent = '';
     streamingReasoning = '';
     suggestions = [];
-    activity = null;
+    running = [];
     isLoading = false;
   }
 
@@ -223,11 +254,15 @@
             streamingReasoning += event.content;
           } else if (event.type === 'tool_call') {
             keepNarration();
-            activity = {
-              toolName: event.toolName,
-              arguments: event.arguments ?? {},
-              round: event.round
-            };
+            running = [
+              ...running,
+              {
+                toolCallId: event.toolCallId ?? undefined,
+                toolName: event.toolName,
+                args: event.args ?? {},
+                round: event.round
+              }
+            ];
           } else if (event.type === 'tool_result') {
             if (isConceptSuggestion(event.toolName, event.content)) {
               addSuggestion(event.content);
@@ -235,8 +270,11 @@
             // Without the event of the call, e.g. from an older server, the text before the call is
             // kept when its result arrives
             keepNarration();
-            const call = activity?.toolName === event.toolName ? activity : null;
-            activity = null;
+            // The call of the result: by its ID, or by its tool from an older server without IDs
+            const call = running.find((c) =>
+              event.toolCallId ? c.toolCallId === event.toolCallId : c.toolName === event.toolName
+            );
+            running = running.filter((c) => c !== call);
             chatMessages = [
               ...chatMessages,
               {
@@ -247,8 +285,8 @@
                 toolResult: {
                   toolName: event.toolName,
                   content: event.content,
-                  arguments: call?.arguments,
-                  round: call?.round
+                  args: event.args ?? call?.args,
+                  round: event.round ?? call?.round
                 },
                 timestamp: new Date()
               }
@@ -269,7 +307,7 @@
             timestamp: new Date()
           }
         ];
-        activity = null;
+        running = [];
         isLoading = false;
         streamingContent = '';
       },
@@ -300,7 +338,7 @@
   // Keeps what the agent wrote for the current question as its answer, with the reasoning of the
   // model at its first tool call or else at the answer
   function finishAnswer() {
-    activity = null;
+    running = [];
     const reasoning = streamingReasoning || undefined;
     const start = chatMessages.findLastIndex((m) => m.role === 'user') + 1;
     const firstToolIdx = chatMessages.findIndex(
@@ -376,6 +414,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks(signal),
         signal
       );
@@ -430,6 +469,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks(signal),
         signal
       );

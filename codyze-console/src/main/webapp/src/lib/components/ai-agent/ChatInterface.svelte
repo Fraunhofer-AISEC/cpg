@@ -159,7 +159,21 @@
     return null;
   }
 
-  function handleNodeClick(node: NodeJSON) {
+  async function handleNodeClick(node: NodeJSON) {
+    // Compact tool results (nodeId, signature, file:line) carry no translation unit, so look the node up by its ID
+    if (!node.translationUnitId && !node.fileName) {
+      const id = (node as any).nodeId ?? node.id;
+      if (!id) return;
+      const [resolved]: NodeJSON[] = await fetch('/api/nodes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([id])
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []);
+      if (!resolved) return;
+      node = resolved;
+    }
     const tu = findTranslationUnit(node);
     if (!tu) return;
     selectedNode = node;
@@ -1363,8 +1377,8 @@
   const argKey = $derived(
     [
       ...new Set([
-        ...toolNodeIds(activity?.arguments),
-        ...messages.flatMap((m) => toolNodeIds(m.toolResult?.arguments))
+        ...toolNodeIds(activity?.args),
+        ...messages.flatMap((m) => toolNodeIds(m.toolResult?.args))
       ])
     ]
       .sort()
@@ -1438,7 +1452,7 @@
   // The calls of the running group, in their order
   const runningCalls = $derived(
     (runningGroup?.entries ?? []).map((e) =>
-      labelOf(e.message.toolResult?.toolName ?? '', e.message.toolResult?.arguments)
+      labelOf(e.message.toolResult?.toolName ?? '', e.message.toolResult?.args)
     )
   );
 
@@ -1475,7 +1489,7 @@
   const liveLabel = $derived.by((): ToolCallLabel | string => {
     const caughtUp = shownCall >= runningCalls.length - 1;
     if (!caughtUp) return runningCalls[shownCall];
-    if (activity) return labelOf(activity.toolName, activity.arguments);
+    if (activity) return labelOf(activity.toolName, activity.args);
     return runningCalls.at(-1) ?? 'Thinking';
   });
 
@@ -2698,10 +2712,10 @@ where its evidence reaches the limits of the analysis -->
                               {@render reasoning(message)}
                               <ToolStep
                                 toolResult={message.toolResult}
-                                label={message.toolResult.arguments
+                                label={message.toolResult.args
                                   ? labelOf(
                                       message.toolResult.toolName ?? '',
-                                      message.toolResult.arguments
+                                      message.toolResult.args
                                     )
                                   : undefined}
                                 paths={toolPaths}

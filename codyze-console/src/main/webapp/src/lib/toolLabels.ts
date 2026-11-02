@@ -26,6 +26,14 @@ export function toolCallLabel(
   };
 
   switch (toolName) {
+    // Koog's file tool, which the model uses to "activate" a skill by reading its SKILL.md (the name
+    // of the skill is its directory)
+    case '__read_file__': {
+      const skill = text('path')?.match(/([^/\\]+)[/\\]SKILL\.md$/)?.[1];
+      return skill
+        ? { tool: 'skill', argument: skill }
+        : { tool: toolName, argument: text('path') };
+    }
     case 'cpg_slice':
       return {
         tool: toolName,

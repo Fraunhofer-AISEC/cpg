@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgTranslate
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListPasses
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addRunPass
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListPassesTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addRunPassTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addTranslateTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
@@ -58,9 +58,9 @@ class RunPassTest {
     fun serverAddsToolsAndRunsPassOnSelectedNode() =
         withClient(
             registerTools = {
-                addCpgTranslate()
-                addListPasses()
-                addRunPass()
+                addTranslateTool()
+                addListPassesTool()
+                addRunPassTool()
             }
         ) { client ->
             // Run translation to populate the CPG properly
@@ -92,7 +92,7 @@ class RunPassTest {
 
     @Test
     fun serverListsPassesWithRequiredNodeType() =
-        withClient(registerTools = { addListPasses() }) { client ->
+        withClient(registerTools = { addListPassesTool() }) { client ->
             val result = client.callTool(name = "cpg_list_passes", arguments = emptyMap())
             assertTrue(result.content.isNotEmpty())
 
@@ -105,7 +105,7 @@ class RunPassTest {
 
     @Test
     fun serverTranslateToolProducesNodes() =
-        withClient(registerTools = { addCpgTranslate() }) { client ->
+        withClient(registerTools = { addTranslateTool() }) { client ->
             val result =
                 client.callTool(
                     name = "cpg_translate",
@@ -125,9 +125,9 @@ class RunPassTest {
     fun testNoAnalysisResult() =
         withClient(
             registerTools = {
-                addCpgTranslate()
-                addListPasses()
-                addRunPass()
+                addTranslateTool()
+                addListPassesTool()
+                addRunPassTool()
             }
         ) { client ->
             // Run translation to populate the CPG properly
@@ -161,9 +161,9 @@ class RunPassTest {
     fun testInvalidNodeId() =
         withClient(
             registerTools = {
-                addCpgTranslate()
-                addListPasses()
-                addRunPass()
+                addTranslateTool()
+                addListPassesTool()
+                addRunPassTool()
             }
         ) { client ->
             // Run translation to populate the CPG properly
@@ -197,9 +197,9 @@ class RunPassTest {
     fun testInvalidPassName() =
         withClient(
             registerTools = {
-                addCpgTranslate()
-                addListPasses()
-                addRunPass()
+                addTranslateTool()
+                addListPassesTool()
+                addRunPassTool()
             }
         ) { client ->
             // Run translation to populate the CPG properly
@@ -237,9 +237,9 @@ class RunPassTest {
     fun testExecuteSamePassTwice() =
         withClient(
             registerTools = {
-                addCpgTranslate()
-                addListPasses()
-                addRunPass()
+                addTranslateTool()
+                addListPassesTool()
+                addRunPassTool()
             }
         ) { client ->
             // Run translation to populate the CPG properly

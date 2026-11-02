@@ -25,17 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSlicePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
-import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.noNodeFoundResult
 import de.fraunhofer.aisec.cpg.serialization.DependenceGraph
 import de.fraunhofer.aisec.cpg.serialization.SliceDirection
 import de.fraunhofer.aisec.cpg.serialization.nodeSlice
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import kotlin.uuid.Uuid
 import kotlinx.serialization.json.Json
 
 /** The furthest a slice reaches, in dependences, whatever is asked for. */
@@ -66,15 +65,12 @@ fun Server.addSliceTool() {
         """
             .trimIndent()
 
-    this.addTool<CpgSlicePayload>(name = "cpg_slice", description = toolDescription) {
-        session: CpgSession,
-        payload: CpgSlicePayload ->
-        val startId = Uuid.parse(payload.id)
-        val start =
-            session.translationResult.nodes.find { it.id == startId }
-                ?: return@addTool CallToolResult(
-                    content = listOf(TextContent("No node found with ID ${payload.id}"))
-                )
+    this.addTool<CpgSlicePayload>(
+        readOnly = true,
+        name = "cpg_slice",
+        description = toolDescription,
+    ) { session, payload ->
+        val start = session.findNodeById(payload.id) ?: return@addTool noNodeFoundResult(payload.id)
         val graph =
             DependenceGraph.entries.find { it.name.equals(payload.graph, ignoreCase = true) }
                 ?: return@addTool CallToolResult(

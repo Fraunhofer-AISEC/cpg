@@ -50,23 +50,14 @@
 
   const toolName = $derived(toolResult.toolName || 'tool');
 
-  function extractSkillName(content: unknown): string | null {
-    const text =
-      typeof content === 'string'
-        ? content
-        : Array.isArray(content) && typeof content[0]?.text === 'string'
-          ? content[0].text
-          : null;
-    return text?.match(/<skill_content\s+name="([^"]+)"/)?.[1] ?? null;
-  }
+  // The name of the call, e.g. `skill` for a skill the agent read
+  const shownName = $derived(label?.tool ?? toolName);
 
   // What the step found, e.g. "3 nodes in 2 files", or the start of a text result
   const summary = $derived.by(() => {
     const content = toolResult.content;
     if (toolResult.isError) return 'error';
-    // The name of an activated skill, or else the start of the result like for other tools
-    const skill = toolName === 'activate_skill' ? extractSkillName(content) : null;
-    if (skill) return skill;
+    if (shownName === 'skill') return 'loaded';
     if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof content?.name === 'string')
       return `suggests ${content.name}`;
     if (slice) {
@@ -132,7 +123,7 @@
       title={toolName}
       onclick={() => (expanded = !expanded)}
     >
-      <span class="shrink-0 font-mono">{toolName}</span>
+      <span class="shrink-0 font-mono">{shownName}</span>
       {#if label?.argument}
         <span class="max-w-[60%] min-w-0 shrink-0 truncate font-mono text-gray-900"
           >{label.argument}</span
