@@ -50,7 +50,13 @@ jobs:
           if grep -q '^enableCodyzeConsole=true' gradle.properties; then
             EXCLUDES="$EXCLUDES -x shadowJar -x shadowDistZip -x shadowDistTar"
           fi
-          ./gradlew --parallel assemble $EXCLUDES
+          #
+          # CodeQL traces the processes started by the build. A Gradle or Kotlin daemon that is
+          # still running from an earlier job on this self-hosted runner is reused by Gradle, but
+          # compiles outside of the tracer, so CodeQL would see no code ("could not process any
+          # code written in Java/Kotlin"). Therefore, neither use a Gradle daemon nor the Kotlin
+          # compile daemon.
+          ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process --parallel assemble $EXCLUDES
       - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:java-kotlin"
