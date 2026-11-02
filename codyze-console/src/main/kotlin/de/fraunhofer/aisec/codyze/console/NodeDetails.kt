@@ -26,8 +26,6 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
@@ -93,7 +91,7 @@ data class NodeDetailsJSON(
     val value: String?,
     val isImplicit: Boolean,
     val enclosingFunction: NodeRefJSON?,
-    val overlays: List<NodeRefJSON>,
+    val overlays: List<OverlayJSON>,
     val callTargets: List<NodeRefJSON>,
     val callers: List<NodeRefJSON>,
     val callees: List<NodeRefJSON>,
@@ -111,13 +109,7 @@ fun Node.toRefJSON(label: String? = null): NodeRefJSON {
         code =
             if (firstLine.length > MAX_SNIPPET_LENGTH) firstLine.take(MAX_SNIPPET_LENGTH) + "…"
             else firstLine,
-        fileName =
-            location
-                ?.artifactLocation
-                ?.uri
-                ?.toString()
-                ?.substringAfterLast('/')
-                ?.substringAfterLast('\\'),
+        fileName = location?.artifactLocation?.fileName,
         startLine = location?.region?.startLine ?: -1,
         startColumn = location?.region?.startColumn ?: -1,
         endLine = location?.region?.endLine ?: -1,
@@ -139,17 +131,15 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
     }
 
     val callTargets = (this as? Call)?.invokes.orEmpty()
-    if (this is Call) {
-        if (callTargets.isEmpty()) {
-            warnings += "The call target could not be resolved; dataflows through it are unknown."
-        }
-        callTargets
-            .filter { it.isInferred }
-            .forEach {
-                warnings +=
-                    "The target '${it.name}' is not part of the analysed code (inferred); its behaviour is unknown."
-            }
+    if (this is Call && status == CallStatus.UNRESOLVED) {
+        warnings += "The call target could not be resolved; dataflows through it are unknown."
     }
+    callTargets
+        .filter { it.isInferred }
+        .forEach {
+            warnings +=
+                "The target '${it.name}' is not part of the analysed code (inferred); its behaviour is unknown."
+        }
     if (this is Function && body == null) {
         warnings +=
             "This function is only declared, its implementation is not part of the analysis."
@@ -161,17 +151,7 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
         value = constantValue(),
         isImplicit = isImplicit,
         enclosingFunction = (this as? Function ?: firstParentOrNull<Function>())?.toRefJSON(),
-        overlays =
-            overlays.map {
-                it.toRefJSON(
-                    label =
-                        when (it) {
-                            is Operation -> "Operation"
-                            is Concept -> "Concept"
-                            else -> null
-                        }
-                )
-            },
+        overlays = overlays.mapNotNull { it.toOverlayJSON() },
         callTargets = callTargets.limited { it.toRefJSON() },
         callers = (this as? Function)?.calledBy.orEmpty().limited { it.toRefJSON() },
         callees = (this as? Function)?.body?.calls.orEmpty().limited { it.toRefJSON() },

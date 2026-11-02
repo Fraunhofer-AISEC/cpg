@@ -10,9 +10,14 @@
   import HoverCard from './HoverCard.svelte';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
-  import { getAnnotations } from '$lib/annotations';
+  import {
+    callRegion,
+    describeOverlay,
+    getFileOverview,
+    overlayLine,
+    type FileOverview
+  } from '$lib/overview';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
-  import type { FileAnnotationsJSON } from '$lib/types';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
   import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
   import type { FlattenedNode } from '$lib/flatten';
@@ -103,7 +108,7 @@
      */
     scrollPositions?: Map<string, number>;
     /** The annotations of the file, loaded by the viewer; bind it to use them outside */
-    annotations?: FileAnnotationsJSON | null;
+    annotations?: FileOverview | null;
     /**
      * Adds lanes to the gutter: one for the numbered steps of the path (see [CodeFocus.path]) and
      * one between the line numbers and the code for the dataflow arcs of the inspected node
@@ -303,7 +308,7 @@
 
   // Annotations of the file (function key figures, call status, concepts), loaded per unit
   async function loadAnnotations(component: string, unitId: string) {
-    const result = await getAnnotations(component, unitId);
+    const result = await getFileOverview(component, unitId);
     if (unitId === translationUnit.id) annotations = result;
   }
 
@@ -319,7 +324,7 @@
     if (!annotations) return null;
     const external = annotations.calls.filter((c) => c.status === 'EXTERNAL');
     const counts = new Map<string, number>();
-    for (const call of external) counts.set(call.name, (counts.get(call.name) ?? 0) + 1);
+    for (const { call } of external) counts.set(call.name, (counts.get(call.name) ?? 0) + 1);
     const topExternal = [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 4)
@@ -329,7 +334,7 @@
       external: external.length,
       topExternal,
       unresolved: annotations.calls.filter((c) => c.status === 'UNRESOLVED').length,
-      concepts: annotations.concepts.length
+      concepts: annotations.overlays.length
     };
   });
 
@@ -391,32 +396,32 @@
     // While a path is shown, the other layers step back
     const faded = pathActive;
     if (layers.visible.concepts) {
-      for (const c of annotations.concepts) {
-        const kind = c.isOperation ? 'Operation' : 'Concept';
+      for (const overlay of annotations.overlays) {
         marks.push({
-          line: c.line,
+          line: overlayLine(overlay),
           lane: 0,
           color: color('concepts'),
-          label: `${kind} ${c.type}`,
+          label: describeOverlay(overlay),
           faded
         });
       }
     }
-    for (const call of annotations.calls) {
-      if (call.status === 'EXTERNAL' && layers.visible.external) {
+    for (const site of annotations.calls) {
+      const line = callRegion(site).startLine;
+      if (site.status === 'EXTERNAL' && layers.visible.external) {
         marks.push({
-          line: call.startLine,
+          line,
           lane: 1,
           color: color('external'),
-          label: `external call ${call.name}()`,
+          label: `external call ${site.call.name}()`,
           faded
         });
-      } else if (call.status === 'UNRESOLVED' && layers.visible.uncertain) {
+      } else if (site.status === 'UNRESOLVED' && layers.visible.uncertain) {
         marks.push({
-          line: call.startLine,
+          line,
           lane: 2,
           color: color('uncertain'),
-          label: `unresolved call ${call.name}()`,
+          label: `unresolved call ${site.call.name}()`,
           faded
         });
       }

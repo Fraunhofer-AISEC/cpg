@@ -88,8 +88,8 @@ export interface NodeRefJSON {
   label?: string;
 }
 
-/** Key figures of a function, shown next to it in the code viewer. */
-export interface FunctionAnnotationJSON {
+/** A function together with its key figures, see `.../translation-unit/{id}/functions`. */
+export interface FunctionCallStatsJSON {
   function: NodeRefJSON;
   callers: number;
   callees: number;
@@ -97,31 +97,25 @@ export interface FunctionAnnotationJSON {
   unresolvedCalls: number;
 }
 
-/** A call, located at its callee, and how well the analysis knows its target. */
-export interface CallAnnotationJSON {
-  id: string;
-  name: string;
-  status: 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
-  startLine: number;
-  startColumn: number;
-  endLine: number;
-  endColumn: number;
+/** How well the analysis knows the target of a call. */
+export type CallStatus = 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
+
+/** A call and how well the analysis knows its target, see `.../translation-unit/{id}/calls`. */
+export interface CallSiteJSON {
+  call: NodeRefJSON;
+  /** The expression naming the target (e.g. `fopen` in `fopen(path, "r")`), if it has a location */
+  callee?: NodeRefJSON;
+  status: CallStatus;
 }
 
-/** A concept or operation in the code; the category is e.g. `crypto` or `file`. */
-export interface ConceptAnnotationJSON {
-  id: string;
-  type: string;
+/** A concept or operation, see `.../translation-unit/{id}/overlays`. */
+export interface OverlayJSON {
+  overlay: NodeRefJSON;
+  /** The area of the overlay, derived from its package, e.g. `crypto` or `file` */
   category: string;
-  isOperation: boolean;
-  line: number;
-}
-
-/** Everything the code viewer shows about a file without interaction, see `.../annotations`. */
-export interface FileAnnotationsJSON {
-  functions: FunctionAnnotationJSON[];
-  calls: CallAnnotationJSON[];
-  concepts: ConceptAnnotationJSON[];
+  underlyingNode?: NodeRefJSON;
+  /** For an operation: the concept it belongs to */
+  concept?: NodeRefJSON;
 }
 
 /** Everything the backend knows about a single node, see `GET /api/node/{id}`. */
@@ -131,7 +125,7 @@ export interface NodeDetailsJSON {
   value?: string;
   isImplicit: boolean;
   enclosingFunction?: NodeRefJSON;
-  overlays: NodeRefJSON[];
+  overlays: OverlayJSON[];
   callTargets: NodeRefJSON[];
   callers: NodeRefJSON[];
   callees: NodeRefJSON[];
@@ -327,12 +321,7 @@ export interface ConstructorInfo {
 
 // QueryTree status determination and styling
 export type QueryTreeStatus =
-  | 'FULFILLED'
-  | 'NOT_FULFILLED'
-  | 'REJECTED'
-  | 'UNDECIDED'
-  | 'NOT_YET_EVALUATED'
-  | 'NON_BOOLEAN';
+  'FULFILLED' | 'NOT_FULFILLED' | 'REJECTED' | 'UNDECIDED' | 'NOT_YET_EVALUATED' | 'NON_BOOLEAN';
 
 export interface QueryTreeStatusConfig {
   bgColor: string;

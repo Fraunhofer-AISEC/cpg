@@ -81,11 +81,8 @@ val mockTu =
             }
     }
 
-/**
- * A mock version of the [ConsoleService] that returns a mock analysis result containing of a few
- * nodes.
- */
-val mockService =
+/** A [ConsoleService] with a mock analysis result containing the given [units]. */
+fun mockServiceFor(vararg units: TranslationUnit) =
     ConsoleService.fromAnalysisResult(
         AnalysisResult(
             translationResult =
@@ -98,7 +95,7 @@ val mockService =
                         components +=
                             Component().apply {
                                 name = Name("mock")
-                                translationUnits += mockTu
+                                translationUnits += units
                             }
                     },
             project = AnalysisProject(name = "mock", projectDir = null, config = mockConfig),
@@ -140,6 +137,12 @@ val mockService =
                 ),
         )
     )
+
+/**
+ * A mock version of the [ConsoleService] that returns a mock analysis result containing of a few
+ * nodes.
+ */
+val mockService = mockServiceFor(mockTu)
 
 /** A mock version of the [ConsoleService] that returns an empty analysis result. */
 val emptyService = ConsoleService()
@@ -275,6 +278,44 @@ class ApplicationTest {
 
         val nodes = response.body<List<NodeJSON>>()
         assertEquals(2, nodes.size)
+    }
+
+    @Test
+    fun testGetTranslationUnitOverview() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val unit = "/api/component/mock/translation-unit/${mockTu.id}"
+
+        // Only the status codes, as the mock nodes have no locations. The contents are tested in
+        // CodeOverviewTest
+        for (path in listOf("functions", "calls", "overlays")) {
+            assertEquals(HttpStatusCode.OK, client.get("$unit/$path").status, path)
+            assertEquals(
+                HttpStatusCode.NotFound,
+                client.get("/api/component/mock/translation-unit/unknown/$path").status,
+                path,
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, client.get("/api/component/mock/overlays").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/component/unknown/overlays").status)
+    }
+
+    @Test
+    fun testNodeDetailsOfOverlayAddedLater() {
+        val call = Call().apply { name = Name("open") }
+        val service = mockServiceFor(TranslationUnit().apply { statements += call })
+        // The first request builds the node index
+        assertNotNull(service.getNodeDetails(call.id.toString()))
+
+        // Like the MCP tools that apply the concepts of the agent, attach a concept directly
+        val file = File(underlyingNode = call, fileName = "data.txt")
+        val details = assertNotNull(service.getNodeDetails(file.id.toString()))
+        assertEquals(file.id, details.node.id)
+        assertEquals(
+            file.id,
+            service.getNodeDetails(call.id.toString())?.overlays?.single()?.overlay?.id,
+        )
     }
 
     @Test

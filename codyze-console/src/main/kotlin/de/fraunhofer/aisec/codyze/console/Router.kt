@@ -61,10 +61,16 @@ import kotlinx.serialization.json.JsonObject
  *   overlay nodes for a translation unit.
  * - POST `/api/nodes`: Retrieves the nodes with the given IDs (without DFG edges). Unknown node IDs
  *   are omitted.
- * - GET `/api/component/{component_name}/translation-unit/{id}/annotations`: Retrieves the
- *   annotations shown in the code viewer (function key figures, call status, concepts).
- * - GET `/api/component/{component_name}/concept-counts`: Retrieves the number of concepts and
- *   operations in each translation unit of a component, by the ID of the unit.
+ * - GET `/api/component/{component_name}/translation-unit/{id}/functions`: Retrieves the functions
+ *   of a translation unit with their key figures (callers, callees, external and unresolved calls).
+ * - GET `/api/component/{component_name}/translation-unit/{id}/calls`: Retrieves the calls of a
+ *   translation unit with the status of their targets (resolved, external, unresolved).
+ * - GET `/api/component/{component_name}/translation-unit/{id}/overlays`: Retrieves the concepts
+ *   and operations of a translation unit, with the nodes they are attached to and, for operations,
+ *   their concept. Unlike `overlay-nodes`, which returns the raw overlay nodes (including their DFG
+ *   edges).
+ * - GET `/api/component/{component_name}/overlays`: Retrieves the concepts and operations of all
+ *   translation units of a component.
  * - GET `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=`: Retrieves
  *   the details of the innermost node at the given position.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
@@ -184,33 +190,26 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             call.respond(nodes)
         }
 
-        // The endpoint to get the annotations shown in the code viewer for a translation unit
-        get("/component/{component_name}/translation-unit/{id}/annotations") {
-            val componentName =
-                call.parameters["component_name"]
-                    ?: return@get call.respond(HttpStatusCode.BadRequest)
-            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
-
-            val annotations = service.getAnnotations(componentName, id)
-            if (annotations != null) {
-                call.respond(annotations)
-            } else {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    mapOf("error" to "Translation unit not found"),
-                )
-            }
+        // The endpoints to get the functions, calls and overlays of a translation unit
+        get("/component/{component_name}/translation-unit/{id}/functions") {
+            respondForTranslationUnit(service::getFunctionCallStats)
+        }
+        get("/component/{component_name}/translation-unit/{id}/calls") {
+            respondForTranslationUnit(service::getCallSites)
+        }
+        get("/component/{component_name}/translation-unit/{id}/overlays") {
+            respondForTranslationUnit(service::getOverlays)
         }
 
-        // The endpoint to get the number of concepts in each translation unit of a component
-        get("/component/{component_name}/concept-counts") {
+        // The endpoint to get the concepts and operations of all translation units of a component
+        get("/component/{component_name}/overlays") {
             val componentName =
                 call.parameters["component_name"]
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            val counts = service.getConceptCounts(componentName)
-            if (counts != null) {
-                call.respond(counts)
+            val overlays = service.getComponentOverlays(componentName)
+            if (overlays != null) {
+                call.respond(overlays)
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "Component not found"))
             }
@@ -370,6 +369,25 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                 )
             }
         }
+    }
+}
+
+/**
+ * Responds with what [get] returns for the `component_name` and `id` parameters of the request, or
+ * with 404 if there is no such translation unit.
+ */
+private suspend inline fun <reified T : Any> RoutingContext.respondForTranslationUnit(
+    get: (componentName: String, id: String) -> T?
+) {
+    val componentName =
+        call.parameters["component_name"] ?: return call.respond(HttpStatusCode.BadRequest)
+    val id = call.parameters["id"] ?: return call.respond(HttpStatusCode.BadRequest)
+
+    val result = get(componentName, id)
+    if (result != null) {
+        call.respond(result)
+    } else {
+        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Translation unit not found"))
     }
 }
 

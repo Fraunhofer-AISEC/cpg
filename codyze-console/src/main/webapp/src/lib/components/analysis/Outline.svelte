@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { FileAnnotationsJSON, FunctionAnnotationJSON, NodeRefJSON } from '$lib/types';
-  import { conceptsInFunction } from '$lib/annotations';
+  import type { FunctionCallStatsJSON, NodeRefJSON } from '$lib/types';
+  import { overlaysInFunction, type FileOverview } from '$lib/overview';
 
   /**
    * The functions of a file with their key figures as small inline bars, sortable per column, to
@@ -8,7 +8,7 @@
    */
   interface Props {
     /** The annotations of the open file, or null while they are loading */
-    annotations: FileAnnotationsJSON | null;
+    annotations: FileOverview | null;
     fileName?: string;
     /** The 1-based line of the selection in the open file, to mark the function containing it */
     selectionLine?: number;
@@ -28,7 +28,7 @@
   ];
 
   interface Row {
-    fn: FunctionAnnotationJSON;
+    fn: FunctionCallStatsJSON;
     values: Record<Column, number>;
   }
 
@@ -40,7 +40,7 @@
         callers: fn.callers,
         external: fn.externalCalls,
         unresolved: fn.unresolvedCalls,
-        concepts: conceptsInFunction(fn, annotations)
+        concepts: overlaysInFunction(fn, annotations)
       }
     }));
   });
@@ -82,7 +82,7 @@
   // The innermost function containing the selection
   const selectedFunctionId = $derived.by(() => {
     if (!selectionLine) return null;
-    let best: FunctionAnnotationJSON | null = null;
+    let best: FunctionCallStatsJSON | null = null;
     for (const { fn } of rows) {
       const { startLine, endLine } = fn.function;
       if (selectionLine < startLine || selectionLine > endLine) continue;

@@ -18,7 +18,7 @@
   import { relativePath } from '$lib/utils/paths';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
-  import { getConceptCounts } from '$lib/annotations';
+  import { countByTranslationUnit, getComponentOverlays, type FileOverview } from '$lib/overview';
   import type {
     NodeJSON,
     AnalysisResultJSON,
@@ -29,7 +29,7 @@
     Model,
     NodeDetailsJSON,
     NodeRefJSON,
-    FileAnnotationsJSON
+    OverlayJSON
   } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
@@ -130,7 +130,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([id])
-      }).then(r => (r.ok ? r.json() : [])).catch(() => []);
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []);
       if (!resolved) return;
       node = resolved;
     }
@@ -483,17 +485,18 @@
     focus.invalidate();
   }
 
-  // The number of concepts per file of the selected component, shown in the file tree
-  let conceptCounts = $state.raw<Map<string, number>>(new Map());
+  // The concepts and operations of the selected component, counted per file in the file tree
+  let componentOverlays = $state.raw<OverlayJSON[]>([]);
+  const conceptCounts = $derived(countByTranslationUnit(componentOverlays));
 
-  async function loadConceptCounts(component: string) {
-    const counts = await getConceptCounts(component);
-    if (component === selectedComponentName) conceptCounts = counts;
+  async function loadComponentOverlays(component: string) {
+    const overlays = await getComponentOverlays(component);
+    if (component === selectedComponentName) componentOverlays = overlays;
   }
 
   $effect(() => {
     void focus.revision;
-    if (selectedComponentName) loadConceptCounts(selectedComponentName);
+    if (selectedComponentName) loadComponentOverlays(selectedComponentName);
   });
 
   // Selects and reveals a node referenced by a concept suggestion, opening its file if needed. The
@@ -577,7 +580,7 @@
   });
 
   // The annotations of the open file, loaded by the code viewer and shown in the outline
-  let fileAnnotations = $state.raw<FileAnnotationsJSON | null>(null);
+  let fileAnnotations = $state.raw<FileOverview | null>(null);
 
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
   // its tab stays open and the inspector tab is only marked
@@ -775,8 +778,6 @@
       requestAnimationFrame(() => scrollToBottom());
     }
   });
-
-  const fileName = (path?: string) => path?.split('/').pop() ?? '';
 
   let expandedReasoning = $state<Set<string>>(new Set());
 
@@ -1277,7 +1278,7 @@
                 <span class="min-w-0 truncate"
                   >📎 <span class="font-mono">{contextNode.name || contextNode.code}</span
                   >{#if contextNode.fileName}
-                    · {fileName(contextNode.fileName)}:{contextNode.startLine}{/if}</span
+                    · {contextNode.fileName ?? ''}:{contextNode.startLine}{/if}</span
                 >
                 <button
                   type="button"

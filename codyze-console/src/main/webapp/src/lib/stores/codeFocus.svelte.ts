@@ -120,11 +120,10 @@ export class CodeFocus {
         const node = details.node;
         this.pathIndex = this.path.findIndex((step) => step.id === node.id);
         if (record && node.translationUnitId) {
-          const file = node.fileName?.split('/').pop() ?? '';
           this.record({
             unitId: node.translationUnitId,
             nodeId: node.id,
-            label: `${node.name || node.code} · ${file}:${node.startLine}`
+            label: `${node.name || node.code} · ${node.fileName ?? ''}:${node.startLine}`
           });
         }
       }

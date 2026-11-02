@@ -2,6 +2,7 @@
   import { tick, type Snippet } from 'svelte';
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+  import { overlayLabel } from '$lib/overview';
   import NodeRefItem from './NodeRefItem.svelte';
   import DataflowTree from './DataflowTree.svelte';
 
@@ -150,8 +151,8 @@
           Concepts & operations ({details.overlays.length})
         </summary>
         <div class="mt-1">
-          {#each details.overlays as overlay (overlay.id)}
-            <NodeRefItem ref={overlay} {onSelect} />
+          {#each details.overlays as overlay (overlay.overlay.id)}
+            <NodeRefItem ref={{ ...overlay.overlay, label: overlayLabel(overlay) }} {onSelect} />
           {/each}
         </div>
       </details>
