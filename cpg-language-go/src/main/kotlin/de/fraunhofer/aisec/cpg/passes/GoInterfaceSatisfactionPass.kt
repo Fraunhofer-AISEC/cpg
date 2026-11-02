@@ -83,19 +83,19 @@ class GoInterfaceSatisfactionPass(ctx: TranslationContext) : ComponentPass(ctx) 
         val allMethods = component.allChildren<Method>()
         var withReceiver = 0
         for (method in allMethods) {
-            val receiverType = method.receiver?.type?.root ?: continue
+            // The receiver variable only exists if the receiver was named. Go allows omitting the
+            // name when the method does not use it -- `func (*cfDictionary) typeName() string` --
+            // and such a method is still part of the type's method set, so we fall back to the
+            // record the method was bound to.
+            val owner =
+                method.recordDeclaration?.name?.localName
+                    ?: method.receiver?.type?.root?.name?.localName
+                    ?: continue
             withReceiver++
             result
-                .getOrPut(receiverType.name.localName) { mutableSetOf() }
+                .getOrPut(owner) { mutableSetOf() }
                 .add(MethodKey(method.name.localName, method.parameters.size))
         }
-        log.info(
-            "  methodsByReceiverType: {} Method nodes, {} with a receiver type, {} distinct receivers; sample receivers={}",
-            allMethods.size,
-            withReceiver,
-            result.size,
-            result.keys.take(3),
-        )
         return result
     }
 
@@ -105,11 +105,6 @@ class GoInterfaceSatisfactionPass(ctx: TranslationContext) : ComponentPass(ctx) 
 
         val interfaces = records.filter { it.kind == "interface" }
         val concretes = records.filter { it.kind != "interface" }
-        log.info(
-            "  sample concrete record names={}; sample interface names={}",
-            concretes.take(3).map { it.name.toString() },
-            interfaces.take(3).map { it.name.toString() },
-        )
         if (interfaces.isEmpty() || concretes.isEmpty()) return
 
         // Pre-compute the required method set of every interface once. Interfaces

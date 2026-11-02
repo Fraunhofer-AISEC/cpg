@@ -405,14 +405,25 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
                     val variable = forEach.variable
                     if (variable is DeclarationStatement) {
-                        // The key is the first variable. It is always an int
                         val keyVariable = variable.declarations.firstOrNull() as? Variable
-                        keyVariable?.type = forEach.primitiveType("int")
-
-                        // The value is the second one. Its type depends on the array type
                         val valueVariable = variable.declarations.getOrNull(1) as? Variable
-                        ((forEach.iterable as? HasType)?.type as? PointerType)?.let {
-                            valueVariable?.type = it.elementType
+
+                        when (val iterated = (forEach.iterable as? HasType)?.type?.iterated) {
+                            is MapType -> {
+                                // Ranging over a map yields its keys and values. Only the value
+                                // type is modelled by MapType, so the key is left alone rather
+                                // than being forced to int, which it only is for a slice.
+                                valueVariable?.type = iterated.elementType
+                            }
+                            is PointerType -> {
+                                // Slices and arrays are modelled as pointers, and are indexed by
+                                // an int.
+                                keyVariable?.type = forEach.primitiveType("int")
+                                valueVariable?.type = iterated.elementType
+                            }
+                            else -> {
+                                // Nothing we can say about the element type.
+                            }
                         }
                     }
                 }
@@ -466,3 +477,20 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // Nothing to do
     }
 }
+
+/**
+ * The type actually iterated over by a `range` clause. A named type -- `type PADataSequence
+ * []PAData` -- carries its slice or map nature in its super types rather than in the type itself,
+ * so we look there as well.
+ *
+ * We deliberately do not use `underlyingType`, which expects a single super type: a named type may
+ * have several once the interfaces it satisfies are known, and we only care about the one that
+ * makes it iterable.
+ */
+private val Type.iterated: Type?
+    get() =
+        when (this) {
+            is MapType,
+            is PointerType -> this
+            else -> this.superTypes.firstOrNull { it is MapType || it is PointerType }
+        }
