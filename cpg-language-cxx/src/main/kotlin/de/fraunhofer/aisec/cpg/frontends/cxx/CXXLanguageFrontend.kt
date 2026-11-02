@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.RegisterDefaultProfile
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -85,6 +86,7 @@ import org.slf4j.LoggerFactory
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
 @RegisterExtraPass(CXXMemoryAllocationPass::class)
+@RegisterDefaultProfile(StdlibProfile::class)
 open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
     LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
 
