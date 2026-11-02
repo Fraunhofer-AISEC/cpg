@@ -95,11 +95,21 @@ data class TypeInfo(val name: String) {
     constructor(type: Type) : this(type.name.toString())
 }
 
+/**
+ * A parameter of a [FunctionInfo]. Its [nodeId] lets the model tag the parameter or refer to it,
+ * e.g. in a `NodeReference` property of a concept or operation.
+ */
 @Serializable
-data class ParameterInfo(val name: String, val type: TypeInfo, val defaultValue: String? = null) {
+data class ParameterInfo(
+    val nodeId: String,
+    val name: String,
+    val type: TypeInfo,
+    val defaultValue: String? = null,
+) {
     constructor(
         parameterDeclaration: Parameter
     ) : this(
+        nodeId = parameterDeclaration.id.toString(),
         name = parameterDeclaration.name.toString(),
         type = TypeInfo(parameterDeclaration.type),
         // `.toString()` on a null default reports the literal string "null"; only emit a value when
