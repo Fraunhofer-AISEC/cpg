@@ -109,11 +109,23 @@
   // Load persisted state from sessionStorage
   function loadPersistedState() {
     if (typeof window === 'undefined') {
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     }
     const stored = sessionStorage.getItem('codyze-agent-state');
     if (!stored)
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     try {
       const parsed = JSON.parse(stored);
       const messages = parsed.messages.map((msg: any) => ({
@@ -124,10 +136,17 @@
         messages,
         suggestions: parsed.suggestions ?? [],
         selectedClient: parsed.selectedClient ?? null,
-        selectedModel: parsed.selectedModel ?? null
+        selectedModel: parsed.selectedModel ?? null,
+        sessionId: parsed.sessionId ?? null
       };
     } catch {
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     }
   }
 
@@ -143,6 +162,7 @@
   let streamingReasoning = $state('');
   let selectedClient = $state<string | null>(persisted.selectedClient);
   let selectedModelName = $state<string | null>(persisted.selectedModel);
+  let sessionId = $state<string | null>(persisted.sessionId);
   let abortController: AbortController | null = null;
 
   const selectedModel = $derived.by((): Model | null => {
@@ -175,7 +195,8 @@
           messages: chatMessages,
           suggestions,
           selectedClient,
-          selectedModel: selectedModelName
+          selectedModel: selectedModelName,
+          sessionId
         })
       );
     }
@@ -191,6 +212,13 @@
       abortController.abort();
       abortController = null;
     }
+    // The server keeps a session's history until it is deleted.
+    if (sessionId) {
+      llmAgent
+        .deleteSession(sessionId)
+        .catch((e) => console.warn('Could not delete the chat session on the server:', e));
+    }
+    sessionId = null;
     chatMessages = [];
     currentMessage = '';
     streamingContent = '';
@@ -221,7 +249,7 @@
                 role: 'assistant' as const,
                 content: '',
                 contentType: 'tool-result',
-                toolResult: { toolName: event.toolName, content: event.content },
+                toolResult: { toolName: event.toolName, args: event.args, content: event.content },
                 timestamp: new Date()
               }
             ];
@@ -312,6 +340,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks()
       );
     } catch (error) {
@@ -361,6 +390,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks()
       );
     } catch (error) {

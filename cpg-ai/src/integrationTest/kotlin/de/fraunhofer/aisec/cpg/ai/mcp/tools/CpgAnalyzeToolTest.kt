@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAnalyzeTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -50,7 +50,7 @@ class CpgAnalyzeToolTest {
 
     @Test
     fun cpgAnalyzeToolIntegrationTest() =
-        withClient(registerTools = { addCpgAnalyzeTool() }) { client ->
+        withClient(registerTools = { addAnalyzeTool() }) { client ->
             val result =
                 client.callTool(
                     name = "cpg_analyze",

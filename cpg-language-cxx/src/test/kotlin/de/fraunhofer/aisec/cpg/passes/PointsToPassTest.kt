@@ -4500,10 +4500,10 @@ class PointsToPassTest {
         val freeDerefPMV = freeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
 
         // Stuff
-        val dataIIntOneLine23 = testFunc.assignments[4].target as? MemberAccess
+        val dataIIntOneLine23 = testFunc.assignments[3].target as? MemberAccess
         assertNotNull(dataIIntOneLine23)
 
-        val dataIIntTwoLine24 = testFunc.assignments[5].target as? MemberAccess
+        val dataIIntTwoLine24 = testFunc.assignments[4].target as? MemberAccess
         assertNotNull(dataIIntTwoLine24)
 
         val dataLine17 = testFunc.assignments[2].target

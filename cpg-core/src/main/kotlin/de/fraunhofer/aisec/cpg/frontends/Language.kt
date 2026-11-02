@@ -115,7 +115,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** The primitive type names of this language. */
     @get:JsonIgnore
     val primitiveTypeNames: Set<String>
-        get() = builtInTypes.keys
+        get() = primitiveTypeNamesWithProfiles ?: builtInTypes.keys
+
+    /**
+     * Additional types contributed by the active [Profile]s. They are not part of the language
+     * itself, so [builtInTypes] always takes precedence. The [TranslationContext] sets them right
+     * after creating the language; a language created elsewhere has none.
+     */
+    @get:JsonIgnore
+    var profileTypes: Map<String, Type> = emptyMap()
+        internal set(value) {
+            field = value
+            // Combined once here, since primitiveTypeNames is read for every operator expression
+            primitiveTypeNamesWithProfiles = builtInTypes.keys + value.keys
+        }
+
+    /** The [primitiveTypeNames] including the [profileTypes], set together with them. */
+    @DoNotPersist @JsonIgnore private var primitiveTypeNamesWithProfiles: Set<String>? = null
 
     /** The built-in types of this language. */
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
@@ -169,7 +185,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    open fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
+    open fun getSimpleTypeOf(typeString: CharSequence) =
+        builtInTypes[typeString.toString()] ?: profileTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     open fun handlesFile(file: File): Boolean {
@@ -206,7 +223,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         result = 31 * result + fileExtensions.hashCode()
         result = 31 * result + namespaceDelimiter.hashCode()
         result = 31 * result + frontend.hashCode()
-        result = 31 * result + primitiveTypeNames.hashCode()
+        // Not primitiveTypeNames: equal languages can have different profile types.
+        result = 31 * result + builtInTypes.keys.hashCode()
         result = 31 * result + accessModifiers.hashCode()
         return result
     }
