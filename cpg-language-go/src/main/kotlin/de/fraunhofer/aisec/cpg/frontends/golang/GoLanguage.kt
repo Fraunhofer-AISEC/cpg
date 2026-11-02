@@ -143,6 +143,26 @@ open class GoLanguage :
             "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this),
         )
 
+    /**
+     * Interfaces, maps, channels and function values refer to other memory (slices already are
+     * [PointerType]s, see [GoLanguageFrontend.typeOf]): an `io.Reader` that is passed to `io.Copy`
+     * is read from, not copied. A named type (e.g. `type Handler func(int)`) has the semantics of
+     * its underlying type.
+     */
+    override fun hasReferenceSemantics(type: Type): Boolean {
+        val underlying = type.underlyingType
+        if (underlying != null && underlying !== type && hasReferenceSemantics(underlying)) {
+            return true
+        }
+        return type.isInterface ||
+            type.isMap ||
+            type.isChannel ||
+            type is FunctionType ||
+            // Anonymous interfaces (see GoLanguageFrontend.typeOf) and the built-in interfaces
+            type.name.localName.startsWith("interface{") ||
+            type.name.toString() in setOf("any", "error")
+    }
+
     override fun tryCast(
         type: Type,
         targetType: Type,

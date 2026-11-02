@@ -166,6 +166,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      */
     open fun isTruthy(value: Any?): Boolean? = value as? Boolean
 
+    /**
+     * Whether a value of [type] refers to other memory like a pointer does, although [type] is not
+     * a [PointerType], e.g., an interface or a map in Go. The
+     * [de.fraunhofer.aisec.cpg.passes.PointsToPass] then also tracks the memory behind such a
+     * value, so that, e.g., a function summary can write to or read from it.
+     */
+    open fun hasReferenceSemantics(type: Type): Boolean = false
+
     init {
         this.language = this
         this.name = Name(this::class.simpleName ?: EMPTY_NAME)
