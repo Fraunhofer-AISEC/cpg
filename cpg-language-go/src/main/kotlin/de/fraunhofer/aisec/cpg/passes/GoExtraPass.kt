@@ -415,6 +415,14 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                                 // than being forced to int, which it only is for a slice.
                                 valueVariable?.type = iterated.elementType
                             }
+                            is ObjectType -> {
+                                // The Go frontend does not build a MapType: a map is an object
+                                // type named "map" carrying its key and value type as generics.
+                                // Ranging over it yields both, and unlike a slice the key is not
+                                // an int.
+                                iterated.generics.getOrNull(0)?.let { keyVariable?.type = it }
+                                iterated.generics.getOrNull(1)?.let { valueVariable?.type = it }
+                            }
                             is PointerType -> {
                                 // Slices and arrays are modelled as pointers, and are indexed by
                                 // an int.
@@ -488,9 +496,13 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
  * makes it iterable.
  */
 private val Type.iterated: Type?
-    get() =
-        when (this) {
-            is MapType,
-            is PointerType -> this
-            else -> this.superTypes.firstOrNull { it is MapType || it is PointerType }
-        }
+    get() {
+        // A map is represented as an object type named "map" whose generics are its key and
+        // value type, rather than as a MapType.
+        fun Type.isIterable() =
+            this is MapType ||
+                this is PointerType ||
+                (this is ObjectType && this.name.localName == "map" && this.generics.size == 2)
+
+        return if (this.isIterable()) this else this.superTypes.firstOrNull { it.isIterable() }
+    }

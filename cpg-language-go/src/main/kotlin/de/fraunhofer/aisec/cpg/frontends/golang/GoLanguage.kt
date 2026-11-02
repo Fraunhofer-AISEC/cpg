@@ -193,6 +193,16 @@ open class GoLanguage :
             return DirectMatch
         }
 
+        // The same has to hold the other way round. A value whose type we could not determine --
+        // the result of a two-value map lookup, say, whose type is only established later when the
+        // data flow is known -- must not rule a candidate out. Not knowing the type is a gap on
+        // our side, and treating it as a mismatch does not merely lose precision: the call stops
+        // matching its target, a stub is inferred in its place, and with it every edge behind that
+        // call.
+        if (type is AutoType || type.root is AutoType) {
+            return DirectMatch
+        }
+
         // We accept the "nil" literal for the following super types:
         // - pointers
         // - interfaces
