@@ -164,6 +164,12 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         // method scope.
                         language.applyModifiers(method, frontend.scopeManager.currentScope)
 
+                        (field.type as? GoStandardLibrary.Ast.FuncType)
+                            ?.results
+                            ?.list
+                            ?.map { frontend.typeOf(it.type) }
+                            ?.let { method.returnTypes += it }
+
                         frontend.scopeManager.enterScope(method)
                         val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
                         if (params != null) {

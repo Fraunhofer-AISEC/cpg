@@ -34,7 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -131,8 +133,17 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         allMethodsFromSupertypes: List<Method>,
     ) {
         for (superMethod in allMethodsFromSupertypes) {
+            val declaredSymbol =
+                (declaration.declaringScope as? RecordScope)
+                    ?.symbols
+                    ?.get(superMethod.name.localName)
+                    ?.filterIsInstance<Method>()
             val overrideCandidates =
-                declaration.methods.filter { superMethod.isOverrideCandidate(it) }
+                identitySetOf(
+                        *(declaredSymbol ?: listOf()).toTypedArray(),
+                        *declaration.methods.toTypedArray(),
+                    )
+                    .filter { superMethod.isOverrideCandidate(it) }
             superMethod.addOverriddenBy(overrideCandidates)
             overrideCandidates.forEach { it.addOverrides(superMethod) }
         }

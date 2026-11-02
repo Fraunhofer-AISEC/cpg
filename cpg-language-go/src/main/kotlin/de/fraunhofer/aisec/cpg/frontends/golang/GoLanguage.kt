@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -349,4 +350,45 @@ open class GoLanguage :
                 else -> Visibility.PACKAGE
             }
     }
+
+    /**
+     * In Go a package is a directory, and two packages in different directories may well carry the
+     * same name. A vendored dependency that forks a standard library package is the common case:
+     * `vendor/.../gofork/encoding/asn1` and the standard library's `encoding/asn1` are both named
+     * `asn1` and declare the same symbols. A lookup by name therefore finds candidates from both,
+     * which the default implementation reports as ambiguous and resolves to `null` -- leaving the
+     * reference unresolved, and with it any member call that uses it as a base.
+     *
+     * Go resolves this unambiguously: an unqualified identifier refers to the declaration in the
+     * package it is written in. We reproduce that by preferring candidates declared in the same
+     * directory as the reference, and only fall back to the default behaviour if that does not
+     * single one out.
+     */
+    override fun bestViableReferenceCandidate(ref: Reference): Declaration? {
+        if (ref.candidates.size > 1) {
+            val refPackage = ref.packageDirectory
+            if (refPackage != null) {
+                val samePackage =
+                    ref.candidates.filterTo(mutableSetOf()) { it.packageDirectory == refPackage }
+                if (samePackage.isNotEmpty()) {
+                    ref.candidates = samePackage
+                }
+            }
+        }
+
+        return super.bestViableReferenceCandidate(ref)
+    }
 }
+
+/**
+ * The directory a node is declared in, which for Go is the same thing as the package it belongs to.
+ * Returns `null` for nodes without a location, which therefore never match any package.
+ */
+private val de.fraunhofer.aisec.cpg.graph.Node.packageDirectory: String?
+    get() =
+        this.location
+            ?.artifactLocation
+            ?.uri
+            ?.path
+            ?.substringBeforeLast('/', missingDelimiterValue = "")
+            ?.ifEmpty { null }

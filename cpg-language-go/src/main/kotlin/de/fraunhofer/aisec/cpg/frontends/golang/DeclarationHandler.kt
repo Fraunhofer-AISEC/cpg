@@ -80,6 +80,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         method.recordDeclaration = record
 
                         frontend.scopeManager.enterScope(record)
+                        // frontend.scopeManager.addDeclaration(method)
                     }
                 }
                 method

@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.helpers.mapNotNullFiltered
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
+import de.fraunhofer.aisec.cpg.passes.GoInterfaceSatisfactionPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -61,6 +62,7 @@ import java.net.URI
  * This is needed because we cannot directly export Go structs and pointers to C.
  */
 @RegisterExtraPass(GoExtraPass::class)
+@RegisterExtraPass(GoInterfaceSatisfactionPass::class)
 @ReplacePass(
     lang = GoLanguage::class,
     old = EvaluationOrderGraphPass::class,
