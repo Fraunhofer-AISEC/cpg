@@ -99,7 +99,7 @@ private const val BUILTIN_GO = "builtin.go"
  * to a fully-qualified name that contains the name of the [ObjectType] that the expression is
  * creating. This way we can resolve the static references to the field to the actual field.
  *
- * ## Add Methods of Embedded Structs to the Record's Scope
+ * ## Add Methods and Fields of Embedded Structs to the Record's Scope
  *
  * This pass also adds methods of [Record.embeddedStructs] into the scope of the [Record] itself, so
  * that it can be resolved using the regular [SymbolResolver].
@@ -110,7 +110,7 @@ private const val BUILTIN_GO = "builtin.go"
 @DependsOn(TypeResolver::class)
 @RequiresLanguage(GoLanguage::class)
 @Description(
-    "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods of Embedded Structs to the Record's Scope."
+    "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods and Fields of Embedded Structs to the Record's Scope."
 )
 class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
@@ -167,14 +167,85 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // Enter our record's scope
         scopeManager.enterScope(record)
 
-        // Loop through the embedded struct and add their methods to the record's scope.
-        for (method in record.embeddedStructs.flatMap { it.toType().methods }) {
-            // Add it to the scope, but do NOT add it to the underlying AST field (methods),
-            // otherwise we would duplicate the method in the AST
-            scopeManager.addDeclaration(method)
+        for (declaration in promotedDeclarations(record)) {
+            // Only the scope is extended. Adding the declaration to the AST as well would
+            // duplicate something that belongs to the embedded struct.
+            scopeManager.addDeclaration(declaration)
         }
 
         scopeManager.leaveScope(record)
+    }
+
+    /**
+     * Collects the fields and methods that [record] promotes from the structs it embeds, following
+     * Go's selector rules (see https://go.dev/ref/spec#Selectors).
+     *
+     * Promotion is transitive, so a struct `A` embedding `B` which itself embeds `C` promotes `C`'s
+     * members as well, at depth two. The rule for choosing between several members of the same name
+     * is "shallowest wins": `x.f` denotes the `f` at the smallest depth at which one exists. If
+     * more than one `f` exists at that smallest depth, the selector is illegal in Go, and a deeper
+     * `f` does not rescue it -- so such a name is not promoted at all.
+     *
+     * We therefore walk the embedding graph breadth first, one depth at a time, and only promote a
+     * name that is neither already taken at a shallower depth nor ambiguous at the current one.
+     * Embedding may be cyclic through pointers (`type A struct { *A }`), so visited records are
+     * tracked.
+     */
+    /**
+     * The methods declared on this record itself. [de.fraunhofer.aisec.cpg.graph.types.ObjectType]
+     * `.methods` also walks the super types, which for Go includes the interfaces the struct
+     * satisfies, so it cannot be used to decide what a record genuinely owns. [Record.methods] is
+     * no alternative either: a Go method is a top-level declaration carrying a receiver and is
+     * therefore not an AST child of its record. We go through the type and keep only what points
+     * back at this record.
+     */
+    private val Record.declaredMethods: List<Method>
+        get() = this.toType().methods.filter { it.recordDeclaration == this }
+
+    private fun promotedDeclarations(record: Record): List<Declaration> {
+        // Depth 0: everything the record declares itself shadows anything promoted.
+        val claimed = mutableSetOf<String>()
+        record.fields.mapTo(claimed) { it.name.localName }
+        // Only the methods this record declares itself. ObjectType.methods also returns the
+        // methods of the super types, which for Go includes every interface the struct satisfies
+        // -- claiming those names here would shadow the embedded struct's own members.
+        record.declaredMethods.mapTo(claimed) { it.name.localName }
+
+        val promoted = mutableListOf<Declaration>()
+        val visited = mutableSetOf(record)
+        var frontier = record.embeddedStructs.filterTo(mutableListOf()) { visited.add(it) }
+
+        while (frontier.isNotEmpty()) {
+            // Group everything visible at this depth by name, so that a name occurring in more
+            // than one embedded struct can be recognised as ambiguous.
+            val byName = mutableMapOf<String, MutableList<Declaration>>()
+            for (embedded in frontier) {
+                for (field in embedded.fields) {
+                    byName.getOrPut(field.name.localName) { mutableListOf() } += field
+                }
+                for (method in embedded.declaredMethods) {
+                    byName.getOrPut(method.name.localName) { mutableListOf() } += method
+                }
+            }
+
+            for ((name, declarations) in byName) {
+                if (name in claimed) {
+                    // Shadowed by a shallower member.
+                    continue
+                }
+                // Claim the name either way: an ambiguous name stays ambiguous, a deeper member
+                // of the same name does not become selectable.
+                claimed += name
+                declarations.singleOrNull()?.let { promoted += it }
+            }
+
+            frontier =
+                frontier
+                    .flatMapTo(mutableListOf()) { it.embeddedStructs }
+                    .filterTo(mutableListOf()) { visited.add(it) }
+        }
+
+        return promoted
     }
 
     private fun addBuiltIn(): TranslationUnit {
