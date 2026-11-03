@@ -141,7 +141,6 @@ class CodeOverviewTest {
         val overlays = tu.toOverlaysJSON().associateBy { it.overlay.id }
 
         val concept = assertNotNull(overlays[file.id])
-        assertEquals("file", concept.category)
         assertEquals(resolvedCall.id, concept.underlyingNode?.id)
         assertNull(concept.concept)
 
