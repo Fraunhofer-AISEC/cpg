@@ -1055,6 +1055,16 @@ interface Lattice<T : Lattice.Element> {
         // current basic block and the next branches have been processed to reduce the amount of
         // merges.
         val mergePointsEdgesMap = IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>()
+        // Edges that have been transferred, i.e. taken as `nextEdge` from a worklist (incl. start
+        // edges). Unlike globalState, this set is never pruned: a pruned edge was still
+        // transferred, so a merge point must not keep waiting for it. This is the event a
+        // merge-point waitlist is cleared against (see [removeIncomingEdgeFromMergePoint] and
+        // [removeIncomingEdgeIfExists]), so the criterion must measure the same event — recording
+        // an edge here when it is merely *dispatched* (its state written while processing the
+        // predecessor) would mark both branches of an if/else as "done" before either reaches the
+        // merge, emptying the waitlist and firing the merge with only one branch's state.
+        val transferredEdges = IdentitySet<EvaluationOrder>()
+        for (startEdge in startEdges) transferredEdges.add(startEdge)
 
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.hasCandidate(): Boolean {
             return this.entries.any { (_, v) -> v.isEmpty() }
@@ -1067,10 +1077,31 @@ interface Lattice<T : Lattice.Element> {
         ) {
             if (mergePointNextEdge !in this) {
                 this[mergePointNextEdge] =
-                    mergePointNextEdge.start.prevEOGEdges.mapTo(mutableSetOf()) {
-                        Pair(it.end, it.start)
-                    }
+                    mergePointNextEdge.start.prevEOGEdges
+                        // A loop's back edge is re-processed each iteration anyway, so a merge
+                        // point (notably the loop head) must not wait for it — otherwise the head
+                        // never becomes ready and the worklist falls back to an arbitrary key.
+                        // An edge already transferred has delivered its state, so waiting for it
+                        // again would deadlock the merge.
+                        .filter { !it.isLoopBackEdge && it !in transferredEdges }
+                        .mapTo(mutableSetOf()) { Pair(it.end, it.start) }
             }
+            this[mergePointNextEdge]?.removeIf {
+                it.first == incomingEdge.end && it.second == incomingEdge.start
+            }
+        }
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>
+            .removeIncomingEdgeIfExists(
+            mergePointNextEdge: EvaluationOrder,
+            incomingEdge: EvaluationOrder,
+        ) {
+            // Removes [incomingEdge] from the waitlist of [mergePointNextEdge], if there is one,
+            // without creating a waitlist. A transferred edge has delivered its state even if it
+            // did not change the successor's state, so the merge point must not wait for it any
+            // longer. Waitlists are only created on a state change (see
+            // [removeIncomingEdgeFromMergePoint]), so this does not change which edges are routed
+            // as merge points.
             this[mergePointNextEdge]?.removeIf {
                 it.first == incomingEdge.end && it.second == incomingEdge.start
             }
@@ -1203,6 +1234,9 @@ interface Lattice<T : Lattice.Element> {
                 } else {
                     mergePointsEdgesMap.removeCandidate()
                 }
+            // Record the edge as transferred before building any waitlists for its successors —
+            // this is the event a merge-point waitlist is cleared against, so it must precede that.
+            transferredEdges.add(nextEdge)
 
             // Compute the effects of "nextEdge" on the state by applying the transformation to
             // its state.
@@ -1316,6 +1350,12 @@ interface Lattice<T : Lattice.Element> {
                             }
 
                         globalState.put(it, newGlobalIt)
+
+                        // nextEdge has been transferred, so it leaves the waitlist of the merge
+                        // point `it` starts at, also if the state did not change: otherwise the
+                        // merge point would wait for it forever. Whether `it` is queued below
+                        // still depends on a state change.
+                        mergePointsEdgesMap.removeIncomingEdgeIfExists(it, nextEdge)
 
                         if (
                             it !in currentBBEdgesList &&
