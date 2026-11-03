@@ -1,13 +1,13 @@
 <script lang="ts">
   import { marked } from 'marked';
   import type { Tokens } from 'marked';
-  import type { NodeRefJSON } from '$lib/types';
+  import type { NodeJSON } from '$lib/types';
   import { citationLabel, citationPattern } from '$lib/agentEvidence';
 
   interface Props {
     content: string;
     /** The cited nodes by ID, to label the citations `[[node:<id>]]` in the content */
-    citations?: Map<string, NodeRefJSON>;
+    citations?: Map<string, NodeJSON>;
     /** Called when a citation is clicked; without it, citations are shown as plain text */
     onCite?: (nodeId: string) => void;
   }

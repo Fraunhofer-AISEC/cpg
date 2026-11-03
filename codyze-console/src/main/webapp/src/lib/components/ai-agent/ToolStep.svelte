@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { NodeRefJSON, ToolResult } from '$lib/types';
+  import type { NodeJSON, ToolResult } from '$lib/types';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -11,10 +11,10 @@
     toolResult: ToolResult;
     step: number;
     /** The nodes the tool returned, resolved to their locations */
-    nodes: NodeRefJSON[];
+    nodes: NodeJSON[];
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
-    onSelect: (ref: NodeRefJSON) => void;
+    onSelect: (ref: NodeJSON) => void;
     /** Shows the step in the code and goes to its first node */
     onActivate: () => void;
     onHover: (hovered: boolean) => void;
@@ -68,7 +68,7 @@
 
   const shownNodes = $derived(showAll ? nodes : nodes.slice(0, preview));
 
-  function location(ref: NodeRefJSON): string {
+  function location(ref: NodeJSON): string {
     return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no location';
   }
 </script>

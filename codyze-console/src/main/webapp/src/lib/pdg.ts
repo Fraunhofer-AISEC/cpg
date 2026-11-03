@@ -1,4 +1,4 @@
-import type { NodeRefJSON } from '$lib/types';
+import type { NodeJSON } from '$lib/types';
 
 /**
  * Slices of the program dependence graph (PDG) of a function: the statements that affect a
@@ -12,7 +12,7 @@ export interface PdgNode {
   /** The ID of the statement, which is also its node ID */
   id: string;
   kind: PdgNodeKind;
-  node: NodeRefJSON;
+  node: NodeJSON;
   startLine: number;
   endLine: number;
   code: string;
@@ -39,7 +39,7 @@ export interface PdgSlice {
   root: string;
   direction: PdgDirection;
   hops: number;
-  function: NodeRefJSON | null;
+  function: NodeJSON | null;
   nodes: PdgNode[];
   edges: PdgEdge[];
   truncated: boolean;
