@@ -347,13 +347,11 @@ data class CallSiteJSON(val call: NodeJSON, val callee: NodeJSON?, val status: C
 /**
  * A concept or operation and the node it is attached to.
  *
- * @property category The area of the overlay, derived from its package, e.g. `crypto` or `file`.
  * @property concept For an operation: the concept it belongs to. `null` for a concept.
  */
 @Serializable
 data class OverlayJSON(
     val overlay: NodeJSON,
-    val category: String,
     val underlyingNode: NodeJSON?,
     val concept: NodeJSON?,
 )
@@ -719,10 +717,6 @@ fun Node.toOverlayJSON(): OverlayJSON? {
     if (this !is Concept && this !is Operation) return null
     return OverlayJSON(
         overlay = toRefJSON(),
-        category =
-            javaClass.packageName.substringAfter("concepts.", "").substringBefore('.').ifEmpty {
-                "other"
-            },
         underlyingNode = (this as OverlayNode).underlyingNode?.toRefJSON(),
         concept = (this as? Operation)?.concept?.toRefJSON(),
     )
