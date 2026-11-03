@@ -121,8 +121,13 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         caseClause: GoStandardLibrary.Ast.CaseClause,
         typeSwitchLhs: Node? = null,
         typeSwitchRhs: Expression? = null,
+        // Whether this clause belongs to a type switch. This cannot be derived from
+        // `typeSwitchRhs`, because the guard of a type switch need not bind the value to a
+        // variable: in `switch v.(type)` -- as opposed to `switch x := v.(type)` -- there is no
+        // assignment and hence no right-hand side, yet the case list still holds types rather
+        // than expressions.
+        isTypeSwitch: Boolean = typeSwitchRhs != null,
     ): Expression {
-        val isTypeSwitch = typeSwitchRhs != null
 
         val case =
             if (caseClause.list.isEmpty()) {
@@ -188,7 +193,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             } else {
                 // We need to work with type listeners here because they might not have their type
                 // yet
-                typeSwitchRhs.registerTypeObserver(
+                typeSwitchRhs?.registerTypeObserver(
                     object : HasType.TypeObserver {
                         override fun typeChanged(newType: Type, src: HasType) {
                             decl.type = newType
@@ -450,6 +455,11 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                     switch.selector = rhs
                     Pair(assign.lhs.singleOrNull(), (rhs as? UnaryOperator)?.input)
                 } else {
+                    // A type switch does not have to bind the value to a variable; `switch
+                    // v.(type)` is a guard without an assignment. The handled statement is then
+                    // the type assertion itself, which we still use as the switch's selector --
+                    // otherwise it would be dropped from the graph entirely.
+                    switch.selector = assign as? Expression
                     Pair(null, null)
                 }
 
@@ -459,7 +469,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                         typeSwitchStmt.body.list.filterIsInstance<
                             GoStandardLibrary.Ast.CaseClause
                         >()) {
-                        handleCaseClause(c, lhs, rhs)
+                        handleCaseClause(c, lhs, rhs, isTypeSwitch = true)
                     }
                 }
         }

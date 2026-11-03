@@ -291,12 +291,24 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             panic.returnTypes = listOf(primitiveType("any"))
             addBuiltInFunction(recover)
 
+            // The `error` record has to be a declaration of the builtin translation unit, not just
+            // a node hanging off its own method. If it is not reachable through the AST, no pass
+            // can see it -- in particular it is not recognized as an interface -- and the type
+            // resolver later synthesizes a second, structurally empty `error` record of kind
+            // "struct" for the `error` type that is used everywhere. Calls through `error` then
+            // dispatch against that placeholder and stop at the body-less `error.Error`.
             val error = newRecord("error", "interface")
+            scopeManager.addDeclaration(error)
+            this.declarations += error
+
             scopeManager.enterScope(error)
 
             val errorFunc = newMethod("Error", recordDeclaration = error)
             errorFunc.returnTypes = listOf(primitiveType("string"))
             addBuiltInFunction(errorFunc)
+            // `addBuiltInFunction` registers the method with the translation unit, but the record
+            // also has to list it, because the structural-satisfaction check compares method sets.
+            error.methods += errorFunc
 
             scopeManager.leaveScope(error)
             builtin

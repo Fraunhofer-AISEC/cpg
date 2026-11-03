@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 
@@ -57,6 +58,11 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
  */
 @RequiresLanguage(GoLanguage::class)
 @ExecuteBefore(TypeHierarchyResolver::class)
+// The built-in declarations, and with them the `error` interface, are contributed by
+// GoExtraPass. Without them `error` is not among the records yet and no type can be found to
+// implement it -- which matters more than it sounds, since implementing `error` is the most
+// common thing a Go type does.
+@DependsOn(GoExtraPass::class)
 @Description(
     "Computes Go's implicit, structural interface satisfaction and records it as implemented interfaces, so that the type hierarchy and therefore method devirtualization become available."
 )
@@ -111,14 +117,25 @@ class GoInterfaceSatisfactionPass(ctx: TranslationContext) : ComponentPass(ctx) 
         // without methods (such as `any`) are skipped: every type would satisfy
         // them, which adds a dispatch edge from every call to every method and
         // is not useful for call graph construction.
+        val byReceiver = methodsByReceiverType(component)
+
         val required =
             interfaces.mapNotNull { iface ->
-                val keys = iface.methodKeys()
+                // As for concrete types, the record's own method list cannot be relied upon: the
+                // built-in `error` interface has its method attached through the record rather
+                // than as an AST child, and its method set would otherwise come out empty --
+                // leaving the most commonly implemented interface of the language out of the
+                // relation entirely.
+                // The record's own list is authoritative where it exists. Only when it is
+                // empty -- as for the built-in `error`, whose method is attached through the
+                // record rather than as an AST child -- do we fall back to the methods collected
+                // by receiver, which is keyed by local name only and would otherwise merge the
+                // requirements of same-named interfaces from different packages.
+                val keys =
+                    iface.methodKeys().ifEmpty { byReceiver[iface.name.localName] ?: setOf() }
                 if (keys.isEmpty()) null else iface to keys
             }
         if (required.isEmpty()) return
-
-        val byReceiver = methodsByReceiverType(component)
 
         var added = 0
         for (record in concretes) {
