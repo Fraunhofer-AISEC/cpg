@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.serialization
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
@@ -219,7 +218,7 @@ fun Node.toOverlayJSON(): OverlayJSON? {
     if (this !is Concept && this !is Operation) return null
     return OverlayJSON(
         overlay = toRefJSON(),
-        underlyingNode = (this as OverlayNode).underlyingNode?.toRefJSON(),
+        underlyingNode = this.underlyingNode?.toRefJSON(),
         concept = (this as? Operation)?.concept?.toRefJSON(),
     )
 }
