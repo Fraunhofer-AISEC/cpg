@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallStatus
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.status
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit

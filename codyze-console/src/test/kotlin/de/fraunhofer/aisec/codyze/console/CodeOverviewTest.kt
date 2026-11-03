@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallStatus
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.status
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.file.OpenFile
@@ -56,7 +58,11 @@ class CodeOverviewTest {
             invokes += targets
         }
 
-    private val helper = Function().apply { name = Name("helper") }
+    private val helper =
+        Function().apply {
+            name = Name("helper")
+            body = Block()
+        }
     private val puts =
         Function().apply {
             name = Name("puts")

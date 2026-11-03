@@ -85,7 +85,7 @@ fun TranslationResult.overview(): CpgOverview {
     // Calls that do not reach any function with a body, grouped by the name of the callee
     val externalCalls =
         calls
-            .filter { call -> call.invokes.none { it.body != null } }
+            .filter { it.status != CallStatus.RESOLVED }
             .groupingBy { it.name.localName }
             .eachCount()
 

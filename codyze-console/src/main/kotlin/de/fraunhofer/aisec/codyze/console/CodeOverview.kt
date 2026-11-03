@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallStatus
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.status
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
@@ -33,16 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import kotlinx.serialization.Serializable
-
-/** How well the analysis knows the target of a call. */
-enum class CallStatus {
-    /** The target is part of the analysed code. */
-    RESOLVED,
-    /** The target is not part of the analysed code, e.g. a library function. */
-    EXTERNAL,
-    /** The target could not be determined at all. */
-    UNRESOLVED,
-}
 
 /** A function together with its key figures. */
 @Serializable
@@ -76,15 +68,6 @@ data class OverlayJSON(
     val underlyingNode: NodeJSON?,
     val concept: NodeJSON?,
 )
-
-/** How well the analysis knows the target of this call, see [CallStatus]. */
-val Call.status: CallStatus
-    get() =
-        when {
-            invokes.isEmpty() -> CallStatus.UNRESOLVED
-            invokes.all { it.isInferred } -> CallStatus.EXTERNAL
-            else -> CallStatus.RESOLVED
-        }
 
 /**
  * Whether this node is located in the file of the given translation unit. The AST of a translation
