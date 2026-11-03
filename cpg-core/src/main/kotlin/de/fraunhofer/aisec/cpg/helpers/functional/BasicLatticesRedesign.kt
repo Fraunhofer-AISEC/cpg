@@ -1073,6 +1073,14 @@ interface Lattice<T : Lattice.Element> {
         val deferredExitEdgesList = mutableListOf<EvaluationOrder>()
         fun EvaluationOrder.isLoopExit(): Boolean =
             this.scc == null && this.start.nextEOGEdges.any { it.scc != null }
+        // The order in which the keys of mergePointsEdgesMap were inserted, for the tie-breaks in
+        // removeCandidate. The map's iteration order derives from identityHashCode and differs
+        // between JVM runs, so breaking ties by it would make the processing order, and with it
+        // the number of transfers, vary from run to run. The map keeps its identity semantics.
+        var mergePointInsertionCounter = 0L
+        val mergePointInsertionOrder = IdentityHashMap<EvaluationOrder, Long>()
+        fun insertionOrderOf(key: EvaluationOrder): Long =
+            mergePointInsertionOrder[key] ?: Long.MAX_VALUE
 
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.hasCandidate(): Boolean {
             return this.entries.any { (_, v) -> v.isEmpty() }
@@ -1084,6 +1092,7 @@ interface Lattice<T : Lattice.Element> {
             incomingEdge: EvaluationOrder,
         ) {
             if (mergePointNextEdge !in this) {
+                mergePointInsertionOrder[mergePointNextEdge] = mergePointInsertionCounter++
                 this[mergePointNextEdge] =
                     mergePointNextEdge.start.prevEOGEdges
                         // A loop's back edge is re-processed each iteration anyway, so a merge
@@ -1118,13 +1127,21 @@ interface Lattice<T : Lattice.Element> {
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.removeCandidate():
             EvaluationOrder {
             // We want an element that were we erased all values
-            // If there are multiple, we take the one with the highest scc
+            // If there are multiple, we take the one with the highest scc, and of those the one
+            // inserted first (see mergePointInsertionOrder). Without a ready one, the one
+            // inserted first.
             val key =
                 this.entries
                     .filter { (_, v) -> v.isEmpty() }
-                    .maxByOrNull { (k, _) -> k.scc ?: 0 }
-                    ?.key ?: this.keys.first()
+                    .minWithOrNull(
+                        compareByDescending<MutableMap.MutableEntry<EvaluationOrder, *>> {
+                                it.key.scc ?: 0
+                            }
+                            .thenBy { insertionOrderOf(it.key) }
+                    )
+                    ?.key ?: this.keys.minBy { insertionOrderOf(it) }
             this.remove(key)
+            mergePointInsertionOrder.remove(key)
             return key
         }
 
