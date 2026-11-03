@@ -72,13 +72,9 @@ private fun Region.span(): Long =
  */
 fun Node.isInFileOf(translationUnit: TranslationUnit): Boolean {
     val location = location ?: return false
-    val file = translationUnit.location?.artifactLocation?.uri ?: return true
-    return location.artifactLocation.uri == file
+    val file = translationUnit.location?.artifactLocation ?: return true
+    return location.artifactLocation == file
 }
-
-/** The nodes of this translation unit that are located in its file, see [isInFileOf]. */
-internal val TranslationUnit.ownNodes: List<Node>
-    get() = nodes.filter { it.translationUnit == this && it.isInFileOf(this) }
 
 /** The calls written in the code, i.e. without operator calls and implicit calls. */
 internal fun Iterable<Node>.explicitCalls(): List<Call> =

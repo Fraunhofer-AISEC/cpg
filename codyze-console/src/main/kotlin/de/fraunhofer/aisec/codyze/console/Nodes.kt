@@ -705,17 +705,22 @@ fun TranslationUnit.toFunctionCallStatsJSON(): List<FunctionCallStatsJSON> =
 
 /** The calls written in this translation unit, with the status of their targets. */
 fun TranslationUnit.toCallSitesJSON(): List<CallSiteJSON> =
-    ownNodes.explicitCalls().map { call ->
-        CallSiteJSON(
-            call = call.toRefJSON(),
-            callee = call.callee.takeIf { it.location != null }?.toRefJSON(),
-            status = call.status,
-        )
-    }
+    nodes
+        .filter { it.isInFileOf(this) }
+        .explicitCalls()
+        .map { call ->
+            CallSiteJSON(
+                call = call.toRefJSON(),
+                callee = call.callee.takeIf { it.location != null }?.toRefJSON(),
+                status = call.status,
+            )
+        }
 
 /** The concepts and operations attached to the nodes of this translation unit. */
 fun TranslationUnit.toOverlaysJSON(): List<OverlayJSON> =
-    ownNodes.flatMap { node -> node.overlays.mapNotNull { it.toOverlayJSON() } }
+    nodes
+        .filter { it.isInFileOf(this) }
+        .flatMap { node -> node.overlays.mapNotNull { it.toOverlayJSON() } }
 
 /** This node as [OverlayJSON], or `null` if it is neither a [Concept] nor an [Operation]. */
 fun Node.toOverlayJSON(): OverlayJSON? {
