@@ -34,10 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.sarif.Region
-import kotlin.uuid.Uuid
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import kotlinx.serialization.Serializable
 
 /**
@@ -45,32 +44,16 @@ import kotlinx.serialization.Serializable
  */
 private const val MAX_RELATED_NODES = 200
 
-/** Upper bound for the code snippet of a [NodeRefJSON]. */
+/** Upper bound for the code of a node that is only referenced, see [toRefJSON]. */
 private const val MAX_SNIPPET_LENGTH = 120
 
 /**
- * A compact reference to a node, with enough information to show it in a list and to navigate to it
- * (also across files).
+ * A node that is related to the node it was listed for, e.g. a neighbour in the dataflow.
  *
- * @property label An optional label describing how the node is related to the node it was listed
- *   for, e.g., the granularity of a dataflow.
+ * @property label Describes the relation, if it is not a plain one, e.g. the granularity and
+ *   calling context of a dataflow.
  */
-@Serializable
-data class NodeRefJSON(
-    val id: Uuid,
-    val type: String,
-    val name: String,
-    val code: String,
-    val fileName: String?,
-    val startLine: Int,
-    val startColumn: Int,
-    val endLine: Int,
-    val endColumn: Int,
-    val translationUnitId: Uuid?,
-    val componentName: String?,
-    val isInferred: Boolean,
-    val label: String? = null,
-)
+@Serializable data class RelatedNodeJSON(val node: NodeJSON, val label: String?)
 
 /**
  * Everything the console knows about a single node that is relevant when inspecting it: its calls,
@@ -86,40 +69,23 @@ data class NodeRefJSON(
  */
 @Serializable
 data class NodeDetailsJSON(
-    val node: NodeRefJSON,
-    val typeName: String?,
-    val value: String?,
-    val isImplicit: Boolean,
-    val enclosingFunction: NodeRefJSON?,
+    val node: NodeJSON,
+    val enclosingFunction: NodeJSON?,
     val overlays: List<OverlayJSON>,
-    val callTargets: List<NodeRefJSON>,
-    val callers: List<NodeRefJSON>,
-    val callees: List<NodeRefJSON>,
-    val dataflowFrom: List<NodeRefJSON>,
-    val dataflowTo: List<NodeRefJSON>,
+    val callTargets: List<NodeJSON>,
+    val callers: List<NodeJSON>,
+    val callees: List<NodeJSON>,
+    val dataflowFrom: List<RelatedNodeJSON>,
+    val dataflowTo: List<RelatedNodeJSON>,
     val warnings: List<String>,
 )
 
-fun Node.toRefJSON(label: String? = null): NodeRefJSON {
-    val firstLine = (code ?: "").lineSequence().firstOrNull()?.trim() ?: ""
-    return NodeRefJSON(
-        id = id,
-        type = javaClass.simpleName,
-        name = name.toString(),
-        code =
-            if (firstLine.length > MAX_SNIPPET_LENGTH) firstLine.take(MAX_SNIPPET_LENGTH) + "…"
-            else firstLine,
-        fileName = location?.artifactLocation?.fileName,
-        startLine = location?.region?.startLine ?: -1,
-        startColumn = location?.region?.startColumn ?: -1,
-        endLine = location?.region?.endLine ?: -1,
-        endColumn = location?.region?.endColumn ?: -1,
-        translationUnitId = translationUnit?.id,
-        componentName = component?.name?.toString(),
-        isInferred = isInferred,
-        label = label,
-    )
-}
+/**
+ * This node as [NodeJSON] for a reference to it, e.g. in a list: without its DFG edges and with
+ * only the first line of its code, so that hub nodes and large functions do not blow up the
+ * response.
+ */
+fun Node.toRefJSON(): NodeJSON = toJSON(noEdges = true, maxCodeLength = MAX_SNIPPET_LENGTH)
 
 fun Node.toDetailsJSON(): NodeDetailsJSON {
     val warnings = mutableListOf<String>()
@@ -147,16 +113,14 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
 
     return NodeDetailsJSON(
         node = toRefJSON(),
-        typeName = (this as? HasType)?.type?.name?.toString(),
-        value = constantValue(),
-        isImplicit = isImplicit,
         enclosingFunction = (this as? Function ?: firstParentOrNull<Function>())?.toRefJSON(),
         overlays = overlays.mapNotNull { it.toOverlayJSON() },
         callTargets = callTargets.limited { it.toRefJSON() },
         callers = (this as? Function)?.calledBy.orEmpty().limited { it.toRefJSON() },
         callees = (this as? Function)?.body?.calls.orEmpty().limited { it.toRefJSON() },
-        dataflowFrom = prevDFGEdges.limited { it.start.toRefJSON(label = it.describe()) },
-        dataflowTo = nextDFGEdges.limited { it.end.toRefJSON(label = it.describe()) },
+        dataflowFrom =
+            prevDFGEdges.limited { RelatedNodeJSON(it.start.toRefJSON(), it.describe()) },
+        dataflowTo = nextDFGEdges.limited { RelatedNodeJSON(it.end.toRefJSON(), it.describe()) },
         warnings = warnings,
     )
 }
@@ -190,22 +154,6 @@ private fun Region.contains(line: Int, column: Int): Boolean {
 /** The size of a region, where any additional line outweighs any number of columns. */
 private fun Region.span(): Long =
     (endLine - startLine).toLong() * Int.MAX_VALUE + (endColumn - startColumn)
-
-/**
- * Evaluates expressions to a constant, if possible. Only simple values are returned, everything
- * else (e.g., the node itself if it cannot be evaluated) is discarded.
- */
-private fun Node.constantValue(): String? {
-    if (this !is Expression || this is Call) return null
-    val value = runCatching { evaluate() }.getOrNull()
-    return when (value) {
-        is Number,
-        is Boolean,
-        is Char,
-        is String -> value.toString()
-        else -> null
-    }
-}
 
 /** Describes the granularity and calling context of a dataflow, if it is not a plain one. */
 private fun Dataflow.describe(): String? {

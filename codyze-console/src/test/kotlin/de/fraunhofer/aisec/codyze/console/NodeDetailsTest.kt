@@ -28,9 +28,13 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -113,5 +117,102 @@ class NodeDetailsTest {
         // A callee that spans the whole call, e.g. a call without parentheses
         callee.location = at(2, 3, 2, 11)
         assertSame(callee, tu.nodeAt(2, 10))
+    }
+
+    @Test
+    fun testUnresolvedCall() {
+        val details = call.toDetailsJSON()
+        assertTrue(details.callTargets.isEmpty())
+        assertTrue(details.warnings.any { "could not be resolved" in it }, "${details.warnings}")
+    }
+
+    @Test
+    fun testCallOfInferredFunction() {
+        val puts =
+            Function().apply {
+                name = Name("puts")
+                isInferred = true
+            }
+        call.invokes += puts
+
+        val details = call.toDetailsJSON()
+        assertEquals(listOf(puts.id), details.callTargets.map { it.id })
+        assertEquals(1, details.warnings.size, "${details.warnings}")
+        assertContains(details.warnings.single(), "'puts' is not part of the analysed code")
+
+        // The inferred function itself has neither code nor a body
+        val warnings = puts.toDetailsJSON().warnings
+        assertTrue(warnings.any { "inferred by the analysis" in it }, "$warnings")
+        assertTrue(warnings.any { "only declared" in it }, "$warnings")
+    }
+
+    @Test
+    fun testCallersCalleesAndEnclosingFunction() {
+        val main = tu.declarations.single() as Function
+        val puts = Function().apply { name = Name("puts") }
+        call.invokes += puts
+
+        assertEquals(listOf(call.id), puts.toDetailsJSON().callers.map { it.id })
+        assertEquals(listOf(call.id), main.toDetailsJSON().callees.map { it.id })
+        assertEquals(main.id, call.toDetailsJSON().enclosingFunction?.id)
+        assertEquals(main.id, main.toDetailsJSON().enclosingFunction?.id)
+    }
+
+    @Test
+    fun testProblemNode() {
+        val problem = ProblemExpression("cannot parse this")
+        val warnings = problem.toDetailsJSON().warnings
+        assertTrue(
+            warnings.any { "could not handle" in it && "cannot parse this" in it },
+            "$warnings",
+        )
+    }
+
+    @Test
+    fun testDataflowLabels() {
+        val field = Reference().apply { name = Name("field") }
+        val fromCall = Reference().apply { name = Name("result") }
+        val plain = Reference().apply { name = Name("plain") }
+        val intoCall = Reference().apply { name = Name("parameter") }
+        argument.prevDFGEdges.add(field) { granularity = partial("field") }
+        argument.prevDFGEdges.addContextSensitive(
+            fromCall,
+            callingContexts = listOf(CallingContextOut(mutableListOf(call))),
+        )
+        argument.prevDFGEdges += plain
+        argument.nextDFGEdges.addContextSensitive(
+            intoCall,
+            callingContexts = listOf(CallingContextIn(mutableListOf(call))),
+        )
+
+        val details = argument.toDetailsJSON()
+        assertEquals(
+            mapOf("field" to "partial: field", "result" to "out of call", "plain" to null),
+            details.dataflowFrom.associate { it.node.name to it.label },
+        )
+        assertEquals(listOf("into call"), details.dataflowTo.map { it.label })
+    }
+
+    @Test
+    fun testRelatedNodesAreLimited() {
+        repeat(250) { argument.nextDFGEdges += Reference().apply { name = Name("use$it") } }
+        assertEquals(200, argument.toDetailsJSON().dataflowTo.size)
+    }
+
+    @Test
+    fun testReference() {
+        val block = Block().apply { code = "if (x) {\n  y();\n}" }
+        assertEquals("if (x) {", block.toRefJSON().code)
+
+        val long = Literal<String>().apply { code = "\"" + "a".repeat(200) + "\"" }
+        val code = long.toRefJSON().code
+        assertEquals(121, code.length)
+        assertTrue(code.endsWith("…"))
+
+        val ref = call.toRefJSON()
+        assertEquals("details.c", ref.fileName)
+        assertEquals(2, ref.startLine)
+        assertTrue(ref.prevDFG.isEmpty() && ref.nextDFG.isEmpty())
+        assertNull(Reference().toRefJSON().fileName)
     }
 }

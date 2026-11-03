@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+  import type { NodeDetailsJSON, NodeJSON } from '$lib/types';
   import type { FlowDirection } from '$lib/stores/codeFocus.svelte';
 
   /**
@@ -33,7 +33,7 @@
     /** Where the free space at the end of a (1-based) line starts, in rem */
     endOfLine: (line: number) => number;
     /** Follows the dataflow to [ref], i.e. inspects it */
-    onFollow: (ref: NodeRefJSON, direction: FlowDirection) => void;
+    onFollow: (ref: NodeJSON, direction: FlowDirection) => void;
     onScrollTo: (line: number) => void;
   }
 
@@ -71,7 +71,7 @@
     direction: FlowDirection;
     /** The line of the other endpoint, i.e. not the inspected node */
     line: number;
-    refs: NodeRefJSON[];
+    refs: NodeJSON[];
     level: number;
   }
 
@@ -81,11 +81,19 @@
   );
 
   const neighbours = $derived([
-    ...details.dataflowFrom.map((ref) => ({ ref, direction: 'from' as const })),
-    ...details.dataflowTo.map((ref) => ({ ref, direction: 'to' as const }))
+    ...details.dataflowFrom.map(({ node: ref }) => ({ ref, direction: 'from' as const })),
+    ...details.dataflowTo.map(({ node: ref }) => ({ ref, direction: 'to' as const }))
   ]);
 
-  const isLocal = (ref: NodeRefJSON) => ref.translationUnitId === unitId && ref.startLine >= 1;
+  // The labels of the dataflows (e.g. their granularity), by direction and node ID
+  const labels = $derived(
+    new Map([
+      ...details.dataflowFrom.map(({ node, label }) => [`from:${node.id}`, label] as const),
+      ...details.dataflowTo.map(({ node, label }) => [`to:${node.id}`, label] as const)
+    ])
+  );
+
+  const isLocal = (ref: NodeJSON) => ref.translationUnitId === unitId && ref.startLine >= 1;
 
   // The arcs, one per direction and line of the other endpoint, nested by their length
   const arcs = $derived.by((): Arc[] => {
@@ -124,8 +132,8 @@
   const lineTop = (line: number) => offsetTop + (line - 1) * lineHeight;
   const lineMiddle = (line: number) => lineTop(line) + lineHeight / 2;
   const isVisible = (line: number) => lineMiddle(line) >= viewTop && lineMiddle(line) <= viewBottom;
-  const tokenStart = (ref: NodeRefJSON) => offsetLeft + ref.startColumn * charWidth;
-  const tokenWidth = (ref: NodeRefJSON) =>
+  const tokenStart = (ref: NodeJSON) => offsetLeft + ref.startColumn * charWidth;
+  const tokenWidth = (ref: NodeJSON) =>
     ref.startLine === ref.endLine
       ? Math.max(ref.endColumn - ref.startColumn, 1) * charWidth
       : Math.max((codeLines[ref.startLine - 1]?.length ?? 0) + 1 - ref.startColumn, 1) * charWidth;
@@ -206,21 +214,22 @@
       .map((ref) => ({ ref, top: lineTop(ref.startLine), x: tokenStart(ref) }));
   });
 
-  function describe(ref: NodeRefJSON, direction: FlowDirection): string {
+  function describe(ref: NodeJSON, direction: FlowDirection): string {
     const what = ref.code || ref.name;
     const where = ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no location';
-    const label = ref.label ? ` (${ref.label})` : '';
+    const relation = labels.get(`${direction}:${ref.id}`);
+    const label = relation ? ` (${relation})` : '';
     return `${direction === 'from' ? 'Comes from' : 'Goes to'} ${what} · ${where}${label}`;
   }
 
-  function chipLabel(ref: NodeRefJSON, direction: FlowDirection): string {
+  function chipLabel(ref: NodeJSON, direction: FlowDirection): string {
     const arrow = direction === 'from' ? '←' : '→';
     const name = ref.name || ref.code;
     if (ref.startLine < 1 || !ref.translationUnitId) return `${arrow} external ${name}`;
     return `${arrow} ${ref.fileName}:${ref.startLine} ${name}`;
   }
 
-  const isExternal = (ref: NodeRefJSON) => ref.isInferred || !ref.translationUnitId;
+  const isExternal = (ref: NodeJSON) => ref.isInferred || !ref.translationUnitId;
 
   const strokeOf = (direction: FlowDirection, key: string) =>
     key === hovered

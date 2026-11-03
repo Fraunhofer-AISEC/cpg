@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.uuid.Uuid
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
@@ -59,7 +61,14 @@ data class EdgeJSON(
     @Serializable(with = UuidSerializer::class) var end: Uuid,
 )
 
-/** JSON data class for a [Node]. */
+/**
+ * JSON data class for a [Node].
+ *
+ * @property isInferred Whether the node was inferred by the analysis instead of being parsed from
+ *   source code, see [Node.isInferred].
+ * @property isImplicit Whether the node is not written in the source code, see [Node.isImplicit].
+ * @property typeName For a node with a type: the name of its type, see [Type.typeName].
+ */
 @Serializable
 data class NodeJSON(
     @Serializable(with = UuidSerializer::class) val id: Uuid,
@@ -76,10 +85,20 @@ data class NodeJSON(
     @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
     val componentName: String? = null,
     val fileName: String? = null,
+    val isInferred: Boolean,
+    val isImplicit: Boolean,
+    val typeName: String?,
 )
 
-/** Converts a [Node] into its JSON representation. */
-fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
+/**
+ * Converts a [Node] into its JSON representation.
+ *
+ * @param noEdges Whether to omit the DFG edges of the node.
+ * @param maxCodeLength If set, [NodeJSON.code] only contains the first line of the code (trimmed),
+ *   shortened to this many characters followed by `…`. This keeps the JSON small when nodes are
+ *   only referenced, e.g. in lists, where the full code of a function would be too much.
+ */
+fun Node.toJSON(noEdges: Boolean = false, maxCodeLength: Int? = null): NodeJSON {
     return NodeJSON(
         id = this.id,
         type = this.javaClass.simpleName,
@@ -87,7 +106,8 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
         startColumn = location?.region?.startColumn ?: -1,
         endLine = location?.region?.endLine ?: -1,
         endColumn = location?.region?.endColumn ?: -1,
-        code = this.code ?: "",
+        code =
+            (this.code ?: "").let { if (maxCodeLength != null) it.snippet(maxCodeLength) else it },
         name = this.name.toString(),
         fileName =
             this.location?.artifactLocation?.uri?.let { uri ->
@@ -103,7 +123,16 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
         nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,
         componentName = this.component?.name?.toString(),
+        isInferred = this.isInferred,
+        isImplicit = this.isImplicit,
+        typeName = (this as? HasType)?.type?.typeName,
     )
+}
+
+/** The first line of this code, trimmed and shortened to at most [maxLength] characters. */
+private fun String.snippet(maxLength: Int): String {
+    val firstLine = lineSequence().firstOrNull()?.trim().orEmpty()
+    return if (firstLine.length > maxLength) firstLine.take(maxLength) + "…" else firstLine
 }
 
 /** Converts an [Edge] into its JSON representation. */

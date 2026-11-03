@@ -319,6 +319,58 @@ class ApplicationTest {
     }
 
     @Test
+    fun testGetNodeDetails() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+
+        val open = assertNotNull(mockTu.calls["open"])
+        val response = client.get("/api/node/${open.id}")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(open.id, response.body<NodeDetailsJSON>().node.id)
+
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client.get("/api/node/00000000-0000-0000-0000-000000000000").status,
+        )
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/node/not-a-uuid").status)
+    }
+
+    @Test
+    fun testGetNodeAt() = testApplication {
+        val uri = java.net.URI("file:/node-at.c")
+        val call =
+            Call().apply {
+                name = Name("open")
+                location =
+                    de.fraunhofer.aisec.cpg.sarif.PhysicalLocation(
+                        uri,
+                        de.fraunhofer.aisec.cpg.sarif.Region(1, 1, 1, 7),
+                    )
+            }
+        val tu = TranslationUnit().apply { statements += call }
+        // Created before the URL, as adding the unit to a component changes its ID (which is
+        // derived from its AST parent)
+        val service = mockServiceFor(tu)
+        application { configureWebconsole(service) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val unit = "/api/component/mock/translation-unit/${tu.id}"
+
+        val response = client.get("$unit/node-at?line=1&column=3")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(call.id, response.body<NodeDetailsJSON>().node.id)
+
+        assertEquals(HttpStatusCode.NotFound, client.get("$unit/node-at?line=5&column=1").status)
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client
+                .get("/api/component/mock/translation-unit/unknown/node-at?line=1&column=3")
+                .status,
+        )
+        assertEquals(HttpStatusCode.BadRequest, client.get("$unit/node-at?line=1").status)
+        assertEquals(HttpStatusCode.BadRequest, client.get("$unit/node-at?line=1&column=x").status)
+    }
+
+    @Test
     fun testGetNodes() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }

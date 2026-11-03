@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick, type Snippet } from 'svelte';
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
-  import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+  import type { NodeDetailsJSON, NodeJSON } from '$lib/types';
   import { overlayLabel } from '$lib/overview';
   import NodeRefItem from './NodeRefItem.svelte';
   import DataflowTree from './DataflowTree.svelte';
@@ -10,9 +10,9 @@
     details: NodeDetailsJSON | null;
     loading?: boolean;
     error?: string | null;
-    onSelect: (ref: NodeRefJSON) => void;
+    onSelect: (ref: NodeJSON) => void;
     /** Called when a node is selected in a dataflow tree, with the chain of hops to it */
-    onFollow?: (chain: NodeRefJSON[], direction: 'from' | 'to') => void;
+    onFollow?: (chain: NodeJSON[], direction: 'from' | 'to') => void;
     /** Additional actions for the inspected node, e.g. adding a concept */
     actions?: Snippet;
     /** A section to expand and scroll into view, e.g. after clicking the code lens of a function */
@@ -97,20 +97,11 @@
         <dd class="truncate font-mono text-gray-700">
           {details.node.fileName}:{details.node.startLine}
         </dd>
-        {#if details.typeName}
+        {#if details.node.typeName}
           <dt class="text-gray-400">Type</dt>
-          <dd class="truncate font-mono text-gray-700">{details.typeName}</dd>
+          <dd class="truncate font-mono text-gray-700">{details.node.typeName}</dd>
         {/if}
-        {#if details.value != null}
-          <dt class="text-gray-400">Value</dt>
-          <dd
-            class="truncate font-mono text-gray-700"
-            title="Constant value computed by the analysis"
-          >
-            {details.value}
-          </dd>
-        {/if}
-        {#if details.isImplicit}
+        {#if details.node.isImplicit}
           <dt class="text-gray-400">Implicit</dt>
           <dd class="text-gray-700">yes (not written in the code)</dd>
         {/if}
@@ -152,7 +143,7 @@
         </summary>
         <div class="mt-1">
           {#each details.overlays as overlay (overlay.overlay.id)}
-            <NodeRefItem ref={{ ...overlay.overlay, label: overlayLabel(overlay) }} {onSelect} />
+            <NodeRefItem ref={overlay.overlay} label={overlayLabel(overlay)} {onSelect} />
           {/each}
         </div>
       </details>

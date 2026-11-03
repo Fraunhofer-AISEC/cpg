@@ -1,4 +1,4 @@
-import type { CallSiteJSON, FunctionCallStatsJSON, NodeRefJSON, OverlayJSON } from '$lib/types';
+import type { CallSiteJSON, FunctionCallStatsJSON, NodeJSON, OverlayJSON } from '$lib/types';
 
 /** What the code viewer shows about a file without any interaction. */
 export interface FileOverview {
@@ -25,7 +25,7 @@ export function overlayLine(overlay: OverlayJSON): number {
 }
 
 /** The part of the code that stands for a call: the name of its target, or else the whole call. */
-export function callRegion(call: CallSiteJSON): NodeRefJSON {
+export function callRegion(call: CallSiteJSON): NodeJSON {
   return call.callee ?? call.call;
 }
 

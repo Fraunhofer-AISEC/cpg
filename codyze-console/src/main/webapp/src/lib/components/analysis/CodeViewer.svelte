@@ -19,7 +19,7 @@
   } from '$lib/overview';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
-  import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+  import type { NodeDetailsJSON } from '$lib/types';
   import type { FlattenedNode } from '$lib/flatten';
   import { getNodeDetails, getNodeDetailsAt, clearNodeDetailsCache } from '$lib/nodeDetails';
   import {
@@ -87,7 +87,7 @@
     /** The node to inspect initially, e.g. from a deep link */
     selectedNodeId?: string;
     /** Called when a node in another file is selected in the inspector */
-    onNavigateToNode?: (ref: NodeRefJSON) => void;
+    onNavigateToNode?: (ref: NodeJSON) => void;
     /** Additional actions for the inspected node, e.g. asking the agent about it */
     nodeActions?: Snippet<[NodeDetailsJSON]>;
     /**
@@ -205,7 +205,7 @@
     }
   });
 
-  function selectRef(ref: NodeRefJSON) {
+  function selectRef(ref: NodeJSON) {
     if (ref.translationUnitId && ref.translationUnitId !== translationUnit.id && onNavigateToNode) {
       onNavigateToNode(ref);
     } else {
@@ -262,7 +262,7 @@
     hover = null;
   }
 
-  function isInside(node: NodeRefJSON, line: number, column: number): boolean {
+  function isInside(node: NodeJSON, line: number, column: number): boolean {
     if (line < node.startLine || line > node.endLine) return false;
     if (line === node.startLine && column < node.startColumn) return false;
     return !(line === node.endLine && column >= node.endColumn);
@@ -379,8 +379,8 @@
       }
       if (layers.visible.dataflow && inspected?.node.translationUnitId === translationUnit.id) {
         const dataflows = [
-          ...inspected.dataflowFrom.map((ref) => ({ ref, label: 'comes from' })),
-          ...inspected.dataflowTo.map((ref) => ({ ref, label: 'goes to' }))
+          ...inspected.dataflowFrom.map(({ node: ref }) => ({ ref, label: 'comes from' })),
+          ...inspected.dataflowTo.map(({ node: ref }) => ({ ref, label: 'goes to' }))
         ];
         for (const { ref, label } of dataflows) {
           if (ref.translationUnitId !== translationUnit.id || ref.startLine < 1) continue;
@@ -452,17 +452,8 @@
   const conceptTarget = $derived<FlattenedNode | null>(
     inspected && componentName
       ? {
-          id: inspected.node.id,
-          type: inspected.node.type,
-          name: inspected.node.name,
-          code: inspected.node.code,
-          startLine: inspected.node.startLine,
-          startColumn: inspected.node.startColumn,
-          endLine: inspected.node.endLine,
-          endColumn: inspected.node.endColumn,
+          ...inspected.node,
           astChildren: [],
-          prevDFG: [],
-          nextDFG: [],
           depth: 0,
           componentName,
           unitId: translationUnit.id
@@ -562,7 +553,7 @@
   }
 
   // Follows a dataflow of the inspected node to [ref], extending the path, and inspects it
-  function followDataflow(ref: NodeRefJSON, direction: FlowDirection) {
+  function followDataflow(ref: NodeJSON, direction: FlowDirection) {
     if (inspected) focus.follow([inspected.node, ref], direction);
     selectRef(ref);
   }

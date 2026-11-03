@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FunctionCallStatsJSON, NodeRefJSON } from '$lib/types';
+  import type { FunctionCallStatsJSON, NodeJSON } from '$lib/types';
   import { overlaysInFunction, type FileOverview } from '$lib/overview';
 
   /**
@@ -12,7 +12,7 @@
     fileName?: string;
     /** The 1-based line of the selection in the open file, to mark the function containing it */
     selectionLine?: number;
-    onSelect: (fn: NodeRefJSON) => void;
+    onSelect: (fn: NodeJSON) => void;
   }
 
   let { annotations, fileName, selectionLine, onSelect }: Props = $props();

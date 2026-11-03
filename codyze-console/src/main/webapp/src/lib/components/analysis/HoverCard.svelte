@@ -29,13 +29,9 @@
     <p class="mt-1 truncate font-mono text-[11px] text-gray-500">{node.code}</p>
   {/if}
   <dl class="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[11px]">
-    {#if details.typeName}
+    {#if details.node.typeName}
       <dt class="text-gray-400">Type</dt>
-      <dd class="truncate font-mono">{details.typeName}</dd>
-    {/if}
-    {#if details.value != null}
-      <dt class="text-gray-400">Value</dt>
-      <dd class="truncate font-mono">{details.value}</dd>
+      <dd class="truncate font-mono">{details.node.typeName}</dd>
     {/if}
     <dt class="text-gray-400">Dataflow</dt>
     <dd>

@@ -1,34 +1,34 @@
 <script lang="ts">
-  import type { NodeRefJSON } from '$lib/types';
+  import type { NodeJSON, RelatedNodeJSON } from '$lib/types';
   import { getNodeDetails } from '$lib/nodeDetails';
   import NodeRefItem from './NodeRefItem.svelte';
   import DataflowTree from './DataflowTree.svelte';
 
   interface Props {
-    refs: NodeRefJSON[];
+    refs: RelatedNodeJSON[];
     /** Backward ("where does it come from") or forward ("where does it go to") */
     direction: 'from' | 'to';
-    onSelect: (ref: NodeRefJSON) => void;
+    onSelect: (ref: NodeJSON) => void;
     /**
      * Called before selecting a node, with the chain of nodes from the root of the tree to it, so
      * the hops can be followed as a path
      */
-    onFollow?: (chain: NodeRefJSON[], direction: 'from' | 'to') => void;
+    onFollow?: (chain: NodeJSON[], direction: 'from' | 'to') => void;
     /** The nodes on the path to this level, starting with the root, e.g. to detect cycles */
-    ancestors?: NodeRefJSON[];
+    ancestors?: NodeJSON[];
   }
 
   let { refs, direction, onSelect, onFollow, ancestors = [] }: Props = $props();
 
-  function select(ref: NodeRefJSON) {
+  function select(ref: NodeJSON) {
     if (ancestors.length > 0) onFollow?.([...ancestors, ref], direction);
     onSelect(ref);
   }
 
   // The children of expanded items, by node ID
-  let expanded = $state<Record<string, NodeRefJSON[] | 'loading'>>({});
+  let expanded = $state<Record<string, RelatedNodeJSON[] | 'loading'>>({});
 
-  async function toggle(ref: NodeRefJSON) {
+  async function toggle(ref: NodeJSON) {
     if (expanded[ref.id]) {
       delete expanded[ref.id];
       return;
@@ -45,11 +45,11 @@
   </p>
 {:else}
   <ul>
-    {#each refs as ref (ref.id + (ref.label ?? ''))}
+    {#each refs as { node: ref, label } (ref.id + (label ?? ''))}
       {@const isCycle = ancestors.some((a) => a.id === ref.id)}
       {@const children = expanded[ref.id]}
       <li>
-        <NodeRefItem {ref} onSelect={select}>
+        <NodeRefItem {ref} {label} onSelect={select}>
           {#snippet leading()}
             {#if isCycle}
               <span

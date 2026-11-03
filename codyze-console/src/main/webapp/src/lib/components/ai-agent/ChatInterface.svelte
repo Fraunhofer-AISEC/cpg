@@ -28,7 +28,6 @@
     ConceptSuggestionItem,
     Model,
     NodeDetailsJSON,
-    NodeRefJSON,
     OverlayJSON
   } from '$lib/types';
 
@@ -143,7 +142,7 @@
   }
 
   // Opens the file of a node selected in the inspector and inspects the node there
-  function handleNavigateToNode(ref: NodeRefJSON) {
+  function handleNavigateToNode(ref: NodeJSON) {
     handleNodeClick({
       ...ref,
       code: ref.code,
@@ -172,7 +171,7 @@
   ];
 
   // How a node is referred to in questions to the agent
-  function describeNode(n: NodeRefJSON): string {
+  function describeNode(n: NodeJSON): string {
     return `the ${n.type} \`${n.code || n.name}\` (node ID ${n.id}, ${n.fileName}:${n.startLine})`;
   }
 
@@ -181,7 +180,7 @@
   }
 
   // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
-  function selectRef(ref: NodeRefJSON) {
+  function selectRef(ref: NodeJSON) {
     if (ref.translationUnitId && ref.translationUnitId !== selectedTranslationUnit?.id) {
       handleNavigateToNode(ref);
     } else {
@@ -571,7 +570,7 @@
   );
 
   // The function containing the inspected node in the open file, or the node if it is a function
-  const breadcrumbFunction = $derived.by((): NodeRefJSON | null => {
+  const breadcrumbFunction = $derived.by((): NodeJSON | null => {
     const details = focus.details;
     if (!details || details.node.translationUnitId !== openedUnit?.id) return null;
     return (

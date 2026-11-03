@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import kotlinx.serialization.Serializable
 
 /** How well the analysis knows the target of a call. */
@@ -46,7 +47,7 @@ enum class CallStatus {
 /** A function together with its key figures. */
 @Serializable
 data class FunctionCallStatsJSON(
-    val function: NodeRefJSON,
+    val function: NodeJSON,
     val callers: Int,
     val callees: Int,
     val externalCalls: Int,
@@ -60,7 +61,7 @@ data class FunctionCallStatsJSON(
  *   a location.
  */
 @Serializable
-data class CallSiteJSON(val call: NodeRefJSON, val callee: NodeRefJSON?, val status: CallStatus)
+data class CallSiteJSON(val call: NodeJSON, val callee: NodeJSON?, val status: CallStatus)
 
 /**
  * A concept or operation and the node it is attached to.
@@ -70,10 +71,10 @@ data class CallSiteJSON(val call: NodeRefJSON, val callee: NodeRefJSON?, val sta
  */
 @Serializable
 data class OverlayJSON(
-    val overlay: NodeRefJSON,
+    val overlay: NodeJSON,
     val category: String,
-    val underlyingNode: NodeRefJSON?,
-    val concept: NodeRefJSON?,
+    val underlyingNode: NodeJSON?,
+    val concept: NodeJSON?,
 )
 
 /** How well the analysis knows the target of this call, see [CallStatus]. */

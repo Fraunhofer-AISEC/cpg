@@ -43,7 +43,9 @@
     lg: 'px-6 py-3 text-base'
   };
 
-  const combinedClasses = $derived(`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`);
+  const combinedClasses = $derived(
+    `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`
+  );
   const isDisabled = $derived(disabled || loading);
 </script>
 

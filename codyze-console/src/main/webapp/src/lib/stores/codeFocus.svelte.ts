@@ -1,4 +1,4 @@
-import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+import type { NodeDetailsJSON, NodeJSON } from '$lib/types';
 
 /** A section of the inspector that can be revealed, e.g. from the code lens of a function. */
 export type InspectorSection = 'callers' | 'callees' | 'callTargets';
@@ -56,7 +56,7 @@ export class CodeFocus {
    * CodeQL. It is built by following dataflows hop by hop (in the inspector or along the arcs in
    * the code) and stays until it is cleared, so the user can step through it
    */
-  path = $state.raw<NodeRefJSON[]>([]);
+  path = $state.raw<NodeJSON[]>([]);
   /** The index of the inspected node in [path], or -1 if it is not on the path */
   pathIndex = $state(-1);
 
@@ -140,10 +140,10 @@ export class CodeFocus {
    * what comes after it (forwards) or before it (backwards), like taking another branch; otherwise
    * the chain starts a new path. Call this before inspecting the end of the chain.
    */
-  follow(chain: NodeRefJSON[], direction: FlowDirection) {
+  follow(chain: NodeJSON[], direction: FlowDirection) {
     if (chain.length < 2) return;
     const start = this.path.findIndex((step) => step.id === chain[0].id);
-    let path: NodeRefJSON[];
+    let path: NodeJSON[];
     if (start < 0) {
       path = direction === 'to' ? chain : [...chain].reverse();
     } else if (direction === 'to') {
@@ -161,7 +161,7 @@ export class CodeFocus {
    * Returns the step of the path [delta] steps away from the current one, e.g. 1 for the next
    * step. From outside of the path, the first step comes next and the last one before.
    */
-  pathStep(delta: number): NodeRefJSON | null {
+  pathStep(delta: number): NodeJSON | null {
     if (this.path.length === 0) return null;
     const index =
       this.pathIndex < 0 ? (delta > 0 ? 0 : this.path.length - 1) : this.pathIndex + delta;

@@ -61,6 +61,12 @@ export interface NodeJSON {
   nextDFG: EdgeJSON[];
   translationUnitId?: string;
   componentName?: string;
+  /** Whether the node was inferred by the analysis instead of being parsed from source code */
+  isInferred: boolean;
+  /** Whether the node is not written in the source code, e.g. an implicit cast */
+  isImplicit: boolean;
+  /** For a node with a type: the name of its type */
+  typeName: string | null;
 }
 
 export interface EdgeJSON {
@@ -70,27 +76,16 @@ export interface EdgeJSON {
   end: string;
 }
 
-/** A compact reference to a node, used to list and navigate to related nodes. */
-export interface NodeRefJSON {
-  id: string;
-  type: string;
-  name: string;
-  code: string;
-  fileName?: string;
-  startLine: number;
-  startColumn: number;
-  endLine: number;
-  endColumn: number;
-  translationUnitId?: string;
-  componentName?: string;
-  isInferred: boolean;
-  /** How the node relates to the inspected node, e.g. the granularity of a dataflow */
-  label?: string;
+/** A node that is related to the node it was listed for, e.g. a neighbour in the dataflow. */
+export interface RelatedNodeJSON {
+  node: NodeJSON;
+  /** How the node relates to the listed node, e.g. the granularity of a dataflow */
+  label: string | null;
 }
 
 /** A function together with its key figures, see `.../translation-unit/{id}/functions`. */
 export interface FunctionCallStatsJSON {
-  function: NodeRefJSON;
+  function: NodeJSON;
   callers: number;
   callees: number;
   externalCalls: number;
@@ -102,35 +97,32 @@ export type CallStatus = 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
 
 /** A call and how well the analysis knows its target, see `.../translation-unit/{id}/calls`. */
 export interface CallSiteJSON {
-  call: NodeRefJSON;
+  call: NodeJSON;
   /** The expression naming the target (e.g. `fopen` in `fopen(path, "r")`), if it has a location */
-  callee?: NodeRefJSON;
+  callee?: NodeJSON;
   status: CallStatus;
 }
 
 /** A concept or operation, see `.../translation-unit/{id}/overlays`. */
 export interface OverlayJSON {
-  overlay: NodeRefJSON;
+  overlay: NodeJSON;
   /** The area of the overlay, derived from its package, e.g. `crypto` or `file` */
   category: string;
-  underlyingNode?: NodeRefJSON;
+  underlyingNode?: NodeJSON;
   /** For an operation: the concept it belongs to */
-  concept?: NodeRefJSON;
+  concept?: NodeJSON;
 }
 
 /** Everything the backend knows about a single node, see `GET /api/node/{id}`. */
 export interface NodeDetailsJSON {
-  node: NodeRefJSON;
-  typeName?: string;
-  value?: string;
-  isImplicit: boolean;
-  enclosingFunction?: NodeRefJSON;
+  node: NodeJSON;
+  enclosingFunction?: NodeJSON;
   overlays: OverlayJSON[];
-  callTargets: NodeRefJSON[];
-  callers: NodeRefJSON[];
-  callees: NodeRefJSON[];
-  dataflowFrom: NodeRefJSON[];
-  dataflowTo: NodeRefJSON[];
+  callTargets: NodeJSON[];
+  callers: NodeJSON[];
+  callees: NodeJSON[];
+  dataflowFrom: RelatedNodeJSON[];
+  dataflowTo: RelatedNodeJSON[];
   warnings: string[];
 }
 
