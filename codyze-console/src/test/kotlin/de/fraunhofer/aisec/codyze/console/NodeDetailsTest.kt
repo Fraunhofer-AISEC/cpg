@@ -158,6 +158,11 @@ class NodeDetailsTest {
         val warnings = puts.toDetailsJSON().warnings
         assertTrue(warnings.any { "inferred by the analysis" in it }, "$warnings")
         assertTrue(warnings.any { "only declared" in it }, "$warnings")
+
+        // A declaration, e.g. in a header, whose definition in another file is analysed
+        val definition = Function().apply { body = Block() }
+        val declaration = Function().apply { this.definition = definition }
+        assertTrue(declaration.toDetailsJSON().warnings.none { "only declared" in it })
     }
 
     @Test
