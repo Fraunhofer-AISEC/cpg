@@ -157,7 +157,11 @@ fun Edge<*>.toJSON(): EdgeJSON {
 
 /** How well the analysis knows what a [Call] does. */
 enum class CallStatus {
-    /** At least one target has a body, i.e., is part of the analysed code. */
+    /**
+     * At least one target has a body, i.e., is part of the analysed code. For a declaration, the
+     * body of its definition counts, e.g. of a function declared in a header and defined in another
+     * file.
+     */
     RESOLVED,
     /**
      * The targets are known, but none of them has a body, e.g. functions that are only declared in
@@ -178,6 +182,6 @@ val Call.status: CallStatus
     get() =
         when {
             invokes.isEmpty() -> CallStatus.UNRESOLVED
-            invokes.none { it.body != null } -> CallStatus.EXTERNAL
+            invokes.none { (it.definition ?: it).hasBody() } -> CallStatus.EXTERNAL
             else -> CallStatus.RESOLVED
         }

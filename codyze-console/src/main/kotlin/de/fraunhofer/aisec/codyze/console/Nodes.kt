@@ -636,7 +636,8 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
             warnings +=
                 "The target '${it.name}' is not part of the analysed code (inferred); its behaviour is unknown."
         }
-    if (this is Function && body == null) {
+    // A declaration whose definition (e.g. in another file) is analysed is not only declared
+    if (this is Function && !(definition ?: this).hasBody()) {
         warnings +=
             "This function is only declared, its implementation is not part of the analysis."
     }

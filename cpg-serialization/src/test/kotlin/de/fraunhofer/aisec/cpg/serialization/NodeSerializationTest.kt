@@ -87,6 +87,8 @@ class NodeSerializationTest {
         assertEquals(CallStatus.RESOLVED, callTo(defined).status)
         // A virtual call can reach a declaration without a body next to an override
         assertEquals(CallStatus.RESOLVED, callTo(declared, defined).status)
+        // A declaration, e.g. in a header, whose definition in another file is analysed
+        assertEquals(CallStatus.RESOLVED, callTo(Function().apply { definition = defined }).status)
     }
 
     @Test
