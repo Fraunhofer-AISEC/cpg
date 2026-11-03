@@ -375,9 +375,13 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     objectType(parts.joinToString("; ", "interface{", "}"))
                 }
                 is GoStandardLibrary.Ast.MapType -> {
-                    // We cannot properly represent Go's built-in map types, yet so we have
-                    // to make a shortcut here and represent it as a Java-like map<K, V> type.
-                    return objectType("map", listOf(typeOf(type.key), typeOf(type.value)))
+                    // We represent Go's built-in map as a Java-like map<K, V> type. It needs its
+                    // own type rather than a plain object type so that subscripting it yields the
+                    // value type; an ObjectType dereferences to an unknown type, which leaves
+                    // every `m[k]` untyped.
+                    val mapType = GoMapType("map", typeOf(type.key), typeOf(type.value), language)
+                    mapType.applyMetadata(this, "map", rawNode = type, doNotPrependNamespace = true)
+                    return mapType
                 }
                 is GoStandardLibrary.Ast.StarExpr -> {
                     typeOf(type.x).pointer()
