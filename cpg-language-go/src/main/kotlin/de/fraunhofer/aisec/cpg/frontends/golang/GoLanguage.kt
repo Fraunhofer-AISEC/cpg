@@ -185,6 +185,23 @@ open class GoLanguage :
             return DirectMatch
         }
 
+        // A value is assignable to a variable whose type has the same underlying type, as long as
+        // at least one of the two is not a named type (see https://go.dev/ref/spec#Assignability).
+        // Both directions occur constantly in practice: `encoding/asn1` passes an
+        // `ObjectIdentifier` to a `[]int` parameter, and `crypto/cryptobyte` passes a `[]byte` to
+        // a `String` parameter.
+        //
+        // Requiring the types to be written identically instead does not merely lose precision:
+        // the call no longer matches its declaration, a body-less stub is inferred in its place,
+        // and everything reachable through that call is lost. Two *different* named types sharing
+        // an underlying type stay incompatible, as Go requires.
+        if (!type.namedType || !targetType.namedType) {
+            val underlying = type.underlyingType
+            if (underlying != null && underlying == targetType.underlyingType) {
+                return DirectMatch
+            }
+        }
+
         // If we encounter an auto type as part of the function declaration, we accept this as any
         // type
         if (
