@@ -84,8 +84,9 @@ class ConsoleService {
     private var queryTreeParentMap: Map<String, String> = emptyMap()
 
     // Lookup of nodes (including overlays) by ID, built lazily on the first node request and
-    // rebuilt when a node is missing (see getNodeDetails)
-    private var nodeIndex: Map<Uuid, Node>? = null
+    // rebuilt when a node is missing (see getNodeDetails). Requests are handled concurrently, so
+    // only complete maps are assigned, and @Volatile makes a new map visible to all of them
+    @Volatile private var nodeIndex: Map<Uuid, Node>? = null
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -283,7 +284,9 @@ class ConsoleService {
     fun getNodeDetails(nodeId: String): NodeDetailsJSON? {
         val id = Uuid.parseOrNull(nodeId) ?: return null
         // Overlays can be added to the graph without the console noticing, e.g. by the MCP tools
-        // that apply the concepts of the agent, so a missing node leads to a fresh index
+        // that apply the concepts of the agent, so a missing node leads to a fresh index. Unknown
+        // IDs are not remembered: the ID of a node is derived from its hash code and can change
+        // when the node changes, so an ID that is unknown now can belong to a node later
         val node = nodeIndex?.get(id) ?: buildNodeIndex()?.get(id)
         return node?.toDetailsJSON()
     }
