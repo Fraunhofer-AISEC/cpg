@@ -691,11 +691,14 @@ fun TranslationUnit.toFunctionCallStatsJSON(): List<FunctionCallStatsJSON> =
             )
         }
 
-/** The calls written in this translation unit, with the status of their targets. */
+/**
+ * The calls written in this translation unit, with the status of their targets. Operator calls and
+ * implicit calls are left out, since they are not written as calls in the code.
+ */
 fun TranslationUnit.toCallSitesJSON(): List<CallSiteJSON> =
     nodes
-        .filter { it.isInFileOf(this) }
-        .explicitCalls()
+        .filterIsInstance<Call>()
+        .filter { it !is OperatorCall && !it.isImplicit && it.isInFileOf(this) }
         .map { call ->
             CallSiteJSON(
                 call = call.toRefJSON(),

@@ -27,8 +27,6 @@ package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.sarif.Region
 
 /**
@@ -44,7 +42,10 @@ fun TranslationUnit.nodeAt(line: Int, column: Int): Node? {
         if (node is TranslationUnit || !node.isInFileOf(this)) continue
         val region = node.location?.region ?: continue
         if (!region.contains(line, column)) continue
-        val span = region.span()
+        // The size of the region, where any additional line outweighs any number of columns
+        val span =
+            (region.endLine - region.startLine).toLong() * Int.MAX_VALUE +
+                (region.endColumn - region.startColumn)
         if (span < bestSpan || span == bestSpan && (best?.isImplicit == true || !node.isImplicit)) {
             best = node
             bestSpan = span
@@ -60,10 +61,6 @@ private fun Region.contains(line: Int, column: Int): Boolean {
     return true
 }
 
-/** The size of a region, where any additional line outweighs any number of columns. */
-private fun Region.span(): Long =
-    (endLine - startLine).toLong() * Int.MAX_VALUE + (endColumn - startColumn)
-
 /**
  * Whether this node is located in the file of the given translation unit. The AST of a translation
  * unit can also contain nodes of other files, e.g. the declarations of included headers in C (see
@@ -75,7 +72,3 @@ fun Node.isInFileOf(translationUnit: TranslationUnit): Boolean {
     val file = translationUnit.location?.artifactLocation ?: return true
     return location.artifactLocation == file
 }
-
-/** The calls written in the code, i.e. without operator calls and implicit calls. */
-internal fun Iterable<Node>.explicitCalls(): List<Call> =
-    filterIsInstance<Call>().filter { it !is OperatorCall && !it.isImplicit }
