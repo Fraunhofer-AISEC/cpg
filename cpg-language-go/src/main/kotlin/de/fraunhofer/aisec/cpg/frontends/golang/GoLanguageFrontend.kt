@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
 import de.fraunhofer.aisec.cpg.passes.GoInterfaceSatisfactionPass
+import de.fraunhofer.aisec.cpg.passes.GoMethodBindingPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -62,6 +63,7 @@ import java.net.URI
  * This is needed because we cannot directly export Go structs and pointers to C.
  */
 @RegisterExtraPass(GoExtraPass::class)
+@RegisterExtraPass(GoMethodBindingPass::class)
 @RegisterExtraPass(GoInterfaceSatisfactionPass::class)
 @ReplacePass(
     lang = GoLanguage::class,
@@ -228,16 +230,23 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
             } else {
                 // We need to be careful with method declarations. We need to put them in the
                 // respective name scope of the record and NOT on the global scope / namespace scope
-                // TODO: this is broken if we see the declaration of the method before the class :(
                 if (declaration is Method) {
-                    declaration.recordDeclaration?.let {
-                        scopeManager.enterScope(it)
+                    val record = declaration.recordDeclaration
+                    if (record != null) {
+                        scopeManager.enterScope(record)
                         scopeManager.addDeclaration(declaration)
-                        scopeManager.leaveScope(it)
-                        // But still add it to the AST of the namespace so our AST walker can find
-                        // it
-                        p.declarations += declaration
+                        scopeManager.leaveScope(record)
                     }
+                    // The method has to end up in the AST of the namespace in either case, so that
+                    // the AST walker can find it. The receiver's record is only known here if it
+                    // has already been parsed, and within a Go package a method routinely precedes
+                    // the type it belongs to -- miekg/dns declares the methods of nearly every RR
+                    // type in the generated ztypes.go while the types themselves live in types.go.
+                    // Keying this on the record meant such a method was added neither to a scope
+                    // nor to the AST, i.e. it was dropped from the graph, and whether that happened
+                    // depended on the order in which the files were parsed. GoMethodBindingPass
+                    // binds the ones left over once the whole component has been parsed.
+                    p.declarations += declaration
                 } else if (declaration != null) {
                     scopeManager.addDeclaration(declaration)
                     p.addDeclaration(declaration)
