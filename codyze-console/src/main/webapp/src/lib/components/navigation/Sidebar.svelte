@@ -50,11 +50,7 @@
     ? 'w-12'
     : 'w-64'}"
 >
-  <div
-    class="flex h-16 items-center justify-between border-b border-gray-200 {collapsed
-      ? 'px-2'
-      : 'px-4'}"
-  >
+  <div class="flex h-16 items-center justify-between border-b border-gray-200 {collapsed ? 'px-2' : 'px-4'}">
     {#if !collapsed}
       <div class="text-xl font-semibold text-blue-600">Codyze</div>
     {/if}
@@ -103,14 +99,8 @@
               title={collapsed ? item.name : "The module 'cpg-ai' is not enabled."}
             >
               {#if item.icon === 'robot'}
-                <svg
-                  class={collapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}
-                  fill="currentColor"
-                  viewBox="0 -960 960 960"
-                >
-                  <path
-                    d="M160-360q-50 0-85-35t-35-85q0-50 35-85t85-35v-80q0-33 23.5-56.5T240-760h120q0-50 35-85t85-35q50 0 85 35t35 85h120q33 0 56.5 23.5T800-680v80q50 0 85 35t35 85q0 50-35 85t-85 35v160q0 33-23.5 56.5T720-120H240q-33 0-56.5-23.5T160-200v-160Zm200-80q25 0 42.5-17.5T420-500q0-25-17.5-42.5T360-560q-25 0-42.5 17.5T300-500q0 25 17.5 42.5T360-440Zm240 0q25 0 42.5-17.5T660-500q0-25-17.5-42.5T600-560q-25 0-42.5 17.5T540-500q0 25 17.5 42.5T600-440ZM320-280h320v-80H320v80Zm-80 80h480v-480H240v480Zm240-240Z"
-                  />
+                <svg class="{collapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}" fill="currentColor" viewBox="0 -960 960 960">
+                  <path d="M160-360q-50 0-85-35t-35-85q0-50 35-85t85-35v-80q0-33 23.5-56.5T240-760h120q0-50 35-85t85-35q50 0 85 35t35 85h120q33 0 56.5 23.5T800-680v80q50 0 85 35t35 85q0 50-35 85t-85 35v160q0 33-23.5 56.5T720-120H240q-33 0-56.5-23.5T160-200v-160Zm200-80q25 0 42.5-17.5T420-500q0-25-17.5-42.5T360-560q-25 0-42.5 17.5T300-500q0 25 17.5 42.5T360-440Zm240 0q25 0 42.5-17.5T660-500q0-25-17.5-42.5T600-560q-25 0-42.5 17.5T540-500q0 25 17.5 42.5T600-440ZM320-280h320v-80H320v80Zm-80 80h480v-480H240v480Zm240-240Z" />
                 </svg>
               {/if}
               {#if !collapsed}{item.name}{/if}
@@ -128,15 +118,8 @@
                 : 'text-gray-700 hover:text-gray-900'}"
             >
               {#if item.icon === 'robot'}
-                <svg
-                  class="drop-shadow-sm {collapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}"
-                  style="color: #975ff1"
-                  fill="currentColor"
-                  viewBox="0 -960 960 960"
-                >
-                  <path
-                    d="M160-360q-50 0-85-35t-35-85q0-50 35-85t85-35v-80q0-33 23.5-56.5T240-760h120q0-50 35-85t85-35q50 0 85 35t35 85h120q33 0 56.5 23.5T800-680v80q50 0 85 35t35 85q0 50-35 85t-85 35v160q0 33-23.5 56.5T720-120H240q-33 0-56.5-23.5T160-200v-160Zm200-80q25 0 42.5-17.5T420-500q0-25-17.5-42.5T360-560q-25 0-42.5 17.5T300-500q0 25 17.5 42.5T360-440Zm240 0q25 0 42.5-17.5T660-500q0-25-17.5-42.5T600-560q-25 0-42.5 17.5T540-500q0 25 17.5 42.5T600-440ZM320-280h320v-80H320v80Zm-80 80h480v-480H240v480Zm240-240Z"
-                  />
+                <svg class="drop-shadow-sm {collapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}" style="color: #975ff1" fill="currentColor" viewBox="0 -960 960 960">
+                  <path d="M160-360q-50 0-85-35t-35-85q0-50 35-85t85-35v-80q0-33 23.5-56.5T240-760h120q0-50 35-85t85-35q50 0 85 35t35 85h120q33 0 56.5 23.5T800-680v80q50 0 85 35t35 85q0 50-35 85t-85 35v160q0 33-23.5 56.5T720-120H240q-33 0-56.5-23.5T160-200v-160Zm200-80q25 0 42.5-17.5T420-500q0-25-17.5-42.5T360-560q-25 0-42.5 17.5T300-500q0 25 17.5 42.5T360-440Zm240 0q25 0 42.5-17.5T660-500q0-25-17.5-42.5T600-560q-25 0-42.5 17.5T540-500q0 25 17.5 42.5T600-440ZM320-280h320v-80H320v80Zm-80 80h480v-480H240v480Zm240-240Z" />
                 </svg>
               {:else}
                 <svg
@@ -174,11 +157,7 @@
                 </svg>
               {/if}
               {#if !collapsed}
-                <span
-                  class={item.icon === 'robot'
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'
-                    : ''}>{item.name}</span
-                >
+                <span class={item.icon === 'robot' ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent' : ''}>{item.name}</span>
               {/if}
             </a>
           {/if}
@@ -195,12 +174,7 @@
         ? 'p-2'
         : 'px-4 py-2'}"
     >
-      <svg
-        class={collapsed ? 'h-5 w-5' : 'mr-2 -ml-1 h-4 w-4'}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
+      <svg class={collapsed ? 'h-5 w-5' : 'mr-2 -ml-1 h-4 w-4'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
       </svg>
       {#if !collapsed}New Project{/if}
