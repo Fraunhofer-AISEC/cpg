@@ -61,6 +61,11 @@
   );
   const filtered = $derived(!!callFilter && !!callStatus);
 
+  // The number of shown nodes, and the total if the backend limited the list
+  function count(shown: number, total: number): string {
+    return total > shown ? `${shown} of ${total}` : `${shown}`;
+  }
+
   const calls = $derived(
     details
       ? [
@@ -68,12 +73,14 @@
             id: 'callTargets' as const,
             title: 'Calls',
             refs: details.callTargets,
+            total: details.callTargetCount,
             hint: 'Functions this call invokes'
           },
           {
             id: 'callers' as const,
             title: 'Called by',
             refs: details.callers,
+            total: details.callerCount,
             hint: 'Calls of this function'
           },
           {
@@ -84,6 +91,8 @@
                 ? 'External calls in body'
                 : 'Unresolved calls in body',
             refs: filteredCallees,
+            // The total of a filtered list is unknown, the filter only applies to the listed calls
+            total: filtered ? filteredCallees.length : details.calleeCount,
             hint: 'Calls made by this function'
           }
         ].filter((group) => group.refs.length > 0)
@@ -178,7 +187,7 @@
           class="cursor-pointer text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
           title={group.hint}
         >
-          {group.title} ({group.refs.length})
+          {group.title} ({count(group.refs.length, group.total)})
         </summary>
         {#if group.id === 'callees' && filtered}
           <button
@@ -203,7 +212,10 @@
         class="cursor-pointer text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
         title="Direct dataflow predecessors; expand to follow them further back"
       >
-        Where does the value come from? ({details.dataflowFrom.length})
+        Where does the value come from? ({count(
+          details.dataflowFrom.length,
+          details.dataflowFromCount
+        )})
       </summary>
       <div class="mt-1">
         {#key details.node.id}
@@ -222,7 +234,7 @@
         class="cursor-pointer text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
         title="Direct dataflow successors; expand to follow them further"
       >
-        Where does the value go? ({details.dataflowTo.length})
+        Where does the value go? ({count(details.dataflowTo.length, details.dataflowToCount)})
       </summary>
       <div class="mt-1">
         {#key details.node.id}

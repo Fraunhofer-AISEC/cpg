@@ -305,7 +305,8 @@ private const val MAX_RELATED_NODES = 200
  * its direct dataflows, attached concepts and operations, and where the analysis is uncertain.
  *
  * The dataflows only contain the direct neighbours, so that the frontend can expand them lazily
- * into a tree.
+ * into a tree. Each list holds at most [MAX_RELATED_NODES] nodes; the `…Count` properties have the
+ * number of nodes before this limit, so that the UI can tell that a list is incomplete.
  *
  * @property callTargets For a [Call]: the functions it invokes.
  * @property callers For a [Function]: the calls that invoke it.
@@ -323,6 +324,11 @@ data class NodeDetailsJSON(
     val dataflowFrom: List<RelatedNodeJSON>,
     val dataflowTo: List<RelatedNodeJSON>,
     val warnings: List<String>,
+    val callTargetCount: Int,
+    val callerCount: Int,
+    val calleeCount: Int,
+    val dataflowFromCount: Int,
+    val dataflowToCount: Int,
 )
 
 /** A function together with its key figures. */
@@ -615,6 +621,10 @@ fun RequirementBuilder.toJSON(
     )
 }
 
+/**
+ * Everything relevant to inspect this node, see [NodeDetailsJSON]: its calls, its direct dataflows,
+ * its concepts and operations, and warnings where the analysis is incomplete or uncertain.
+ */
 fun Node.toDetailsJSON(): NodeDetailsJSON {
     val warnings = mutableListOf<String>()
     if (isInferred) {
@@ -640,17 +650,24 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
             "This function is only declared, its implementation is not part of the analysis."
     }
 
+    val callers = (this as? Function)?.calledBy.orEmpty()
+    val callees = (this as? Function)?.body?.calls.orEmpty()
     return NodeDetailsJSON(
         node = toRefJSON(),
         enclosingFunction = (this as? Function ?: firstParentOrNull<Function>())?.toRefJSON(),
         overlays = overlays.mapNotNull { it.toOverlayJSON() },
         callTargets = callTargets.limited { it.toRefJSON() },
-        callers = (this as? Function)?.calledBy.orEmpty().limited { it.toRefJSON() },
-        callees = (this as? Function)?.body?.calls.orEmpty().limited { it.toRefJSON() },
+        callers = callers.limited { it.toRefJSON() },
+        callees = callees.limited { it.toRefJSON() },
         dataflowFrom =
             prevDFGEdges.limited { RelatedNodeJSON(it.start.toRefJSON(), it.describe()) },
         dataflowTo = nextDFGEdges.limited { RelatedNodeJSON(it.end.toRefJSON(), it.describe()) },
         warnings = warnings,
+        callTargetCount = callTargets.size,
+        callerCount = callers.size,
+        calleeCount = callees.size,
+        dataflowFromCount = prevDFGEdges.size,
+        dataflowToCount = nextDFGEdges.size,
     )
 }
 
@@ -680,7 +697,11 @@ fun TranslationUnit.toFunctionCallStatsJSON(): List<FunctionCallStatsJSON> =
     functions
         .filter { !it.isImplicit && it.body != null && it.isInFileOf(this) }
         .map { function ->
-            val statuses = function.body.calls.filter { it !is OperatorCall }.map { it.status }
+            // The calls written in the code, like the call sites (see toCallSitesJSON)
+            val statuses =
+                function.body.calls
+                    .filter { it !is OperatorCall && !it.isImplicit }
+                    .map { it.status }
             FunctionCallStatsJSON(
                 function = function.toRefJSON(),
                 callers = function.calledBy.size,
