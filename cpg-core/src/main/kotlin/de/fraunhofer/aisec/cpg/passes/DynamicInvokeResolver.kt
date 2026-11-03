@@ -157,24 +157,30 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     continue
                 }
             }
-            // A function can also reach the call site as part of a larger object rather than on
-            // its own: stored in an array, a map or a field, as in a table of constructors
+            // A function can also reach the call site as part of a container rather than on its
+            // own: stored in an array or a map, as in a table of constructors
             // `var TypeToRR = map[uint16]func() RR{...}` that is later read back and invoked. The
-            // DFG does record those flows, but with a partial granularity naming the index or
-            // field, so following only full flows stops at the first container and the call
-            // appears to have no target at all.
+            // DFG does record that flow, but with a partial granularity naming the index, so
+            // following only full flows stops at the container and the call appears to have no
+            // target at all.
             //
-            // We therefore follow partial flows as well. This over-approximates -- a value stored
-            // under one index may be reported for a read of another -- but the candidate still has
-            // to match the function pointer's signature, and for a call graph an extra possible
-            // target is the safe direction, while a missing one silently removes everything
-            // reachable through it.
+            // We therefore follow partial flows out of a container as well. This
+            // over-approximates -- a value stored under one index may be reported for a read of
+            // another -- but the candidate still has to match the function pointer's signature,
+            // and for a call graph an additional possible target is the safe direction while a
+            // missing one silently removes everything reachable through it.
+            //
+            // We deliberately do not do the same for a member access. Its partial flow leads to
+            // the *base*, i.e. to the whole object, which would merge every field of that object
+            // into one set of candidates and lose which function pointer a particular field was
+            // assigned. The write-usages of the field below are the precise answer for that case.
+            val followPartial = curr !is MemberAccess
             val prevDFGToPush =
                 curr.prevDFGEdges.mapFilteredTo(
                     mutableListOf(),
                     {
                         it.granularity is FullDataflowGranularity ||
-                            it.granularity is PartialDataflowGranularity<*>
+                            (followPartial && it.granularity is PartialDataflowGranularity<*>)
                     },
                 ) {
                     it.start
