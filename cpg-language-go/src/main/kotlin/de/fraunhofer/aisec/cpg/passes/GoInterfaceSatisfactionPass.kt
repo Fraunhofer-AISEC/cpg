@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+import de.fraunhofer.aisec.cpg.frontends.golang.embeddedStructs
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
@@ -151,11 +152,37 @@ class GoInterfaceSatisfactionPass(ctx: TranslationContext) : ComponentPass(ctx) 
             }
         if (required.isEmpty()) return
 
+        // Embedding promotes the embedded type's methods into the embedding type's method set, so
+        // the set has to be closed over embedded structs before it can be compared against an
+        // interface's requirements. miekg/dns relies on this throughout: `type CDNSKEY struct {
+        // DNSKEY }` declares no methods of its own at all and satisfies `RR` purely through
+        // DNSKEY. Without the closure such a type implements nothing.
+        val methodSets = mutableMapOf<Record, Set<MethodKey>>()
+
+        fun methodSetOf(record: Record, seen: MutableSet<Record>): Set<MethodKey> {
+            methodSets[record]?.let {
+                return it
+            }
+            if (!seen.add(record)) {
+                // Embedding cannot legally be cyclic in Go, but we must not loop on a graph that
+                // says otherwise.
+                return byReceiver[record.name.localName] ?: record.methodKeys()
+            }
+            val own = byReceiver[record.name.localName] ?: record.methodKeys()
+            val all = own.toMutableSet()
+            for (embedded in record.embeddedStructs) {
+                all += methodSetOf(embedded, seen)
+            }
+            seen.remove(record)
+            methodSets[record] = all
+            return all
+        }
+
         var added = 0
         for (record in concretes) {
             // Prefer the receiver-based method set; fall back to the record's own
             // list for types whose methods are already attached.
-            val provided = byReceiver[record.name.localName] ?: record.methodKeys()
+            val provided = methodSetOf(record, mutableSetOf())
             if (provided.isEmpty()) continue
 
             for ((iface, needed) in required) {

@@ -25,10 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+import de.fraunhofer.aisec.cpg.frontends.HasImplicitPointerToArrayIndexing
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
@@ -81,7 +83,27 @@ class Subscription : Expression(), HasBase, HasType.TypeObserver {
     private fun getSubscriptType(arrayType: Type): Type {
         return when (subscriptExpression) {
             is Range -> arrayType
-            else -> arrayType.dereference()
+            else -> {
+                val dereferenced = arrayType.dereference()
+                // In a language that implicitly dereferences a pointer to an array on indexing,
+                // `a[i]` means `(*a)[i]`, so a single step only gets us from the pointer to the
+                // array and we still have to index it. Go's `s *[16]uint32` is the common case:
+                // `s[0]` is a `uint32`, not a `[16]uint32`.
+                // Both arrays and pointers are modelled as a PointerType, so the origin has to be
+                // checked: this applies to a *pointer* holding an *array*, and must not fire for a
+                // slice of slices such as `[][]byte`, where one step is correct.
+                if (
+                    language is HasImplicitPointerToArrayIndexing &&
+                        arrayType is PointerType &&
+                        arrayType.pointerOrigin == PointerType.PointerOrigin.POINTER &&
+                        dereferenced is PointerType &&
+                        dereferenced.pointerOrigin == PointerType.PointerOrigin.ARRAY
+                ) {
+                    dereferenced.dereference()
+                } else {
+                    dereferenced
+                }
+            }
         }
     }
 
