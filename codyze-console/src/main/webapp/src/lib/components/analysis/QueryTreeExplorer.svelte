@@ -202,7 +202,7 @@
       queryTree.nodeValues.length
     );
     displayedNodeCount = newCount;
-    
+
     if (newCount >= queryTree.nodeValues.length) {
       showingAllNodes = true;
     }
@@ -211,7 +211,7 @@
   // Function to show all node values at once
   function showAllNodes() {
     if (!queryTree?.nodeValues) return;
-    
+
     displayedNodeCount = queryTree.nodeValues.length;
     showingAllNodes = true;
   }
@@ -412,20 +412,20 @@
               <QueryTreeNodeValue {node} {baseUrl} queryTreeId={queryTree?.id} />
             {/each}
           </div>
-          
+
           <!-- Load more button for node values -->
           {#if displayedNodeCount < queryTree.nodeValues.length}
             <div class="mt-3 flex justify-center space-x-2">
               <button
                 onclick={loadMoreNodes}
-                class="inline-flex items-center rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 shadow-sm hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                class="inline-flex items-center rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 shadow-sm hover:bg-purple-100 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:outline-none"
               >
                 Show more ({displayedNodeCount} of {queryTree.nodeValues.length})
               </button>
               {#if queryTree.nodeValues.length - displayedNodeCount > NODE_VALUES_BATCH_SIZE}
                 <button
                   onclick={showAllNodes}
-                  class="inline-flex items-center rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 shadow-sm hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                  class="inline-flex items-center rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 shadow-sm hover:bg-purple-100 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:outline-none"
                 >
                   Show all {queryTree.nodeValues.length}
                 </button>

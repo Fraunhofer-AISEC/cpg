@@ -1,4 +1,4 @@
-import type { NodePathsJSON, NodeRefJSON } from '$lib/types';
+import type { NodePathsJSON, NodeJSON } from '$lib/types';
 
 /**
  * Slices of the program dependence graph (PDG) of a function: the statements that affect a
@@ -21,7 +21,7 @@ export interface GraphNode {
   /** The ID of the statement, which is also its node ID */
   id: string;
   kind: GraphNodeKind;
-  node: NodeRefJSON;
+  node: NodeJSON;
   startLine: number;
   endLine: number;
   code: string;
@@ -48,7 +48,7 @@ export interface GraphSlice {
   root: string;
   direction: GraphDirection;
   hops: number;
-  function: NodeRefJSON | null;
+  function: NodeJSON | null;
   nodes: GraphNode[];
   edges: GraphEdge[];
   truncated: boolean;

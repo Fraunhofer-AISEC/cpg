@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { NodeRefJSON } from '$lib/types';
+  import type { NodeJSON } from '$lib/types';
   import {
     describeDependences,
     locationOf,
@@ -18,9 +18,9 @@
   interface Props {
     panel: GraphPanel;
     /** Inspects the node of a statement, opening its file if it is in another one */
-    onInspect: (node: NodeRefJSON) => void;
+    onInspect: (node: NodeJSON) => void;
     /** Asks the agent about the node of a statement */
-    onAsk: (node: NodeRefJSON) => void;
+    onAsk: (node: NodeJSON) => void;
     /** Called when a statement is clicked in the graph, to show it in the code */
     onSelectNode?: (node: GraphNode) => void;
   }

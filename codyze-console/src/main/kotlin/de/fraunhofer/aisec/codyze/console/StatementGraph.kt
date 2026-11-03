@@ -40,6 +40,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Switch
+import de.fraunhofer.aisec.cpg.serialization.CallStatus
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.status
+import de.fraunhofer.aisec.cpg.serialization.toRefJSON
 import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
 
@@ -80,7 +84,7 @@ enum class GraphEdgeKind {
 data class GraphNodeJSON(
     val id: String,
     val kind: GraphNodeKind,
-    val node: NodeRefJSON,
+    val node: NodeJSON,
     val startLine: Int,
     val endLine: Int,
     val code: String,
@@ -117,7 +121,7 @@ data class GraphSliceJSON(
     val direction: SliceDirection,
     val hops: Int,
     /** The function the slice is limited to */
-    val function: NodeRefJSON?,
+    val function: NodeJSON?,
     val nodes: List<GraphNodeJSON>,
     val edges: List<GraphEdgeJSON>,
     /** Whether statements are missing because the slice reached the upper bound of nodes */

@@ -1,5 +1,9 @@
 <script lang="ts">
-  import type { ConceptSuggestionItem, OperationSuggestionItem, SuggestionItemStatus } from '$lib/types';
+  import type {
+    ConceptSuggestionItem,
+    OperationSuggestionItem,
+    SuggestionItemStatus
+  } from '$lib/types';
 
   interface Props {
     items: ConceptSuggestionItem[];
@@ -32,9 +36,7 @@
   function setConceptStatus(idx: number, status: SuggestionItemStatus) {
     const concept = items[idx];
     const propagatedOps = concept.operations.map((op) =>
-      op.status === 'pending' || status !== 'accepted'
-        ? { ...op, status }
-        : op
+      op.status === 'pending' || status !== 'accepted' ? { ...op, status } : op
     );
     items[idx] = { ...concept, status, operations: propagatedOps };
   }
@@ -49,7 +51,10 @@
     items = items.map((item) => ({
       ...item,
       status: 'accepted' as SuggestionItemStatus,
-      operations: item.operations.map((op) => ({ ...op, status: 'accepted' as SuggestionItemStatus })),
+      operations: item.operations.map((op) => ({
+        ...op,
+        status: 'accepted' as SuggestionItemStatus
+      }))
     }));
   }
 
@@ -57,7 +62,10 @@
     items = items.map((item) => ({
       ...item,
       status: 'rejected' as SuggestionItemStatus,
-      operations: item.operations.map((op) => ({ ...op, status: 'rejected' as SuggestionItemStatus })),
+      operations: item.operations.map((op) => ({
+        ...op,
+        status: 'rejected' as SuggestionItemStatus
+      }))
     }));
   }
 
@@ -66,7 +74,7 @@
       .filter((item) => item.status === 'accepted')
       .map((item) => ({
         ...item,
-        operations: item.operations.filter((op) => op.status === 'accepted'),
+        operations: item.operations.filter((op) => op.status === 'accepted')
       }));
     onApplySuggestions?.(accepted);
   }
@@ -87,8 +95,10 @@
 
 <div class="flex h-full flex-col text-xs">
   <!-- Header -->
-  <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2">
-    <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Suggestions</span>
+  <div
+    class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2"
+  >
+    <span class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Suggestions</span>
     <span
       class="rounded-full px-2 py-0.5 text-[11px] font-semibold {pendingCount > 0
         ? 'bg-yellow-100 text-yellow-700'
@@ -115,13 +125,17 @@
   {/if}
 
   {#if items.length === 0}
-    <p class="p-4 text-center italic text-gray-400">No suggestions</p>
+    <p class="p-4 text-center text-gray-400 italic">No suggestions</p>
   {:else}
     <ul class="flex-1 overflow-y-auto py-1">
       {#each items as item, idx (idx)}
         {@const expanded = expandedConcepts.has(idx)}
         {@const conceptActive = isActive(item.suggestion.nodeId)}
-        <li class="mx-1 mb-1 overflow-hidden rounded border {conceptActive ? 'border-blue-400 bg-blue-50/30' : 'border-gray-200 bg-white'}">
+        <li
+          class="mx-1 mb-1 overflow-hidden rounded border {conceptActive
+            ? 'border-blue-400 bg-blue-50/30'
+            : 'border-gray-200 bg-white'}"
+        >
           <!-- Concept header -->
           <div class="flex items-center gap-1.5 px-2 py-1.5">
             <button
@@ -141,7 +155,11 @@
               </svg>
             </button>
 
-            <span class="shrink-0 rounded px-1 py-0.5 font-mono text-[10px] font-semibold {statusBadge(item.status)}">
+            <span
+              class="shrink-0 rounded px-1 py-0.5 font-mono text-[10px] font-semibold {statusBadge(
+                item.status
+              )}"
+            >
               Concept
             </span>
 
@@ -161,7 +179,13 @@
                 type="button"
                 aria-label="Accept"
               >
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  stroke-width="2.5"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </button>
@@ -171,14 +195,22 @@
                 type="button"
                 aria-label="Reject"
               >
-                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  stroke-width="2.5"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             {:else}
               <button
                 onclick={() => setConceptStatus(idx, 'pending')}
-                class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold {statusBadge(item.status)} transition-opacity hover:opacity-70"
+                class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold {statusBadge(
+                  item.status
+                )} transition-opacity hover:opacity-70"
                 type="button"
                 aria-label="Reset"
               >
@@ -190,12 +222,18 @@
           {#if expanded}
             <div class="border-t border-gray-100 bg-gray-50/60 px-3 py-2">
               {#if item.suggestion.description}
-                <p class="mb-2 text-[11px] leading-snug text-gray-700">{item.suggestion.description}</p>
+                <p class="mb-2 text-[11px] leading-snug text-gray-700">
+                  {item.suggestion.description}
+                </p>
               {/if}
 
               {#if item.suggestion.properties.length > 0}
                 <div class="mb-2">
-                  <div class="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">Properties</div>
+                  <div
+                    class="mb-0.5 text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
+                  >
+                    Properties
+                  </div>
                   <ul class="space-y-0.5">
                     {#each item.suggestion.properties as prop}
                       <li class="flex items-start gap-1.5 font-mono text-[11px]">
@@ -211,15 +249,23 @@
               {/if}
 
               {#if item.operations.length > 0}
-                <div class="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                <div class="mb-0.5 text-[10px] font-semibold tracking-wide text-gray-500 uppercase">
                   Operations ({item.operations.length})
                 </div>
                 <ul class="space-y-1">
                   {#each item.operations as opItem, opIdx}
                     {@const opActive = isActive(opItem.operation.nodeId)}
-                    <li class="rounded border {opActive ? 'border-blue-400 bg-blue-50/40' : 'border-gray-200 bg-white'} p-1.5">
+                    <li
+                      class="rounded border {opActive
+                        ? 'border-blue-400 bg-blue-50/40'
+                        : 'border-gray-200 bg-white'} p-1.5"
+                    >
                       <div class="flex items-center gap-1.5">
-                        <span class="shrink-0 rounded px-1 py-0.5 font-mono text-[10px] font-semibold {statusBadge(opItem.status)}">
+                        <span
+                          class="shrink-0 rounded px-1 py-0.5 font-mono text-[10px] font-semibold {statusBadge(
+                            opItem.status
+                          )}"
+                        >
                           Op
                         </span>
                         <button
@@ -237,8 +283,18 @@
                             type="button"
                             aria-label="Accept operation"
                           >
-                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            <svg
+                              class="h-3 w-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              stroke-width="2.5"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                           </button>
                           <button
@@ -247,14 +303,26 @@
                             type="button"
                             aria-label="Reject operation"
                           >
-                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                              class="h-3 w-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              stroke-width="2.5"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </button>
                         {:else}
                           <button
                             onclick={() => setOperationStatus(idx, opIdx, 'pending')}
-                            class="shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold {statusBadge(opItem.status)} hover:opacity-70"
+                            class="shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold {statusBadge(
+                              opItem.status
+                            )} hover:opacity-70"
                             type="button"
                           >
                             {opItem.status}
@@ -262,7 +330,9 @@
                         {/if}
                       </div>
                       {#if opItem.operation.description}
-                        <p class="mt-1 pl-1 text-[11px] leading-snug text-gray-600">{opItem.operation.description}</p>
+                        <p class="mt-1 pl-1 text-[11px] leading-snug text-gray-600">
+                          {opItem.operation.description}
+                        </p>
                       {/if}
                       {#if opItem.operation.properties.length > 0}
                         <ul class="mt-1 space-y-0.5 pl-1">

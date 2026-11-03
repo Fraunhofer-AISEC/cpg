@@ -1,10 +1,4 @@
-import type {
-  NodeInfoJSON,
-  NodeJSON,
-  NodePathsJSON,
-  NodeRefJSON,
-  TrustIssueJSON
-} from '$lib/types';
+import type { NodeInfoJSON, NodeJSON, NodePathsJSON, TrustIssueJSON } from '$lib/types';
 
 /**
  * The evidence of the agent's answers: the nodes returned by its tool calls and the nodes it cites
@@ -81,30 +75,18 @@ export function extractNodeIds(content: unknown, max = 50): string[] {
 }
 
 // The resolved nodes, shared by all callers. Null for IDs that are no nodes
-const resolved = new Map<string, NodeRefJSON | null>();
+const resolved = new Map<string, NodeJSON | null>();
 
-function toRef(node: NodeJSON): NodeRefJSON {
-  return {
-    id: node.id,
-    type: node.type,
-    name: node.name,
-    code: (node.code ?? '').split('\n')[0].trim(),
-    fileName: node.fileName?.split('/').pop(),
-    startLine: node.startLine,
-    startColumn: node.startColumn,
-    endLine: node.endLine,
-    endColumn: node.endColumn,
-    translationUnitId: node.translationUnitId,
-    componentName: node.componentName,
-    isInferred: false
-  };
+/** The node as a reference, with only the first line of its code. */
+function toRef(node: NodeJSON): NodeJSON {
+  return { ...node, code: (node.code ?? '').split('\n')[0].trim() };
 }
 
 /**
  * Resolves node IDs to references with their location, asking the backend only for IDs that were
  * not resolved before. IDs that are no nodes are missing from the result.
  */
-export async function resolveNodes(ids: string[]): Promise<Map<string, NodeRefJSON>> {
+export async function resolveNodes(ids: string[]): Promise<Map<string, NodeJSON>> {
   const missing = ids.filter((id) => !resolved.has(id));
   if (missing.length > 0) {
     const nodes: NodeJSON[] = await fetch('/api/nodes', {
@@ -117,7 +99,7 @@ export async function resolveNodes(ids: string[]): Promise<Map<string, NodeRefJS
     for (const node of nodes) resolved.set(node.id.toLowerCase(), toRef(node));
     for (const id of missing) if (!resolved.has(id)) resolved.set(id, null);
   }
-  const result = new Map<string, NodeRefJSON>();
+  const result = new Map<string, NodeJSON>();
   for (const id of ids) {
     const ref = resolved.get(id);
     if (ref) result.set(id, ref);
@@ -126,7 +108,7 @@ export async function resolveNodes(ids: string[]): Promise<Map<string, NodeRefJS
 }
 
 /** A short label for a cited node, e.g. `encrypt · main.c:13`. */
-export function citationLabel(ref: NodeRefJSON): string {
+export function citationLabel(ref: NodeJSON): string {
   const name = ref.name || (ref.code.length <= 24 ? ref.code : `${ref.code.slice(0, 23)}…`);
   return ref.startLine >= 1 ? `${name} · ${ref.fileName ?? ''}:${ref.startLine}` : name;
 }
