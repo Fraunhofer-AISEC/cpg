@@ -272,6 +272,7 @@
     }
   };
 
+
   onMount(async () => {
     // Dynamically import Monaco to avoid SSR issues
     const monaco = await import('monaco-editor');
