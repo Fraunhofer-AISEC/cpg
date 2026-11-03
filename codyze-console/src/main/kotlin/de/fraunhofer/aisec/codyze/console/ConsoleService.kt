@@ -218,10 +218,6 @@ class ConsoleService {
         return getComponent(componentName)?.translationUnits?.find { it.id == uuid }
     }
 
-    /** Finds the CPG node of the translation unit with the given ID in the specified component. */
-    private fun findCpgTranslationUnit(componentName: String, id: String): TranslationUnit? =
-        findTranslationUnit(componentName, id)?.cpgTU
-
     /**
      * Returns the nodes for the given translation unit ID for the specified component as a list of
      * [NodeJSON].
@@ -231,7 +227,7 @@ class ConsoleService {
         id: String,
         overlayNodes: Boolean,
     ): List<NodeJSON> {
-        return findCpgTranslationUnit(componentName, id)?.let { extractNodes(it, overlayNodes) }
+        return findTranslationUnit(componentName, id)?.cpgTU?.let { extractNodes(it, overlayNodes) }
             ?: emptyList()
     }
 
@@ -252,21 +248,21 @@ class ConsoleService {
      * such unit.
      */
     fun getFunctionCallStats(componentName: String, id: String): List<FunctionCallStatsJSON>? =
-        findCpgTranslationUnit(componentName, id)?.toFunctionCallStatsJSON()
+        findTranslationUnit(componentName, id)?.cpgTU?.toFunctionCallStatsJSON()
 
     /**
      * Returns the calls of a translation unit with the status of their targets, or `null` if there
      * is no such unit.
      */
     fun getCallSites(componentName: String, id: String): List<CallSiteJSON>? =
-        findCpgTranslationUnit(componentName, id)?.toCallSitesJSON()
+        findTranslationUnit(componentName, id)?.cpgTU?.toCallSitesJSON()
 
     /**
      * Returns the concepts and operations of a translation unit, or `null` if there is no such
      * unit.
      */
     fun getOverlays(componentName: String, id: String): List<OverlayJSON>? =
-        findCpgTranslationUnit(componentName, id)?.toOverlaysJSON()
+        findTranslationUnit(componentName, id)?.cpgTU?.toOverlaysJSON()
 
     /**
      * Returns the concepts and operations of all translation units of a component, or `null` if
@@ -291,7 +287,8 @@ class ConsoleService {
         endLine: Int? = null,
         endColumn: Int? = null,
     ): NodeDetailsJSON? {
-        return findCpgTranslationUnit(componentName, id)
+        return findTranslationUnit(componentName, id)
+            ?.cpgTU
             ?.nodeAt(line, column, endLine, endColumn)
             ?.toDetailsJSON()
     }
