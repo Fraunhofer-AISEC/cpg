@@ -1,11 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import type {
-  AnalysisResultJSON,
-  LlmProviderWithModels,
-  McpCapabilities,
-  SkillInfo
-} from '$lib/types';
+import type { AnalysisResultJSON, LlmProviderWithModels, McpCapabilities, SkillInfo } from '$lib/types';
 import { agentSession } from '$lib/stores/agentSession.svelte';
 
 export const load: PageLoad = async ({ fetch }) => {
@@ -37,12 +32,8 @@ export const load: PageLoad = async ({ fetch }) => {
       loadProviders()
     ]);
 
-    const result: AnalysisResultJSON | null = resultRes.ok
-      ? await resultRes.json().catch(() => null)
-      : null;
-    const mcpCapabilities: McpCapabilities | null = capsRes.ok
-      ? await capsRes.json().catch(() => null)
-      : null;
+    const result: AnalysisResultJSON | null = resultRes.ok ? await resultRes.json().catch(() => null) : null;
+    const mcpCapabilities: McpCapabilities | null = capsRes.ok ? await capsRes.json().catch(() => null) : null;
     const skills: SkillInfo[] = skillsRes.ok ? await skillsRes.json().catch(() => []) : [];
 
     return { result, mcpCapabilities, skills, providers };

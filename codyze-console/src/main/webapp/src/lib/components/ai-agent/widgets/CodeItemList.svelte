@@ -45,7 +45,7 @@
     code: 'Code',
     reasoning: 'Reasoning',
     securityImpact: 'Security Impact',
-    fieldCount: 'Fields'
+    fieldCount: 'Fields',
   };
 
   function buildDynamicExtraProps(item: any): Record<string, string> {
@@ -88,9 +88,7 @@
 
     const id = `${item.id?.toString() || item.nodeId || 'item'}-${index}`;
     const title = item.name || item.signature || item.nodeId || 'Unknown';
-    const subtitle = item.overlay
-      ? getShortName(item.overlay)
-      : item.returnType || item.kind || item.overlayClass || item.type || '';
+    const subtitle = item.overlay ? getShortName(item.overlay) : (item.returnType || item.kind || item.overlayClass || item.type || '');
     const location = formatLocation(item);
     const extraProps = buildDynamicExtraProps(item);
 
@@ -102,27 +100,20 @@
       badge: item.overlayType
         ? { text: item.overlayType, color: item.overlayType === 'Concept' ? 'green' : 'amber' }
         : item.overlayClass
-          ? {
-              text: item.overlayClass,
-              color: isConceptClass(item.overlayClass) ? 'green' : 'amber'
-            }
+          ? { text: item.overlayClass, color: isConceptClass(item.overlayClass) ? 'green' : 'amber' }
           : undefined,
       expandable: Object.keys(extraProps).length > 0,
       extraProps,
-      original: item
+      original: item,
     };
   }
 
   function getBadgeClasses(color: string): string {
     switch (color) {
-      case 'green':
-        return 'bg-green-100 text-green-800';
-      case 'amber':
-        return 'bg-amber-100 text-amber-800';
-      case 'blue':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'green': return 'bg-green-100 text-green-800';
+      case 'amber': return 'bg-amber-100 text-amber-800';
+      case 'blue': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   }
 
@@ -160,64 +151,33 @@
     {#each visibleItems as item (item.id)}
       <div class="overflow-hidden rounded-md border border-gray-200 bg-white">
         <button
-          class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:ring-inset"
-          onclick={() => (item.expandable ? toggleExpand(item.id) : handleClick(item))}
+          class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+          onclick={() => item.expandable ? toggleExpand(item.id) : handleClick(item)}
           type="button"
         >
           {#if item.badge}
-            <span
-              class="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase {getBadgeClasses(
-                item.badge.color
-              )}">{item.badge.text}</span
-            >
+            <span class="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide {getBadgeClasses(item.badge.color)}">{item.badge.text}</span>
           {/if}
 
           <div class="flex min-w-0 flex-1 flex-col gap-0.5">
             <div class="truncate font-mono text-sm font-semibold text-gray-900">{item.title}</div>
             {#if item.subtitle || item.location}
               <div class="flex items-center gap-1.5 truncate text-[13px] text-gray-500">
-                {#if item.subtitle}<span class="font-medium text-gray-600">{item.subtitle}</span
-                  >{/if}
+                {#if item.subtitle}<span class="font-medium text-gray-600">{item.subtitle}</span>{/if}
                 {#if item.subtitle && item.location}<span class="text-gray-300">&middot;</span>{/if}
-                {#if item.location}<span class="font-mono text-xs text-gray-400"
-                    >{item.location}</span
-                  >{/if}
+                {#if item.location}<span class="font-mono text-xs text-gray-400">{item.location}</span>{/if}
               </div>
             {/if}
           </div>
 
           <div class="flex shrink-0 items-center">
             {#if item.expandable}
-              <svg
-                class="h-4 w-4 text-gray-400 transition-transform duration-200 {expandedIds.has(
-                  item.id
-                )
-                  ? 'rotate-180'
-                  : ''}"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
+              <svg class="h-4 w-4 text-gray-400 transition-transform duration-200 {expandedIds.has(item.id) ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             {:else}
-              <svg
-                class="h-4 w-4 text-gray-300 transition-all hover:translate-x-0.5 hover:text-blue-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
+              <svg class="h-4 w-4 text-gray-300 transition-all hover:translate-x-0.5 hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
             {/if}
           </div>
@@ -227,12 +187,9 @@
           <div class="border-t border-gray-100 bg-gray-50 px-3 pb-3">
             {#each Object.entries(item.extraProps) as [key, value]}
               <div class="mt-2.5">
-                <span class="text-xs font-semibold tracking-wide text-gray-500 uppercase"
-                  >{key}:</span
-                >
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">{key}:</span>
                 {#if key === 'Code'}
-                  <pre
-                    class="mt-1 overflow-x-auto rounded bg-gray-100 px-2 py-1.5 font-mono text-[13px] break-words whitespace-pre-wrap text-gray-700">{value}</pre>
+                  <pre class="mt-1 overflow-x-auto whitespace-pre-wrap break-words rounded bg-gray-100 px-2 py-1.5 font-mono text-[13px] text-gray-700">{value}</pre>
                 {:else}
                   <p class="mt-1 text-sm leading-relaxed text-gray-700">{value}</p>
                 {/if}
@@ -241,8 +198,8 @@
             <button
               class="mt-2.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-600 transition-colors hover:border-blue-300 hover:text-blue-600"
               onclick={() => handleClick(item)}
-              type="button">View Details</button
-            >
+              type="button"
+            >View Details</button>
           </div>
         {/if}
       </div>
@@ -251,7 +208,7 @@
     {#if hasMore && !showAll}
       <button
         class="w-full rounded-md py-2 text-[13px] font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-blue-600"
-        onclick={() => (showAll = true)}
+        onclick={() => showAll = true}
         type="button"
       >
         Show all {items.length} results ({items.length - DEFAULT_VISIBLE} more)
