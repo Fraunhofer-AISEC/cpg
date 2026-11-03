@@ -305,13 +305,13 @@ private const val MAX_RELATED_NODES = 200
  * its direct dataflows, attached concepts and operations, and where the analysis is uncertain.
  *
  * The dataflows only contain the direct neighbours, so that the frontend can expand them lazily
- * into a tree. Each list holds at most [MAX_RELATED_NODES] nodes, [totals] has their full sizes.
+ * into a tree. Each list holds at most [MAX_RELATED_NODES] nodes; the `…Count` properties have the
+ * number of nodes before this limit, so that the UI can tell that a list is incomplete.
  *
  * @property callTargets For a [Call]: the functions it invokes.
  * @property callers For a [Function]: the calls that invoke it.
  * @property callees For a [Function]: the calls in its body.
  * @property warnings Places where the analysis is incomplete or uncertain for this node.
- * @property totals The number of related nodes before the lists were limited.
  */
 @Serializable
 data class NodeDetailsJSON(
@@ -324,20 +324,11 @@ data class NodeDetailsJSON(
     val dataflowFrom: List<RelatedNodeJSON>,
     val dataflowTo: List<RelatedNodeJSON>,
     val warnings: List<String>,
-    val totals: RelatedTotalsJSON,
-)
-
-/**
- * The number of related nodes of a node, see [NodeDetailsJSON]. A total larger than the size of its
- * list means that the list was limited, e.g. for a function called from many places.
- */
-@Serializable
-data class RelatedTotalsJSON(
-    val callTargets: Int,
-    val callers: Int,
-    val callees: Int,
-    val dataflowFrom: Int,
-    val dataflowTo: Int,
+    val callTargetCount: Int,
+    val callerCount: Int,
+    val calleeCount: Int,
+    val dataflowFromCount: Int,
+    val dataflowToCount: Int,
 )
 
 /** A function together with its key figures. */
@@ -672,14 +663,11 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
             prevDFGEdges.limited { RelatedNodeJSON(it.start.toRefJSON(), it.describe()) },
         dataflowTo = nextDFGEdges.limited { RelatedNodeJSON(it.end.toRefJSON(), it.describe()) },
         warnings = warnings,
-        totals =
-            RelatedTotalsJSON(
-                callTargets = callTargets.size,
-                callers = callers.size,
-                callees = callees.size,
-                dataflowFrom = prevDFGEdges.size,
-                dataflowTo = nextDFGEdges.size,
-            ),
+        callTargetCount = callTargets.size,
+        callerCount = callers.size,
+        calleeCount = callees.size,
+        dataflowFromCount = prevDFGEdges.size,
+        dataflowToCount = nextDFGEdges.size,
     )
 }
 

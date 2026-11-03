@@ -217,8 +217,8 @@ class NodeDetailsTest {
         repeat(250) { argument.nextDFGEdges += Reference().apply { name = Name("use$it") } }
         val details = argument.toDetailsJSON()
         assertEquals(200, details.dataflowTo.size)
-        // The total tells that the list was limited
-        assertEquals(250, details.totals.dataflowTo)
+        // The count tells that the list was limited
+        assertEquals(250, details.dataflowToCount)
     }
 
     @Test

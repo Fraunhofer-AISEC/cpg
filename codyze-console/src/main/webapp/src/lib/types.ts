@@ -152,17 +152,12 @@ export interface NodeDetailsJSON {
   dataflowFrom: RelatedNodeJSON[];
   dataflowTo: RelatedNodeJSON[];
   warnings: string[];
-  /** The number of related nodes before the lists were limited by the backend */
-  totals: RelatedTotalsJSON;
-}
-
-/** The number of related nodes of a node; larger than its list if the list was limited. */
-export interface RelatedTotalsJSON {
-  callTargets: number;
-  callers: number;
-  callees: number;
-  dataflowFrom: number;
-  dataflowTo: number;
+  /** The number of nodes of each list before the backend limited it */
+  callTargetCount: number;
+  callerCount: number;
+  calleeCount: number;
+  dataflowFromCount: number;
+  dataflowToCount: number;
 }
 
 // MCP capabilities

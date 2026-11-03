@@ -73,14 +73,14 @@
             id: 'callTargets' as const,
             title: 'Calls',
             refs: details.callTargets,
-            total: details.totals.callTargets,
+            total: details.callTargetCount,
             hint: 'Functions this call invokes'
           },
           {
             id: 'callers' as const,
             title: 'Called by',
             refs: details.callers,
-            total: details.totals.callers,
+            total: details.callerCount,
             hint: 'Calls of this function'
           },
           {
@@ -92,7 +92,7 @@
                 : 'Unresolved calls in body',
             refs: filteredCallees,
             // The total of a filtered list is unknown, the filter only applies to the listed calls
-            total: filtered ? filteredCallees.length : details.totals.callees,
+            total: filtered ? filteredCallees.length : details.calleeCount,
             hint: 'Calls made by this function'
           }
         ].filter((group) => group.refs.length > 0)
@@ -214,7 +214,7 @@
       >
         Where does the value come from? ({count(
           details.dataflowFrom.length,
-          details.totals.dataflowFrom
+          details.dataflowFromCount
         )})
       </summary>
       <div class="mt-1">
@@ -234,7 +234,7 @@
         class="cursor-pointer text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
         title="Direct dataflow successors; expand to follow them further"
       >
-        Where does the value go? ({count(details.dataflowTo.length, details.totals.dataflowTo)})
+        Where does the value go? ({count(details.dataflowTo.length, details.dataflowToCount)})
       </summary>
       <div class="mt-1">
         {#key details.node.id}
