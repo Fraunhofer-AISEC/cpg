@@ -22,10 +22,18 @@ class AgentSession {
     this.providersLoaded = true;
   }
 
-  openMcpModal = () => { this.showMcpModal = true; };
-  closeMcpModal = () => { this.showMcpModal = false; };
-  openSkillsModal = () => { this.showSkillsModal = true; };
-  closeSkillsModal = () => { this.showSkillsModal = false; };
+  openMcpModal = () => {
+    this.showMcpModal = true;
+  };
+  closeMcpModal = () => {
+    this.showMcpModal = false;
+  };
+  openSkillsModal = () => {
+    this.showSkillsModal = true;
+  };
+  closeSkillsModal = () => {
+    this.showSkillsModal = false;
+  };
 }
 
 export const agentSession = new AgentSession();

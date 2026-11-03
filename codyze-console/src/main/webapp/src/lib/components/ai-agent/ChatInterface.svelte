@@ -26,7 +26,7 @@
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
-  import { getConceptCounts } from '$lib/annotations';
+  import { countByTranslationUnit, getComponentOverlays, type FileOverview } from '$lib/overview';
   import type {
     NodeJSON,
     AnalysisResultJSON,
@@ -36,8 +36,7 @@
     ConceptSuggestionItem,
     Model,
     NodeDetailsJSON,
-    NodeRefJSON,
-    FileAnnotationsJSON,
+    OverlayJSON,
     TrustIssueJSON,
     CodeSelection
   } from '$lib/types';
@@ -140,7 +139,9 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([id])
-      }).then(r => (r.ok ? r.json() : [])).catch(() => []);
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []);
       if (!resolved) return;
       node = resolved;
     }
@@ -151,7 +152,7 @@
   }
 
   // Opens the file of a node selected in the inspector and inspects the node there
-  function handleNavigateToNode(ref: NodeRefJSON) {
+  function handleNavigateToNode(ref: NodeJSON) {
     handleNodeClick({
       ...ref,
       code: ref.code,
@@ -180,7 +181,7 @@
   ];
 
   // How a node is referred to in questions to the agent
-  function describeNode(n: NodeRefJSON): string {
+  function describeNode(n: NodeJSON): string {
     return `the ${n.type} \`${n.code || n.name}\` (node ID ${n.id}, ${n.fileName}:${n.startLine})`;
   }
 
@@ -212,7 +213,7 @@
   }
 
   // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
-  function selectRef(ref: NodeRefJSON) {
+  function selectRef(ref: NodeJSON) {
     if (ref.translationUnitId && ref.translationUnitId !== selectedTranslationUnit?.id) {
       handleNavigateToNode(ref);
     } else {
@@ -524,17 +525,18 @@
     focus.invalidate();
   }
 
-  // The number of concepts per file of the selected component, shown in the file tree
-  let conceptCounts = $state.raw<Map<string, number>>(new Map());
+  // The concepts and operations of the selected component, counted per file in the file tree
+  let componentOverlays = $state.raw<OverlayJSON[]>([]);
+  const conceptCounts = $derived(countByTranslationUnit(componentOverlays));
 
-  async function loadConceptCounts(component: string) {
-    const counts = await getConceptCounts(component);
-    if (component === selectedComponentName) conceptCounts = counts;
+  async function loadComponentOverlays(component: string) {
+    const overlays = await getComponentOverlays(component);
+    if (component === selectedComponentName) componentOverlays = overlays;
   }
 
   $effect(() => {
     void focus.revision;
-    if (selectedComponentName) loadConceptCounts(selectedComponentName);
+    if (selectedComponentName) loadComponentOverlays(selectedComponentName);
   });
 
   // Selects and reveals a node referenced by a concept suggestion, opening its file if needed. The
@@ -551,7 +553,7 @@
   }
 
   // The nodes cited in the answers of the agent, resolved to their locations to label and open them
-  let citedRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  let citedRefs = $state.raw<Map<string, NodeJSON>>(new Map());
   const citedKey = $derived(
     [
       ...new Set([
@@ -623,7 +625,7 @@
   );
 
   // The nodes of the evidence, resolved to their locations. IDs that are no nodes are missing
-  let evidenceRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  let evidenceRefs = $state.raw<Map<string, NodeJSON>>(new Map());
   const evidenceKey = $derived(
     [...new Set(blockEvidence.flatMap((e) => [...e.steps.flatMap((s) => s.ids), ...e.claimed]))]
       .sort()
@@ -647,7 +649,7 @@
       : blockEvidence.findLastIndex((e) => e.steps.some((s) => s.ids.length) || e.claimed.length)
   );
 
-  function stepNodes(ids: string[]): NodeRefJSON[] {
+  function stepNodes(ids: string[]): NodeJSON[] {
     return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
   }
 
@@ -700,7 +702,7 @@
     };
   }
 
-  function trustLocation(ref: NodeRefJSON): string {
+  function trustLocation(ref: NodeJSON): string {
     return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
   }
 
@@ -798,7 +800,7 @@
   );
 
   // The function containing the inspected node in the open file, or the node if it is a function
-  const breadcrumbFunction = $derived.by((): NodeRefJSON | null => {
+  const breadcrumbFunction = $derived.by((): NodeJSON | null => {
     const details = focus.details;
     if (!details || details.node.translationUnitId !== openedUnit?.id) return null;
     return (
@@ -807,7 +809,7 @@
   });
 
   // The annotations of the open file, loaded by the code viewer and shown in the outline
-  let fileAnnotations = $state.raw<FileAnnotationsJSON | null>(null);
+  let fileAnnotations = $state.raw<FileOverview | null>(null);
 
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
   // its tab stays open and the inspector tab is only marked
@@ -1014,8 +1016,6 @@
       requestAnimationFrame(() => scrollToBottom());
     }
   });
-
-  const fileName = (path?: string) => path?.split('/').pop() ?? '';
 
   let expandedReasoning = $state<Set<string>>(new Set());
 
@@ -1691,7 +1691,7 @@
                 <span class="min-w-0 truncate"
                   >📎 <span class="font-mono">{contextNode.name || contextNode.code}</span
                   >{#if contextNode.fileName}
-                    · {fileName(contextNode.fileName)}:{contextNode.startLine}{/if}</span
+                    · {contextNode.fileName ?? ''}:{contextNode.startLine}{/if}</span
                 >
                 <button
                   type="button"

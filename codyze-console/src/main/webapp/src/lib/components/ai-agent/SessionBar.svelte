@@ -8,11 +8,7 @@
     onModelSelect?: (model: Model) => void;
   }
 
-  let {
-    models = [],
-    selectedModel = null,
-    onModelSelect
-  }: Props = $props();
+  let { models = [], selectedModel = null, onModelSelect }: Props = $props();
 
   let menuOpen = $state(false);
   let menuContainer = $state<HTMLDivElement | undefined>();
@@ -58,7 +54,11 @@
       title="No LLM provider is available. Configure a client in application.conf (and set the matching API key env variable for providers that need one)."
     >
       <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-6.75a9 9 0 100 18 9 9 0 000-18zm0 12.75h.008v.008H12v-.008z" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M12 9v3.75m0-6.75a9 9 0 100 18 9 9 0 000-18zm0 12.75h.008v.008H12v-.008z"
+        />
       </svg>
       <span>No LLM provider configured</span>
     </div>
@@ -79,27 +79,46 @@
       </button>
 
       {#if menuOpen}
-        <div class="absolute bottom-full left-0 z-10 mb-2 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+        <div
+          class="absolute bottom-full left-0 z-10 mb-2 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+        >
           <div class="border-b border-gray-100 px-3 py-2">
             <p class="text-xs font-medium text-gray-500">Available models</p>
           </div>
 
           <div class="max-h-80 overflow-y-auto py-1" role="listbox">
             {#each modelsByProvider as [provider, providerModels]}
-              <div class="sticky top-0 z-10 border-b border-gray-100 bg-white/95 px-3 py-1.5 backdrop-blur">
-                <p class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">{provider}</p>
+              <div
+                class="sticky top-0 z-10 border-b border-gray-100 bg-white/95 px-3 py-1.5 backdrop-blur"
+              >
+                <p class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">
+                  {provider}
+                </p>
               </div>
               {#each providerModels as model}
-                {@const isSelected = selectedModel?.client === model.client && selectedModel?.model === model.model}
+                {@const isSelected =
+                  selectedModel?.client === model.client && selectedModel?.model === model.model}
                 <button
                   type="button"
                   {@attach isSelected ? scrollIntoViewWhenOpen : () => {}}
-                  class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-gray-50 {isSelected ? 'bg-blue-50' : ''}"
+                  class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-gray-50 {isSelected
+                    ? 'bg-blue-50'
+                    : ''}"
                   onclick={() => selectModel(model)}
                 >
-                  <span class="font-mono text-sm {isSelected ? 'font-semibold text-blue-700' : 'text-gray-800'}">{model.model}</span>
+                  <span
+                    class="font-mono text-sm {isSelected
+                      ? 'font-semibold text-blue-700'
+                      : 'text-gray-800'}">{model.model}</span
+                  >
                   {#if isSelected}
-                    <svg class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <svg
+                      class="h-3.5 w-3.5 text-blue-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                    >
                       <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   {/if}
@@ -129,7 +148,13 @@
       onclick={agentSession.openSkillsModal}
       title="Skills"
     >
-      <svg class="h-3 w-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+      <svg
+        class="h-3 w-3 text-amber-500"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        stroke-width="2.5"
+      >
         <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
       </svg>
       {agentSession.skills.length} skill{agentSession.skills.length === 1 ? '' : 's'}
