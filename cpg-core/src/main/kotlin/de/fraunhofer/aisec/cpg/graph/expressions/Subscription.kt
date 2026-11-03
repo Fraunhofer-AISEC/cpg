@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 
@@ -100,6 +101,19 @@ class Subscription : Expression(), HasBase, HasType.TypeObserver {
                         dereferenced.pointerOrigin == PointerType.PointerOrigin.ARRAY
                 ) {
                     dereferenced.dereference()
+                } else if (dereferenced is UnknownType) {
+                    // A type that cannot be indexed itself may still be a *defined* type whose
+                    // underlying type can: Go's `type ints []int` is indexed like the `[]int` it
+                    // is defined as. The underlying type is modelled as a super type, so we fall
+                    // back to the first super type that yields something when indexed.
+                    //
+                    // This only ever replaces an unknown result, so a type that genuinely cannot
+                    // be indexed is unaffected. Leaving it unknown is not harmless: the value
+                    // flows on untyped, and a call it is passed to can no longer be matched
+                    // against its declaration, so it resolves to an inferred stub instead.
+                    arrayType.superTypes.firstNotNullOfOrNull { superType ->
+                        superType.dereference().takeIf { it !is UnknownType }
+                    } ?: dereferenced
                 } else {
                     dereferenced
                 }
