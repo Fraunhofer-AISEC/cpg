@@ -161,12 +161,17 @@
 </script>
 
 {#if query !== null}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 z-50 flex justify-center bg-gray-900/10 pt-[12vh]" onclick={close}>
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div class="fixed inset-0 z-50 flex justify-center pt-[12vh]">
+    <!-- The backdrop closes the palette when clicked next to it -->
+    <button
+      type="button"
+      class="absolute inset-0 cursor-default bg-gray-900/10"
+      aria-label="Close"
+      tabindex="-1"
+      onclick={close}
+    ></button>
     <div
-      class="flex h-fit max-h-[60vh] w-[36rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl"
-      onclick={(e) => e.stopPropagation()}
+      class="relative flex h-fit max-h-[60vh] w-[36rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl"
       role="dialog"
       tabindex="-1"
       aria-label={isCommands ? 'Command palette' : 'Open file'}
@@ -185,6 +190,8 @@
       />
       <ul id="palette-results" class="min-h-0 overflow-y-auto py-1" role="listbox" bind:this={list}>
         {#each results as result, i (result.key)}
+          <!-- The input handles the keyboard for the options (aria-activedescendant) -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
           <li
             id="palette-result-{i}"
             data-index={i}
