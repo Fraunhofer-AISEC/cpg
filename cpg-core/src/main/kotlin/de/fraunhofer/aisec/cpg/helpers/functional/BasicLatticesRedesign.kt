@@ -1065,6 +1065,14 @@ interface Lattice<T : Lattice.Element> {
         // merge, emptying the waitlist and firing the merge with only one branch's state.
         val transferredEdges = IdentitySet<EvaluationOrder>()
         for (startEdge in startEdges) transferredEdges.add(startEdge)
+        // Edges that leave a loop, deferred until no other work is pending except the merge
+        // fallback. Processed as soon as they are ready, they would run the code after the loop
+        // before the loop body has stabilised, so that code would be transferred once per
+        // iteration. Such an edge has no scc, but its start node has an outgoing edge with an scc
+        // (the one that stays in the loop).
+        val deferredExitEdgesList = mutableListOf<EvaluationOrder>()
+        fun EvaluationOrder.isLoopExit(): Boolean =
+            this.scc == null && this.start.nextEOGEdges.any { it.scc != null }
 
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.hasCandidate(): Boolean {
             return this.entries.any { (_, v) -> v.isEmpty() }
@@ -1176,6 +1184,7 @@ interface Lattice<T : Lattice.Element> {
             nextBranchEdgesList.forEach(::markLive)
             sccEdgesQueue.forEach { (_, edge) -> markLive(edge) }
             mergePointsEdgesMap.keys.forEach(::markLive)
+            deferredExitEdgesList.forEach(::markLive)
 
             while (stack.isNotEmpty()) {
                 stack.removeLast().end.nextEOGEdges.forEach(::markLive)
@@ -1199,7 +1208,8 @@ interface Lattice<T : Lattice.Element> {
             currentBBEdgesList.isNotEmpty() ||
                 nextBranchEdgesList.isNotEmpty() ||
                 mergePointsEdgesMap.isNotEmpty() ||
-                sccEdgesQueue.isNotEmpty()
+                sccEdgesQueue.isNotEmpty() ||
+                deferredExitEdgesList.isNotEmpty()
         ) {
             currentCoroutineContext().ensureActive()
             // Sample the retention before pruning: that high-water mark is what actually has to fit
@@ -1231,6 +1241,12 @@ interface Lattice<T : Lattice.Element> {
                     // that we have to compute and that we hopefully reduce the number of
                     // re-processing the same basic blocks.
                     nextBranchEdgesList.removeFirst()
+                } else if (deferredExitEdgesList.isNotEmpty()) {
+                    // Before the fallback: a loop head does not need the fallback to iterate (its
+                    // waitlist ignores back edges), and a merge point that waits for one of these
+                    // edges must get it before the fallback forces it with partial state. The
+                    // fallback is left for merge points with unreachable predecessors.
+                    deferredExitEdgesList.removeFirst()
                 } else {
                     mergePointsEdgesMap.removeCandidate()
                 }
@@ -1373,7 +1389,11 @@ interface Lattice<T : Lattice.Element> {
                                         ?: newGlobalIt.compare(oldGlobalIt)) in
                                         setOf(Order.GREATER, Order.UNEQUAL))
                         ) {
-                            if (
+                            if (it.isLoopExit()) {
+                                // See deferredExitEdgesList. Its latest state is in globalState, so
+                                // an edge that is already waiting is not queued again.
+                                if (it !in deferredExitEdgesList) deferredExitEdgesList.add(it)
+                            } else if (
                                 // We might be at the merge point.
                                 // In comparison to a loop entry, a merge point has multiple
                                 // prevEOGEdges without SCC-Label and at least one nextEOGEdge
