@@ -136,8 +136,6 @@ export interface CallSiteJSON {
 /** A concept or operation, see `.../translation-unit/{id}/overlays`. */
 export interface OverlayJSON {
   overlay: NodeJSON;
-  /** The area of the overlay, derived from its package, e.g. `crypto` or `file` */
-  category: string;
   underlyingNode?: NodeJSON;
   /** For an operation: the concept it belongs to */
   concept?: NodeJSON;
