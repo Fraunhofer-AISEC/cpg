@@ -131,17 +131,20 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
  * region, explicit nodes are preferred over implicit ones and deeper nodes over their parents.
  */
 fun TranslationUnit.nodeAt(line: Int, column: Int): Node? {
-    return nodes
-        .withIndex()
-        .filter { (_, node) ->
-            node !is TranslationUnit && node.location?.region?.contains(line, column) == true
+    var best: Node? = null
+    var bestSpan = Long.MAX_VALUE
+    // The nodes are in pre-order, so among nodes with the same region, a later one is deeper
+    for (node in nodes) {
+        if (node is TranslationUnit) continue
+        val region = node.location?.region ?: continue
+        if (!region.contains(line, column)) continue
+        val span = region.span()
+        if (span < bestSpan || span == bestSpan && (best?.isImplicit == true || !node.isImplicit)) {
+            best = node
+            bestSpan = span
         }
-        .minWithOrNull(
-            compareBy<IndexedValue<Node>> { (_, node) -> node.location?.region?.span() }
-                .thenBy { (_, node) -> node.isImplicit }
-                .thenByDescending { (index, _) -> index }
-        )
-        ?.value
+    }
+    return best
 }
 
 private fun Region.contains(line: Int, column: Int): Boolean {
