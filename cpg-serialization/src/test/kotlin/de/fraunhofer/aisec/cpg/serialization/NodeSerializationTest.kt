@@ -37,6 +37,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
 
 class NodeSerializationTest {
     @Test
@@ -100,5 +101,17 @@ class NodeSerializationTest {
     @Test
     fun testCallStatusUnresolved() {
         assertEquals(CallStatus.UNRESOLVED, callTo().status)
+    }
+
+    @Test
+    fun testJsonWithoutNewFields() {
+        // JSON written before isInferred, isImplicit and typeName existed can still be read
+        val json =
+            """{"id":"00000000-0000-0000-0000-000000000001","type":"Reference","startLine":1,""" +
+                """"startColumn":1,"endLine":1,"endColumn":2,"code":"x","name":"x"}"""
+        val node = Json.decodeFromString<NodeJSON>(json)
+        assertFalse(node.isInferred)
+        assertFalse(node.isImplicit)
+        assertNull(node.typeName)
     }
 }

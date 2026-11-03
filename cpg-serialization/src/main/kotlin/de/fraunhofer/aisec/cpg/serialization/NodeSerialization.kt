@@ -88,9 +88,9 @@ data class NodeJSON(
     @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
     val componentName: String? = null,
     val fileName: String? = null,
-    val isInferred: Boolean,
-    val isImplicit: Boolean,
-    val typeName: String?,
+    val isInferred: Boolean = false,
+    val isImplicit: Boolean = false,
+    val typeName: String? = null,
 )
 
 /**
