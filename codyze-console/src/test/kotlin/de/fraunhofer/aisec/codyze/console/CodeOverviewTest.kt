@@ -105,6 +105,15 @@ class CodeOverviewTest {
     }
 
     @Test
+    fun testFunctionCallStatsIgnoreImplicitCalls() {
+        // E.g. an implicit constructor call, which is not shown as a call site either
+        resolvedCall.isImplicit = true
+        val main = assertNotNull(tu.toFunctionCallStatsJSON().singleOrNull())
+        assertEquals(2, main.callees)
+        assertEquals(2, tu.toCallSitesJSON().size)
+    }
+
+    @Test
     fun testNodesOfAnIncludedFileAreIgnored() {
         // An inline function of an included header (see loadIncludes) with a call in its body
         val header = URI("file:/overview.h")

@@ -156,6 +156,12 @@ export interface NodeDetailsJSON {
   dataflowFrom: RelatedNodeJSON[];
   dataflowTo: RelatedNodeJSON[];
   warnings: string[];
+  /** The number of nodes of each list before the backend limited it */
+  callTargetCount: number;
+  callerCount: number;
+  calleeCount: number;
+  dataflowFromCount: number;
+  dataflowToCount: number;
 }
 
 /** A compact reference to a node in the results of the MCP tools (`NodeInfo` in the backend). */
