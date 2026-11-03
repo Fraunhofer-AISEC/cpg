@@ -70,11 +70,11 @@ export interface NodeJSON extends NodeBaseJSON {
   prevDFG: EdgeJSON[];
   nextDFG: EdgeJSON[];
   /** Whether the node was inferred by the analysis instead of being parsed from source code */
-  isInferred: boolean;
+  isInferred?: boolean;
   /** Whether the node is not written in the source code, e.g. an implicit cast */
-  isImplicit: boolean;
+  isImplicit?: boolean;
   /** For a node with a type: the name of its type */
-  typeName: string | null;
+  typeName?: string | null;
 }
 
 export interface EdgeJSON {
