@@ -215,7 +215,10 @@ class NodeDetailsTest {
     @Test
     fun testRelatedNodesAreLimited() {
         repeat(250) { argument.nextDFGEdges += Reference().apply { name = Name("use$it") } }
-        assertEquals(200, argument.toDetailsJSON().dataflowTo.size)
+        val details = argument.toDetailsJSON()
+        assertEquals(200, details.dataflowTo.size)
+        // The total tells that the list was limited
+        assertEquals(250, details.totals.dataflowTo)
     }
 
     @Test
