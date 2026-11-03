@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { NodeRefJSON } from '$lib/types';
+  import { overlayName } from '$lib/overview';
+  import type { NodeJSON } from '$lib/types';
   import {
     dependencesOf,
     getSliceCounts,
@@ -22,7 +23,7 @@
     /** The inspected node, whose edges are emphasized if it is a part of the selected statement */
     inspectedId?: string | null;
     /** Inspects the node of a statement, opening its file if it is in another one */
-    onInspect: (node: NodeRefJSON) => void;
+    onInspect: (node: NodeJSON) => void;
     /** Called when a statement is clicked in the graph, to show it in the code */
     onSelectNode?: (node: GraphNode) => void;
   }
@@ -95,10 +96,10 @@
     if (node.kind === 'OVERLAY') {
       notes.push({
         tone: 'purple',
-        text: `${node.node.label ?? 'Overlay'} ${node.node.name || node.node.type} is attached to line ${node.startLine}. Inspecting it shows what it belongs to.`
+        text: `${node.overlay ? overlayName(node.overlay) : `Overlay ${node.node.name || node.node.type}`} is attached to line ${node.startLine}. Inspecting it shows what it belongs to.`
       });
     } else if (node.overlays.length > 0) {
-      const names = node.overlays.map((o) => `${o.label ?? ''} ${o.name || o.type}`.trim());
+      const names = node.overlays.map(overlayName);
       const list =
         names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
       notes.push({

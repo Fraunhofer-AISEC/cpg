@@ -1,13 +1,13 @@
 <script lang="ts">
   import { marked } from 'marked';
   import type { Tokens } from 'marked';
-  import type { NodeRefJSON } from '$lib/types';
+  import type { NodeJSON } from '$lib/types';
   import { citationName, citationPattern } from '$lib/agentEvidence';
 
   interface Props {
     content: string;
     /** The cited nodes by ID, to label the citations `[[node:<id>]]` in the content */
-    citations?: Map<string, NodeRefJSON>;
+    citations?: Map<string, NodeJSON>;
     /** Called when a citation is clicked; without it, citations are shown as plain text */
     onCite?: (nodeId: string) => void;
     /** Called when the mouse enters a citation, with its chip, and with `null` when it leaves it */
@@ -41,7 +41,7 @@
 
   // Whether the code an answer writes is the code of the node it cites. Only then may the chip be
   // labeled with it: a citation of another node must stay visible as such
-  function namesNode(code: string, ref: NodeRefJSON): boolean {
+  function namesNode(code: string, ref: NodeJSON): boolean {
     const normalize = (text: string) => text.replace(/\s+/g, ' ').replace(/;$/, '').trim();
     const written = normalize(code);
     const own = normalize(ref.code);

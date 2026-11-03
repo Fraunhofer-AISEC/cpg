@@ -48,7 +48,11 @@
             onclick={() => nodeClick(node)}
             type="button"
           >
-            <span class="shrink-0 rounded px-1 py-0.5 font-mono text-[10px] font-semibold {typeColor(node.type)}">
+            <span
+              class="shrink-0 rounded px-1 py-0.5 font-mono text-[10px] font-semibold {typeColor(
+                node.type
+              )}"
+            >
               {node.type}
             </span>
             <span class="flex-1 truncate text-gray-900">{node.name || '—'}</span>

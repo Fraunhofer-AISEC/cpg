@@ -11,11 +11,16 @@
   import { hasModifier, isTyping } from '$lib/utils/keyboard';
   import DataflowArcs from './DataflowArcs.svelte';
   import StepMarkers, { type StepMarker } from './StepMarkers.svelte';
-  import { getAnnotations } from '$lib/annotations';
+  import {
+    callRegion,
+    describeOverlay,
+    getFileOverview,
+    overlayLine,
+    type FileOverview
+  } from '$lib/overview';
   import { layers, layerInfos, type Layer } from '$lib/stores/layers.svelte';
-  import type { FileAnnotationsJSON } from '$lib/types';
   import AddConceptDialog from '../forms/AddConceptDialog.svelte';
-  import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+  import type { NodeDetailsJSON } from '$lib/types';
   import type { FlattenedNode } from '$lib/flatten';
   import { getNodeDetails, getNodeDetailsAt, clearNodeDetailsCache } from '$lib/nodeDetails';
   import {
@@ -84,7 +89,7 @@
     /** The node to inspect initially, e.g. from a deep link */
     selectedNodeId?: string;
     /** Called when a node in another file is selected in the inspector */
-    onNavigateToNode?: (ref: NodeRefJSON) => void;
+    onNavigateToNode?: (ref: NodeJSON) => void;
     /** Additional actions for the inspected node, e.g. asking the agent about it */
     nodeActions?: Snippet<[NodeDetailsJSON]>;
     /**
@@ -105,7 +110,7 @@
      */
     scrollPositions?: Map<string, number>;
     /** The annotations of the file, loaded by the viewer; bind it to use them outside */
-    annotations?: FileAnnotationsJSON | null;
+    annotations?: FileOverview | null;
     /** The first visible line (1-based); bind it to know where in the file the user is */
     topLine?: number;
     /**
@@ -249,7 +254,7 @@
     }
   });
 
-  function selectRef(ref: NodeRefJSON) {
+  function selectRef(ref: NodeJSON) {
     if (ref.translationUnitId && ref.translationUnitId !== translationUnit.id && onNavigateToNode) {
       onNavigateToNode(ref);
     } else {
@@ -318,7 +323,7 @@
     return lines.join('\n');
   }
 
-  function rangeOfNode(node: NodeRefJSON): CodeRange | null {
+  function rangeOfNode(node: NodeJSON): CodeRange | null {
     if (node.translationUnitId !== translationUnit.id || node.startLine < 1) return null;
     const range = {
       startLine: node.startLine,
@@ -507,7 +512,7 @@
     hover = null;
   }
 
-  function isInside(node: NodeRefJSON, line: number, column: number): boolean {
+  function isInside(node: NodeJSON, line: number, column: number): boolean {
     if (line < node.startLine || line > node.endLine) return false;
     if (line === node.startLine && column < node.startColumn) return false;
     return !(line === node.endLine && column >= node.endColumn);
@@ -578,7 +583,7 @@
 
   // Annotations of the file (function key figures, call status, concepts), loaded per unit
   async function loadAnnotations(component: string, unitId: string) {
-    const result = await getAnnotations(component, unitId);
+    const result = await getFileOverview(component, unitId);
     if (unitId === translationUnit.id) annotations = result;
   }
 
@@ -594,7 +599,7 @@
     if (!annotations) return null;
     const external = annotations.calls.filter((c) => c.status === 'EXTERNAL');
     const counts = new Map<string, number>();
-    for (const call of external) counts.set(call.name, (counts.get(call.name) ?? 0) + 1);
+    for (const { call } of external) counts.set(call.name, (counts.get(call.name) ?? 0) + 1);
     const topExternal = [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 4)
@@ -603,7 +608,7 @@
       functions: annotations.functions.length,
       external: external.length,
       topExternal,
-      concepts: annotations.concepts.length
+      concepts: annotations.overlays.length
     };
   });
 
@@ -694,17 +699,8 @@
   const conceptTarget = $derived<FlattenedNode | null>(
     inspected && componentName
       ? {
-          id: inspected.node.id,
-          type: inspected.node.type,
-          name: inspected.node.name,
-          code: inspected.node.code,
-          startLine: inspected.node.startLine,
-          startColumn: inspected.node.startColumn,
-          endLine: inspected.node.endLine,
-          endColumn: inspected.node.endColumn,
+          ...inspected.node,
           astChildren: [],
-          prevDFG: [],
-          nextDFG: [],
           depth: 0,
           componentName,
           unitId: translationUnit.id
@@ -812,7 +808,7 @@
   }
 
   // Follows a dataflow of the inspected node to [ref], extending the path, and inspects it
-  function followDataflow(ref: NodeRefJSON, direction: FlowDirection) {
+  function followDataflow(ref: NodeJSON, direction: FlowDirection) {
     if (inspected) focus.follow([inspected.node, ref], direction);
     selectRef(ref);
   }

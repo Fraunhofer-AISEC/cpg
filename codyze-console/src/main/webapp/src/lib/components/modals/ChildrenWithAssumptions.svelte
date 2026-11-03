@@ -38,7 +38,10 @@
 
   // Initialize assumption groups from the map
   const totalChildrenCount = $derived(() => {
-    return Object.values(childrenWithAssumptionIds).reduce((sum, children) => sum + children.length, 0);
+    return Object.values(childrenWithAssumptionIds).reduce(
+      (sum, children) => sum + children.length,
+      0
+    );
   });
 
   // Load query tree data on mount
@@ -53,19 +56,21 @@
       globalError = null;
 
       // Initialize assumption groups with deduplication
-      assumptionGroups = Object.entries(childrenWithAssumptionIds).map(([assumptionId, childrenIds]) => ({
-        assumptionId,
-        assumption: undefined, // Will be populated when we load the first child
-        childrenIds: [...new Set(childrenIds)], // Deduplicate children IDs
-        loadedChildren: [],
-        loadedCount: 0,
-        loading: false,
-        loadingMore: false,
-        error: null
-      }));
+      assumptionGroups = Object.entries(childrenWithAssumptionIds).map(
+        ([assumptionId, childrenIds]) => ({
+          assumptionId,
+          assumption: undefined, // Will be populated when we load the first child
+          childrenIds: [...new Set(childrenIds)], // Deduplicate children IDs
+          loadedChildren: [],
+          loadedCount: 0,
+          loading: false,
+          loadingMore: false,
+          error: null
+        })
+      );
 
       // Load the first batch for each assumption group
-      await Promise.all(assumptionGroups.map(group => loadMoreForGroup(group)));
+      await Promise.all(assumptionGroups.map((group) => loadMoreForGroup(group)));
     } catch (err) {
       console.error('Failed to initialize children with assumptions:', err);
       globalError = 'Failed to load child evaluation details';
@@ -84,14 +89,14 @@
 
       const nextBatch = group.childrenIds.slice(group.loadedCount, group.loadedCount + BATCH_SIZE);
       const newQueryTrees = await loadQueryTrees(nextBatch);
-      
+
       group.loadedChildren = [...group.loadedChildren, ...newQueryTrees];
       group.loadedCount += nextBatch.length;
 
       // If we don't have the assumption details yet, get it from the first loaded child
       if (!group.assumption && newQueryTrees.length > 0) {
         const firstChild = newQueryTrees[0];
-        group.assumption = firstChild.assumptions.find(a => a.id === group.assumptionId);
+        group.assumption = firstChild.assumptions.find((a) => a.id === group.assumptionId);
       }
     } catch (err) {
       console.error(`Failed to load more children for assumption ${group.assumptionId}:`, err);
@@ -214,7 +219,11 @@
     {:else}
       <div class="space-y-4">
         {#each assumptionGroups as group (group.assumptionId)}
-          <div class="rounded-lg border p-4 {group.assumption ? getAssumptionStatusColor(group.assumption.status) : 'border-gray-200 bg-gray-50'}">
+          <div
+            class="rounded-lg border p-4 {group.assumption
+              ? getAssumptionStatusColor(group.assumption.status)
+              : 'border-gray-200 bg-gray-50'}"
+          >
             <!-- Assumption Header -->
             <div class="mb-3 border-b border-gray-200 pb-2">
               <div class="flex items-center justify-between">
@@ -222,9 +231,7 @@
                   {#if group.assumption}
                     <div class="flex-1">
                       <div class="flex items-center space-x-2">
-                        <div class="text-sm font-medium text-gray-900">
-                          Assumption
-                        </div>
+                        <div class="text-sm font-medium text-gray-900">Assumption</div>
                         <span class="text-xs text-gray-600">
                           {getAssumptionTypeDisplay(group.assumption.assumptionType)}
                         </span>
@@ -235,10 +242,8 @@
                     </div>
                   {:else}
                     <div class="flex-1">
-                      <div class="text-sm font-medium text-gray-900">
-                        Assumption
-                      </div>
-                      <div class="text-xs text-gray-600 font-mono">
+                      <div class="text-sm font-medium text-gray-900">Assumption</div>
+                      <div class="font-mono text-xs text-gray-600">
                         ID: {getShortId(group.assumptionId)}...
                       </div>
                     </div>
@@ -246,7 +251,11 @@
                 </div>
                 <div class="flex items-center space-x-2">
                   {#if group.assumption}
-                    <span class="rounded-full px-2 py-1 text-xs font-medium {getAssumptionStatusBadgeColor(group.assumption.status)}">
+                    <span
+                      class="rounded-full px-2 py-1 text-xs font-medium {getAssumptionStatusBadgeColor(
+                        group.assumption.status
+                      )}"
+                    >
                       {group.assumption.status}
                     </span>
                   {/if}

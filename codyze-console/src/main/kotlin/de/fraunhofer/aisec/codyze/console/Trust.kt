@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.serialization.CallStatus
-import de.fraunhofer.aisec.cpg.serialization.NodeRefJSON
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.status
 import de.fraunhofer.aisec.cpg.serialization.toRefJSON
 import kotlinx.serialization.Serializable
@@ -59,7 +59,7 @@ enum class TrustIssueKind {
 @Serializable
 data class TrustIssueJSON(
     val kind: TrustIssueKind,
-    val location: NodeRefJSON,
+    val location: NodeJSON,
     val reason: String,
     val evidence: List<String>,
 )

@@ -56,9 +56,8 @@ enum class GraphNodeKind {
     /** Code outside of the function of the slice, in another file or not analysed at all. */
     STUB,
     /**
-     * A concept or operation that the dependences pass through. Its node is labelled like the
-     * overlays of a node ([toOverlayRefJSON]), its code and lines are those of the node it is
-     * attached to.
+     * A concept or operation that the dependences pass through, see [GraphNodeJSON.overlay]. Its
+     * code and lines are those of the node it is attached to.
      */
     OVERLAY,
 }
@@ -78,6 +77,7 @@ enum class GraphEdgeKind {
  * @property depth The number of hops from the root of the slice.
  * @property more The number of statements further away that are not part of the slice because of
  *   the hop limit, so that the UI can offer to expand it.
+ * @property overlay For an [GraphNodeKind.OVERLAY]: the concept or operation itself.
  * @property overlays The concepts and operations attached to the nodes of the statement.
  * @property unresolved Whether the statement has a call whose target is unknown.
  * @property external Whether the statement has a call to code that is not analysed. For a stub: the
@@ -88,13 +88,14 @@ enum class GraphEdgeKind {
 data class GraphNodeJSON(
     val id: String,
     val kind: GraphNodeKind,
-    val node: NodeRefJSON,
+    val node: NodeJSON,
     val startLine: Int,
     val endLine: Int,
     val code: String,
     val depth: Int,
     val more: Int,
-    val overlays: List<NodeRefJSON>,
+    val overlay: OverlayJSON?,
+    val overlays: List<OverlayJSON>,
     val unresolved: Boolean,
     val external: Boolean,
     val warning: Boolean,
@@ -117,8 +118,8 @@ data class GraphEdgeJSON(
     val to: String,
     val kind: GraphEdgeKind,
     val label: String?,
-    val fromPart: NodeRefJSON? = null,
-    val toPart: NodeRefJSON? = null,
+    val fromPart: NodeJSON? = null,
+    val toPart: NodeJSON? = null,
 )
 
 /**
@@ -131,7 +132,7 @@ data class GraphSliceJSON(
     val direction: SliceDirection,
     val hops: Int,
     /** The function the slice is limited to */
-    val function: NodeRefJSON?,
+    val function: NodeJSON?,
     val nodes: List<GraphNodeJSON>,
     val edges: List<GraphEdgeJSON>,
     /** Whether statements are missing because the slice reached the upper bound of nodes */
@@ -198,7 +199,7 @@ val Node.isBranching: Boolean
     get() = this is IfElse || this is Loop || this is Switch || this is CatchClause
 
 /** This node as a part of [statement], or `null` if it is the statement itself. */
-fun Node.asPartOf(statement: Node): NodeRefJSON? = if (this === statement) null else toRefJSON()
+fun Node.asPartOf(statement: Node): NodeJSON? = if (this === statement) null else toRefJSON()
 
 /** Whether this is a concept or an operation, which a graph shows as an overlay. */
 val Node.isConceptOverlay: Boolean
@@ -263,20 +264,17 @@ fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON 
     return GraphNodeJSON(
         id = id.toString(),
         kind = kind,
-        node = if (overlay) toOverlayRefJSON() else toRefJSON(),
+        node = toRefJSON(),
         startLine = startLine,
         endLine = maxOf(endLine, startLine),
         // Code that is not analysed, e.g. a function that is not declared, has no code but a name
         code = toRefJSON().code.ifEmpty { name.localName },
         depth = depth,
         more = more,
+        overlay = if (overlay) toOverlayJSON() else null,
         overlays =
             if (overlay) emptyList()
-            else
-                members
-                    .flatMap { it.overlays }
-                    .filter { it.isConceptOverlay }
-                    .map { it.toOverlayRefJSON() },
+            else members.flatMap { it.overlays }.mapNotNull { it.toOverlayJSON() },
         unresolved = statuses.any { it == CallStatus.UNRESOLVED },
         external =
             if (kind == GraphNodeKind.STUB) isInferred || location == null

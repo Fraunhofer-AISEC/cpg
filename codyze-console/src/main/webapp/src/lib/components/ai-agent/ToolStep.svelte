@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { NodePathsJSON, NodeRefJSON, NodeSliceJSON, ToolResult } from '$lib/types';
+  import type { NodePathsJSON, NodeJSON, NodeSliceJSON, ToolResult } from '$lib/types';
   import type { ToolCallLabel } from '$lib/toolLabels';
 
   /**
@@ -17,14 +17,14 @@
     label?: ToolCallLabel;
     step: number;
     /** The nodes the tool returned, resolved to their locations */
-    nodes: NodeRefJSON[];
+    nodes: NodeJSON[];
     /** The paths the tool returned, if it searched for paths */
     paths?: NodePathsJSON | null;
     /** The slice the tool computed, if it computed one */
     slice?: NodeSliceJSON | null;
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
-    onSelect: (ref: NodeRefJSON) => void;
+    onSelect: (ref: NodeJSON) => void;
     /** Shows the step in the code and goes to its first node */
     onActivate: () => void;
     onHover: (hovered: boolean) => void;
@@ -89,7 +89,7 @@
 
   const shownNodes = $derived(showAll ? nodes : nodes.slice(0, preview));
 
-  function location(ref: NodeRefJSON): string {
+  function location(ref: NodeJSON): string {
     return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no location';
   }
 </script>

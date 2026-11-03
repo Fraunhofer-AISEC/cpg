@@ -447,7 +447,7 @@ fun nodeSlice(
                         depth = it.depth,
                         kind = it.kind,
                         more = it.more,
-                        concepts = it.overlays.map { overlay -> overlay.type }.distinct(),
+                        concepts = it.overlays.map { overlay -> overlay.overlay.type }.distinct(),
                         external = it.external,
                         unresolved = it.unresolved,
                     )

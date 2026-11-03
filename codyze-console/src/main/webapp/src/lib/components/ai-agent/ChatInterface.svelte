@@ -48,7 +48,7 @@
   import CodeContextMenu, {
     type ContextMenuItem
   } from '$lib/components/analysis/CodeContextMenu.svelte';
-  import { getConceptCounts } from '$lib/annotations';
+  import { countByTranslationUnit, getComponentOverlays, type FileOverview } from '$lib/overview';
   import type {
     FindingsJSON,
     NodeJSON,
@@ -62,8 +62,7 @@
     ConceptSuggestionItem,
     Model,
     NodeDetailsJSON,
-    NodeRefJSON,
-    FileAnnotationsJSON,
+    OverlayJSON,
     TrustIssueJSON,
     ToolActivity,
     CodeSelection
@@ -181,7 +180,7 @@
   }
 
   // Opens the file of a node selected in the inspector and inspects the node there
-  function handleNavigateToNode(ref: NodeRefJSON) {
+  function handleNavigateToNode(ref: NodeJSON) {
     handleNodeClick({
       ...ref,
       code: ref.code,
@@ -215,7 +214,7 @@
   ];
 
   // How a node is referred to in questions to the agent
-  function describeNode(n: NodeRefJSON): string {
+  function describeNode(n: NodeJSON): string {
     return `the ${n.type} \`${n.code || n.name}\` (node ID ${n.id}, ${n.fileName}:${n.startLine})`;
   }
 
@@ -226,7 +225,7 @@
   const fileName = (path?: string) => path?.split('/').pop() ?? '';
 
   // How the context of a question is shown with it, e.g. `log_debug main.c:10`
-  function nodeLabel(n: NodeRefJSON): string {
+  function nodeLabel(n: NodeJSON): string {
     const where = n.fileName ? ` ${fileName(n.fileName)}:${n.startLine}` : '';
     return `${n.name || n.code}${where}`;
   }
@@ -262,7 +261,7 @@
   }
 
   // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
-  function selectRef(ref: NodeRefJSON) {
+  function selectRef(ref: NodeJSON) {
     if (ref.translationUnitId && ref.translationUnitId !== selectedTranslationUnit?.id) {
       handleNavigateToNode(ref);
     } else {
@@ -688,7 +687,7 @@
 
   // The statement of the slice a node belongs to: the statement itself, or the innermost one that
   // contains the start of the node
-  function sliceNodeFor(node: NodeRefJSON): GraphNode | null {
+  function sliceNodeFor(node: NodeJSON): GraphNode | null {
     const nodes = graph.slice?.nodes ?? [];
     const exact = nodes.find((n) => n.id === node.id);
     if (exact || node.startLine < 1) return exact ?? null;
@@ -902,17 +901,18 @@
       }))
   );
 
-  // The number of concepts per file of the selected component, shown in the file tree
-  let conceptCounts = $state.raw<Map<string, number>>(new Map());
+  // The concepts and operations of the selected component, counted per file in the file tree
+  let componentOverlays = $state.raw<OverlayJSON[]>([]);
+  const conceptCounts = $derived(countByTranslationUnit(componentOverlays));
 
-  async function loadConceptCounts(component: string) {
-    const counts = await getConceptCounts(component);
-    if (component === selectedComponentName) conceptCounts = counts;
+  async function loadComponentOverlays(component: string) {
+    const overlays = await getComponentOverlays(component);
+    if (component === selectedComponentName) componentOverlays = overlays;
   }
 
   $effect(() => {
     void focus.revision;
-    if (selectedComponentName) loadConceptCounts(selectedComponentName);
+    if (selectedComponentName) loadComponentOverlays(selectedComponentName);
   });
 
   // Selects and reveals a node the agent refers to (a citation, a node a tool returned, a
@@ -933,7 +933,7 @@
   }
 
   // The nodes cited in the answers of the agent, resolved to their locations to label and open them
-  let citedRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  let citedRefs = $state.raw<Map<string, NodeJSON>>(new Map());
   const citedKey = $derived(
     [
       ...new Set([
@@ -989,7 +989,7 @@
   // The citation under the mouse in an answer: its node is shown in a preview next to it, its
   // lines are tinted in the code and its statement stands out in the graph, without changing what
   // is selected. A citation is the only way the answer marks the code
-  let citeHover = $state.raw<{ ref: NodeRefJSON; chip: DOMRect } | null>(null);
+  let citeHover = $state.raw<{ ref: NodeJSON; chip: DOMRect } | null>(null);
   let citeGraphHover = false;
 
   function hoverCitation(nodeId: string | null, chip: HTMLElement | null) {
@@ -1007,7 +1007,7 @@
 
   // The lines a citation refers to: a function only by its head, anything else by at most a few
   // lines, so that a citation never tints a whole body
-  function citedRange(ref: NodeRefJSON): { first: number; last: number } {
+  function citedRange(ref: NodeJSON): { first: number; last: number } {
     const last = ref.type === 'Function' ? ref.startLine : Math.max(ref.endLine, ref.startLine);
     return { first: ref.startLine, last: Math.min(last, ref.startLine + 2) };
   }
@@ -1023,7 +1023,7 @@
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const previewCode = new Map<string, Promise<string[] | null>>();
 
-  function codeOf(ref: NodeRefJSON): Promise<string[] | null> {
+  function codeOf(ref: NodeJSON): Promise<string[] | null> {
     const unitId = ref.translationUnitId;
     const componentName = ref.componentName;
     if (!unitId || !componentName) return Promise.resolve(null);
@@ -1101,7 +1101,7 @@
   );
 
   // The nodes of the evidence, resolved to their locations. IDs that are no nodes are missing
-  let evidenceRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  let evidenceRefs = $state.raw<Map<string, NodeJSON>>(new Map());
   const evidenceKey = $derived(
     [...new Set(blockEvidence.flatMap((e) => [...e.steps.flatMap((s) => s.ids), ...e.claimed]))]
       .sort()
@@ -1125,7 +1125,7 @@
       : blockEvidence.findLastIndex((e) => e.steps.some((s) => s.ids.length) || e.claimed.length)
   );
 
-  function stepNodes(ids: string[]): NodeRefJSON[] {
+  function stepNodes(ids: string[]): NodeJSON[] {
     return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
   }
 
@@ -1159,8 +1159,8 @@
 
   // The places of cited nodes, in the order of their citations: nodes cited one after the other on
   // the same line, e.g. a call and the variable it is assigned to, are one place
-  function placesOf(refs: NodeRefJSON[]): NodeRefJSON[][] {
-    const places: NodeRefJSON[][] = [];
+  function placesOf(refs: NodeJSON[]): NodeJSON[][] {
+    const places: NodeJSON[][] = [];
     for (const ref of refs) {
       const last = places.at(-1)?.[0];
       if (
@@ -1360,7 +1360,7 @@
   }
 
   // The places in the code the answer of a block cites, in the order it cites them
-  function citedPlaces(b: number): NodeRefJSON[][] {
+  function citedPlaces(b: number): NodeJSON[][] {
     const ids = (timeline[b]?.entries ?? []).flatMap((e) =>
       e.message.contentType === 'text' ? extractCitations(e.message.content) : []
     );
@@ -1373,7 +1373,7 @@
   }
 
   // The nodes among the arguments of the tool calls, to name them in the labels of the calls
-  let argRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  let argRefs = $state.raw<Map<string, NodeJSON>>(new Map());
   const argKey = $derived(
     [
       ...new Set([
@@ -1490,7 +1490,7 @@
     };
   }
 
-  function trustLocation(ref: NodeRefJSON): string {
+  function trustLocation(ref: NodeJSON): string {
     return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
   }
 
@@ -1618,7 +1618,7 @@
 
   // The function containing the inspected node in the open file, or the node if it is a function.
   // Without a selection in the file, it is the function at the top of what is visible
-  const breadcrumbFunction = $derived.by((): NodeRefJSON | null => {
+  const breadcrumbFunction = $derived.by((): NodeJSON | null => {
     const details = focus.details;
     if (details && details.node.translationUnitId === openedUnit?.id) {
       return (
@@ -1634,11 +1634,11 @@
   });
 
   // The annotations of the open file, loaded by the code viewer and shown in the outline
-  let fileAnnotations = $state.raw<FileAnnotationsJSON | null>(null);
+  let fileAnnotations = $state.raw<FileOverview | null>(null);
 
   // The status of the calls of the open file by their node ID
   const callStatus = $derived(
-    fileAnnotations ? new Map(fileAnnotations.calls.map((c) => [c.id, c.status])) : undefined
+    fileAnnotations ? new Map(fileAnnotations.calls.map((c) => [c.call.id, c.status])) : undefined
   );
 
   // Switches to the inspector after the user inspected a node, unless the agent is working: then

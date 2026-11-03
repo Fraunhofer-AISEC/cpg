@@ -23,6 +23,7 @@
 </script>
 
 <script lang="ts">
+  import { overlayKind, overlayName } from '$lib/overview';
   import { Handle, Position, type NodeProps } from '@xyflow/svelte';
   import { branchName, locationOf } from '$lib/graph';
 
@@ -35,7 +36,9 @@
 
   // The concepts and operations of the statement by name, unless they are nodes of their own
   const overlayNames = $derived(
-    card.overlaysShown ? [] : [...new Set(statement.overlays.map((o) => o.name || o.type))]
+    card.overlaysShown
+      ? []
+      : [...new Set(statement.overlays.map((o) => o.overlay.name || o.overlay.type))]
   );
 
   // The badges of the semantic colors. With a single one its word is shown as well
@@ -44,7 +47,7 @@
       overlayNames.length > 0 && {
         icon: '◆',
         word: overlayNames[0] + (overlayNames.length > 1 ? ` +${overlayNames.length - 1}` : ''),
-        title: statement.overlays.map((o) => `${o.label ?? ''} ${o.name || o.type}`).join('\n'),
+        title: statement.overlays.map(overlayName).join('\n'),
         cls: 'text-purple-600'
       },
       statement.warning && { icon: '⚠', word: 'warning', cls: 'text-amber-600' },
@@ -97,7 +100,7 @@ graph. Expanding by double click is a shortcut, the button at the border does th
     {:else if overlay}
       <span class="text-purple-600 group-[.graph-far]/flow:text-4xl">◆</span>
       <span class="truncate group-[.graph-far]/flow:hidden"
-        >{statement.node.label ?? 'Overlay'} · L{statement.startLine}</span
+        >{statement.overlay ? overlayKind(statement.overlay) : 'Overlay'} · L{statement.startLine}</span
       >
     {:else}
       <span
