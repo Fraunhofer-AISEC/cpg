@@ -70,6 +70,7 @@ class CodeOverviewTest {
 
     private val tu =
         TranslationUnit().apply {
+            location = PhysicalLocation(uri, Region())
             declarations +=
                 Function().apply {
                     name = Name("main")
@@ -95,6 +96,27 @@ class CodeOverviewTest {
         assertEquals(3, main.callees)
         assertEquals(1, main.externalCalls)
         assertEquals(1, main.unresolvedCalls)
+    }
+
+    @Test
+    fun testNodesOfAnIncludedFileAreIgnored() {
+        // An inline function of an included header (see loadIncludes) with a call in its body
+        val header = URI("file:/overview.h")
+        tu.declarations +=
+            Function().apply {
+                name = Name("inlined")
+                location = PhysicalLocation(header, Region(1, 1, 3, 2))
+                body =
+                    Block().apply {
+                        statements +=
+                            call("helper", 2, helper).apply {
+                                location = PhysicalLocation(header, Region(2, 1, 2, 10))
+                            }
+                    }
+            }
+
+        assertEquals(listOf("main"), tu.toFunctionCallStatsJSON().map { it.function.name })
+        assertEquals(3, tu.toCallSitesJSON().size)
     }
 
     @Test

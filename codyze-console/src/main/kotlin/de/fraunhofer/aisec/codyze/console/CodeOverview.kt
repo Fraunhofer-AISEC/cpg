@@ -86,9 +86,21 @@ val Call.status: CallStatus
             else -> CallStatus.RESOLVED
         }
 
-/** The nodes of this translation unit that have a location in it. */
+/**
+ * Whether this node is located in the file of the given translation unit. The AST of a translation
+ * unit can also contain nodes of other files, e.g. the declarations of included headers in C (see
+ * `loadIncludes`), whose positions refer to these files. If the unit has no file, any node with a
+ * location is considered to be in it.
+ */
+fun Node.isInFileOf(translationUnit: TranslationUnit): Boolean {
+    val location = location ?: return false
+    val file = translationUnit.location?.artifactLocation?.uri ?: return true
+    return location.artifactLocation.uri == file
+}
+
+/** The nodes of this translation unit that are located in its file, see [isInFileOf]. */
 private val TranslationUnit.ownNodes: List<Node>
-    get() = nodes.filter { it.location != null && it.translationUnit == this }
+    get() = nodes.filter { it.translationUnit == this && it.isInFileOf(this) }
 
 /** The calls written in the code, i.e. without operator calls and implicit calls. */
 private fun Iterable<Node>.explicitCalls(): List<Call> =
@@ -97,7 +109,7 @@ private fun Iterable<Node>.explicitCalls(): List<Call> =
 /** The functions of this translation unit that have a body, with their key figures. */
 fun TranslationUnit.toFunctionCallStatsJSON(): List<FunctionCallStatsJSON> =
     functions
-        .filter { !it.isImplicit && it.body != null && it.location != null }
+        .filter { !it.isImplicit && it.body != null && it.isInFileOf(this) }
         .map { function ->
             val statuses = function.body.calls.filter { it !is OperatorCall }.map { it.status }
             FunctionCallStatsJSON(

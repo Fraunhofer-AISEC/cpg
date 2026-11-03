@@ -135,7 +135,7 @@ fun TranslationUnit.nodeAt(line: Int, column: Int): Node? {
     var bestSpan = Long.MAX_VALUE
     // The nodes are in pre-order, so among nodes with the same region, a later one is deeper
     for (node in nodes) {
-        if (node is TranslationUnit) continue
+        if (node is TranslationUnit || !node.isInFileOf(this)) continue
         val region = node.location?.region ?: continue
         if (!region.contains(line, column)) continue
         val span = region.span()

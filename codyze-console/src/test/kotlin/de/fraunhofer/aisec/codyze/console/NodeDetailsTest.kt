@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.codyze.console
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
@@ -74,6 +75,7 @@ class NodeDetailsTest {
         }
     private val tu =
         TranslationUnit().apply {
+            location = PhysicalLocation(uri, Region())
             declarations +=
                 Function().apply {
                     name = Name("main")
@@ -110,6 +112,17 @@ class NodeDetailsTest {
                 location = at(2, 3, 2, 11)
             }
         assertSame(call, tu.nodeAt(2, 10))
+    }
+
+    @Test
+    fun testNodeOfAnIncludedFileIsIgnored() {
+        // A declaration of an included header (see loadIncludes) at the same position in its file
+        tu.declarations +=
+            Variable().apply {
+                name = Name("y")
+                location = PhysicalLocation(URI("file:/details.h"), Region(2, 8, 2, 9))
+            }
+        assertSame(argument, tu.nodeAt(2, 8))
     }
 
     @Test
