@@ -32,8 +32,6 @@ import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.dsl.RequirementBuilder
 import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CallStatus
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.status
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -293,9 +291,6 @@ data class ConceptRequestJSON(
  * Upper bound for each list in [NodeDetailsJSON], so that hub nodes do not blow up the response.
  */
 private const val MAX_RELATED_NODES = 200
-
-/** Upper bound for the code of a node that is only referenced, see [toRefJSON]. */
-private const val MAX_SNIPPET_LENGTH = 120
 
 /**
  * A node that is related to the node it was listed for, e.g. a neighbour in the dataflow.
@@ -621,13 +616,6 @@ fun RequirementBuilder.toJSON(
         queryTree = queryTree?.toJSON(),
     )
 }
-
-/**
- * This node as [NodeJSON] for a reference to it, e.g. in a list: without its DFG edges and with
- * only the first line of its code, so that hub nodes and large functions do not blow up the
- * response.
- */
-fun Node.toRefJSON(): NodeJSON = toJSON(noEdges = true, maxCodeLength = MAX_SNIPPET_LENGTH)
 
 fun Node.toDetailsJSON(): NodeDetailsJSON {
     val warnings = mutableListOf<String>()

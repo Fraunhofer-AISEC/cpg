@@ -26,7 +26,10 @@
 package de.fraunhofer.aisec.cpg.serialization
 
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import kotlin.test.Test
@@ -69,5 +72,31 @@ class NodeSerializationTest {
         assertEquals("int", Reference().apply { type = int }.toJSON().typeName)
         // A node without a type
         assertNull(TranslationUnit().toJSON().typeName)
+    }
+
+    // The status of calls, see CallStatus
+    private val defined = Function().apply { body = Block() }
+    // E.g. declared in a header, as with loadIncludes
+    private val declared = Function()
+    private val inferred = Function().apply { isInferred = true }
+
+    private fun callTo(vararg targets: Function) = Call().apply { invokes += targets }
+
+    @Test
+    fun testCallStatusResolved() {
+        assertEquals(CallStatus.RESOLVED, callTo(defined).status)
+        // A virtual call can reach a declaration without a body next to an override
+        assertEquals(CallStatus.RESOLVED, callTo(declared, defined).status)
+    }
+
+    @Test
+    fun testCallStatusExternal() {
+        assertEquals(CallStatus.EXTERNAL, callTo(declared).status)
+        assertEquals(CallStatus.EXTERNAL, callTo(inferred).status)
+    }
+
+    @Test
+    fun testCallStatusUnresolved() {
+        assertEquals(CallStatus.UNRESOLVED, callTo().status)
     }
 }

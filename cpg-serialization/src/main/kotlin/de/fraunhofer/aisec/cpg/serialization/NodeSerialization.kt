@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.serialization
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -129,6 +130,16 @@ fun Node.toJSON(noEdges: Boolean = false, maxCodeLength: Int? = null): NodeJSON 
     )
 }
 
+/** Upper bound for the code of a node that is only referenced, see [toRefJSON]. */
+private const val MAX_SNIPPET_LENGTH = 120
+
+/**
+ * This node as [NodeJSON] for a reference to it, e.g. in a list: without its DFG edges and with
+ * only the first line of its code, so that hub nodes and large functions do not blow up the
+ * response.
+ */
+fun Node.toRefJSON(): NodeJSON = toJSON(noEdges = true, maxCodeLength = MAX_SNIPPET_LENGTH)
+
 /** The first line of this code, trimmed and shortened to at most [maxLength] characters. */
 private fun String.snippet(maxLength: Int): String {
     val firstLine = lineSequence().firstOrNull()?.trim().orEmpty()
@@ -143,3 +154,30 @@ fun Edge<*>.toJSON(): EdgeJSON {
         end = this.end.id,
     )
 }
+
+/** How well the analysis knows what a [Call] does. */
+enum class CallStatus {
+    /** At least one target has a body, i.e., is part of the analysed code. */
+    RESOLVED,
+    /**
+     * The targets are known, but none of them has a body, e.g. functions that are only declared in
+     * a header or a library, or that were inferred by the analysis.
+     */
+    EXTERNAL,
+    /** No target could be determined at all. */
+    UNRESOLVED,
+}
+
+/**
+ * How well the analysis knows the targets of this call, see [CallStatus].
+ *
+ * A single target with a body is enough for [CallStatus.RESOLVED], since the targets of a virtual
+ * call can include declarations without a body (e.g. a pure virtual method) next to its overrides.
+ */
+val Call.status: CallStatus
+    get() =
+        when {
+            invokes.isEmpty() -> CallStatus.UNRESOLVED
+            invokes.none { it.body != null } -> CallStatus.EXTERNAL
+            else -> CallStatus.RESOLVED
+        }
