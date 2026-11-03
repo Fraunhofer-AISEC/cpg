@@ -11,11 +11,25 @@ func (e Aes256) GetETypeID() int32 {
 	return 18
 }
 
+func (e Aes192) EncryptMessage(key []byte, message []byte) []byte {
+	return aes192Encrypt(key, message)
+}
+
+// GetETypeID does not use its receiver, so the name is omitted. The method is
+// still part of Aes192's method set.
+func (Aes192) GetETypeID() int32 {
+	return 19
+}
+
 func (n NotAnEType) GetETypeID() int32 {
 	return 0
 }
 
 func aes256Encrypt(key []byte, message []byte) []byte {
+	return message
+}
+
+func aes192Encrypt(key []byte, message []byte) []byte {
 	return message
 }
 

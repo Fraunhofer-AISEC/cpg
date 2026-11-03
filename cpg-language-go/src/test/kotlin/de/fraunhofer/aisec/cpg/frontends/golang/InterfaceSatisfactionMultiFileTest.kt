@@ -158,6 +158,47 @@ class InterfaceSatisfactionMultiFileTest {
         )
     }
 
+    /**
+     * A type whose method set is only complete once a method with an *unnamed* receiver is counted
+     * must still satisfy the interface. Such a method has no receiver variable, and because its
+     * type is declared in another translation unit it is not bound to its record either, so it is
+     * easily dropped when collecting method sets -- which silently removes the type from every
+     * interface it implements.
+     */
+    @Test
+    fun testUnnamedReceiverCountsTowardsTheMethodSet() {
+        val result = analyzeFixture()
+        assertNotNull(result)
+
+        val etype = result.records["main.EType"]
+        assertNotNull(etype)
+
+        val getID =
+            result.methods.firstOrNull {
+                it.name.localName == "GetETypeID" && it.name.parent?.localName == "Aes192"
+            }
+        assertNotNull(getID, "the unnamed-receiver method should be parsed as a method of Aes192")
+        assertNull(
+            getID.receiver,
+            "precondition: an unnamed receiver yields no receiver variable, which is what makes " +
+                "this case hard -- if this ever changes, the fallback is no longer exercised",
+        )
+
+        val ifaceMethod = etype.methods["EncryptMessage"]
+        assertNotNull(ifaceMethod)
+
+        val overridingRecords =
+            ifaceMethod.overriddenBy.filterIsInstance<Method>().mapNotNull {
+                it.recordDeclaration?.name?.localName ?: it.name.parent?.localName
+            }
+        assertContains(
+            overridingRecords,
+            "Aes192",
+            "Aes192's method set is complete only when the unnamed-receiver GetETypeID is " +
+                "counted, so it must implement EType",
+        )
+    }
+
     /** With the override relation in place, the dispatch must reach the implementation. */
     @Test
     fun testCallThroughInterfaceIsDevirtualized() {

@@ -93,9 +93,23 @@ class GoInterfaceSatisfactionPass(ctx: TranslationContext) : ComponentPass(ctx) 
             // name when the method does not use it -- `func (*cfDictionary) typeName() string` --
             // and such a method is still part of the type's method set, so we fall back to the
             // record the method was bound to.
+            // Neither of the first two keys is always available. The receiver variable only exists
+            // if the receiver was named: Go allows omitting the name when the method does not use
+            // it -- `func (*OPT) parse(...)` -- and such a method is still part of the type's
+            // method set. The record declaration, in turn, is only bound when the type is declared
+            // in the same translation unit as the method, which is routinely not the case for
+            // generated code: miekg/dns declares `type OPT struct` in edns.go but its `pack` and
+            // `Header` in zmsg.go and ztypes.go.
+            //
+            // A method whose receiver is unnamed *and* whose type is declared elsewhere therefore
+            // has neither key and would be dropped, leaving the type's method set incomplete and
+            // the type out of every interface it actually satisfies. The name is built as
+            // `Name(funcName, fqnRecord)` regardless, so its parent always names the receiver
+            // type.
             val owner =
                 method.recordDeclaration?.name?.localName
                     ?: method.receiver?.type?.root?.name?.localName
+                    ?: method.name.parent?.localName
                     ?: continue
             withReceiver++
             result
