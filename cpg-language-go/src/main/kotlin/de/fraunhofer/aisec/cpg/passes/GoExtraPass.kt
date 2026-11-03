@@ -159,15 +159,32 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      * ```
      */
     private fun handleRecord(record: Record) {
-        // We are only interest in structs, not interfaces
-        if (record.kind != "struct") {
+        val promoted =
+            when (record.kind) {
+                "struct" -> promotedDeclarations(record)
+                // An interface composes other interfaces by embedding them, and every method of an
+                // embedded interface belongs to the embedding one's method set:
+                //
+                //     type ArrayEncoder interface {
+                //         PrimitiveArrayEncoder
+                //         AppendArray(ArrayMarshaler) error
+                //     }
+                //
+                // A call to `AppendInt` -- declared by PrimitiveArrayEncoder -- on something typed
+                // as ArrayEncoder has to find that declaration. Without it the resolver invents an
+                // inferred method on ArrayEncoder instead, which has no body and no
+                // implementations, so every call through the embedding interface stops there.
+                "interface" -> promotedInterfaceMethods(record)
+                else -> return
+            }
+        if (promoted.isEmpty()) {
             return
         }
 
         // Enter our record's scope
         scopeManager.enterScope(record)
 
-        for (declaration in promotedDeclarations(record)) {
+        for (declaration in promoted) {
             // Only the scope is extended. Adding the declaration to the AST as well would
             // duplicate something that belongs to the embedded struct.
             scopeManager.addDeclaration(declaration)
@@ -175,6 +192,39 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
         scopeManager.leaveScope(record)
     }
+
+    /**
+     * Collects the methods that [record], an interface, obtains from the interfaces it embeds.
+     *
+     * An embedded interface is modelled as a super type of the embedding one (see
+     * `SpecificationHandler.handleInterfaceTypeSpec`), and embedding is transitive. A method the
+     * interface declares itself takes precedence, so names it already owns are not promoted.
+     */
+    private fun promotedInterfaceMethods(record: Record): List<Declaration> {
+        val claimed = record.methods.mapTo(mutableSetOf()) { it.name.localName }
+        val promoted = mutableListOf<Declaration>()
+        val visited = mutableSetOf(record)
+        val frontier = ArrayDeque(record.embeddedInterfaces.filter { visited.add(it) })
+
+        while (frontier.isNotEmpty()) {
+            val embedded = frontier.removeFirst()
+            for (method in embedded.methods) {
+                if (claimed.add(method.name.localName)) {
+                    promoted += method
+                }
+            }
+            frontier.addAll(embedded.embeddedInterfaces.filter { visited.add(it) })
+        }
+
+        return promoted
+    }
+
+    /** The interfaces that this record embeds, i.e. its super types that are interfaces. */
+    private val Record.embeddedInterfaces: List<Record>
+        get() =
+            this.superTypes.mapNotNull {
+                ((it as? ObjectType)?.recordDeclaration)?.takeIf { r -> r.kind == "interface" }
+            }
 
     /**
      * Collects the fields and methods that [record] promotes from the structs it embeds, following
