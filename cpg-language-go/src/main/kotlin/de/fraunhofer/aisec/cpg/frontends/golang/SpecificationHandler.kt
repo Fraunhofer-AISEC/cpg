@@ -116,20 +116,30 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     // A field can also have no name, which means that it is embedded. In this case,
                     // it can be accessed by the local name of its type, and therefore we name the
                     // field accordingly. We use the "modifiers" property to denote that this is an
-                    // embedded field, so we can easily retrieve them later
-                    val (fieldName, modifiers) =
+                    // embedded field, so we can easily retrieve them later.
+                    //
+                    // One entry can furthermore declare several fields sharing a type: `class,
+                    // tag, length int` are three int fields. Keeping only the first name does not
+                    // leave the others untyped, it means they do not exist at all, so a reference
+                    // to one has no type and whatever it is passed to can no longer be matched
+                    // against a declaration.
+                    val names =
                         if (field.names.isEmpty()) {
                             // Retrieve the root type local name
-                            Pair(type.root.name.localName, setOf("embedded"))
+                            listOf(Pair(type.root.name.localName, setOf("embedded")))
                         } else {
-                            Pair(field.names[0].name, setOf())
+                            field.names.map { Pair(it.name, setOf<String>()) }
                         }
 
-                    newField(fieldName, type, modifiers, rawNode = field, holder = record) { decl ->
-                        // A struct field is exported/unexported based on the casing of its (field
-                        // or, for embedded fields, type) name. We are inside the record scope here,
-                        // which is a NameScope, so the language applies the export semantics.
-                        language.applyModifiers(decl, frontend.scopeManager.currentScope)
+                    for ((fieldName, modifiers) in names) {
+                        newField(fieldName, type, modifiers, rawNode = field, holder = record) {
+                            decl ->
+                            // A struct field is exported/unexported based on the casing of its
+                            // (field or, for embedded fields, type) name. We are inside the record
+                            // scope here, which is a NameScope, so the language applies the export
+                            // semantics.
+                            language.applyModifiers(decl, frontend.scopeManager.currentScope)
+                        }
                     }
                 }
             }
