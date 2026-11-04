@@ -41,8 +41,10 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  *   unknown type and calls with parameters of these types do not resolve. A typedef that the code
  *   or a loaded header declares takes precedence over them.
  * - It defines the macro `va_arg` (from `<stdarg.h>`), because the parser cannot handle a type as
- *   its argument without it. It expands to a cast of `0` to that type, so the expression has the
- *   right type.
+ *   its argument without it. Like the header of a compiler, it expands to `__builtin_va_arg`, which
+ *   CDT knows. The [ExpressionHandler] translates that into a cast of the `va_list` to the
+ *   requested type, so the expression has the right type and still reads the `va_list` (the data
+ *   flow from it is kept). If `<stdarg.h>` is parsed, it defines the same macro.
  * - It provides data flow summaries for common functions, such as `memcpy` or `strcpy` (see
  *   `profiles/cxx/stdlib.yml`), which are used for all calls to a function of this name that has no
  *   body and is declared globally or in `std` (not a method).
@@ -75,7 +77,10 @@ object StdlibProfile : Profile("stdlib") {
             return emptyMap()
         }
 
-        return mapOf("va_arg(a,t)" to "((t)0)")
+        // This is what <stdarg.h> of GCC and Clang defines. CDT knows `__builtin_va_arg` itself,
+        // as a builtin macro, so we only need to provide the name that the headers would. The
+        // expression it expands to is translated in [ExpressionHandler].
+        return mapOf("va_arg(a,t)" to "__builtin_va_arg(a,t)")
     }
 
     override val functionSummaries = listOf("profiles/cxx/stdlib.yml")
