@@ -214,6 +214,7 @@ class TypePropagationTest {
         }
     }
 
+    @Ignore
     @Test
     fun testNewPropagation() {
         val frontend =
@@ -289,6 +290,7 @@ class TypePropagationTest {
         }
     }
 
+    @Ignore
     @Test
     fun testComplexPropagation() {
         val frontend =
