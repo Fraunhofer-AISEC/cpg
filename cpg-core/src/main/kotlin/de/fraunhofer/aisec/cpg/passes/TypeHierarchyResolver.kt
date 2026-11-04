@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
@@ -62,14 +61,24 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
     "Builds the type hierarchy within the CPG, establishing relationships between types such as inheritance and interface implementation."
 )
 open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    protected val recordMap = mutableMapOf<Name, Record>()
+    /**
+     * Every record of the component, not one per name.
+     *
+     * Two records may legitimately share a name, because a name identifies a type only together
+     * with the namespace it lives in: Go packages are identified by their import path, so a
+     * vendored fork such as `github.com/google/certificate-transparency-go/asn1` sits beside the
+     * standard `encoding/asn1` and both declare `ObjectIdentifier`. Keeping only the first record
+     * of a name meant the others were never analyzed, so their methods never became override
+     * candidates and a call through an interface could not reach them at all.
+     */
+    protected val records = identitySetOf<Record>()
     protected val enums = mutableListOf<Enumeration>()
 
     override fun accept(component: Component) {
         for (tu in component.translationUnits) {
             findRecordsAndEnums(tu)
         }
-        for (recordDecl in recordMap.values) {
+        for (recordDecl in records) {
             val supertypeRecords = findSupertypeRecords(recordDecl)
             val allMethodsFromSupertypes = getAllMethodsFromSupertypes(supertypeRecords)
             analyzeOverridingMethods(recordDecl, allMethodsFromSupertypes)
@@ -86,7 +95,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Imports from a record also import what the record inherits. Now that we know the
         // supertypes, the imported symbols need to be updated.
-        for (record in recordMap.values + enums) {
+        for (record in records + enums) {
             val scope = ctx.scopeManager.lookupScope(record) as? NameScope ?: continue
             for (edge in scope.importedByEdges) {
                 edge.declaration?.let { ctx.scopeManager.updateImportedSymbols(it) }
@@ -103,7 +112,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     if (t is Enumeration) {
                         enums.add(t)
                     } else if (t is Record) {
-                        recordMap.putIfAbsent(t.name, t)
+                        records.add(t)
                     }
                 }
             },
