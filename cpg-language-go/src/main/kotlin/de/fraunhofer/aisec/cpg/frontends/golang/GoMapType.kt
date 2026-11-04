@@ -50,11 +50,29 @@ class GoMapType(
     /** Subscripting a map yields its value type. */
     override fun dereference(): Type = valueType
 
+    /**
+     * A map type is structural: `map[string]int` is the same type wherever it is written, so two of
+     * them are equal when their key and value types are.
+     *
+     * We deliberately do not delegate to [ObjectType.equals], because [Type.equals] also compares
+     * the *scope* a type was created in. A type carrying generics is not interned by the type
+     * builder -- interning is limited to simple named types -- so every occurrence of a map type is
+     * a fresh instance holding the scope it was written in, and two occurrences in different scopes
+     * would never be equal. The visible consequence is that passing a map to a parameter of the
+     * very same map type does not match, the call is not resolved to its declaration, and a
+     * body-less stub is inferred in its place.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is GoMapType) return false
-        return super.equals(other) && keyType == other.keyType && valueType == other.valueType
+        return language == other.language &&
+            keyType == other.keyType &&
+            valueType == other.valueType
     }
 
-    override fun hashCode(): Int = super.hashCode() * 31 + valueType.hashCode()
+    /**
+     * [Type] uses a constant hash code on purpose, because its name and scope change while the
+     * types are being resolved and it therefore cannot hash on them. We keep that contract.
+     */
+    override fun hashCode(): Int = super.hashCode()
 }
