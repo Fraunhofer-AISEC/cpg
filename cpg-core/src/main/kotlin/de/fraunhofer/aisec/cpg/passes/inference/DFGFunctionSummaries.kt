@@ -31,6 +31,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
+import de.fraunhofer.aisec.cpg.Profile
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
@@ -55,11 +56,13 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
+import java.io.InputStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -74,6 +77,14 @@ class DFGFunctionSummaries {
     /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
+    /**
+     * The entries of [functionToDFGEntryMap] that come from a [Profile], with their profile. They
+     * only describe functions whose code is not available, so they are not applied to a function
+     * with a body, nor to a function that the profile does not declare (see
+     * [findFunctionDeclarationEntry]).
+     */
+    private val profileEntries = mutableMapOf<FunctionDeclarationEntry, Profile>()
+
     fun hasSummary(function: Function) = function.functionSummary.isNotEmpty()
 
     fun getLastWrites(function: Function): Map<Node, Set<Function.FSEntry>> =
@@ -81,16 +92,34 @@ class DFGFunctionSummaries {
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
+        return file.inputStream().use { addEntries(it, file.extension) }
+    }
+
+    /**
+     * Reads the [DataflowEntry]s from [input]. The format is derived from the [extension] (`yaml`
+     * or `yml`, everything else is treated as JSON). Entries for an already known function replace
+     * the previous ones. [profile] marks the entries as those of a [Profile].
+     */
+    private fun addEntries(
+        input: InputStream,
+        extension: String,
+        profile: Profile? = null,
+    ): Map<FunctionDeclarationEntry, List<DFGEntry>> {
         val mapper =
-            if (file.extension.lowercase() in listOf("yaml", "yml")) {
+            if (extension.lowercase() in listOf("yaml", "yml")) {
                     ObjectMapper(YAMLFactory())
                 } else {
                     ObjectMapper(JsonFactory())
                 }
                 .registerKotlinModule()
-        val entries = mapper.readValue<List<DataflowEntry>>(file)
+        val entries = mapper.readValue<List<DataflowEntry>>(input)
         for (entry in entries) {
             functionToDFGEntryMap[entry.functionDeclaration] = entry.dataFlows
+            if (profile != null) {
+                profileEntries[entry.functionDeclaration] = profile
+            } else {
+                profileEntries -= entry.functionDeclaration
+            }
         }
         return functionToDFGEntryMap
     }
@@ -111,7 +140,8 @@ class DFGFunctionSummaries {
         declEntry: FunctionDeclarationEntry,
         summary: List<DFGEntry>,
     ): Function {
-        val inferredFunction = contextProvider.newFunction(language.parseName(declEntry.methodName))
+        val inferredFunction =
+            with(contextProvider) { newFunction(language.parseName(declEntry.methodName)) }
         declEntry.signature?.forEachIndexed { i, typeName ->
             val type =
                 if (contextProvider.ctx.typeManager.typeExists(typeName)) {
@@ -128,7 +158,8 @@ class DFGFunctionSummaries {
                     // contextProvider.ctx.typeManager.registerType(type)
                     type
                 } ?: language.unknownType()
-            inferredFunction.parameters += contextProvider.newParameter(Name("param$i"), type)
+            inferredFunction.parameters +=
+                with(contextProvider) { newParameter(Name("param$i"), type) }
         }
         applyDfgEntryToFunction(inferredFunction, summary)
         return inferredFunction
@@ -145,6 +176,11 @@ class DFGFunctionSummaries {
      * 4) If it's a method (i.e., invoked on an object), we also consider which type of the
      *    receiver/base is the most precise one
      *
+     * Entries of a [Profile] ([profileEntries]) are left out if the function or its definition has
+     * a body: the code describes the function itself, and a summary would replace what the analysis
+     * of that code finds. They are also left out if a registered entry matches, since registered
+     * summaries take precedence.
+     *
      * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
      * matches.
      */
@@ -153,11 +189,15 @@ class DFGFunctionSummaries {
 
         val language = functionDecl.language
         val methodName = functionDecl.name
+        val hasCode = (functionDecl.definition ?: functionDecl).hasBody()
 
         // The language and the method name have to match. If a signature is specified, it also has
         // to match to the one of the Function, null indicates that we accept everything.
-        val matchingEntries =
+        val candidates =
             functionToDFGEntryMap.keys.filter {
+                val profile = profileEntries[it]
+                if (profile != null && (hasCode || !profile.declares(functionDecl)))
+                    return@filter false
                 // The language has to match otherwise the remaining comparison is useless
                 if (language.matchesOrDerivesFrom(it.language)) {
                     // Split the name if we have a FQN
@@ -195,6 +235,7 @@ class DFGFunctionSummaries {
                     false
                 }
             }
+        val matchingEntries = candidates.filter { it !in profileEntries }.ifEmpty { candidates }
 
         log.debug(
             "Found {} matching entries for function declaration {} with parameter types {} in {}",
@@ -210,6 +251,25 @@ class DFGFunctionSummaries {
         } else if (matchingEntries.filter { it.signature != null }.size == 1) {
             // Only one entry with a matching signature => We take this one.
             functionToDFGEntryMap[matchingEntries.single { it.signature != null }]
+        } else if (matchingEntries.isNotEmpty() && matchingEntries.all { it.signature == null }) {
+            // Multiple entries without a signature => The one for the most specific language wins,
+            // e.g. one for CPPLanguage over one for CLanguage in C++ code. Several for the same
+            // language are summaries registered twice, so we take the first one and warn.
+            val mostSpecific =
+                matchingEntries
+                    .groupBy { language.derivationDistance(it.language) ?: Int.MAX_VALUE }
+                    .minBy { it.key }
+                    .value
+            if (mostSpecific.size > 1) {
+                log.warn(
+                    "Found {} function summaries without a signature for {} in the same " +
+                        "language, using the first one: {}",
+                    mostSpecific.size,
+                    functionDecl.name,
+                    mostSpecific.first(),
+                )
+            }
+            functionToDFGEntryMap[mostSpecific.first()]
         } else if (matchingEntries.isNotEmpty()) {
             /* There are multiple matching entries. We use the following routine:
              * First, we filter for existing signatures.
@@ -219,16 +279,14 @@ class DFGFunctionSummaries {
              * If nothing helped to get a unique entry, we pick the first remaining entry and hope it's the most precise one.
              */
             val typeEntryList =
-                matchingEntries
-                    .filter { it.signature != null }
-                    .map {
-                        Pair(
-                            language.parseName(it.methodName).parent?.let { it1 ->
-                                typeManager.lookupResolvedType(it1, language = language)
-                            } ?: language.unknownType(),
-                            it,
-                        )
-                    }
+                matchingEntries.mapFiltered({ it.signature != null }) {
+                    Pair(
+                        language.parseName(it.methodName).parent?.let { it1 ->
+                            typeManager.lookupResolvedType(it1, language = language)
+                        } ?: language.unknownType(),
+                        it,
+                    )
+                }
             val uniqueTypes = typeEntryList.map { it.first }.distinct()
             val targetType =
                 language.parseName(functionDecl.name).parent?.let { it1 ->
@@ -242,29 +300,28 @@ class DFGFunctionSummaries {
                     ?.first
 
             val mostPreciseClassEntries =
-                typeEntryList.filter { it.first == mostPreciseType }.map { it.second }
+                typeEntryList.mapFiltered({ it.first == mostPreciseType }) { it.second }
 
-            val signatureResults =
-                mostPreciseClassEntries
-                    .map {
-                        Pair(
-                            it,
-                            functionDecl.matchesSignature(
-                                it.signature?.map {
-                                    typeManager.lookupResolvedType(it, language = language)
-                                        ?: language.unknownType()
-                                } ?: listOf()
-                            ),
+            val signatureResults = buildMap {
+                for (entry in mostPreciseClassEntries) {
+                    val result =
+                        functionDecl.matchesSignature(
+                            entry.signature?.map {
+                                typeManager.lookupResolvedType(it, language = language)
+                                    ?: language.unknownType()
+                            } ?: listOf()
                         )
+                    if (result is SignatureMatches) {
+                        put(entry, result)
                     }
-                    .filter { it.second is SignatureMatches }
-                    .associate { it }
+                }
+            }
 
             val rankings = signatureResults.entries.map { Pair(it.value.ranking, it.key) }
 
             // Find the best (lowest) rank and find functions with the specific rank
             val bestRanking = rankings.minBy { it.first }.first
-            val list = rankings.filter { it.first == bestRanking }.map { it.second }
+            val list = rankings.mapFiltered({ it.first == bestRanking }) { it.second }
 
             functionToDFGEntryMap[list.first()]
         } else {
@@ -369,7 +426,7 @@ class DFGFunctionSummaries {
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
             // We can't currently draw the edges between ParameterMemoryValues here because we don't
-            // yet have them, so we do this in handleCallExpression in the pointsToPass
+            // yet have them, so we do this in handleEmptyFunction in the pointsToPass
             // Note: When we have a Name for a memoryAddress that does not yet exist, we need to
             // draw the DFG edge later in writeEntry()
             if (destValueDepth == 1 && srcValueDepth == 1)
@@ -428,9 +485,47 @@ class DFGFunctionSummaries {
             return dfgFunctionSummaries
         }
 
+        /**
+         * Generates a [DFGFunctionSummaries] object from the summaries of the [profiles] and the
+         * [files]. The [files] are read last, so they override the summaries of a profile.
+         */
+        fun fromProfilesAndFiles(profiles: List<Profile>, files: List<File>): DFGFunctionSummaries {
+            val dfgFunctionSummaries = DFGFunctionSummaries()
+            for (profile in profiles) {
+                for (resource in profile.functionSummaries) {
+                    val stream = profile.classLoader.getResourceAsStream(resource)
+                    if (stream == null) {
+                        log.error(
+                            "Could not find function summaries {} of profile {}",
+                            resource,
+                            profile.name,
+                        )
+                        continue
+                    }
+                    stream.use {
+                        dfgFunctionSummaries.addEntries(
+                            it,
+                            resource.substringAfterLast('.'),
+                            profile = profile,
+                        )
+                    }
+                }
+            }
+            files.forEach { dfgFunctionSummaries.addEntriesFromFile(it) }
+            return dfgFunctionSummaries
+        }
+
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
     }
 }
+
+/**
+ * Returns `true` if [function] can be one of the functions that this profile summarizes: a function
+ * (not a method) that is declared globally or in one of the [Profile.summaryNamespaces].
+ */
+private fun Profile.declares(function: Function): Boolean =
+    function !is Method &&
+        function.name.parent.let { it == null || it.toString() in summaryNamespaces }
 
 /**
  * Returns `true` if this language class or one of its superclasses matches [targetLanguageName].
@@ -441,17 +536,27 @@ class DFGFunctionSummaries {
  * For backwards compatibility, both fully qualified class names and simple class names are
  * supported, since existing summary YAMLs may use entries such as `CPPLanguage`.
  */
-private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean {
+private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean =
+    derivationDistance(targetLanguageName) != null
+
+/**
+ * The number of superclasses between this language class and the one [targetLanguageName] names (0
+ * if it is this language's class itself), or `null` if it is none of them. See
+ * [matchesOrDerivesFrom] for the names.
+ */
+private fun Language<*>.derivationDistance(targetLanguageName: String): Int? {
     var currentClass: Class<*>? = this.javaClass
+    var distance = 0
 
     while (currentClass != null) {
         if (
             currentClass.name == targetLanguageName || currentClass.simpleName == targetLanguageName
         ) {
-            return true
+            return distance
         }
         currentClass = currentClass.superclass
+        distance++
     }
 
-    return false
+    return null
 }

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -52,7 +51,7 @@ import java.util.Objects
  * `Point { x, y }` and `Circle(radius)` each become one [ObjectDeconstruction], typed to `Point` /
  * `Circle` respectively, with one [components] entry per bound field/element.
  */
-class ObjectDeconstruction : Deconstruction(), ArgumentHolder, HasType.TypeObserver {
+class ObjectDeconstruction : Deconstruction(), HasType.TypeObserver {
     @Relationship("COMPONENTS") var componentEdges = astEdgesOf<Expression>()
     var components by unwrapping(ObjectDeconstruction::componentEdges)
 
@@ -63,28 +62,6 @@ class ObjectDeconstruction : Deconstruction(), ArgumentHolder, HasType.TypeObser
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), components)
-
-    override fun addArgument(expression: Expression) {
-        this.components += expression
-        expression.access = this.access
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        val idx = componentEdges.indexOfFirst { it.end == old }
-        if (idx != -1) {
-            old.unregisterTypeObserver(this)
-            componentEdges[idx].end = new
-            new.registerTypeObserver(this)
-            new.access = this.access
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in this.components
-    }
 
     override fun typeChanged(newType: Type, src: HasType) {
         val type = type

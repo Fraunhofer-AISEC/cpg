@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
-import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -79,38 +78,17 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val type: Type
         when (basicLit.kind) {
             STRING -> {
-                value =
-                    rawValue.substring(
-                        1.coerceAtMost(rawValue.length - 1),
-                        (rawValue.length - 1).coerceAtLeast(0),
-                    )
+                value = parseGoStringLiteral(rawValue)
                 type = primitiveType("string")
             }
             INT -> {
-                // Get rid of all underscores
-                rawValue = rawValue.replace("_", "")
-                val prefix = rawValue.substring(0, 2.coerceAtMost(rawValue.length))
-                val postfix = rawValue.substring(2.coerceAtMost(rawValue.length), rawValue.length)
-
-                value =
-                    when (prefix) {
-                        "0x" -> BigInteger(postfix, 16)
-                        "0o" -> BigInteger(postfix, 10)
-                        "0b" -> BigInteger(postfix, 2)
-                        else -> BigInteger(rawValue, 10)
-                    }
-
+                val parsed = parseGoIntLiteral(rawValue)
                 value =
                     when {
-                        value > BigInteger.valueOf(Long.MAX_VALUE) -> {
-                            value
-                        }
-                        value.toLong() > Int.MAX_VALUE -> {
-                            value.toLong()
-                        }
-                        else -> {
-                            value.toInt()
-                        }
+                        parsed == null -> null
+                        parsed > BigInteger.valueOf(Long.MAX_VALUE) -> parsed
+                        parsed.toLong() > Int.MAX_VALUE -> parsed.toLong()
+                        else -> parsed.toInt()
                     }
                 type = primitiveType("int")
             }
@@ -121,7 +99,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 type = primitiveType("float64")
             }
             CHAR -> {
-                value = rawValue.firstOrNull()
+                // A rune is an alias for int32, so its value is the code point
+                value = parseGoRuneLiteral(rawValue)
                 type = primitiveType("rune")
             }
             else -> {
@@ -130,18 +109,14 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             }
         }
 
-        val lit = newLiteral(value, rawNode = basicLit)
-        lit.type = type
-
-        return lit
+        return newLiteral(value, rawNode = basicLit) { lit -> lit.type = type }
     }
 
     private fun handleBinaryExpr(binaryExpr: GoStandardLibrary.Ast.BinaryExpr): BinaryOperator {
-        val binOp = newBinaryOperator(binaryExpr.opString, rawNode = binaryExpr)
-        binOp.lhs = handle(binaryExpr.x)
-        binOp.rhs = handle(binaryExpr.y)
-
-        return binOp
+        return newBinaryOperator(binaryExpr.opString, rawNode = binaryExpr) { binOp ->
+            binOp.lhs = handle(binaryExpr.x)
+            binOp.rhs = handle(binaryExpr.y)
+        }
     }
 
     private fun handleIdent(ident: GoStandardLibrary.Ast.Ident): Expression {
@@ -153,14 +128,21 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 "iota" to Pair(primitiveType("int"), frontend.declCtx.iotaValue),
             )
 
-        // Check, if this is one of the builtinLiterals and handle them as a literal
+        // Check, if this is one of the builtinLiterals and handle them as a literal. Predeclared
+        // identifiers can be shadowed by regular declarations, in which case this is a reference.
         val literalPair = builtinLiterals[ident.name]
-        if (literalPair != null) {
+        if (literalPair != null && !isShadowed(ident.name)) {
+            // iota only has a value inside a constant declaration
+            if (ident.name == "iota" && frontend.declCtx.currentDecl?.tok != CONST_TOKEN) {
+                return newProblemExpression(
+                    "iota is only allowed in constant declarations",
+                    rawNode = ident,
+                )
+            }
             val (type, value) = literalPair
-            val literal = newLiteral(value, type, rawNode = ident)
-            literal.name = parseName(ident.name)
-
-            return literal
+            return newLiteral(value, type, rawNode = ident) { literal ->
+                literal.name = parseName(ident.name)
+            }
         }
 
         // If we are directly in a name scope, make sure we FQN'ize the name, to help with
@@ -178,11 +160,10 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleIndexExpr(indexExpr: GoStandardLibrary.Ast.IndexExpr): Subscription {
-        val ase = newSubscription(rawNode = indexExpr)
-        ase.arrayExpression = frontend.expressionHandler.handle(indexExpr.x)
-        ase.subscriptExpression = frontend.expressionHandler.handle(indexExpr.index)
-
-        return ase
+        return newSubscription(rawNode = indexExpr) { ase ->
+            ase.arrayExpression = frontend.expressionHandler.handle(indexExpr.x)
+            ase.subscriptExpression = frontend.expressionHandler.handle(indexExpr.index)
+        }
     }
 
     private fun handleCallExpr(callExpr: GoStandardLibrary.Ast.CallExpr): Expression {
@@ -195,14 +176,13 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.InterfaceType,
             is GoStandardLibrary.Ast.StructType,
             is GoStandardLibrary.Ast.MapType -> {
-                val cast = newCast(rawNode = callExpr)
-                cast.castType = frontend.typeOf(unwrapped)
+                return newCast(rawNode = callExpr) { cast ->
+                    cast.castType = frontend.typeOf(unwrapped)
 
-                if (callExpr.args.isNotEmpty()) {
-                    cast.expression = frontend.expressionHandler.handle(callExpr.args[0])
+                    if (callExpr.args.isNotEmpty()) {
+                        cast.expression = frontend.expressionHandler.handle(callExpr.args[0])
+                    }
                 }
-
-                return cast
             }
         }
 
@@ -226,12 +206,15 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 }
             }
 
-        // Handle special functions, such as make and new in a special way
+        // Handle the built-in functions make and new in a special way. Only an unqualified
+        // reference refers to them; a method or package function can have the same local name.
         val name = callee.name.localName
-        if (name == "new") {
-            return handleNewExpr(callExpr)
-        } else if (name == "make") {
-            return handleMakeExpr(callExpr)
+        if (callee is Reference && callee !is MemberAccess && callee.name.parent == null) {
+            if (name == "new" && !isShadowed(name)) {
+                return handleNewExpr(callExpr)
+            } else if (name == "make" && !isShadowed(name)) {
+                return handleMakeExpr(callExpr)
+            }
         }
 
         // Differentiate between calls and member calls based on the callee
@@ -254,7 +237,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         // Parse and add call arguments
         for (arg in callExpr.args) {
-            call += handle(arg)
+            call.arguments += handle(arg)
         }
 
         return call
@@ -285,21 +268,17 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             return newProblemExpression("could not create New with empty arguments")
         }
 
-        val n = newNew(rawNode = callExpr)
+        return newNew(rawNode = callExpr) { n ->
+            // First argument is type
+            val type = frontend.typeOf(callExpr.args[0])
 
-        // First argument is type
-        val type = frontend.typeOf(callExpr.args[0])
+            // new is a pointer, so need to reference the type with a pointer
+            n.type = type.reference(PointerType.PointerOrigin.POINTER)
 
-        // new is a pointer, so need to reference the type with a pointer
-        n.type = type.reference(PointerType.PointerOrigin.POINTER)
-
-        // a new expression also needs an initializer, which is usually a Construction
-        val construct = newConstruction(rawNode = callExpr)
-        construct.type = type
-
-        n.initializer = construct
-
-        return n
+            // a new expression also needs an initializer, which is usually a Construction
+            n.initializer =
+                newConstruction(rawNode = callExpr) { construct -> construct.type = type }
+        }
     }
 
     private fun handleMakeExpr(callExpr: GoStandardLibrary.Ast.CallExpr): Expression {
@@ -325,8 +304,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 val construct = newConstruction(rawNode = callExpr)
 
                 // Pass the remaining arguments
-                for (expr in args.subList(1.coerceAtMost(args.size - 1), args.size - 1)) {
-                    handle(expr).let { construct += it }
+                for (expr in args.subList(1, args.size)) {
+                    handle(expr).let { construct.arguments += it }
                 }
 
                 construct
@@ -359,6 +338,14 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return ref
     }
 
+    /**
+     * Checks whether the predeclared identifier [name] is shadowed by a declaration that is visible
+     * in the current scope.
+     */
+    private fun isShadowed(name: String): Boolean {
+        return frontend.scopeManager.lookupSymbolByName(parseName(name), language).isNotEmpty()
+    }
+
     private fun isPackageName(name: CharSequence): Boolean {
         for (imp in frontend.currentFile?.imports ?: listOf()) {
             // If we have an alias, we need to check it instead of the import name
@@ -379,18 +366,17 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
      * subscriptExpression to share some code between this and an index expression.
      */
     private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): Subscription {
-        val ase = newSubscription(rawNode = sliceExpr)
-        ase.arrayExpression = frontend.expressionHandler.handle(sliceExpr.x)
+        return newSubscription(rawNode = sliceExpr) { ase ->
+            ase.arrayExpression = frontend.expressionHandler.handle(sliceExpr.x)
 
-        // Build the slice expression
-        val range = newRange(rawNode = sliceExpr)
-        sliceExpr.low?.let { range.floor = frontend.expressionHandler.handle(it) }
-        sliceExpr.high?.let { range.ceiling = frontend.expressionHandler.handle(it) }
-        sliceExpr.max?.let { range.third = frontend.expressionHandler.handle(it) }
-
-        ase.subscriptExpression = range
-
-        return ase
+            // Build the slice expression
+            ase.subscriptExpression =
+                newRange(rawNode = sliceExpr) { range ->
+                    sliceExpr.low?.let { range.floor = frontend.expressionHandler.handle(it) }
+                    sliceExpr.high?.let { range.ceiling = frontend.expressionHandler.handle(it) }
+                    sliceExpr.max?.let { range.third = frontend.expressionHandler.handle(it) }
+                }
+        }
     }
 
     private fun handleStarExpr(starExpr: GoStandardLibrary.Ast.StarExpr): PointerDereference {
@@ -407,38 +393,39 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         // "special" type assertion `.(type)`, which is used in a type switch to retrieve the type
         // of the variable. In this case we treat it as a special unary operator.
         return if (typeAssertExpr.type == null) {
-            val op =
-                newUnaryOperator(
-                    ".(type)",
-                    postfix = true,
-                    prefix = false,
-                    rawNode = typeAssertExpr,
-                )
-            op.input = handle(typeAssertExpr.x)
-            op
+            newUnaryOperator(".(type)", postfix = true, prefix = false, rawNode = typeAssertExpr) {
+                op ->
+                op.input = handle(typeAssertExpr.x)
+            }
         } else {
-            val cast = newCast(rawNode = typeAssertExpr)
+            newCast(rawNode = typeAssertExpr) { cast ->
+                // Parse the inner expression
+                cast.expression = handle(typeAssertExpr.x)
 
-            // Parse the inner expression
-            cast.expression = handle(typeAssertExpr.x)
-
-            // The type can be null, but only in certain circumstances, i.e, a type switch
-            typeAssertExpr.type?.let { cast.castType = frontend.typeOf(it) }
-            cast
+                // The type can be null, but only in certain circumstances, i.e, a type switch
+                typeAssertExpr.type?.let { cast.castType = frontend.typeOf(it) }
+            }
         }
     }
 
-    private fun handleUnaryExpr(unaryExpr: GoStandardLibrary.Ast.UnaryExpr): UnaryOperator {
-        val op =
-            newUnaryOperator(
-                unaryExpr.opString,
-                postfix = false,
-                prefix = false,
-                rawNode = unaryExpr,
-            )
-        op.input = handle(unaryExpr.x)
+    private fun handleUnaryExpr(unaryExpr: GoStandardLibrary.Ast.UnaryExpr): Expression {
+        // Taking the address of an expression is a pointer reference, like in C/C++. This is what
+        // the passes, e.g., the PointsToPass, expect.
+        if (unaryExpr.opString == "&") {
+            val input = handle(unaryExpr.x)
+            return newPointerReference(input.name, unknownType(), rawNode = unaryExpr).apply {
+                this.input = input
+            }
+        }
 
-        return op
+        return newUnaryOperator(
+            unaryExpr.opString,
+            postfix = false,
+            prefix = false,
+            rawNode = unaryExpr,
+        ) { op ->
+            op.input = handle(unaryExpr.x)
+        }
     }
 
     /**
@@ -452,18 +439,17 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         // the "outer" one. See below
         val type = compositeLit.type?.let { frontend.typeOf(it) } ?: unknownType()
 
-        val list = newInitializerList(type, rawNode = compositeLit)
-        list.type = type
+        return newInitializerList(type, rawNode = compositeLit) { list ->
+            list.type = type
 
-        val expressions = mutableListOf<Expression>()
-        for (elem in compositeLit.elts) {
-            val expression = handle(elem)
-            expressions += expression
+            val expressions = mutableListOf<Expression>()
+            for (elem in compositeLit.elts) {
+                val expression = handle(elem)
+                expressions += expression
+            }
+
+            list.initializers = expressions
         }
-
-        list.initializers = expressions
-
-        return list
     }
 
     /*
@@ -471,14 +457,16 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     // Lambda and a function declaration.
          */
     fun handleFuncLit(funcLit: GoStandardLibrary.Ast.FuncLit): Lambda {
-        val lambda = newLambda(rawNode = funcLit)
-        // Parse the expression as a function declaration with a little trick
-        lambda.function = frontend.declarationHandler.handle(funcLit.toDecl()) as? Function
-
-        return lambda
+        return newLambda(rawNode = funcLit) { lambda ->
+            // Parse the expression as a function declaration with a little trick
+            lambda.function = frontend.declarationHandler.handle(funcLit.toDecl()) as? Function
+        }
     }
 
     companion object {
+        /** The value of `token.CONST`, i.e., the token of a constant declaration. */
+        const val CONST_TOKEN = 64
+
         val builtins =
             listOf(
                 "bool",

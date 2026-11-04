@@ -55,6 +55,7 @@ import de.fraunhofer.aisec.cpg.persistence.Relationship
 import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
 import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
+import de.fraunhofer.aisec.cpg.sarif.CodeSpan
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import kotlin.uuid.Uuid
@@ -85,17 +86,68 @@ abstract class Node() :
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class)
-    override var name: Name = Name(EMPTY_NAME)
+    override var name: Name = emptyName
         set(value) {
             field = value
             cachedHashCode = 0
         }
 
+    /** Backing storage for [code] when it is not interned as a [codeSpan]. */
+    @DoNotPersist @JsonIgnore private var literalCode: String? = null
+
+    /**
+     * Lazily-populated pointer into a shared, cached copy of this node's source file, used instead
+     * of a dedicated copy of [code] when the code exactly matches a range of that file. Only ever
+     * populated via [setCodeSpan]. See [de.fraunhofer.aisec.cpg.sarif.tryInternCode].
+     */
+    @DoNotPersist @JsonIgnore private var codeSpan: CodeSpan? = null
+
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
      * where nodes are created artificially, it may be null.
+     *
+     * Internally, this may be backed by [codeSpan] (an offset range into a shared, cached copy of
+     * the whole source file) instead of a dedicated copy of the string, to avoid the O(depth)
+     * duplication that comes from nested AST nodes each holding an overlapping copy of their
+     * ancestors' code. This is purely a storage optimization: the value returned/accepted here is
+     * unaffected by which representation is used.
      */
-    var code: String? = null
+    var code: String?
+        get() = codeSpan?.materialize() ?: literalCode
+        set(value) {
+            codeSpan = null
+            literalCode = value
+        }
+
+    /**
+     * Whether [code] is currently backed by a [CodeSpan] shared with other nodes of the same file,
+     * rather than a dedicated copy of the string. Exposed for diagnostics/benchmarking only: the
+     * value returned by [code] is identical either way.
+     */
+    @DoNotPersist
+    @get:JsonIgnore
+    val isCodeInterned: Boolean
+        get() = codeSpan != null
+
+    /**
+     * Sets [code] to [span]'s content without allocating a dedicated copy of the string. Used only
+     * by [setCodeAndLocation] once it has verified that [span] reproduces the original code
+     * exactly.
+     */
+    internal fun setCodeSpan(span: CodeSpan) {
+        codeSpan = span
+        literalCode = null
+    }
+
+    /**
+     * Copies [other]'s [code], preserving an interned [codeSpan] if [other] has one, instead of
+     * materializing and re-storing a dedicated copy of the string (as a plain `code = other.code`
+     * assignment would).
+     */
+    internal fun copyCodeFrom(other: Node) {
+        codeSpan = other.codeSpan
+        literalCode = other.literalCode
+    }
 
     /**
      * The language of this node. This property is set in [Node.applyMetadata] by a
@@ -533,6 +585,9 @@ abstract class Node() :
         @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
         const val EMPTY_NAME = ""
+
+        /** A single shared instance used as [name]'s default, to avoid allocating one per node. */
+        private val emptyName = Name(EMPTY_NAME)
     }
 }
 

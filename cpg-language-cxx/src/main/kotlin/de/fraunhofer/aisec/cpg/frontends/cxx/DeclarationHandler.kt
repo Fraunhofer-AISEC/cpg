@@ -91,9 +91,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val from = parseName(ctx.mappingName.toString())
         val to = parseName(ctx.alias.toString())
 
-        val import = newImport(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
-
-        return import
+        return newImport(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
     }
 
     /**
@@ -103,10 +101,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
         val import = parseName(ctx.qualifiedName.toString())
-        val declaration =
-            newImport(import, style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, rawNode = ctx)
-
-        return declaration
+        return newImport(
+            import,
+            style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+            rawNode = ctx,
+        )
     }
 
     /**
@@ -116,14 +115,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun handleUsingDeclaration(ctx: CPPASTUsingDeclaration): Declaration {
         val import = parseName(ctx.name.toString())
-        val declaration =
-            newImport(
-                import,
-                style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
-                rawNode = ctx,
-            )
-
-        return declaration
+        return newImport(
+            import,
+            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+            rawNode = ctx,
+        )
     }
 
     /**
@@ -131,30 +127,21 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * into a [Namespace].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): Namespace {
-        val nsd = newNamespace(ctx.name.toString(), rawNode = ctx)
+        return newNamespace(ctx.name.toString(), rawNode = ctx, enterScope = true) { nsd ->
+            // Finally, handle all declarations within that namespace
+            for (child in ctx.declarations) {
+                val decl = handle(child) ?: continue
 
-        // Enter the namespace scope
-        frontend.scopeManager.enterScope(nsd)
-
-        // Finally, handle all declarations within that namespace
-        for (child in ctx.declarations) {
-            val decl = handle(child) ?: continue
-
-            val canonical = frontend.scopeManager.addDeclaration(decl)
-            nsd.addDeclaration(canonical)
+                val canonical = frontend.scopeManager.addDeclaration(decl)
+                nsd.declarations += canonical
+            }
         }
-
-        frontend.scopeManager.leaveScope(nsd)
-
-        return nsd
     }
 
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
         Util.errorWithFileLocation(frontend, ctx, log, ctx.problem.message)
 
-        val problem = newProblemDeclaration(ctx.problem.message)
-
-        return problem
+        return newProblemDeclaration(ctx.problem.message)
     }
 
     /**
@@ -221,9 +208,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // add an implicit return statement, if there is none
                 if (lastStatement !is Return) {
-                    val returnStatement = newReturn()
-                    returnStatement.isImplicit = true
-                    bodyStatement.statements += returnStatement
+                    bodyStatement.statements += newReturn { it.isImplicit = true }
                 }
                 declaration.body = bodyStatement
             }
@@ -433,7 +418,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * resolution-relevant inside a function — depends on *where* the declaration appears and is
      * therefore delegated to the language's
      * [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers], which reads the current scope
-     * and sets [Declaration.visibility] and [ValueDeclaration.isStatic] accordingly.
+     * and sets [Declaration.visibility] and [Declaration.isStatic] accordingly.
      */
     private fun handleStorageClass(
         declaration: ValueDeclaration,

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.helpers.mapNotNullFiltered
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -85,14 +86,16 @@ class BasicBlock() : OverlayNode() {
             val startLine = nodes.mapNotNull { it.location?.region?.startLine }.minOrNull() ?: -1
             val startColumn =
                 nodes
-                    .filter { it.location?.region?.startLine == startLine }
-                    .mapNotNull { it.location?.region?.startColumn }
+                    .mapNotNullFiltered({ it.location?.region?.startLine == startLine }) {
+                        it.location?.region?.startColumn
+                    }
                     .minOrNull() ?: -1
             val endLine = nodes.mapNotNull { it.location?.region?.endLine }.maxOrNull() ?: -1
             val endColumn =
                 nodes
-                    .filter { it.location?.region?.endLine == endLine }
-                    .mapNotNull { it.location?.region?.endColumn }
+                    .mapNotNullFiltered({ it.location?.region?.endLine == endLine }) {
+                        it.location?.region?.endColumn
+                    }
                     .maxOrNull() ?: -1
             return PhysicalLocation(
                 uri = startNode?.location?.artifactLocation?.uri ?: URI(""),

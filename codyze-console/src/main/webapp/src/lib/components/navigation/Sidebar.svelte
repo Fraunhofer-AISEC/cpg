@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { onMount } from 'svelte';
   import type { AnalysisProjectJSON } from '$lib/types';
 
@@ -42,7 +42,7 @@
     { name: 'Agent', path: '/chat', icon: 'robot', disabled: !mcpEnabled }
   ]);
 
-  let currentPath = $derived($page.url.pathname);
+  let currentPath = $derived(page.url.pathname);
 </script>
 
 <aside

@@ -65,7 +65,6 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.JavaExtraPass
-import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -79,7 +78,6 @@ import kotlin.jvm.optionals.getOrNull
 @RegisterExtraPass(
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
-@RegisterExtraPass(JavaImportResolver::class)
 @RegisterExtraPass(JavaExtraPass::class)
 open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<JavaLanguageFrontend>) :
     LanguageFrontend<Node, Type>(ctx, language) {
@@ -133,11 +131,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                     path ->
                     val fqn = previous?.name.fqn(path)
 
-                    val nsd = newNamespace(fqn, rawNode = packDecl)
-                    scopeManager.addDeclaration(nsd)
-                    val holder = previous ?: tud
-                    holder.addDeclaration(nsd)
-
+                    val nsd = newNamespace(fqn, rawNode = packDecl, holder = previous ?: tud)
                     scopeManager.enterScope(nsd)
                     nsd
                 } ?: tud
@@ -156,20 +150,33 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // import would be visible as symbols in the whole namespace
             scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
-                val incl = newInclude(anImport.nameAsString)
-                scopeManager.addDeclaration(incl)
-                tud.addDeclaration(incl)
+                // `import a.b.C;` imports a single symbol from the namespace `a.b` and `import
+                // a.b.*;` all of them. Static imports (`import static a.b.C.m;`) do the same, but
+                // import from the record `a.b.C` instead.
+                val style =
+                    if (anImport.isAsterisk) {
+                        ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
+                    } else {
+                        ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
+                    }
+                newImport(
+                    parseName(anImport.nameAsString),
+                    style = style,
+                    rawNode = anImport,
+                    holder = tud,
+                ) {
+                    it.modifiers = if (anImport.isStatic) setOf(STATIC) else setOf()
+                    language.applyModifiers(it, scopeManager.currentScope)
+                }
             }
 
             // We create an implicit import for "java.lang.*"
-            val decl =
-                newImport(
-                        parseName("java.lang"),
-                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
-                    )
-                    .implicit("import java.lang.*")
-            scopeManager.addDeclaration(decl)
-            tud.addDeclaration(decl)
+            newImport(
+                    parseName("java.lang"),
+                    style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    holder = tud,
+                )
+                .implicit("import java.lang.*")
             scopeManager.leaveScope(tud)
 
             if (holder is Namespace) {

@@ -41,7 +41,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Some languages provide a way to have multiple variables, iterables and predicates. For this
  * reason, we represent the `variable, iterable and predicate in its own class [Comprehension].
  */
-class CollectionComprehension : Expression(), ArgumentHolder {
+class CollectionComprehension : Expression() {
 
     @Relationship("COMPREHENSION_EXPRESSIONS")
     var comprehensionExpressionEdges = astEdgesOf<Comprehension>()
@@ -82,37 +82,6 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), statement, comprehensionExpressions)
-
-    override fun addArgument(expression: Expression) {
-        if (this.statement is ProblemExpression) {
-            this.statement = expression
-        } else if (expression is Comprehension) {
-            this.comprehensionExpressions += expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (this.statement == old) {
-            this.statement = new
-            return true
-        }
-        if (new !is Comprehension) return false
-        var changedSomething = false
-        val newCompExp =
-            this.comprehensionExpressions.map {
-                if (it == old) {
-                    changedSomething = true
-                    new
-                } else it
-            }
-        this.comprehensionExpressions.clear()
-        this.comprehensionExpressions.addAll(newCompExp)
-        return changedSomething
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return this.statement == expression || expression in this.comprehensionExpressions
-    }
 
     override fun getStartingPrevEOG(): Collection<Node> {
         val allChildren = this.allChildren<Node> { true }

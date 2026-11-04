@@ -9,12 +9,12 @@
   } from '$lib/components/requirements';
   import { preloadQueryTree } from '$lib/stores/queryTreeStore';
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
 
   let { data }: PageProps = $props();
 
   // Get target node from URL parameters
-  const targetNodeId = $derived($page.url.searchParams.get('targetNodeId'));
+  const targetNodeId = $derived(page.url.searchParams.get('targetNodeId'));
 
   // Breadcrumb items
   const breadcrumbItems = $derived([

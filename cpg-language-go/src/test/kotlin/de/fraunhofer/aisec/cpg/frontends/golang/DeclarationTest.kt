@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerReference
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -152,8 +152,9 @@ class DeclarationTest {
         val `return` = body.statements.first() as? Return
         assertNotNull(`return`)
 
-        val returnValue = `return`.returnValue as? UnaryOperator
+        val returnValue = `return`.returnValue as? PointerReference
         assertNotNull(returnValue)
+        assertIs<InitializerList>(returnValue.input)
 
         val s = p.variables["p.s"]
         assertNotNull(s)

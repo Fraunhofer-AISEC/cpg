@@ -90,7 +90,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = constructorDeclaration,
             )
         declaration.modifiers =
-            constructorDeclaration.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            constructorDeclaration.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
         language.applyModifiers(declaration, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
@@ -160,7 +162,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = constructorDeclaration,
             )
         declaration.modifiers =
-            constructorDeclaration.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            constructorDeclaration.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
         language.applyModifiers(declaration, frontend.scopeManager.currentScope)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
@@ -170,15 +174,13 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             }
         )
         for (parameter in constructorDeclaration.parameters) {
-            val param =
-                this.newParameter(
-                    parameter.nameAsString,
-                    frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
-                    parameter.isVarArgs,
-                    rawNode = parameter,
-                )
-            frontend.scopeManager.addDeclaration(param)
-            declaration.parameters += param
+            this.newParameter(
+                parameter.nameAsString,
+                frontend.getTypeAsGoodAsPossible(parameter, parameter.resolve()),
+                parameter.isVarArgs,
+                rawNode = parameter,
+                holder = declaration,
+            )
         }
 
         val record =
@@ -209,7 +211,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 rawNode = methodDecl,
             )
         functionDeclaration.modifiers =
-            methodDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            methodDecl.modifiers.mapTo(mutableSetOf()) { modifier -> modifier.keyword.asString() }
         language.applyModifiers(functionDeclaration, frontend.scopeManager.currentScope)
 
         frontend.scopeManager.enterScope(functionDeclaration)
@@ -232,10 +234,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     resolvedType,
                     parameter.isVarArgs,
                     rawNode = parameter,
+                    holder = functionDeclaration,
                 )
             frontend.processAnnotations(param, parameter)
-            frontend.scopeManager.addDeclaration(param)
-            functionDeclaration.parameters += param
         }
         val returnTypes = listOf(frontend.getReturnTypeAsGoodAsPossible(methodDecl, resolvedMethod))
         functionDeclaration.returnTypes = returnTypes
@@ -287,7 +288,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             ?.let { recordDeclaration.implementedInterfaces = it }
 
         recordDeclaration.modifiers =
-            classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            classInterDecl.modifiers.mapTo(mutableSetOf()) { modifier ->
+                modifier.keyword.asString()
+            }
         language.applyModifiers(recordDeclaration, frontend.scopeManager.currentScope)
 
         frontend.typeManager.addTypeParameter(
@@ -296,8 +299,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 ParameterizedType(it.nameAsString, language)
             } ?: listOf(),
         )
-
-        processImportDeclarations(recordDeclaration)
 
         frontend.scopeManager.enterScope(recordDeclaration)
         processRecordMembers(classInterDecl, recordDeclaration)
@@ -381,7 +382,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newField(
                     variable.name.asString(),
                     type,
-                    fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
+                    fieldDecl.modifiers.mapTo(mutableSetOf()) { modifier ->
+                        modifier.keyword.asString()
+                    },
                     isStatic = fieldDecl.isStatic,
                     initializer = initializer,
                     rawNode = fieldDecl,
@@ -397,13 +400,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val name = enumDecl.nameAsString
         val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
         enumDeclaration.modifiers =
-            enumDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+            enumDecl.modifiers.mapTo(mutableSetOf()) { modifier -> modifier.keyword.asString() }
         language.applyModifiers(enumDeclaration, frontend.scopeManager.currentScope)
 
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
-
-        processImportDeclarations(enumDeclaration)
 
         frontend.scopeManager.enterScope(enumDeclaration)
 
@@ -496,54 +497,39 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             }
         }
         if (recordDeclaration.constructors.isEmpty()) {
-            val constructorDeclaration =
-                this.newConstructor(recordDeclaration.name.localName, recordDeclaration)
-                    .implicit(recordDeclaration.name.localName)
-            frontend.scopeManager.addDeclaration(constructorDeclaration)
-            recordDeclaration.constructors += constructorDeclaration
+            this.newConstructor(
+                    recordDeclaration.name.localName,
+                    recordDeclaration,
+                    holder = recordDeclaration,
+                )
+                .implicit(recordDeclaration.name.localName)
         }
         frontend.processAnnotations(recordDeclaration, typeDecl)
-    }
-
-    private fun processImportDeclarations(recordDeclaration: Record) {
-        val allImports =
-            frontend.context
-                ?.imports
-                ?.map {
-                    var iName: String = it.nameAsString
-                    // we need to ensure that x.* imports really preserve the asterisk!
-                    if (it.isAsterisk && !iName.endsWith(".*")) {
-                        iName += ".*"
-                    }
-                    Pair(it, iName)
-                }
-                ?.groupBy({ it.first.isStatic }, { it.second })
-
-        recordDeclaration.staticImportStatements = allImports?.get(true) ?: listOf()
-        recordDeclaration.importStatements = allImports?.get(false) ?: listOf()
     }
 
     /* Not so sure about the place of Annotations in the CPG currently */
     fun handleEnumConstant(enumConstDecl: EnumConstantDeclaration): EnumConstant {
         val currentEnum = frontend.scopeManager.currentRecord
-        val result = this.newEnumConstant(enumConstDecl.nameAsString, rawNode = enumConstDecl)
-        if (enumConstDecl.arguments.isNotEmpty()) {
-            val arguments =
-                enumConstDecl.arguments.mapNotNull { frontend.expressionHandler.handle(it) }
-            // TODO: This call resolution in the frontend might fail, in particular if we haven't
-            // processed the constructor yet. Should be cleaned up in the future but requires
-            // changes to the starting points of call/symbol resolution.
-            val matchingConstructor =
-                currentEnum?.constructors?.singleOrNull {
-                    it.matchesSignature(arguments.map { it.type }).isDirectMatch
-                }
+        return this.newEnumConstant(enumConstDecl.nameAsString, rawNode = enumConstDecl) { result ->
+            if (enumConstDecl.arguments.isNotEmpty()) {
+                val arguments =
+                    enumConstDecl.arguments.mapNotNull { frontend.expressionHandler.handle(it) }
+                // TODO: This call resolution in the frontend might fail, in particular if we
+                // haven't processed the constructor yet. Should be cleaned up in the future but
+                // requires changes to the starting points of call/symbol resolution.
+                val matchingConstructor =
+                    currentEnum?.constructors?.singleOrNull {
+                        it.matchesSignature(arguments.map { it.type }).isDirectMatch
+                    }
 
-            val constructExpr = newConstruction(matchingConstructor?.name ?: currentEnum?.name)
-            arguments.forEach { constructExpr.addArgument(it) }
-            matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
-            result.initializer = constructExpr
+                result.initializer =
+                    newConstruction(matchingConstructor?.name ?: currentEnum?.name) { constructExpr
+                        ->
+                        arguments.forEach { constructExpr.addArgument(it) }
+                        matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
+                    }
+            }
         }
-        return result
     }
 
     fun /* TODO refine return type*/ handleAnnotationDeclaration(
@@ -564,23 +550,30 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         )
     }
 
-    fun handleVariableDeclarator(variable: VariableDeclarator): Variable {
+    fun handleVariableDeclarator(
+        variable: VariableDeclarator,
+        holder: DeclarationHolder? = null,
+    ): Variable {
         val resolved = variable.resolve()
         val declarationType = frontend.getTypeAsGoodAsPossible(variable, resolved)
-        val declaration = newVariable(resolved.name, declarationType, false, rawNode = variable)
-        if (declarationType is PointerType && declarationType.isArray) {
-            declaration.isArray = true
-        }
-        val oInitializer = variable.initializer
-        if (oInitializer.isPresent) {
-            val initializer = frontend.expressionHandler.handle(oInitializer.get())
-            if (initializer is ArrayConstruction) {
+        return newVariable(
+            resolved.name,
+            declarationType,
+            false,
+            rawNode = variable,
+            holder = holder,
+        ) { declaration ->
+            if (declarationType is PointerType && declarationType.isArray) {
                 declaration.isArray = true
             }
-            declaration.initializer = initializer
+            variable.initializer.ifPresent {
+                val initializer = frontend.expressionHandler.handle(it)
+                if (initializer is ArrayConstruction) {
+                    declaration.isArray = true
+                }
+                declaration.initializer = initializer
+            }
         }
-
-        return declaration
     }
 
     companion object {

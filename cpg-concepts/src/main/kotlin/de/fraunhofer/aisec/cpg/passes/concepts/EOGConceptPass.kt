@@ -97,21 +97,51 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
-            overlayNodes.forEach {
-                it.underlyingNode = underlyingNode
-                if (it is Operation) {
-                    // Connect with the EOG
-                    underlyingNode.insertNodeAfterwardInEOGPath(it)
-                    // Call the default DFG method for this operation.
-                    it.setDFG()
-                    // Add the operation to the concept.
-                    it.concept.ops += it
-                } else if (it is Concept) {
-                    // Call the default DFG method for this operation.
-                    it.setDFG()
-                }
+            attachOverlays(underlyingNode, overlayNodes)
+        }
+    }
+
+    /**
+     * Attaches [overlays] (from the final state) to [underlyingNode] and returns the ones that were
+     * attached.
+     *
+     * The states of different EOG paths to a node can hold overlays that are equal, but not
+     * identical: the lattice compares nodes by identity, and if a node is evaluated again with a
+     * state that lacks its earlier overlays (which depends on the iteration order, e.g. after a
+     * loop), [filterDuplicates] cannot see them. Each overlay is therefore only attached once, and
+     * not at all if an equal one is attached already.
+     */
+    internal fun attachOverlays(
+        underlyingNode: Node,
+        overlays: Collection<OverlayNode>,
+    ): List<OverlayNode> {
+        val attached = mutableListOf<OverlayNode>()
+        for (overlay in overlays) {
+            if (attached.none { it == overlay } && underlyingNode.overlays.none { it == overlay }) {
+                attached += overlay
             }
         }
+
+        // Keep the (optional) IFDS summary cache honest: a node that just gained overlays may be
+        // a sink for later reaching-sources queries, so its callee must not be short-circuited.
+        if (attached.isNotEmpty()) {
+            ctx.currentComponent?.ifdsSummaryCache?.markSink(underlyingNode)
+        }
+        attached.forEach {
+            it.underlyingNode = underlyingNode
+            if (it is Operation) {
+                // Connect with the EOG
+                underlyingNode.insertNodeAfterwardInEOGPath(it)
+                // Call the default DFG method for this operation.
+                it.setDFG()
+                // Add the operation to the concept.
+                it.concept.ops += it
+            } else if (it is Concept) {
+                // Call the default DFG method for this operation.
+                it.setDFG()
+            }
+        }
+        return attached
     }
 
     /**
@@ -231,6 +261,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
         return if (filteredAddedOverlays.isEmpty()) {
             currentState
         } else {
+            // Keep the (optional) IFDS summary cache honest: this node just gained state overlays
+            // and
+            // may be a sink for later reaching-sources queries, so its callee must stay expandable.
+            ctx.currentComponent?.ifdsSummaryCache?.markSink(currentNode)
             runBlocking {
                 lattice.lub(
                     currentState,

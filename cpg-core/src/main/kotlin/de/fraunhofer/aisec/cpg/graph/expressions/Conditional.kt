@@ -40,7 +40,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class Conditional : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
+class Conditional : Expression(), BranchingNode, HasType.TypeObserver {
     @Relationship("CONDITION")
     var conditionEdge =
         astEdgeOf<Expression>(ProblemExpression("could not parse condition expression"))
@@ -77,36 +77,6 @@ class Conditional : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObs
 
     override val branchedBy
         get() = condition
-
-    override fun addArgument(expression: Expression) {
-        if (condition is ProblemExpression) {
-            condition = expression
-        } else if (thenExpression == null) {
-            thenExpression = expression
-        } else {
-            elseExpression = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return when (old) {
-            thenExpression -> {
-                thenExpression = new
-                true
-            }
-            elseExpression -> {
-                elseExpression = new
-                true
-            }
-            else -> {
-                false
-            }
-        }
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return this.thenExpression == expression || elseExpression == expression
-    }
 
     override fun typeChanged(newType: Type, src: HasType) {
         val types = mutableSetOf<Type>()

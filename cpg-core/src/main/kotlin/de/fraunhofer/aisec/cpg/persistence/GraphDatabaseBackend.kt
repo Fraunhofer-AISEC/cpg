@@ -106,7 +106,7 @@ fun TranslationResult.persist(db: GraphDatabaseBackend, purgeDb: Boolean = true)
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
     val astNodes = this@persist.nodes
-    val connected = astNodes.flatMap { it.connectedNodes }.toSet()
+    val connected = astNodes.flatMapTo(mutableSetOf()) { it.connectedNodes }
     val nodes = (astNodes + connected).distinct()
 
     if (purgeDb) {

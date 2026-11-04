@@ -31,11 +31,11 @@ import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalFunctions
 import de.fraunhofer.aisec.cpg.frontends.HasGlobalVariables
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
+import de.fraunhofer.aisec.cpg.frontends.HasImportsFromRecords
 import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -165,6 +165,18 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): Record? {
  *   This is something we do not want to do see (see above).
  */
 internal fun Pass<*>.tryVariableInference(ref: Reference): Variable? {
+    // If the reference is imported from a record (e.g., a static import in Java), we need to infer
+    // a static field in this record
+    val language = ref.language
+    if (language is HasImportsFromRecords) {
+        val record = language.recordImportedFor(ref)
+        if (record != null) {
+            val field = record.startInference(ctx)?.inferFieldDeclaration(ref)
+            field?.isStatic = true
+            return field
+        }
+    }
+
     val currentRecordType = scopeManager.currentRecord?.toType()
     return if (
         ref.language is HasImplicitReceiver &&
@@ -276,6 +288,17 @@ internal fun Pass<*>.tryFunctionInference(
     //    MyClass::doSomething() or in a namespace call (in case we do not want to explore the
     //    base type here yet). This will change in a future PR.
     val callee = call.callee
+
+    // If the function is imported from a record (e.g., a static import in Java), we need to infer
+    // a static method in this record
+    val language = call.language
+    if (callee is Reference && callee !is MemberAccess && language is HasImportsFromRecords) {
+        val record = language.recordImportedFor(callee)
+        if (record != null) {
+            return listOfNotNull(record.inferMethod(call, isStatic = true, ctx = ctx))
+        }
+    }
+
     val (suitableBases, bestGuess) =
         if (
             callee is MemberAccess ||
@@ -365,18 +388,15 @@ internal fun Pass<*>.tryMethodInference(
             false
         } else {
             // 3) Lastly, if we are still undecided, we do a quick check on the current
-            // component,
-            // if we have multiple calls to the same function from across different locations.
-            // This is a bit more expensive, so we leave this as a last resort.
-            // If we encounter "others", there is a high chance this is a global function. Of
-            // course, we could run into a scenario where we have multiple calls to `init()` in
-            // several classes and in all occasions the `this` was left out; but this seems
-            // unlikely
-            val others =
-                ctx.currentComponent.calls {
-                    it != call && it.name == call.name && call !is MemberCall
-                }
-            others.isNotEmpty()
+            // component, if we have multiple calls to the same function from across different
+            // locations. If we encounter "others", there is a high chance this is a global
+            // function. Of course, we could run into a scenario where we have multiple calls to
+            // `init()` in several classes and in all occasions the `this` was left out; but this
+            // seems unlikely.
+            //
+            // Note that `call` itself is part of the current component and therefore contributes
+            // one occurrence of its own name, which is why we are looking for more than one.
+            ctx.callNameOccurrences(ctx.currentComponent, call.name) > 1
         }
 
     if (inferGlobalFunction) {
@@ -399,7 +419,9 @@ internal fun Pass<*>.tryMethodInference(
     }
     records = records.distinct()
 
-    return records.mapNotNull { record -> record.inferMethod(call, ctx = ctx) }
+    // A static call (e.g., `MyClass.foo()` in Java) needs a static method
+    val isStatic = (call as? MemberCall)?.isStatic == true
+    return records.mapNotNull { record -> record.inferMethod(call, isStatic = isStatic, ctx = ctx) }
 }
 
 /**

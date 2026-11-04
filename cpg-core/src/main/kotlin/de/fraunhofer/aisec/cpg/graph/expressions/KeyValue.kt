@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,7 +37,7 @@ import java.util.*
  *
  * Most often used in combination with an [InitializerList] to represent the creation of an array.
  */
-class KeyValue : Expression(), ArgumentHolder {
+class KeyValue : Expression() {
 
     @Relationship("KEY") var keyEdge = astEdgeOf<Expression>(ProblemExpression("missing key"))
     /**
@@ -51,30 +50,6 @@ class KeyValue : Expression(), ArgumentHolder {
 
     /** The value of this pair. It can be any expression */
     var value by unwrapping(KeyValue::valueEdge)
-
-    override fun addArgument(expression: Expression) {
-        if (key is ProblemExpression) {
-            key = expression
-        } else if (value is ProblemExpression) {
-            value = expression
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (key == old) {
-            key = new
-            return true
-        } else if (value == old) {
-            value = new
-            return true
-        }
-
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return key == expression || value == expression
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.filterIsInstanceAndMapTo
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import kotlin.collections.plusAssign
@@ -466,16 +467,15 @@ fun List<Node>.collectRelationships(): List<RelationshipMap> {
                         }
                 }
                 is List<*> -> {
-                    relationships +=
-                        value.filterIsInstance<Node>().map { end ->
-                            mapOf(
-                                "startId" to node.id.toString(),
-                                "startLegacyId" to node.legacyId,
-                                "endId" to end.id.toString(),
-                                "endLegacyId" to end.legacyId,
-                                "type" to entry.key,
-                            )
-                        }
+                    value.filterIsInstanceAndMapTo<Node, _, _>(relationships) { end ->
+                        mapOf(
+                            "startId" to node.id.toString(),
+                            "startLegacyId" to node.legacyId,
+                            "endId" to end.id.toString(),
+                            "endLegacyId" to end.legacyId,
+                            "type" to entry.key,
+                        )
+                    }
                 }
                 is Node -> {
                     relationships +=

@@ -136,57 +136,45 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleLocal(local: Local): Expression {
         // Apparently, a local can either be a reference to variable or a literal
         return if (local.name.startsWith("\"")) {
-            val lit = newLiteral(local.name.substring(1, local.name.length - 2), rawNode = local)
-            lit.type = objectType("java.lang.String")
-
-            lit
+            newLiteral(local.name.substring(1, local.name.length - 2), rawNode = local) {
+                it.type = objectType("java.lang.String")
+            }
         } else {
-            val ref = newReference(local.name, frontend.typeOf(local.type), rawNode = local)
-
-            ref
+            newReference(local.name, frontend.typeOf(local.type), rawNode = local)
         }
     }
 
     private fun handleThisRef(thisRef: JThisRef): Reference {
-        val ref = newReference("@this", frontend.typeOf(thisRef.type), rawNode = thisRef)
-
-        return ref
+        return newReference("@this", frontend.typeOf(thisRef.type), rawNode = thisRef)
     }
 
     private fun handleParameterRef(parameterRef: JParameterRef): Reference {
-        val ref =
-            newReference(
-                "@parameter${parameterRef.index}",
-                frontend.typeOf(parameterRef.type),
-                rawNode = parameterRef,
-            )
-
-        return ref
+        return newReference(
+            "@parameter${parameterRef.index}",
+            frontend.typeOf(parameterRef.type),
+            rawNode = parameterRef,
+        )
     }
 
     private fun handleInstanceFieldRef(instanceFieldRef: JInstanceFieldRef): Reference {
         val base = handle(instanceFieldRef.base)
 
-        val ref =
-            newMemberAccess(
-                instanceFieldRef.fieldSignature.name,
-                base,
-                frontend.typeOf(instanceFieldRef.fieldSignature.type),
-                rawNode = instanceFieldRef,
-            )
-
-        return ref
+        return newMemberAccess(
+            instanceFieldRef.fieldSignature.name,
+            base,
+            frontend.typeOf(instanceFieldRef.fieldSignature.type),
+            rawNode = instanceFieldRef,
+        )
     }
 
     private fun handleStaticFieldRef(staticFieldRef: JStaticFieldRef) =
         staticFieldRef.fieldSignature.toStaticRef()
 
     private fun handleArrayRef(arrayRef: JArrayRef): Subscription {
-        val sub = newSubscription(rawNode = arrayRef)
-        sub.arrayExpression = handle(arrayRef.base)
-        sub.subscriptExpression = handle(arrayRef.index)
-
-        return sub
+        return newSubscription(rawNode = arrayRef) { sub ->
+            sub.arrayExpression = handle(arrayRef.base)
+            sub.subscriptExpression = handle(arrayRef.index)
+        }
     }
 
     private fun handleAbstractInstanceInvokeExpr(
@@ -198,10 +186,9 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
         val callee = newMemberAccess(invokeExpr.methodSignature.name, base)
 
-        val call = newMemberCall(callee, rawNode = invokeExpr)
-        call.arguments = invokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
-
-        return call
+        return newMemberCall(callee, rawNode = invokeExpr) { call ->
+            call.arguments = invokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
+        }
     }
 
     private fun handleVirtualInvokeExpr(invokeExpr: JVirtualInvokeExpr): MemberCall {
@@ -225,16 +212,15 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // This is probably a constructor call
         return if (invokeExpr.methodSignature.name == "<init>") {
             val type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
-            val construct = newConstruction(rawNode = invokeExpr)
-            construct.callee = newReference(Name("<init>", type.name))
-            construct.type = type
+            newConstruction(rawNode = invokeExpr) { construct ->
+                construct.callee = newReference(Name("<init>", type.name))
+                construct.type = type
 
-            construct.arguments = invokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
-
-            construct
+                construct.arguments = invokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
+            }
         } else {
             // Just a normal call
-            return handleAbstractInstanceInvokeExpr(invokeExpr)
+            handleAbstractInstanceInvokeExpr(invokeExpr)
         }
     }
 
@@ -244,21 +230,19 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // TODO(oxisto): This is actually somewhat related to a Lambda, but not really
         // sure ow to model this
         val callee = dynamicInvokeExpr.methodSignature.toStaticRef()
-        val call = newCall(callee, rawNode = dynamicInvokeExpr)
-        call.arguments = dynamicInvokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
-        call.type = frontend.typeOf(dynamicInvokeExpr.methodSignature.type)
-
-        return call
+        return newCall(callee, rawNode = dynamicInvokeExpr) { call ->
+            call.arguments = dynamicInvokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
+            call.type = frontend.typeOf(dynamicInvokeExpr.methodSignature.type)
+        }
     }
 
     private fun handleStaticInvoke(staticInvokeExpr: JStaticInvokeExpr): Call {
         val ref = staticInvokeExpr.methodSignature.toStaticRef()
 
-        val call = newCall(ref, rawNode = staticInvokeExpr)
-        call.arguments = staticInvokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
-        call.type = frontend.typeOf(staticInvokeExpr.type)
-
-        return call
+        return newCall(ref, rawNode = staticInvokeExpr) { call ->
+            call.arguments = staticInvokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
+            call.type = frontend.typeOf(staticInvokeExpr.type)
+        }
     }
 
     /**
@@ -270,64 +254,58 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         newNew(frontend.typeOf(newExpr.type), rawNode = newExpr)
 
     private fun handleNewArrayExpr(newArrayExpr: JNewArrayExpr): ArrayConstruction {
-        val new = newArrayConstruction(rawNode = newArrayExpr)
-        new.type = frontend.typeOf(newArrayExpr.type)
-        new.dimensions = listOfNotNull(handle(newArrayExpr.size)).toMutableList()
-
-        return new
+        return newArrayConstruction(rawNode = newArrayExpr) { new ->
+            new.type = frontend.typeOf(newArrayExpr.type)
+            new.dimensions = listOfNotNull(handle(newArrayExpr.size)).toMutableList()
+        }
     }
 
     private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): ArrayConstruction {
-        val new = newArrayConstruction(rawNode = newMultiArrayExpr)
-        new.type = frontend.typeOf(newMultiArrayExpr.type)
-        new.dimensions = newMultiArrayExpr.sizes.mapNotNullTo(mutableListOf()) { handle(it) }
-
-        return new
+        return newArrayConstruction(rawNode = newMultiArrayExpr) { new ->
+            new.type = frontend.typeOf(newMultiArrayExpr.type)
+            new.dimensions = newMultiArrayExpr.sizes.mapNotNullTo(mutableListOf()) { handle(it) }
+        }
     }
 
     private fun handleCastExpr(castExpr: JCastExpr): Cast {
-        val cast = newCast(rawNode = castExpr)
-        cast.expression = handle(castExpr.op)
-        cast.castType = frontend.typeOf(castExpr.type)
-
-        return cast
+        return newCast(rawNode = castExpr) { cast ->
+            cast.expression = handle(castExpr.op)
+            cast.castType = frontend.typeOf(castExpr.type)
+        }
     }
 
     private fun handleAbstractBinopExpr(expr: AbstractBinopExpr): BinaryOperator {
-        val op = newBinaryOperator(expr.symbol.trim(), rawNode = expr)
-        op.lhs = handle(expr.op1)
-        op.rhs = handle(expr.op2)
-        op.type = frontend.typeOf(expr.type)
-
-        return op
+        return newBinaryOperator(expr.symbol.trim(), rawNode = expr) { op ->
+            op.lhs = handle(expr.op1)
+            op.rhs = handle(expr.op2)
+            op.type = frontend.typeOf(expr.type)
+        }
     }
 
     private fun handleNegExpr(expr: AbstractUnopExpr): UnaryOperator {
-        val op = newUnaryOperator("-", postfix = false, prefix = true, rawNode = expr)
-        op.input = handle(expr.op)
-        op.type = frontend.typeOf(expr.type)
-
-        return op
+        return newUnaryOperator("-", postfix = false, prefix = true, rawNode = expr) { op ->
+            op.input = handle(expr.op)
+            op.type = frontend.typeOf(expr.type)
+        }
     }
 
     private fun handleInstanceOfExpr(instanceOfExpr: JInstanceOfExpr): BinaryOperator {
-        val op = newBinaryOperator("instanceof", rawNode = instanceOfExpr)
-        op.lhs = handle(instanceOfExpr.op)
+        return newBinaryOperator("instanceof", rawNode = instanceOfExpr) { op ->
+            op.lhs = handle(instanceOfExpr.op)
 
-        val type = frontend.typeOf(instanceOfExpr.checkType)
-        op.rhs = newTypeExpression("", type, rawNode = type)
-        op.rhs.name = type.name
-        op.type = frontend.typeOf(instanceOfExpr.type)
-
-        return op
+            val type = frontend.typeOf(instanceOfExpr.checkType)
+            op.rhs = newTypeExpression("", type, rawNode = type)
+            op.rhs.name = type.name
+            op.type = frontend.typeOf(instanceOfExpr.type)
+        }
     }
 
     private fun handleLengthExpr(lengthExpr: JLengthExpr): UnaryOperator {
-        val op = newUnaryOperator("lengthof", prefix = true, postfix = false, rawNode = lengthExpr)
-        op.input = handle(lengthExpr.op)
-        op.type = frontend.typeOf(lengthExpr.type)
-
-        return op
+        return newUnaryOperator("lengthof", prefix = true, postfix = false, rawNode = lengthExpr) {
+            op ->
+            op.input = handle(lengthExpr.op)
+            op.type = frontend.typeOf(lengthExpr.type)
+        }
     }
 
     private fun handleBooleanConstant(constant: BooleanConstant) =

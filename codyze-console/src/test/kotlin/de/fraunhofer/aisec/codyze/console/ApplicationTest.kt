@@ -31,6 +31,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.ai.ChatService
+import de.fraunhofer.aisec.cpg.ai.clients.LlmProviderConfig
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
@@ -42,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.github.detekt.sarif4k.*
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -59,6 +62,7 @@ val mockConfig =
 val mockTu =
     TranslationUnit().apply {
         name = Name("tu1")
+        code = "int main() { open(); }"
         var func =
             Function().apply {
                 name = Name("main")
@@ -163,9 +167,27 @@ class ApplicationTest {
         val component = result.components.firstOrNull()
         assertNotNull(component)
         assertEquals("mock", component.name)
+        // The code is only included when requesting a single translation unit
+        assertNull(component.translationUnits.single().code)
 
         val findings = result.findings
         assertEquals(1, findings.size)
+    }
+
+    @Test
+    fun testChatSessionCanBeDeleted() = testApplication {
+        val httpClient = HttpClient()
+        val chatService =
+            ChatService(httpClient, LlmProviderConfig(httpClient, emptyList()), "http://localhost")
+        application { configureWebconsole(mockService, chatService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+
+        val sessionId = client.post("/api/chat/sessions").body<Map<String, String>>()["sessionId"]
+        assertNotNull(sessionId)
+
+        val response = client.delete("/api/chat/sessions/$sessionId")
+        assertEquals(HttpStatusCode.NoContent, response.status)
+        chatService.close()
     }
 
     @Test
@@ -221,6 +243,7 @@ class ApplicationTest {
 
         val translationUnit = response.body<TranslationUnitJSON>()
         assertEquals("tu1", translationUnit.name)
+        assertEquals(mockTu.code, translationUnit.code)
     }
 
     @Test
@@ -252,6 +275,89 @@ class ApplicationTest {
 
         val nodes = response.body<List<NodeJSON>>()
         assertEquals(2, nodes.size)
+    }
+
+    @Test
+    fun testGetNodes() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+
+        // A node nested in a function body, which is not part of the ast-nodes of its unit
+        val open = assertNotNull(mockTu.calls["open"])
+        val unknownId = "00000000-0000-0000-0000-000000000000"
+        val response =
+            client.post("/api/nodes") {
+                contentType(ContentType.Application.Json)
+                setBody(listOf(open.id.toString(), unknownId))
+            }
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val node = response.body<List<NodeJSON>>().singleOrNull()
+        assertNotNull(node)
+        assertEquals(open.id, node.id)
+        assertEquals(mockTu.id, node.translationUnitId)
+    }
+
+    @Test
+    fun testGetNodesEmpty() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response =
+            client.post("/api/nodes") {
+                contentType(ContentType.Application.Json)
+                setBody(emptyList<String>())
+            }
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(emptyList(), response.body<List<NodeJSON>>())
+    }
+
+    @Test
+    fun testGetNodesInvalidRequest() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val response =
+            client.post("/api/nodes") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"not": "a list"}""")
+            }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun testGetNodesWithoutAnalysisResult() {
+        assertEquals(emptyList(), ConsoleService().getNodes(listOf(mockTu.id.toString())))
+    }
+
+    @Test
+    fun testGetTranslationUnitUnknownComponent() {
+        assertNull(mockService.getTranslationUnit("unknown", mockTu.id.toString()))
+    }
+
+    @Test
+    fun testGetTranslationUnitWithoutCode() {
+        val tu = TranslationUnit().apply { name = Name("no-code") }
+        val service =
+            ConsoleService.fromAnalysisResult(
+                AnalysisResult(
+                    translationResult =
+                        TranslationResult(
+                                translationManager =
+                                    TranslationManager.builder().config(mockConfig).build(),
+                                finalCtx = TranslationContext(config = mockConfig),
+                            )
+                            .apply {
+                                components +=
+                                    Component().apply {
+                                        name = Name("mock")
+                                        translationUnits += tu
+                                    }
+                            },
+                    project = AnalysisProject(name = "mock", projectDir = null, config = mockConfig),
+                )
+            )
+
+        val translationUnit = assertNotNull(service.getTranslationUnit("mock", tu.id.toString()))
+        assertEquals("", translationUnit.code)
     }
 
     @Test

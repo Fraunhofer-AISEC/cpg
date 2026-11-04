@@ -44,12 +44,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a C++ union/struct/class or Java class */
 open class Record :
-    Declaration(),
-    DeclarationHolder,
-    StatementHolder,
-    EOGStarterHolder,
-    DeclaresType,
-    HasSecondaryTypeEdge {
+    Declaration(), DeclarationHolder, EOGStarterHolder, DeclaresType, HasSecondaryTypeEdge {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -117,8 +112,8 @@ open class Record :
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Expression>()
-    override var statements by unwrapping(Record::statementEdges)
+    var statementEdges = astEdgesOf<Expression>()
+    var statements by unwrapping(Record::statementEdges)
 
     @DoNotPersist var superClasses: MutableList<Type> = ArrayList()
 
@@ -130,15 +125,6 @@ open class Record :
     @DoNotPersist var implementedInterfaces = mutableListOf<Type>()
 
     @Relationship var superTypeDeclarations: Set<Record> = HashSet()
-
-    var importStatements: List<String> = ArrayList()
-
-    @Relationship var imports: MutableSet<Declaration> = HashSet()
-
-    // Methods and fields can be imported statically
-    var staticImportStatements: List<String> = ArrayList()
-
-    @Relationship var staticImports: MutableSet<ValueDeclaration> = HashSet()
 
     @DoNotPersist
     override val declarations: List<Declaration>

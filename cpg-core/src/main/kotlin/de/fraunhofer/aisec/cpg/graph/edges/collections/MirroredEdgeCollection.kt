@@ -64,12 +64,12 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
         // loop.
         if (outgoing) {
             var prevOfNext = mirrorProperty.call(edge.end)
-            if (edge !in prevOfNext) {
+            if (!prevOfNext.containsEdge(edge)) {
                 prevOfNext.add(edge)
             }
         } else {
             var nextOfPrev = mirrorProperty.call(edge.start)
-            if (edge !in nextOfPrev) {
+            if (!nextOfPrev.containsEdge(edge)) {
                 nextOfPrev.add(edge)
             }
         }
@@ -77,4 +77,15 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
         // Execute any remaining post actions
         super.handleOnAdd(edge)
     }
+}
+
+/**
+ * Checks whether [edge] is contained in this collection. When an edge is added to a mirrored list,
+ * the list appends it and then mirrors it to the other side, which in turn checks whether the edge
+ * is already contained in the original list. In this case, the edge is the last element, so we can
+ * avoid a linear (and [Edge.equals]-heavy) scan, which would otherwise make adding n edges to a
+ * single node quadratic (e.g., the nodes of a very large basic block).
+ */
+private fun <EdgeType : Edge<*>> MutableCollection<EdgeType>.containsEdge(edge: EdgeType): Boolean {
+    return (this as? List<EdgeType>)?.lastOrNull() === edge || edge in this
 }

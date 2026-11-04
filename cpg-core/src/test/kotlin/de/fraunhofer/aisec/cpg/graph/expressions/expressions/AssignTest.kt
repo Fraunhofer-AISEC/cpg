@@ -26,11 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.expressions.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.function
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import kotlin.test.*
@@ -62,26 +60,36 @@ class AssignTest {
     fun propagateTuple() {
         with(TestLanguageFrontend()) {
             val result = build {
-                translationResult {
-                    translationUnit {
-                        val func =
-                            function(
-                                "func",
-                                returnTypes = listOf(objectType("MyClass"), objectType("error")),
-                            )
+                singleTranslationUnit { tu ->
 
-                        function("main") {
-                            val refA = newReference("a")
-                            val refErr = newReference("err")
-                            val refFunc = newReference("func")
-                            refFunc.refersTo = func
-                            val call = newCall(refFunc)
+                    // Evaluated at the outer (translation-unit) scope, before "func"'s own scope is
+                    // entered -- these types get compared later against freshly-created
+                    // objectType(...)
+                    // instances via assertContains, and Type.equals compares scope by reference.
+                    val funcReturnTypes = listOf(objectType("MyClass"), objectType("error"))
+                    val func =
+                        newFunction("func", holder = tu, enterScope = true) { f ->
+                            f.returnTypes = funcReturnTypes
+                            f.type = computeType(f)
+                        }
 
+                    newFunction("main", holder = tu, enterScope = true) { main ->
+                        main.type = computeType(main)
+
+                        main.body = newBlock {
                             // Assignment from "func()" to "a" and "err".
-                            val stmt = newAssign(lhs = listOf(refA, refErr), rhs = listOf(call))
-
-                            body = newBlock()
-                            body as Block += stmt
+                            it.statements +=
+                                newAssign(
+                                    lhs = listOf(newReference("a"), newReference("err")),
+                                    rhs =
+                                        listOf(
+                                            newCall(
+                                                newReference("func").also { ref ->
+                                                    ref.refersTo = func
+                                                }
+                                            )
+                                        ),
+                                )
                         }
                     }
                 }

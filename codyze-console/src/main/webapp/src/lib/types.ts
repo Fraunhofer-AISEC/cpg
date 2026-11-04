@@ -41,7 +41,8 @@ export interface TranslationUnitJSON {
   id: string;
   name: string;
   path: string;
-  code: string;
+  /** Only set when a single translation unit is fetched, not in listings (e.g., `/api/result`) */
+  code?: string;
   findings: FindingsJSON[];
 }
 
@@ -109,7 +110,11 @@ export interface McpCapabilities {
 export interface SkillInfo {
   name: string;
   description: string;
-  body: string;
+  location: string;
+  license?: string | null;
+  compatibility?: string | null;
+  metadata?: Record<string, string>;
+  allowedTools?: string | null;
 }
 
 // AI Agent / Chat interfaces
@@ -130,6 +135,7 @@ export interface LLMMessage {
 
 export interface ToolResult {
   toolName?: string;
+  args?: Record<string, unknown>;
   content: any;
   isError?: boolean;
 }

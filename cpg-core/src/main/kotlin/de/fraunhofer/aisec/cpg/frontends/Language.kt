@@ -115,7 +115,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** The primitive type names of this language. */
     @get:JsonIgnore
     val primitiveTypeNames: Set<String>
-        get() = builtInTypes.keys
+        get() = primitiveTypeNamesWithProfiles ?: builtInTypes.keys
+
+    /**
+     * Additional types contributed by the active [Profile]s. They are not part of the language
+     * itself, so [builtInTypes] always takes precedence. The [TranslationContext] sets them right
+     * after creating the language; a language created elsewhere has none.
+     */
+    @get:JsonIgnore
+    var profileTypes: Map<String, Type> = emptyMap()
+        internal set(value) {
+            field = value
+            // Combined once here, since primitiveTypeNames is read for every operator expression
+            primitiveTypeNamesWithProfiles = builtInTypes.keys + value.keys
+        }
+
+    /** The [primitiveTypeNames] including the [profileTypes], set together with them. */
+    @DoNotPersist @JsonIgnore private var primitiveTypeNamesWithProfiles: Set<String>? = null
 
     /** The built-in types of this language. */
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
@@ -132,8 +148,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** All operators which perform a simple assignment from the rhs to the lhs. */
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
-    /** The standard evaluator to be used with this language. */
-    @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    /**
+     * The standard evaluator to be used with this language. A fresh instance is returned on every
+     * access, so that concurrent evaluations (e.g. from parallel query evaluation) never share
+     * mutable evaluator state such as [ValueEvaluator.path].
+     */
+    @DoNotPersist
+    open val evaluator: ValueEvaluator
+        get() = ValueEvaluator()
 
     /**
      * Determines whether [value] (the result of evaluating a condition with [evaluator]) is
@@ -163,7 +185,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    open fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
+    open fun getSimpleTypeOf(typeString: CharSequence) =
+        builtInTypes[typeString.toString()] ?: profileTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
     open fun handlesFile(file: File): Boolean {
@@ -200,7 +223,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         result = 31 * result + fileExtensions.hashCode()
         result = 31 * result + namespaceDelimiter.hashCode()
         result = 31 * result + frontend.hashCode()
-        result = 31 * result + primitiveTypeNames.hashCode()
+        // Not primitiveTypeNames: equal languages can have different profile types.
+        result = 31 * result + builtInTypes.keys.hashCode()
         result = 31 * result + accessModifiers.hashCode()
         return result
     }
@@ -539,17 +563,27 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * single item. Otherwise, we have an ambiguous result and cannot determine the result with
      * certainty.
      *
-     * If we encounter an ambiguous result, a warning is issued.
+     * If we encounter an ambiguous result, a warning is issued - except when [ref] is the
+     * [Call.callee] of a call (see [Reference.resolutionHelper]). Several candidates for a callee
+     * are not an ambiguity at all but the completely ordinary case of an overload set, which
+     * [SymbolResolver.handleCall] subsequently narrows down by matching the call's arguments
+     * against each candidate's signature. Reporting it here would therefore produce a warning per
+     * call to any overloaded function - by far the dominant source of log noise on real C++ code -
+     * for a situation that is about to be resolved correctly a moment later. Should the callee
+     * genuinely stay unresolvable or ambiguous after signature matching,
+     * [decideInvokesBasedOnCandidates] reports exactly that, so nothing goes unnoticed.
      */
     open fun bestViableReferenceCandidate(ref: Reference): Declaration? {
         return if (ref.candidates.size > 1) {
-            Util.warnWithFileLocation(
-                ref,
-                log,
-                "Resolution of reference {} was ambiguous, cannot set refersTo correctly, " +
-                    "will be set to null.",
-                ref.name,
-            )
+            if (ref.resolutionHelper !is Call) {
+                Util.warnWithFileLocation(
+                    ref,
+                    log,
+                    "Resolution of reference {} was ambiguous, cannot set refersTo correctly, " +
+                        "will be set to null.",
+                    ref.name,
+                )
+            }
             null
         } else {
             ref.candidates.singleOrNull()

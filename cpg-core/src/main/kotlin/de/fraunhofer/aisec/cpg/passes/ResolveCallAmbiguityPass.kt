@@ -145,7 +145,7 @@ fun SubgraphWalker.ScopedWalker<Node>.replaceCallWithCast(
     pointer: Boolean,
 ) {
     val cast = provider.newCast()
-    cast.code = call.code
+    cast.copyCodeFrom(call)
     cast.language = call.language
     cast.location = call.location
     cast.castType =

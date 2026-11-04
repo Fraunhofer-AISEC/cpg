@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -175,7 +174,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
     protected fun handleTranslationUnit(node: TranslationUnit) {
-        handleStatementHolder(node as StatementHolder)
+        handleStatementHolder(node, node.statements)
 
         // loop through functions
         for (child in node.declarations) {
@@ -190,7 +189,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
     protected fun handleNamespace(node: Namespace) {
-        handleStatementHolder(node)
+        handleStatementHolder(node, node.statements)
 
         // loop through functions
         for (child in node.declarations) {
@@ -239,7 +238,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
     protected open fun handleRecord(node: Record) {
-        handleStatementHolder(node)
+        handleStatementHolder(node, node.statements)
         currentPredecessors.clear()
         for (constructor in node.constructors) {
             handleEOG(constructor)
@@ -259,20 +258,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
-    protected fun handleStatementHolder(statementHolder: StatementHolder) {
+    protected fun handleStatementHolder(node: Node, statements: List<Expression>) {
         // separate code into static and non-static parts as they are executed in different moments,
         // although they can be placed in the same enclosing declaration.
-        val code = statementHolder.statements
+        val staticCode = statements.filter { (it as? Block)?.isStaticBlock == true }
+        val nonStaticCode = statements.filter { it !in staticCode }
 
-        val staticCode = code.filter { (it as? Block)?.isStaticBlock == true }
-        val nonStaticCode = code.filter { it !in staticCode }
-
-        attachToEOG(statementHolder as Node)
+        attachToEOG(node)
         for (staticStatement in staticCode) {
             handleEOG(staticStatement)
         }
         currentPredecessors.clear()
-        attachToEOG(statementHolder as Node)
+        attachToEOG(node)
         for (nonStaticStatement in nonStaticCode) {
             handleEOG(nonStaticStatement)
         }
@@ -605,8 +602,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See [Specification for Return](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#return)
      */
     protected fun handleReturn(node: Return) {
-        // analyze the return value
-        handleEOG(node.returnValue)
+        // analyze the return values from left to right
+        node.returnValues.forEach { handleEOG(it) }
 
         // push the statement itself
         attachToEOG(node)
@@ -1016,7 +1013,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // nodes following the loop
             currentPredecessors.addAll(cfNode.filterIsInstance<Break>())
             // [Continue]s are attached to the start of loops
-            val continues = cfNode.filterIsInstance<Continue>().toMutableList()
+            val continues = cfNode.filterIsInstanceTo<Continue, _>(mutableListOf())
             if (continues.isNotEmpty()) {
                 val conditions =
                     loop.conditions.map { SubgraphWalker.getEOGPathEdges(it).entries }.flatten()
@@ -1084,12 +1081,26 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleEOG(node.statement)
         handleEOG(node.condition)
 
-        nextEdgeBranch = true
-        connectCurrentEOGToLoopStart(node)
+        // `do { ... } while (0)` is the usual macro idiom and never runs its body twice. Without a
+        // back edge it stays straight-line code, instead of a loop that EOG-based fixpoint analyses
+        // (e.g. the PointsToPass) would have to iterate.
+        if (!node.condition.isAlwaysFalsyLiteral()) {
+            nextEdgeBranch = true
+            connectCurrentEOGToLoopStart(node)
+        }
         nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
         attachToEOG(node)
+    }
+
+    /**
+     * Whether this is a [Literal] whose value is falsy in this node's [Language], e.g. `0` in
+     * C/C++. Only literals are recognized, so no constant folding has to run before this pass.
+     */
+    private fun Expression?.isAlwaysFalsyLiteral(): Boolean {
+        val literal = this as? Literal<*> ?: return false
+        return language.isTruthy(literal.value) == false
     }
 
     /**
@@ -1325,12 +1336,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /** We use the scope where the current [node] is in, to find a statement labeled with [label] */
     fun getLabeledASTNode(node: Node, label: String): Node? {
-        scopeManager.jumpTo(node.scope)
-        val labelStatement = scopeManager.getLabel(label)
-        labelStatement?.subStatement?.let {
-            return it
+        // Temporarily jump to the node's scope to perform label lookup and restore the old scope
+        val oldScope = scopeManager.jumpTo(node.scope)
+        try {
+            val labelStatement = scopeManager.getLabel(label)
+            labelStatement?.subStatement?.let {
+                return it
+            }
+            return null
+        } finally {
+            // restore previous scope (may be null)
+            scopeManager.jumpTo(oldScope)
         }
-        return null
     }
 
     /**

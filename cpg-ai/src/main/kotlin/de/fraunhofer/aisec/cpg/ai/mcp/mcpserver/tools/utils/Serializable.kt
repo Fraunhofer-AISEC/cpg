@@ -102,7 +102,9 @@ data class ParameterInfo(val name: String, val type: TypeInfo, val defaultValue:
     ) : this(
         name = parameterDeclaration.name.toString(),
         type = TypeInfo(parameterDeclaration.type),
-        defaultValue = parameterDeclaration.default.toString(),
+        // `.toString()` on a null default reports the literal string "null"; only emit a value when
+        // a default actually exists.
+        defaultValue = parameterDeclaration.default?.toString(),
     )
 }
 
@@ -140,21 +142,33 @@ data class FunctionInfo(
     val endLine: Int?,
     val translationUnitId: String?,
 ) {
+    /**
+     * [includeCode] false omits [code], which can be an entire function body, as bulk listings do:
+     * `cpg_get_node` fetches the full details (code included) once a function is picked.
+     */
     constructor(
-        functionDeclaration: Function
+        functionDeclaration: Function,
+        includeCode: Boolean = true,
     ) : this(
         nodeId = functionDeclaration.id.toString(),
         name = functionDeclaration.name.toString(),
         parameters = functionDeclaration.parameters.map { ParameterInfo(it) },
         signature = functionDeclaration.signature,
         callees = functionDeclaration.callees.map { it.name.localName },
-        code = functionDeclaration.code,
+        code = if (includeCode) functionDeclaration.code else null,
         fileName = functionDeclaration.location?.artifactLocation?.fileName,
         startLine = functionDeclaration.location?.region?.startLine,
         endLine = functionDeclaration.location?.region?.endLine,
         translationUnitId = functionDeclaration.translationUnit?.id?.toString(),
     )
 }
+
+/**
+ * The compact entry of a listing: a node's id, a one-line [signature] and its [location] as
+ * `file:line` (omitted from the JSON if unknown, e.g. for an inferred function).
+ */
+@Serializable
+data class SignatureInfo(val nodeId: String, val signature: String, val location: String? = null)
 
 @Serializable
 data class RecordInfo(
@@ -195,14 +209,16 @@ data class CallInfo(
     val endLine: Int?,
     val translationUnitId: String?,
 ) {
+    /** [includeCode] false omits [code], as for [FunctionInfo]. */
     constructor(
-        callExpression: Call
+        callExpression: Call,
+        includeCode: Boolean = true,
     ) : this(
         nodeId = callExpression.id.toString(),
         name = callExpression.name.toString(),
         argumentNames = callExpression.arguments.map { it.name.localName },
         resolvedTo = callExpression.invokes.map { it.name.toString() },
-        code = callExpression.code,
+        code = if (includeCode) callExpression.code else null,
         fileName = callExpression.location?.artifactLocation?.fileName,
         startLine = callExpression.location?.region?.startLine,
         endLine = callExpression.location?.region?.endLine,
@@ -212,6 +228,8 @@ data class CallInfo(
 
 @Serializable
 data class CpgAnalysisResult(
+    /** The name of the analyzed project. Pass it as `projectName` to target it in tool calls. */
+    val projectName: String,
     val totalNodes: Int,
     val functions: Int,
     val variables: Int,
@@ -236,3 +254,31 @@ data class QueryTreeNode(
     val node: NodeJSON?,
     val children: List<QueryTreeNode> = emptyList(),
 )
+
+/** A compact, fixed-size overview of a [de.fraunhofer.aisec.cpg.TranslationResult]. */
+@Serializable
+data class CpgOverview(
+    val components: List<ComponentOverview>,
+    /** Functions with a body, i.e., functions defined in the analyzed code. */
+    val definedFunctions: Int,
+    /**
+     * Functions without a body in the analyzed code, e.g. declared in a header or called from a
+     * library - the same notion of "external" as in [externalFunctionsCalled].
+     */
+    val externalFunctions: Int,
+    val records: Int,
+    val calls: Int,
+    /** Files by the number of functions defined in them. */
+    val filesWithMostFunctions: List<NamedCount>,
+    /** Defined functions by the number of calls to them. */
+    val mostCalledFunctions: List<NamedCount>,
+    /** Callees without a body by the number of calls to them. */
+    val externalFunctionsCalled: List<NamedCount>,
+    /** Defined functions which are never called, by the number of calls they make. */
+    val entryPointCandidates: List<NamedCount>,
+    val entryPointCandidatesTotal: Int,
+)
+
+@Serializable data class ComponentOverview(val name: String, val translationUnits: Int)
+
+@Serializable data class NamedCount(val name: String, val count: Int)

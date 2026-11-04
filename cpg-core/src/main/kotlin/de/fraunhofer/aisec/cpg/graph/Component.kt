@@ -75,6 +75,15 @@ open class Component : AstNode() {
     val additionalTypes = IdentityHashMap<String, Type>()
 
     /**
+     * An optional, transient per-pass cache that accelerates [ifdsReachingSources] queries over
+     * this component's (immutable-during-a-pass) DFG/EOG by reusing predicate-independent balanced
+     * callee summaries. A pass installs it for the duration of its run (and must [markSink]-mark
+     * every potential sink, see [IfdsSummaryCache]'s soundness contract) and clears it afterwards;
+     * queries that find no cache here run the exact uncached tabulation.
+     */
+    @DoNotPersist var ifdsSummaryCache: IfdsSummaryCache? = null
+
+    /**
      * In contrast to other Nodes we do not add the assumptions collected over the component because
      * we are already the component.
      */

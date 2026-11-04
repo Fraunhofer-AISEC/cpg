@@ -70,6 +70,19 @@ abstract class Declaration : AstNode(), HasModifiers {
      */
     var visibility: Visibility = Visibility.UNKNOWN
 
+    /**
+     * Whether this declaration is *static*, i.e., bound to its enclosing [Record] rather than to an
+     * instance of it. Common examples are static [Field]s and [Method]s, but also static nested
+     * [Record]s (e.g., `static class` in Java) or static imports (e.g., `import static` in Java).
+     *
+     * Like [visibility], this is the *interpreted* value: a language frontend maps the relevant
+     * [modifiers] onto it (see [de.fraunhofer.aisec.cpg.frontends.Language.applyModifiers]), so
+     * that passes do not need to know the language-specific keywords. Note that the same keyword
+     * can mean different things depending on the language and scope, e.g., `static` at file scope
+     * in C/C++ denotes internal linkage, which is represented by [Visibility.INTERNAL] instead.
+     */
+    var isStatic = false
+
     override fun getExitNextEOG(): Collection<Node> {
         return setOf()
     }

@@ -28,19 +28,22 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
@@ -58,6 +61,22 @@ class TagOverlaysPassTest {
     class SecretKey(underlyingNode: Node? = null) : Concept(underlyingNode) {
         override fun equals(other: Any?): Boolean {
             return other is SecretKey && super.equals(other)
+        }
+
+        override fun hashCode() = Objects.hash(super.hashCode())
+    }
+
+    class Resource(underlyingNode: Node? = null) : Concept(underlyingNode) {
+        override fun equals(other: Any?): Boolean {
+            return other is Resource && super.equals(other)
+        }
+
+        override fun hashCode() = Objects.hash(super.hashCode())
+    }
+
+    class Use(concept: Concept) : Operation(concept) {
+        override fun equals(other: Any?): Boolean {
+            return other is Use && super.equals(other)
         }
 
         override fun hashCode() = Objects.hash(super.hashCode())
@@ -122,16 +141,28 @@ class TagOverlaysPassTest {
                         )
                 )
             ) {
-                translationResult {
-                    translationUnit {
-                        record("Encryption") {}
-                        function("main") {
-                            body {
-                                declare {
-                                    variable("key", t("string"), init = { literal("secret") })
+                build {
+                    singleTranslationUnit { tu ->
+                        newRecord("Encryption", "class", holder = tu, enterScope = true)
+
+                        newFunction("main", holder = tu, enterScope = true) { main ->
+                            main.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable(
+                                            "key",
+                                            objectType("string"),
+                                            holder = declStmt,
+                                        ) {
+                                            it.initializer = newLiteral("secret")
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newCall(newReference("encrypt")) {
+                                            it.arguments += newReference("key")
+                                        }
                                 }
-                                call("encrypt") { ref("key") }
-                            }
                         }
                     }
                 }
@@ -163,5 +194,39 @@ class TagOverlaysPassTest {
         val arg0OverlayCryptoArgument =
             arg0.overlays.filterIsInstance<CryptoArgument>().singleOrNull()
         assertNotNull(arg0OverlayCryptoArgument)
+    }
+
+    @Test
+    fun testEqualOverlaysAreAttachedOnce() {
+        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+        val call = Call()
+
+        // E.g. from the states of two EOG paths to the call, see EOGConceptPass.attachOverlays
+        val first = Resource()
+        val attached = pass.attachOverlays(call, listOf(first, Resource()))
+        assertEquals(listOf<Node>(first), attached)
+        assertEquals(listOf<Node>(first), call.overlays.toList())
+
+        // An equal one in a later execution of the pass is not attached either
+        assertEquals(emptyList(), pass.attachOverlays(call, listOf(Resource())))
+        assertEquals(listOf<Node>(first), call.overlays.toList())
+    }
+
+    @Test
+    fun testEqualOperationsAreAttachedOnce() {
+        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+        val call = Call()
+        val next = Reference()
+        call.nextEOGEdges += EvaluationOrder(call, next)
+        val resource = Resource()
+
+        val first = Use(resource)
+        val attached = pass.attachOverlays(call, listOf(first, Use(resource)))
+        assertEquals(listOf<Node>(first), attached)
+
+        // The operation is inserted into the EOG and added to its concept only once
+        assertEquals(listOf<Node>(first), call.nextEOG.toList())
+        assertEquals(listOf<Node>(next), first.nextEOG.toList())
+        assertEquals(setOf<Operation>(first), resource.ops)
     }
 }

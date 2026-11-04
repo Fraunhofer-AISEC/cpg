@@ -101,7 +101,8 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
 
     /**
      * This function returns a [TranslationResult], but rather than parsing source code, the
-     * function [init] is used to build nodes in the Node Fluent DSL.
+     * function [init] is used to build nodes directly, e.g., using the node builder functions in
+     * [de.fraunhofer.aisec.cpg.graph.NodeBuilder] and friends.
      */
     fun build(init: LanguageFrontend<*, *>.() -> TranslationResult): TranslationResult {
         return init(this)

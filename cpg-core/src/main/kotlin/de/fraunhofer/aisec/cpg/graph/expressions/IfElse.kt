@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.commonType
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -42,7 +41,7 @@ import kotlin.collections.ifEmpty
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfElse : Expression(false), BranchingNode, ArgumentHolder, HasType.TypeObserver {
+class IfElse : Expression(false), BranchingNode, HasType.TypeObserver {
 
     @Relationship(value = "INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Expression>()
@@ -95,19 +94,6 @@ class IfElse : Expression(false), BranchingNode, ArgumentHolder, HasType.TypeObs
             .append("thenStatement", thenStatement)
             .append("elseStatement", elseStatement)
             .toString()
-    }
-
-    override fun addArgument(expression: Expression) {
-        condition = expression
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        this.condition = new
-        return true
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return this.condition == expression
     }
 
     override fun equals(other: Any?): Boolean {

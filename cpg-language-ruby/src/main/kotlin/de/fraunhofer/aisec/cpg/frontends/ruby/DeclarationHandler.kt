@@ -151,8 +151,9 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
     private fun applyVisibilityToExisting(record: Record, name: String, visibilityKeyword: String) {
         val method = record.methods.firstOrNull { it.name.localName == name } ?: return
         method.modifiers =
-            method.modifiers.filterNot { it in RubyLanguage.visibilityModifiers }.toSet() +
-                visibilityKeyword
+            method.modifiers
+                .filterNotTo(mutableSetOf()) { it in RubyLanguage.visibilityModifiers }
+                .apply { add(visibilityKeyword) }
         language.applyModifiers(method, frontend.scopeManager.currentScope)
     }
 
@@ -211,7 +212,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
             if (lastStatement !is Return) {
                 val returnStatement = newReturn()
                 returnStatement.isImplicit = true
-                body += returnStatement
+                body.statements += returnStatement
 
                 // TODO: Ruby returns the last expression, if there is no explicit return
             }

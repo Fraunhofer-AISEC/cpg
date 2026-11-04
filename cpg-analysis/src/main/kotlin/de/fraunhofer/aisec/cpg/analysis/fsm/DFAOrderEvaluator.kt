@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.helpers.filterMappedTo
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -275,10 +277,12 @@ open class DFAOrderEvaluator(
      */
     private fun callUsesInterestingBase(node: Call, eogPath: String): List<String> {
         val allUsedBases =
-            node.arguments
-                .map { arg -> (arg as? Reference)?.refersTo }
-                .filter { arg -> arg != null && consideredBases.contains(arg) }
-                .toMutableList()
+            node.arguments.filterMappedTo(
+                mutableListOf(),
+                { arg -> (arg as? Reference)?.refersTo },
+            ) { arg ->
+                arg != null && consideredBases.contains(arg)
+            }
         if (
             node is MemberCall &&
                 node.base is Reference &&
@@ -421,7 +425,7 @@ open class DFAOrderEvaluator(
         val outNodes = mutableListOf<Node>()
         outNodes +=
             if (eliminateUnreachableCode) {
-                node.nextEOGEdges.filter { e -> !e.unreachable }.map { it.end }
+                node.nextEOGEdges.mapFiltered({ e -> !e.unreachable }) { it.end }
             } else {
                 node.nextEOG
             }
@@ -515,7 +519,7 @@ open class DFAOrderEvaluator(
             baseToFSM.entries
                 .groupBy { e -> e.key.split("|")[1] }
                 .map { x ->
-                    "${x.key}(${x.value.mapNotNull { y -> y.value.currentState }.toSet().joinToString(",")})"
+                    "${x.key}(${x.value.mapNotNullTo(mutableSetOf()) { y -> y.value.currentState }.joinToString(",")})"
                 }
                 .sorted()
                 .joinToString(",")

@@ -79,12 +79,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleJsxClosingElement(node: TypeScriptNode): Expression {
         // this basically represents an HTML tag with attributes
-        val tag = newExpressionList(rawNode = node)
-
-        // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = Name("</$it>") }
-
-        return tag
+        return newExpressionList(rawNode = node) { tag ->
+            // it contains an Identifier node, we map this into the name
+            this.frontend.getIdentifierName(node).let { tag.name = Name("</$it>") }
+        }
     }
 
     private fun handleJsxExpression(node: TypeScriptNode): Expression {
@@ -95,27 +93,23 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
         // this basically represents an HTML tag with attributes
-        val tag = newExpressionList(rawNode = node)
+        return newExpressionList(rawNode = node) { tag ->
+            // it contains an Identifier node, we map this into the name
+            this.frontend.getIdentifierName(node).let { tag.name = Name("<$it>") }
 
-        // it contains an Identifier node, we map this into the name
-        this.frontend.getIdentifierName(node).let { tag.name = Name("<$it>") }
-
-        // and a container named JsxAttributes, with JsxAttribute nodes
-        tag.expressions =
-            node.firstChild("JsxAttributes")?.children?.mapNotNullTo(mutableListOf()) {
-                this.handle(it)
-            } ?: mutableListOf()
-
-        return tag
+            // and a container named JsxAttributes, with JsxAttribute nodes
+            tag.expressions =
+                node.firstChild("JsxAttributes")?.children?.mapNotNullTo(mutableListOf()) {
+                    this.handle(it)
+                } ?: mutableListOf()
+        }
     }
 
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
-        val jsx = newExpressionList(rawNode = node)
-
-        jsx.expressions =
-            node.children?.mapNotNullTo(mutableListOf()) { this.handle(it) } ?: mutableListOf()
-
-        return jsx
+        return newExpressionList(rawNode = node) { jsx ->
+            jsx.expressions =
+                node.children?.mapNotNullTo(mutableListOf()) { this.handle(it) } ?: mutableListOf()
+        }
     }
 
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
@@ -140,10 +134,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // we cannot directly return a function declaration as an expression, so we
         // wrap it into a lambda expression
-        val lambda = newLambda(rawNode = node)
-        lambda.function = func
-
-        return lambda
+        return newLambda(rawNode = node) { lambda -> lambda.function = func }
     }
 
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValue {
@@ -156,12 +147,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerList {
-        val ile = newInitializerList(unknownType(), rawNode = node)
-
-        ile.initializers =
-            node.children?.mapNotNullTo(mutableListOf()) { this.handle(it) } ?: mutableListOf()
-
-        return ile
+        return newInitializerList(unknownType(), rawNode = node) { ile ->
+            ile.initializers =
+                node.children?.mapNotNullTo(mutableListOf()) { this.handle(it) } ?: mutableListOf()
+        }
     }
 
     private fun handleStringLiteral(node: TypeScriptNode): Literal<String> {

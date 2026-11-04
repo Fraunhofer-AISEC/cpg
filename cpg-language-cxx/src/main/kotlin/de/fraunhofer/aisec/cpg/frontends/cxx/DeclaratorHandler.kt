@@ -115,16 +115,13 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // constructors and thus implicit (constructor) initialization calls
             val implicitInitializerAllowed = frontend.dialect is GPPLanguage
 
-            val declaration =
-                newVariable(
-                    ctx.name.toString(),
-                    unknownType(), // Type will be filled out later by
-                    // handleSimpleDeclaration
-                    implicitInitializerAllowed = implicitInitializerAllowed,
-                    rawNode = ctx,
-                )
-
-            declaration
+            newVariable(
+                ctx.name.toString(),
+                unknownType(), // Type will be filled out later by
+                // handleSimpleDeclaration
+                implicitInitializerAllowed = implicitInitializerAllowed,
+                rawNode = ctx,
+            )
         }
     }
 
@@ -137,17 +134,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         val name = parseName(ctx.name.toString())
 
-        val declaration =
-            newField(
-                name.localName,
-                unknownType(),
-                emptySet(),
-                initializer = initializer,
-                implicitInitializerAllowed = true,
-                rawNode = ctx,
-            )
-
-        return declaration
+        return newField(
+            name.localName,
+            unknownType(),
+            emptySet(),
+            initializer = initializer,
+            implicitInitializerAllowed = true,
+            rawNode = ctx,
+        )
     }
 
     /**
@@ -321,11 +315,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // is appended to the original ones. For coherent graph behavior, we introduce an implicit
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs = newParameter("va_args", unknownType(), true)
-            varargs.isImplicit = true
-            varargs.argumentIndex = i
-            frontend.scopeManager.addDeclaration(varargs)
-            declaration.parameters += varargs
+            newParameter("va_args", unknownType(), true, holder = declaration) { varargs ->
+                varargs.isImplicit = true
+                varargs.argumentIndex = i
+            }
         }
         frontend.scopeManager.leaveScope(declaration)
 
@@ -370,9 +363,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Create the receiver. implicitInitializerAllowed must be false, otherwise fixInitializers
         // will create another implicit constructexpression for this variable, and we don't want
         // this.
-        val thisDeclaration = newVariable("this", type = type, implicitInitializerAllowed = false)
-        // Yes, this is implicit
-        thisDeclaration.isImplicit = true
+        val thisDeclaration =
+            newVariable("this", type = type, implicitInitializerAllowed = false) {
+                // Yes, this is implicit
+                it.isImplicit = true
+            }
 
         // Add it to the scope of the method
         frontend.scopeManager.addDeclaration(thisDeclaration)
