@@ -39,9 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
-/** Thread-local set to track nodes currently propagating types to prevent infinite recursion */
-private val propagatingNodes = ThreadLocal.withInitial { mutableSetOf<HasType>() }
-
 /**
  * This interfaces denotes that the given [Node] has a "type". Currently, we only have two known
  * implementations of this class, an [Expression] and a [ValueDeclaration]. All other nodes with
@@ -198,35 +195,24 @@ interface HasType : LanguageProvider {
             return
         }
 
-        // Guard against infinite recursion in type propagation cycles
-        val currentlyPropagating = propagatingNodes.get()
-        if (this in currentlyPropagating) {
-            return
-        }
-
-        currentlyPropagating.add(this)
-        try {
-            if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
-                val assignedTypes = this.assignedTypes
-                if (assignedTypes.isEmpty()) {
-                    return
-                }
-                // Inform all type observers about the changes
-                for (observer in typeObservers) {
-                    observer.assignedTypeChanged(assignedTypes, this)
-                }
-            } else {
-                val newType = this.type
-                if (newType is UnknownType) {
-                    return
-                }
-                // Inform all type observers about the changes
-                for (observer in typeObservers) {
-                    observer.typeChanged(newType, this)
-                }
+        if (changeType == TypeObserver.ChangeType.ASSIGNED_TYPE) {
+            val assignedTypes = this.assignedTypes
+            if (assignedTypes.isEmpty()) {
+                return
             }
-        } finally {
-            currentlyPropagating.remove(this)
+            // Inform all type observers about the changes
+            for (observer in typeObservers) {
+                observer.assignedTypeChanged(assignedTypes, this)
+            }
+        } else {
+            val newType = this.type
+            if (newType is UnknownType) {
+                return
+            }
+            // Inform all type observers about the changes
+            for (observer in typeObservers) {
+                observer.typeChanged(newType, this)
+            }
         }
     }
 

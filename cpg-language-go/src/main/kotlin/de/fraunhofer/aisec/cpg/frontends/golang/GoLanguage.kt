@@ -52,6 +52,7 @@ open class GoLanguage :
     HasStructs,
     HasFirstClassFunctions,
     HasImplicitPointerToArrayIndexing,
+    HasPackagesSpanningMultipleFiles,
     HasAnonymousIdentifier,
     HasFunctionStyleCasts,
     HasVisibilityModifiers,

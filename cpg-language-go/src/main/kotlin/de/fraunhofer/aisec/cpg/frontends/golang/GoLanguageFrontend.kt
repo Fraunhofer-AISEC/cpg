@@ -83,6 +83,12 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     var currentFile: GoStandardLibrary.Ast.File? = null
 
     /**
+     * The file currently being parsed. Resolving the name a package declares for itself starts from
+     * here, by looking for the package's directory in the enclosing `vendor` directories.
+     */
+    var currentFilePath: File? = null
+
+    /**
      * The names introduced by a short variable declaration (`x := ...`) in the function currently
      * being parsed.
      *
@@ -153,6 +159,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnit {
+        currentFilePath = file
         if (!shouldBeBuild(file, ctx.config.symbols)) {
             log.debug(
                 "Ignoring the contents of {} because of missing build tags or different GOOS/GOARCH.",

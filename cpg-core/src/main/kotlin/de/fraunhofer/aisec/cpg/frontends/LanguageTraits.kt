@@ -272,6 +272,20 @@ interface HasFunctionStyleConstruction : HasCallAmbiguity
 interface HasFunctionOverloading : LanguageTrait
 
 /**
+ * A language trait for languages whose files do not stand on their own, but form a larger unit -- a
+ * package -- together with the other files of their directory.
+ *
+ * Go is such a language: `type Tree` may be declared in `types.go` while its methods live in
+ * `ztypes.go`, and both see each other without an import. Parsing such files independently of one
+ * another hides every declaration of a sibling file, so references across them cannot be resolved
+ * and records get invented for them instead.
+ *
+ * Parallel parsing therefore has to keep the files of one directory together in a single
+ * [de.fraunhofer.aisec.cpg.TranslationContext], and may only parallelize across directories.
+ */
+interface HasPackagesSpanningMultipleFiles : LanguageTrait
+
+/**
  * A language trait for languages that implicitly dereference a pointer to an array when it is
  * indexed, i.e. where `a[i]` means `(*a)[i]` for an `a` pointing to an array.
  *
