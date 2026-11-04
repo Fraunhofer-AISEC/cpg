@@ -463,13 +463,35 @@ class DFGFunctionSummariesTest {
     }
 
     @Test
-    fun testEntriesWithoutSignatureUseTheFirst() {
+    fun testEntriesWithoutSignatureUseTheMostSpecificLanguage() {
+        // The entry for TestLanguageWithColon (param2 -> param0.deref) wins over the one for
+        // TestLanguage, from which it derives, although it is registered second
+        assertEquals(
+            listOf(2),
+            memcpyParam0SourceIndices("src/test/resources/function-dfg-without-signature.yml"),
+        )
+    }
+
+    @Test
+    fun testEntriesWithoutSignatureForTheSameLanguageUseTheFirst() {
+        assertEquals(
+            listOf(1),
+            memcpyParam0SourceIndices(
+                "src/test/resources/function-dfg-without-signature-same-language.yml"
+            ),
+        )
+    }
+
+    /**
+     * The indices of the parameters the data flowing into the first parameter of `memcpy` comes
+     * from, as one of the function summaries in [summaries] (all without a signature) describes it,
+     * when `memcpy` is called in [TestLanguageWithColon] code.
+     */
+    private fun memcpyParam0SourceIndices(summaries: String): List<Int> {
         val config =
             TranslationConfiguration.builder()
                 .registerLanguage<TestLanguageWithColon>()
-                .registerFunctionSummaries(
-                    File("src/test/resources/function-dfg-without-signature.yml")
-                )
+                .registerFunctionSummaries(File(summaries))
                 .inferenceConfiguration(
                     InferenceConfiguration.builder()
                         .inferDfgForUnresolvedCalls(true)
@@ -519,11 +541,11 @@ class DFGFunctionSummariesTest {
                 }
             }
 
-        // Without a signature, nothing ranks one entry above the other, so the first one is used
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
-        val sources = memcpy.functionSummary[memcpy.parameters[0]].orEmpty().map { it.srcNode }
-        assertEquals(listOf<Any?>(memcpy.parameters[1]), sources)
+        return memcpy.functionSummary[memcpy.parameters[0]].orEmpty().map { entry ->
+            memcpy.parameters.indexOfFirst { it === entry.srcNode }
+        }
     }
 
     @Ignore(

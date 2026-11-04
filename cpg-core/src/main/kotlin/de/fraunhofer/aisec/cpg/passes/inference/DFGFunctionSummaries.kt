@@ -214,15 +214,24 @@ class DFGFunctionSummaries {
             // Only one entry with a matching signature => We take this one.
             functionToDFGEntryMap[matchingEntries.single { it.signature != null }]
         } else if (matchingEntries.isNotEmpty() && matchingEntries.all { it.signature == null }) {
-            // Multiple entries without a signature => Nothing ranks one above the others, so we
-            // take the first one (e.g. entries for a language and for one derived from it).
-            log.warn(
-                "Found {} function summaries without a signature for {}, using the first one: {}",
-                matchingEntries.size,
-                functionDecl.name,
-                matchingEntries.first(),
-            )
-            functionToDFGEntryMap[matchingEntries.first()]
+            // Multiple entries without a signature => The one for the most specific language wins,
+            // e.g. one for CPPLanguage over one for CLanguage in C++ code. Several for the same
+            // language are summaries registered twice, so we take the first one and warn.
+            val mostSpecific =
+                matchingEntries
+                    .groupBy { language.derivationDistance(it.language) ?: Int.MAX_VALUE }
+                    .minBy { it.key }
+                    .value
+            if (mostSpecific.size > 1) {
+                log.warn(
+                    "Found {} function summaries without a signature for {} in the same " +
+                        "language, using the first one: {}",
+                    mostSpecific.size,
+                    functionDecl.name,
+                    mostSpecific.first(),
+                )
+            }
+            functionToDFGEntryMap[mostSpecific.first()]
         } else if (matchingEntries.isNotEmpty()) {
             /* There are multiple matching entries. We use the following routine:
              * First, we filter for existing signatures.
@@ -451,17 +460,27 @@ class DFGFunctionSummaries {
  * For backwards compatibility, both fully qualified class names and simple class names are
  * supported, since existing summary YAMLs may use entries such as `CPPLanguage`.
  */
-private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean {
+private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean =
+    derivationDistance(targetLanguageName) != null
+
+/**
+ * The number of superclasses between this language class and the one [targetLanguageName] names (0
+ * if it is this language's class itself), or `null` if it is none of them. See
+ * [matchesOrDerivesFrom] for the names.
+ */
+private fun Language<*>.derivationDistance(targetLanguageName: String): Int? {
     var currentClass: Class<*>? = this.javaClass
+    var distance = 0
 
     while (currentClass != null) {
         if (
             currentClass.name == targetLanguageName || currentClass.simpleName == targetLanguageName
         ) {
-            return true
+            return distance
         }
         currentClass = currentClass.superclass
+        distance++
     }
 
-    return false
+    return null
 }
