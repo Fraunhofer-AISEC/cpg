@@ -79,6 +79,19 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     private var commentMap: GoStandardLibrary.Ast.CommentMap? = null
     var currentFile: GoStandardLibrary.Ast.File? = null
 
+    /**
+     * The names introduced by a short variable declaration (`x := ...`) in the function currently
+     * being parsed.
+     *
+     * Such a declaration shadows a package of the same name from that point on, and `liner :=
+     * liner.NewLiner()` is ordinary Go. The declaration itself is only turned into a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Variable] later, by
+     * [de.fraunhofer.aisec.cpg.passes.GoExtraPass], so the scope manager cannot answer the question
+     * while we are still parsing. We therefore remember the names ourselves, in the order they
+     * appear, which is exactly what deciding between a package qualifier and a member access needs.
+     */
+    val shortVariableNames = mutableSetOf<String>()
+
     override val frontendConfiguration: GoFrontendConfiguration by lazy {
         this.ctx.config.frontendConfigurations[this::class] as? GoFrontendConfiguration
             ?: NoDependenciesGoFrontendConfiguration()

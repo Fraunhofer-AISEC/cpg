@@ -75,6 +75,15 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 "="
             }
 
+        if (assignStmt.tok == 47) {
+            // Remember the declared names, so that a later selector on one of them is read as a
+            // member access rather than as a package qualifier. We do this after the right-hand
+            // side has been handled, because the new name is not in scope within its own
+            // initializer: in `liner := liner.NewLiner()` the right-hand side still refers to the
+            // package.
+            lhs.forEach { frontend.shortVariableNames += it.name.localName }
+        }
+
         return newAssign(operatorCode, lhs, rhs, rawNode = assignStmt)
     }
 

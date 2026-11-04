@@ -103,6 +103,9 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         frontend.scopeManager.enterScope(func)
 
+        // The short variable declarations of one function say nothing about the next one.
+        frontend.shortVariableNames.clear()
+
         val receiver = (func as? Method)?.receiver
         if (receiver != null) {
             // Add the receiver do the scope manager, so we can resolve the receiver value
