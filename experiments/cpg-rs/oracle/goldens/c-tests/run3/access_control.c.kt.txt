@@ -1,0 +1,6 @@
+#0 TranslationUnit name='access_control.c' type='-' loc=1:1-7:4 code='// C has no access control: `struct`/`union` members are alw'
+  #1 Record name='Point' type='-' loc=4:1-7:2 code='struct Point {\n  int x;\n  int y;\n}'
+    #2 Field name='Point::x' type='int' loc=5:7-5:8 code='x' eog=[#3]
+    #3 Field name='Point::y' type='int' loc=6:7-6:8 code='y'
+    #4 Constructor name='Point::Point' type='Point()Point' loc=? code='Point'
+      #5 Variable name='this' type='Point*' loc=? code=''

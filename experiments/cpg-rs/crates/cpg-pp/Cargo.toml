@@ -1,0 +1,7 @@
+[package]
+name = "cpg-pp"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+

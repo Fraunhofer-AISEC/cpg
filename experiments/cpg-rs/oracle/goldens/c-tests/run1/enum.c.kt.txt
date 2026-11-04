@@ -1,0 +1,10 @@
+#0 TranslationUnit name='enum.c' type='-' loc=1:1-9:2 code='typedef enum {\n  THIS = 0,\n  THAT = 1,\n  THE_OTHER = 2,\n'
+  #1 Enumeration name='' type='-' loc=1:1-5:10 code='typedef enum {\n  THIS = 0,\n  THAT = 1,\n  THE_OTHER = 2,\n'
+    #2 EnumConstant name='::THIS' type='int' loc=2:3-2:11 code='THIS = 0'
+    #3 EnumConstant name='::THAT' type='int' loc=3:3-3:11 code='THAT = 1'
+    #4 EnumConstant name='::THE_OTHER' type='int' loc=4:3-4:16 code='THE_OTHER = 2'
+  #5 Typedef name='MyEnum' type='-' loc=? code=''
+  #6 Function name='main' type='()int' loc=7:1-9:2 code='int main() {\n  return THE_OTHER;\n}' eog=[#9]
+    #7 Block name='' type='UNKNOWN' loc=7:12-9:2 code='{\n  return THE_OTHER;\n}'
+      #8 Return name='' type='UNKNOWN' loc=8:3-8:20 code='return THE_OTHER;'
+        #9 Reference name='THE_OTHER' type='int' loc=8:10-8:19 code='THE_OTHER' refersTo=#4 eog=[#8]

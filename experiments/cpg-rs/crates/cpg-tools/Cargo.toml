@@ -1,0 +1,12 @@
+[package]
+name = "cpg-tools"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+cpg-core.workspace = true
+cpg-pp.workspace = true
+cpg-c.workspace = true
+cpg-passes.workspace = true
+cpg-ffi.workspace = true
+tree-sitter.workspace = true

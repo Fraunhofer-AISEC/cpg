@@ -1,0 +1,11 @@
+#0 TranslationUnit name='struct.c' type='-' loc=1:1-9:3 code='struct MyStruct {\n  int field;\n};\n\nint main() {\n  struc'
+  #1 Record name='MyStruct' type='-' loc=1:1-3:2 code='struct MyStruct {\n  int field;\n}'
+    #2 Field name='MyStruct::field' type='int' loc=2:7-2:12 code='field'
+    #3 Constructor name='MyStruct::MyStruct' type='MyStruct()MyStruct' loc=? code='MyStruct'
+      #4 Variable name='this' type='MyStruct*' loc=? code=''
+  #5 Function name='main' type='()int' loc=5:1-9:2 code='int main() {\n  struct MyStruct s;\n\n  return 1;\n}' eog=[#8]
+    #6 Block name='' type='UNKNOWN' loc=5:12-9:2 code='{\n  struct MyStruct s;\n\n  return 1;\n}'
+      #7 DeclarationStatement name='' type='UNKNOWN' loc=6:3-6:21 code='struct MyStruct s;' eog=[#10]
+        #8 Variable name='s' type='MyStruct' loc=6:19-6:20 code='s' eog=[#7]
+      #9 Return name='' type='UNKNOWN' loc=8:3-8:12 code='return 1;'
+        #10 Literal name='' type='int' loc=8:10-8:11 code='1' eog=[#9]

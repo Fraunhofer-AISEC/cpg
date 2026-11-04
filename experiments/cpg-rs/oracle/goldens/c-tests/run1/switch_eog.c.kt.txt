@@ -1,0 +1,18 @@
+#0 TranslationUnit name='switch_eog.c' type='-' loc=1:1-16:2 code='#include <stdio.h>\n\nint main()\n{\n  int a = 0;\n\n  switc'
+  #1 Function name='main' type='()int' loc=3:1-16:2 code='int main()\n{\n  int a = 0;\n\n  switch (a)\n  {\n  case 1:\' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=4:1-16:2 code='{\n  int a = 0;\n\n  switch (a)\n  {\n  case 1:\n    return '
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=5:3-5:13 code='int a = 0;' eog=[#7]
+        #4 Variable name='a' type='int' loc=5:7-5:12 code='a = 0' eog=[#5]
+          #5 Literal name='' type='int' loc=5:11-5:12 code='0' eog=[#3]
+      #6 Switch name='' type='UNKNOWN' loc=7:3-12:4 code='switch (a)\n  {\n  case 1:\n    return 0;\n    // default:\n' eog=[#16]
+        #7 Reference name='a' type='int' loc=7:11-7:12 code='a' refersTo=#4 eog=[#10,#8]
+        #8 Block name='' type='UNKNOWN' loc=8:3-12:4 code='{\n  case 1:\n    return 0;\n    // default:\n  }' eog=[#6]
+          #9 Case name='' type='UNKNOWN' loc=9:3-9:10 code='case 1:' eog=[#12]
+            #10 Literal name='' type='int' loc=9:8-9:9 code='1' eog=[#9]
+          #11 Return name='' type='UNKNOWN' loc=10:5-10:14 code='return 0;'
+            #12 Literal name='' type='int' loc=10:12-10:13 code='0' eog=[#11]
+      #13 Call name='printf' type='UNKNOWN' loc=15:3-15:21 code='printf("%d\n", a);' invokes=[] eog=[#17]
+        #14 Literal name='' type='char[]' loc=15:10-15:16 code='"%d\n"' eog=[#15]
+        #15 Reference name='a' type='int' loc=15:18-15:19 code='a' refersTo=#4 eog=[#13]
+        #16 Reference name='printf' type='UNKNOWN' loc=15:3-15:9 code='printf' refersTo=- eog=[#14]
+      #17 Return name='' type='UNKNOWN' loc=? code=''

@@ -1,0 +1,32 @@
+#0 TranslationUnit name='goto.c' type='-' loc=1:1-13:3 code='int a(int x) {\n  if (x) goto done;\n  if (x > 1) goto done;'
+  #1 Function name='a' type='(int)int' loc=1:1-7:2 code='int a(int x) {\n  if (x) goto done;\n  if (x > 1) goto done;' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=1:14-7:2 code='{\n  if (x) goto done;\n  if (x > 1) goto done;\n  x = 3;\nd'
+      #3 IfElse name='' type='UNKNOWN' loc=2:3-2:20 code='if (x) goto done;' eog=[#8]
+        #4 Reference name='x' type='int' loc=2:7-2:8 code='x' refersTo=#18 eog=[#5:T,#3:F]
+        #5 Goto name='' type='UNKNOWN' loc=2:10-2:20 code='goto done;'
+      #6 IfElse name='' type='UNKNOWN' loc=3:3-3:24 code='if (x > 1) goto done;' eog=[#12]
+        #7 BinaryOperator name='>' type='bool' loc=3:7-3:12 code='x > 1' eog=[#10:T,#6:F]
+          #8 Reference name='x' type='int' loc=3:7-3:8 code='x' refersTo=#18 eog=[#9]
+          #9 Literal name='' type='int' loc=3:11-3:12 code='1' eog=[#7]
+        #10 Goto name='done' type='UNKNOWN' loc=3:14-3:24 code='goto done;' eog=[#16]
+      #11 Assign name='=' type='UNKNOWN' loc=4:3-4:9 code='x = 3;' eog=[#16]
+        #12 Reference name='x' type='int' loc=4:3-4:4 code='x' refersTo=#18 eog=[#13]
+        #13 Literal name='' type='int' loc=4:7-4:8 code='3' eog=[#11]
+      #14 Label name='done' type='UNKNOWN' loc=5:1-6:12 code='done:\n  return x;'
+        #15 Return name='' type='UNKNOWN' loc=6:3-6:12 code='return x;'
+          #16 Reference name='x' type='int' loc=6:10-6:11 code='x' refersTo=#18 eog=[#15]
+      #17 Return name='' type='UNKNOWN' loc=? code=''
+    #18 Parameter name='x' type='int' loc=1:7-1:12 code='int x'
+  #19 Function name='b' type='(int)int' loc=8:1-13:2 code='int b(int n) {\nagain:\n  n--;\n  if (n > 0) goto again;\n  ' eog=[#23]
+    #20 Block name='' type='UNKNOWN' loc=8:14-13:2 code='{\nagain:\n  n--;\n  if (n > 0) goto again;\n  return n;\n}'
+      #21 Label name='again' type='UNKNOWN' loc=9:1-10:7 code='again:\n  n--;'
+        #22 UnaryOperator name='--' type='int' loc=10:3-10:7 code='n--;' eog=[#26]
+          #23 Reference name='n' type='int' loc=10:3-10:4 code='n' refersTo=#31 eog=[#22]
+      #24 IfElse name='' type='UNKNOWN' loc=11:3-11:25 code='if (n > 0) goto again;' eog=[#30]
+        #25 BinaryOperator name='>' type='bool' loc=11:7-11:12 code='n > 0' eog=[#28:T,#24:F]
+          #26 Reference name='n' type='int' loc=11:7-11:8 code='n' refersTo=#31 eog=[#27]
+          #27 Literal name='' type='int' loc=11:11-11:12 code='0' eog=[#25]
+        #28 Goto name='again' type='UNKNOWN' loc=11:14-11:25 code='goto again;' eog=[#23]
+      #29 Return name='' type='UNKNOWN' loc=12:3-12:12 code='return n;'
+        #30 Reference name='n' type='int' loc=12:10-12:11 code='n' refersTo=#31 eog=[#29]
+    #31 Parameter name='n' type='int' loc=8:7-8:12 code='int n'

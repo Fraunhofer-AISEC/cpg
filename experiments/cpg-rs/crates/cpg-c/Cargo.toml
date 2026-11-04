@@ -1,0 +1,11 @@
+[package]
+name = "cpg-c"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+cpg-core.workspace = true
+cpg-pp.workspace = true
+tree-sitter.workspace = true
+tree-sitter-c.workspace = true
+rustc-hash.workspace = true

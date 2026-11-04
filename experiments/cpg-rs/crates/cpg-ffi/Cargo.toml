@@ -1,0 +1,13 @@
+[package]
+name = "cpg-ffi"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+cpg-c.workspace = true
+cpg-pp.workspace = true
+tree-sitter.workspace = true
+tree-sitter-c.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]

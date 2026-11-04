@@ -1,0 +1,14 @@
+#0 TranslationUnit name='symbol_resolver_fail.c' type='-' loc=1:1-12:3 code='// this macro contains two literals. Because this is a macro'
+  #1 Function name='symbol_resolver_fail' type='()int' loc=6:1-12:2 code='int symbol_resolver_fail()\n{\n  char *address;\n  if (SOME_' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=7:1-12:2 code='{\n  char *address;\n  if (SOME_MACRO) {\n    do_call(addres'
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=8:3-8:17 code='char *address;' eog=[#7]
+        #4 Variable name='address' type='char*' loc=8:8-8:16 code='*address' eog=[#3]
+      #5 IfElse name='' type='UNKNOWN' loc=9:3-11:4 code='if (SOME_MACRO) {\n    do_call(address);\n  }' eog=[#13]
+        #6 BinaryOperator name='<<' type='int' loc=9:7-9:17 code='SOME_MACRO' eog=[#12:T,#5:F]
+          #7 Literal name='' type='int' loc=9:7-9:17 code='SOME_MACRO' eog=[#8]
+          #8 Literal name='' type='int' loc=9:7-9:17 code='SOME_MACRO' eog=[#6]
+        #9 Block name='' type='UNKNOWN' loc=9:19-11:4 code='{\n    do_call(address);\n  }' eog=[#5]
+          #10 Call name='do_call' type='UNKNOWN' loc=10:5-10:22 code='do_call(address);' invokes=[] eog=[#9]
+            #11 Reference name='address' type='char*' loc=10:13-10:20 code='address' refersTo=#4 eog=[#10]
+            #12 Reference name='do_call' type='UNKNOWN' loc=10:5-10:12 code='do_call' refersTo=- eog=[#11]
+      #13 Return name='' type='UNKNOWN' loc=? code=''

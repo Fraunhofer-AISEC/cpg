@@ -1,0 +1,8 @@
+[package]
+name = "cpg-core"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+rustc-hash.workspace = true
+

@@ -1,0 +1,39 @@
+#0 TranslationUnit name='stdlib_profile_summaries.c' type='-' loc=1:1-13:3 code='// Neither strcpy nor strcat are declared, as the standard h'
+  #1 Function name='copy' type='(char*)void' loc=2:1-6:2 code='void copy(char *dst) {\n    char b = 'b';\n    char *p = str' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=2:22-6:2 code='{\n    char b = 'b';\n    char *p = strcpy(dst, &b);\n    ch'
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=3:5-3:18 code='char b = 'b';' eog=[#7]
+        #4 Variable name='b' type='char' loc=3:10-3:17 code='b = 'b'' eog=[#5]
+          #5 Literal name='' type='char' loc=3:14-3:17 code=''b'' eog=[#3]
+      #6 DeclarationStatement name='' type='UNKNOWN' loc=4:5-4:31 code='char *p = strcpy(dst, &b);' eog=[#14]
+        #7 Variable name='p' type='char*' loc=4:10-4:30 code='*p = strcpy(dst, &b)' eog=[#12]
+          #8 Call name='strcpy' type='UNKNOWN' loc=4:15-4:30 code='strcpy(dst, &b)' invokes=[] eog=[#6]
+            #9 Reference name='dst' type='char*' loc=4:22-4:25 code='dst' refersTo=#18 eog=[#11]
+            #10 PointerReference name='b' type='char*' loc=4:27-4:29 code='&b' refersTo=#4 eog=[#8]
+              #11 Reference name='b' type='char' loc=4:28-4:29 code='b' refersTo=#4 eog=[#10]
+            #12 Reference name='strcpy' type='UNKNOWN' loc=4:15-4:21 code='strcpy' refersTo=- eog=[#9]
+      #13 DeclarationStatement name='' type='UNKNOWN' loc=5:5-5:25 code='char viaReturn = *p;' eog=[#17]
+        #14 Variable name='viaReturn' type='char' loc=5:10-5:24 code='viaReturn = *p' eog=[#16]
+          #15 PointerDereference name='p' type='char' loc=5:22-5:24 code='*p' refersTo=#7 eog=[#13]
+            #16 Reference name='p' type='char*' loc=5:23-5:24 code='p' refersTo=#7 eog=[#15]
+      #17 Return name='' type='UNKNOWN' loc=? code=''
+    #18 Parameter name='dst' type='char*' loc=2:11-2:20 code='char *dst'
+  #19 Function name='append' type='(char*)void' loc=8:1-13:2 code='void append(char *dst) {\n    char b = 'b';\n    *dst = 'a';' eog=[#22]
+    #20 Block name='' type='UNKNOWN' loc=8:24-13:2 code='{\n    char b = 'b';\n    *dst = 'a';\n    strcat(dst, &b);\'
+      #21 DeclarationStatement name='' type='UNKNOWN' loc=9:5-9:18 code='char b = 'b';' eog=[#26]
+        #22 Variable name='b' type='char' loc=9:10-9:17 code='b = 'b'' eog=[#23]
+          #23 Literal name='' type='char' loc=9:14-9:17 code=''b'' eog=[#21]
+      #24 Assign name='=' type='UNKNOWN' loc=10:5-10:16 code='*dst = 'a';' eog=[#32]
+        #25 PointerDereference name='dst' type='char' loc=10:5-10:9 code='*dst' refersTo=#38 eog=[#27]
+          #26 Reference name='dst' type='char*' loc=10:6-10:9 code='dst' refersTo=#38 eog=[#25]
+        #27 Literal name='' type='char' loc=10:12-10:15 code=''a'' eog=[#24]
+      #28 Call name='strcat' type='UNKNOWN' loc=11:5-11:21 code='strcat(dst, &b);' invokes=[] eog=[#34]
+        #29 Reference name='dst' type='char*' loc=11:12-11:15 code='dst' refersTo=#38 eog=[#31]
+        #30 PointerReference name='b' type='char*' loc=11:17-11:19 code='&b' refersTo=#22 eog=[#28]
+          #31 Reference name='b' type='char' loc=11:18-11:19 code='b' refersTo=#22 eog=[#30]
+        #32 Reference name='strcat' type='UNKNOWN' loc=11:5-11:11 code='strcat' refersTo=- eog=[#29]
+      #33 DeclarationStatement name='' type='UNKNOWN' loc=12:5-12:29 code='char afterAppend = *dst;' eog=[#37]
+        #34 Variable name='afterAppend' type='char' loc=12:10-12:28 code='afterAppend = *dst' eog=[#36]
+          #35 PointerDereference name='dst' type='char' loc=12:24-12:28 code='*dst' refersTo=#38 eog=[#33]
+            #36 Reference name='dst' type='char*' loc=12:25-12:28 code='dst' refersTo=#38 eog=[#35]
+      #37 Return name='' type='UNKNOWN' loc=? code=''
+    #38 Parameter name='dst' type='char*' loc=8:13-8:22 code='char *dst'

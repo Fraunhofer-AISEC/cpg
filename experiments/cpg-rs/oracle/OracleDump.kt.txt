@@ -1,0 +1,114 @@
+/*
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.frontends.cxx
+
+import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.test.analyze
+import java.io.File
+import java.util.IdentityHashMap
+import kotlin.test.Test
+
+/** Scratch: canonical dump of the Kotlin CPG (frontend + the passes SymbolResolver needs). */
+class TmpDump {
+    @Test
+    fun dump() {
+        val dir = File(System.getenv("DUMP_DIR") ?: error("DUMP_DIR not set"))
+        val outDir = File(System.getenv("DUMP_OUT_DIR") ?: error("DUMP_OUT_DIR not set"))
+        outDir.mkdirs()
+        dir.listFiles { f -> f.isFile && f.extension == "c" }!!
+            .sortedBy { it.name }
+            .forEach { file ->
+                val out = File(outDir, file.name + ".kt.txt")
+                try {
+                    out.writeText(dumpFile(file))
+                } catch (e: Throwable) {
+                    out.writeText("ERROR ${e.javaClass.simpleName}: ${e.message}\n")
+                }
+            }
+    }
+
+    private fun dumpFile(file: File): String {
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), false) {
+                it.registerLanguage<CLanguage>()
+                it.loadIncludes(false)
+                it.debugParser(false)
+                it.inferenceConfiguration(
+                    de.fraunhofer.aisec.cpg.InferenceConfiguration.builder().enabled(false).build()
+                )
+                it.registerPass<ImportResolver>()
+                it.registerPass<TypeResolver>()
+                it.registerPass<TypeHierarchyResolver>()
+                it.registerPass<EvaluationOrderGraphPass>()
+                it.registerPass<SymbolResolver>()
+            }
+        val tus = result.components.flatMap { it.translationUnits }
+
+        val ids = IdentityHashMap<Any, Int>()
+        fun number(n: AstNode) {
+            ids[n] = ids.size
+            n.astChildren.forEach { number(it) }
+        }
+        tus.forEach { number(it) }
+
+        fun ref(d: Any?) =
+            if (d == null) "-" else ids[d]?.let { "#$it" } ?: "ext:${d.javaClass.simpleName}"
+        val sb = StringBuilder()
+        fun dump(n: AstNode, depth: Int) {
+            val r = n.location?.region
+            val loc =
+                if (r == null) "?"
+                else "${r.startLine}:${r.startColumn}-${r.endLine}:${r.endColumn}"
+            val type = (n as? HasType)?.type?.name?.toString() ?: "-"
+            val code = (n.code ?: "").replace("\n", "\\n").take(60)
+            sb.append("  ".repeat(depth))
+                .append(
+                    "#${ids[n]} ${n.javaClass.simpleName} name='${n.name}' type='$type' loc=$loc code='$code'"
+                )
+            if (n is Reference) sb.append(" refersTo=${ref(n.refersTo)}")
+            if (n is Call) sb.append(" invokes=[${n.invokes.joinToString(",") { ref(it) }}]")
+            val eog =
+                n.nextEOGEdges.joinToString(",") {
+                    ref(it.end) +
+                        (it.branch?.let { b -> if (b) ":T" else ":F" } ?: "") +
+                        (if (it.unreachable) ":U" else "")
+                }
+            if (eog.isNotEmpty()) sb.append(" eog=[$eog]")
+            sb.append('\n')
+            n.astChildren.forEach { dump(it, depth + 1) }
+        }
+        tus.forEach { dump(it, 0) }
+        return sb.toString()
+    }
+}

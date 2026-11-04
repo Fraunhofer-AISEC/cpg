@@ -1,0 +1,19 @@
+#0 TranslationUnit name='typedef_over_builtin.c' type='-' loc=1:1-12:41 code='// Typedefs with the names of built-in types: the headers th'
+  #1 Typedef name='size_t' type='-' loc=? code=''
+  #2 Typedef name='int32_t' type='-' loc=? code=''
+  #3 Variable name='declared' type='int' loc=6:8-6:16 code='declared'
+  #4 Variable name='alsoDeclared' type='long int' loc=7:9-7:21 code='alsoDeclared'
+  #5 Variable name='untouched' type='uint64_t' loc=9:10-9:19 code='untouched'
+  #6 Function name='call' type='(int)int' loc=11:1-11:43 code='int call(size_t p) { return (size_t)(p); }' eog=[#11]
+    #7 Block name='' type='UNKNOWN' loc=11:20-11:43 code='{ return (size_t)(p); }'
+      #8 Return name='' type='UNKNOWN' loc=11:22-11:41 code='return (size_t)(p);'
+        #9 Cast name='int' type='int' loc=11:29-11:40 code='(size_t)(p)' eog=[#8]
+          #10 UnaryOperator name='()' type='int' loc=11:37-11:40 code='(p)' eog=[#9]
+            #11 Reference name='p' type='int' loc=11:38-11:39 code='p' refersTo=#12 eog=[#10]
+    #12 Parameter name='p' type='int' loc=11:10-11:18 code='size_t p'
+  #13 Function name='plain' type='(int)int' loc=12:1-12:40 code='int plain(int v) { return (size_t) v; }' eog=[#17]
+    #14 Block name='' type='UNKNOWN' loc=12:18-12:40 code='{ return (size_t) v; }'
+      #15 Return name='' type='UNKNOWN' loc=12:20-12:38 code='return (size_t) v;'
+        #16 Cast name='int' type='int' loc=12:27-12:37 code='(size_t) v' eog=[#15]
+          #17 Reference name='v' type='int' loc=12:36-12:37 code='v' refersTo=#18 eog=[#16]
+    #18 Parameter name='v' type='int' loc=12:11-12:16 code='int v'

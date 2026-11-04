@@ -1,0 +1,21 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+
+[workspace.dependencies]
+tree-sitter = "0.27.1"
+tree-sitter-c = "0.24.2"
+rustc-hash = "2.1.3"
+cpg-core = { path = "crates/cpg-core" }
+cpg-pp = { path = "crates/cpg-pp" }
+cpg-c = { path = "crates/cpg-c" }
+cpg-passes = { path = "crates/cpg-passes" }
+cpg-ffi = { path = "crates/cpg-ffi" }
+
+[profile.release]
+opt-level = 3
+lto = true
