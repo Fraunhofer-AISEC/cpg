@@ -51,6 +51,39 @@ import kotlin.time.Duration
 
 class PointsToPassTest {
     @Test
+    fun testSummaryAppliesThroughParametersOfAnInferredRecordType() {
+        val file = File("src/test/resources/pointsToPass/inferred_record.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                // Explicit, so the test does not depend on PointsToPass being a default pass
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(
+                    File("src/test/resources/pointsToPass/inferred_record.yml")
+                )
+            }
+        assertNotNull(tu)
+
+        // read_into(&value, h) copies what h refers to into value (see inferred_record.yml). The
+        // record of Handle is only inferred, so h is treated like a parameter of an unknown type
+        // and reading value afterward reads the memory behind the caller's h.
+        val reader = tu.functions["reader"]
+        assertNotNull(reader)
+        val afterRead = reader.variables["afterRead"]?.initializer
+        assertNotNull(afterRead)
+        val reached = mutableSetOf<Node>()
+        val worklist = ArrayDeque(listOf<Node>(afterRead))
+        while (worklist.isNotEmpty()) {
+            val node = worklist.removeFirst()
+            if (reached.add(node)) worklist.addAll(node.prevDFG)
+        }
+        assertTrue(
+            reached.any { it is ParameterMemoryValue && it.name.parent?.toString() == "reader.h" },
+            "the memory behind reader's h does not reach value, only $reached",
+        )
+    }
+
+    @Test
     fun testBasics() {
         val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
