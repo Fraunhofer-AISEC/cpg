@@ -149,6 +149,29 @@ class StatementTest {
     }
 
     @Test
+    fun testCallWithWrongArgumentCountResolvesToTheDeclaredFunction() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("wrong_argument_count.go").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val pair = tu.functions["pair"]
+        assertNotNull(pair)
+        val call = tu.calls["pair"]
+        assertNotNull(call)
+
+        // The name alone determines the function, the arguments do not choose among candidates
+        assertEquals(listOf(pair), call.invokes)
+        assertTrue(tu.functions.none { it.isInferred && it.name.localName == "pair" })
+    }
+
+    @Test
     fun testTypeSwitch() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
