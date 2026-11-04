@@ -103,10 +103,16 @@ interface HasType : LanguageProvider {
             return
         }
 
-        val changed =
-            (this.assignedTypes as MutableSet).addAll(
-                types.filter { language.shouldPropagateType(this.type, it, this) == true }
-            )
+        // Add directly instead of filtering into an intermediate collection first, since this is
+        // called for every observer notification.
+        val assignedTypes = this.assignedTypes as MutableSet
+        val ownType = this.type
+        var changed = false
+        for (type in types) {
+            if (language.shouldPropagateType(ownType, type, this) == true) {
+                changed = assignedTypes.add(type) || changed
+            }
+        }
         if (changed) {
             informObservers(TypeObserver.ChangeType.ASSIGNED_TYPE)
         }

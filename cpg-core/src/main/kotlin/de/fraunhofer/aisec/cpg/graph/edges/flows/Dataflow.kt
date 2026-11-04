@@ -220,14 +220,24 @@ private fun callsIdentityHash(calls: List<Call>): Int {
 }
 
 class CallingContextIn(override val calls: MutableList<Call>) : CallingContext {
+    /** The hash is used for every copy of a state, so we compute it only once. 0 means unset. */
+    private var cachedHashCode = 0
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CallingContextIn) return false
         return callsEqualByIdentity(this.calls, other.calls)
     }
 
+    // Like for any key of a hash-based collection, the [calls] must not change once this object
+    // was used as one, so we can cache the hash.
     override fun hashCode(): Int {
-        return 31 * callsIdentityHash(calls)
+        var h = cachedHashCode
+        if (h == 0) {
+            h = 31 * callsIdentityHash(calls)
+            cachedHashCode = h
+        }
+        return h
     }
 }
 
@@ -235,14 +245,24 @@ class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
     override val calls: MutableList<Call>
 ) : CallingContext {
+    /** The hash is used for every copy of a state, so we compute it only once. 0 means unset. */
+    private var cachedHashCode = 0
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CallingContextOut) return false
         return callsEqualByIdentity(this.calls, other.calls)
     }
 
+    // Like for any key of a hash-based collection, the [calls] must not change once this object
+    // was used as one, so we can cache the hash.
     override fun hashCode(): Int {
-        return 31 * callsIdentityHash(calls)
+        var h = cachedHashCode
+        if (h == 0) {
+            h = 31 * callsIdentityHash(calls)
+            cachedHashCode = h
+        }
+        return h
     }
 }
 
