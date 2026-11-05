@@ -13,6 +13,7 @@ def parse(text):
         m = LINE.match(l)
         if not m: continue
         ind, nid, cls, name, typ, loc, code, rest = m.groups()
+        if cls == 'TranslationUnit': name = os.path.basename(name)  # relative to the invocation
         d = dict(cls=cls, name=name, type=typ, loc=loc, code=code, depth=len(ind)//2, id=nid, rest=rest)
         out.append(d)
     sig = {d['id']: '%s|%s|%s' % (d['cls'], d['name'], d['loc']) for d in out}

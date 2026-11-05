@@ -1,0 +1,14 @@
+#0 TranslationUnit name='../../private/tmp/va-in/va_arg_redefined.c' type='-' loc=1:1-8:3 code='// What <stdarg.h> of GCC and Clang does: it defines the sam'
+  #1 Function name='next' type='(void*)int' loc=4:1-8:2 code='int next(void *ap) {\n  int v = va_arg(ap, int);\n  char *s ' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=4:20-8:2 code='{\n  int v = va_arg(ap, int);\n  char *s = va_arg(ap, char *'
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=5:3-5:27 code='int v = va_arg(ap, int);' eog=[#8]
+        #4 Variable name='v' type='int' loc=5:7-5:26 code='v = va_arg(ap, int)' eog=[#6]
+          #5 Cast name='int' type='int' loc=5:11-5:26 code='va_arg(ap, int)' eog=[#3]
+            #6 Reference name='ap' type='void*' loc=5:11-5:26 code='va_arg(ap, int)' refersTo=#13 eog=[#5]
+      #7 DeclarationStatement name='' type='UNKNOWN' loc=6:3-6:32 code='char *s = va_arg(ap, char *);' eog=[#12]
+        #8 Variable name='s' type='char*' loc=6:8-6:31 code='*s = va_arg(ap, char *)' eog=[#10]
+          #9 Cast name='char*' type='char*' loc=6:13-6:31 code='va_arg(ap, char *)' eog=[#7]
+            #10 Reference name='ap' type='void*' loc=6:13-6:31 code='va_arg(ap, char *)' refersTo=#13 eog=[#9]
+      #11 Return name='' type='UNKNOWN' loc=7:3-7:12 code='return v;'
+        #12 Reference name='v' type='int' loc=7:10-7:11 code='v' refersTo=#4 eog=[#11]
+    #13 Parameter name='ap' type='void*' loc=4:10-4:18 code='void *ap'

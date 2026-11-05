@@ -19,6 +19,16 @@ impl<'a> Builder<'a, '_> {
     pub(crate) fn base_type(&self, t: Option<Ts>) -> String {
         let Some(t) = t else { return "int".to_string() };
         let txt = text(self.g.src, &t);
+        // GNU `typeof(...)`: the Kotlin frontend names the type `typeof(<raw signature of the
+        // parenthesized operand>)`, e.g. `typeof((int))`
+        for kw in [&b"__typeof__"[..], b"__typeof", b"typeof"] {
+            if let Some(rest) = txt.strip_prefix(kw) {
+                let rest = rest.trim_ascii_start();
+                if rest.first() == Some(&b'(') && rest.last() == Some(&b')') {
+                    return format!("typeof({})", String::from_utf8_lossy(rest));
+                }
+            }
+        }
         match t.kind() {
             "primitive_type" => {
                 if matches!(txt, b"void" | b"char" | b"int" | b"float" | b"double" | b"_Bool" | b"bool") {

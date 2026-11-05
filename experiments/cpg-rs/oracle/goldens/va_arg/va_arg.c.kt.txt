@@ -1,0 +1,14 @@
+#0 TranslationUnit name='../../private/tmp/va-in/va_arg.c' type='-' loc=1:1-5:3 code='int next(void *ap) {\n  int v = va_arg(ap, int);\n  char *s '
+  #1 Function name='next' type='(void*)int' loc=1:1-5:2 code='int next(void *ap) {\n  int v = va_arg(ap, int);\n  char *s ' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=1:20-5:2 code='{\n  int v = va_arg(ap, int);\n  char *s = va_arg(ap, char *'
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=2:3-2:27 code='int v = va_arg(ap, int);' eog=[#8]
+        #4 Variable name='v' type='int' loc=2:7-2:26 code='v = va_arg(ap, int)' eog=[#6]
+          #5 Cast name='int' type='int' loc=2:11-2:26 code='va_arg(ap, int)' eog=[#3]
+            #6 Reference name='ap' type='void*' loc=2:11-2:26 code='va_arg(ap, int)' refersTo=#13 eog=[#5]
+      #7 DeclarationStatement name='' type='UNKNOWN' loc=3:3-3:32 code='char *s = va_arg(ap, char *);' eog=[#12]
+        #8 Variable name='s' type='char*' loc=3:8-3:31 code='*s = va_arg(ap, char *)' eog=[#10]
+          #9 Cast name='char*' type='char*' loc=3:13-3:31 code='va_arg(ap, char *)' eog=[#7]
+            #10 Reference name='ap' type='void*' loc=3:13-3:31 code='va_arg(ap, char *)' refersTo=#13 eog=[#9]
+      #11 Return name='' type='UNKNOWN' loc=4:3-4:12 code='return v;'
+        #12 Reference name='v' type='int' loc=4:10-4:11 code='v' refersTo=#4 eog=[#11]
+    #13 Parameter name='ap' type='void*' loc=1:10-1:18 code='void *ap'

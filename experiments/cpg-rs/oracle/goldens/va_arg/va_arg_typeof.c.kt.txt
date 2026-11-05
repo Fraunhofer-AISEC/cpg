@@ -1,0 +1,11 @@
+#0 TranslationUnit name='../../private/tmp/va-in/va_arg_typeof.c' type='-' loc=1:1-6:3 code='// Looks like the expansion of __builtin_va_arg, but is writ'
+  #1 Function name='deref' type='(void*)int' loc=3:1-6:2 code='int deref(void *p) {\n  int v = *(__typeof__(int) *)p;\n  re' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=3:20-6:2 code='{\n  int v = *(__typeof__(int) *)p;\n  return v;\n}'
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=4:3-4:33 code='int v = *(__typeof__(int) *)p;' eog=[#9]
+        #4 Variable name='v' type='int' loc=4:7-4:32 code='v = *(__typeof__(int) *)p' eog=[#7]
+          #5 PointerDereference name='typeof((int))*' type='typeof((int))' loc=4:11-4:32 code='*(__typeof__(int) *)p' refersTo=- eog=[#3]
+            #6 Cast name='typeof((int))*' type='typeof((int))*' loc=4:12-4:32 code='(__typeof__(int) *)p' eog=[#5]
+              #7 Reference name='p' type='void*' loc=4:31-4:32 code='p' refersTo=#10 eog=[#6]
+      #8 Return name='' type='UNKNOWN' loc=5:3-5:12 code='return v;'
+        #9 Reference name='v' type='int' loc=5:10-5:11 code='v' refersTo=#4 eog=[#8]
+    #10 Parameter name='p' type='void*' loc=3:11-3:18 code='void *p'
