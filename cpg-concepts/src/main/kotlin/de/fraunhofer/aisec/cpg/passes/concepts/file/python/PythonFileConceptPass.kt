@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.Util
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
@@ -49,7 +48,6 @@ import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
-import kotlinx.coroutines.runBlocking
 
 // TODO: move file creation before join pass
 /**
@@ -80,7 +78,8 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
          *
          * should both operate on the same [File] concept node.
          *
-         * This is currently done per [Component].
+         * This is currently done per [Component]. It is a separate mechanism from
+         * [NodeToOverlayState.intern], which only finds equal overlays of the same node.
          */
         // TODO: Is TranslationUnit better?
         internal val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
@@ -485,21 +484,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             connect = false,
                         )
                         .apply { isTempFile = fileHandle.isTempFile }
-                        .also { newFile ->
-                            // store the new file in the cache
-                            currentMap[fileHandle.fileName] = newFile
-                            // and add it to the lattice
-                            runBlocking {
-                                lattice.lub(
-                                    one = state,
-                                    two =
-                                        NodeToOverlayStateElement(
-                                            fileHandle.underlyingNode!! /* TODO*/ to
-                                                PowersetLattice.Element(newFile)
-                                        ),
-                                    allowModify = true,
-                                )
-                            }
+                        .let { newFile ->
+                            // add it to the lattice and store it in the cache
+                            addFile(lattice, state, fileHandle.underlyingNode!! /* TODO*/, newFile)
+                                .also { currentMap[fileHandle.fileName] = it }
                         }
             }
         }
@@ -530,24 +518,31 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                         FileTempFileStatus.NOT_A_TEMP_FILE
                                     }
                             }
-                            .also { newFile ->
-                                // store the new file in the cache
-                                currentMap[fileName] = newFile
-                                // and add it to the lattice
-                                runBlocking {
-                                    lattice.lub(
-                                        one = state,
-                                        two =
-                                            NodeToOverlayStateElement(
-                                                cpgNode to PowersetLattice.Element(newFile)
-                                            ),
-                                        allowModify = true,
-                                    )
+                            .let { newFile ->
+                                // add it to the lattice and store it in the cache
+                                addFile(lattice, state, cpgNode, newFile).also {
+                                    currentMap[fileName] = it
                                 }
                             }
                 }
 
         return result
+    }
+
+    /**
+     * Adds [file] to [state] for [node] and returns the instance which [state] holds for it: an
+     * equal [File] that exists already, or [file] itself (see [NodeToOverlayState.intern]). The
+     * operations on the file have to refer to that instance.
+     */
+    private fun addFile(
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+        node: Node,
+        file: File,
+    ): File {
+        val instance = lattice.intern(node, listOf(file)).filterIsInstance<File>().single()
+        lattice.addOverlays(state, node, listOf(instance))
+        return instance
     }
 
     /**

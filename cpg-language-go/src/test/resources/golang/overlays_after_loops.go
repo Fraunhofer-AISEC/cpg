@@ -15,3 +15,15 @@ func indexLoop() {
 	}
 	log.Printf("after")
 }
+
+func acquire() int { return 1 }
+
+func release(r int) {}
+
+func resourceAfterLoop(params []int) {
+	for _, p := range params {
+		log.Printf("use %d", p)
+	}
+	r := acquire()
+	release(r)
+}
