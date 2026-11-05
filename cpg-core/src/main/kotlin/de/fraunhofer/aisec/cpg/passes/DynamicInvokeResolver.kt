@@ -41,7 +41,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
@@ -269,6 +271,23 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // refers to. That is where the step over the call boundary below can pick up.
             if (prevDFGToPush.isEmpty() && curr is Reference) {
                 curr.refersTo?.let { prevDFGToPush.add(it) }
+            }
+
+            // A loop variable over a container of functions holds whatever the container holds:
+            // `for _, set := range settings { set(s) }` is the shape every "functional options"
+            // API in Go is built on. Continue at the container, from where the partial flows out
+            // of it and the step over the call boundary below can carry on.
+            if (prevDFGToPush.isEmpty() && curr is Variable) {
+                val loop = curr.firstParentOrNull<ForEach>()
+                val declaredByLoop =
+                    loop != null &&
+                        (curr in loop.locals ||
+                            (loop.variable as? DeclarationStatement)
+                                ?.declarations
+                                ?.contains(curr) == true)
+                if (declaredByLoop) {
+                    loop?.iterable?.let { prevDFGToPush.add(it) }
+                }
             }
 
             if (prevDFGToPush.isEmpty() && (curr is Parameter || curr is Variable)) {
