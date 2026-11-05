@@ -1,0 +1,7 @@
+- functionDeclaration:
+    language: CLanguage
+    methodName: read_into
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
