@@ -913,23 +913,30 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val records =
             possibleContainingTypes.mapNotNullTo(mutableSetOf()) { it.root.recordDeclaration }
         for (record in records) {
-            val byName =
-                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
-            if (byName.isNotEmpty()) {
-                candidates.addAll(byName)
+            // We know *which* record this is, so look the member up in the scope that record
+            // declares. Going through the fully qualified name instead would go through whichever
+            // scope carries that name, which need not be this one: several records can share a
+            // name, and then we collect the members of all of them.
+            //
+            // Go makes that the normal case rather than a corner case, because a package is named
+            // after the last element of its import path. lego ships about 130 DNS providers, each
+            // with its own `providers/dns/<provider>/internal/client.go` declaring a `Client` --
+            // all of them `internal.Client` to us. Resolving `c.do(req)` by name alone answered
+            // one call with the `do` of every provider, which is where four fifths of that
+            // project's spurious reachability came from.
+            val inRecord =
+                record.declaringScope?.lookupSymbol(symbol, qualifiedLookup = true) ?: listOf()
+            if (inRecord.isNotEmpty()) {
+                candidates.addAll(inRecord)
                 continue
             }
 
-            // Looking a member up by its fully qualified name goes through whichever scope carries
-            // that name, which is not necessarily the scope of *this* record: two records can end
-            // up with the same name, and then the lookup may land on the other one and come back
-            // empty while the member sits right here. Go makes that easy to hit, because a package
-            // is named after the last element of its import path, so `.../zap/buffer.Buffer` and
-            // any other `buffer.Buffer` are indistinguishable by name. Fall back to the scope the
-            // record itself declares.
-            record.declaringScope?.lookupSymbol(symbol, qualifiedLookup = true)?.let {
-                candidates.addAll(it)
-            }
+            // The record does not declare the symbol itself. It may still be visible through the
+            // name -- an extension declared elsewhere, a language that spreads a type over several
+            // scopes -- so fall back to the lookup by fully qualified name.
+            candidates.addAll(
+                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
+            )
         }
 
         // Find invokes by supertypes
@@ -1428,12 +1435,17 @@ internal fun Pass<*>.resolveWithArguments(
     // matches the argument signature. See [HasNameOnlyCallResolution]. We exclude member calls on
     // a base whose type we do not know, because there the candidates were not found through a
     // record scope but collected by name across the whole graph, so they really are guesses.
+    val baseType = (source as? MemberCall)?.base?.type
     val mayFallBackToCandidates =
         language is HasNameOnlyCallResolution &&
-            !(source is MemberCall &&
-                (source.base?.type is DynamicType ||
-                    source.base?.type is UnknownType ||
-                    source.base?.type is AutoType))
+            !(baseType is DynamicType || baseType is UnknownType || baseType is AutoType) &&
+            // ... and not if the record we would be resolving in is one we invented ourselves.
+            // The fallback is justified by the name lookup having identified *the* declaration,
+            // and that argument does not survive a receiver whose type we never found: there we
+            // end up answering the call with every same-named method in the program. In a
+            // vendored Kubernetes tree a single `m.ObjectMeta.Size()` came back with 1202
+            // targets, one for every generated `Size`, at each of 114 call sites.
+            (baseType?.root as? ObjectType)?.recordDeclaration?.isInferred != true
 
     // If we have a "problematic" result, we can stop here. In this case we cannot really
     // determine anything more.

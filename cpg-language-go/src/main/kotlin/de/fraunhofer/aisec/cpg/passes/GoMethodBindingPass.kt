@@ -77,11 +77,18 @@ class GoMethodBindingPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         // A Go method's name is built as `Name(funcName, fqnRecord)`, so its parent is the fully
-        // qualified name of the receiver type. Prefer that over the local name, which would merge
-        // same-named types from different packages -- `Header` exists in several.
-        val byFqn = mutableMapOf<String, Record>()
+        // qualified name of the receiver type. That name alone does not identify the type though,
+        // because we name a package after the last element of its import path: lego ships about
+        // 130 DNS providers, each with a `providers/dns/<provider>/internal/client.go` declaring a
+        // `Client`, and all of them are `internal.Client` to us. Binding by name alone attached
+        // every provider's `do` to one of the records, so a single call site came back with 123
+        // targets and dragged in the whole of every other provider.
+        //
+        // A method and its receiver type have to be declared in the same package, and a Go package
+        // is a directory, so the directory of the declaring file tells the same-named types apart.
+        val byOwner = mutableMapOf<Pair<String, String>, Record>()
         for (record in records) {
-            byFqn.putIfAbsent(record.name.toString(), record)
+            byOwner.putIfAbsent(record.name.toString() to record.packageDirectory, record)
         }
 
         var bound = 0
@@ -90,7 +97,7 @@ class GoMethodBindingPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 continue
             }
             val owner = method.name.parent?.toString() ?: continue
-            val record = byFqn[owner] ?: continue
+            val record = byOwner[owner to method.packageDirectory] ?: continue
 
             method.recordDeclaration = record
             // Setting the record is not enough. TypeHierarchyResolver.analyzeOverridingMethods
@@ -116,3 +123,11 @@ class GoMethodBindingPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // nothing to do
     }
 }
+
+/**
+ * The directory of the file this node was declared in, which for Go is its package. Empty if we do
+ * not know where it came from, which keeps such nodes from matching a node we do know the origin
+ * of.
+ */
+private val de.fraunhofer.aisec.cpg.graph.Node.packageDirectory: String
+    get() = this.location?.artifactLocation?.uri?.path?.substringBeforeLast('/') ?: ""
