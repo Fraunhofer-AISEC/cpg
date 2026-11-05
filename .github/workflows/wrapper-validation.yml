@@ -1,0 +1,29 @@
+name: wrapper-validation
+
+# Verifies gradle/wrapper/gradle-wrapper.jar against the checksums published by Gradle, so a
+# tampered wrapper jar is caught before any other workflow runs `./gradlew`.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "gradle/wrapper/**"
+      - "gradlew"
+      - "gradlew.bat"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "gradle/wrapper/**"
+      - "gradlew"
+      - "gradlew.bat"
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: gradle/actions/wrapper-validation@v5

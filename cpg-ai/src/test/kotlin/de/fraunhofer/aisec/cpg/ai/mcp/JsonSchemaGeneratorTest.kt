@@ -25,19 +25,52 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp
 
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptList
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.passes.Description
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 class JsonSchemaGeneratorTest {
+
+    /**
+     * Regression test for the property-description-always-null bug: [toSchema] marks a field
+     * required purely by Kotlin nullability (see [testComplexSchema] below), so a nullable
+     * `LLMProperty.description` was silently optional in the schema sent to the model - it never
+     * had to supply one when applying a concept/operation, unlike the concept's/operation's own
+     * (non-nullable) `description`. Asserts the nested `LLMProperty` object schema, reached via
+     * `concepts[].properties[]`, now requires `description` too.
+     */
+    @Test
+    fun testLlmPropertyDescriptionIsRequired() {
+        val schema = LLMConceptList::class.toSchema()
+        val concepts = schema.properties!!.jsonObject.getValue("concepts").jsonObject
+        val conceptItems = concepts.getValue("items").jsonObject
+        val conceptRequired =
+            conceptItems.getValue("required").jsonArray.map { it.jsonPrimitive.content }
+        assertTrue("description" in conceptRequired, "LLMConcept.description should be required")
+
+        val properties = conceptItems.jsonObject.getValue("properties").jsonObject
+        val propertyItems =
+            properties.getValue("properties").jsonObject.getValue("items").jsonObject
+        val propertyRequired =
+            propertyItems.getValue("required").jsonArray.map { it.jsonPrimitive.content }
+        assertTrue(
+            "description" in propertyRequired,
+            "LLMProperty.description should now be required, not just LLMConcept's own description",
+        )
+    }
 
     @Test
     fun testComplexSchema() {

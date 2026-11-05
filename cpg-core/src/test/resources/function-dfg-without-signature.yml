@@ -1,0 +1,17 @@
+# Two entries without a signature that both match memcpy of TestLanguageWithColon: one for
+# TestLanguage and one for TestLanguageWithColon, which is derived from it.
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguage
+    methodName: memcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: TestLanguageWithColon
+    methodName: memcpy
+  dataFlows:
+    - from: param2
+      to: param0.deref
+      dfgType: full

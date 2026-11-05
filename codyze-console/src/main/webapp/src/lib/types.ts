@@ -110,7 +110,11 @@ export interface McpCapabilities {
 export interface SkillInfo {
   name: string;
   description: string;
-  body: string;
+  location: string;
+  license?: string | null;
+  compatibility?: string | null;
+  metadata?: Record<string, string>;
+  allowedTools?: string | null;
 }
 
 // AI Agent / Chat interfaces
@@ -131,6 +135,7 @@ export interface LLMMessage {
 
 export interface ToolResult {
   toolName?: string;
+  args?: Record<string, unknown>;
   content: any;
   isError?: boolean;
 }

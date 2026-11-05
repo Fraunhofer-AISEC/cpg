@@ -34,28 +34,30 @@ import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 fun configureServer(
     configure: Server.() -> Server = {
         // TOOLS
-        this.addCpgTranslate()
-        this.addListPasses()
-        this.addRunPass()
-        this.addCpgAnalyzeTool()
-        this.addCpgApplyConceptsTool()
-        this.addCpgDataflowTool()
-        this.listFunctions()
-        this.listRecords()
-        this.listCalls()
-        this.listCallsTo()
-        this.listAvailableConcepts()
-        this.listAvailableOperations()
-        this.getAllArgs()
-        this.getArgByIndexOrName()
-        this.listConceptsAndOperations()
-        this.getNode()
+        this.addTranslateTool()
+        this.addListPassesTool()
+        this.addRunPassTool()
+        this.addAnalyzeTool()
+        this.addApplyConceptsTool()
+        this.addDataflowTool()
+        this.addOverviewTool()
+        this.addListFunctionsTool()
+        this.addGetFunctionsByNameTool()
+        this.addListRecordsTool()
+        this.addListCallsTool()
+        this.addListCallsToTool()
+        this.addListAvailableConceptsTool()
+        this.addListAvailableOperationsTool()
+        this.addListCallArgsTool()
+        this.addListCallArgByNameOrIndexTool()
+        this.addListConceptsAndOperationsTool()
+        this.addGetNodeTool()
         this.addDfgBackwardTool()
         this.addGetLastWriteTool()
-        this.listLLMConceptsOperations()
-        this.addOrUpdateConcept()
-        this.suggestLLMConceptsAndOperations()
-        this.addLLMConceptAndOperations()
+        this.addListLLMConceptsOperationsTool()
+        this.addAddOrUpdateLLMConceptTool()
+        this.addSuggestLLMConceptsAndOperationsTool()
+        this.addAddLLMConceptAndOperationsTool()
         // PROMPTS
         this.addSuggestConceptsPrompt()
         this
@@ -76,7 +78,7 @@ fun configureServer(
     return Server(info, options).configure()
 }
 
-/** Default configureServer constructor call to use via reflection (e.g. from codyze-console). */
+/** [configureServer] with its default tools, as a plain function (e.g. for codyze-console). */
 fun configureDefaultServer(): Server = configureServer()
 
 const val cpgDescription =
