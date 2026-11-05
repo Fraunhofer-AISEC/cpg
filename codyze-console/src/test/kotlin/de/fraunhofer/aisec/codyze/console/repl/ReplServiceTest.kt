@@ -36,13 +36,13 @@ import kotlin.test.assertTrue
 class ReplServiceTest {
 
     @Test
-    fun `reports a missing analysis instead of throwing`() {
+    fun testEvalWithoutAnalysis() {
         val service = ReplService(emptyService)
         assertIs<ReplEvalResult.RuntimeError>(service.eval("1 + 1"))
     }
 
     @Test
-    fun `evaluates values and remembers the last one`() {
+    fun testEvalValue() {
         val service = ReplService(mockService)
 
         assertEquals(ReplEvalResult.Value("2"), service.eval("1 + 1"))
@@ -50,7 +50,7 @@ class ReplServiceTest {
     }
 
     @Test
-    fun `declarations are Unit results and visible in later snippets`() {
+    fun testEvalDeclaration() {
         val service = ReplService(mockService)
 
         assertEquals(ReplEvalResult.UnitResult, service.eval("val n = 41"))
@@ -61,14 +61,14 @@ class ReplServiceTest {
     }
 
     @Test
-    fun `evaluates queries against the analysis result`() {
+    fun testEvalQuery() {
         val service = ReplService(mockService)
 
         assertEquals(ReplEvalResult.Value("1"), service.eval("result.functions.size"))
     }
 
     @Test
-    fun `reports compile errors`() {
+    fun testCompileError() {
         val service = ReplService(mockService)
 
         val error = assertIs<ReplEvalResult.CompileError>(service.eval("undefinedName + 1"))
@@ -76,7 +76,7 @@ class ReplServiceTest {
     }
 
     @Test
-    fun `reports runtime errors and keeps the session usable`() {
+    fun testRuntimeError() {
         val service = ReplService(mockService)
 
         val error = assertIs<ReplEvalResult.RuntimeError>(service.eval("error(\"boom\")"))
@@ -86,7 +86,7 @@ class ReplServiceTest {
     }
 
     @Test
-    fun `resetting the session after a reload forgets previous declarations`() {
+    fun testResetSession() {
         val service = ReplService(mockService)
         service.eval("val n = result.functions.first()")
         service.eval("n.name.localName")

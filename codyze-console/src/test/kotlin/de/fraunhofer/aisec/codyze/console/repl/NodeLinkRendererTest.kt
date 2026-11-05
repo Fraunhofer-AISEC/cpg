@@ -52,34 +52,34 @@ class NodeLinkRendererTest {
         }
 
     @Test
-    fun `renders null and scalars`() {
+    fun testRenderNullAndScalars() {
         assertEquals("null", plain().render(null))
         assertEquals("42", plain().render(42))
         assertEquals("text", plain().render("text"))
     }
 
     @Test
-    fun `renders a node with its kind and a file line`() {
+    fun testRenderNode() {
         val rendered = plain().render(node("x", "file:///src/dir/a.kt"))
         assertContains(rendered, "x : Reference")
         assertContains(rendered, "a.kt:3")
     }
 
     @Test
-    fun `without color there is no escape sequence, not even a hyperlink`() {
+    fun testRenderWithoutColor() {
         val rendered = plain(LinkScheme.FILE).render(node("x", "file:///src/a.kt"))
         assertFalse(rendered.contains(esc), rendered)
     }
 
     @Test
-    fun `with color the location is an OSC 8 hyperlink for the configured scheme`() {
+    fun testRenderLocationHyperlink() {
         val renderer = NodeLinkRenderer(color = true, linkScheme = LinkScheme.VSCODE)
         val rendered = renderer.render(node("x", "file:///src/a.kt", line = 3, column = 5))
         assertContains(rendered, "$esc]8;;vscode://file/src/a.kt:3:5")
     }
 
     @Test
-    fun `a control character in a path is neither shown nor part of the link target`() {
+    fun testControlCharacterInPath() {
         val renderer = NodeLinkRenderer(color = true, linkScheme = LinkScheme.FILE)
         val rendered = renderer.render(node("x", "file:///src/a%1B%5D8;;evil%07.kt"))
         // The only escapes left are the ones the renderer emits itself: the OSC 8 open/close
@@ -90,13 +90,13 @@ class NodeLinkRendererTest {
     }
 
     @Test
-    fun `a location without a line is just the uri`() {
+    fun testLocationWithoutLine() {
         val n = node("x", "file:///src/a.kt", line = 0)
         assertContains(plain().render(n), "file:///src/a.kt")
     }
 
     @Test
-    fun `renders collections with a count and an index per item`() {
+    fun testRenderCollection() {
         val rendered = plain().render(listOf("a", "b"))
         assertContains(rendered, "(2 items)")
         assertContains(rendered, "[0] a")
@@ -105,7 +105,7 @@ class NodeLinkRendererTest {
     }
 
     @Test
-    fun `long collections are capped`() {
+    fun testRenderLongCollection() {
         val rendered = plain().render(List(500) { it })
         assertContains(rendered, "(500 items)")
         assertContains(rendered, "more")
@@ -113,7 +113,7 @@ class NodeLinkRendererTest {
     }
 
     @Test
-    fun `renders maps and arrays`() {
+    fun testRenderMapsAndArrays() {
         val map = plain().render(mapOf("k" to 1))
         assertContains(map, "k -> 1")
         assertEquals("{}", plain().render(emptyMap<String, Int>()))
@@ -121,7 +121,7 @@ class NodeLinkRendererTest {
     }
 
     @Test
-    fun `link schemes build urls`() {
+    fun testLinkSchemeUrls() {
         assertEquals("file:///a.kt", LinkScheme.FILE.urlFor("/a.kt", 3, 5))
         assertEquals("vscode://file/a.kt:3:5", LinkScheme.VSCODE.urlFor("/a.kt", 3, 5))
         assertEquals("vscode://file/a.kt:3", LinkScheme.VSCODE.urlFor("/a.kt", 3, 0))
@@ -129,7 +129,7 @@ class NodeLinkRendererTest {
     }
 
     @Test
-    fun `the link scheme can be chosen from the environment`() {
+    fun testLinkSchemeDetection() {
         assertEquals(
             LinkScheme.VSCODE,
             LinkScheme.detect { if (it == "CODYZE_LINK_SCHEME") "VSCode" else null },

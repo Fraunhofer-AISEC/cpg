@@ -39,48 +39,48 @@ class TerminalImageRendererTest {
     private val st = "$esc\\"
 
     @Test
-    fun `detects Kitty via KITTY_WINDOW_ID`() {
+    fun testDetectKittyViaWindowId() {
         val env = mapOf("KITTY_WINDOW_ID" to "1")
         assertEquals(ImageProtocol.KITTY, TerminalImageSupport.detect { env[it] })
     }
 
     @Test
-    fun `detects Kitty via TERM`() {
+    fun testDetectKittyViaTerm() {
         val env = mapOf("TERM" to "xterm-kitty")
         assertEquals(ImageProtocol.KITTY, TerminalImageSupport.detect { env[it] })
     }
 
     @Test
-    fun `detects Kitty for Ghostty`() {
+    fun testDetectGhostty() {
         val env = mapOf("TERM_PROGRAM" to "ghostty")
         assertEquals(ImageProtocol.KITTY, TerminalImageSupport.detect { env[it] })
     }
 
     @Test
-    fun `detects iTerm2`() {
+    fun testDetectITerm2() {
         val env = mapOf("TERM_PROGRAM" to "iTerm.app")
         assertEquals(ImageProtocol.ITERM2, TerminalImageSupport.detect { env[it] })
     }
 
     @Test
-    fun `detects iTerm2 protocol for WezTerm`() {
+    fun testDetectWezTerm() {
         val env = mapOf("TERM_PROGRAM" to "WezTerm")
         assertEquals(ImageProtocol.ITERM2, TerminalImageSupport.detect { env[it] })
     }
 
     @Test
-    fun `returns null for unrecognized terminals`() {
+    fun testDetectUnknownTerminal() {
         val env = mapOf("TERM_PROGRAM" to "Apple_Terminal", "TERM" to "xterm-256color")
         assertNull(TerminalImageSupport.detect { env[it] })
     }
 
     @Test
-    fun `returns null when no env vars are set`() {
+    fun testDetectWithoutEnv() {
         assertNull(TerminalImageSupport.detect { null })
     }
 
     @Test
-    fun `iTerm2 encoding wraps base64 payload in OSC 1337 with a BEL terminator`() {
+    fun testITerm2Encoding() {
         val bytes = byteArrayOf(1, 2, 3, 4, 5)
         val file = File.createTempFile("test-image-", ".png").apply { writeBytes(bytes) }
 
@@ -94,7 +94,7 @@ class TerminalImageRendererTest {
     }
 
     @Test
-    fun `Kitty encoding chunks large payloads with correct continuation markers`() {
+    fun testKittyEncodingChunks() {
         // Large enough to require multiple 4096-byte base64 chunks.
         val bytes = ByteArray(10_000) { it.toByte() }
         val file = File.createTempFile("test-image-", ".png").apply { writeBytes(bytes) }

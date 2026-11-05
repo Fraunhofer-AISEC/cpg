@@ -38,25 +38,25 @@ class TerminalTextTest {
     private val bel = "\u0007"
 
     @Test
-    fun `leaves ordinary text unchanged`() {
+    fun testSanitizeOrdinaryText() {
         assertEquals("hello, wörld → 42", TerminalText.sanitize("hello, wörld → 42"))
         assertEquals("a\nb\tc", TerminalText.sanitize("a\nb\tc"))
     }
 
     @Test
-    fun `escapes C0, DEL and C1 control characters`() {
+    fun testSanitizeControlCharacters() {
         assertEquals("a\\x1b]0;evil\\x07b", TerminalText.sanitize("a$esc]0;evil${bel}b"))
         assertEquals("\\x7f\\x9b", TerminalText.sanitize("\u007F\u009B"))
         assertEquals("a\\x0db", TerminalText.sanitize("a\rb"))
     }
 
     @Test
-    fun `escapes newlines in OSC parameters`() {
+    fun testSanitizeOscNewlines() {
         assertEquals("a\\x0ab\\x09c", TerminalText.sanitizeOsc("a\nb\tc"))
     }
 
     @Test
-    fun `OSC helpers cannot be terminated early by their parameter`() {
+    fun testOscParameterCannotTerminate() {
         val title = TerminalTitle.set("project$bel$esc]0;owned")
         assertEquals(1, title.count { it == '\u0007' })
         assertEquals(1, title.count { it == '\u001B' })
@@ -71,7 +71,7 @@ class TerminalTextTest {
     }
 
     @Test
-    fun `renderer does not emit escape sequences from rendered values`() {
+    fun testRendererSanitizesValues() {
         val renderer = NodeLinkRenderer(color = false, linkScheme = LinkScheme.NONE)
 
         val node = Reference().apply { name = Name("evil$esc]8;;https://example.com$esc\\") }

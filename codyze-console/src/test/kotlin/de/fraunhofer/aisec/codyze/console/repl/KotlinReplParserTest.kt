@@ -47,14 +47,14 @@ class KotlinReplParserTest {
     }
 
     @Test
-    fun `plain statements are complete`() {
+    fun testCompleteStatements() {
         assertComplete("result.functions.size")
         assertComplete("val x = 1")
         assertComplete("foo(bar[1], { x -> x })")
     }
 
     @Test
-    fun `an open bracket asks for more input`() {
+    fun testOpenBracketIsIncomplete() {
         assertIncomplete("foo(")
         assertIncomplete("val xs = listOf(1,\n2")
         assertIncomplete("result.calls.filter {")
@@ -62,19 +62,19 @@ class KotlinReplParserTest {
     }
 
     @Test
-    fun `a closing bracket without an opening one is left to the compiler`() {
+    fun testUnmatchedClosingBracket() {
         assertComplete(")")
     }
 
     @Test
-    fun `an unterminated string or char asks for more input`() {
+    fun testUnterminatedStringOrCharIsIncomplete() {
         assertIncomplete("val s = \"abc")
         assertIncomplete("val s = \"\"\"abc")
         assertIncomplete("val c = '")
     }
 
     @Test
-    fun `brackets inside strings, chars and comments are ignored`() {
+    fun testBracketsInLiteralsAndComments() {
         assertComplete("val s = \"(\"")
         assertComplete("val s = \"\"\"(\n[\n{\"\"\"")
         assertComplete("val c = '('")
@@ -83,7 +83,7 @@ class KotlinReplParserTest {
     }
 
     @Test
-    fun `quotes inside other literals and comments do not open a string`() {
+    fun testQuotesInLiteralsAndComments() {
         // a double quote in a char literal, an apostrophe in a string, a quote in a comment
         assertComplete("val c = '\"'")
         assertComplete("val s = \"it's\"")
@@ -93,34 +93,34 @@ class KotlinReplParserTest {
     }
 
     @Test
-    fun `escapes do not end a string or char`() {
+    fun testEscapesInStringsAndChars() {
         assertComplete("val s = \"a\\\"b\"")
         assertIncomplete("val s = \"a\\\"")
         assertComplete("val c = '\\''")
     }
 
     @Test
-    fun `an unterminated block comment asks for more input`() {
+    fun testUnterminatedBlockCommentIsIncomplete() {
         assertIncomplete("/* comment")
         assertIncomplete("val x = 1 /* a")
         assertComplete("/* comment */")
     }
 
     @Test
-    fun `block comments nest`() {
+    fun testNestedBlockComments() {
         assertIncomplete("/* outer /* inner */")
         assertIncomplete("/* a /* b /* c */ */")
         assertComplete("/* outer /* inner */ done */")
     }
 
     @Test
-    fun `a line comment ends at the end of the line`() {
+    fun testLineComment() {
         assertIncomplete("foo( // )")
         assertComplete("foo( // comment\n)")
     }
 
     @Test
-    fun `completion splits words at punctuation`() {
+    fun testCompletionWordSplitting() {
         val line = "result.functions.fil"
         val parsed = parser.parse(line, line.length, Parser.ParseContext.COMPLETE)
         assertEquals("fil", parsed.word())
@@ -137,7 +137,7 @@ class KotlinReplParserTest {
     }
 
     @Test
-    fun `an incomplete line is accepted while completing`() {
+    fun testIncompleteLineWhileCompleting() {
         // Only ACCEPT_LINE may ask for a continuation; TAB on an open bracket must still complete
         val line = "foo(bar."
         assertEquals("", parser.parse(line, line.length, Parser.ParseContext.COMPLETE).word())

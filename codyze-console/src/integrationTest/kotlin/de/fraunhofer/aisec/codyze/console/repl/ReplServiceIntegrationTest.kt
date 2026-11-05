@@ -54,7 +54,7 @@ class ReplServiceIntegrationTest {
     }
 
     @Test
-    fun `eval handles declarations, values, Unit, and compile-time and runtime errors`() {
+    fun testEvalResultKinds() {
         val repl = analyzedReplService()
 
         // A value-producing expression renders a Value and updates lastValue.
@@ -79,7 +79,7 @@ class ReplServiceIntegrationTest {
     }
 
     @Test
-    fun `resetSession discards prior declarations so they no longer resolve`() {
+    fun testResetSessionDiscardsDeclarations() {
         val repl = analyzedReplService()
 
         assertIs<ReplEvalResult.UnitResult>(repl.eval("val n = result.components.size"))
