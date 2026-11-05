@@ -66,3 +66,56 @@ declarationState: address -> (addresses, values (node, shortFS), lastWrites))`, 
 3. Calls: summaries (also the YAML ones of the stdlib profile), calling contexts.
 4. Limits (state size, summary size, k-limiting) from the start of step 3: in the Kotlin profile of
    sqlite3.c 399 functions (callers high in the call graph) hit the 1 s timeout and cost ~440 s.
+
+## Decision (2026-11-05): faithful port, completeness first
+
+All results of the Kotlin pass are kept; slower is acceptable. No precision-reducing approximations;
+the limits are parameters with the Kotlin defaults (unlimited where Kotlin is) so that precision can
+be traded for speed later. Speed only comes from representation, not from computing less.
+
+## Core primitives, as read from the Kotlin code (not ported yet)
+
+`getAddresses(node, startNode)`: a value declaration -> its `MemoryAddress` (created lazily and kept
+in `node.memoryAddresses`); a reference -> the addresses of its declaration (a function is its own
+address); `PointerReference` -> none; `PointerDereference` -> the *values* of its input (the address of
+`*a` is the value of `a`; `a + literal` becomes a subscription); `MemberAccess` -> the field addresses
+stored in the base's address (by resolved name); `Subscription` -> field addresses of the base values
+named by the index (index `0` -> the base values); `Cast` -> its expression; `BinaryOperator` -> a
+memory address of its own; anything else -> itself.
+
+`getValues(node, startNode)`: `PointerReference` -> the addresses of its input; `PointerDereference` ->
+the values stored at the values of its input (from the general state if the node is not the start node
+or one of its children, else from the declaration state); a value declaration -> the values stored at
+its addresses; `MemberAccess` -> the values of its field addresses, else those of the base, else an
+`UnknownMemoryValue` (`getFieldValueOrBase`); `Reference` -> from the general state unless it is the
+start node (or its child), else the values at its addresses, minus those that come from the assignment
+it is part of; globals read the declaration state (and `globalDerefs`); `Cast` -> its expression;
+`Subscription` -> field values or the base.
+
+State updates: `push(general)` and `pushToDeclarationsState` only add what is not there yet
+(they subtract the existing entries first) and then take the lub (union, in place).
+
+Side tables that live outside of the state: `node.memoryAddresses`, `nodesCreatingUnknownValues`,
+`syntheticOrigins`/`summaryNodes` (k-limiting of synthetic chains), `globalDerefs`. The pass creates
+synthetic nodes (`MemoryAddress`, `UnknownMemoryValue`, `ParameterMemoryValue`) that are not in the AST.
+
+## Rust design sketch
+
+- The graph arena gets synthetic nodes (kind + name, flag `synthetic`), appended after the AST nodes,
+  printed as `ext:<Class>(<name>)` like the oracle does.
+- Facts (`NodeWithPropertiesKey`: node + a set of properties such as granularity, short-FS flag, calling
+  context chain) are interned to ids, so that equality and hashing are integer operations. Calling
+  contexts are interned chains.
+- Sets of nodes/facts are sorted vectors or bitsets; the two state maps are persistent (structurally
+  shared) so that a state per EOG node is cheap to copy.
+- The configuration struct mirrors `PointsToPass.Configuration` with the Kotlin defaults.
+- Determinism: insertion order is the iteration order wherever Kotlin iterates identity sets, so that
+  the result does not depend on hashing (Kotlin's does).
+
+## Size of the job
+
+Primitives and state fetchers about 1,000 lines of Kotlin, the handlers (assign, expression,
+declaration, unary, return, new, delete) about 800, calls (summaries, destinations, calling contexts,
+function summaries of the stdlib YAML) about 2,000. The first milestone that is useful on its own is the
+intraprocedural part: scalars, fields, pointers, `&`, `*`, arrays, without calls, verified on `pt/*.c`
+and the intraprocedural parts of the Kotlin `PointsToPassTest` resources.
