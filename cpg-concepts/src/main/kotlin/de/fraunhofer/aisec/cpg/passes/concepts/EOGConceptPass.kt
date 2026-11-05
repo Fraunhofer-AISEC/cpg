@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
@@ -36,9 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.WeakHashMap
 import kotlinx.coroutines.runBlocking
 
 typealias NodeToOverlayStateElement =
@@ -160,15 +164,48 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /** Stores the current component in case we need it to look up some stuff. */
     var currentComponent: Component? = null
 
+    /**
+     * Whether this pass is executed again as long as an execution attaches new overlay nodes, i.e.,
+     * until a fixpoint is reached. The overlays of an EOG starter are only attached to their
+     * underlying nodes after it has been processed, so an overlay that builds upon another one
+     * (e.g., via [getOverlaysByPrevDFG]) misses it if the other one belongs to an EOG starter that
+     * is processed later, e.g., a function declared further down. The next execution finds it.
+     *
+     * The executions are triggered with [markDirty] and bounded by
+     * [de.fraunhofer.aisec.cpg.TranslationConfiguration.maxPassExecutions], so this only takes
+     * effect if the passes are executed sequentially.
+     */
+    protected open val iterateToFixpoint: Boolean
+        get() = false
+
     override fun cleanup() {
         // Nothing to do
     }
 
+    /**
+     * Schedules the next execution if [iterateToFixpoint] is set and this execution attached new
+     * overlay nodes. This runs once after all EOG starters of an execution (each of which gets its
+     * own instance of the pass) and before the dirty nodes are evaluated.
+     */
     override fun finalCleanup() {
-        // Nothing to do
+        val execution = fixpointExecutions.remove(ctx) ?: return
+        val result = execution.result ?: return
+
+        // These marks of the previous execution have already scheduled this one
+        result.dirtyNodes.values.forEach { passes -> passes.removeAll { it == this::class } }
+        execution.newlyTagged.forEach { result.markDirty(it, this::class) }
     }
 
     override fun accept(node: Node) {
+        val execution =
+            if (iterateToFixpoint) {
+                fixpointExecutions
+                    .getOrPut(ctx) { FixpointExecution() }
+                    .also { it.result = it.result ?: node.translationResult }
+            } else {
+                null
+            }
+
         ctx.currentComponent = node.component
         currentComponent = ctx.currentComponent
 
@@ -184,7 +221,9 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
-            attachOverlays(underlyingNode, overlayNodes)
+            if (attachOverlays(underlyingNode, overlayNodes).isNotEmpty()) {
+                execution?.newlyTagged?.add(underlyingNode)
+            }
         }
     }
 
@@ -344,6 +383,21 @@ open class EOGConceptPass(ctx: TranslationContext) :
             ctx.currentComponent?.ifdsSummaryCache?.markSink(currentNode)
         }
         return currentState
+    }
+
+    /**
+     * What one execution of a pass with [iterateToFixpoint] collects across its EOG starters: the
+     * nodes that got new overlay nodes, to be marked dirty in [finalCleanup].
+     */
+    private class FixpointExecution {
+        var result: TranslationResult? = null
+        val newlyTagged: MutableSet<Node> = Collections.synchronizedSet(identitySetOf())
+    }
+
+    companion object {
+        /** The current [FixpointExecution] of each [TranslationContext]. */
+        private val fixpointExecutions: MutableMap<TranslationContext, FixpointExecution> =
+            Collections.synchronizedMap(WeakHashMap())
     }
 }
 

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
@@ -42,11 +43,13 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class TagOverlaysPassTest {
 
@@ -80,6 +83,64 @@ class TagOverlaysPassTest {
         }
 
         override fun hashCode() = Objects.hash(super.hashCode())
+    }
+
+    class Release(underlyingNode: Node? = null) : Concept(underlyingNode) {
+        override fun equals(other: Any?): Boolean {
+            return other is Release && super.equals(other)
+        }
+
+        override fun hashCode() = Objects.hash(super.hashCode())
+    }
+
+    /**
+     * Tags `release()` in `early` only if `acquire()` in `later`, a function processed after
+     * `early`, already has its [Resource]. Returns the result and how often the pass visited
+     * `acquire()`, i.e., how often it was executed.
+     */
+    private fun tagAcrossFunctions(iterateToFixpoint: Boolean): Pair<TranslationResult, Int> {
+        val acquireVisits = AtomicInteger()
+        val tagging = tag {
+            each<Call>("acquire").with {
+                acquireVisits.incrementAndGet()
+                Resource()
+            }
+            each<Call>("release").with {
+                val resources =
+                    node.translationUnit.allChildrenWithOverlays<Resource>() +
+                        state.values.flatten().filterIsInstance<Resource>()
+                if (resources.isNotEmpty()) Release() else null
+            }
+        }
+        val result =
+            with(
+                TestLanguageFrontend(
+                    ctx =
+                        TranslationContext(
+                            config =
+                                TranslationConfiguration.builder()
+                                    .registerPass<TagOverlaysPass>()
+                                    .configurePass<TagOverlaysPass>(
+                                        TagOverlaysPass.Configuration(tagging, iterateToFixpoint)
+                                    )
+                                    .build()
+                        )
+                )
+            ) {
+                build {
+                    singleTranslationUnit { tu ->
+                        for ((name, callee) in listOf("early" to "release", "later" to "acquire")) {
+                            newFunction(name, holder = tu, enterScope = true) { function ->
+                                function.body =
+                                    newBlock(enterScope = true) { block ->
+                                        block.statements += newCall(newReference(callee))
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
+        return Pair(result, acquireVisits.get())
     }
 
     @Test
@@ -272,5 +333,25 @@ class TagOverlaysPassTest {
         assertEquals(listOf<Node>(use), call.nextEOG.toList())
         assertEquals(listOf<Node>(next), use.nextEOG.toList())
         assertEquals(setOf<Operation>(use), resource.ops)
+    }
+
+    @Test
+    fun testOverlaysOfLaterFunctionsNeedFixpoint() {
+        val (result, executions) = tagAcrossFunctions(iterateToFixpoint = false)
+
+        assertEquals(1, executions)
+        assertNotNull(result.calls["acquire"]?.conceptNodes?.singleOrNull() as? Resource)
+        assertTrue(result.calls["release"]?.conceptNodes.isNullOrEmpty())
+    }
+
+    @Test
+    fun testIterateToFixpoint() {
+        val (result, executions) = tagAcrossFunctions(iterateToFixpoint = true)
+
+        // The first execution tags acquire, the second one release, the third one nothing new
+        assertEquals(3, executions)
+        assertNotNull(result.calls["acquire"]?.conceptNodes?.singleOrNull() as? Resource)
+        assertNotNull(result.calls["release"]?.conceptNodes?.singleOrNull() as? Release)
+        assertTrue(result.dirtyNodes.values.none { TagOverlaysPass::class in it })
     }
 }
