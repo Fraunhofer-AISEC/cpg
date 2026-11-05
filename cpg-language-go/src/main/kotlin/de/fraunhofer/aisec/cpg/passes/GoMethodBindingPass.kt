@@ -86,9 +86,16 @@ class GoMethodBindingPass(ctx: TranslationContext) : ComponentPass(ctx) {
         //
         // A method and its receiver type have to be declared in the same package, and a Go package
         // is a directory, so the directory of the declaring file tells the same-named types apart.
+        // The directory is only a tie-breaker though. A record we inferred has no location and
+        // therefore no directory, and a receiver that resolves to such a record would otherwise
+        // find no match at all and stay unbound -- which costs method sets, interface
+        // satisfaction and every call dispatched through them. So keep a by-name map as a
+        // fallback and only let the directory decide between same-named candidates.
         val byOwner = mutableMapOf<Pair<String, String>, Record>()
+        val byName = mutableMapOf<String, Record>()
         for (record in records) {
             byOwner.putIfAbsent(record.name.toString() to record.packageDirectory, record)
+            byName.putIfAbsent(record.name.toString(), record)
         }
 
         var bound = 0
@@ -97,7 +104,7 @@ class GoMethodBindingPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 continue
             }
             val owner = method.name.parent?.toString() ?: continue
-            val record = byOwner[owner to method.packageDirectory] ?: continue
+            val record = byOwner[owner to method.packageDirectory] ?: byName[owner] ?: continue
 
             method.recordDeclaration = record
             // Setting the record is not enough. TypeHierarchyResolver.analyzeOverridingMethods
