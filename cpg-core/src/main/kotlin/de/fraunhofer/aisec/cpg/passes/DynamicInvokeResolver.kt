@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
@@ -40,6 +42,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
@@ -75,15 +79,40 @@ import java.util.function.Consumer
 class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private lateinit var walker: ScopedWalker<AstNode>
     private var inferDfgForUnresolvedCalls = false
+    private var keyedInitializers: Map<Pair<Name, String>, List<Expression>> = mapOf()
 
     override fun accept(component: Component) {
         inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+        collectKeyedInitializers(component)
         walker = ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node -> handle(node) }
 
         for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
+    }
+
+    /**
+     * Collects, per (record, field name), the values that a keyed initializer assigns to that
+     * field.
+     *
+     * Setting a function-typed field from a struct literal is how a whole family of libraries is
+     * configured -- `zapcore.EncoderConfig{EncodeLevel: CapitalLevelEncoder, EncodeTime:
+     * ISO8601TimeEncoder}` -- but the key of such an initializer is a bare identifier that names a
+     * field of the literal's type, not a reference resolved to that field. It therefore does not
+     * show up among the field's usages, and the search for the target of `enc.EncodeLevel(l, arr)`
+     * has nowhere to go.
+     */
+    private fun collectKeyedInitializers(component: Component) {
+        val collected = mutableMapOf<Pair<Name, String>, MutableList<Expression>>()
+        for (list in component.allChildren<InitializerList>()) {
+            val recordName = list.type.root.name
+            for (keyValue in list.initializers.filterIsInstance<KeyValue>()) {
+                val key = (keyValue.key as? Reference)?.name?.localName ?: continue
+                collected.getOrPut(recordName to key) { mutableListOf() } += keyValue.value
+            }
+        }
+        keyedInitializers = collected
     }
 
     private fun handle(node: Node?) {
@@ -210,6 +239,15 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     ?.let { prevDFGToPush.addAll(it) }
                 // Also add the initializer of the field (if it exists)
                 (curr.refersTo as? Field)?.initializer?.let { prevDFGToPush.add(it) }
+                // ... and whatever a struct literal assigned to it, which is not a usage of the
+                // field (see collectKeyedInitializers).
+                (curr.refersTo as? Field)?.let { field ->
+                    field.name.parent?.let { owner ->
+                        keyedInitializers[owner to field.name.localName]?.let {
+                            prevDFGToPush.addAll(it)
+                        }
+                    }
+                }
             }
 
             // A function value very often enters the enclosing function from outside: as the
