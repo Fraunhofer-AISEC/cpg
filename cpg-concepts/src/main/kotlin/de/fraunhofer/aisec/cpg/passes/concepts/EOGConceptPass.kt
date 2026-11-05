@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
@@ -36,14 +37,104 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.Collections
+import java.util.IdentityHashMap
+import java.util.WeakHashMap
 import kotlinx.coroutines.runBlocking
 
 typealias NodeToOverlayStateElement =
     ConcurrentMapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
 
-typealias NodeToOverlayState = ConcurrentMapLattice<Node, PowersetLattice.Element<OverlayNode>>
+/**
+ * The lattice of the states of one execution of [EOGConceptPass.accept]. It also remembers the
+ * [OverlayNode]s created per node, so that a node which is evaluated more than once (e.g. after a
+ * loop, with the states of different EOG paths) gets the same instances again. Otherwise, the
+ * states would hold equal but not identical overlays, and an overlay built upon one of them (e.g.
+ * an [Operation] of a [Concept]) could refer to an instance that is never attached.
+ *
+ * Overlays are added to a state with [addOverlays].
+ */
+class NodeToOverlayState(innerLattice: PowersetLattice<OverlayNode> = PowersetLattice()) :
+    ConcurrentMapLattice<Node, PowersetLattice.Element<OverlayNode>>(innerLattice) {
+
+    /**
+     * The overlays created so far per node. They are compared with `==` (see [OverlayNode.hashCode]
+     * why not in a hash-based collection).
+     */
+    private val created = IdentityHashMap<Node, MutableList<OverlayNode>>()
+
+    /**
+     * Returns the instances to use for [overlays] of [node]: for each overlay, an equal one that is
+     * attached to [node] already, else an equal one created for [node] before (also earlier in
+     * [overlays]), else the overlay itself, which is remembered from now on.
+     *
+     * A new [Operation] refers to the [Concept] it was built with. If that concept is one of
+     * [overlays], it is therefore kept as it is, even if an equal one exists.
+     */
+    fun intern(node: Node, overlays: Collection<OverlayNode>): List<OverlayNode> {
+        val attached = node.overlays.filterIsInstance<OverlayNode>()
+        val known = created.getOrPut(node) { mutableListOf() }
+        val canonical = IdentityHashMap<OverlayNode, OverlayNode>()
+        for (overlay in overlays) {
+            canonical[overlay] =
+                if (attached.any { it === overlay } || known.any { it === overlay }) {
+                    overlay
+                } else {
+                    attached.firstOrNull { it == overlay }
+                        ?: known.firstOrNull { it == overlay }
+                        ?: overlay.also { known += it }
+                }
+        }
+        for (overlay in overlays) {
+            if (overlay !is Operation || canonical[overlay] !== overlay) continue
+            val concept = overlay.concept
+            val conceptInstance = canonical[concept]
+            if (conceptInstance != null && conceptInstance !== concept) {
+                canonical[concept] = concept
+                known += concept
+            }
+        }
+
+        val result = mutableListOf<OverlayNode>()
+        for (overlay in overlays) {
+            val instance = canonical[overlay] ?: overlay
+            if (result.none { it === instance }) {
+                result += instance
+            }
+        }
+        return result
+    }
+
+    /**
+     * Adds the [intern]ed [overlays] of [node] to [state], which is modified, and returns the ones
+     * that [state] did not contain yet.
+     */
+    fun addOverlays(
+        state: NodeToOverlayStateElement,
+        node: Node,
+        overlays: Collection<OverlayNode>,
+    ): List<OverlayNode> {
+        val added =
+            intern(node, overlays).filter { overlay ->
+                state[node]?.none { it === overlay } != false
+            }
+        if (added.isNotEmpty()) {
+            runBlocking {
+                lub(
+                    state,
+                    NodeToOverlayStateElement(
+                        node to PowersetLattice.Element(*added.toTypedArray())
+                    ),
+                    true,
+                )
+            }
+        }
+        return added
+    }
+}
 
 /**
  * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
@@ -73,15 +164,48 @@ open class EOGConceptPass(ctx: TranslationContext) :
     /** Stores the current component in case we need it to look up some stuff. */
     var currentComponent: Component? = null
 
+    /**
+     * Whether this pass is executed again as long as an execution attaches new overlay nodes, i.e.,
+     * until a fixpoint is reached. The overlays of an EOG starter are only attached to their
+     * underlying nodes after it has been processed, so an overlay that builds upon another one
+     * (e.g., via [getOverlaysByPrevDFG]) misses it if the other one belongs to an EOG starter that
+     * is processed later, e.g., a function declared further down. The next execution finds it.
+     *
+     * The executions are triggered with [markDirty] and bounded by
+     * [de.fraunhofer.aisec.cpg.TranslationConfiguration.maxPassExecutions], so this only takes
+     * effect if the passes are executed sequentially.
+     */
+    protected open val iterateToFixpoint: Boolean
+        get() = false
+
     override fun cleanup() {
         // Nothing to do
     }
 
+    /**
+     * Schedules the next execution if [iterateToFixpoint] is set and this execution attached new
+     * overlay nodes. This runs once after all EOG starters of an execution (each of which gets its
+     * own instance of the pass) and before the dirty nodes are evaluated.
+     */
     override fun finalCleanup() {
-        // Nothing to do
+        val execution = fixpointExecutions.remove(ctx) ?: return
+        val result = execution.result ?: return
+
+        // These marks of the previous execution have already scheduled this one
+        result.dirtyNodes.values.forEach { passes -> passes.removeAll { it == this::class } }
+        execution.newlyTagged.forEach { result.markDirty(it, this::class) }
     }
 
     override fun accept(node: Node) {
+        val execution =
+            if (iterateToFixpoint) {
+                fixpointExecutions
+                    .getOrPut(ctx) { FixpointExecution() }
+                    .also { it.result = it.result ?: node.translationResult }
+            } else {
+                null
+            }
+
         ctx.currentComponent = node.component
         currentComponent = ctx.currentComponent
 
@@ -97,7 +221,9 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
-            attachOverlays(underlyingNode, overlayNodes)
+            if (attachOverlays(underlyingNode, overlayNodes).isNotEmpty()) {
+                execution?.newlyTagged?.add(underlyingNode)
+            }
         }
     }
 
@@ -105,22 +231,16 @@ open class EOGConceptPass(ctx: TranslationContext) :
      * Attaches [overlays] (from the final state) to [underlyingNode] and returns the ones that were
      * attached.
      *
-     * The states of different EOG paths to a node can hold overlays that are equal, but not
-     * identical: the lattice compares nodes by identity, and if a node is evaluated again with a
-     * state that lacks its earlier overlays (which depends on the iteration order, e.g. after a
-     * loop), [filterDuplicates] cannot see them. Each overlay is therefore only attached once, and
-     * not at all if an equal one is attached already.
+     * The state only holds the instances returned by [NodeToOverlayState.intern], which may be
+     * attached to [underlyingNode] already (e.g. by an earlier execution of this pass). These are
+     * skipped.
      */
     internal fun attachOverlays(
         underlyingNode: Node,
         overlays: Collection<OverlayNode>,
     ): List<OverlayNode> {
-        val attached = mutableListOf<OverlayNode>()
-        for (overlay in overlays) {
-            if (attached.none { it == overlay } && underlyingNode.overlays.none { it == overlay }) {
-                attached += overlay
-            }
-        }
+        val attached =
+            overlays.filter { overlay -> underlyingNode.overlays.none { it === overlay } }
 
         // Keep the (optional) IFDS summary cache honest: a node that just gained overlays may be
         // a sink for later reaching-sources queries, so its callee must not be short-circuited.
@@ -242,63 +362,42 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
     /**
      * Returns and modifies the (new) state which contains all [OverlayNode]s that should be added
-     * for the given [currentNode]. This is done by calling the [handleNode] method and filtering
-     * the result based on the current state.
+     * for the given [currentNode]. This is done by calling the [handleNode] method and adding the
+     * result to the state with [NodeToOverlayState.addOverlays].
      */
     private fun overlayStateForNode(
         lattice: NodeToOverlayState,
         currentState: NodeToOverlayStateElement,
         currentNode: Node,
     ): NodeToOverlayStateElement {
-        val addedOverlays = handleNode(lattice, currentState, currentNode).toSet()
-
-        // This is some magic to filter out overlays that are already in the state (equal but not
-        // identical) for the same Node. It also filters the nodes if they have already been created
-        // by a previous iteration over the same code block. This happens if multiple EOG starters
-        // reach a certain piece of code (frequently happens with the code after catch clauses).
-        val filteredAddedOverlays = filterDuplicates(currentState, currentNode, addedOverlays)
-
-        return if (filteredAddedOverlays.isEmpty()) {
-            currentState
-        } else {
+        val added =
+            lattice.addOverlays(
+                currentState,
+                currentNode,
+                handleNode(lattice, currentState, currentNode).toSet(),
+            )
+        if (added.isNotEmpty()) {
             // Keep the (optional) IFDS summary cache honest: this node just gained state overlays
-            // and
-            // may be a sink for later reaching-sources queries, so its callee must stay expandable.
+            // and may be a sink for later reaching-sources queries, so its callee must stay
+            // expandable.
             ctx.currentComponent?.ifdsSummaryCache?.markSink(currentNode)
-            runBlocking {
-                lattice.lub(
-                    currentState,
-                    NodeToOverlayStateElement(
-                        currentNode to
-                            PowersetLattice.Element(*filteredAddedOverlays.toTypedArray())
-                    ),
-                    true,
-                )
-            }
         }
+        return currentState
+    }
+
+    /**
+     * What one execution of a pass with [iterateToFixpoint] collects across its EOG starters: the
+     * nodes that got new overlay nodes, to be marked dirty in [finalCleanup].
+     */
+    private class FixpointExecution {
+        var result: TranslationResult? = null
+        val newlyTagged: MutableSet<Node> = Collections.synchronizedSet(identitySetOf())
     }
 
     companion object {
-        /**
-         * This is some magic to filter out overlays from [newOverlays] that are already in the
-         * [currentState] (equal but not identical) for the same [node]. It also filters the
-         * [OverlayNode]s if they have already been created by a previous iteration over the same
-         * code block. This happens if multiple EOG starters reach a certain piece of code
-         * (frequently happens with the code after catch clauses). Returns a new list of the
-         * remaining [OverlayNode]s and does not modify [newOverlays].
-         */
-        fun filterDuplicates(
-            currentState: NodeToOverlayStateElement,
-            node: Node,
-            newOverlays: Collection<OverlayNode>,
-        ): Collection<OverlayNode> {
-            return newOverlays.filter { new ->
-                currentState[node]?.none { existing -> new == existing } != false &&
-                    node.overlays.none { existing ->
-                        (existing as? OverlayNode)?.equals(new) == true
-                    }
-            }
-        }
+        /** The current [FixpointExecution] of each [TranslationContext]. */
+        private val fixpointExecutions: MutableMap<TranslationContext, FixpointExecution> =
+            Collections.synchronizedMap(WeakHashMap())
     }
 }
 
