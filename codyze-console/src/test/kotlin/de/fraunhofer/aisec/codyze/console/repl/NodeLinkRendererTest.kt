@@ -122,7 +122,7 @@ class NodeLinkRendererTest {
 
     @Test
     fun `link schemes build urls`() {
-        assertEquals("file:///a.kt#L3", LinkScheme.FILE.urlFor("/a.kt", 3, 5))
+        assertEquals("file:///a.kt", LinkScheme.FILE.urlFor("/a.kt", 3, 5))
         assertEquals("vscode://file/a.kt:3:5", LinkScheme.VSCODE.urlFor("/a.kt", 3, 5))
         assertEquals("vscode://file/a.kt:3", LinkScheme.VSCODE.urlFor("/a.kt", 3, 0))
         assertEquals(null, LinkScheme.NONE.urlFor("/a.kt", 3, 5))

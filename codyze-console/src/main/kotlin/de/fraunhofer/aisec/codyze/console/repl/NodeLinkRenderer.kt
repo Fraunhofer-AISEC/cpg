@@ -54,8 +54,9 @@ private const val RED = "$ESC[31m"
  *   the exact line/column. Works whenever VS Code is the default handler for the scheme — i.e. when
  *   running inside VS Code's integrated terminal, or when the user has VS Code installed and
  *   configured as the `vscode://` handler.
- * * [FILE] (`file://<path>#L<line>`) — universal but most OS handlers (macOS `open`, `xdg-open`)
- *   strip the `#L<line>` fragment, so the editor opens at line 1.
+ * * [FILE] (`file://<path>`) — universal fallback without a line number. A `#L<line>` fragment is
+ *   not understood by the OS handlers, and some (e.g. the JetBrains terminal) treat it as part of
+ *   the file name and then fail to open the file at all.
  * * [NONE] — disables the hyperlink wrapper entirely; only plain `file:line` text.
  *
  * The default is auto-detected from `TERM_PROGRAM` (set by most modern terminals) and can be
@@ -69,7 +70,7 @@ enum class LinkScheme {
     fun urlFor(path: String, line: Int, column: Int): String? =
         when (this) {
             NONE -> null
-            FILE -> "file://$path#L$line"
+            FILE -> "file://$path"
             VSCODE -> "vscode://file$path:$line${if (column > 0) ":$column" else ""}"
         }
 
