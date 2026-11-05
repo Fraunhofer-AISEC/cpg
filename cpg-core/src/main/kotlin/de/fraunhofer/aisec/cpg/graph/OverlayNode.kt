@@ -82,24 +82,29 @@ abstract class OverlayNode() : Node() {
         if (this === other) {
             return true
         }
+        // We do not compare code and location: they are copied from the underlying node (see
+        // propagateNodePropertiesFromUnderlyingNode), so an attached overlay would never be equal
+        // to an unattached one with the same properties.
         return other is OverlayNode &&
             name == other.name &&
-            code == other.code &&
             comment == other.comment &&
-            location == other.location &&
             isImplicit == other.isImplicit &&
-            // If the underlying node is null, we don't care about it. We also cannot compare the
-            // location in this case.
+            // If the underlying node is null, we don't care about it.
             (this.underlyingNode == null ||
                 other.underlyingNode == null ||
                 // If both have an underlying node, it should be the same one.
-                (this.underlyingNode == other.underlyingNode && this.location == other.location))
+                this.underlyingNode == other.underlyingNode)
     }
 
     /**
      * Returns the hash code of this [OverlayNode].
      *
      * See [equals] for the properties that are included in this process.
+     *
+     * Unlike [equals], this always includes the [underlyingNode]: [Node.id] is derived from the
+     * hash code, so it has to tell equal overlays of different nodes apart. An unattached overlay
+     * can therefore be equal to an attached one without having the same hash code, so equal
+     * overlays must not be looked up via hash-based collections.
      */
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), underlyingNode)
