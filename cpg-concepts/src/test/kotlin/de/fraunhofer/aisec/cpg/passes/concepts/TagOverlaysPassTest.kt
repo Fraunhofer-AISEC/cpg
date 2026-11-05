@@ -197,36 +197,80 @@ class TagOverlaysPassTest {
     }
 
     @Test
-    fun testEqualOverlaysAreAttachedOnce() {
-        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+    fun testEqualOverlaysAreInternedPerNode() {
+        val lattice = NodeToOverlayState()
         val call = Call()
 
-        // E.g. from the states of two EOG paths to the call, see EOGConceptPass.attachOverlays
+        // E.g. from the states of two EOG paths to the call, or from evaluating it again
         val first = Resource()
-        val attached = pass.attachOverlays(call, listOf(first, Resource()))
-        assertEquals(listOf<Node>(first), attached)
-        assertEquals(listOf<Node>(first), call.overlays.toList())
+        assertEquals(listOf<Node>(first), lattice.intern(call, listOf(first, Resource())))
+        assertEquals(listOf<Node>(first), lattice.intern(call, listOf(Resource())))
 
-        // An equal one in a later execution of the pass is not attached either
-        assertEquals(emptyList(), pass.attachOverlays(call, listOf(Resource())))
-        assertEquals(listOf<Node>(first), call.overlays.toList())
+        // Overlays of another node are not shared
+        val other = Call()
+        val second = Resource()
+        assertEquals(listOf<Node>(second), lattice.intern(other, listOf(second)))
     }
 
     @Test
-    fun testEqualOperationsAreAttachedOnce() {
+    fun testAttachedOverlaysTakePrecedence() {
+        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+        val call = Call()
+        val attached = Resource()
+        pass.attachOverlays(call, listOf(attached))
+
+        // E.g. in a later execution of the pass
+        val lattice = NodeToOverlayState()
+        assertEquals(listOf<Node>(attached), lattice.intern(call, listOf(Resource())))
+        assertEquals(
+            emptyList(),
+            pass.attachOverlays(call, lattice.intern(call, listOf(Resource()))),
+        )
+        assertEquals(listOf<Node>(attached), call.overlays.toList())
+    }
+
+    @Test
+    fun testOperationsReferToTheInternedConcept() {
+        val lattice = NodeToOverlayState()
+        val acquire = Call()
+        val release = Call()
+        val resource = Resource()
+        assertEquals(listOf<Node>(resource), lattice.intern(acquire, listOf(resource)))
+
+        // An operation built upon the equal resource of another evaluation is equal to one built
+        // upon the interned resource, so it is replaced by that one
+        val use = Use(resource)
+        assertEquals(listOf<Node>(use), lattice.intern(release, listOf(use, Use(Resource()))))
+    }
+
+    @Test
+    fun testNewOperationsKeepTheirConcept() {
+        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+        val call = Call()
+        pass.attachOverlays(call, listOf(Resource()))
+
+        // The resource is equal to the attached one, but the new operation refers to it, so it is
+        // kept rather than leaving the operation with a concept that is never attached
+        val resource = Resource()
+        val use = Use(resource)
+        val interned = NodeToOverlayState().intern(call, listOf(resource, use))
+        assertEquals(listOf<Node>(resource, use), interned)
+    }
+
+    @Test
+    fun testOperationsAreAttachedOnce() {
         val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
         val call = Call()
         val next = Reference()
         call.nextEOGEdges += EvaluationOrder(call, next)
         val resource = Resource()
+        val use = Use(resource)
+        assertEquals(listOf<Node>(resource, use), pass.attachOverlays(call, listOf(resource, use)))
 
-        val first = Use(resource)
-        val attached = pass.attachOverlays(call, listOf(first, Use(resource)))
-        assertEquals(listOf<Node>(first), attached)
-
-        // The operation is inserted into the EOG and added to its concept only once
-        assertEquals(listOf<Node>(first), call.nextEOG.toList())
-        assertEquals(listOf<Node>(next), first.nextEOG.toList())
-        assertEquals(setOf<Operation>(first), resource.ops)
+        // A later execution of the pass holds the same instances, which are skipped
+        assertEquals(emptyList(), pass.attachOverlays(call, listOf(resource, use)))
+        assertEquals(listOf<Node>(use), call.nextEOG.toList())
+        assertEquals(listOf<Node>(next), use.nextEOG.toList())
+        assertEquals(setOf<Operation>(use), resource.ops)
     }
 }
