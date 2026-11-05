@@ -39,6 +39,7 @@ import kotlin.script.experimental.api.ScriptDiagnostic
 import kotlin.script.experimental.api.ScriptEvaluationConfiguration
 import kotlin.script.experimental.api.SourceCode
 import kotlin.script.experimental.api.constructorArgs
+import kotlin.script.experimental.api.defaultImports
 import kotlin.script.experimental.host.toScriptSource
 import kotlin.script.experimental.jvm.BasicJvmReplEvaluator
 import kotlin.script.experimental.jvm.BasicJvmScriptEvaluator
@@ -76,7 +77,14 @@ class ReplService(private val consoleService: ConsoleService) {
 
     private val hostConfig = defaultJvmScriptingHostConfiguration
     private val compilationConfig: ScriptCompilationConfiguration =
-        createJvmCompilationConfigurationFromTemplate<CpgQueryScript>()
+        createJvmCompilationConfigurationFromTemplate<CpgQueryScript> {
+            // REPL-only helpers, on top of the imports of every CpgQueryScript.
+            defaultImports.append("de.fraunhofer.aisec.codyze.console.repl.openDFG")
+        }
+
+    /** The imports every snippet gets, as configured in [compilationConfig]. */
+    val defaultImports: List<String>
+        get() = compilationConfig[ScriptCompilationConfiguration.defaultImports].orEmpty()
 
     /**
      * Long-lived REPL compiler — both compiles snippets and serves completion. `var`, not `val`:

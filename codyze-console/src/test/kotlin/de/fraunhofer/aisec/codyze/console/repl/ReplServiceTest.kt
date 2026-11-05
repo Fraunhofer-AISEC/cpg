@@ -25,8 +25,12 @@
  */
 package de.fraunhofer.aisec.codyze.console.repl
 
+import de.fraunhofer.aisec.codyze.console.CpgQueryScript
 import de.fraunhofer.aisec.codyze.console.emptyService
 import de.fraunhofer.aisec.codyze.console.mockService
+import kotlin.script.experimental.api.ScriptCompilationConfiguration
+import kotlin.script.experimental.api.defaultImports
+import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -65,6 +69,40 @@ class ReplServiceTest {
         val service = ReplService(mockService)
 
         assertEquals(ReplEvalResult.Value("1"), service.eval("result.functions.size"))
+    }
+
+    @Test
+    fun testDefaultImports() {
+        val service = ReplService(mockService)
+
+        // One type from each default-imported package, so a moved package fails here instead of
+        // silently dropping out of scope.
+        assertIs<ReplEvalResult.UnitResult>(
+            service.eval(
+                "val types = listOf(TranslationResult::class, Node::class, Function::class, " +
+                    "Call::class, ObjectType::class, QueryTree::class)"
+            )
+        )
+        assertEquals(ReplEvalResult.Value("6"), service.eval("types.size"))
+    }
+
+    @Test
+    fun testReplOnlyImports() {
+        // The REPL helpers are in scope in the REPL, and :imports lists them ...
+        val service = ReplService(mockService)
+        assertIs<ReplEvalResult.UnitResult>(service.eval("val f = ::openDFG"))
+        assertTrue(
+            service.defaultImports.any { it.endsWith(".openDFG") },
+            "${service.defaultImports}",
+        )
+
+        // ... but not in the query scripts of the web console.
+        val queryImports =
+            createJvmCompilationConfigurationFromTemplate<CpgQueryScript>()[
+                    ScriptCompilationConfiguration.defaultImports]
+                .orEmpty()
+        assertTrue(queryImports.none { it.contains("openDFG") }, queryImports.toString())
+        assertTrue(service.defaultImports.containsAll(queryImports))
     }
 
     @Test

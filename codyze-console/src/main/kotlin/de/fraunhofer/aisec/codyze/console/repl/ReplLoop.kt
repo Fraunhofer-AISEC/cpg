@@ -485,19 +485,7 @@ class ReplLoop(
     }
 
     private fun printImports(out: PrintWriter) {
-        // Mirror the imports in CpgQueryScript so the user knows what's already in scope.
-        listOf(
-                "de.fraunhofer.aisec.cpg.*",
-                "de.fraunhofer.aisec.cpg.graph.*",
-                "de.fraunhofer.aisec.cpg.graph.declarations.*",
-                "de.fraunhofer.aisec.cpg.graph.statements.*",
-                "de.fraunhofer.aisec.cpg.graph.expressions.*",
-                "de.fraunhofer.aisec.cpg.graph.types.*",
-                "de.fraunhofer.aisec.cpg.graph.concepts.*",
-                "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.*",
-                "de.fraunhofer.aisec.cpg.query.*",
-            )
-            .forEach { out.println("  import $it") }
+        replService.defaultImports.forEach { out.println("  import $it") }
     }
 
     private fun printResultSummary(out: PrintWriter) {
