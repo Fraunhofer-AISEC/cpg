@@ -40,7 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * itself takes precedence over what a profile provides.
  *
  * A profile can contribute
- * - [builtInTypes], i.e., types which the language does not know itself, and
+ * - [builtInTypes], i.e., types which the language does not know itself,
+ * - [symbols], i.e., preprocessor symbols which the headers would define, and
  * - [functionSummaries], i.e., DFG summaries for functions whose body is not available.
  */
 abstract class Profile(
@@ -52,6 +53,16 @@ abstract class Profile(
      * the types of [Language.builtInTypes]. The default is an empty map, i.e., none.
      */
     open fun builtInTypes(language: Language<*>): Map<String, Type> = emptyMap()
+
+    /**
+     * Returns the preprocessor symbols (macros) this profile contributes to [language], by name.
+     * They are defined for every file before it is parsed, e.g., for a macro which the standard
+     * library headers would define, but which the parser cannot expand without them. A
+     * function-like macro includes its parameters in the name, e.g., `va_arg(a,t)`. Symbols set
+     * with [TranslationConfiguration.Builder.symbols] take precedence. The default is an empty map,
+     * i.e., none.
+     */
+    open fun symbols(language: Language<*>): Map<String, String> = emptyMap()
 
     /**
      * The class path resources of function summary files (JSON or YAML, in the format described in
