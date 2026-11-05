@@ -138,7 +138,17 @@ fn make_macro(name: &[u8], rest: &[u8]) -> Macro {
     } else {
         None
     };
-    Macro { func_like, params: Vec::new(), external: false, body, subst }
+    let params = if func_like {
+        let close = rest.iter().position(|&b| b == b')').unwrap_or(rest.len());
+        rest[1..close.max(1)]
+            .split(|&b| b == b',')
+            .map(|p| p.trim_ascii().to_vec())
+            .filter(|p| !p.is_empty())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    Macro { func_like, params, external: false, body, subst }
 }
 
 /// Builds a macro from a profile-style entry: `NAME` or `NAME(a,b)` mapped to the body.
@@ -459,6 +469,15 @@ fn eval(expr: &[u8], macros: &HashMap<Vec<u8>, Macro>, depth: u32) -> Result<i64
 
 // ---------------------------------------------------------------------------------------------
 
+/// The symbols of the C stdlib profile, in the format of `Profile.symbols()`. `va_arg` is what a
+/// compiler's `<stdarg.h>` defines; `__builtin_va_arg` is what CDT defines itself, which the Kotlin
+/// frontend translates into a cast of the `va_list` to the requested type.
+pub const C_STDLIB_SYMBOLS: &[(&str, &str)] = &[
+    ("__STDC__", "1"),
+    ("va_arg(a,t)", "__builtin_va_arg(a,t)"),
+    ("__builtin_va_arg(a,t)", "((t)a)"),
+];
+
 /// Preprocesses `src` into a buffer of the same length. `defines` use the format of a CPG
 /// `Profile.symbols()` map: `NAME` or `NAME(a,b)` (function-like) mapped to the body.
 pub fn preprocess(src: &[u8], defines: &[(&str, &str)]) -> (Vec<u8>, PpStats) {
@@ -555,7 +574,17 @@ pub fn preprocess(src: &[u8], defines: &[(&str, &str)]) -> (Vec<u8>, PpStats) {
                 conditional = false;
                 let n = rest.iter().position(|&b| !is_ident(b)).unwrap_or(rest.len());
                 if n > 0 {
-                    macros.insert(rest[..n].to_vec(), make_macro(&rest[..n], &rest[n..]));
+                    let mut m = make_macro(&rest[..n], &rest[n..]);
+                    // A macro whose body is a call of an external macro, such as the
+                    // `#define va_arg(ap, type) __builtin_va_arg(ap, type)` of <stdarg.h>, is
+                    // expanded like the external one (the project's own macros are not).
+                    let first = m.body.iter().position(|&b| !is_ident(b)).unwrap_or(m.body.len());
+                    if m.func_like
+                        && macros.get(&m.body[..first]).is_some_and(|w| w.func_like && w.external)
+                    {
+                        m.external = true;
+                    }
+                    macros.insert(rest[..n].to_vec(), m);
                 }
             }
             b"undef" if active => {
@@ -608,7 +637,14 @@ fn blank(out: &mut [u8], src: &[u8], start: usize, end: usize, mask: Option<&[u8
 /// Expands a call of the function-like macro `m` whose name ends at `name_end`. Returns the
 /// expansion and the end of the call, or `None` if the call is not well-formed on this line, the
 /// argument count does not match, or the body uses `#`/`##` (not supported).
-fn expand_call(line: &[u8], mask: &[u8], name_end: usize, m: &Macro) -> Option<(Vec<u8>, usize)> {
+fn expand_call(
+    line: &[u8],
+    mask: &[u8],
+    name_end: usize,
+    m: &Macro,
+    macros: &HashMap<Vec<u8>, Macro>,
+    level: u32,
+) -> Option<(Vec<u8>, usize)> {
     if m.body.contains(&b'#') {
         return None;
     }
@@ -676,10 +712,50 @@ fn expand_call(line: &[u8], mask: &[u8], name_end: usize, m: &Macro) -> Option<(
             i += 1;
         }
     }
-    Some((text, call_end))
+    Some((rescan(text, macros, level), call_end))
 }
 
-/// Expands the object-like macros in `body` (recursively, up to a depth), leaving everything else
+/// Expands the calls of external function-like macros in `text`, the result of an expansion (so a
+/// profile can define `va_arg` as `__builtin_va_arg`, which it defines in turn).
+fn rescan(text: Vec<u8>, macros: &HashMap<Vec<u8>, Macro>, level: u32) -> Vec<u8> {
+    if level >= 4 {
+        return text;
+    }
+    let mut mask = Vec::new();
+    classify(&text, &mut false, &mut mask);
+    let mut out = Vec::with_capacity(text.len());
+    let mut i = 0;
+    while i < text.len() {
+        if mask[i] != CODE {
+            out.push(text[i]);
+            i += 1;
+        } else if text[i].is_ascii_digit() {
+            while i < text.len() && (is_ident(text[i]) || text[i] == b'.') {
+                out.push(text[i]);
+                i += 1;
+            }
+        } else if is_ident_start(text[i]) {
+            let s = i;
+            while i < text.len() && is_ident(text[i]) && mask[i] == CODE {
+                i += 1;
+            }
+            if let Some(m) = macros.get(&text[s..i]).filter(|m| m.func_like && m.external) {
+                if let Some((expansion, end)) = expand_call(&text, &mask, i, m, macros, level + 1) {
+                    out.extend(expansion);
+                    i = end;
+                    continue;
+                }
+            }
+            out.extend_from_slice(&text[s..i]);
+        } else {
+            out.push(text[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Expands the object-like macros in `body' (recursively, up to a depth), leaving everything else
 /// alone. `None` if the expansion is too deep (a cycle).
 fn expand_object(
     body: &[u8],
@@ -786,7 +862,7 @@ fn substitute(
                     }
                 }
                 Some(m) if m.func_like && m.external => {
-                    if let Some((text, call_end)) = expand_call(line, mask, i, m) {
+                    if let Some((text, call_end)) = expand_call(line, mask, i, m, macros, 0) {
                         if text.len() <= call_end - s {
                             let dst = &mut out[start + s..start + call_end];
                             dst.fill(b' ');
@@ -905,6 +981,27 @@ mod tests {
         assert_eq!(clamp_to_spans(&spans, 0, 5), (0, 5));
         assert_eq!(clamp_to_spans(&spans, 0, 40), (0, 40));
         assert_eq!(clamp_to_spans(&spans, 30, 40), (30, 40));
+    }
+
+    #[test]
+    fn va_arg_of_the_stdlib_profile_is_a_cast_that_keeps_the_va_list() {
+        let (out, st) = pp_with("int v = va_arg(ap, int);\n", C_STDLIB_SYMBOLS);
+        assert_eq!(out, "int v = ((int)ap)      ;\n");
+        assert_eq!(st.expansions, 1);
+        assert_eq!(st.spans, vec![(8, 23)]);
+        let (out, _) = pp_with("char *s = __builtin_va_arg(ap, char *);\n", C_STDLIB_SYMBOLS);
+        assert!(out.contains("((char *)ap)"));
+    }
+
+    #[test]
+    fn source_may_define_va_arg_like_stdarg_h() {
+        let src = "#define va_arg(ap, type) __builtin_va_arg(ap, type)\nint v = va_arg(ap, int);\n";
+        let (out, st) = pp_with(src, C_STDLIB_SYMBOLS);
+        assert!(out.ends_with("int v = ((int)ap)      ;\n"), "{out}");
+        assert_eq!(st.expansions, 1);
+        // a macro of the project that merely looks similar is not expanded
+        let (out, st) = pp_with("#define va_arg(a, t) other(a, t)\nint v = va_arg(ap, int);\n", C_STDLIB_SYMBOLS);
+        assert!(out.contains("va_arg(ap, int);") && st.expansions == 0);
     }
 
     #[test]

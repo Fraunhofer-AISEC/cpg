@@ -1,1 +1,3 @@
 target
+# the repository-wide "bin" pattern would otherwise hide crates/cpg-tools/src/bin
+!bin
