@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -126,7 +127,9 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *   [ObjectType.recordDeclaration], sync [Type.superTypes] with the declaration and set
      *   [Type.typeOrigin] to [Type.Origin.RESOLVED].
      */
-    fun resolveType(type: Type): Boolean {
+    fun resolveType(type: Type): Boolean = resolveType(type, identitySetOf())
+
+    private fun resolveType(type: Type, resolving: MutableSet<Type>): Boolean {
         // Because we still have multiple "global scopes" (one per parallel context), we need to
         // make sure they all point to the final global scope
         type.updateGlobalScope()
@@ -134,9 +137,16 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // Check for a possible typedef
         var target = scopeManager.typedefFor(type.name, type.scope)
         if (target != null) {
-            if (target.typeOrigin == Type.Origin.UNRESOLVED && type != target) {
+            // Following the alias chain has to be able to stop. Comparing the target to this type
+            // only catches an alias that points directly at itself, and a chain that comes back
+            // around -- which we also get from two aliases of the same name in different scopes
+            // that each resolve to the other -- recurses until the stack runs out and takes the
+            // analysis of the whole project with it.
+            if (
+                target.typeOrigin == Type.Origin.UNRESOLVED && type != target && resolving.add(type)
+            ) {
                 // Make sure our typedef target is resolved
-                resolveType(target)
+                resolveType(target, resolving)
             }
 
             var originDeclares = target.recordDeclaration

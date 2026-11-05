@@ -924,19 +924,31 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             // all of them `internal.Client` to us. Resolving `c.do(req)` by name alone answered
             // one call with the `do` of every provider, which is where four fifths of that
             // project's spurious reachability came from.
-            val inRecord =
-                record.declaringScope?.lookupSymbol(symbol, qualifiedLookup = true) ?: listOf()
-            if (inRecord.isNotEmpty()) {
-                candidates.addAll(inRecord)
-                continue
-            }
-
-            // The record does not declare the symbol itself. It may still be visible through the
-            // name -- an extension declared elsewhere, a language that spreads a type over several
-            // scopes -- so fall back to the lookup by fully qualified name.
+            // Both sources are used, not one in preference to the other: the record's own scope
+            // can be missing a member that the name lookup does find -- one promoted from an
+            // embedded type, or declared in a scope the type is spread over -- and dropping it
+            // would lose a call edge, which is the one kind of error we care most about avoiding.
+            // What the name lookup must not contribute is the members of a *different* record
+            // that merely shares the name, so those are filtered out by the package they are
+            // declared in.
             candidates.addAll(
-                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
+                record.declaringScope?.lookupSymbol(symbol, qualifiedLookup = true) ?: listOf()
             )
+
+            val recordPackage = record.packageDirectory
+            for (candidate in
+                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)) {
+                val candidatePackage = candidate.packageDirectory
+                // Keep it unless we can positively tell it belongs somewhere else. An unknown
+                // origin on either side is not evidence of a mismatch.
+                if (
+                    recordPackage.isEmpty() ||
+                        candidatePackage.isEmpty() ||
+                        candidatePackage == recordPackage
+                ) {
+                    candidates.add(candidate)
+                }
+            }
         }
 
         // Find invokes by supertypes
@@ -1480,3 +1492,13 @@ internal fun Pass<*>.resolveWithArguments(
 
     return result
 }
+
+/**
+ * The directory of the file this node was declared in. For a language whose packages are
+ * directories -- Go, where a package is moreover named only after the last element of its import
+ * path -- this tells apart declarations that share a fully qualified name but belong to different
+ * packages. Empty when we do not know where the node came from, which callers must treat as "no
+ * information" rather than as a mismatch.
+ */
+internal val Node.packageDirectory: String
+    get() = this.location?.artifactLocation?.uri?.path?.substringBeforeLast('/') ?: ""
