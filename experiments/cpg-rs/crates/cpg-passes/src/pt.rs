@@ -15,6 +15,9 @@
 //! initializer lists.
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::sync::Arc;
+
+use im::OrdMap;
 
 use cpg_core::{Access, Granularity, Graph, Kind, NONE, SYNTH_BASE};
 use rustc_hash::FxHashMap;
@@ -31,6 +34,10 @@ pub struct Config {
     pub max_field_access_path_depth: Option<usize>,
     pub max_synthetic_chain_depth: Option<usize>,
     pub draw_current_deref_dfg: bool,
+    /// Per function (`Configuration.timeout`); on expiry the function gets the dummy summary.
+    pub timeout: Option<std::time::Duration>,
+    /// Log every function that takes longer than this to stderr.
+    pub log_slower_than: Option<std::time::Duration>,
 }
 
 impl Default for Config {
@@ -41,6 +48,8 @@ impl Default for Config {
             max_field_access_path_depth: Some(6),
             max_synthetic_chain_depth: Some(6),
             draw_current_deref_dfg: true,
+            timeout: None,
+            log_slower_than: None,
         }
     }
 }
@@ -117,32 +126,93 @@ struct DEntry {
 
 #[derive(Clone, Default, PartialEq)]
 struct State {
-    gs: BTreeMap<N, GEntry>,
-    decl: BTreeMap<N, DEntry>,
+    gs: OrdMap<N, Arc<GEntry>>,
+    decl: OrdMap<N, Arc<DEntry>>,
+}
+
+fn is_subset<T: Ord>(a: &Set<T>, b: &Set<T>) -> bool {
+    a.len() <= b.len() && a.is_subset(b)
 }
 
 impl State {
-    /// Least upper bound into `self`; returns whether `self` changed.
+    /// Least upper bound into `self`; returns whether `self` changed. The entries are shared between
+    /// states and only copied when they change.
     fn join(&mut self, o: &State) -> bool {
         let mut ch = false;
-        for (k, e) in &o.gs {
-            let s = self.gs.entry(*k).or_default();
-            ch |= union(&mut s.addrs, &e.addrs);
-            ch |= union(&mut s.vals, &e.vals);
-            ch |= union(&mut s.lw, &e.lw);
+        for (k, e) in o.gs.iter() {
+            match self.gs.get_mut(k) {
+                Some(s) => {
+                    if Arc::ptr_eq(s, e)
+                        || (is_subset(&e.addrs, &s.addrs) && is_subset(&e.vals, &s.vals) && is_subset(&e.lw, &s.lw))
+                    {
+                        continue;
+                    }
+                    let m = Arc::make_mut(s);
+                    union(&mut m.addrs, &e.addrs);
+                    union(&mut m.vals, &e.vals);
+                    union(&mut m.lw, &e.lw);
+                    ch = true;
+                }
+                None => {
+                    self.gs.insert(*k, e.clone());
+                    ch = true;
+                }
+            }
         }
-        for (k, e) in &o.decl {
-            let s = self.decl.entry(*k).or_default();
-            ch |= union(&mut s.addrs, &e.addrs);
-            ch |= union(&mut s.vals, &e.vals);
-            ch |= union(&mut s.lw, &e.lw);
+        for (k, e) in o.decl.iter() {
+            match self.decl.get_mut(k) {
+                Some(s) => {
+                    if Arc::ptr_eq(s, e)
+                        || (is_subset(&e.addrs, &s.addrs) && is_subset(&e.vals, &s.vals) && is_subset(&e.lw, &s.lw))
+                    {
+                        continue;
+                    }
+                    let m = Arc::make_mut(s);
+                    union(&mut m.addrs, &e.addrs);
+                    union(&mut m.vals, &e.vals);
+                    union(&mut m.lw, &e.lw);
+                    ch = true;
+                }
+                None => {
+                    self.decl.insert(*k, e.clone());
+                    ch = true;
+                }
+            }
         }
         ch
     }
 
+    fn gs_mut(&mut self, n: N) -> &mut GEntry {
+        Arc::make_mut(self.gs.entry(n).or_insert_with(|| Arc::new(GEntry::default())))
+    }
+
+    fn decl_mut(&mut self, n: N) -> &mut DEntry {
+        Arc::make_mut(self.decl.entry(n).or_insert_with(|| Arc::new(DEntry::default())))
+    }
+
+    /// The entry of `n`, which starts with `n` as its only address if there is none yet.
+    fn decl_mut_init(&mut self, n: N) -> &mut DEntry {
+        Arc::make_mut(self.decl.entry(n).or_insert_with(|| {
+            Arc::new(DEntry { addrs: Set::from([n]), ..DEntry::default() })
+        }))
+    }
+
+    fn gs_put(&mut self, n: N, e: GEntry) {
+        self.gs.insert(n, Arc::new(e));
+    }
+
+    fn decl_put(&mut self, n: N, e: DEntry) {
+        self.decl.insert(n, Arc::new(e));
+    }
+
     /// `push`: adds to what the general state holds for `n`.
     fn push(&mut self, n: N, e: GEntry) {
-        let s = self.gs.entry(n).or_default();
+        if let Some(s) = self.gs.get(&n) {
+            if is_subset(&e.addrs, &s.addrs) && is_subset(&e.vals, &s.vals) && is_subset(&e.lw, &s.lw) {
+                return;
+            }
+        }
+        let s = self.gs_mut(n);
         s.addrs.extend(e.addrs);
         s.vals.extend(e.vals);
         s.lw.extend(e.lw);
@@ -150,7 +220,12 @@ impl State {
 
     /// `pushToDeclarationsState`.
     fn push_decl(&mut self, n: N, e: DEntry) {
-        let s = self.decl.entry(n).or_default();
+        if let Some(s) = self.decl.get(&n) {
+            if is_subset(&e.addrs, &s.addrs) && is_subset(&e.vals, &s.vals) && is_subset(&e.lw, &s.lw) {
+                return;
+            }
+        }
+        let s = self.decl_mut(n);
         s.addrs.extend(e.addrs);
         s.vals.extend(e.vals);
         s.lw.extend(e.lw);
@@ -267,7 +342,14 @@ use calls::{FKey, FsEntry};
 type Source = (Option<N>, bool, Option<Off>);
 
 pub fn pointsto(g: &mut Graph) {
-    pointsto_with(g, Config::default())
+    let mut cfg = Config::default();
+    if let Some(ms) = std::env::var("PT_TIMEOUT_MS").ok().and_then(|v| v.parse().ok()) {
+        cfg.timeout = Some(std::time::Duration::from_millis(ms));
+    }
+    if let Some(ms) = std::env::var("PT_LOG_MS").ok().and_then(|v| v.parse().ok()) {
+        cfg.log_slower_than = Some(std::time::Duration::from_millis(ms));
+    }
+    pointsto_with(g, cfg)
 }
 
 pub fn pointsto_with(g: &mut Graph, cfg: Config) {
@@ -320,8 +402,17 @@ pub fn pointsto_with(g: &mut Graph, cfg: Config) {
         fsum: FxHashMap::default(),
         chain: Vec::new(),
     };
+    let total = (0..n as u32).filter(|&f| p.g.nodes[f as usize].kind == Kind::Function).count();
+    let (mut done, mut last_log) = (0usize, std::time::Instant::now());
+    let started = last_log;
+    let progress = std::env::var("PT_PROGRESS").is_ok();
     for f in 0..n as u32 {
         if p.g.nodes[f as usize].kind == Kind::Function {
+            done += 1;
+            if progress && last_log.elapsed() >= std::time::Duration::from_secs(5) {
+                last_log = std::time::Instant::now();
+                eprintln!("[{done}/{total}] functions, {:?} elapsed", started.elapsed());
+            }
             if p.has_body(f) {
                 if !p.succ[f as usize].is_empty() {
                     p.analyze(f);
@@ -639,11 +730,7 @@ impl<'g, 'a> Pt<'g, 'a> {
                 let global = self.is_global(addr);
                 let new = self.synthetic_for(addr, &name, false, SClass::Memory, global);
                 if !self.is_unknown(addr) {
-                    let e = st.decl.entry(addr).or_insert_with(|| DEntry {
-                        addrs: Set::from([addr]),
-                        ..DEntry::default()
-                    });
-                    e.addrs.insert(new);
+                    st.decl_mut_init(addr).addrs.insert(new);
                 }
                 ret.insert(new);
             }
@@ -702,11 +789,7 @@ impl<'g, 'a> Pt<'g, 'a> {
             } else {
                 let name = self.node_name(node);
                 let e = self.synthetic_for(node, &name, true, SClass::Unknown, false);
-                let d = st.decl.entry(node).or_insert_with(|| DEntry {
-                    addrs: Set::from([node]),
-                    ..DEntry::default()
-                });
-                d.vals.insert((e, false));
+                st.decl_mut_init(node).vals.insert((e, false));
                 add_full(&mut ret, e, false, "", &none);
             }
         } else {
@@ -1172,7 +1255,13 @@ impl<'g, 'a> Pt<'g, 'a> {
             queue.push_back(s);
             queued[s as usize] = true;
         }
+        let started = std::time::Instant::now();
+        let mut aborted = false;
         while let Some(node) = queue.pop_front() {
+            if self.cfg.timeout.is_some_and(|t| started.elapsed() > t) {
+                aborted = true;
+                break;
+            }
             queued[node as usize] = false;
             let state = inn[&node].clone();
             let out = self.transfer(node, state);
@@ -1193,6 +1282,20 @@ impl<'g, 'a> Pt<'g, 'a> {
         }
         let mut fin = State::default();
         let mut any = false;
+        if aborted {
+            eprintln!("timeout: {} after {:?}", self.name_of(f).full, started.elapsed());
+            fin = st.clone();
+            for out in outs.values() {
+                fin.join(out);
+            }
+            // treated as an empty function: the dummy summary, but the results so far are kept
+            if self.summary_is_empty(f) {
+                let prev = self.add_dummy_function_summary(f);
+                fin.push(f, GEntry { lw: prev, ..GEntry::default() });
+            }
+            self.draw(&fin);
+            return;
+        }
         for (&node, out) in &outs {
             if self.succ[node as usize].is_empty() {
                 fin.join(out);
@@ -1208,6 +1311,9 @@ impl<'g, 'a> Pt<'g, 'a> {
         self.draw(&fin);
         let mut fin = fin;
         self.store_function_summary(f, &mut fin);
+        if self.cfg.log_slower_than.is_some_and(|t| started.elapsed() > t) {
+            eprintln!("slow: {} {:?} ({} nodes)", self.name_of(f).full, started.elapsed(), outs.len());
+        }
     }
 
     /// `drawDataflowEdges`
@@ -1269,8 +1375,9 @@ impl<'g, 'a> Pt<'g, 'a> {
 
     /// `transferInternal`
     fn transfer(&mut self, node: N, mut st: State) -> State {
-        let existing = st.decl.get(&node).cloned().unwrap_or_default();
-        st.push_decl(node, existing);
+        if !st.decl.contains_key(&node) {
+            st.decl_put(node, DEntry::default());
+        }
         match self.g.nodes[node as usize].kind {
             Kind::Function => self.handle_function(node, &mut st),
             Kind::Literal => {}
@@ -1529,7 +1636,7 @@ impl<'g, 'a> Pt<'g, 'a> {
             for addr in self.get_addresses(st, input, input) {
                 let new_value = (node, false);
                 let new_lw = key(input, Props::fs(false));
-                st.decl.insert(
+                st.decl_put(
                     addr,
                     DEntry {
                         addrs: Set::from([addr]),
@@ -1593,10 +1700,7 @@ impl<'g, 'a> Pt<'g, 'a> {
         }
         for (base, off) in all {
             for ba in self.get_addresses(st, base, base) {
-                let e = st
-                    .decl
-                    .entry(ba)
-                    .or_insert_with(|| DEntry { addrs: Set::from([ba]), ..DEntry::default() });
+                let e = st.decl_mut_init(ba);
                 let np = Props { fs: Some(false), off: Some(off.clone()), ..Props::default() };
                 e.lw.retain(|k| !k.p.contains_all(&np));
                 e.lw.insert(key(base, np));
@@ -1641,7 +1745,7 @@ impl<'g, 'a> Pt<'g, 'a> {
                 let full = sources.iter().any(|s| s.2.is_none());
                 let entry = DEntry { addrs: current, vals: pairs.clone(), lw: last_writes.clone() };
                 if full && !is_summary {
-                    st.decl.insert(da, entry);
+                    st.decl_put(da, entry);
                 } else {
                     if !is_summary {
                         let written: Vec<String> = sources
@@ -1654,8 +1758,8 @@ impl<'g, 'a> Pt<'g, 'a> {
                                 _ => None,
                             })
                             .collect();
-                        if let Some(e) = st.decl.get_mut(&da) {
-                            e.lw.retain(|k| {
+                        if st.decl.contains_key(&da) {
+                            st.decl_mut(da).lw.retain(|k| {
                                 let n = match &k.p.off {
                                     Some(Off::Field(n)) => Some(n.clone()),
                                     Some(Off::Node(f)) if self.is(*f, Kind::Field) => {
@@ -1678,15 +1782,14 @@ impl<'g, 'a> Pt<'g, 'a> {
                 for &d in destinations {
                     let e = GEntry { addrs: dest_addrs.clone(), vals: mapped.clone(), lw: new_lw.clone() };
                     if overwrite {
-                        st.gs.insert(d, e);
+                        st.gs_put(d, e);
                     } else {
                         st.push(d, e);
                     }
                 }
             } else {
                 for &d in destinations {
-                    let e = st.gs.entry(d).or_default();
-                    e.lw.extend(mapped.iter().cloned());
+                    st.gs_mut(d).lw.extend(mapped.iter().cloned());
                 }
             }
         }

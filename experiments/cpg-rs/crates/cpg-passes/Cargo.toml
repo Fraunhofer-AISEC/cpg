@@ -6,3 +6,4 @@ version.workspace = true
 [dependencies]
 cpg-core.workspace = true
 rustc-hash.workspace = true
+im = "15"
