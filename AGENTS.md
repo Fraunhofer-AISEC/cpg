@@ -59,7 +59,6 @@ pnpm run build
 - Every source file needs the Apache 2.0 license header. `spotlessApply` adds it to new files.
 - Prefer Kotlin idioms over Java-style patterns. Write KDoc for public APIs.
 - Import types instead of writing fully qualified names in code (`PrintWriter`, not `java.io.PrintWriter`). Qualify a name only to resolve a clash, e.g. CPG's and sarif4k's `PhysicalLocation`.
-- Catch the narrowest exception that fits, and do not swallow it silently: at least log it. Avoid `runCatching` around large blocks, because it also hides bugs you did not expect.
 
 ### Tests
 
