@@ -4,6 +4,9 @@ use crate::Kind;
 
 pub const NONE: u32 = u32::MAX;
 
+/// Ids from here on are synthetic nodes (`Graph::synth`), not nodes of the AST.
+pub const SYNTH_BASE: u32 = 0x8000_0000;
+
 /// How an expression is used: read, written, or both (see `AccessValues` of the Kotlin CPG).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Access {
@@ -98,6 +101,9 @@ pub struct Graph<'a> {
     type_ids: FxHashMap<String, u32>,
     /// Code of implicit nodes that have no source range (e.g. the `true` of `for (;;)`).
     pub code_override: FxHashMap<u32, String>,
+    /// Nodes the analyses create that are not part of the AST (`MemoryAddress`, ...): the simple
+    /// class name and the name. Their id is `SYNTH_BASE + index`.
+    pub synth: Vec<(&'static str, String)>,
 }
 
 impl<'a> Graph<'a> {
@@ -116,6 +122,7 @@ impl<'a> Graph<'a> {
             unresolved_syms: Vec::new(),
             type_ids: FxHashMap::default(),
             code_override: FxHashMap::default(),
+            synth: Vec::new(),
         }
     }
 

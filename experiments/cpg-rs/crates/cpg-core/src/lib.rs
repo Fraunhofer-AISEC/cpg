@@ -6,5 +6,5 @@ mod graph;
 mod kind;
 
 pub use dump::dump;
-pub use graph::{Access, DfgEdge, EogEdge, Granularity, Graph, Node, NONE};
+pub use graph::{Access, DfgEdge, EogEdge, Granularity, Graph, Node, NONE, SYNTH_BASE};
 pub use kind::Kind;

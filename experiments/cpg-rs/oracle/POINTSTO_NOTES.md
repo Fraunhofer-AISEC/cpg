@@ -119,3 +119,18 @@ declaration, unary, return, new, delete) about 800, calls (summaries, destinatio
 function summaries of the stdlib YAML) about 2,000. The first milestone that is useful on its own is the
 intraprocedural part: scalars, fields, pointers, `&`, `*`, arrays, without calls, verified on `pt/*.c`
 and the intraprocedural parts of the Kotlin `PointsToPassTest` resources.
+
+## Status (milestone 1: intraprocedural core, `crates/cpg-passes/src/pt.rs`)
+
+Ported on the general/declaration-state model (`DFG_MODE=pointsto2`): state + `push`/`pushToDeclarationsState`,
+`getAddresses`, `getValues`, `getLastWrites`, `fetchFieldAddresses`, `fetchValueFromDeclarationState`,
+`syntheticNodeFor` (k-limiting), `handleDeclaration` (incl. array initializer lists), `handleAssign`,
+`updateValues`, `updateBaseLastWrites`, `handleUnaryOperator`, `handleExpression` (incl. current-deref DFG),
+`initializeParameter` (PMVs), `handleReturn` (edge to the function), `drawDataflowEdges`.
+Config mirrors the Kotlin defaults (`PtConfig`).
+
+Result against the Kotlin goldens (run with `PART_DETAIL=1` so partial targets print `Class:name`):
+`scalar`, `fields`, `structs`, `ptr1`, `ptr2`, `access.c` identical; c-tests 92.9 %, probes 97.4 % (was
+77.8 % / 89.2 %). All that is left are calls (call edges with calling contexts `<in:#n>/<out:#n>`, function
+summaries, short FS `!fs` edges), `new`/`delete`, for-each, and record-aware initializer lists.
+Next: milestone 2 = `handleCall` + function summaries + calling contexts (Kotlin 1360-3470).

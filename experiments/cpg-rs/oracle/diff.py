@@ -40,6 +40,8 @@ def parse(text):
         r = re.search(r"refersTo=(#\d+|-|ext:\w+)", d['rest'])
         dm = re.search(r"dfg=\[(.*)\]", d['rest'])
         d['dfg'] = ','.join(sorted(edge_sig(sig, x) for x in split_top(dm.group(1)))) if dm else ''
+        if not os.environ.get('PART_DETAIL'):  # goldens without DUMP_CTX print `node` for node targets
+            d['dfg'] = re.sub(r'Part\((?!Field:)\w+:[^)]*\)', 'Part(node)', d['dfg'])
         ac = re.search(r" acc=(\w+)", d['rest'])
         d['acc'] = ac.group(1) if ac else ''
         d['refersTo'] = (sig.get(r.group(1)[1:], '?') if r.group(1).startswith('#') else r.group(1)) if r else ''

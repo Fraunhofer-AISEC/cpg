@@ -124,7 +124,7 @@ pub fn dfg(g: &mut Graph, flow_sensitive_references: bool) {
                 let (Some(&array), Some(&index)) = (kids.first(), kids.get(1)) else { continue };
                 let gran = match literal_number(g, index) {
                     Some(n) => Granularity::Indexed(n),
-                    None => Granularity::Partial("node".to_string()),
+                    None => Granularity::Partial(format!("{}:{}", g.nodes[index as usize].kind.class_name(), g.name_str(index))),
                 };
                 if access == Access::Write {
                     g.add_dfg(id, array, gran);

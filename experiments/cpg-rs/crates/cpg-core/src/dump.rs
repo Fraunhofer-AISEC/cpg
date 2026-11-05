@@ -45,6 +45,14 @@ pub fn dump(g: &Graph, unit_name: &str) -> String {
         dfg_in[e.to as usize].push(k);
     }
 
+    let ref_str = |id: u32| -> String {
+        if id >= crate::SYNTH_BASE {
+            let (class, name) = &g.synth[(id - crate::SYNTH_BASE) as usize];
+            format!("ext:{class}({name})")
+        } else {
+            format!("#{}", dump_id[id as usize])
+        }
+    };
     let mut out = String::new();
     for (i, &(id, depth)) in order.iter().enumerate() {
         let n = g.nodes[id as usize];
@@ -110,7 +118,7 @@ pub fn dump(g: &Graph, unit_name: &str) -> String {
                 .iter()
                 .map(|&k| {
                     let e = &g.dfg[k];
-                    format!("#{}{}", dump_id[e.from as usize], e.granularity.tag())
+                    format!("{}{}", ref_str(e.from), e.granularity.tag())
                 })
                 .collect();
             out.push_str(&format!(" dfg=[{}]", t.join(",")));
