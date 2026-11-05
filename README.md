@@ -38,6 +38,13 @@ For example using docker:
 docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
 ```
 
+Alternatively, the subproject [cpg-falkordb](./cpg-falkordb) persists the very same graph to a [FalkorDB](https://www.falkordb.com/) database. FalkorDB is an in-memory graph database that also speaks Cypher, but requires no server-side plugin and starts almost instantly, which makes it convenient for short-lived analysis runs and CI pipelines.
+
+For example using docker:
+```
+docker run -p 6379:6379 -p 3000:3000 -d falkordb/falkordb:latest
+```
+
 ### As Library
 
 The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle.
