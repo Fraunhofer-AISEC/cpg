@@ -62,8 +62,8 @@ both of these are true:
 2. **[`mmdc`](https://github.com/mermaid-js/mermaid-cli) (mermaid-cli) is installed and working**,
    including its headless-Chrome runtime:
    ```bash
-   npm install -g @mermaid-js/mermaid-cli   # or: brew install mermaid-cli
-   npx puppeteer browsers install chrome-headless-shell
+   pnpm add -g @mermaid-js/mermaid-cli   # or: brew install mermaid-cli
+   pnpm dlx puppeteer browsers install chrome-headless-shell
    ```
    The second step is easy to miss - without it, `mmdc` is on your `$PATH` but fails to actually
    render anything.

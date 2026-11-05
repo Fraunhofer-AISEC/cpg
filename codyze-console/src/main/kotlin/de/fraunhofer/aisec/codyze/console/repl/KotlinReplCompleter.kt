@@ -69,9 +69,18 @@ class KotlinReplCompleter(private val replService: ReplService) : Completer {
             line.toScriptSource("Completion_${completionCounter.incrementAndGet()}.cpg.query.kts")
         val position = SourceCode.Position(line = 0, col = 0, absolutePos = cursor)
 
-        val result = runBlocking {
-            replService.compiler.complete(source, position, replService.compilationConfig())
-        }
+        // A failing completion must not take the REPL down; it just offers no candidates.
+        val result =
+            runCatching {
+                    runBlocking {
+                        replService.compiler.complete(
+                            source,
+                            position,
+                            replService.compilationConfig(),
+                        )
+                    }
+                }
+                .getOrNull() ?: return
 
         if (result !is ResultWithDiagnostics.Success) return
 

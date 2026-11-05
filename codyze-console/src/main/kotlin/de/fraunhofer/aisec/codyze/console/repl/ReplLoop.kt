@@ -77,109 +77,136 @@ class ReplLoop(
     fun run() {
         Files.createDirectories(historyFile.parent)
         val terminal = TerminalBuilder.builder().system(true).build()
-        // Detect the terminal's light/dark mode now that we have a real JLine terminal — the
-        // OSC 11 query needs a TTY. Done before any prompt is printed so the first rendered
-        // output already picks the readable gray for the detected theme.
-        replService.theme = ThemeDetector.detect(terminal)
-        val reader: LineReader =
-            LineReaderBuilder.builder()
-                .terminal(terminal)
-                .appName("codyze-repl")
-                .completer(KotlinReplCompleter(replService))
-                .parser(KotlinReplParser())
-                .highlighter(KotlinReplHighlighter())
-                .variable(LineReader.HISTORY_FILE, historyFile)
-                .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%P  > ")
-                // AUTO_LIST: show the candidate menu immediately on first TAB instead of
-                // requiring a double-tap.
-                // AUTO_MENU: with multiple candidates, the menu auto-pops on TAB.
-                // LIST_PACKED: render the menu in compact column form so 30+ candidates fit.
-                .option(LineReader.Option.AUTO_LIST, true)
-                .option(LineReader.Option.AUTO_MENU, true)
-                .option(LineReader.Option.LIST_PACKED, true)
-                .option(LineReader.Option.LIST_AMBIGUOUS, true)
-                // Kotlin uses `!!` as the non-null assertion operator. JLine defaults to bash-
-                // style history expansion which would rewrite `m!!` to `m<last-command>` — we
-                // disable that entirely so REPL input is taken verbatim.
-                .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
-                .build()
-        installDotCompleteWidget(reader)
+        var isRealTerminal = false
+        try {
+            // Detect the terminal's light/dark mode now that we have a real JLine terminal — the
+            // OSC 11 query needs a TTY. Done before any prompt is printed so the first rendered
+            // output already picks the readable gray for the detected theme.
+            replService.theme = ThemeDetector.detect(terminal)
+            val reader: LineReader =
+                LineReaderBuilder.builder()
+                    .terminal(terminal)
+                    .appName("codyze-repl")
+                    .completer(KotlinReplCompleter(replService))
+                    .parser(KotlinReplParser())
+                    .highlighter(KotlinReplHighlighter())
+                    .variable(LineReader.HISTORY_FILE, historyFile)
+                    .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%P  > ")
+                    // AUTO_LIST: show the candidate menu immediately on first TAB instead of
+                    // requiring a double-tap.
+                    // AUTO_MENU: with multiple candidates, the menu auto-pops on TAB.
+                    // LIST_PACKED: render the menu in compact column form so 30+ candidates fit.
+                    .option(LineReader.Option.AUTO_LIST, true)
+                    .option(LineReader.Option.AUTO_MENU, true)
+                    .option(LineReader.Option.LIST_PACKED, true)
+                    .option(LineReader.Option.LIST_AMBIGUOUS, true)
+                    // Kotlin uses `!!` as the non-null assertion operator. JLine defaults to bash-
+                    // style history expansion which would rewrite `m!!` to `m<last-command>` — we
+                    // disable that entirely so REPL input is taken verbatim.
+                    .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
+                    .build()
+            installDotCompleteWidget(reader)
 
-        // The tab title (OSC 2) is a universal, decades-old mechanism nearly every terminal
-        // supports. The colored Tab Status dot (OSC 21337) is iTerm2 3.7+-specific but has no
-        // profile-configuration prerequisite, unlike the Badge. Both are set unconditionally,
-        // guarded only by not being a dumb/non-TTY terminal.
-        val isRealTerminal = terminal.type != Terminal.TYPE_DUMB
-        fun setStatus(busy: Boolean) {
-            if (!isRealTerminal) return
-            val title = statusTitle(busy)
-            val color = if (busy) "#ffa500" else "#32cd32"
-            terminal.writer().print(TerminalTitle.set(title))
-            terminal.writer().print(TabStatus.set(status = title, indicatorColor = color))
-            terminal.writer().flush()
-        }
-        setStatus(busy = false)
-
-        printReadyLine(terminal.writer())
-        terminal.writer().flush()
-
-        while (true) {
-            if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.promptStart())
-            val line =
-                try {
-                    reader.readLine(prompt())
-                } catch (_: UserInterruptException) {
-                    // Ctrl-C: clear the line and continue.
-                    continue
-                } catch (_: EndOfFileException) {
-                    // Ctrl-D: exit.
-                    break
-                }
-
-            val trimmed = line?.trim().orEmpty()
-            if (trimmed.isEmpty()) continue
-
-            if (trimmed.startsWith(":")) {
-                if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandStart())
-                val keepGoing = handleMeta(trimmed, terminal.writer())
-                if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandEnd(0))
+            // The tab title (OSC 2) is a universal, decades-old mechanism nearly every terminal
+            // supports. The colored Tab Status dot (OSC 21337) is iTerm2 3.7+-specific but has no
+            // profile-configuration prerequisite, unlike the Badge. Both are set unconditionally,
+            // guarded only by not being a dumb/non-TTY terminal.
+            isRealTerminal = terminal.type != Terminal.TYPE_DUMB
+            fun setStatus(busy: Boolean) {
+                if (!isRealTerminal) return
+                val title = statusTitle(busy)
+                val color = if (busy) "#ffa500" else "#32cd32"
+                terminal.writer().print(TerminalTitle.set(title))
+                terminal.writer().print(TabStatus.set(status = title, indicatorColor = color))
                 terminal.writer().flush()
-                if (!keepGoing) break
-                continue
             }
-
-            sessionLines.add(line!!)
-            if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandStart())
-            setStatus(busy = true)
-            val result = replService.eval(line)
             setStatus(busy = false)
-            val exitCode =
-                when (result) {
-                    is ReplEvalResult.Value,
-                    is ReplEvalResult.UnitResult -> 0
-                    is ReplEvalResult.CompileError,
-                    is ReplEvalResult.RuntimeError -> 1
+
+            printReadyLine(terminal.writer())
+            terminal.writer().flush()
+
+            while (true) {
+                if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.promptStart())
+                val line =
+                    try {
+                        reader.readLine(prompt())
+                    } catch (_: UserInterruptException) {
+                        // Ctrl-C: clear the line and continue.
+                        continue
+                    } catch (_: EndOfFileException) {
+                        // Ctrl-D: exit.
+                        break
+                    }
+
+                val trimmed = line?.trim().orEmpty()
+                if (trimmed.isEmpty()) continue
+
+                if (trimmed.startsWith(":")) {
+                    if (isRealTerminal)
+                        terminal.writer().print(ShellIntegrationMarks.commandStart())
+                    val keepGoing =
+                        try {
+                            handleMeta(trimmed, terminal.writer())
+                        } catch (e: Exception) {
+                            printCommandFailure(e, terminal.writer())
+                            true
+                        }
+                    if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandEnd(0))
+                    terminal.writer().flush()
+                    if (!keepGoing) break
+                    continue
                 }
-            if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandEnd(exitCode))
-            when (result) {
-                is ReplEvalResult.Value -> terminal.writer().println(result.rendered)
-                is ReplEvalResult.UnitResult -> Unit
-                // DiagnosticFormatter already prefixes with "error:" / "warning:" + color,
-                // so we just print its output verbatim.
-                is ReplEvalResult.CompileError -> terminal.writer().println(result.message)
-                is ReplEvalResult.RuntimeError -> terminal.writer().println(result.message)
+
+                sessionLines.add(line!!)
+                if (isRealTerminal) terminal.writer().print(ShellIntegrationMarks.commandStart())
+                setStatus(busy = true)
+                val result =
+                    try {
+                        replService.eval(line)
+                    } catch (e: Exception) {
+                        if (isRealTerminal)
+                            terminal.writer().print(ShellIntegrationMarks.commandEnd(1))
+                        printCommandFailure(e, terminal.writer())
+                        terminal.writer().flush()
+                        continue
+                    } finally {
+                        setStatus(busy = false)
+                    }
+                val exitCode =
+                    when (result) {
+                        is ReplEvalResult.Value,
+                        is ReplEvalResult.UnitResult -> 0
+                        is ReplEvalResult.CompileError,
+                        is ReplEvalResult.RuntimeError -> 1
+                    }
+                if (isRealTerminal)
+                    terminal.writer().print(ShellIntegrationMarks.commandEnd(exitCode))
+                when (result) {
+                    is ReplEvalResult.Value -> terminal.writer().println(result.rendered)
+                    is ReplEvalResult.UnitResult -> Unit
+                    // DiagnosticFormatter already prefixes with "error:" / "warning:" + color,
+                    // so we just print its output verbatim.
+                    is ReplEvalResult.CompileError -> terminal.writer().println(result.message)
+                    is ReplEvalResult.RuntimeError -> terminal.writer().println(result.message)
+                }
+                terminal.writer().flush()
             }
-            terminal.writer().flush()
+        } finally {
+            // Title is left alone on exit: shells with their own title-setting prompt hooks
+            // overwrite it on the next prompt anyway, so forcing it blank here would just flash an
+            // empty tab title first. The Tab Status dot has no such shell-side reset, so clear it
+            // explicitly.
+            if (isRealTerminal) {
+                terminal.writer().print(TabStatus.set(status = "", indicatorColor = ""))
+                terminal.writer().flush()
+            }
+            terminal.close()
         }
-        // Title is left alone on exit: shells with their own title-setting prompt hooks (as this
-        // one evidently has) overwrite it on the next prompt anyway, so forcing it blank here
-        // would just flash an empty tab title first. The Tab Status dot has no such shell-side
-        // reset, so clear it explicitly.
-        if (isRealTerminal) {
-            terminal.writer().print(TabStatus.set(status = "", indicatorColor = ""))
-            terminal.writer().flush()
-        }
-        terminal.close()
+    }
+
+    /** Reports a command that failed outside the evaluated script, and keeps the REPL running. */
+    private fun printCommandFailure(e: Exception, out: PrintWriter) {
+        out.println("error: ${TerminalText.sanitize(e.toString(), allowNewlines = false)}")
     }
 
     private fun prompt(): String = "codyze> "
