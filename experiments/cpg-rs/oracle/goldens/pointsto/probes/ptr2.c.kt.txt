@@ -1,0 +1,17 @@
+#0 TranslationUnit name='../../private/tmp/pt-in4/ptr2.c' type='-' loc=1:1-5:3 code='int g(int *q) {\n  int a = *q;\n  *q = a + 1;\n  return *q;\'
+  #1 Function name='g' type='(int*)int' loc=1:1-5:2 code='int g(int *q) {\n  int a = *q;\n  *q = a + 1;\n  return *q;\' eog=[#4] dfg=[#13]
+    #2 Block name='' type='UNKNOWN' loc=1:15-5:2 code='{\n  int a = *q;\n  *q = a + 1;\n  return *q;\n}'
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=2:3-2:14 code='int a = *q;' eog=[#9]
+        #4 Variable name='a' type='int' loc=2:7-2:13 code='a = *q' eog=[#6] dfg=[#5]
+          #5 PointerDereference name='q' type='int' loc=2:11-2:13 code='*q' refersTo=#16 eog=[#3] dfg=[#6:Part(PointerDereference),ext:ParameterMemoryValue(g.q.derefvalue),ext:ParameterMemoryValue(g.q.derefderefvalue)]
+            #6 Reference name='q' type='int*' loc=2:12-2:13 code='q' refersTo=#16 eog=[#5] dfg=[ext:ParameterMemoryValue(g.q.derefderefvalue),#16,ext:ParameterMemoryValue(g.q.derefvalue)]
+      #7 Assign name='=' type='UNKNOWN' loc=3:3-3:14 code='*q = a + 1;' eog=[#15]
+        #8 PointerDereference name='q' type='int' loc=3:3-3:5 code='*q' acc=WRITE refersTo=#16 eog=[#11] dfg=[#10,#9:Part(PointerDereference)]
+          #9 Reference name='q' type='int*' loc=3:4-3:5 code='q' refersTo=#16 eog=[#8] dfg=[#16]
+        #10 BinaryOperator name='+' type='int' loc=3:8-3:13 code='a + 1' eog=[#7] dfg=[#11,#12]
+          #11 Reference name='a' type='int' loc=3:8-3:9 code='a' refersTo=#4 eog=[#12] dfg=[ext:ParameterMemoryValue(g.q.derefderefvalue),#4]
+          #12 Literal name='' type='int' loc=3:12-3:13 code='1' eog=[#10]
+      #13 Return name='' type='UNKNOWN' loc=4:3-4:13 code='return *q;' dfg=[#14]
+        #14 PointerDereference name='q' type='int' loc=4:10-4:12 code='*q' refersTo=#16 eog=[#13] dfg=[#15:Part(PointerDereference),#8]
+          #15 Reference name='q' type='int*' loc=4:11-4:12 code='q' refersTo=#16 eog=[#14] dfg=[#8,#16]
+    #16 Parameter name='q' type='int*' loc=1:7-1:13 code='int *q'
