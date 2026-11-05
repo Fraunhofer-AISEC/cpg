@@ -268,7 +268,10 @@ sealed class Scope(
      *   [GlobalScope]. This is needed because a [NamespaceScope] (e.g., a Java or Go package) is
      *   shared between all files that declare it, but has only one parent. Therefore, the file
      *   scope of the current file is not necessarily part of its parent chain. Any other
-     *   [FileScope] in the parent chain is skipped, since it belongs to a different file.
+     *   [FileScope] in the parent chain is skipped, since it belongs to a different file. The
+     *   wildcard imports of this file scope (e.g., `using A;` in C# or `import a.*;` in Java) are
+     *   only considered right before the [GlobalScope], since they do not shadow the declarations
+     *   of the surrounding namespaces.
      * @param predicate An optional predicate which should be used in the lookup. Kept as the last
      *   parameter (after [localSymbols]) so existing trailing-lambda call sites keep binding to
      *   this one.
@@ -304,10 +307,32 @@ sealed class Scope(
         }
 
         while (scope != null) {
+            // Right before the global scope, we consider the wildcard imports of the current file
+            // (see [fileScope]). Its other symbols were already considered, so a qualified lookup
+            // in the file scope only yields the wildcard imports.
+            if (visitFileScope && scope is GlobalScope) {
+                list =
+                    fileScope
+                        .lookupSymbol(
+                            symbol,
+                            languageOnly = languageOnly,
+                            qualifiedLookup = true,
+                            replaceImports = replaceImports,
+                            localSymbols = localSymbols,
+                            predicate = predicate,
+                        )
+                        .toMutableList()
+                if (list.isNotEmpty()) {
+                    break
+                }
+            }
+
             list = (localSymbols?.invoke(scope, symbol) ?: scope.symbols[symbol])?.toMutableList()
 
-            // Also add any wildcard imports that we have to the list
-            val wildcards = scope.wildcardImports
+            // Also add any wildcard imports that we have to the list, except the ones of the
+            // current file, which we consider right before the global scope (see above)
+            val wildcards =
+                if (visitFileScope && scope == fileScope) setOf() else scope.wildcardImports
             if (list == null) {
                 list = wildcards.toMutableList()
             } else {

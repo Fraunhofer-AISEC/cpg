@@ -519,6 +519,21 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
+     * Returns the [FileScope] of the file that [scope] belongs to. A [NamespaceScope] and the
+     * [GlobalScope] can be shared between several files, so for them (and for `null`), this returns
+     * `null`.
+     */
+    fun fileScopeOf(scope: Scope?): FileScope? {
+        return when (scope) {
+            null,
+            is NamespaceScope,
+            is GlobalScope -> null
+            is FileScope -> scope
+            else -> scope.astNode?.let { fileScopeOf(it) }
+        }
+    }
+
+    /**
      * This function looks up scope by its FQN. This only works for [NameScope]s.
      *
      * Note: Beware that this only does a very simple lookup in the scope table and DOES NOT take
@@ -1101,17 +1116,22 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      *
      * In case that the lookup returns more than one symbol, this function will emit a warning and
      * return the first symbol found.
+     *
+     * If [fileScope] is set, an unqualified lookup also considers the symbols (e.g., the imports)
+     * of this file scope, see [Scope.lookupSymbol].
      */
     fun lookupTypeSymbolByName(
         name: Name,
         language: Language<*>,
         startScope: Scope?,
+        fileScope: FileScope? = null,
     ): DeclaresType? {
-        var symbols =
+        val symbols =
             lookupSymbolByName(
                     name = name,
                     language = language,
                     startScope = startScope,
+                    fileScope = fileScope,
                     predicate = SymbolFilter.DECLARES_TYPE,
                 )
                 .filterIsInstance<DeclaresType>()
