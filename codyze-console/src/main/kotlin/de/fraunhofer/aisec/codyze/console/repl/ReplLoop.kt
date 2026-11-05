@@ -27,7 +27,10 @@ package de.fraunhofer.aisec.codyze.console.repl
 
 import de.fraunhofer.aisec.codyze.console.AnalyzeRequestJSON
 import de.fraunhofer.aisec.codyze.console.ConsoleService
+import de.fraunhofer.aisec.cpg.graph.Node
 import java.io.File
+import java.io.PrintStream
+import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.system.measureTimeMillis
@@ -39,6 +42,7 @@ import org.jline.reader.Reference
 import org.jline.reader.UserInterruptException
 import org.jline.reader.Widget
 import org.jline.reader.impl.LineReaderImpl
+import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 
 /**
@@ -105,7 +109,7 @@ class ReplLoop(
         // supports. The colored Tab Status dot (OSC 21337) is iTerm2 3.7+-specific but has no
         // profile-configuration prerequisite, unlike the Badge. Both are set unconditionally,
         // guarded only by not being a dumb/non-TTY terminal.
-        val isRealTerminal = terminal.type != org.jline.terminal.Terminal.TYPE_DUMB
+        val isRealTerminal = terminal.type != Terminal.TYPE_DUMB
         fun setStatus(busy: Boolean) {
             if (!isRealTerminal) return
             val title = statusTitle(busy)
@@ -208,7 +212,7 @@ class ReplLoop(
     }
 
     /** Prints a short "ready" summary once analysis is finished. */
-    private fun printReadyLine(out: java.io.PrintWriter) {
+    private fun printReadyLine(out: PrintWriter) {
         val tr = replService.translationResult
         if (tr != null) {
             val tus = tr.components.flatMap { it.translationUnits }.size
@@ -230,7 +234,7 @@ class ReplLoop(
          * before analysis starts so the user sees the banner immediately and knows the slow log
          * noise that follows is expected work, not a freeze.
          */
-        fun printStartupBanner(out: java.io.PrintStream, sourceDir: String?) {
+        fun printStartupBanner(out: PrintStream, sourceDir: String?) {
             out.println(CYAN + CODYZE_BANNER + RESET)
             out.println(
                 "${BOLD}Codyze REPL${RESET}${DIM} — Kotlin scripting against the analyzed CPG.${RESET}"
@@ -271,7 +275,7 @@ class ReplLoop(
     }
 
     /** Returns false to signal exit. */
-    private fun handleMeta(input: String, out: java.io.PrintWriter): Boolean {
+    private fun handleMeta(input: String, out: PrintWriter): Boolean {
         val parts = input.removePrefix(":").trim().split(Regex("\\s+"), limit = 2)
         val cmd = parts[0]
         val arg = parts.getOrNull(1)?.trim().orEmpty()
@@ -294,7 +298,7 @@ class ReplLoop(
         return true
     }
 
-    private fun printHelp(out: java.io.PrintWriter) {
+    private fun printHelp(out: PrintWriter) {
         out.println(
             """
             |Meta-commands:
@@ -321,7 +325,7 @@ class ReplLoop(
         )
     }
 
-    private fun reloadAnalysis(arg: String, out: java.io.PrintWriter) {
+    private fun reloadAnalysis(arg: String, out: PrintWriter) {
         // Parse arguments: support ":reload <path> --concepts <file>"
         val tokens = arg.split(Regex("\\s+"))
         var sourceDir: String? = null
@@ -400,7 +404,7 @@ class ReplLoop(
      * No argument: re-uses `replService.lastValue`. With argument: evaluates the expression, then
      * exports its result.
      */
-    private fun exportFlow(arg: String, out: java.io.PrintWriter) {
+    private fun exportFlow(arg: String, out: PrintWriter) {
         if (arg.isNotEmpty()) {
             // Run the expression so its return value is captured in lastValue.
             when (val res = replService.eval(arg)) {
@@ -446,7 +450,7 @@ class ReplLoop(
      *
      * No argument: uses `replService.lastValue`. With argument: evaluates the expression first.
      */
-    private fun exportDfg(arg: String, out: java.io.PrintWriter) {
+    private fun exportDfg(arg: String, out: PrintWriter) {
         val node =
             if (arg.isNotEmpty()) {
                 when (val res = replService.eval(arg)) {
@@ -468,7 +472,7 @@ class ReplLoop(
                 replService.lastValue
             }
 
-        if (node !is de.fraunhofer.aisec.cpg.graph.Node) {
+        if (node !is Node) {
             out.println(
                 "No node to visualize. Run an expression that returns a Node, " +
                     "or pass one: :dfg <expr>"
@@ -480,7 +484,7 @@ class ReplLoop(
         if (result.isNotEmpty()) out.println(result)
     }
 
-    private fun printImports(out: java.io.PrintWriter) {
+    private fun printImports(out: PrintWriter) {
         // Mirror the imports in CpgQueryScript so the user knows what's already in scope.
         listOf(
                 "de.fraunhofer.aisec.cpg.*",
@@ -496,7 +500,7 @@ class ReplLoop(
             .forEach { out.println("  import $it") }
     }
 
-    private fun printResultSummary(out: java.io.PrintWriter) {
+    private fun printResultSummary(out: PrintWriter) {
         val tr = replService.translationResult
         if (tr == null) {
             out.println("No analysis loaded.")
@@ -505,7 +509,7 @@ class ReplLoop(
         out.println(replService.render(tr.components.flatMap { it.translationUnits }))
     }
 
-    private fun saveSession(arg: String, out: java.io.PrintWriter) {
+    private fun saveSession(arg: String, out: PrintWriter) {
         if (arg.isEmpty()) {
             out.println("Usage: :save <file>")
             return

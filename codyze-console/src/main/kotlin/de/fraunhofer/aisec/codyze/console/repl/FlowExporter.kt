@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import java.io.File
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -166,7 +167,7 @@ object FlowExporter {
         return root.toString()
     }
 
-    private fun kotlinx.serialization.json.JsonObjectBuilder.result(flow: List<Node>) {
+    private fun JsonObjectBuilder.result(flow: List<Node>) {
         put("ruleId", "CodyzeFlow")
         put("level", "note")
         putJsonObject("message") {
@@ -205,7 +206,7 @@ object FlowExporter {
         }
     }
 
-    private fun kotlinx.serialization.json.JsonObjectBuilder.location(node: Node) {
+    private fun JsonObjectBuilder.location(node: Node) {
         val loc = node.location
         val uri = loc?.artifactLocation?.uri?.toString() ?: return
         val region = loc.region

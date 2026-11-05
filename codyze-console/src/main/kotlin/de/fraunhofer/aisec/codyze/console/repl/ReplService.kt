@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.codyze.console.repl
 import de.fraunhofer.aisec.codyze.console.ConsoleService
 import de.fraunhofer.aisec.codyze.console.CpgQueryScript
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.printDFG
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
@@ -223,7 +224,7 @@ class ReplService(private val consoleService: ConsoleService) {
  * prints it directly into the terminal. Otherwise falls back to writing a `.mermaid` file and
  * opening it externally (VS Code, or the OS default handler).
  */
-fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node, theme: Theme = Theme.DARK): String {
+fun openDFG(node: Node, theme: Theme = Theme.DARK): String {
     val mermaidWithWrapper = node.printDFG()
     // Remove the markdown code fence wrapper
     val mermaid = mermaidWithWrapper.removeSurrounding("```mermaid\n", "\n```")

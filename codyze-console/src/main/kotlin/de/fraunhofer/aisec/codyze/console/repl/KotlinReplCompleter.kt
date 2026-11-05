@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.repl
 
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.SourceCode
 import kotlin.script.experimental.api.SourceCodeCompletionVariant
@@ -51,7 +52,7 @@ import org.jline.reader.ParsedLine
  */
 class KotlinReplCompleter(private val replService: ReplService) : Completer {
 
-    private val completionCounter = java.util.concurrent.atomic.AtomicInteger(0)
+    private val completionCounter = AtomicInteger(0)
 
     override fun complete(
         reader: LineReader,
