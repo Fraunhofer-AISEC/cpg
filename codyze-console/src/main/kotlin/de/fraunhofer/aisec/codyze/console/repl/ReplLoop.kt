@@ -384,6 +384,15 @@ class ReplLoop(
                     return
                 }
 
+        // The analysis itself doesn't fail for a missing directory, it just produces an empty
+        // result, which would silently replace the current one.
+        if (!File(finalSourceDir).isDirectory) {
+            out.println(
+                "Reload failed: ${TerminalText.sanitize(finalSourceDir)} is not a directory"
+            )
+            return
+        }
+
         // Preserve includeDir/topLevel from the previous analysis — :reload only lets the user
         // override the source dir and --concepts, not those two.
         val request =
