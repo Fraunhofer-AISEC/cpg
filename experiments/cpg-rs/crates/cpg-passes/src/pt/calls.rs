@@ -120,7 +120,7 @@ impl<'g, 'a> Pt<'g, 'a> {
 
     /// `mergeFSEntry`
     pub(super) fn merge_fs_entry(&mut self, f: N, key: FKey, new: FsEntry) {
-        let list = self.fsum.entry(f).or_default();
+        let mut list = self.fsum.entry(f).or_default();
         let slot = match list.iter().position(|(k, _)| *k == key) {
             Some(i) => i,
             None => {
@@ -161,7 +161,7 @@ impl<'g, 'a> Pt<'g, 'a> {
         }
         let rets = self.returns_of(f);
         let keys: Vec<N> = if rets.is_empty() { vec![f] } else { rets };
-        let list = self.fsum.entry(f).or_default();
+        let mut list = self.fsum.entry(f).or_default();
         for k in keys {
             list.push((FKey::Node(k), entries.clone()));
         }
@@ -185,7 +185,7 @@ impl<'g, 'a> Pt<'g, 'a> {
             .collect();
         let rets = self.returns_of(f);
         let keys: Vec<N> = if rets.is_empty() { vec![f] } else { rets };
-        let list = self.fsum.entry(f).or_default();
+        let mut list = self.fsum.entry(f).or_default();
         for k in keys {
             list.push((FKey::Node(k), entries.clone()));
         }
@@ -302,7 +302,7 @@ impl<'g, 'a> Pt<'g, 'a> {
         for inv in invokes {
             self.calculate_function_summaries(inv);
             self.incoming_contexts(inv, call, st);
-            let entries_by_key = self.fsum.get(&inv).cloned().unwrap_or_default();
+            let entries_by_key = self.fsum.get(&inv).map(|r| r.clone()).unwrap_or_default();
             let args = self.arguments(call);
             let mut work: Vec<Work> = Vec::new();
             for (fk, entries) in &entries_by_key {
@@ -375,12 +375,7 @@ impl<'g, 'a> Pt<'g, 'a> {
     /// The memory address a callee creates per call (`CallToMemAddrMap`).
     fn call_memory_address(&mut self, call: N, name: &str) -> N {
         let k = (call, format!("callmem:{name}"));
-        if let Some(&n) = self.unknowns.get(&k) {
-            return n;
-        }
-        let n = self.new_synth(SClass::Memory, &Name::plain(name), false);
-        self.unknowns.insert(k, n);
-        n
+        *self.unknowns.entry(k).or_insert_with(|| self.new_synth(SClass::Memory, &Name::plain(name), false))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -441,7 +436,7 @@ impl<'g, 'a> Pt<'g, 'a> {
             } else {
                 self.get_nested_values(st, arg, 1, false, true, true)
             };
-            let pmvs = self.param_mvs.get(&p).cloned().unwrap_or_default();
+            let pmvs = self.param_mvs.get(&p).map(|r| r.clone()).unwrap_or_default();
             let deref: Vec<N> = pmvs.iter().copied().filter(|&m| self.synth_of(m).unwrap().local == "derefvalue").collect();
             let derefderef: Vec<N> =
                 pmvs.iter().copied().filter(|&m| self.synth_of(m).unwrap().local == "derefderefvalue").collect();
@@ -942,7 +937,7 @@ impl<'g, 'a> Pt<'g, 'a> {
     /// `storeFunctionSummary` (without the detailed short function summary)
     pub(super) fn store_function_summary(&mut self, f: N, st: &mut State) {
         // clearFSDummies
-        if let Some(l) = self.fsum.get_mut(&f) {
+        if let Some(mut l) = self.fsum.get_mut(&f) {
             l.retain(|(k, _)| *k != FKey::Dummy);
         }
         for param in self.params(f) {

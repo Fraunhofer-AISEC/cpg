@@ -7,3 +7,6 @@ version.workspace = true
 cpg-core.workspace = true
 rustc-hash.workspace = true
 im = "15"
+rayon = "1"
+dashmap = "6"
+boxcar = "0.2"

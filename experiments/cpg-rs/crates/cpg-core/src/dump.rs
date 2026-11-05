@@ -47,7 +47,7 @@ pub fn dump(g: &Graph, unit_name: &str) -> String {
 
     let ref_str = |id: u32| -> String {
         if id >= crate::SYNTH_BASE {
-            let (class, name) = &g.synth[(id - crate::SYNTH_BASE) as usize];
+            let (class, name) = &g.synth[((id - crate::SYNTH_BASE) & 0x0FFF_FFFF) as usize];
             format!("ext:{class}({name})")
         } else {
             format!("#{}", dump_id[id as usize])

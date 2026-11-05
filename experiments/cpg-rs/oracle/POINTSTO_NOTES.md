@@ -176,3 +176,12 @@ Results: c-tests 99.3 %, probes 98.9 %. Left: (1) the detailed short FS in `addP
 from arguments that influence a written parameter; needs the backward DFG walker, step 5), (2) stdlib profile function
 summaries (a declared `strlen` has a summary from the profile, so `handleEmptyFunction` takes its second branch),
 (3) non-deterministic Kotlin choices (callee prototype vs definition, finding #23).
+
+## Parallel points-to (call-graph waves)
+
+`pt.rs` splits `Shared` (graph structure + concurrent tables: DashMap, boxcar for the synthetic nodes whose class/global flag
+are bits of the id) from `Pt` (one task: chain, edges). The functions are grouped in strongly connected components of the call
+graph (Tarjan), the components are processed level by level (callees first), the components of one level in parallel (rayon,
+`PT_THREADS`); a component of mutually recursive functions runs on one thread. Edges are collected per task and added in
+level/component order. Difference to Kotlin: a callee is analyzed in its own wave, not inside the time budget of its caller.
+sqlite3.c, 1 s per function: 348 s sequential -> 88 s on 12 cores (302 functions time out).

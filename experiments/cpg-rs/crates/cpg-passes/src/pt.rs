@@ -20,7 +20,8 @@ use std::sync::Arc;
 use im::OrdMap;
 
 use cpg_core::{Access, Granularity, Graph, Kind, NONE, SYNTH_BASE};
-use rustc_hash::FxHashMap;
+use dashmap::DashMap;
+use rustc_hash::{FxBuildHasher, FxHashMap};
 
 use crate::numeric::numeric;
 
@@ -309,31 +310,79 @@ struct Fetched {
     last_writes: Set<Key>,
 }
 
-struct Pt<'g, 'a> {
-    g: &'g mut Graph<'a>,
-    cfg: Config,
+type Map<K, V> = DashMap<K, V, FxBuildHasher>;
+
+/// What all the function analyses share: the immutable structure of the graph, and the tables that
+/// the analyses fill (concurrently, one function per task).
+struct Shared {
     parent: Vec<N>,
     ref_of: Vec<N>,
     succ: Vec<Vec<N>>,
-    synth: Vec<Synth>,
-    /// `node.memoryAddresses`
-    mem_addrs: FxHashMap<N, Vec<N>>,
-    /// `param.memoryValues` (the `ParameterMemoryValue`s)
-    param_mvs: FxHashMap<N, Vec<N>>,
-    /// `nodesCreatingUnknownValues`
-    unknowns: FxHashMap<(N, String), N>,
-    origins: FxHashMap<N, Origin>,
-    summaries: FxHashMap<(N, String, bool), N>,
-    /// `globalDerefs`
-    global_derefs: FxHashMap<N, Set<(N, bool)>>,
-    /// the temporary subscriptions of `getAddresses` of a dereference of `ptr + literal`: (array, index)
     fn_of: Vec<N>,
     /// the invoked functions of a call
     invokes: FxHashMap<N, Vec<N>>,
+    synth: boxcar::Vec<Synth>,
+    /// `node.memoryAddresses`
+    mem_addrs: Map<N, Vec<N>>,
+    /// `param.memoryValues` (the `ParameterMemoryValue`s)
+    param_mvs: Map<N, Vec<N>>,
+    /// `nodesCreatingUnknownValues`
+    unknowns: Map<(N, String), N>,
+    origins: Map<N, Origin>,
+    summaries: Map<(N, String, bool), N>,
+    /// `globalDerefs`
+    global_derefs: Map<N, Set<(N, bool)>>,
     /// `function.functionSummary`, in insertion order
-    fsum: FxHashMap<N, Vec<(FKey, Vec<FsEntry>)>>,
+    fsum: Map<N, Vec<(FKey, Vec<FsEntry>)>>,
+}
+
+/// A data flow edge a task found: (from, to, granularity, function summary flag, contexts).
+type EdgeOut = (N, N, Granularity, bool, Vec<(bool, Vec<N>)>);
+
+/// The analysis of one function (or of a group of mutually recursive ones) on one thread.
+struct Pt<'g, 'a> {
+    g: &'g Graph<'a>,
+    cfg: &'g Config,
+    parent: &'g Vec<N>,
+    ref_of: &'g Vec<N>,
+    succ: &'g Vec<Vec<N>>,
+    fn_of: &'g Vec<N>,
+    invokes: &'g FxHashMap<N, Vec<N>>,
+    synth: &'g boxcar::Vec<Synth>,
+    mem_addrs: &'g Map<N, Vec<N>>,
+    param_mvs: &'g Map<N, Vec<N>>,
+    unknowns: &'g Map<(N, String), N>,
+    origins: &'g Map<N, Origin>,
+    summaries: &'g Map<(N, String, bool), N>,
+    global_derefs: &'g Map<N, Set<(N, bool)>>,
+    fsum: &'g Map<N, Vec<(FKey, Vec<FsEntry>)>>,
     /// the functions that are being analyzed (`functionSummaryAnalysisChain`)
     chain: Vec<N>,
+    edges: Vec<EdgeOut>,
+}
+
+impl<'g, 'a> Pt<'g, 'a> {
+    fn new(g: &'g Graph<'a>, cfg: &'g Config, sh: &'g Shared) -> Self {
+        Pt {
+            g,
+            cfg,
+            parent: &sh.parent,
+            ref_of: &sh.ref_of,
+            succ: &sh.succ,
+            fn_of: &sh.fn_of,
+            invokes: &sh.invokes,
+            synth: &sh.synth,
+            mem_addrs: &sh.mem_addrs,
+            param_mvs: &sh.param_mvs,
+            unknowns: &sh.unknowns,
+            origins: &sh.origins,
+            summaries: &sh.summaries,
+            global_derefs: &sh.global_derefs,
+            fsum: &sh.fsum,
+            chain: Vec::new(),
+            edges: Vec::new(),
+        }
+    }
 }
 
 mod calls;
@@ -384,55 +433,201 @@ pub fn pointsto_with(g: &mut Graph, cfg: Config) {
             }
         }
     }
-    let mut p = Pt {
-        g,
-        cfg,
+    let sh = Shared {
         parent,
         ref_of,
         succ,
-        synth: Vec::new(),
-        mem_addrs: FxHashMap::default(),
-        param_mvs: FxHashMap::default(),
-        unknowns: FxHashMap::default(),
-        origins: FxHashMap::default(),
-        summaries: FxHashMap::default(),
-        global_derefs: FxHashMap::default(),
         fn_of,
         invokes,
-        fsum: FxHashMap::default(),
-        chain: Vec::new(),
+        synth: boxcar::Vec::new(),
+        mem_addrs: Map::default(),
+        param_mvs: Map::default(),
+        unknowns: Map::default(),
+        origins: Map::default(),
+        summaries: Map::default(),
+        global_derefs: Map::default(),
+        fsum: Map::default(),
     };
-    let total = (0..n as u32).filter(|&f| p.g.nodes[f as usize].kind == Kind::Function).count();
-    let (mut done, mut last_log) = (0usize, std::time::Instant::now());
-    let started = last_log;
-    let progress = std::env::var("PT_PROGRESS").is_ok();
-    for f in 0..n as u32 {
-        if p.g.nodes[f as usize].kind == Kind::Function {
-            done += 1;
-            if progress && last_log.elapsed() >= std::time::Duration::from_secs(5) {
-                last_log = std::time::Instant::now();
-                eprintln!("[{done}/{total}] functions, {:?} elapsed", started.elapsed());
-            }
-            if p.has_body(f) {
-                if !p.succ[f as usize].is_empty() {
-                    p.analyze(f);
+
+    // the call graph between the functions, in strongly connected components, callees first
+    let funcs: Vec<N> = (0..n as u32).filter(|&f| g.nodes[f as usize].kind == Kind::Function).collect();
+    let total = funcs.len();
+    let mut index_of: FxHashMap<N, usize> = FxHashMap::default();
+    for (i, &f) in funcs.iter().enumerate() {
+        index_of.insert(f, i);
+    }
+    let mut callees: Vec<Vec<usize>> = vec![Vec::new(); total];
+    for (&call, invs) in &sh.invokes {
+        let f = sh.fn_of[call as usize];
+        if let Some(&fi) = index_of.get(&f) {
+            for inv in invs {
+                if let Some(&ci) = index_of.get(inv) {
+                    if !callees[fi].contains(&ci) {
+                        callees[fi].push(ci);
+                    }
                 }
-            } else {
-                p.analyze_empty(f);
-            }
-        }
-        // the implicit constructor of a record returns its `this`
-        if p.g.nodes[f as usize].kind == Kind::Constructor {
-            let this: Vec<u32> = p
-                .g
-                .children(f)
-                .filter(|&c| p.g.nodes[c as usize].kind == Kind::Variable && p.g.name_str(c) == "this")
-                .collect();
-            for t in this {
-                p.g.add_dfg(t, f, Granularity::Full);
             }
         }
     }
+    for c in callees.iter_mut() {
+        c.sort_unstable();
+    }
+    let (comp_of, comps) = tarjan(&callees);
+    // level of a component: one more than the highest level of what it calls
+    let mut level = vec![0usize; comps.len()];
+    // Tarjan numbers the components callees first
+    for (ci, members) in comps.iter().enumerate() {
+        let mut l = 0;
+        for &m in members {
+            for &c in &callees[m] {
+                if comp_of[c] != ci {
+                    l = l.max(level[comp_of[c]] + 1);
+                }
+            }
+        }
+        level[ci] = l;
+    }
+    let max_level = level.iter().copied().max().unwrap_or(0);
+    let mut by_level: Vec<Vec<usize>> = vec![Vec::new(); max_level + 1];
+    for (ci, &l) in level.iter().enumerate() {
+        by_level[l].push(ci);
+    }
+
+    let done = std::sync::atomic::AtomicUsize::new(0);
+    let started = std::time::Instant::now();
+    let last_log = std::sync::Mutex::new(started);
+    let progress = std::env::var("PT_PROGRESS").is_ok();
+    let pool = rayon::ThreadPoolBuilder::new()
+        .stack_size(256 << 20)
+        .num_threads(std::env::var("PT_THREADS").ok().and_then(|v| v.parse().ok()).unwrap_or(0))
+        .build()
+        .unwrap();
+    let mut all_edges: Vec<EdgeOut> = Vec::new();
+    {
+        let g: &Graph = g;
+        for (li, comps_here) in by_level.iter().enumerate() {
+            use rayon::prelude::*;
+            let results: Vec<Vec<EdgeOut>> = pool.install(|| {
+                comps_here
+                    .par_iter()
+                    .map(|&ci| {
+                        let mut p = Pt::new(g, &cfg, &sh);
+                        for &m in &comps[ci] {
+                            let f = funcs[m];
+                            if p.has_body(f) {
+                                if !p.succ[f as usize].is_empty() {
+                                    p.analyze(f);
+                                }
+                            } else {
+                                p.analyze_empty(f);
+                            }
+                            let d = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                            if progress {
+                                let mut l = last_log.lock().unwrap();
+                                if l.elapsed() >= std::time::Duration::from_secs(5) {
+                                    *l = std::time::Instant::now();
+                                    eprintln!(
+                                        "[{d}/{total}] functions, level {li}/{max_level}, {:?} elapsed",
+                                        started.elapsed()
+                                    );
+                                }
+                            }
+                        }
+                        p.edges
+                    })
+                    .collect()
+            });
+            for r in results {
+                all_edges.extend(r);
+            }
+        }
+    }
+    g.synth = sh
+        .synth
+        .iter()
+        .map(|(_, s)| {
+            let cls = match s.class {
+                SClass::Memory => "MemoryAddress",
+                SClass::Unknown => "UnknownMemoryValue",
+                SClass::Param => "ParameterMemoryValue",
+            };
+            (cls, s.full.clone())
+        })
+        .collect();
+    for (from, to, gran, fs, ctx) in all_edges {
+        g.add_dfg_ext(from, to, gran, fs, ctx);
+    }
+    // the implicit constructor of a record returns its `this`
+    for f in 0..n as u32 {
+        if g.nodes[f as usize].kind == Kind::Constructor {
+            let this: Vec<u32> = g
+                .children(f)
+                .filter(|&c| g.nodes[c as usize].kind == Kind::Variable && g.name_str(c) == "this")
+                .collect();
+            for t in this {
+                g.add_dfg(t, f, Granularity::Full);
+            }
+        }
+    }
+}
+
+/// Tarjan's algorithm (iterative): the component of every node, and the components, callees first.
+fn tarjan(adj: &[Vec<usize>]) -> (Vec<usize>, Vec<Vec<usize>>) {
+    let n = adj.len();
+    let mut index = vec![usize::MAX; n];
+    let mut low = vec![0usize; n];
+    let mut on = vec![false; n];
+    let mut comp_of = vec![usize::MAX; n];
+    let mut comps: Vec<Vec<usize>> = Vec::new();
+    let mut stack: Vec<usize> = Vec::new();
+    let mut counter = 0;
+    for root in 0..n {
+        if index[root] != usize::MAX {
+            continue;
+        }
+        let mut work: Vec<(usize, usize)> = vec![(root, 0)];
+        index[root] = counter;
+        low[root] = counter;
+        counter += 1;
+        stack.push(root);
+        on[root] = true;
+        while let Some(&mut (v, ref mut i)) = work.last_mut() {
+            if *i < adj[v].len() {
+                let w = adj[v][*i];
+                *i += 1;
+                if index[w] == usize::MAX {
+                    index[w] = counter;
+                    low[w] = counter;
+                    counter += 1;
+                    stack.push(w);
+                    on[w] = true;
+                    work.push((w, 0));
+                } else if on[w] {
+                    low[v] = low[v].min(index[w]);
+                }
+            } else {
+                work.pop();
+                if let Some(&(u, _)) = work.last() {
+                    low[u] = low[u].min(low[v]);
+                }
+                if low[v] == index[v] {
+                    let mut comp = Vec::new();
+                    loop {
+                        let w = stack.pop().unwrap();
+                        on[w] = false;
+                        comp_of[w] = comps.len();
+                        comp.push(w);
+                        if w == v {
+                            break;
+                        }
+                    }
+                    comp.sort_unstable();
+                    comps.push(comp);
+                }
+            }
+        }
+    }
+    (comp_of, comps)
 }
 
 impl<'g, 'a> Pt<'g, 'a> {
@@ -456,7 +651,7 @@ impl<'g, 'a> Pt<'g, 'a> {
     }
     fn synth_of(&self, n: N) -> Option<&Synth> {
         if n >= SYNTH_BASE {
-            Some(&self.synth[(n - SYNTH_BASE) as usize])
+            self.synth.get(((n - SYNTH_BASE) & 0x0FFF_FFFF) as usize)
         } else {
             None
         }
@@ -464,11 +659,19 @@ impl<'g, 'a> Pt<'g, 'a> {
     fn is_memory(&self, n: N) -> bool {
         n >= SYNTH_BASE
     }
+    /// The class of a synthetic node is part of its id (bits 28 and 29).
+    fn sclass(n: N) -> SClass {
+        match ((n - SYNTH_BASE) >> 28) & 3 {
+            0 => SClass::Memory,
+            1 => SClass::Unknown,
+            _ => SClass::Param,
+        }
+    }
     fn is_pmv(&self, n: N) -> bool {
-        self.synth_of(n).is_some_and(|s| s.class == SClass::Param)
+        n >= SYNTH_BASE && Self::sclass(n) == SClass::Param
     }
     fn is_unknown(&self, n: N) -> bool {
-        self.synth_of(n).is_some_and(|s| s.class == SClass::Unknown)
+        n >= SYNTH_BASE && Self::sclass(n) == SClass::Unknown
     }
     /// A node with a memory address (`ValueDeclaration`).
     fn is_value_decl(&self, n: N) -> bool {
@@ -485,15 +688,19 @@ impl<'g, 'a> Pt<'g, 'a> {
         )
     }
 
-    fn new_synth(&mut self, class: SClass, name: &Name, global: bool) -> N {
-        self.synth.push(Synth { class, local: name.local.clone(), full: name.full.clone(), global });
-        let cls = match class {
-            SClass::Memory => "MemoryAddress",
-            SClass::Unknown => "UnknownMemoryValue",
-            SClass::Param => "ParameterMemoryValue",
+    fn new_synth(&self, class: SClass, name: &Name, global: bool) -> N {
+        let idx = self.synth.push(Synth {
+            class,
+            local: name.local.clone(),
+            full: name.full.clone(),
+            global,
+        }) as u32;
+        let c = match class {
+            SClass::Memory => 0,
+            SClass::Unknown => 1,
+            SClass::Param => 2,
         };
-        self.g.synth.push((cls, name.full.clone()));
-        SYNTH_BASE + (self.synth.len() - 1) as u32
+        SYNTH_BASE + (((global as u32) << 30) | (c << 28) | idx)
     }
 
     /// The name of any node.
@@ -662,54 +869,46 @@ impl<'g, 'a> Pt<'g, 'a> {
     }
 
     /// `syntheticNodeFor`
-    fn synthetic_for(&mut self, base: N, name: &Name, is_value: bool, class: SClass, global: bool) -> N {
-        let origin = self.origins.get(&base).copied();
+    fn synthetic_for(&self, base: N, name: &Name, is_value: bool, class: SClass, global: bool) -> N {
+        let origin = self.origins.get(&base).map(|o| *o);
         let root = origin.map_or(base, |o| o.root);
         let depth = origin.map_or(0, |o| o.depth) + 1;
         let within = self.cfg.max_synthetic_chain_depth.is_none_or(|m| depth <= m);
         if within {
-            if let Some(&n) = self.unknowns.get(&(base, name.full.clone())) {
-                return n;
-            }
-            let n = self.new_synth(class, name, global);
-            self.unknowns.insert((base, name.full.clone()), n);
-            self.origins.insert(n, Origin { root, depth, summary: false });
-            return n;
+            return *self.unknowns.entry((base, name.full.clone())).or_insert_with(|| {
+                let n = self.new_synth(class, name, global);
+                self.origins.insert(n, Origin { root, depth, summary: false });
+                n
+            });
         }
         let k = (root, name.full.clone(), is_value);
-        if let Some(&n) = self.summaries.get(&k) {
-            return n;
-        }
-        let n = self.new_synth(class, name, global);
-        self.summaries.insert(k, n);
-        self.origins.insert(
-            n,
-            Origin { root, depth: self.cfg.max_synthetic_chain_depth.unwrap_or(0), summary: true },
-        );
-        n
+        let max = self.cfg.max_synthetic_chain_depth.unwrap_or(0);
+        *self.summaries.entry(k).or_insert_with(|| {
+            let n = self.new_synth(class, name, global);
+            self.origins.insert(n, Origin { root, depth: max, summary: true });
+            n
+        })
     }
 
     /// `nodesCreatingUnknownValues.computeIfAbsent(UnknownValueKey(node, name))`
-    fn unknown_value(&mut self, node: N, name: &Name) -> N {
-        if let Some(&n) = self.unknowns.get(&(node, name.full.clone())) {
-            return n;
-        }
-        let n = self.new_synth(SClass::Unknown, name, false);
-        self.unknowns.insert((node, name.full.clone()), n);
-        n
+    fn unknown_value(&self, node: N, name: &Name) -> N {
+        *self
+            .unknowns
+            .entry((node, name.full.clone()))
+            .or_insert_with(|| self.new_synth(SClass::Unknown, name, false))
     }
 
     // ---------------------------------------------------------------- the state fetchers
 
     /// The memory addresses of a value declaration or binary operator (created on demand).
     fn memory_addresses(&mut self, n: N) -> Vec<N> {
-        if self.mem_addrs.get(&n).is_none_or(|v| v.is_empty()) {
-            let name = self.name_of(n);
-            let global = self.is_global(n);
-            let a = self.new_synth(SClass::Memory, &name, global);
-            self.mem_addrs.entry(n).or_default().push(a);
+        let name = self.name_of(n);
+        let global = self.is_global(n);
+        let mut e = self.mem_addrs.entry(n).or_default();
+        if e.is_empty() {
+            e.push(self.new_synth(SClass::Memory, &name, global));
         }
-        self.mem_addrs[&n].clone()
+        e.clone()
     }
 
     /// `fetchFieldAddresses`
@@ -766,8 +965,8 @@ impl<'g, 'a> Pt<'g, 'a> {
                 add_full(&mut ret, node, false, "", &none);
                 return ret;
             }
-            if let Some(el) = self.global_derefs.get(&node) {
-                for &(v, _) in el {
+            if let Some(el) = self.global_derefs.get(&node).map(|r| r.clone()) {
+                for &(v, _) in &el {
                     add_full(&mut ret, v, false, "", &none);
                 }
             } else if self.is_unknown(node) {
@@ -886,8 +1085,8 @@ impl<'g, 'a> Pt<'g, 'a> {
                 let mut ret = Set::new();
                 for addr in self.get_addresses(st, node, node) {
                     if self.is_global(addr) {
-                        if let Some(el) = self.global_derefs.get(&addr) {
-                            for &(v, s) in el {
+                        if let Some(el) = self.global_derefs.get(&addr).map(|r| r.clone()) {
+                            for &(v, s) in &el {
                                 ret.insert(key(v, Props::fs(s)));
                             }
                         }
@@ -1018,13 +1217,14 @@ impl<'g, 'a> Pt<'g, 'a> {
                     return Set::from([d]);
                 }
                 if self.is_value_decl(d) {
-                    if self.mem_addrs.get(&d).is_none_or(|v| v.is_empty()) {
+                    let empty = self.mem_addrs.get(&d).is_none_or(|v| v.is_empty());
+                    if empty {
                         let name = self.name_of(node);
                         let global = self.is_global(node);
                         let a = self.new_synth(SClass::Memory, &name, global);
                         self.mem_addrs.entry(d).or_default().push(a);
                     }
-                    return self.mem_addrs[&d].iter().copied().collect();
+                    return self.mem_addrs.get(&d).map(|v| v.iter().copied().collect()).unwrap_or_default();
                 }
                 Set::new()
             }
@@ -1323,7 +1523,7 @@ impl<'g, 'a> Pt<'g, 'a> {
                 // a `ParameterMemoryValue` has memory addresses as well
                 if self.is_pmv(key) {
                     let add: Vec<N> = e.addrs.iter().copied().filter(|&a| self.is_memory(a)).collect();
-                    let v = self.mem_addrs.entry(key).or_default();
+                    let mut v = self.mem_addrs.entry(key).or_default();
                     for a in add {
                         if !v.contains(&a) {
                             v.push(a);
@@ -1336,7 +1536,7 @@ impl<'g, 'a> Pt<'g, 'a> {
                 && !(self.is(key, Kind::Variable) && self.global_variable(key))
             {
                 let add: Vec<N> = e.addrs.iter().copied().filter(|&a| self.is_memory(a)).collect();
-                let v = self.mem_addrs.entry(key).or_default();
+                let mut v = self.mem_addrs.entry(key).or_default();
                 for a in add {
                     if !v.contains(&a) {
                         v.push(a);
@@ -1359,7 +1559,7 @@ impl<'g, 'a> Pt<'g, 'a> {
                         Ctx::Out(v) => (false, v.clone()),
                     })
                     .collect();
-                self.g.add_dfg_ext(k.n, key, gran, k.p.fs == Some(true), ctx);
+                self.edges.push((k.n, key, gran, k.p.fs == Some(true), ctx));
             }
         }
     }
