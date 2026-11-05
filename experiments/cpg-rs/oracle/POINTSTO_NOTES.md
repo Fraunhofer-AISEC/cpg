@@ -134,3 +134,34 @@ Result against the Kotlin goldens (run with `PART_DETAIL=1` so partial targets p
 77.8 % / 89.2 %). All that is left are calls (call edges with calling contexts `<in:#n>/<out:#n>`, function
 summaries, short FS `!fs` edges), `new`/`delete`, for-each, and record-aware initializer lists.
 Next: milestone 2 = `handleCall` + function summaries + calling contexts (Kotlin 1360-3470).
+
+## Milestone 2 (calls): what is read, and the plan
+
+Read (Kotlin `PointsToPass.kt`): `handleCall` 2479-2692, `calculatePrevDFGs` 2694, `calculateFunctionSummaries` 2742,
+`writeMapEntriesToState` 2853, `addEntryToMap` 2955, `createPropertySet` 3325, `calculateCallDestinations` 3368,
+`calculateIncomingCallingContexts` 1999 + `innerCalculateIncomingCallingContexts` 2132, `handleReturn` FS part 1864,
+`storeFunctionSummary` 1501, `addParameterInfoToFS` 1360, `mergeFSEntry` 772, `handleEmptyFunction` 1210,
+`addDummyFunctionSummary` 1163, `FSEntry` (Function.kt:120; equality ignores lastWrites).
+
+Structure of a call (`handleCall`), per invoked function (header declarations are dropped if the same name+type has a body):
+1. `calculateFunctionSummaries`: analyze the callee first (recursion -> dummy summary; no body -> dummy summary: every
+   parameter flows into the return / the function itself, entries with the short-FS flag).
+2. `calculateIncomingCallingContexts`: arg -> Parameter (edge with `CallingContextIn([call])`), arg deref values -> deref PMVs
+   (`derefvalue`, `derefderefvalue`) with the context.
+3. per FS entry (depth 0..3, one depth at a time): `calculateCallDestinations` (where is written) + `addEntryToMap`
+   (what is written, which last writes) into `mapDstToSrc`; then `writeMapEntriesToState` -> `updateValues(overwrite=false)`
+   with `CallingContextOut([call])` appended to the last writes' context chains (not for short-FS entries).
+4. short-FS edges: pushed as last writes (flag true) onto the call node.
+
+Properties in the Rust `Props` that are still missing for this: the calling-context chain (In/Out lists of calls) and the
+function-summary flag on edges (`!fs`); `DfgEdge` needs `fs` and `ctx` (dump prints `!fs` and `<in:#n>/<out:#n>`).
+
+Open sub-project: the *detailed short FS* in `addParameterInfoToFS` uses `followDFGEdgesUntilHitNodes(Backward(DFG),
+OnlyFullDFG+FieldSensitive+ContextSensitive, Interprocedural(maxCallDepth=1, maxSteps=10))`, i.e. the generic traversal engine
+(`GraphTraversal.kt` `followXUntilHitNodes`, `AnalysisConfiguration.kt` `Backward.pickNextStep`/`filterEdges`/call-stack ops).
+It has to be ported as a small, separate DFG walker in Rust, over the graph with the edges drawn so far.
+
+Suggested order: (a) `DfgEdge` with fs+contexts, dump; (b) FS data structure (`FsEntry`, merge by equality ignoring lastWrites);
+(c) bodiless callees + dummy FS; (d) callees with bodies: `storeFunctionSummary` without the detailed short FS,
+incoming/outgoing contexts, destinations; (e) the DFG walker and the detailed short FS; (f) recursion, function pointers
+(`addDynamicInvokesEdges`), methods/receivers (C has none).
