@@ -109,19 +109,23 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Resolves function pointers in a [MemberCall]. In this case the [MemberCall.callee] field is a
-     * binary operator on which [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator.rhs] needs
-     * to have a [FunctionPointerType].
+     * Resolves function pointers in a [MemberCall]. The [MemberCall.callee] is either a binary
+     * operator on whose [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator.rhs] has a
+     * [FunctionPointerType], or -- the common shape -- a [MemberAccess] that reads a function-typed
+     * field, as in `e.cfg.EncodeDuration(d, enc)`. The latter is not a method call at all: the
+     * symbol resolver finds no method of that name on the record and invents an inferred one, so we
+     * also take over when every target is inferred.
      */
     private fun handleMemberCall(call: MemberCall) {
+        if (call.invokes.isNotEmpty() && !call.invokes.all { it.isInferred }) {
+            // The PointsToPass or the symbol resolver found real targets, nothing to do
+            return
+        }
         val callee = call.callee
-        // Only try to resolve if the PointsToPass did not manage to find any invokes edge
-        if (
-            call.invokes.isEmpty() &&
-                callee is BinaryOperator &&
-                callee.rhs.type is FunctionPointerType
-        ) {
+        if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
             handleCallee(call, callee.rhs)
+        } else if (callee is MemberAccess && getFunctionPointerType(callee) != null) {
+            handleCallee(call, callee)
         }
     }
 
@@ -203,6 +207,12 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             prevDFGToPush.forEach(Consumer(work::push))
+        }
+
+        // Keep whatever was there if we found nothing: an inferred target is still better than no
+        // target at all, and dropping it would also drop the DFG edges built on top of it.
+        if (invocationCandidates.isEmpty() && call.invokes.isNotEmpty()) {
+            return
         }
 
         call.invokes = invocationCandidates

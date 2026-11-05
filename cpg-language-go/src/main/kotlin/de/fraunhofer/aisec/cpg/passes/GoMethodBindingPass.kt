@@ -52,10 +52,17 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
  *
  * Once the whole component has been parsed the order no longer matters, so the remaining methods
  * can be bound by name here. This has to happen before [GoInterfaceSatisfactionPass] computes
- * method sets and before [TypeHierarchyResolver] derives the hierarchy from them.
+ * method sets, before [TypeHierarchyResolver] derives the hierarchy from them, and before
+ * [GoExtraPass] promotes the methods of an embedded struct into the embedding one: a method that is
+ * not bound to its receiver's record yet is not part of that record's method set, so it would not
+ * be promoted either. `acmez.Client` embeds `*acme.Client`, whose `RevokeCertificate` is declared
+ * in `certificate.go` while the type itself lives in `client.go` -- the file declaring the method
+ * is parsed first, so without this ordering the promotion silently skips it and every call of
+ * `RevokeCertificate` on the embedding type invents an inferred method instead.
  */
 @RequiresLanguage(GoLanguage::class)
-@DependsOn(GoExtraPass::class)
+@DependsOn(TypeResolver::class)
+@ExecuteBefore(GoExtraPass::class)
 @ExecuteBefore(GoInterfaceSatisfactionPass::class)
 @ExecuteBefore(TypeHierarchyResolver::class)
 @Description(

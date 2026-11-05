@@ -56,14 +56,14 @@ fun getFunctionPointerType(expr: Expression): FunctionPointerType? {
         }
         is FunctionPointerType -> type
         else -> {
-            // some languages allow other types to derive from a function type, in this case
-            // we need to look for a super type
-            val superType = type.superTypes.singleOrNull()
-            if (superType is FunctionType) {
-                superType.pointer() as FunctionPointerType
-            } else {
-                null
-            }
+            // Some languages allow other types to derive from a function type, in this case we
+            // need to look for a super type. A named type can have more super types than the one
+            // it is defined over -- in Go a defined function type such as
+            // `type DurationEncoder func(time.Duration, PrimitiveArrayEncoder)` also gets the
+            // interfaces it satisfies as super types -- so look for the function type among them
+            // instead of requiring it to be the only one.
+            val superType = type.superTypes.filterIsInstance<FunctionType>().singleOrNull()
+            superType?.pointer() as? FunctionPointerType
         }
     }
 }
