@@ -1,0 +1,25 @@
+#0 TranslationUnit name='implicit_casts.c' type='-' loc=1:1-12:3 code='void f(int x) {}\n\n// g simulates a compile error\nvoid g(i'
+  #1 Function name='f' type='(int)void' loc=1:1-1:17 code='void f(int x) {}' eog=[#3] dfg=[#3]
+    #2 Block name='' type='UNKNOWN' loc=1:15-1:17 code='{}'
+      #3 Return name='' type='UNKNOWN' loc=? code=''
+    #4 Parameter name='x' type='int' loc=1:8-1:13 code='int x' dfg=[#19<in:#18>]
+  #5 Function name='g' type='(int)void' loc=4:1-4:17 code='void g(int x) {}' eog=[#7] dfg=[#7]
+    #6 Block name='' type='UNKNOWN' loc=4:15-4:17 code='{}'
+      #7 Return name='' type='UNKNOWN' loc=? code=''
+    #8 Parameter name='x' type='int' loc=4:8-4:13 code='int x' dfg=[#22<in:#21>]
+  #9 Function name='g' type='(float)void' loc=5:1-5:19 code='void g(float x) {}' eog=[#11] dfg=[#11]
+    #10 Block name='' type='UNKNOWN' loc=5:17-5:19 code='{}'
+      #11 Return name='' type='UNKNOWN' loc=? code=''
+    #12 Parameter name='x' type='float' loc=5:8-5:15 code='float x' dfg=[#22<in:#21>]
+  #13 Function name='main' type='()int' loc=7:1-12:2 code='int main() {\n   char x = 'a';\n   f(x);\n\n   g(x);\n}' eog=[#16] dfg=[#24]
+    #14 Block name='' type='UNKNOWN' loc=7:12-12:2 code='{\n   char x = 'a';\n   f(x);\n\n   g(x);\n}'
+      #15 DeclarationStatement name='' type='UNKNOWN' loc=8:4-8:17 code='char x = 'a';' eog=[#20]
+        #16 Variable name='x' type='char' loc=8:9-8:16 code='x = 'a'' eog=[#17] dfg=[#17]
+          #17 Literal name='' type='char' loc=8:13-8:16 code=''a'' eog=[#15]
+      #18 Call name='f' type='void' loc=9:4-9:9 code='f(x);' invokes=[#1] eog=[#23] dfg=[#1<out:#18>]
+        #19 Reference name='x' type='char' loc=9:6-9:7 code='x' refersTo=#16 eog=[#18] dfg=[#16]
+        #20 Reference name='f' type='(int)void' loc=9:4-9:5 code='f' refersTo=#1 eog=[#19] dfg=[#1]
+      #21 Call name='g' type='void' loc=11:4-11:9 code='g(x);' invokes=[#9,#5] eog=[#24] dfg=[#9<out:#21>,#5<out:#21>]
+        #22 Reference name='x' type='char' loc=11:6-11:7 code='x' refersTo=#16 eog=[#21] dfg=[#16]
+        #23 Reference name='g' type='(float)void' loc=11:4-11:5 code='g' refersTo=#9 eog=[#22] dfg=[#9]
+      #24 Return name='' type='UNKNOWN' loc=? code=''

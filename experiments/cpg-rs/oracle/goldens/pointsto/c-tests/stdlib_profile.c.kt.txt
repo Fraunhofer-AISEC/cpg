@@ -1,0 +1,19 @@
+#0 TranslationUnit name='stdlib_profile.c' type='-' loc=1:1-8:3 code='// Neither the types nor memcpy are declared, as the standar'
+  #1 Function name='copy' type='(char*, char*, size_t)void' loc=2:1-4:2 code='void copy(char *dst, char *src, size_t n) {\n    memcpy(dst,' eog=[#7] dfg=[#8]
+    #2 Block name='' type='UNKNOWN' loc=2:43-4:2 code='{\n    memcpy(dst, src, n);\n}'
+      #3 Call name='memcpy' type='UNKNOWN' loc=3:5-3:25 code='memcpy(dst, src, n);' invokes=[] eog=[#8] dfg=[#4,#5,#6]
+        #4 Reference name='dst' type='char*' loc=3:12-3:15 code='dst' refersTo=#9 eog=[#5] dfg=[ext:ParameterMemoryValue(copy.dst.derefvalue),#9,ext:ParameterMemoryValue(copy.dst.derefderefvalue)]
+        #5 Reference name='src' type='char*' loc=3:17-3:20 code='src' refersTo=#10 eog=[#6] dfg=[#10,ext:ParameterMemoryValue(copy.src.derefvalue),ext:ParameterMemoryValue(copy.src.derefderefvalue)]
+        #6 Reference name='n' type='size_t' loc=3:22-3:23 code='n' refersTo=#11 eog=[#3] dfg=[ext:ParameterMemoryValue(copy.n.derefvalue),ext:ParameterMemoryValue(copy.n.derefderefvalue),#11]
+        #7 Reference name='memcpy' type='UNKNOWN' loc=3:5-3:11 code='memcpy' refersTo=- eog=[#4]
+      #8 Return name='' type='UNKNOWN' loc=? code=''
+    #9 Parameter name='dst' type='char*' loc=2:11-2:20 code='char *dst'
+    #10 Parameter name='src' type='char*' loc=2:22-2:31 code='char *src'
+    #11 Parameter name='n' type='size_t' loc=2:33-2:41 code='size_t n'
+  #12 Function name='next' type='(size_t)long int' loc=6:1-8:2 code='long next(size_t size) {\n    return size + 1;\n}' eog=[#16] dfg=[#14]
+    #13 Block name='' type='UNKNOWN' loc=6:24-8:2 code='{\n    return size + 1;\n}'
+      #14 Return name='' type='UNKNOWN' loc=7:5-7:21 code='return size + 1;' dfg=[#15]
+        #15 BinaryOperator name='+' type='size_t' loc=7:12-7:20 code='size + 1' eog=[#14] dfg=[#16,#17]
+          #16 Reference name='size' type='size_t' loc=7:12-7:16 code='size' refersTo=#18 eog=[#17] dfg=[ext:ParameterMemoryValue(next.size.derefderefvalue),ext:ParameterMemoryValue(next.size.derefvalue),#18]
+          #17 Literal name='' type='int' loc=7:19-7:20 code='1' eog=[#15]
+    #18 Parameter name='size' type='size_t' loc=6:11-6:22 code='size_t size'

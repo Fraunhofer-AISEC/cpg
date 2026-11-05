@@ -1,0 +1,24 @@
+#0 TranslationUnit name='va_arg_forms.c' type='-' loc=1:1-9:3 code='typedef long long i64;\n\ndouble forms(void *ap) {\n  *va_ar'
+  #1 Typedef name='i64' type='-' loc=? code=''
+  #2 Function name='forms' type='(void*)double' loc=3:1-9:2 code='double forms(void *ap) {\n  *va_arg(ap, int *) = 1;\n  i64 b' eog=[#7] dfg=[#21]
+    #3 Block name='' type='UNKNOWN' loc=3:24-9:2 code='{\n  *va_arg(ap, int *) = 1;\n  i64 big = va_arg(ap, i64);\n'
+      #4 Assign name='=' type='UNKNOWN' loc=4:3-4:26 code='*va_arg(ap, int *) = 1;' eog=[#10]
+        #5 PointerDereference name='int*' type='int' loc=4:3-4:21 code='*va_arg(ap, int *)' acc=WRITE refersTo=- eog=[#8] dfg=[#8,#6:Part(PointerDereference)]
+          #6 Cast name='int*' type='int*' loc=4:4-4:21 code='va_arg(ap, int *)' eog=[#5] dfg=[#7]
+            #7 Reference name='ap' type='void*' loc=4:4-4:21 code='va_arg(ap, int *)' refersTo=#23 eog=[#6] dfg=[#23,ext:ParameterMemoryValue(forms.ap.derefvalue),ext:ParameterMemoryValue(forms.ap.derefderefvalue)]
+        #8 Literal name='' type='int' loc=4:24-4:25 code='1' eog=[#4]
+      #9 DeclarationStatement name='' type='UNKNOWN' loc=5:3-5:29 code='i64 big = va_arg(ap, i64);' eog=[#14]
+        #10 Variable name='big' type='long long int' loc=5:7-5:28 code='big = va_arg(ap, i64)' eog=[#12] dfg=[#11]
+          #11 Cast name='long long int' type='long long int' loc=5:13-5:28 code='va_arg(ap, i64)' eog=[#9] dfg=[#12]
+            #12 Reference name='ap' type='void*' loc=5:13-5:28 code='va_arg(ap, i64)' refersTo=#23 eog=[#11] dfg=[#5,#23]
+      #13 DeclarationStatement name='' type='UNKNOWN' loc=6:3-6:47 code='unsigned long n = va_arg(ap, unsigned long);' eog=[#18]
+        #14 Variable name='n' type='unsigned long int' loc=6:17-6:46 code='n = va_arg(ap, unsigned long)' eog=[#16] dfg=[#15]
+          #15 Cast name='unsigned long int' type='unsigned long int' loc=6:21-6:46 code='va_arg(ap, unsigned long)' eog=[#13] dfg=[#16]
+            #16 Reference name='ap' type='void*' loc=6:21-6:46 code='va_arg(ap, unsigned long)' refersTo=#23 eog=[#15] dfg=[#5,#23]
+      #17 DeclarationStatement name='' type='UNKNOWN' loc=7:3-7:33 code='double d = va_arg(ap, double);' eog=[#22]
+        #18 Variable name='d' type='double' loc=7:10-7:32 code='d = va_arg(ap, double)' eog=[#20] dfg=[#19]
+          #19 Cast name='double' type='double' loc=7:14-7:32 code='va_arg(ap, double)' eog=[#17] dfg=[#20]
+            #20 Reference name='ap' type='void*' loc=7:14-7:32 code='va_arg(ap, double)' refersTo=#23 eog=[#19] dfg=[#5,#23]
+      #21 Return name='' type='UNKNOWN' loc=8:3-8:12 code='return d;' dfg=[#22]
+        #22 Reference name='d' type='double' loc=8:10-8:11 code='d' refersTo=#18 eog=[#21] dfg=[#5,#18]
+    #23 Parameter name='ap' type='void*' loc=3:14-3:22 code='void *ap'

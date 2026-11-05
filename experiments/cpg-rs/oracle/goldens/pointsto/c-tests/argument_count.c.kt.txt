@@ -1,0 +1,27 @@
+#0 TranslationUnit name='argument_count.c' type='-' loc=1:1-10:3 code='// In C, the name alone determines the function, also if the'
+  #1 Function name='old_style' type='()int' loc=3:1-3:17 code='int old_style();'
+  #2 Function name='two' type='(int, int)int' loc=4:1-4:47 code='static int two(int a, int b) { return a + b; }' eog=[#6] dfg=[#4]
+    #3 Block name='' type='UNKNOWN' loc=4:30-4:47 code='{ return a + b; }'
+      #4 Return name='' type='UNKNOWN' loc=4:32-4:45 code='return a + b;' dfg=[#5]
+        #5 BinaryOperator name='+' type='int' loc=4:39-4:44 code='a + b' eog=[#4] dfg=[#6,#7]
+          #6 Reference name='a' type='int' loc=4:39-4:40 code='a' refersTo=#8 eog=[#7] dfg=[#8]
+          #7 Reference name='b' type='int' loc=4:43-4:44 code='b' refersTo=#9 eog=[#5] dfg=[#9]
+    #8 Parameter name='a' type='int' loc=4:16-4:21 code='int a' dfg=[#21<in:#20>]
+    #9 Parameter name='b' type='int' loc=4:23-4:28 code='int b'
+  #10 Function name='caller' type='()int' loc=6:1-10:2 code='int caller(void) {\n    int a = old_style(1, 2);\n    int b ' eog=[#13] dfg=[#23]
+    #11 Block name='' type='UNKNOWN' loc=6:18-10:2 code='{\n    int a = old_style(1, 2);\n    int b = two(1);\n    re'
+      #12 DeclarationStatement name='' type='UNKNOWN' loc=7:5-7:29 code='int a = old_style(1, 2);' eog=[#19]
+        #13 Variable name='a' type='int' loc=7:9-7:28 code='a = old_style(1, 2)' eog=[#17] dfg=[#14]
+          #14 Call name='old_style' type='int' loc=7:13-7:28 code='old_style(1, 2)' invokes=[#1] eog=[#12] dfg=[#1<out:#14>]
+            #15 Literal name='' type='int' loc=7:23-7:24 code='1' eog=[#16]
+            #16 Literal name='' type='int' loc=7:26-7:27 code='2' eog=[#14]
+            #17 Reference name='old_style' type='()int' loc=7:13-7:22 code='old_style' refersTo=#1 eog=[#15] dfg=[#1]
+      #18 DeclarationStatement name='' type='UNKNOWN' loc=8:5-8:20 code='int b = two(1);' eog=[#25]
+        #19 Variable name='b' type='int' loc=8:9-8:19 code='b = two(1)' eog=[#22] dfg=[#20]
+          #20 Call name='two' type='int' loc=8:13-8:19 code='two(1)' invokes=[#2] eog=[#18] dfg=[#2<out:#20>]
+            #21 Literal name='' type='int' loc=8:17-8:18 code='1' eog=[#20]
+            #22 Reference name='two' type='(int, int)int' loc=8:13-8:16 code='two' refersTo=#2 eog=[#21] dfg=[#2]
+      #23 Return name='' type='UNKNOWN' loc=9:5-9:18 code='return a + b;' dfg=[#24]
+        #24 BinaryOperator name='+' type='int' loc=9:12-9:17 code='a + b' eog=[#23] dfg=[#25,#26]
+          #25 Reference name='a' type='int' loc=9:12-9:13 code='a' refersTo=#13 eog=[#26] dfg=[#13]
+          #26 Reference name='b' type='int' loc=9:16-9:17 code='b' refersTo=#19 eog=[#24] dfg=[#19]

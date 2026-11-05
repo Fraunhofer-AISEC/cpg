@@ -1,0 +1,33 @@
+#0 TranslationUnit name='typedef_struct.c' type='-' loc=1:1-13:3 code='typedef struct test {\n  int a;\n  int b;\n} S;\n\nint struc'
+  #1 Record name='test' type='-' loc=1:1-4:2 code='typedef struct test {\n  int a;\n  int b;\n}'
+    #2 Field name='test::a' type='int' loc=2:7-2:8 code='a' eog=[#3]
+    #3 Field name='test::b' type='int' loc=3:7-3:8 code='b'
+    #4 Constructor name='test::test' type='test()test' loc=? code='test' dfg=[#5]
+      #5 Variable name='this' type='test*' loc=? code=''
+  #6 Typedef name='S' type='-' loc=? code=''
+  #7 Function name='structs' type='()int' loc=6:1-13:3 code='int structs() {\n  S s;\n  S t;\n  S* p=&s;\n  s.a=1;\n  s.b' eog=[#10] dfg=[#32]
+    #8 Block name='' type='UNKNOWN' loc=6:15-13:3 code='{\n  S s;\n  S t;\n  S* p=&s;\n  s.a=1;\n  s.b=2;\n  printf('
+      #9 DeclarationStatement name='' type='UNKNOWN' loc=7:3-7:7 code='S s;' eog=[#12]
+        #10 Variable name='s' type='test' loc=7:5-7:6 code='s' eog=[#9]
+      #11 DeclarationStatement name='' type='UNKNOWN' loc=8:3-8:7 code='S t;' eog=[#14]
+        #12 Variable name='t' type='test' loc=8:5-8:6 code='t' eog=[#11]
+      #13 DeclarationStatement name='' type='UNKNOWN' loc=9:3-9:11 code='S* p=&s;' eog=[#19]
+        #14 Variable name='p' type='test*' loc=9:4-9:10 code='* p=&s' eog=[#16] dfg=[#15]
+          #15 PointerReference name='s' type='test*' loc=9:8-9:10 code='&s' refersTo=#10 eog=[#13] dfg=[#16:Part(PointerReference),ext:MemoryAddress(s),#10]
+            #16 Reference name='s' type='test' loc=9:9-9:10 code='s' refersTo=#10 eog=[#15] dfg=[#10]
+      #17 Assign name='=' type='UNKNOWN' loc=10:3-10:9 code='s.a=1;' eog=[#23]
+        #18 MemberAccess name='test::a' type='int' loc=10:3-10:6 code='s.a' acc=WRITE refersTo=#2 eog=[#20] dfg=[#20]
+          #19 Reference name='s' type='test' loc=10:3-10:4 code='s' refersTo=#10 eog=[#18] dfg=[#18:F(test::a),#10]
+        #20 Literal name='' type='int' loc=10:7-10:8 code='1' eog=[#17]
+      #21 Assign name='=' type='UNKNOWN' loc=11:3-11:9 code='s.b=2;' eog=[#31]
+        #22 MemberAccess name='test::b' type='int' loc=11:3-11:6 code='s.b' acc=WRITE refersTo=#3 eog=[#24] dfg=[#24]
+          #23 Reference name='s' type='test' loc=11:3-11:4 code='s' refersTo=#10 eog=[#22] dfg=[#22:F(test::b),#19:Part(Field:test::a),#10]
+        #24 Literal name='' type='int' loc=11:7-11:8 code='2' eog=[#21]
+      #25 Call name='printf' type='UNKNOWN' loc=12:3-12:31 code='printf("%d %d\n", s.a, s.b);' invokes=[] eog=[#32] dfg=[#26,#27,#29]
+        #26 Literal name='' type='char[]' loc=12:10-12:19 code='"%d %d\n"' eog=[#28]
+        #27 MemberAccess name='test::a' type='int' loc=12:21-12:24 code='s.a' refersTo=#2 eog=[#30] dfg=[#28:F(test::a),#18]
+          #28 Reference name='s' type='test' loc=12:21-12:22 code='s' refersTo=#10 eog=[#27] dfg=[#19:Part(Field:test::a),#10,#23:Part(Field:test::b)]
+        #29 MemberAccess name='test::b' type='int' loc=12:26-12:29 code='s.b' refersTo=#3 eog=[#25] dfg=[#30:F(test::b),#22]
+          #30 Reference name='s' type='test' loc=12:26-12:27 code='s' refersTo=#10 eog=[#29] dfg=[#19:Part(Field:test::a),#10,#23:Part(Field:test::b)]
+        #31 Reference name='printf' type='UNKNOWN' loc=12:3-12:9 code='printf' refersTo=- eog=[#26]
+      #32 Return name='' type='UNKNOWN' loc=? code=''

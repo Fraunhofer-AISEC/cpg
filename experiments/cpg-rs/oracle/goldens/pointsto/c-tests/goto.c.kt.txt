@@ -1,0 +1,7 @@
+#0 TranslationUnit name='goto.c' type='-' loc=1:1-5:3 code='void foo() {\n  goto LAB_123;\nLAB_123:\n  return;\n}\n'
+  #1 Function name='foo' type='()void' loc=1:1-5:2 code='void foo() {\n  goto LAB_123;\nLAB_123:\n  return;\n}' eog=[#3] dfg=[#5]
+    #2 Block name='' type='UNKNOWN' loc=1:12-5:2 code='{\n  goto LAB_123;\nLAB_123:\n  return;\n}'
+      #3 Goto name='LAB_123' type='UNKNOWN' loc=2:3-2:16 code='goto LAB_123;' eog=[#5]
+      #4 Label name='LAB_123' type='UNKNOWN' loc=3:1-4:10 code='LAB_123:\n  return;'
+        #5 Return name='' type='UNKNOWN' loc=4:3-4:10 code='return;'
+      #6 Return name='' type='UNKNOWN' loc=? code=''

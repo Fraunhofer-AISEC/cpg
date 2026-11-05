@@ -1,0 +1,20 @@
+#0 TranslationUnit name='static_semantics.c' type='-' loc=1:1-14:3 code='// In C, a file-scope `static` gives the variable/function i'
+  #1 Variable name='internalGlobal' type='int' loc=3:12-3:30 code='internalGlobal = 1' eog=[#2] dfg=[#2]
+    #2 Literal name='' type='int' loc=3:29-3:30 code='1'
+  #3 Variable name='exportedGlobal' type='int' loc=4:5-4:23 code='exportedGlobal = 2' eog=[#4] dfg=[#4]
+    #4 Literal name='' type='int' loc=4:22-4:23 code='2'
+  #5 Function name='internalFunction' type='()int' loc=6:1-6:57 code='static int internalFunction() { return internalGlobal; }' eog=[#8] dfg=[#7]
+    #6 Block name='' type='UNKNOWN' loc=6:31-6:57 code='{ return internalGlobal; }'
+      #7 Return name='' type='UNKNOWN' loc=6:33-6:55 code='return internalGlobal;' dfg=[#8]
+        #8 Reference name='internalGlobal' type='int' loc=6:40-6:54 code='internalGlobal' refersTo=#1 eog=[#7] dfg=[#1]
+  #9 Function name='exportedFunction' type='()int' loc=8:1-8:50 code='int exportedFunction() { return exportedGlobal; }' eog=[#12] dfg=[#11]
+    #10 Block name='' type='UNKNOWN' loc=8:24-8:50 code='{ return exportedGlobal; }'
+      #11 Return name='' type='UNKNOWN' loc=8:26-8:48 code='return exportedGlobal;' dfg=[#12]
+        #12 Reference name='exportedGlobal' type='int' loc=8:33-8:47 code='exportedGlobal' refersTo=#3 eog=[#11] dfg=[#3]
+  #13 Function name='useLocalStatic' type='()int' loc=10:1-14:2 code='int useLocalStatic() {\n    // Inside a function, `static` o' eog=[#16] dfg=[#18]
+    #14 Block name='' type='UNKNOWN' loc=10:22-14:2 code='{\n    // Inside a function, `static` only affects storage d'
+      #15 DeclarationStatement name='' type='UNKNOWN' loc=12:5-12:32 code='static int localStatic = 0;' eog=[#19]
+        #16 Variable name='localStatic' type='int' loc=12:16-12:31 code='localStatic = 0' eog=[#17] dfg=[#17]
+          #17 Literal name='' type='int' loc=12:30-12:31 code='0' eog=[#15]
+      #18 Return name='' type='UNKNOWN' loc=13:5-13:24 code='return localStatic;' dfg=[#19]
+        #19 Reference name='localStatic' type='int' loc=13:12-13:23 code='localStatic' refersTo=#16 eog=[#18] dfg=[#16]

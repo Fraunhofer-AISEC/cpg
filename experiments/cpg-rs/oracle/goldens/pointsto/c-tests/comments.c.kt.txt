@@ -1,0 +1,10 @@
+#0 TranslationUnit name='comments.c' type='-' loc=1:1-20:2 code='/**\n * Documentation comment\n */\nvoid functionDoc() {\n  '
+  #1 Function name='functionDoc' type='()void' loc=4:1-6:2 code='void functionDoc() {\n  return;\n}' eog=[#3] dfg=[#3]
+    #2 Block name='' type='UNKNOWN' loc=4:20-6:2 code='{\n  return;\n}'
+      #3 Return name='' type='UNKNOWN' loc=5:3-5:10 code='return;'
+  #4 Function name='functionMultiline' type='()void' loc=12:1-14:2 code='void functionMultiline() {\n  return;\n}' eog=[#6] dfg=[#6]
+    #5 Block name='' type='UNKNOWN' loc=12:26-14:2 code='{\n  return;\n}'
+      #6 Return name='' type='UNKNOWN' loc=13:3-13:10 code='return;'
+  #7 Function name='functionSimple' type='()void' loc=18:1-20:2 code='void functionSimple() {\n  return;\n}' eog=[#9] dfg=[#9]
+    #8 Block name='' type='UNKNOWN' loc=18:23-20:2 code='{\n  return;\n}'
+      #9 Return name='' type='UNKNOWN' loc=19:3-19:10 code='return;'

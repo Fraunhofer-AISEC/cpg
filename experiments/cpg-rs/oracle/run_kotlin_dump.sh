@@ -21,4 +21,4 @@ cd "$CPG_ROOT"
   -PenableTypeScriptFrontend=false -PenableRubyFrontend=false -PenableJVMFrontend=false \
   -PenableINIFrontend=false -PenablePHPFrontend=false -PenableRustFrontend=false \
   -PenableJavaFrontend=false > /tmp/run_kotlin_dump.log 2>&1 || { tail -20 /tmp/run_kotlin_dump.log; exit 1; }
-ls "$out" | wc -l | xargs echo "dumped files:"
+ls "$DUMP_OUT_DIR" | wc -l | xargs echo "dumped files:"
