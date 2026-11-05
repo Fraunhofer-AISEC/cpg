@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.console.repl
 
+import de.fraunhofer.aisec.codyze.getCodeflow
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import java.io.File
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.addJsonObject
@@ -62,7 +62,7 @@ object FlowExporter {
      * file, and returns the file. Returns null if no paths could be extracted.
      */
     fun export(value: Any?): File? {
-        val flows = extractFlows(value).filter { it.isNotEmpty() }
+        val flows = extractFlows(value)
         if (flows.isEmpty()) return null
 
         val sarif = buildSarif(flows)
@@ -116,35 +116,17 @@ object FlowExporter {
     }
 
     /**
-     * Pulls node-paths out of a [QueryTree] structure. Mirrors the `getCodeflow()` logic in
-     * codyze-core but is inlined here to avoid a module dependency just for one ten-line walk.
-     *
-     * The tree is heterogeneous: leaves are either lists of nodes (a path) or other trees that
-     * recurse. We walk depth-first and collect every list-of-Node leaf we hit.
+     * Extracts the node-paths from [value]: a [QueryTree] (via codyze-core's [getCodeflow]), a
+     * single path given as a list of [Node]s, or a list of either.
      */
-    private fun extractFlows(value: Any?): List<List<Node>> =
+    fun extractFlows(value: Any?): List<List<Node>> =
         when (value) {
-            null -> emptyList()
-            is QueryTree<*> -> extractFlowsFromTree(value)
-            is List<*> -> {
-                if (value.all { it is Node }) {
-                    @Suppress("UNCHECKED_CAST") listOf(value as List<Node>)
-                } else {
-                    value.flatMap { extractFlows(it) }
-                }
-            }
+            is QueryTree<*> -> value.getCodeflow()
+            is List<*> ->
+                if (value.all { it is Node }) listOf(value.filterIsInstance<Node>())
+                else value.flatMap { extractFlows(it) }
             else -> emptyList()
-        }
-
-    private fun extractFlowsFromTree(tree: QueryTree<*>): List<List<Node>> {
-        if (tree is SinglePathResult) return tree.children.flatMap { extractFlowsFromTree(it) }
-        val v = tree.value
-        if (v is List<*> && v.all { it is Node } && v.isNotEmpty()) {
-            @Suppress("UNCHECKED_CAST")
-            return listOf(v as List<Node>)
-        }
-        return tree.children.flatMap { extractFlowsFromTree(it) }
-    }
+        }.filter { it.isNotEmpty() }
 
     private fun buildSarif(flows: List<List<Node>>): String {
         val root = buildJsonObject {
