@@ -165,3 +165,14 @@ Suggested order: (a) `DfgEdge` with fs+contexts, dump; (b) FS data structure (`F
 (c) bodiless callees + dummy FS; (d) callees with bodies: `storeFunctionSummary` without the detailed short FS,
 incoming/outgoing contexts, destinations; (e) the DFG walker and the detailed short FS; (f) recursion, function pointers
 (`addDynamicInvokesEdges`), methods/receivers (C has none).
+
+## Status (milestone 2, steps 1-4 done): calls, summaries, calling contexts
+
+`pt/calls.rs`: function summaries (`FsEntry`, merge ignoring last writes), dummy summaries (bodiless functions, recursion),
+return entries (`handleReturn`), `storeFunctionSummary` (without the detailed short FS), incoming/outgoing calling contexts,
+`calculateCallDestinations`, `addEntryToMap`, `writeMapEntriesToState`. `DfgEdge` carries `fs` and calling contexts.
+DFGPass in points-to mode only draws `invoke -> call` with an `out` context (and `arg -> call` for unresolved calls).
+Results: c-tests 99.3 %, probes 98.9 %. Left: (1) the detailed short FS in `addParameterInfoToFS` (the `!fs` edges
+from arguments that influence a written parameter; needs the backward DFG walker, step 5), (2) stdlib profile function
+summaries (a declared `strlen` has a summary from the profile, so `handleEmptyFunction` takes its second branch),
+(3) non-deterministic Kotlin choices (callee prototype vs definition, finding #23).

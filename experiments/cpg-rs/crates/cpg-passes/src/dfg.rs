@@ -29,7 +29,19 @@ pub fn dfg(g: &mut Graph, flow_sensitive_references: bool) {
         let access = g.nodes[id as usize].access;
         let full = Granularity::Full;
         match kind {
-            Kind::Call => call(g, id, &kids),
+            Kind::Call if !flow_sensitive_references => call(g, id, &kids),
+            // with the points-to pass, only the edge from the invoked functions (leaving the call)
+            Kind::Call => {
+                let invoked: Vec<u32> = g.invokes.iter().filter(|e| e.0 == id).map(|e| e.1).collect();
+                if invoked.is_empty() {
+                    for &a in kids.split_last().map_or(&[][..], |(_, a)| a) {
+                        g.add_dfg(a, id, Granularity::Full);
+                    }
+                }
+                for f in invoked {
+                    g.add_dfg_ext(f, id, Granularity::Full, false, vec![(false, vec![id])]);
+                }
+            }
             Kind::Cast => {
                 if let Some(&e) = kids.first() {
                     g.add_dfg(e, id, full);

@@ -118,7 +118,17 @@ pub fn dump(g: &Graph, unit_name: &str) -> String {
                 .iter()
                 .map(|&k| {
                     let e = &g.dfg[k];
-                    format!("{}{}", ref_str(e.from), e.granularity.tag())
+                    {
+                    let mut s = format!("{}{}", ref_str(e.from), e.granularity.tag());
+                    if e.fs {
+                        s.push_str("!fs");
+                    }
+                    for (is_in, calls) in &e.ctx {
+                        let c: Vec<String> = calls.iter().map(|&c| ref_str(c)).collect();
+                        s.push_str(&format!("<{}:{}>", if *is_in { "in" } else { "out" }, c.join("/")));
+                    }
+                    s
+                }
                 })
                 .collect();
             out.push_str(&format!(" dfg=[{}]", t.join(",")));

@@ -50,6 +50,15 @@ impl Default for Config {
 enum Off {
     Node(N),
     Str(String),
+    /// A `Field` that only has a name (the partial writes of function summaries).
+    Field(String),
+}
+
+/// A calling context: the calls entered (`In`) or left (`Out`), in flow order.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+enum Ctx {
+    In(Vec<N>),
+    Out(Vec<N>),
 }
 
 /// The properties of a `NodeWithPropertiesKey`: a set in Kotlin, a record of the possible members here.
@@ -61,6 +70,10 @@ struct Props {
     off: Option<Off>,
     /// A `PointerDataflowGranularity` (1: current deref value, 2: current deref deref value).
     deref: u8,
+    /// A `CallingContextChain`.
+    ctx: Vec<Ctx>,
+    /// An Int: the index of the parameter whose argument replaces the source (dummy summaries).
+    idx: Option<u32>,
 }
 
 impl Props {
@@ -216,6 +229,9 @@ fn local_of(full: &str) -> &str {
 struct Fetched {
     value: N,
     short: bool,
+    /// the field the value was fetched from (`fetchFields`)
+    sub: String,
+    last_writes: Set<Key>,
 }
 
 struct Pt<'g, 'a> {
@@ -237,7 +253,18 @@ struct Pt<'g, 'a> {
     global_derefs: FxHashMap<N, Set<(N, bool)>>,
     /// the temporary subscriptions of `getAddresses` of a dereference of `ptr + literal`: (array, index)
     fn_of: Vec<N>,
+    /// the invoked functions of a call
+    invokes: FxHashMap<N, Vec<N>>,
+    /// `function.functionSummary`, in insertion order
+    fsum: FxHashMap<N, Vec<(FKey, Vec<FsEntry>)>>,
+    /// the functions that are being analyzed (`functionSummaryAnalysisChain`)
+    chain: Vec<N>,
 }
+
+mod calls;
+use calls::{FKey, FsEntry};
+
+type Source = (Option<N>, bool, Option<Off>);
 
 pub fn pointsto(g: &mut Graph) {
     pointsto_with(g, Config::default())
@@ -260,6 +287,10 @@ pub fn pointsto_with(g: &mut Graph, cfg: Config) {
             parent[c as usize] = i;
             c = g.nodes[c as usize].next;
         }
+    }
+    let mut invokes: FxHashMap<N, Vec<N>> = FxHashMap::default();
+    for &(c, f) in &g.invokes {
+        invokes.entry(c).or_default().push(f);
     }
     let mut fn_of = vec![NONE; n];
     for f in 0..n as u32 {
@@ -285,10 +316,19 @@ pub fn pointsto_with(g: &mut Graph, cfg: Config) {
         summaries: FxHashMap::default(),
         global_derefs: FxHashMap::default(),
         fn_of,
+        invokes,
+        fsum: FxHashMap::default(),
+        chain: Vec::new(),
     };
     for f in 0..n as u32 {
-        if p.g.nodes[f as usize].kind == Kind::Function && !p.succ[f as usize].is_empty() {
-            p.analyze(f);
+        if p.g.nodes[f as usize].kind == Kind::Function {
+            if p.has_body(f) {
+                if !p.succ[f as usize].is_empty() {
+                    p.analyze(f);
+                }
+            } else {
+                p.analyze_empty(f);
+            }
         }
         // the implicit constructor of a record returns its `this`
         if p.g.nodes[f as usize].kind == Kind::Constructor {
@@ -627,28 +667,30 @@ impl<'g, 'a> Pt<'g, 'a> {
     fn fetch_decl_value(&mut self, st: &mut State, node: N, fetch_fields: bool, excl_short: bool) -> Vec<Fetched> {
         let mut ret: Vec<Fetched> = Vec::new();
         let mut seen = Set::new();
-        let mut add = |ret: &mut Vec<Fetched>, v: N, short: bool| {
-            if seen.insert((v, short)) {
-                ret.push(Fetched { value: v, short });
+        let mut add_full = |ret: &mut Vec<Fetched>, v: N, short: bool, sub: &str, lw: &Set<Key>| {
+            if seen.insert((v, short, sub.to_string())) {
+                ret.push(Fetched { value: v, short, sub: sub.to_string(), last_writes: lw.clone() });
             }
         };
+        let none = Set::new();
+
         if self.is_global(node) {
             if self.is(node, Kind::Function) {
-                add(&mut ret, node, false);
+                add_full(&mut ret, node, false, "", &none);
                 return ret;
             }
             if let Some(el) = self.global_derefs.get(&node) {
                 for &(v, _) in el {
-                    add(&mut ret, v, false);
+                    add_full(&mut ret, v, false, "", &none);
                 }
             } else if self.is_unknown(node) {
-                add(&mut ret, node, false);
+                add_full(&mut ret, node, false, "", &none);
             } else {
                 let name = self.node_name(node);
                 let global = true;
                 let e = self.synthetic_for(node, &name, true, SClass::Unknown, global);
                 self.global_derefs.insert(node, Set::from([(e, false)]));
-                add(&mut ret, e, false);
+                add_full(&mut ret, e, false, "", &none);
             }
             return ret;
         }
@@ -656,7 +698,7 @@ impl<'g, 'a> Pt<'g, 'a> {
         let usable = entry.is_some_and(|e| e.vals.iter().any(|p| !excl_short || !p.1));
         if !usable {
             if self.is_unknown(node) {
-                add(&mut ret, node, false);
+                add_full(&mut ret, node, false, "", &none);
             } else {
                 let name = self.node_name(node);
                 let e = self.synthetic_for(node, &name, true, SClass::Unknown, false);
@@ -665,14 +707,15 @@ impl<'g, 'a> Pt<'g, 'a> {
                     ..DEntry::default()
                 });
                 d.vals.insert((e, false));
-                add(&mut ret, e, false);
+                add_full(&mut ret, e, false, "", &none);
             }
         } else {
-            for &(v, s) in &entry.unwrap().vals.clone() {
+            let ent = entry.unwrap().clone();
+            for &(v, s) in &ent.vals {
                 if excl_short && s {
                     continue;
                 }
-                add(&mut ret, v, s);
+                add_full(&mut ret, v, s, "", &ent.lw);
             }
         }
         if fetch_fields {
@@ -682,10 +725,11 @@ impl<'g, 'a> Pt<'g, 'a> {
                 if f == node || node_addrs.contains(&f) {
                     continue;
                 }
-                if let Some(e) = st.decl.get(&f) {
-                    for &(v, s) in &e.vals.clone() {
+                if let Some(e) = st.decl.get(&f).cloned() {
+                    let sub = self.name_of(f).local;
+                    for &(v, s) in &e.vals {
                         if (excl_short && !s) || !excl_short {
-                            add(&mut ret, v, s);
+                            add_full(&mut ret, v, s, &sub, &e.lw);
                         }
                     }
                 }
@@ -1098,6 +1142,20 @@ impl<'g, 'a> Pt<'g, 'a> {
     // ---------------------------------------------------------------- the handlers
 
     fn analyze(&mut self, f: N) {
+        // already analyzed (as a callee, or with a summary): `acceptInternal` returns early
+        if !self.summary_is_empty(f) && self.has_body(f) {
+            return;
+        }
+        self.chain.push(f);
+        self.analyze_body(f);
+        self.chain.pop();
+        // nothing to summarize: a dummy entry, so that the function is not analyzed again
+        if self.summary_is_empty(f) {
+            self.fsum.entry(f).or_default().push((FKey::Dummy, Vec::new()));
+        }
+    }
+
+    fn analyze_body(&mut self, f: N) {
         let mut st = State::default();
         let addrs = self.get_addresses(&mut st, f, f);
         st.push_decl(f, DEntry { addrs, ..DEntry::default() });
@@ -1148,12 +1206,24 @@ impl<'g, 'a> Pt<'g, 'a> {
             }
         }
         self.draw(&fin);
+        let mut fin = fin;
+        self.store_function_summary(f, &mut fin);
     }
 
     /// `drawDataflowEdges`
     fn draw(&mut self, fin: &State) {
         for (&key, e) in &fin.gs {
             if key >= SYNTH_BASE {
+                // a `ParameterMemoryValue` has memory addresses as well
+                if self.is_pmv(key) {
+                    let add: Vec<N> = e.addrs.iter().copied().filter(|&a| self.is_memory(a)).collect();
+                    let v = self.mem_addrs.entry(key).or_default();
+                    for a in add {
+                        if !v.contains(&a) {
+                            v.push(a);
+                        }
+                    }
+                }
                 continue;
             }
             if matches!(self.g.nodes[key as usize].kind, Kind::Variable | Kind::Param | Kind::Field | Kind::Binary)
@@ -1170,10 +1240,20 @@ impl<'g, 'a> Pt<'g, 'a> {
             for k in &e.lw {
                 let gran = match &k.p.off {
                     Some(Off::Str(s)) => Granularity::Partial(s.clone()),
+                    Some(Off::Field(n)) => Granularity::Partial(format!("Field:{n}")),
                     Some(Off::Node(t)) => Granularity::Partial(self.partial_detail(*t)),
                     None => Granularity::Full,
                 };
-                self.g.add_dfg(k.n, key, gran);
+                let ctx = k
+                    .p
+                    .ctx
+                    .iter()
+                    .map(|c| match c {
+                        Ctx::In(v) => (true, v.clone()),
+                        Ctx::Out(v) => (false, v.clone()),
+                    })
+                    .collect();
+                self.g.add_dfg_ext(k.n, key, gran, k.p.fs == Some(true), ctx);
             }
         }
     }
@@ -1197,7 +1277,7 @@ impl<'g, 'a> Pt<'g, 'a> {
             Kind::Variable => self.handle_declaration(node, &mut st),
             Kind::Assign => self.handle_assign(node, &mut st),
             Kind::Unary => self.handle_unary(node, &mut st),
-            Kind::Call => {}
+            Kind::Call => self.handle_call(node, &mut st),
             Kind::Return => self.handle_return(node, &mut st),
             Kind::Ref
             | Kind::PointerRef
@@ -1315,6 +1395,12 @@ impl<'g, 'a> Pt<'g, 'a> {
     fn handle_return(&mut self, ret: N, st: &mut State) {
         let f = self.fn_of[ret as usize];
         if f != NONE {
+            let rvs: Vec<N> = self.g.children(ret).collect();
+            for rv in rvs {
+                self.return_summary(f, ret, rv, st);
+            }
+        }
+        if f != NONE {
             st.push(f, GEntry { lw: Set::from([key(ret, Props::default())]), ..GEntry::default() });
         }
     }
@@ -1363,7 +1449,7 @@ impl<'g, 'a> Pt<'g, 'a> {
                         let input = self.first(ini);
                         self.handle_expression(input, st)
                     }
-                    Some(Kind::Call) => {}
+                    Some(Kind::Call) => self.handle_call(ini, st),
                     _ => self.handle_expression(ini, st),
                 }
                 if self.is(ini, Kind::InitList) {
@@ -1511,14 +1597,14 @@ impl<'g, 'a> Pt<'g, 'a> {
                     .decl
                     .entry(ba)
                     .or_insert_with(|| DEntry { addrs: Set::from([ba]), ..DEntry::default() });
-                let np = Props { fs: Some(false), off: Some(off.clone()), deref: 0 };
+                let np = Props { fs: Some(false), off: Some(off.clone()), ..Props::default() };
                 e.lw.retain(|k| !k.p.contains_all(&np));
                 e.lw.insert(key(base, np));
             }
         }
     }
 
-    /// `updateValues` (for assignments: all sources are full writes)
+    /// `updateValues` for assignments: all sources are full writes.
     fn update_values(
         &mut self,
         st: &mut State,
@@ -1527,23 +1613,75 @@ impl<'g, 'a> Pt<'g, 'a> {
         dest_addrs: &Set<N>,
         last_writes: &Set<Key>,
     ) {
-        let mapped: Set<Key> = sources.iter().map(|&(n, s)| key(n, Props::fs(s))).collect();
+        let src: Vec<Source> = sources.iter().map(|&(n, s)| (Some(n), s, None)).collect();
+        self.update_values_gen(st, &src, destinations, dest_addrs, last_writes, true);
+    }
+
+    /// `updateValues`: sources are (node, short function summary, partial target); a source without a
+    /// partial target is a full write.
+    fn update_values_gen(
+        &mut self,
+        st: &mut State,
+        sources: &[Source],
+        destinations: &[N],
+        dest_addrs: &Set<N>,
+        last_writes: &Set<Key>,
+        overwrite: bool,
+    ) {
+        let no_dest_with_body = !destinations.iter().any(|&d| {
+            self.is(d, Kind::Call) && self.single_invoke_without_body(d)
+        });
+        let mapped: Set<Key> =
+            sources.iter().filter_map(|&(n, s, _)| n.map(|n| key(n, Props::fs(s)))).collect();
+        let pairs: Set<(N, bool)> = sources.iter().filter_map(|&(n, s, _)| n.map(|n| (n, s))).collect();
         for &da in dest_addrs {
             if !self.is_global(da) {
                 let current = st.decl.get(&da).map(|e| e.addrs.clone()).unwrap_or_else(|| Set::from([da]));
                 let is_summary = self.is_summary_node(da);
-                if !is_summary {
-                    st.decl.insert(da, DEntry { addrs: current, vals: sources.clone(), lw: last_writes.clone() });
+                let full = sources.iter().any(|s| s.2.is_none());
+                let entry = DEntry { addrs: current, vals: pairs.clone(), lw: last_writes.clone() };
+                if full && !is_summary {
+                    st.decl.insert(da, entry);
                 } else {
-                    st.push_decl(da, DEntry { addrs: current, vals: sources.clone(), lw: last_writes.clone() });
+                    if !is_summary {
+                        let written: Vec<String> = sources
+                            .iter()
+                            .filter_map(|s| match &s.2 {
+                                Some(Off::Field(n)) => Some(n.clone()),
+                                Some(Off::Node(f)) if self.is(*f, Kind::Field) => {
+                                    Some(local_of(self.g.name_str(*f)).to_string())
+                                }
+                                _ => None,
+                            })
+                            .collect();
+                        if let Some(e) = st.decl.get_mut(&da) {
+                            e.lw.retain(|k| {
+                                let n = match &k.p.off {
+                                    Some(Off::Field(n)) => Some(n.clone()),
+                                    Some(Off::Node(f)) if self.is(*f, Kind::Field) => {
+                                        Some(local_of(self.g.name_str(*f)).to_string())
+                                    }
+                                    _ => None,
+                                };
+                                !n.is_some_and(|n| written.contains(&n))
+                            });
+                        }
+                    }
+                    st.push_decl(da, entry);
                 }
                 let mut new_lw = last_writes.clone();
                 new_lw.retain(|lw| {
-                    !(sources.iter().any(|s| s.0 == lw.n && lw.p.fs == Some(s.1))
-                        || destinations.contains(&lw.n))
+                    !(no_dest_with_body
+                        && (sources.iter().any(|s| s.0 == Some(lw.n) && lw.p.fs == Some(s.1))
+                            || destinations.contains(&lw.n)))
                 });
                 for &d in destinations {
-                    st.gs.insert(d, GEntry { addrs: dest_addrs.clone(), vals: mapped.clone(), lw: new_lw.clone() });
+                    let e = GEntry { addrs: dest_addrs.clone(), vals: mapped.clone(), lw: new_lw.clone() };
+                    if overwrite {
+                        st.gs.insert(d, e);
+                    } else {
+                        st.push(d, e);
+                    }
                 }
             } else {
                 for &d in destinations {

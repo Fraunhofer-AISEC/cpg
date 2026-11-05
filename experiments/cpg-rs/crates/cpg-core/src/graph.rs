@@ -68,6 +68,10 @@ pub struct DfgEdge {
     pub from: u32,
     pub to: u32,
     pub granularity: Granularity,
+    /// A function summary edge (`!fs` in the dump).
+    pub fs: bool,
+    /// Calling contexts of a context-sensitive edge: `(is_in, calls)`.
+    pub ctx: Vec<(bool, Vec<u32>)>,
 }
 
 /// An evaluation order edge.
@@ -92,7 +96,7 @@ pub struct Graph<'a> {
     pub eog: Vec<EogEdge>,
     /// Data flow edges, in creation order.
     pub dfg: Vec<DfgEdge>,
-    dfg_seen: FxHashSet<(u32, u32, Granularity)>,
+    dfg_seen: FxHashSet<(u32, u32, Granularity, bool, Vec<(bool, Vec<u32>)>)>,
     /// Nodes the EOG reaches from its starters (the nodes the Kotlin `SymbolResolver` visits).
     /// Empty if the EOG pass has not run, which means everything counts as reachable.
     pub eog_visited: Vec<bool>,
@@ -128,8 +132,13 @@ impl<'a> Graph<'a> {
 
     /// Adds a data flow edge `from -> to` unless the same edge exists.
     pub fn add_dfg(&mut self, from: u32, to: u32, granularity: Granularity) {
-        if self.dfg_seen.insert((from, to, granularity.clone())) {
-            self.dfg.push(DfgEdge { from, to, granularity });
+        self.add_dfg_ext(from, to, granularity, false, Vec::new());
+    }
+
+    /// Adds a data flow edge with a function summary flag and calling contexts.
+    pub fn add_dfg_ext(&mut self, from: u32, to: u32, granularity: Granularity, fs: bool, ctx: Vec<(bool, Vec<u32>)>) {
+        if self.dfg_seen.insert((from, to, granularity.clone(), fs, ctx.clone())) {
+            self.dfg.push(DfgEdge { from, to, granularity, fs, ctx });
         }
     }
 
