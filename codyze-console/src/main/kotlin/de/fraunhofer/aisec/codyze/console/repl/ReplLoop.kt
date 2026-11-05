@@ -302,7 +302,7 @@ class ReplLoop(
     }
 
     /** Returns false to signal exit. */
-    private fun handleMeta(input: String, out: PrintWriter): Boolean {
+    internal fun handleMeta(input: String, out: PrintWriter): Boolean {
         val parts = input.removePrefix(":").trim().split(Regex("\\s+"), limit = 2)
         val cmd = parts[0]
         val arg = parts.getOrNull(1)?.trim().orEmpty()
@@ -354,7 +354,7 @@ class ReplLoop(
 
     private fun reloadAnalysis(arg: String, out: PrintWriter) {
         // Parse arguments: support ":reload <path> --concepts <file>"
-        val tokens = arg.split(Regex("\\s+"))
+        val tokens = arg.split(Regex("\\s+")).filter { it.isNotEmpty() }
         var sourceDir: String? = null
         var conceptsFile: String? = null
 
