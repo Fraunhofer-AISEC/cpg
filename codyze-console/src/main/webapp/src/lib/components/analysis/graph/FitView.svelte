@@ -22,9 +22,12 @@
 
   const { fitView, setViewport } = useSvelteFlow();
 
-  // The smallest zoom at which the code of the cards can be read, and the margin of the graph
-  const readable = 0.75;
+  // The margin of the graph
   const margin = 24;
+  // The smallest zoom at which the code of the cards can be read. A narrow view, e.g. a side panel
+  // on a laptop, accepts a somewhat smaller one, but not much: a wide graph in a tall panel would
+  // else leave the lower part of the view empty.
+  const readable = $derived(Math.min(0.75, Math.max(0.65, width / 800)));
 
   $effect(() => {
     void trigger;
@@ -49,12 +52,13 @@
       fitView({ padding: 0.12, maxZoom: 1, duration: 200 });
       return;
     }
-    // The top of the graph: centered if it is narrow enough, else around its first card
+    // The graph is wider than the view: start at its left edge, so that no space is left unused,
+    // unless that would push the first card out of view
     const top = points.reduce((a, b) => (b.y < a.y || (b.y === a.y && b.x < a.x) ? b : a));
+    const fromLeft = margin - minX * readable;
+    const topRight = (top.x + cardWidth) * readable + fromLeft;
     const x =
-      (maxX - minX) * readable <= width - 2 * margin
-        ? (width - (maxX - minX) * readable) / 2 - minX * readable
-        : width / 2 - (top.x + cardWidth / 2) * readable;
+      topRight <= width - margin ? fromLeft : width / 2 - (top.x + cardWidth / 2) * readable;
     setViewport({ x, y: margin - minY * readable, zoom: readable }, { duration: 200 });
   }
 </script>

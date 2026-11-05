@@ -68,7 +68,8 @@ function load(): Record<Layer, boolean> {
   const visible: Record<Layer, boolean> = {
     concepts: true,
     external: true,
-    findings: true,
+    // Off until it is asked for: the yellow lines draw the eye away from what the user looks at
+    findings: false,
     dataflow: true,
     agent: true
   };
@@ -88,6 +89,11 @@ function load(): Record<Layer, boolean> {
 /** Which layers are shown in the code viewers, remembered across sessions. */
 class Layers {
   visible = $state(load());
+
+  /** Shows a layer for what the user asked for, without remembering it for the next session. */
+  reveal(layer: Layer) {
+    this.visible[layer] = true;
+  }
 
   toggle(layer: Layer) {
     this.visible[layer] = !this.visible[layer];
