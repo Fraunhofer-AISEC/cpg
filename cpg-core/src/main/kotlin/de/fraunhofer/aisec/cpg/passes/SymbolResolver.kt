@@ -905,7 +905,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         decideInvokesBasedOnCandidates(callee, call)
     }
 
-    private fun resolveMemberByName(
+    internal fun resolveMemberByName(
         symbol: String,
         possibleContainingTypes: Set<Type>,
     ): Set<Declaration> {
