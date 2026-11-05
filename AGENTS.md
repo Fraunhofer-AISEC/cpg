@@ -58,7 +58,38 @@ pnpm run build
 - Formatting is done by spotless with **ktfmt (kotlinlang style)**. Run `./gradlew spotlessApply` instead of hand-formatting.
 - Every source file needs the Apache 2.0 license header. `spotlessApply` adds it to new files.
 - Prefer Kotlin idioms over Java-style patterns. Write KDoc for public APIs.
-- Tests: JUnit 5 with `kotlin.test` assertions (not JUnit assertions directly).
+- Import types instead of writing fully qualified names in code (`PrintWriter`, not `java.io.PrintWriter`). Qualify a name only to resolve a clash, e.g. CPG's and sarif4k's `PhysicalLocation`.
+- Catch the narrowest exception that fits, and do not swallow it silently: at least log it. Avoid `runCatching` around large blocks, because it also hides bugs you did not expect.
+
+### Tests
+
+- JUnit 5 with `kotlin.test` assertions (not JUnit assertions directly).
+- Name test methods in camelCase with a `test` prefix: `fun testOpenBracketIsIncomplete()`, not ``fun `an open bracket asks for more input`()``. The rest of the repository uses this style.
+- Assertions on the DFG, EOG or CDG belong in `cpg-core` tests, not in language frontend tests. Frontend tests check what the frontend produces.
+- To test non-public code, make it `internal` rather than `public`. `src/test` can see `internal` members, `src/integrationTest` cannot.
+
+### Comments and KDoc
+
+- Describe what the code does, and a non-obvious reason in terms of the code itself. A reader without the history of the change must understand it.
+- Do not write the history of a change, a debugging story or a discussion into comments ("this caused a crash, so we now…", "as discussed", "previously…"). That belongs in the commit message or the PR description.
+- Do not copy examples from a chat or a demo into comments; keep examples general.
+- Only state a reason that you have checked. A wrong "why" (e.g. "to avoid a dependency" on a module that is already a dependency) is worse than none.
+
+### Use the existing graph API
+
+Before writing traversal or helper code, look for an existing function; do not walk edges by hand. The most common ones (all in `cpg-core` / `cpg-analysis`):
+
+| Task | Use |
+|---|---|
+| Find nodes in an AST subtree | `n.calls`, `n.functions`, `n.refs`, `n.variables`, `n.literals`, … (`graph/Extensions.kt`), or `n.allChildren<T>()` |
+| Filter by name | `n.calls["foo"]`, `n.calls("foo")` |
+| Walk up the AST | `n.firstParentOrNull<Function>()` |
+| Follow data or execution flow | `followDFGEdgesUntilHit`, `followEOGEdgesUntilHit` and related functions |
+| Ask a flow question as a query | `dataFlow(...)`, `executionPath(...)` (`query/FlowQueries.kt`) |
+| Call graph | `Function.callees`, `TranslationResult.callersOf(function)` |
+| Visit every node | `SubgraphWalker` |
+
+See `docs/docs/GettingStarted/shortcuts.md`, `docs/docs/GettingStarted/graph-traversal/` and `docs/docs/GettingStarted/query.md` for the full API. The same applies outside the graph: check other modules for an existing helper before writing one (e.g. `codyze-core` already turns query results into SARIF).
 
 ### CPG node patterns (see `CONTRIBUTING.md` for details)
 
@@ -80,7 +111,7 @@ pnpm run build
   - Scope is optional and should be the short module name: drop the `cpg-` / `cpg-language-` prefix (`core`, `analysis`, `concepts`, `ai`, `go`, `python`, `cxx`, ...). Codyze modules keep their full name (`codyze-console`, `codyze-core`).
   - Examples: `feat(core): add UnknownMemoryValue`, `fix(go): resolve scopes via AST lookup`, `perf(codyze-console): virtualize node tables`.
   - Mark breaking changes with `!`, e.g. `refactor(core)!: remove fluent DSL`.
-- Keep PRs small and focused: one concern per PR. Split unrelated changes into separate PRs.
+- Keep PRs small and focused: one concern per PR. Split unrelated changes into separate PRs, including small fixes you notice along the way.
 - Include tests with changes whenever possible.
 - PRs that change the graph or analysis interfaces need a changelog section in the PR description (format in `CONTRIBUTING.md`).
 - Never commit stray local files (scratch tests, patches, archives, build outputs).
