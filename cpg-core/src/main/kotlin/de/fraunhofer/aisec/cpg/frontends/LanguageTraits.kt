@@ -272,6 +272,24 @@ interface HasFunctionStyleConstruction : HasCallAmbiguity
 interface HasFunctionOverloading : LanguageTrait
 
 /**
+ * A language trait for languages in which the name of a call already determines its target: there
+ * is no function overloading and no inheritance that could supply a second declaration of the same
+ * name, so a name lookup that found a declaration has found *the* declaration.
+ *
+ * For such a language, a declaration that was found by name but whose parameters do not match the
+ * arguments is still the target of the call. The mismatch says something about our type modelling
+ * -- a type alias we did not resolve, an untyped constant that ended up with a different type than
+ * the parameter, an argument whose type we could not infer -- and nothing about whether this is the
+ * right callee. Inferring a new declaration instead would be wrong twice over: it invents a
+ * function the program does not have, and it silently drops everything reachable through the call.
+ *
+ * Go is such a language. Note that the trait is deliberately *not* the negation of
+ * [HasFunctionOverloading]: a language without overloading may still have inheritance, where a
+ * signature mismatch legitimately means "not this one, keep looking further up the hierarchy".
+ */
+interface HasNameOnlyCallResolution : LanguageTrait
+
+/**
  * A language trait for languages whose files do not stand on their own, but form a larger unit -- a
  * package -- together with the other files of their directory.
  *

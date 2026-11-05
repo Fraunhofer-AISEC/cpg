@@ -1121,8 +1121,15 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun getInvocationCandidatesFromParents(
         name: Symbol,
         possibleTypes: Set<Record>,
+        // The records we already descended into. Excluding only the records of the level we came
+        // from is not enough to terminate: a super type relation may be cyclic, which in Go happens
+        // as soon as two interfaces have the same method set, because each of them then
+        // structurally
+        // satisfies the other and both get the other as a super type.
+        visited: MutableSet<Record> = mutableSetOf(),
     ): List<Declaration> {
         val workingPossibleTypes = mutableSetOf(*possibleTypes.toTypedArray())
+        visited += possibleTypes
         return if (possibleTypes.isEmpty()) {
             listOf()
         } else {
@@ -1145,7 +1152,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 workingPossibleTypes.flatMap {
                     getInvocationCandidatesFromParents(
                         name,
-                        it.superTypeDeclarations.filterTo(mutableSetOf()) { it !in possibleTypes },
+                        it.superTypeDeclarations.filterTo(mutableSetOf()) { it !in visited },
+                        visited,
                     )
                 }
             }
@@ -1379,10 +1387,26 @@ internal fun Pass<*>.resolveWithArguments(
     }
     result.viableFunctions = result.signatureResults.keys
 
+    // Whether we may fall back to the declarations the name lookup produced when none of them
+    // matches the argument signature. See [HasNameOnlyCallResolution]. We exclude member calls on
+    // a base whose type we do not know, because there the candidates were not found through a
+    // record scope but collected by name across the whole graph, so they really are guesses.
+    val mayFallBackToCandidates =
+        language is HasNameOnlyCallResolution &&
+            !(source is MemberCall &&
+                (source.base?.type is DynamicType ||
+                    source.base?.type is UnknownType ||
+                    source.base?.type is AutoType))
+
     // If we have a "problematic" result, we can stop here. In this case we cannot really
     // determine anything more.
     if (result.success == PROBLEMATIC) {
-        result.bestViable = result.viableFunctions
+        result.bestViable =
+            if (mayFallBackToCandidates) {
+                result.viableFunctions.ifEmpty { result.candidateFunctions }
+            } else {
+                result.viableFunctions
+            }
         return result
     }
 
@@ -1391,6 +1415,19 @@ internal fun Pass<*>.resolveWithArguments(
     val pair = language.bestViableResolution(result)
     result.bestViable = pair.first
     result.success = pair.second
+
+    // In a language that resolves calls by name only, the symbol lookup has already decided which
+    // declaration is meant, so keep it even if the signature does not match. See
+    // [HasNameOnlyCallResolution].
+    if (result.bestViable.isEmpty() && mayFallBackToCandidates) {
+        result.bestViable = result.candidateFunctions
+        result.success =
+            if (result.candidateFunctions.size == 1) {
+                SUCCESSFUL
+            } else {
+                AMBIGUOUS
+            }
+    }
 
     return result
 }
