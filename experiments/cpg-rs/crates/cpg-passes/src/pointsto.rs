@@ -7,11 +7,17 @@
 //!   where paths join, and loops are iterated to a fixpoint.
 //! - Every `Return` flows into its function.
 //!
-//! Stage 2: struct fields. A struct variable has three kinds of definitions:
+//! Stage 2: struct fields, also nested. A struct variable has three kinds of definitions, for a
+//! path of fields (`o.in.a` is `[in, a]`):
 //! - `Whole`: the declaration (and whole assignments),
-//! - `Field`: the member accesses that last wrote a field, read by a member access of that field,
-//! - `Partial`: the base references of those writes, which a read of the whole struct gets, with the
-//!   field as granularity.
+//! - `Field`: the member access that last wrote a path, read by a member access of that path,
+//! - `Partial`: for every prefix of a written path, the node that stands for the prefix (the base
+//!   reference, or the member access) as a partial definition of its parent, with the next field as
+//!   granularity. A read of the parent gets these.
+//!
+//! A member that is read without any definition for its path (or its sub-fields) gets the
+//! declaration of its field. A whole assignment to the variable does not copy field definitions; it
+//! only replaces everything known about the variable.
 //!
 //! Not yet: pointers and memory addresses, arrays, calls and function summaries.
 
@@ -21,19 +27,29 @@ use cpg_core::{Access, Granularity, Graph, Kind, NONE};
 
 /// What a set of definitions is about: a declaration as a whole, one of its fields (written by the
 /// member access), or a field as a partial definition of the whole (the base reference of a write).
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum Key {
     Whole(u32),
-    Field(u32, u32),
-    Partial(u32, u32),
+    /// The declaration and the path of fields.
+    Field(u32, Vec<u32>),
+    /// The declaration, the path of the parent, and the field in it.
+    Partial(u32, Vec<u32>, u32),
 }
 
 impl Key {
-    fn decl(self) -> u32 {
+    fn decl(&self) -> u32 {
         match self {
-            Key::Whole(d) | Key::Field(d, _) | Key::Partial(d, _) => d,
+            Key::Whole(d) | Key::Field(d, _) | Key::Partial(d, _, _) => *d,
         }
     }
+}
+
+/// A member access chain on a local variable: `nodes[0]` is the base reference, `nodes[i]` the member
+/// access of `path[i - 1]`.
+struct MemberPath {
+    decl: u32,
+    nodes: Vec<u32>,
+    path: Vec<u32>,
 }
 
 /// Key -> the nodes whose value may be the current one.
@@ -119,17 +135,38 @@ fn analyze(g: &mut Graph, f: u32, ref_of: &[u32], succ: &[Vec<u32>]) {
                 for (key, defs) in state.iter().filter(|(k, _)| k.decl() == d) {
                     let gran = match key {
                         Key::Whole(_) => Granularity::Full,
-                        Key::Partial(_, fld) => Granularity::Partial(format!("Field:{}", g.name_str(*fld))),
-                        Key::Field(..) => continue, // read by the member access, not by the base
+                        // only the fields of the variable itself, not of its fields
+                        Key::Partial(_, parent, fld) if parent.is_empty() => {
+                            Granularity::Partial(format!("Field:{}", g.name_str(*fld)))
+                        }
+                        _ => continue,
                     };
                     edges.extend(defs.iter().map(|&def| (def, node, gran.clone())));
                 }
             }
         }
         if kind == Kind::Member && access != Access::Write {
-            if let Some((d, _base, fld)) = member_target(g, node, ref_of, &local) {
-                if let Some(defs) = state.get(&Key::Field(d, fld)) {
+            if let Some(m) = member_path(g, node, ref_of, &local) {
+                let mut found = false;
+                if let Some(defs) = state.get(&Key::Field(m.decl, m.path.clone())) {
+                    found |= !defs.is_empty();
                     edges.extend(defs.iter().map(|&def| (def, node, Granularity::Full)));
+                }
+                // what was written to the fields of this member
+                for (key, defs) in state.iter().filter(|(k, _)| k.decl() == m.decl) {
+                    if let Key::Partial(_, parent, fld) = key {
+                        if *parent == m.path {
+                            found |= !defs.is_empty();
+                            let gran = Granularity::Partial(format!("Field:{}", g.name_str(*fld)));
+                            edges.extend(defs.iter().map(|&def| (def, node, gran.clone())));
+                        }
+                    }
+                }
+                if !found {
+                    // nothing known: the declaration of the field is its (default) value
+                    if let Some(&last) = m.path.last() {
+                        edges.push((last, node, Granularity::Full));
+                    }
                 }
             }
         }
@@ -142,19 +179,37 @@ fn analyze(g: &mut Graph, f: u32, ref_of: &[u32], succ: &[Vec<u32>]) {
     }
 }
 
-/// A member access of a field of a local variable: the declaration, the base reference and the
-/// field.
-fn member_target(g: &Graph, member: u32, ref_of: &[u32], local: &dyn Fn(u32) -> bool) -> Option<(u32, u32, u32)> {
-    let base = g.nodes[member as usize].first_child;
-    let field = ref_of[member as usize];
-    if base == NONE || field == NONE || g.nodes[base as usize].kind != Kind::Ref {
-        return None;
+/// The chain of member accesses `member` ends, if it starts at a local variable and all fields are
+/// resolved.
+fn member_path(g: &Graph, member: u32, ref_of: &[u32], local: &dyn Fn(u32) -> bool) -> Option<MemberPath> {
+    let mut nodes = vec![member];
+    let mut path = Vec::new();
+    let mut cur = member;
+    loop {
+        let field = ref_of[cur as usize];
+        if field == NONE || g.nodes[field as usize].kind != Kind::Field {
+            return None;
+        }
+        path.push(field);
+        let base = g.nodes[cur as usize].first_child;
+        if base == NONE {
+            return None;
+        }
+        nodes.push(base);
+        match g.nodes[base as usize].kind {
+            Kind::Member => cur = base,
+            Kind::Ref => {
+                let decl = ref_of[base as usize];
+                if !local(decl) {
+                    return None;
+                }
+                nodes.reverse();
+                path.reverse();
+                return Some(MemberPath { decl, nodes, path });
+            }
+            _ => return None,
+        }
     }
-    if g.nodes[field as usize].kind != Kind::Field {
-        return None;
-    }
-    let decl = ref_of[base as usize];
-    local(decl).then_some((decl, base, field))
 }
 
 /// A write to `target` (the target of an assignment, or the operand of `++`/`--`), as a definition.
@@ -169,9 +224,12 @@ fn define(g: &Graph, target: u32, out: &mut State, ref_of: &[u32], local: &dyn F
             }
         }
         Kind::Member => {
-            if let Some((d, base, fld)) = member_target(g, target, ref_of, local) {
-                out.insert(Key::Field(d, fld), BTreeSet::from([target]));
-                out.insert(Key::Partial(d, fld), BTreeSet::from([base]));
+            if let Some(m) = member_path(g, target, ref_of, local) {
+                out.insert(Key::Field(m.decl, m.path.clone()), BTreeSet::from([target]));
+                // every prefix of the path is a partial definition of its parent
+                for i in 0..m.path.len() {
+                    out.insert(Key::Partial(m.decl, m.path[..i].to_vec(), m.path[i]), BTreeSet::from([m.nodes[i]]));
+                }
             }
         }
         _ => {}
@@ -207,7 +265,7 @@ fn transfer(g: &Graph, node: u32, state: &State, ref_of: &[u32], local: &dyn Fn(
 fn merge(into: &mut State, from: &State) -> bool {
     let mut changed = false;
     for (key, defs) in from {
-        let slot = into.entry(*key).or_default();
+        let slot = into.entry(key.clone()).or_default();
         for &d in defs {
             changed |= slot.insert(d);
         }

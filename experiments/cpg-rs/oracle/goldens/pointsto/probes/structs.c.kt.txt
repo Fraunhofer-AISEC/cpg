@@ -1,0 +1,49 @@
+#0 TranslationUnit name='../../private/tmp/pt-in3/structs.c' type='-' loc=1:1-19:3 code='struct I {\n  int a;\n};\nstruct O {\n  struct I in;\n  int '
+  #1 Record name='I' type='-' loc=1:1-3:2 code='struct I {\n  int a;\n}'
+    #2 Field name='I::a' type='int' loc=2:7-2:8 code='a'
+    #3 Constructor name='I::I' type='I()I' loc=? code='I' dfg=[#4]
+      #4 Variable name='this' type='I*' loc=? code=''
+  #5 Record name='O' type='-' loc=4:1-7:2 code='struct O {\n  struct I in;\n  int z;\n}'
+    #6 Field name='O::in' type='I' loc=5:12-5:14 code='in' eog=[#7]
+    #7 Field name='O::z' type='int' loc=6:7-6:8 code='z'
+    #8 Constructor name='O::O' type='O()O' loc=? code='O' dfg=[#9]
+      #9 Variable name='this' type='O*' loc=? code=''
+  #10 Function name='h' type='(int)int' loc=9:1-19:2 code='int h(int c) {\n  struct O o;\n  o.in.a = 1;\n  o.z = 2;\n  ' eog=[#13] dfg=[#42]
+    #11 Block name='' type='UNKNOWN' loc=9:14-19:2 code='{\n  struct O o;\n  o.in.a = 1;\n  o.z = 2;\n  int u = o.in.'
+      #12 DeclarationStatement name='' type='UNKNOWN' loc=10:3-10:14 code='struct O o;' eog=[#17]
+        #13 Variable name='o' type='O' loc=10:12-10:13 code='o' eog=[#12]
+      #14 Assign name='=' type='UNKNOWN' loc=11:3-11:14 code='o.in.a = 1;' eog=[#21]
+        #15 MemberAccess name='I::a' type='int' loc=11:3-11:9 code='o.in.a' acc=WRITE refersTo=#2 eog=[#18] dfg=[#18]
+          #16 MemberAccess name='O::in' type='I' loc=11:3-11:7 code='o.in' acc=READWRITE refersTo=#6 eog=[#15] dfg=[#15:F(I::a),#6]
+            #17 Reference name='o' type='O' loc=11:3-11:4 code='o' refersTo=#13 eog=[#16] dfg=[#16:F(O::in),#13]
+        #18 Literal name='' type='int' loc=11:12-11:13 code='1' eog=[#14]
+      #19 Assign name='=' type='UNKNOWN' loc=12:3-12:11 code='o.z = 2;' eog=[#24]
+        #20 MemberAccess name='O::z' type='int' loc=12:3-12:6 code='o.z' acc=WRITE refersTo=#7 eog=[#22] dfg=[#22]
+          #21 Reference name='o' type='O' loc=12:3-12:4 code='o' refersTo=#13 eog=[#20] dfg=[#20:F(O::z),#13,#17:Part(Field:O::in)]
+        #22 Literal name='' type='int' loc=12:9-12:10 code='2' eog=[#19]
+      #23 DeclarationStatement name='' type='UNKNOWN' loc=13:3-13:18 code='int u = o.in.a;' eog=[#29]
+        #24 Variable name='u' type='int' loc=13:7-13:17 code='u = o.in.a' eog=[#27] dfg=[#25]
+          #25 MemberAccess name='I::a' type='int' loc=13:11-13:17 code='o.in.a' refersTo=#2 eog=[#23] dfg=[#26:F(I::a),#15]
+            #26 MemberAccess name='O::in' type='I' loc=13:11-13:15 code='o.in' refersTo=#6 eog=[#25] dfg=[#27:F(O::in),#16:Part(Field:I::a)]
+              #27 Reference name='o' type='O' loc=13:11-13:12 code='o' refersTo=#13 eog=[#26] dfg=[#13,#17:Part(Field:O::in),#21:Part(Field:O::z)]
+      #28 DeclarationStatement name='' type='UNKNOWN' loc=14:3-14:15 code='struct O o2;' eog=[#31]
+        #29 Variable name='o2' type='O' loc=14:12-14:14 code='o2' eog=[#28]
+      #30 Assign name='=' type='UNKNOWN' loc=15:3-15:10 code='o2 = o;' eog=[#34]
+        #31 Reference name='o2' type='O' loc=15:3-15:5 code='o2' acc=WRITE refersTo=#29 eog=[#32] dfg=[#32]
+        #32 Reference name='o' type='O' loc=15:8-15:9 code='o' refersTo=#13 eog=[#30] dfg=[#13,#17:Part(Field:O::in),#21:Part(Field:O::z)]
+      #33 DeclarationStatement name='' type='UNKNOWN' loc=16:3-16:16 code='int v = o2.z;' eog=[#38]
+        #34 Variable name='v' type='int' loc=16:7-16:15 code='v = o2.z' eog=[#36] dfg=[#35]
+          #35 MemberAccess name='O::z' type='int' loc=16:11-16:15 code='o2.z' refersTo=#7 eog=[#33] dfg=[#36:F(O::z),#7]
+            #36 Reference name='o2' type='O' loc=16:11-16:13 code='o2' refersTo=#29 eog=[#35] dfg=[#31]
+      #37 DeclarationStatement name='' type='UNKNOWN' loc=17:3-17:19 code='int w = o2.in.a;' eog=[#45]
+        #38 Variable name='w' type='int' loc=17:7-17:18 code='w = o2.in.a' eog=[#41] dfg=[#39]
+          #39 MemberAccess name='I::a' type='int' loc=17:11-17:18 code='o2.in.a' refersTo=#2 eog=[#37] dfg=[#40:F(I::a),#2]
+            #40 MemberAccess name='O::in' type='I' loc=17:11-17:16 code='o2.in' refersTo=#6 eog=[#39] dfg=[#41:F(O::in),#6]
+              #41 Reference name='o2' type='O' loc=17:11-17:13 code='o2' refersTo=#29 eog=[#40] dfg=[#31]
+      #42 Return name='' type='UNKNOWN' loc=18:3-18:20 code='return u + v + w;' dfg=[#43]
+        #43 BinaryOperator name='+' type='int' loc=18:10-18:19 code='u + v + w' eog=[#42] dfg=[#44,#47]
+          #44 BinaryOperator name='+' type='int' loc=18:10-18:15 code='u + v' eog=[#47] dfg=[#45,#46]
+            #45 Reference name='u' type='int' loc=18:10-18:11 code='u' refersTo=#24 eog=[#46] dfg=[#24]
+            #46 Reference name='v' type='int' loc=18:14-18:15 code='v' refersTo=#34 eog=[#44] dfg=[#34]
+          #47 Reference name='w' type='int' loc=18:18-18:19 code='w' refersTo=#38 eog=[#43] dfg=[#38]
+    #48 Parameter name='c' type='int' loc=9:7-9:12 code='int c'
