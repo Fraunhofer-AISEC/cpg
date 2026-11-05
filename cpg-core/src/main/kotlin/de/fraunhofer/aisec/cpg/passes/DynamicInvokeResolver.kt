@@ -172,10 +172,17 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 continue
             }
 
-            val isLambda = curr is Variable && curr.initializer is Lambda
+            // A function literal does not have to be bound to a variable first. It is just as
+            // often written where it is handed over -- returned from a factory, passed as an
+            // argument, or converted to a defined function type, as in
+            // `return ProcessWith(func(e string) string { ... })`. In that case the literal
+            // itself is what flows here, and looking only inside variables walks straight past
+            // the one target the call has.
+            val lambda = curr as? Lambda ?: (curr as? Variable)?.initializer as? Lambda
+            val isLambda = lambda != null
             val currentFunction =
                 when {
-                    isLambda -> (curr as Variable).initializer.let { (it as Lambda).function }
+                    lambda != null -> lambda.function
                     // A named function used as a value: `var Get = pool.Get` or
                     // `Register(addKnownTypes)`. What flows here is a reference to the function,
                     // not the declaration node itself, so without this the search walks past the
