@@ -50,7 +50,7 @@ impl<'a> Builder<'a, '_> {
     pub(crate) fn add_implicit(&mut self, parent: u32, kind: Kind, name: u32) -> u32 {
         let id = self.g.nodes.len() as u32;
         self.g.nodes.push(Node {
-            kind, ptr: 0, name, ty: NONE, start: NONE, end: NONE, ty_start: 0, ty_end: 0,
+            kind, ptr: 0, access: cpg_core::Access::Read, name, ty: NONE, start: NONE, end: NONE, ty_start: 0, ty_end: 0,
             first_child: NONE, last_child: NONE, next: NONE,
         });
         self.link(parent, id);
@@ -75,7 +75,7 @@ impl<'a> Builder<'a, '_> {
         });
         let id = self.g.nodes.len() as u32;
         self.g.nodes.push(Node {
-            kind, ptr: 0, name, ty: NONE, start, end,
+            kind, ptr: 0, access: cpg_core::Access::Read, name, ty: NONE, start, end,
             ty_start: 0, ty_end: 0, first_child: NONE, last_child: NONE, next: NONE,
         });
         self.link(parent, id);
@@ -108,8 +108,17 @@ impl<'a> Builder<'a, '_> {
 
     /// The name of the first child, whatever it is (a pointer reference or dereference is named
     /// after its operand, e.g. `++` for `*p++`).
-    pub(crate) fn name_of_child(&self, node: u32) -> u32 {
+    pub(crate) fn name_of_child(&mut self, node: u32) -> u32 {
         let c = self.g.nodes[node as usize].first_child;
-        if c == NONE { NONE } else { self.g.nodes[c as usize].name }
+        if c == NONE {
+            return NONE;
+        }
+        // At translation time, a member access is named `<type of its base>.<field>`, and the type of
+        // the base is not known yet.
+        if self.g.nodes[c as usize].kind == Kind::Member {
+            let field = self.g.name_str(c).to_string();
+            return self.intern_owned(format!("UNKNOWN.{field}").into_bytes());
+        }
+        self.g.nodes[c as usize].name
     }
 }

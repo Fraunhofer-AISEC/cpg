@@ -6,5 +6,5 @@ mod graph;
 mod kind;
 
 pub use dump::dump;
-pub use graph::{EogEdge, Graph, Node, NONE};
+pub use graph::{Access, EogEdge, Graph, Node, NONE};
 pub use kind::Kind;

@@ -66,6 +66,11 @@ pub fn dump(g: &Graph, unit_name: &str) -> String {
             "{}#{} {} name='{}' type='{}' loc={} code='{}'",
             "  ".repeat(depth), i, n.kind.class_name(), name, ty, loc, code
         ));
+        match n.access {
+            crate::Access::Read => {}
+            crate::Access::Write => out.push_str(" acc=WRITE"),
+            crate::Access::ReadWrite => out.push_str(" acc=READWRITE"),
+        }
         if matches!(n.kind, Kind::Ref | Kind::PointerRef | Kind::PointerDeref | Kind::Member) {
             match refers[id as usize] {
                 NONE => out.push_str(" refersTo=-"),

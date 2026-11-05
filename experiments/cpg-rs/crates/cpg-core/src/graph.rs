@@ -4,10 +4,20 @@ use crate::Kind;
 
 pub const NONE: u32 = u32::MAX;
 
+/// How an expression is used: read, written, or both (see `AccessValues` of the Kotlin CPG).
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Access {
+    #[default]
+    Read,
+    Write,
+    ReadWrite,
+}
+
 #[derive(Clone, Copy)]
 pub struct Node {
     pub kind: Kind,
     pub ptr: u8,
+    pub access: Access,
     pub name: u32,
     /// Index into `Graph::names` of the type name (NONE = node has no type).
     pub ty: u32,

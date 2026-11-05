@@ -7,6 +7,7 @@ fn main() {
     cpg_passes::eog(&mut g);
     cpg_passes::resolve(&mut g);
     cpg_passes::typing(&mut g);
+    cpg_passes::access(&mut g);
     let unit = std::path::Path::new(&args[1]).file_name().unwrap().to_string_lossy().into_owned();
     print!("{}", cpg_core::dump(&g, &unit));
 }

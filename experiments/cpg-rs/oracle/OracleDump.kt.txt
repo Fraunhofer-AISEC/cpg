@@ -26,10 +26,21 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.StringIndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.NonLocalVariablesIdentificationPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
@@ -41,6 +52,17 @@ import kotlin.test.Test
 
 /** Scratch: canonical dump of the Kotlin CPG (frontend + the passes SymbolResolver needs). */
 class TmpDump {
+    private fun granularity(g: Granularity): String =
+        when (g) {
+            is FullDataflowGranularity -> ""
+            is PointerDataflowGranularity -> ":P(${g.pointerTarget})"
+            is FieldDataflowGranularity -> ":F(${g.partialTarget.name})"
+            is IndexedDataflowGranularity -> ":I(${g.partialTarget})"
+            is StringIndexedDataflowGranularity -> ":S(${g.partialTarget})"
+            is PartialDataflowGranularity<*> -> ":Part(${g.partialTarget})"
+            else -> ":?"
+        }
+
     @Test
     fun dump() {
         val dir = File(System.getenv("DUMP_DIR") ?: error("DUMP_DIR not set"))
@@ -72,6 +94,11 @@ class TmpDump {
                 it.registerPass<TypeHierarchyResolver>()
                 it.registerPass<EvaluationOrderGraphPass>()
                 it.registerPass<SymbolResolver>()
+                // DUMP_PASSES: dfg adds the data flow graph (without control flow)
+                if ("dfg" in (System.getenv("DUMP_PASSES") ?: "").split(",")) {
+                    it.registerPass<NonLocalVariablesIdentificationPass>()
+                    it.registerPass<DFGPass>()
+                }
             }
         val tus = result.components.flatMap { it.translationUnits }
 
@@ -96,6 +123,9 @@ class TmpDump {
                 .append(
                     "#${ids[n]} ${n.javaClass.simpleName} name='${n.name}' type='$type' loc=$loc code='$code'"
                 )
+            if (System.getenv("DUMP_ACCESS") != null && n is Expression && n.access != AccessValues.READ) {
+                sb.append(" acc=${n.access}")
+            }
             if (n is Reference) sb.append(" refersTo=${ref(n.refersTo)}")
             if (n is Call) sb.append(" invokes=[${n.invokes.joinToString(",") { ref(it) }}]")
             val eog =
@@ -105,6 +135,11 @@ class TmpDump {
                         (if (it.unreachable) ":U" else "")
                 }
             if (eog.isNotEmpty()) sb.append(" eog=[$eog]")
+            val dfg =
+                n.prevDFGEdges.joinToString(",") { e ->
+                    ref(e.start) + granularity(e.granularity) + (if (e.functionSummary) "!fs" else "")
+                }
+            if (dfg.isNotEmpty()) sb.append(" dfg=[$dfg]")
             sb.append('\n')
             n.astChildren.forEach { dump(it, depth + 1) }
         }

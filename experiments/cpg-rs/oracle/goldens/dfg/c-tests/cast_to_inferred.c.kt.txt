@@ -1,0 +1,15 @@
+#0 TranslationUnit name='cast_to_inferred.c' type='-' loc=1:1-6:2 code='int foo(const mytype *p)\n{\n	mytype *v;\n	*v = (mytype)*p;\'
+  #1 Function name='foo' type='(mytype*)int' loc=1:1-6:2 code='int foo(const mytype *p)\n{\n	mytype *v;\n	*v = (mytype)*p;\' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=2:1-6:2 code='{\n	mytype *v;\n	*v = (mytype)*p;\n	return 0;\n}'
+      #3 DeclarationStatement name='' type='UNKNOWN' loc=3:2-3:12 code='mytype *v;' eog=[#7]
+        #4 Variable name='v' type='mytype*' loc=3:9-3:11 code='*v' eog=[#3]
+      #5 Assign name='=' type='UNKNOWN' loc=4:2-4:18 code='*v = (mytype)*p;' eog=[#13]
+        #6 PointerDereference name='v' type='mytype' loc=4:2-4:4 code='*v' acc=WRITE refersTo=#4 eog=[#10] dfg=[#8,#7:Part(PointerDereference)]
+          #7 Reference name='v' type='mytype*' loc=4:3-4:4 code='v' refersTo=#4 eog=[#6] dfg=[#4]
+        #8 BinaryOperator name='*' type='UNKNOWN' loc=4:7-4:17 code='(mytype)*p' eog=[#5] dfg=[#9,#11]
+          #9 UnaryOperator name='()' type='UNKNOWN' loc=4:7-4:15 code='(mytype)' eog=[#11] dfg=[#10]
+            #10 Reference name='mytype' type='UNKNOWN' loc=4:8-4:14 code='mytype' refersTo=- eog=[#9]
+          #11 Reference name='p' type='mytype*' loc=4:16-4:17 code='p' refersTo=#14 eog=[#8] dfg=[#14]
+      #12 Return name='' type='UNKNOWN' loc=5:2-5:11 code='return 0;' dfg=[#13]
+        #13 Literal name='' type='int' loc=5:9-5:10 code='0' eog=[#12]
+    #14 Parameter name='p' type='mytype*' loc=1:9-1:24 code='const mytype *p'

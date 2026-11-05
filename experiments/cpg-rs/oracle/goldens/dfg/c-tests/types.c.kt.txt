@@ -1,0 +1,5 @@
+#0 TranslationUnit name='types.c' type='-' loc=1:1-5:2 code='// C allows to omit the type specifier, which then defaults '
+  #1 Function name='main' type='()int' loc=3:1-5:2 code='main() {\n  return 1;\n}' eog=[#4]
+    #2 Block name='' type='UNKNOWN' loc=3:8-5:2 code='{\n  return 1;\n}'
+      #3 Return name='' type='UNKNOWN' loc=4:3-4:12 code='return 1;' dfg=[#4]
+        #4 Literal name='' type='int' loc=4:10-4:11 code='1' eog=[#3]

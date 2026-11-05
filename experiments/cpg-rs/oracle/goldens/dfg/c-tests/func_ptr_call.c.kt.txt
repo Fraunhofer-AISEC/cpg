@@ -1,0 +1,29 @@
+#0 TranslationUnit name='func_ptr_call.c' type='-' loc=1:1-24:3 code='void target() {}\n\nint main() {\n  // Declares a function p'
+  #1 Function name='target' type='()void' loc=1:1-1:17 code='void target() {}' eog=[#3]
+    #2 Block name='' type='UNKNOWN' loc=1:15-1:17 code='{}'
+      #3 Return name='' type='UNKNOWN' loc=? code=''
+  #4 Function name='main' type='()int' loc=3:1-24:2 code='int main() {\n  // Declares a function pointer with an initi' eog=[#7]
+    #5 Block name='' type='UNKNOWN' loc=3:12-24:2 code='{\n  // Declares a function pointer with an initializer set '
+      #6 DeclarationStatement name='' type='UNKNOWN' loc=5:3-5:32 code='void (*no_param)() = &target;' eog=[#11]
+        #7 Variable name='no_param' type='' loc=5:8-5:31 code='(*no_param)() = &target' eog=[#9] dfg=[#8]
+          #8 PointerReference name='target' type='' loc=5:24-5:31 code='&target' refersTo=#1 eog=[#6] dfg=[#9:Part(PointerReference)]
+            #9 Reference name='target' type='()void' loc=5:25-5:31 code='target' refersTo=#1 eog=[#8] dfg=[#1]
+      #10 DeclarationStatement name='' type='UNKNOWN' loc=7:3-7:37 code='void (*no_param_uninitialized) ();' eog=[#13]
+        #11 Variable name='no_param_uninitialized' type='' loc=7:8-7:36 code='(*no_param_uninitialized) ()' eog=[#10] dfg=[#13]
+      #12 Assign name='=' type='UNKNOWN' loc=10:3-10:36 code='no_param_uninitialized = &target;' eog=[#18]
+        #13 Reference name='no_param_uninitialized' type='' loc=10:3-10:25 code='no_param_uninitialized' acc=WRITE refersTo=#11 eog=[#15] dfg=[#14]
+        #14 PointerReference name='target' type='' loc=10:28-10:35 code='&target' refersTo=#1 eog=[#12] dfg=[#15:Part(PointerReference)]
+          #15 Reference name='target' type='()void' loc=10:29-10:35 code='target' refersTo=#1 eog=[#14] dfg=[#1]
+      #16 Call name='no_param' type='UNKNOWN' loc=14:3-14:17 code='(*no_param)();' invokes=[] eog=[#21]
+        #17 PointerDereference name='no_param' type='' loc=14:4-14:13 code='*no_param' refersTo=#7 eog=[#16] dfg=[#18:Part(PointerDereference)]
+          #18 Reference name='no_param' type='' loc=14:5-14:13 code='no_param' refersTo=#7 eog=[#17] dfg=[#7]
+      #19 Call name='no_param_uninitialized' type='UNKNOWN' loc=15:3-15:31 code='(*no_param_uninitialized)();' invokes=[] eog=[#23]
+        #20 PointerDereference name='no_param_uninitialized' type='' loc=15:4-15:27 code='*no_param_uninitialized' refersTo=#11 eog=[#19] dfg=[#21:Part(PointerDereference)]
+          #21 Reference name='no_param_uninitialized' type='' loc=15:5-15:27 code='no_param_uninitialized' refersTo=#11 eog=[#20] dfg=[#11]
+      #22 Call name='no_param' type='UNKNOWN' loc=19:3-19:14 code='no_param();' invokes=[] eog=[#25]
+        #23 Reference name='no_param' type='' loc=19:3-19:11 code='no_param' refersTo=#7 eog=[#22] dfg=[#7]
+      #24 Call name='no_param_uninitialized' type='UNKNOWN' loc=20:3-20:28 code='no_param_uninitialized();' invokes=[] eog=[#27]
+        #25 Reference name='no_param_uninitialized' type='' loc=20:3-20:25 code='no_param_uninitialized' refersTo=#11 eog=[#24] dfg=[#11]
+      #26 Call name='target' type='void' loc=23:3-23:12 code='target();' invokes=[#1] eog=[#28] dfg=[#1]
+        #27 Reference name='target' type='()void' loc=23:3-23:9 code='target' refersTo=#1 eog=[#26] dfg=[#1]
+      #28 Return name='' type='UNKNOWN' loc=? code=''
