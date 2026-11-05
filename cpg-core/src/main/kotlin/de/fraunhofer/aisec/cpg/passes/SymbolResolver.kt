@@ -913,9 +913,23 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val records =
             possibleContainingTypes.mapNotNullTo(mutableSetOf()) { it.root.recordDeclaration }
         for (record in records) {
-            candidates.addAll(
+            val byName =
                 ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
-            )
+            if (byName.isNotEmpty()) {
+                candidates.addAll(byName)
+                continue
+            }
+
+            // Looking a member up by its fully qualified name goes through whichever scope carries
+            // that name, which is not necessarily the scope of *this* record: two records can end
+            // up with the same name, and then the lookup may land on the other one and come back
+            // empty while the member sits right here. Go makes that easy to hit, because a package
+            // is named after the last element of its import path, so `.../zap/buffer.Buffer` and
+            // any other `buffer.Buffer` are indistinguishable by name. Fall back to the scope the
+            // record itself declares.
+            record.declaringScope?.lookupSymbol(symbol, qualifiedLookup = true)?.let {
+                candidates.addAll(it)
+            }
         }
 
         // Find invokes by supertypes

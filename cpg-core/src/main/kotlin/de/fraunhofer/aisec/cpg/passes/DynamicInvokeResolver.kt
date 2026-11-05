@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
@@ -43,6 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.functional.getFunctionPointerType
@@ -208,6 +210,38 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     ?.let { prevDFGToPush.addAll(it) }
                 // Also add the initializer of the field (if it exists)
                 (curr.refersTo as? Field)?.initializer?.let { prevDFGToPush.add(it) }
+            }
+
+            // A function value very often enters the enclosing function from outside: as the
+            // receiver of a method on a defined function type -- `func (f Decorator) Apply(p
+            // Processor) { f(p) }` -- or as a parameter, as in `Decorate(c Processor, ds
+            // ...Decorator)`, which calls each of the decorators it was handed. Inside the
+            // function there is nothing more to follow, so without stepping over the call boundary
+            // the search ends at the parameter and the call looks like it has no target. The data
+            // flow graph only models that step for inferred functions, so do it here, from the
+            // call sites of the function this parameter belongs to.
+            // If a reference has no incoming data flow of its own, continue at the declaration it
+            // refers to. That is where the step over the call boundary below can pick up.
+            if (prevDFGToPush.isEmpty() && curr is Reference) {
+                curr.refersTo?.let { prevDFGToPush.add(it) }
+            }
+
+            if (prevDFGToPush.isEmpty() && (curr is Parameter || curr is Variable)) {
+                val owner = (curr as Node).firstParentOrNull<Function>()
+                for (callSite in owner?.calledBy ?: listOf()) {
+                    if (curr === (owner as? Method)?.receiver) {
+                        (callSite as? MemberCall)?.base?.let { prevDFGToPush.add(it) }
+                    } else if (curr is Parameter) {
+                        if (curr.isVariadic) {
+                            // Everything from this position on is collected into the parameter
+                            prevDFGToPush.addAll(callSite.arguments.drop(curr.argumentIndex))
+                        } else {
+                            callSite.arguments.getOrNull(curr.argumentIndex)?.let {
+                                prevDFGToPush.add(it)
+                            }
+                        }
+                    }
+                }
             }
 
             prevDFGToPush.forEach(Consumer(work::push))

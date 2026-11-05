@@ -108,6 +108,16 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): Record? {
         return null
     }
 
+    // A record of that name already exists; it was only out of reach from the scope the type was
+    // written in. Inferring a second one does not add anything and actively hurts, because the two
+    // then compete for the same symbol: a lookup that lands on the empty inferred record finds
+    // none of the real one's members, and every method call on the type is left without a target.
+    // Hand out the record we already have instead.
+    val existingRecord = (existingScope as? RecordScope)?.astNode as? Record
+    if (existingRecord != null && !existingRecord.isInferred) {
+        return existingRecord
+    }
+
     val kind =
         if (type.language is HasStructs) {
             "struct"
