@@ -198,7 +198,11 @@ open class Dataflow(
 }
 
 sealed interface CallingContext {
-    /** The call expression that affects this dataflow edge. In flow order (outermost last). */
+    /**
+     * The call expressions that affect this dataflow edge. In flow order (outermost last). A
+     * context keeps its own copy of the list it was created with, but this list can still be
+     * modified; the [hashCode] of the context takes this into account.
+     */
     val calls: MutableList<Call>
 }
 
@@ -219,9 +223,59 @@ private fun callsIdentityHash(calls: List<Call>): Int {
     return result
 }
 
-class CallingContextIn(override val calls: MutableList<Call>) : CallingContext {
-    /** The hash is used for every copy of a state, so we compute it only once. 0 means unset. */
-    private var cachedHashCode = 0
+/**
+ * The list of [Call]s of a [CallingContext]. The hash of a context is needed for every copy of a
+ * points-to state, so we do not want to recompute it for every call. But since the list is
+ * modifiable, we cannot cache it forever either: this list counts its modifications and remembers
+ * the hash together with the count it was computed for.
+ */
+private class CallList(initial: Collection<Call>) : AbstractMutableList<Call>() {
+    private val list = ArrayList(initial)
+
+    /** The number of modifications so far. */
+    private var version = 0
+
+    /** The version in the upper and the hash in the lower 32 bits, `-1` if unset. */
+    @Volatile private var cached = -1L
+
+    override val size: Int
+        get() = list.size
+
+    override fun get(index: Int): Call = list[index]
+
+    override fun add(index: Int, element: Call) {
+        list.add(index, element)
+        version++
+    }
+
+    override fun removeAt(index: Int): Call {
+        version++
+        return list.removeAt(index)
+    }
+
+    override fun set(index: Int, element: Call): Call {
+        version++
+        return list.set(index, element)
+    }
+
+    /** The hash of the [Call]s by identity, computed only if the list changed since last time. */
+    fun identityHash(): Int {
+        val current = version
+        val c = cached
+        if (c != -1L && (c ushr 32).toInt() == current) {
+            return c.toInt()
+        }
+
+        val hash = callsIdentityHash(this)
+        cached = (current.toLong() shl 32) or (hash.toLong() and 0xFFFFFFFFL)
+        return hash
+    }
+}
+
+class CallingContextIn(calls: MutableList<Call>) : CallingContext {
+    private val callList = CallList(calls)
+
+    override val calls: MutableList<Call> = callList
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -229,24 +283,15 @@ class CallingContextIn(override val calls: MutableList<Call>) : CallingContext {
         return callsEqualByIdentity(this.calls, other.calls)
     }
 
-    // Like for any key of a hash-based collection, the [calls] must not change once this object
-    // was used as one, so we can cache the hash.
     override fun hashCode(): Int {
-        var h = cachedHashCode
-        if (h == 0) {
-            h = 31 * callsIdentityHash(calls)
-            cachedHashCode = h
-        }
-        return h
+        return 31 * callList.identityHash()
     }
 }
 
-class CallingContextOut(
-    /** The call expression that affects this dataflow edge. */
-    override val calls: MutableList<Call>
-) : CallingContext {
-    /** The hash is used for every copy of a state, so we compute it only once. 0 means unset. */
-    private var cachedHashCode = 0
+class CallingContextOut(calls: MutableList<Call>) : CallingContext {
+    private val callList = CallList(calls)
+
+    override val calls: MutableList<Call> = callList
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -254,15 +299,8 @@ class CallingContextOut(
         return callsEqualByIdentity(this.calls, other.calls)
     }
 
-    // Like for any key of a hash-based collection, the [calls] must not change once this object
-    // was used as one, so we can cache the hash.
     override fun hashCode(): Int {
-        var h = cachedHashCode
-        if (h == 0) {
-            h = 31 * callsIdentityHash(calls)
-            cachedHashCode = h
-        }
-        return h
+        return 31 * callList.identityHash()
     }
 }
 
