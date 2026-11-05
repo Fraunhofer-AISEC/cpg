@@ -143,10 +143,14 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
             val isLambda = curr is Variable && curr.initializer is Lambda
             val currentFunction =
-                if (isLambda) {
-                    (curr.initializer as Lambda).function
-                } else {
-                    curr
+                when {
+                    isLambda -> (curr as Variable).initializer.let { (it as Lambda).function }
+                    // A named function used as a value: `var Get = pool.Get` or
+                    // `Register(addKnownTypes)`. What flows here is a reference to the function,
+                    // not the declaration node itself, so without this the search walks past the
+                    // only target it will ever find.
+                    curr is Reference && curr.refersTo is Function -> curr.refersTo
+                    else -> curr
                 }
 
             if (currentFunction is Function) {

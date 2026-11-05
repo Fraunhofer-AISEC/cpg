@@ -758,6 +758,20 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // in handleReference.
         val helper = current.resolutionHelper
         if (helper is MemberCall) {
+            // The callee of a member call does not have to be a method. In a language with
+            // first-class functions a field can hold a function, and `srv.MsgInvalidFunc(m, err)`
+            // then calls the value in that field rather than a method of that name. Call
+            // resolution only ever considers Function candidates, so such a call ends up with no
+            // target at all -- and since there is no record member to infer a method from, not
+            // even an inferred one. Bind the access to the field here and take over its type, so
+            // that DynamicInvokeResolver can follow the data flow to whatever was stored in it.
+            if (language is HasFirstClassFunctions && current.candidates.none { it is Function }) {
+                val field = current.candidates.filterIsInstance<Field>().singleOrNull()
+                if (field != null && field.type.isFunctionLike) {
+                    current.refersTo = field
+                    current.type = field.type
+                }
+            }
             return
         }
 
@@ -1278,6 +1292,15 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
     // We also set the callee's refersTo
     callee.refersTo = call.invokes.firstOrNull()
 }
+
+/**
+ * Whether a value of this type can be called. Next to the function types themselves this covers a
+ * type that is *defined over* a function type, such as Go's `type HandlerFunc func(http.Request)`,
+ * which carries the function type among its super types.
+ */
+internal val Type.isFunctionLike: Boolean
+    get() =
+        this is FunctionType || this is FunctionPointerType || superTypes.any { it is FunctionType }
 
 /**
  * Returns a set of types in which the [Call.callee] (which is a [Reference]) could reside in. More
