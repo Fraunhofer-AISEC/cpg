@@ -71,7 +71,7 @@ pub fn dfg(g: &mut Graph, flow_sensitive_references: bool) {
             }
             Kind::Ref => {
                 let decl = ref_of[id as usize];
-                if decl != NONE && (!flow_sensitive_references || is_global(g, decl)) {
+                if decl != NONE && (!flow_sensitive_references || is_global(g, decl, &parent)) {
                     match access {
                         Access::Write => g.add_dfg(id, decl, full),
                         Access::Read => g.add_dfg(decl, id, full),
@@ -174,20 +174,11 @@ fn call(g: &mut Graph, id: u32, kids: &[u32]) {
     }
 }
 
-/// A global variable (or a function): declared in the translation unit itself.
-fn is_global(g: &Graph, decl: u32) -> bool {
+/// A global variable (or a function): declared directly in the translation unit.
+fn is_global(g: &Graph, decl: u32, parent: &[u32]) -> bool {
     match g.nodes[decl as usize].kind {
         Kind::Function => true,
-        Kind::Variable => {
-            // global if the unit is its parent: not inside a function
-            let mut c = decl;
-            // walk up through the first-child/next structure is not possible without parents,
-            // so look for a unit child with this id
-            g.children(0).any(|k| k == c) && {
-                c = 0;
-                c == 0
-            }
-        }
+        Kind::Variable => parent[decl as usize] == 0,
         _ => false,
     }
 }

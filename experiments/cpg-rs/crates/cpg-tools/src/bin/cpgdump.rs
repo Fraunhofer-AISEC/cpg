@@ -9,7 +9,11 @@ fn main() {
     cpg_passes::typing(&mut g);
     cpg_passes::access(&mut g);
     // DFG_MODE=pointsto: the points-to pass is part of the pipeline (references are not handled here)
-    cpg_passes::dfg(&mut g, std::env::var("DFG_MODE").is_ok_and(|m| m == "pointsto"));
+    let pointsto = std::env::var("DFG_MODE").is_ok_and(|m| m == "pointsto");
+    cpg_passes::dfg(&mut g, pointsto);
+    if pointsto {
+        cpg_passes::pointsto(&mut g);
+    }
     let unit = std::path::Path::new(&args[1]).file_name().unwrap().to_string_lossy().into_owned();
     print!("{}", cpg_core::dump(&g, &unit));
 }

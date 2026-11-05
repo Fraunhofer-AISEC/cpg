@@ -26,6 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
@@ -39,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.NonLocalVariablesIdentificationPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
@@ -47,11 +51,20 @@ import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 import java.util.IdentityHashMap
 import kotlin.test.Test
 
 /** Scratch: canonical dump of the Kotlin CPG (frontend + the passes SymbolResolver needs). */
 class TmpDump {
+    /** What a partial granularity points to: the name of a node when details are wanted. */
+    private fun partialDetail(t: Any?): String =
+        if (t is de.fraunhofer.aisec.cpg.graph.Node) {
+            if (System.getenv("DUMP_CTX") != null) "${t.javaClass.simpleName}:${t.name}" else "node"
+        } else {
+            "$t"
+        }
+
     private fun granularity(g: Granularity): String =
         when (g) {
             is FullDataflowGranularity -> ""
@@ -60,7 +73,7 @@ class TmpDump {
             is IndexedDataflowGranularity -> ":I(${g.partialTarget})"
             is StringIndexedDataflowGranularity -> ":S(${g.partialTarget})"
             is PartialDataflowGranularity<*> ->
-                ":Part(${if (g.partialTarget is de.fraunhofer.aisec.cpg.graph.Node) "node" else g.partialTarget})"
+                ":Part(${partialDetail(g.partialTarget)})"
             else -> ":?"
         }
 
@@ -96,9 +109,16 @@ class TmpDump {
                 it.registerPass<EvaluationOrderGraphPass>()
                 it.registerPass<SymbolResolver>()
                 // DUMP_PASSES: dfg adds the data flow graph (without control flow)
-                if ("dfg" in (System.getenv("DUMP_PASSES") ?: "").split(",")) {
+                val wanted = (System.getenv("DUMP_PASSES") ?: "").split(",")
+                if ("dfg" in wanted || "pointsto" in wanted) {
                     it.registerPass<NonLocalVariablesIdentificationPass>()
                     it.registerPass<DFGPass>()
+                }
+                // pointsto: the PointsToPass is part of the pipeline (references get their flow
+                // sensitive edges from it)
+                if ("pointsto" in wanted) {
+                    it.registerPass<PointsToPass>()
+                    it.configurePass<PointsToPass>(PointsToPass.Configuration(timeout = 30.seconds))
                 }
             }
         val tus = result.components.flatMap { it.translationUnits }
@@ -111,7 +131,13 @@ class TmpDump {
         tus.forEach { number(it) }
 
         fun ref(d: Any?) =
-            if (d == null) "-" else ids[d]?.let { "#$it" } ?: "ext:${d.javaClass.simpleName}"
+            if (d == null) "-"
+            else
+                ids[d]?.let { "#$it" }
+                    ?: ("ext:${d.javaClass.simpleName}" +
+                        (if (System.getenv("DUMP_CTX") != null && d is de.fraunhofer.aisec.cpg.graph.Node)
+                            "(${d.name})"
+                        else ""))
         val sb = StringBuilder()
         fun dump(n: AstNode, depth: Int) {
             val r = n.location?.region
@@ -138,7 +164,14 @@ class TmpDump {
             if (eog.isNotEmpty()) sb.append(" eog=[$eog]")
             val dfg =
                 n.prevDFGEdges.joinToString(",") { e ->
-                    ref(e.start) + granularity(e.granularity) + (if (e.functionSummary) "!fs" else "")
+                    ref(e.start) + granularity(e.granularity) +
+                        (if (e.functionSummary) "!fs" else "") +
+                        (if (System.getenv("DUMP_CTX") != null && e is ContextSensitiveDataflow)
+                            e.callingContexts.joinToString("") { c ->
+                                (if (c is CallingContextIn) "<in:" else if (c is CallingContextOut) "<out:" else "<?:") +
+                                    c.calls.joinToString("/") { call -> ref(call) } + ">"
+                            }
+                        else "")
                 }
             if (dfg.isNotEmpty()) sb.append(" dfg=[$dfg]")
             sb.append('\n')
