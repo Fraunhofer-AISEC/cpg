@@ -16,6 +16,7 @@
   import { hasModifier, isTyping, modifierLabel } from '$lib/utils/keyboard';
   import { layers, layerInfos } from '$lib/stores/layers.svelte';
   import { navigation } from '$lib/stores/navigation.svelte';
+  import { collapseWhenNarrow } from '$lib/narrow.svelte';
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
@@ -869,6 +870,8 @@
     const component = unit ? findComponentForTu(unit.id) : null;
     if (!unit || !component) return;
     if (unit.id !== selectedTranslationUnit?.id) handleFileSelect(unit);
+    // The findings are not drawn in the code until one is asked for
+    layers.reveal('findings');
     showInspector();
     // The node at the place of the finding, which shows it in the code
     focus.inspect(
@@ -1567,6 +1570,12 @@
   // mark the inspector tab after the column was opened again
   let collapsedUnseen = $state(false);
   let sidebarOpen = $state(true);
+
+  // On a small display the navigation, the sidebar and the column next to the code make room for
+  // the code, and can be opened again when needed
+  collapseWhenNarrow(1400, () => (navigation.collapsed = true));
+  collapseWhenNarrow(1200, () => (sidebarOpen = false));
+  collapseWhenNarrow(1000, () => (contextCollapsed = true));
 
   // The views of the sidebar, switched in the activity bar
   type SidebarView = 'files' | 'outline' | 'findings';

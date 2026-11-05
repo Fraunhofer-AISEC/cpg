@@ -3,8 +3,13 @@
   import { PageHeader } from '$lib/components/navigation';
   import { FileTree } from '$lib/components/analysis';
   import { page } from '$app/state';
+  import { collapseWhenNarrow } from '$lib/narrow.svelte';
 
   let { data, children }: LayoutProps = $props();
+
+  // The file tree makes room for the code on a small display
+  let filesCollapsed = $state(false);
+  collapseWhenNarrow(1200, () => (filesCollapsed = true));
 
   // Clean breadcrumb navigation
   const referrerUrl = $derived(() => {
@@ -60,6 +65,7 @@
       fileHref={(unit) => `/components/${data.component.name}/translation-unit/${unit.id}`}
       componentHref={(name) => `/components/${name}`}
       width="w-64"
+      bind:collapsed={filesCollapsed}
     />
 
     <!-- Main content area -->
