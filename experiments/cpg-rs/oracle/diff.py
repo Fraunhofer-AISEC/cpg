@@ -19,6 +19,8 @@ def parse(text):
     sig = {d['id']: '%s|%s|%s' % (d['cls'], d['name'], d['loc']) for d in out}
     for d in out:
         r = re.search(r"refersTo=(#\d+|-|ext:\w+)", d['rest'])
+        dm = re.search(r"dfg=\[(.*?)\]", d['rest'])
+        d['dfg'] = ','.join(sorted((sig.get(x.split(':')[0][1:], '?') + (':' + ':'.join(x.split(':')[1:]) if ':' in x else '')) for x in dm.group(1).replace('),', ')\x00').split('\x00') if x)) if dm else ''
         ac = re.search(r" acc=(\w+)", d['rest'])
         d['acc'] = ac.group(1) if ac else ''
         d['refersTo'] = (sig.get(r.group(1)[1:], '?') if r.group(1).startswith('#') else r.group(1)) if r else ''

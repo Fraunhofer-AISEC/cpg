@@ -19,7 +19,7 @@
       #18 Call name='f' type='void' loc=9:4-9:9 code='f(x);' invokes=[#1] eog=[#23] dfg=[#1]
         #19 Reference name='x' type='char' loc=9:6-9:7 code='x' refersTo=#16 eog=[#18] dfg=[#16]
         #20 Reference name='f' type='(int)void' loc=9:4-9:5 code='f' refersTo=#1 eog=[#19] dfg=[#1]
-      #21 Call name='g' type='void' loc=11:4-11:9 code='g(x);' invokes=[#5,#9] eog=[#24] dfg=[#5,#9]
+      #21 Call name='g' type='void' loc=11:4-11:9 code='g(x);' invokes=[#9,#5] eog=[#24] dfg=[#9,#5]
         #22 Reference name='x' type='char' loc=11:6-11:7 code='x' refersTo=#16 eog=[#21] dfg=[#16]
-        #23 Reference name='g' type='(int)void' loc=11:4-11:5 code='g' refersTo=#5 eog=[#22] dfg=[#5]
+        #23 Reference name='g' type='(float)void' loc=11:4-11:5 code='g' refersTo=#9 eog=[#22] dfg=[#9]
       #24 Return name='' type='UNKNOWN' loc=? code=''

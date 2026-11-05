@@ -9,7 +9,7 @@
       #8 While name='' type='UNKNOWN' loc=7:5-7:22 code='while (s[n]) n++;' eog=[#15]
         #9 UnaryOperator name='++' type='size_t' loc=7:18-7:22 code='n++;' eog=[#12] dfg=[#10]
           #10 Reference name='n' type='size_t' loc=7:18-7:19 code='n' acc=READWRITE refersTo=#6 eog=[#9] dfg=[#9,#6]
-        #11 Subscription name='' type='char' loc=7:12-7:16 code='s[n]' eog=[#10:T,#8:F] dfg=[#12:Part(Reference[name=n,location=stdlib_profile_own_definition.c(7:14-7:15),type=IntegerType[name=size_t],refersTo=Variable[name=n,location=stdlib_profile_own_definition.c(6:12-6:17),initializer=Literal[location=stdlib_profile_own_definition.c(6:16-6:17),type=IntegerType[name=int],value=0],modifiers=[]]])]
+        #11 Subscription name='' type='char' loc=7:12-7:16 code='s[n]' eog=[#10:T,#8:F] dfg=[#12:Part(node)]
           #12 Reference name='s' type='char*' loc=7:12-7:13 code='s' refersTo=#16 eog=[#13] dfg=[#16]
           #13 Reference name='n' type='size_t' loc=7:14-7:15 code='n' refersTo=#6 eog=[#11] dfg=[#6]
       #14 Return name='' type='UNKNOWN' loc=8:5-8:14 code='return n;' dfg=[#15]

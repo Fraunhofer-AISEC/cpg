@@ -2,7 +2,7 @@
   #1 Function name='takesVoidPtr' type='(void*)void' loc=1:1-1:32 code='void takesVoidPtr(void* ptr) {}' eog=[#3]
     #2 Block name='' type='UNKNOWN' loc=1:30-1:32 code='{}'
       #3 Return name='' type='UNKNOWN' loc=? code=''
-    #4 Parameter name='ptr' type='void*' loc=1:19-1:28 code='void* ptr' dfg=[#14,#23,#30,#37]
+    #4 Parameter name='ptr' type='void*' loc=1:19-1:28 code='void* ptr' dfg=[#14,#23,#37,#30]
   #5 Function name='main' type='()int' loc=3:1-17:2 code='int main() {\n    int x;\n    int* intPtr = &x;\n    takesVo' eog=[#8]
     #6 Block name='' type='UNKNOWN' loc=3:12-17:2 code='{\n    int x;\n    int* intPtr = &x;\n    takesVoidPtr(intPt'
       #7 DeclarationStatement name='' type='UNKNOWN' loc=4:5-4:11 code='int x;' eog=[#10]

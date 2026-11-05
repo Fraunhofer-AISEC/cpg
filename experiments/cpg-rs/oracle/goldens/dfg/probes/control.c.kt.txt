@@ -2,7 +2,7 @@
   #1 Function name='f' type='(int, int)int' loc=1:1-22:2 code='int f(int a, int b) {\n  int r = 0;\n  if (a > b) { r = 1; }' eog=[#4]
     #2 Block name='' type='UNKNOWN' loc=1:21-22:2 code='{\n  int r = 0;\n  if (a > b) { r = 1; } else { r = 2; }\n  '
       #3 DeclarationStatement name='' type='UNKNOWN' loc=2:3-2:13 code='int r = 0;' eog=[#8]
-        #4 Variable name='r' type='int' loc=2:7-2:12 code='r = 0' eog=[#5] dfg=[#5,#12,#76,#70,#80,#16,#49,#21]
+        #4 Variable name='r' type='int' loc=2:7-2:12 code='r = 0' eog=[#5] dfg=[#5,#12,#76,#80,#49,#70,#21,#16]
           #5 Literal name='' type='int' loc=2:11-2:12 code='0' eog=[#3]
       #6 IfElse name='' type='UNKNOWN' loc=3:3-3:40 code='if (a > b) { r = 1; } else { r = 2; }' eog=[#19]
         #7 BinaryOperator name='>' type='bool' loc=3:7-3:12 code='a > b' eog=[#12:T,#16:F] dfg=[#8,#9]

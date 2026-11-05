@@ -1,4 +1,4 @@
-#0 TranslationUnit name='../../private/tmp/acc-in/access.c' type='-' loc=1:1-21:3 code='struct S { int x; struct S *next; };\n\nint f(int *p, int a['
+#0 TranslationUnit name='access.c' type='-' loc=1:1-21:3 code='struct S { int x; struct S *next; };\n\nint f(int *p, int a['
   #1 Record name='S' type='-' loc=1:1-1:36 code='struct S { int x; struct S *next; }'
     #2 Field name='S::x' type='int' loc=1:16-1:17 code='x' eog=[#3]
     #3 Field name='S::next' type='S*' loc=1:28-1:33 code='*next'
@@ -16,7 +16,7 @@
           #15 Literal name='' type='int' loc=5:5-5:6 code='1' eog=[#13]
         #16 Literal name='' type='int' loc=5:10-5:11 code='3' eog=[#12]
       #17 Assign name='+=' type='UNKNOWN' loc=6:3-6:13 code='a[i] += 1;' eog=[#24] dfg=[#18,#21]
-        #18 Subscription name='' type='int' loc=6:3-6:7 code='a[i]' acc=READWRITE eog=[#21] dfg=[#17,#19:Part(Reference[name=i,location=access.c(6:5-6:6),type=IntegerType[name=int],refersTo=Parameter[name=i,location=access.c(3:49-3:54)]])]
+        #18 Subscription name='' type='int' loc=6:3-6:7 code='a[i]' acc=READWRITE eog=[#21] dfg=[#17,#19:Part(node)]
           #19 Reference name='a' type='int[]' loc=6:3-6:4 code='a' refersTo=#86 eog=[#20] dfg=[#86]
           #20 Reference name='i' type='int' loc=6:5-6:6 code='i' refersTo=#89 eog=[#18] dfg=[#89]
         #21 Literal name='' type='int' loc=6:11-6:12 code='1' eog=[#17]

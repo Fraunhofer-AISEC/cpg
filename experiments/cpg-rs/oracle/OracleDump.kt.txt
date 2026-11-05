@@ -59,7 +59,8 @@ class TmpDump {
             is FieldDataflowGranularity -> ":F(${g.partialTarget.name})"
             is IndexedDataflowGranularity -> ":I(${g.partialTarget})"
             is StringIndexedDataflowGranularity -> ":S(${g.partialTarget})"
-            is PartialDataflowGranularity<*> -> ":Part(${g.partialTarget})"
+            is PartialDataflowGranularity<*> ->
+                ":Part(${if (g.partialTarget is de.fraunhofer.aisec.cpg.graph.Node) "node" else g.partialTarget})"
             else -> ":?"
         }
 

@@ -8,7 +8,7 @@
   #7 Function name='n' type='(int, int)int' loc=3:1-23:2 code='int n(int a, int b) {\n  int s = 0;\n  for (int i = 0; i < a' eog=[#10]
     #8 Block name='' type='UNKNOWN' loc=3:21-23:2 code='{\n  int s = 0;\n  for (int i = 0; i < a; i++) {\n    for (i'
       #9 DeclarationStatement name='' type='UNKNOWN' loc=4:3-4:13 code='int s = 0;' eog=[#56]
-        #10 Variable name='s' type='int' loc=4:7-4:12 code='s = 0' eog=[#11] dfg=[#11,#34,#66,#41,#46]
+        #10 Variable name='s' type='int' loc=4:7-4:12 code='s = 0' eog=[#11] dfg=[#11,#34,#46,#66,#41]
           #11 Literal name='' type='int' loc=4:11-4:12 code='0' eog=[#9]
       #12 For name='' type='UNKNOWN' loc=5:3-16:4 code='for (int i = 0; i < a; i++) {\n    for (int j = 0; j < b; j+' eog=[#66]
         #13 Block name='' type='UNKNOWN' loc=5:31-16:4 code='{\n    for (int j = 0; j < b; j++) {\n      if (j == 1) cont' eog=[#62]

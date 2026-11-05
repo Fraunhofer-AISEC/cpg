@@ -14,8 +14,18 @@ use cpg_core::{Access, Graph, Kind, NONE};
 const COMPOUND: &[&str] = &["+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&=", "|=", "^="];
 
 pub fn access(g: &mut Graph) {
-    for id in 0..g.nodes.len() as u32 {
+    // The Kotlin frontend builds nodes bottom-up, and each rule fires when the node it belongs to is
+    // built, so a later (outer) rule can overwrite an earlier (inner) one: the operand of a
+    // dereference or address-of is set to `READ`, which a unary operator hands on, so the `++` of
+    // `*p++` no longer writes `p`. Node ids are in pre-order, so this walks them backwards.
+    for id in (0..g.nodes.len() as u32).rev() {
         match g.nodes[id as usize].kind {
+            Kind::PointerRef | Kind::PointerDeref => {
+                let input = g.nodes[id as usize].first_child;
+                if input != NONE {
+                    set(g, input, Access::Read);
+                }
+            }
             Kind::Assign => assign(g, id),
             Kind::Unary if matches!(g.name_str(id), "++" | "--") => {
                 let input = g.nodes[id as usize].first_child;

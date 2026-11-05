@@ -56,7 +56,7 @@
           #55 InitializerList name='' type='int[]' loc=20:20-20:37 code='{ [0 ... 9] = 2 }' eog=[#53] dfg=[#56:I(0)]
             #56 Assign name='=' type='UNKNOWN' loc=20:22-20:35 code='[0 ... 9] = 2' eog=[#55]
               #57 Subscription name='' type='int[]' loc=20:22-20:31 code='[0 ... 9]' acc=WRITE eog=[#62] dfg=[#62]
-                #58 Reference name='foo3' type='int[]' loc=? code='' refersTo=#54 eog=[#60] dfg=[#57:Part(Range[location=designated.c(20:22-20:31),type=UNKNOWN]),#54]
+                #58 Reference name='foo3' type='int[]' loc=? code='' refersTo=#54 eog=[#60] dfg=[#57:Part(node),#54]
                 #59 Range name='' type='UNKNOWN' loc=20:22-20:31 code='[0 ... 9]' eog=[#57]
                   #60 Literal name='' type='int' loc=20:23-20:24 code='0' eog=[#61]
                   #61 Literal name='' type='int' loc=20:29-20:30 code='9' eog=[#59]

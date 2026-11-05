@@ -40,6 +40,11 @@ pub fn dump(g: &Graph, unit_name: &str) -> String {
         eog[e.from as usize].push((e.to, e.branch, e.unreachable));
     }
 
+    let mut dfg_in: Vec<Vec<usize>> = vec![Vec::new(); g.nodes.len()];
+    for (k, e) in g.dfg.iter().enumerate() {
+        dfg_in[e.to as usize].push(k);
+    }
+
     let mut out = String::new();
     for (i, &(id, depth)) in order.iter().enumerate() {
         let n = g.nodes[id as usize];
@@ -99,6 +104,16 @@ pub fn dump(g: &Graph, unit_name: &str) -> String {
                 })
                 .collect();
             out.push_str(&format!(" eog=[{}]", t.join(",")));
+        }
+        if !dfg_in[id as usize].is_empty() {
+            let t: Vec<String> = dfg_in[id as usize]
+                .iter()
+                .map(|&k| {
+                    let e = &g.dfg[k];
+                    format!("#{}{}", dump_id[e.from as usize], e.granularity.tag())
+                })
+                .collect();
+            out.push_str(&format!(" dfg=[{}]", t.join(",")));
         }
         out.push('\n');
     }

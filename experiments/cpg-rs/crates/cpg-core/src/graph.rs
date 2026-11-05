@@ -1,4 +1,4 @@
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::Kind;
 
@@ -30,6 +30,43 @@ pub struct Node {
     pub next: u32,
 }
 
+/// The granularity of a data flow edge (the `Granularity` of the Kotlin CPG).
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+pub enum Granularity {
+    Full,
+    /// `ADDRESS`, `CURRENT_DEREF_VALUE`, `CURRENT_DEREF_DEREF_VALUE`
+    Pointer(&'static str),
+    /// A field, by its (qualified) name.
+    Field(String),
+    /// An index, as the number is printed.
+    Indexed(String),
+    StringIndexed(String),
+    /// Some other part, e.g. `PointerReference`.
+    Partial(String),
+}
+
+impl Granularity {
+    /// The suffix of an edge in the dump.
+    pub fn tag(&self) -> String {
+        match self {
+            Granularity::Full => String::new(),
+            Granularity::Pointer(p) => format!(":P({p})"),
+            Granularity::Field(f) => format!(":F({f})"),
+            Granularity::Indexed(i) => format!(":I({i})"),
+            Granularity::StringIndexed(s) => format!(":S({s})"),
+            Granularity::Partial(p) => format!(":Part({p})"),
+        }
+    }
+}
+
+/// A data flow edge from `from` to `to`.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct DfgEdge {
+    pub from: u32,
+    pub to: u32,
+    pub granularity: Granularity,
+}
+
 /// An evaluation order edge.
 #[derive(Clone, Copy, Debug)]
 pub struct EogEdge {
@@ -50,6 +87,9 @@ pub struct Graph<'a> {
     pub invokes: Vec<(u32, u32)>,
     /// Evaluation order edges, in creation order (which is the order per source node).
     pub eog: Vec<EogEdge>,
+    /// Data flow edges, in creation order.
+    pub dfg: Vec<DfgEdge>,
+    dfg_seen: FxHashSet<(u32, u32, Granularity)>,
     /// Nodes the EOG reaches from its starters (the nodes the Kotlin `SymbolResolver` visits).
     /// Empty if the EOG pass has not run, which means everything counts as reachable.
     pub eog_visited: Vec<bool>,
@@ -69,11 +109,20 @@ impl<'a> Graph<'a> {
             refers_to: Vec::new(),
             invokes: Vec::new(),
             eog: Vec::new(),
+            dfg: Vec::new(),
+            dfg_seen: FxHashSet::default(),
             eog_visited: Vec::new(),
             unresolved: 0,
             unresolved_syms: Vec::new(),
             type_ids: FxHashMap::default(),
             code_override: FxHashMap::default(),
+        }
+    }
+
+    /// Adds a data flow edge `from -> to` unless the same edge exists.
+    pub fn add_dfg(&mut self, from: u32, to: u32, granularity: Granularity) {
+        if self.dfg_seen.insert((from, to, granularity.clone())) {
+            self.dfg.push(DfgEdge { from, to, granularity });
         }
     }
 

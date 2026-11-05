@@ -3,7 +3,7 @@
     #2 Block name='' type='UNKNOWN' loc=1:33-1:46 code='{ return 0; }'
       #3 Return name='' type='UNKNOWN' loc=1:35-1:44 code='return 0;' dfg=[#4]
         #4 Literal name='' type='int' loc=1:42-1:43 code='0' eog=[#3]
-    #5 Parameter name='p' type='int*' loc=1:25-1:31 code='int *p' dfg=[#16,#21,#26,#31]
+    #5 Parameter name='p' type='int*' loc=1:25-1:31 code='int *p' dfg=[#16,#21,#31,#26]
   #6 Function name='take_other_pointer' type='(int*)int' loc=2:1-2:52 code='static int take_other_pointer(int *p) { return 0; }' eog=[#9]
     #7 Block name='' type='UNKNOWN' loc=2:39-2:52 code='{ return 0; }'
       #8 Return name='' type='UNKNOWN' loc=2:41-2:50 code='return 0;' dfg=[#9]

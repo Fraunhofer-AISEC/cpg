@@ -2,7 +2,7 @@
   #1 Function name='g' type='(int, int*)int' loc=1:1-15:2 code='int g(int x, int *p) {\n  int a = x > 0 ? 1 : 2;\n  int b = ' eog=[#4]
     #2 Block name='' type='UNKNOWN' loc=1:22-15:2 code='{\n  int a = x > 0 ? 1 : 2;\n  int b = (x && a) || !x;\n  a '
       #3 DeclarationStatement name='' type='UNKNOWN' loc=2:3-2:25 code='int a = x > 0 ? 1 : 2;' eog=[#12]
-        #4 Variable name='a' type='int' loc=2:7-2:24 code='a = x > 0 ? 1 : 2' eog=[#7] dfg=[#5,#20,#23,#62]
+        #4 Variable name='a' type='int' loc=2:7-2:24 code='a = x > 0 ? 1 : 2' eog=[#7] dfg=[#5,#20,#62,#23]
           #5 Conditional name='' type='int' loc=? code='' eog=[#3] dfg=[#9,#10]
             #6 BinaryOperator name='>' type='bool' loc=2:11-2:16 code='x > 0' eog=[#9:T,#10:F] dfg=[#7,#8]
               #7 Reference name='x' type='int' loc=2:11-2:12 code='x' refersTo=#69 eog=[#8] dfg=[#69]
