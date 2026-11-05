@@ -41,7 +41,7 @@ import kotlin.test.assertEquals
 
 class ArrayValueTest {
     private val lattice =
-        TupleState<Any>(
+        TupleState<Any, NewIntervalLattice.Element>(
             DeclarationState(NewIntervalLattice()),
             NewIntervalState(NewIntervalLattice()),
         )
@@ -49,7 +49,7 @@ class ArrayValueTest {
     @Test
     fun testApplyDeclaration() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -74,7 +74,7 @@ class ArrayValueTest {
     @Test
     fun testApplyReference() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -104,7 +104,7 @@ class ArrayValueTest {
     @Test
     fun testApplyDeclarationWithoutInitializer() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -129,7 +129,7 @@ class ArrayValueTest {
     @Test
     fun testEmptyDimensions() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -155,7 +155,7 @@ class ArrayValueTest {
     @Test
     fun testLiteralInitializer() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -177,7 +177,7 @@ class ArrayValueTest {
     @Test
     fun testInitializerListInitializer() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -211,7 +211,7 @@ class ArrayValueTest {
     @Test
     fun testArrayConstructionWithInitializer() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
@@ -245,7 +245,7 @@ class ArrayValueTest {
     @Test
     fun testNonNumberDimension() {
         val startState =
-            TupleStateElement<Any>(
+            TupleStateElement<Any, NewIntervalLattice.Element>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )

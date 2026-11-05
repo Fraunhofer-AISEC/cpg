@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -34,32 +35,35 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * This class implements the [Value] interface for tracking the size of mutable collections. It
  * provides several operations which can then be used for concrete implementations.
  */
-abstract class MutableCollectionSize : Value<LatticeInterval> {
+abstract class MutableCollectionSize : Value<NewIntervalLattice.Element, LatticeInterval> {
     fun createEmptyCollection(): LatticeInterval {
         return LatticeInterval.Bounded(0, 0)
     }
 
     fun createWithElementsFromElement(
         element: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         return state.intervalOf(element)
     }
 
-    fun createWithElements(elements: List<Node>, state: TupleStateElement<Any>): LatticeInterval {
+    fun createWithElements(
+        elements: List<Node>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
+    ): LatticeInterval {
         return LatticeInterval.Bounded(elements.size, elements.size)
     }
 
     fun addSingleElementWithoutElementCheck(
         target: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         return state.intervalOf(target) + LatticeInterval.Bounded(1, 1)
     }
 
     fun addSingleElementWithElementCheck(
         target: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         return state.intervalOf(target) + LatticeInterval.Bounded(0, 1)
     }
@@ -67,7 +71,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
     fun addMultipleElementsWithoutElementCheck(
         target: Node,
         element: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         return state.intervalOf(target) + state.intervalOf(element)
     }
@@ -75,7 +79,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
     fun addMultipleElementsWithElementCheck(
         target: Node,
         element: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         val elementSize = state.intervalOf(element)
         // TODO: Do we want infinite or zero as upper bound or return bottom if we have bottom for
@@ -89,7 +93,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
     fun addMultipleElementsWithoutElementCheck(
         target: Node,
         elements: List<Node>,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         return state.intervalOf(target) + LatticeInterval.Bounded(elements.size, elements.size)
     }
@@ -97,7 +101,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
     fun addMultipleElementsWithElementCheck(
         target: Node,
         elements: List<Node>,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         return state.intervalOf(target) + LatticeInterval.Bounded(0, elements.size)
     }
@@ -108,7 +112,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
 
     fun removeSingleElementWithoutElementCheck(
         target: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         val result = state.intervalOf(target) - LatticeInterval.Bounded(1, 1)
 
@@ -121,7 +125,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
 
     fun removeSingleElementWithElementCheck(
         target: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         val result = state.intervalOf(target) - LatticeInterval.Bounded(0, 1)
 
@@ -134,7 +138,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
 
     fun removeMultipleElementsWithoutElementCheck(
         target: Node,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         // We could remove all elements if all are similar, so we only know that the new size will
         // be somewhere between 0 and the current maximal size
@@ -149,7 +153,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
     fun removeMultipleElementsWithElementCheck(
         target: Node,
         elements: List<Node>,
-        state: TupleStateElement<Any>,
+        state: TupleStateElement<Any, NewIntervalLattice.Element>,
     ): LatticeInterval {
         val result = state.intervalOf(target) - LatticeInterval.Bounded(0, elements.size)
 
