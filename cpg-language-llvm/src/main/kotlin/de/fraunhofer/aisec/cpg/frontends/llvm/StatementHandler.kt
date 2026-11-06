@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.annotations.FunctionReplacement
 import java.util.function.BiConsumer
@@ -471,7 +472,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleAlloca(instr: LLVMValueRef): Expression {
         val array = newArrayConstruction(rawNode = instr)
 
-        array.type = frontend.typeOf(instr)
+        // alloca returns a pointer to the allocated type. We use the instruction's explicit
+        // allocated type (rather than deriving it from the pointer's element type) since that
+        // also works with opaque pointers.
+        array.type = frontend.typeOf(LLVMGetAllocatedType(instr)).pointer()
 
         // LLVM is quite forthcoming here. in case the optional length parameter is omitted in the
         // source code, it will automatically be set to 1
@@ -508,6 +512,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val input = frontend.getOperandValueAtIndex(instr, 0)
         val ref = newPointerDereference(input.name, rawNode = instr)
         ref.input = input
+        // A load reads a value of an explicitly specified type out of a pointer. Under opaque
+        // pointers, the pointer operand's type no longer carries the pointee type (it is just an
+        // untyped "ptr"), so type propagation from the input does not yield the loaded type. We
+        // therefore seed the dereference with the load's explicit result type. For typed pointers,
+        // this should normally match what PointerDereference would otherwise derive from its
+        // input's type, but it is an explicit override either way, not merely a defensive no-op.
+        ref.type = frontend.typeOf(instr)
 
         return declarationOrNot(ref, instr)
     }
@@ -604,7 +615,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Handles the [`insertvalue`](https://llvm.org/docs/LangRef.html#insertvalue-instruction)
      * instruction.
      *
-     * We use it similar to a constructor and assign the individual sub-elements.
+     * We use it similar to a constructor and assign the individual sub-elements. The loop below
+     * mirrors [ExpressionHandler.handleGetElementPtr]'s array-vs-struct-field decision, including
+     * treating `UnknownType` base types the same as `PointerType` ones; see that function's KDoc
+     * for why.
      */
     private fun handleInsertValue(instr: LLVMValueRef): Expression {
         val numOps = LLVMGetNumIndices(instr)
@@ -645,7 +659,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     return declarationOrNot(operand, instr)
                 }
                 base = base.arguments[index]
-            } else if (baseType is PointerType) {
+            }
+            // See this function's KDoc for why UnknownType is included here.
+            else if (baseType is PointerType || baseType is UnknownType) {
                 val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
@@ -1419,6 +1435,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * IR is SSA, we need to declare a new variable in this case, which is named according to
      * [valueRef]. In case the variable assignment is optional, and we directly return the
      * [Expression] associated with the instruction.
+     *
+     * If the instruction's own LLVM type maps to [UnknownType] (e.g. an opaque pointer result), the
+     * declared variable falls back to [rhs]'s type instead. This is shared by every instruction
+     * that can have a left-hand side, not just alloca/getelementptr/load, but it can only actually
+     * change the result for handlers that explicitly set `rhs.type` before calling this function
+     * (currently [handleAlloca] and [handleLoad]): [Expression.type] defaults to [UnknownType], and
+     * nothing else in this file assigns to it beforehand, so the fallback is a no-op for every
+     * other instruction (calls, casts, binary/phi/select results, ...), in both typed and opaque
+     * pointer mode.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Expression {
         val namePair = frontend.getNameOf(valueRef)
@@ -1427,7 +1452,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // if it is still empty, we probably do not have a left side
         return if (lhs != "") {
-            val decl = newVariable(lhs, frontend.typeOf(valueRef), false, rawNode = valueRef)
+            // See this function's KDoc for why this fallback is needed, and why it is a no-op
+            // outside alloca/load.
+            var type = frontend.typeOf(valueRef)
+            val rhsType = rhs.type
+            if (type is UnknownType && rhsType !is UnknownType) {
+                type = rhsType
+            }
+
+            val decl = newVariable(lhs, type, false, rawNode = valueRef)
             decl.initializer = rhs
 
             // add the declaration to the current scope
