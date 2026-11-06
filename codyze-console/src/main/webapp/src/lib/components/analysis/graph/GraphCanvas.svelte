@@ -9,7 +9,7 @@
     type Node
   } from '@xyflow/svelte';
   import '@xyflow/svelte/dist/style.css';
-  import type { GraphNode, GraphSlice } from '$lib/graph';
+  import type { GraphEdge, GraphNode, GraphSlice } from '$lib/graph';
   import type { GraphPanel } from '$lib/stores/graphPanel.svelte';
   import {
     cardHeight,
@@ -26,15 +26,18 @@
   /**
    * The graph of a slice: a card for each statement and an edge for each dependence, laid out in
    * layers by ELK and shown with Svelte Flow. The selected statement and its edges are emphasized,
-   * the others step back.
+   * the others step back. If the inspected node is a part of the selected statement, e.g. an
+   * argument of a call, only its own edges are emphasized.
    */
   interface Props {
     panel: GraphPanel;
+    /** The inspected node, which may be a part of a statement */
+    inspectedId?: string | null;
     /** Called when a statement is clicked, after it was selected */
     onSelectNode?: (node: GraphNode) => void;
   }
 
-  let { panel, onSelectNode }: Props = $props();
+  let { panel, inspectedId = null, onSelectNode }: Props = $props();
 
   const nodeTypes = { card: GraphCard };
   const edgeTypes = { dependence: GraphEdgeLine };
@@ -44,10 +47,10 @@
   let layout = $state.raw<{ slice: GraphSlice; laid: SliceLayout } | null>(null);
 
   $effect(() => {
-    const slice = panel.slice;
+    const slice = panel.shown;
     if (!slice) return;
     layoutSlice(slice).then((laid) => {
-      if (panel.slice === slice) layout = { slice, laid };
+      if (panel.shown === slice) layout = { slice, laid };
     });
   });
 
@@ -56,19 +59,39 @@
 
   // Zoomed far out, the cards show only their line number
   let zoom = $state(1);
+  // The size of the view, to show a large graph at a readable size, see FitView
+  let viewWidth = $state(0);
+  let viewHeight = $state(0);
   const far = $derived(zoom < 0.4);
 
   const selectedId = $derived(panel.selectedId);
+  // The evidence of the agent stays visible as a whole: there, what is not connected to the
+  // selection is not faded, only what the answer does not cite
+  const fadeBySelection = $derived(!panel.evidence);
+
+  // The edges of the inspected node, if it is a part of the selected statement
+  const focusEdges = $derived.by((): GraphEdge[] => {
+    if (!layout || !inspectedId || !selectedId) return [];
+    return layout.slice.edges.filter(
+      (e) =>
+        (e.to === selectedId && e.toPart?.id === inspectedId) ||
+        (e.from === selectedId && e.fromPart?.id === inspectedId)
+    );
+  });
+  const focused = $derived(new Set(focusEdges.map(edgeKey)));
 
   const nodes = $derived.by((): Node[] => {
     if (!layout) return [];
     const { slice, laid } = layout;
     const connected = new Set<string>();
-    for (const e of slice.edges) {
+    for (const e of focusEdges.length > 0 ? focusEdges : slice.edges) {
       if (e.from === selectedId) connected.add(e.to);
       if (e.to === selectedId) connected.add(e.from);
     }
     const rootFile = slice.nodes.find((n) => n.id === slice.root)?.node.fileName;
+    // The statements whose overlays are shown as nodes of their own
+    const withOverlay = new Set(slice.edges.filter((e) => e.kind === 'OVERLAY').map((e) => e.from));
+    const path = panel.evidence?.path;
     return slice.nodes.flatMap((statement) => {
       const position = laid.positions.get(statement.id);
       if (!position) return [];
@@ -76,12 +99,18 @@
         statement,
         selected: statement.id === selectedId,
         hovered: statement.id === panel.hoveredId,
-        faded: selectedId !== null && statement.id !== selectedId && !connected.has(statement.id),
+        faded:
+          fadeBySelection &&
+          selectedId !== null &&
+          statement.id !== selectedId &&
+          !connected.has(statement.id),
         root: statement.id === slice.root,
         otherFile:
           statement.node.fileName && statement.node.fileName !== rootFile
             ? statement.node.fileName
             : null,
+        overlaysShown: withOverlay.has(statement.id),
+        offPath: !!path && !path.has(statement.id),
         onExpand: (id) => panel.expand(id)
       };
       return [
@@ -102,10 +131,18 @@
   const edges = $derived.by((): Edge[] => {
     if (!layout) return [];
     const { slice, laid } = layout;
+    const path = panel.evidence?.path;
     return slice.edges.flatMap((e) => {
       const route = laid.edges.get(edgeKey(e));
       if (!route) return [];
-      const active = selectedId !== null && (e.from === selectedId || e.to === selectedId);
+      const overlay = e.kind === 'OVERLAY';
+      // A dependence between two statements of the path the agent's answer leads along
+      const agent = !overlay && !!path && path.has(e.from) && path.has(e.to);
+      // With the edges of the inspected node, only they belong to the selection
+      const active =
+        !overlay &&
+        selectedId !== null &&
+        (focused.size > 0 ? focused.has(edgeKey(e)) : e.from === selectedId || e.to === selectedId);
       const marked = e.kind === 'DATA' && hoveredVariable !== null && e.label === hoveredVariable;
       const data: GraphEdgeData = {
         points: route.points,
@@ -113,8 +150,10 @@
         text: e.label,
         kind: e.kind,
         active,
-        faded: selectedId !== null && !active,
+        faded:
+          (fadeBySelection && selectedId !== null && !active) || (!!path && !agent && !overlay),
         marked,
+        agent,
         onHoverVariable: (name) => (hoveredVariable = name)
       };
       return [
@@ -125,13 +164,15 @@
           type: 'dependence',
           selectable: false,
           focusable: false,
-          // The tip has the color of the edge
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: edgeColor(e.kind, active, marked),
-            width: 14,
-            height: 14
-          },
+          // The tip has the color of the edge. The link of an overlay has no direction
+          markerEnd: overlay
+            ? undefined
+            : {
+                type: MarkerType.ArrowClosed,
+                color: edgeColor(e.kind, active, marked, agent),
+                width: 14,
+                height: 14
+              },
           data
         }
       ];
@@ -141,11 +182,16 @@
   function nodeColor(node: Node): string {
     const statement = (node.data as GraphCardData).statement;
     if (statement.id === selectedId) return '#3b82f6';
+    if (statement.kind === 'OVERLAY') return '#c4b5fd';
     return statement.kind === 'STUB' ? '#d1d5db' : '#94a3b8';
   }
 </script>
 
-<div class="group/flow relative h-full min-h-0 w-full {far ? 'graph-far' : ''}">
+<div
+  class="group/flow relative h-full min-h-0 w-full {far ? 'graph-far' : ''}"
+  bind:clientWidth={viewWidth}
+  bind:clientHeight={viewHeight}
+>
   {#if layout}
     <SvelteFlow
       {nodes}
@@ -158,7 +204,7 @@
       nodesConnectable={false}
       elementsSelectable={false}
       deleteKey={null}
-      attributionPosition="top-left"
+      proOptions={{ hideAttribution: true }}
       onnodeclick={({ node }) => {
         panel.select(node.id);
         const statement = layout?.slice.nodes.find((n) => n.id === node.id);
@@ -170,15 +216,22 @@
     >
       <Background gap={16} size={1} bgColor="#fbfbfc" patternColor="#e2e5ea" />
       <Controls showLock={false} position="bottom-left" />
+      <!-- The minimap only shows while the mouse is over the graph, so that it does not cover the
+      cards of a graph that fits into the view -->
       <MiniMap
         pannable
         zoomable
         {nodeColor}
         maskColor="rgba(241, 245, 249, 0.7)"
         position="bottom-right"
-        class="!h-24 !w-36"
+        class="!h-24 !w-36 opacity-0 transition-opacity group-hover/flow:opacity-100"
       />
-      <FitView trigger={layout} />
+      <FitView
+        trigger={layout}
+        positions={layout.laid.positions}
+        width={viewWidth}
+        height={viewHeight}
+      />
     </SvelteFlow>
   {/if}
 
@@ -202,7 +255,7 @@
     <!-- More of the slice, one hop further -->
     <button
       type="button"
-      class="absolute top-3 right-3 z-10 rounded-full border border-blue-200 bg-white px-3 py-1 text-[11.5px] text-blue-700 shadow-sm hover:bg-blue-50"
+      class="absolute top-3 right-3 z-10 rounded-full border border-blue-200 bg-white px-2 py-0.5 text-[11px] text-blue-700 shadow-sm hover:bg-blue-50"
       onclick={() => panel.setHops(panel.hops + 1)}
     >
       + {panel.more}

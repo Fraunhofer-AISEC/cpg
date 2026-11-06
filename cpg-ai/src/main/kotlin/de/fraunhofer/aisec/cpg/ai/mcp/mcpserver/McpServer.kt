@@ -54,6 +54,7 @@ fun configureServer(
         this.addGetNodeTool()
         this.addDfgBackwardTool()
         this.addDfgForwardTool()
+        this.addSliceTool()
         this.addGetLastWriteTool()
         this.addListLLMConceptsOperationsTool()
         this.addAddOrUpdateLLMConceptTool()

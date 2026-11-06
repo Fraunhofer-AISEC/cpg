@@ -19,6 +19,16 @@ export function describeOverlay(overlay: OverlayJSON): string {
     : `Concept ${overlay.overlay.type}${target}`;
 }
 
+/** Whether the overlay is a concept (a thing, e.g. a secret) or an operation on one. */
+export function overlayKind(overlay: OverlayJSON): 'Concept' | 'Operation' {
+  return overlay.concept ? 'Operation' : 'Concept';
+}
+
+/** The kind and the name of the overlay, e.g. `Concept File` or `Operation OpenFile`. */
+export function overlayName(overlay: OverlayJSON): string {
+  return `${overlayKind(overlay)} ${overlay.overlay.name || overlay.overlay.type}`;
+}
+
 /** A short label for the kind of the overlay, e.g. `Concept` or `Operation of File`. */
 export function overlayLabel(overlay: OverlayJSON): string {
   return overlay.concept ? `Operation of ${overlay.concept.type}` : 'Concept';

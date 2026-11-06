@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { NodePathsJSON, NodeJSON, ToolResult } from '$lib/types';
+  import type { NodePathsJSON, NodeJSON, NodeSliceJSON, ToolResult } from '$lib/types';
+  import type { ToolCallLabel } from '$lib/toolLabels';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -9,11 +10,18 @@
    */
   interface Props {
     toolResult: ToolResult;
+    /**
+     * The call with its main argument; without it, only the tool is named. How it was called, e.g.
+     * the graph of a slice, is part of the summary
+     */
+    label?: ToolCallLabel;
     step: number;
     /** The nodes the tool returned, resolved to their locations */
     nodes: NodeJSON[];
     /** The paths the tool returned, if it searched for paths */
     paths?: NodePathsJSON | null;
+    /** The slice the tool computed, if it computed one */
+    slice?: NodeSliceJSON | null;
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
     onSelect: (ref: NodeJSON) => void;
@@ -22,8 +30,18 @@
     onHover: (hovered: boolean) => void;
   }
 
-  let { toolResult, step, nodes, paths, selectedId, onSelect, onActivate, onHover }: Props =
-    $props();
+  let {
+    toolResult,
+    label,
+    step,
+    nodes,
+    paths,
+    slice,
+    selectedId,
+    onSelect,
+    onActivate,
+    onHover
+  }: Props = $props();
 
   let expanded = $state(false);
   let showAll = $state(false);
@@ -32,24 +50,20 @@
 
   const toolName = $derived(toolResult.toolName || 'tool');
 
-  // Koog's file tool, which the model uses to "activate" a skill by reading its SKILL.md
-  const READ_FILE_TOOL = '__read_file__';
-
-  // The name of the skill if the step read a skill's SKILL.md (the name is its directory)
-  const skillName = $derived.by(() => {
-    const path = toolResult.args?.path;
-    if (toolName !== READ_FILE_TOOL || typeof path !== 'string') return null;
-    return path.match(/([^/\\]+)[/\\]SKILL\.md$/)?.[1] ?? null;
-  });
-  const label = $derived(skillName ? 'skill' : toolName);
+  // The name of the call, e.g. `skill` for a skill the agent read
+  const shownName = $derived(label?.tool ?? toolName);
 
   // What the step found, e.g. "3 nodes in 2 files", or the start of a text result
   const summary = $derived.by(() => {
     const content = toolResult.content;
     if (toolResult.isError) return 'error';
-    if (skillName) return skillName;
+    if (shownName === 'skill') return 'loaded';
     if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof content?.name === 'string')
       return `suggests ${content.name}`;
+    if (slice) {
+      const count = `${slice.statements.length}${slice.truncated ? '+' : ''}`;
+      return `${slice.graph} ${slice.direction.toLowerCase()} · ${count} ${slice.statements.length === 1 ? 'statement' : 'statements'}`;
+    }
     if (paths) {
       const count = `${paths.paths.length}${paths.truncated ? '+' : ''}`;
       return `${paths.kind} · ${count} ${paths.paths.length === 1 ? 'path' : 'paths'}`;
@@ -88,11 +102,13 @@
       class="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-0.5 text-[10px] leading-none font-semibold tabular-nums {nodes.length
         ? 'bg-slate-700 text-white hover:bg-slate-900'
         : 'bg-slate-200 text-slate-600'}"
-      title={paths
-        ? `Step ${step}: show its ${paths.paths.length === 1 ? 'path' : 'paths'} in the code`
-        : nodes.length
-          ? `Step ${step}: show its nodes in the code`
-          : `Step ${step} returned no nodes of the code`}
+      title={slice
+        ? `Step ${step}: show its slice in the graph`
+        : paths
+          ? `Step ${step}: show its ${paths.paths.length === 1 ? 'path' : 'paths'} in the code`
+          : nodes.length
+            ? `Step ${step}: show its nodes in the code`
+            : `Step ${step} returned no nodes of the code`}
       disabled={nodes.length === 0}
       onclick={onActivate}
     >
@@ -104,9 +120,15 @@
         ? 'text-red-600'
         : 'text-gray-700'}"
       aria-expanded={expanded}
+      title={toolName}
       onclick={() => (expanded = !expanded)}
     >
-      <span class="shrink-0 font-mono">{label}</span>
+      <span class="shrink-0 font-mono">{shownName}</span>
+      {#if label?.argument}
+        <span class="max-w-[60%] min-w-0 shrink-0 truncate font-mono text-gray-900"
+          >{label.argument}</span
+        >
+      {/if}
       <span class="min-w-0 truncate text-gray-400" title={summary}>{summary}</span>
       <svg
         class="ml-auto h-3 w-3 shrink-0 text-gray-300 transition-transform {expanded

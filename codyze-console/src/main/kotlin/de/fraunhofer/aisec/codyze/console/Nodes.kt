@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
@@ -308,6 +307,8 @@ private const val MAX_RELATED_NODES = 200
  * into a tree. Each list holds at most [MAX_RELATED_NODES] nodes; the `…Count` properties have the
  * number of nodes before this limit, so that the UI can tell that a list is incomplete.
  *
+ * @property overlay For a concept or operation: the overlay itself, with the node it is attached to
+ *   and, for an operation, its concept.
  * @property callTargets For a [Call]: the functions it invokes.
  * @property callers For a [Function]: the calls that invoke it.
  * @property callees For a [Function]: the calls in its body.
@@ -316,6 +317,7 @@ private const val MAX_RELATED_NODES = 200
 @Serializable
 data class NodeDetailsJSON(
     val node: NodeJSON,
+    val overlay: OverlayJSON?,
     val enclosingFunction: NodeJSON?,
     val overlays: List<OverlayJSON>,
     val callTargets: List<NodeJSON>,
@@ -349,18 +351,6 @@ data class FunctionCallStatsJSON(
  */
 @Serializable
 data class CallSiteJSON(val call: NodeJSON, val callee: NodeJSON?, val status: CallStatus)
-
-/**
- * A concept or operation and the node it is attached to.
- *
- * @property concept For an operation: the concept it belongs to. `null` for a concept.
- */
-@Serializable
-data class OverlayJSON(
-    val overlay: NodeJSON,
-    val underlyingNode: NodeJSON?,
-    val concept: NodeJSON?,
-)
 
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
@@ -654,6 +644,7 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
     val callees = (this as? Function)?.body?.calls.orEmpty()
     return NodeDetailsJSON(
         node = toRefJSON(),
+        overlay = toOverlayJSON(),
         enclosingFunction = (this as? Function ?: firstParentOrNull<Function>())?.toRefJSON(),
         overlays = overlays.mapNotNull { it.toOverlayJSON() },
         callTargets = callTargets.limited { it.toRefJSON() },
@@ -732,13 +723,3 @@ fun TranslationUnit.toOverlaysJSON(): List<OverlayJSON> =
     nodes
         .filter { it.isInFileOf(this) }
         .flatMap { node -> node.overlays.mapNotNull { it.toOverlayJSON() } }
-
-/** This node as [OverlayJSON], or `null` if it is neither a [Concept] nor an [Operation]. */
-fun Node.toOverlayJSON(): OverlayJSON? {
-    if (this !is Concept && this !is Operation) return null
-    return OverlayJSON(
-        overlay = toRefJSON(),
-        underlyingNode = (this as OverlayNode).underlyingNode?.toRefJSON(),
-        concept = (this as? Operation)?.concept?.toRefJSON(),
-    )
-}

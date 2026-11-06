@@ -34,6 +34,7 @@ import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.*
 import ai.koog.agents.core.environment.ReceivedToolResult
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.features.eventHandler.feature.EventHandlerConfig
 import ai.koog.agents.features.eventHandler.feature.handleEvents
 import ai.koog.agents.mcp.McpToolRegistryProvider
 import ai.koog.agents.mcp.metadata.McpServerInfo
@@ -719,13 +720,7 @@ class ChatService(
                                 else -> {}
                             }
                         }
-                        onToolCallCompleted { ctx ->
-                            val args = ctx.toolArgs.toKotlinxJsonElement()
-                            val content =
-                                ctx.toolResult?.toKotlinxJsonElement()?.let(::unwrapMcpToolResult)
-                                    ?: JsonNull
-                            send(Events.toolResult(ctx.toolName, args, content))
-                        }
+                        sendToolEvents { send(it) }
                         onToolCallFailed { ctx -> send(Events.text("Tool failed: ${ctx.message}")) }
                         countTokenUsage(usage)
                         onAgentCompleted { ctx ->
@@ -836,6 +831,28 @@ class ChatService(
                 role = if (msg.role == Role.User) "user" else "assistant",
                 content = (msg.content as? TextContent)?.text ?: "",
             )
+        }
+    }
+
+    /**
+     * Sends a `tool_call` event when a tool call starts and a `tool_result` event when it
+     * completes, both with the id of the call. The calls of one response of the model share their
+     * round: it increases with every request to the model, so it does not depend on how the
+     * strategy names its nodes.
+     */
+    internal fun EventHandlerConfig.sendToolEvents(send: suspend (String) -> Unit) {
+        var round = 0
+        onLLMStreamingStarting { round++ }
+        onLLMCallStarting { round++ }
+        onToolCallStarting { ctx ->
+            val args = ctx.toolArgs.toKotlinxJsonElement()
+            send(Events.toolCall(ctx.toolCallId, ctx.toolName, args, round))
+        }
+        onToolCallCompleted { ctx ->
+            val args = ctx.toolArgs.toKotlinxJsonElement()
+            val content =
+                ctx.toolResult?.toKotlinxJsonElement()?.let(::unwrapMcpToolResult) ?: JsonNull
+            send(Events.toolResult(ctx.toolName, args, content, ctx.toolCallId, round))
         }
     }
 

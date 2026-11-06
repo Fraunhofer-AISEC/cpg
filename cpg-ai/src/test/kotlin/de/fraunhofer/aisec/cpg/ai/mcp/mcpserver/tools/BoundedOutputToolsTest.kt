@@ -160,11 +160,14 @@ class BoundedOutputToolsTest {
             )
         val start = session.translationResult.refs.last { it.name.localName == "b" }.id.toString()
 
-        val all = dfgBackward(session, CpgDfgPathsPayload(start)).content.single() as TextContent
+        val all =
+            dfgPathsResult(session, CpgDfgPathsPayload(start), backward = true).content.single()
+                as TextContent
         val total = Json.decodeFromString<NodePaths>(all.text).paths.size
         assertTrue(total > 1, "b must be reached by more than one path")
 
-        val capped = dfgBackward(session, CpgDfgPathsPayload(start, limit = 1)).content
+        val capped =
+            dfgPathsResult(session, CpgDfgPathsPayload(start, limit = 1), backward = true).content
         assertEquals(2, capped.size, "one JSON object and the summary")
         assertEquals(
             1,
@@ -178,7 +181,11 @@ class BoundedOutputToolsTest {
         val session = analyze(dir, "int main() { return 0; }", passes = false)
 
         val outcome =
-            dfgBackward(session, CpgDfgPathsPayload("00000000-0000-0000-0000-000000000000"))
+            dfgPathsResult(
+                session,
+                CpgDfgPathsPayload("00000000-0000-0000-0000-000000000000"),
+                backward = true,
+            )
 
         assertTrue((outcome.content.single() as TextContent).text.startsWith("No node found"))
     }

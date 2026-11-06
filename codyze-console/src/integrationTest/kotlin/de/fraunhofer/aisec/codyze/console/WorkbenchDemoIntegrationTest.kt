@@ -34,8 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.serialization.GraphEdgeKind
+import de.fraunhofer.aisec.cpg.serialization.GraphNodeKind
+import de.fraunhofer.aisec.cpg.serialization.GraphSliceJSON
 import de.fraunhofer.aisec.cpg.serialization.NodeInfo
 import de.fraunhofer.aisec.cpg.serialization.NodePaths
+import de.fraunhofer.aisec.cpg.serialization.SliceCountsJSON
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -125,6 +129,12 @@ class WorkbenchDemoIntegrationTest {
             "edges: ${backward.edges}",
         )
         assertTrue(getKey.external, "get_key should be marked as external")
+        // The initializer of a variable is part of its declaration, not a statement of its own
+        val keyLine = positionOf("char *key = get_key(&cfg)").first
+        val atKeyLine =
+            backward.nodes.filter { it.kind != GraphNodeKind.STUB && it.startLine == keyLine }
+        assertEquals(1, atKeyLine.size, "statements at the key: ${atKeyLine.map { it.code }}")
+        assertTrue("char" in atKeyLine.single().code, "statement: ${atKeyLine.single().code}")
 
         // What the key affects: the encryption, the plain copy and the log
         val forward =

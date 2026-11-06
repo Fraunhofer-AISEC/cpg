@@ -146,6 +146,8 @@ export interface OverlayJSON {
 /** Everything the backend knows about a single node, see `GET /api/node/{id}`. */
 export interface NodeDetailsJSON {
   node: NodeJSON;
+  /** For a concept or operation: the overlay itself */
+  overlay: OverlayJSON | null;
   enclosingFunction?: NodeJSON;
   overlays: OverlayJSON[];
   callTargets: NodeJSON[];
@@ -185,6 +187,23 @@ export interface NodePathsJSON {
   start: NodeInfoJSON;
   paths: NodeInfoJSON[][];
   /** Whether paths are missing because of the limits of the search */
+  truncated: boolean;
+}
+
+/**
+ * A slice of the program dependence graph a tool computed (see NodeSlice in the backend), with the
+ * parameters to show it in the graph panel
+ */
+export interface NodeSliceJSON {
+  kind: 'slice';
+  /** What the slice shows, e.g. "what affects `x`" */
+  description: string;
+  start: NodeInfoJSON;
+  graph: 'PDG' | 'DFG' | 'CDG';
+  direction: 'BACKWARD' | 'FORWARD';
+  hops: number;
+  interprocedural: boolean;
+  statements: { nodeId: string }[];
   truncated: boolean;
 }
 
@@ -253,20 +272,41 @@ export interface LLMMessage {
 
 export interface ToolResult {
   toolName?: string;
+  /** The arguments the model called the tool with, if they are known */
   args?: Record<string, unknown>;
   content: any;
   isError?: boolean;
+  /**
+   * The response of the model that called the tool, if it is known. The calls of one response share
+   * it, a later response has a higher one; the rounds are not consecutive
+   */
+  round?: number;
+}
+
+/** A tool call of the agent that is running, before its result is known. */
+export interface ToolActivity {
+  /** Identifies the call; its result carries the same ID */
+  toolCallId?: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  round?: number;
 }
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  contentType?: 'text' | 'tool-result';
+  /**
+   * What an assistant message is: its answer, the result of a tool call, or what the model wrote
+   * before a tool call, e.g. what it is about to do
+   */
+  contentType?: 'text' | 'tool-result' | 'narration';
   toolResult?: ToolResult;
   reasoning?: string;
   /** For user messages: the selected code the question refers to, which is sent along with it */
   context?: string;
+  /** A short name of the context, e.g. `log_debug main.c:10`, shown with the question */
+  contextLabel?: string;
   timestamp: Date;
 }
 

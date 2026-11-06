@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.serialization
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.translationUnit
@@ -198,6 +200,28 @@ data class NodePaths(
     val paths: List<List<NodeInfo>>,
     val truncated: Boolean,
 )
+
+/**
+ * A concept or operation and the node it is attached to.
+ *
+ * @property concept For an operation: the concept it belongs to. `null` for a concept.
+ */
+@Serializable
+data class OverlayJSON(
+    val overlay: NodeJSON,
+    val underlyingNode: NodeJSON?,
+    val concept: NodeJSON?,
+)
+
+/** This node as [OverlayJSON], or `null` if it is neither a [Concept] nor an [Operation]. */
+fun Node.toOverlayJSON(): OverlayJSON? {
+    if (this !is Concept && this !is Operation) return null
+    return OverlayJSON(
+        overlay = toRefJSON(),
+        underlyingNode = this.underlyingNode?.toRefJSON(),
+        concept = (this as? Operation)?.concept?.toRefJSON(),
+    )
+}
 
 /** How well the analysis knows what a [Call] does. */
 enum class CallStatus {

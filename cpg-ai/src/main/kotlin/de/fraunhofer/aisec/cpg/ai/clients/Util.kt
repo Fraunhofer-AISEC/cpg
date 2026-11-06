@@ -79,13 +79,39 @@ object Events {
 
     fun keepalive(): String = Json.encodeToString(buildJsonObject { put("type", "keepalive") })
 
-    fun toolResult(toolName: String, args: JsonElement, content: JsonElement): String =
+    /**
+     * A tool call that starts, before its result is known, so that the frontend can show what the
+     * agent is doing. [toolCallId] identifies the call, its [toolResult] carries the same id. The
+     * calls of one response of the model share their [round], also if they run in parallel; the
+     * calls of a later response have a higher one. The rounds are not consecutive.
+     */
+    fun toolCall(toolCallId: String?, toolName: String, args: JsonElement, round: Int): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "tool_call")
+                put("toolCallId", toolCallId)
+                put("toolName", toolName)
+                put("args", args)
+                put("round", round)
+            }
+        )
+
+    /** The result of a tool call, with the [toolCallId] and [round] of its [toolCall]. */
+    fun toolResult(
+        toolName: String,
+        args: JsonElement,
+        content: JsonElement,
+        toolCallId: String? = null,
+        round: Int? = null,
+    ): String =
         Json.encodeToString(
             buildJsonObject {
                 put("type", "tool_result")
+                put("toolCallId", toolCallId)
                 put("toolName", toolName)
                 put("args", args)
                 put("content", content)
+                put("round", round)
             }
         )
 

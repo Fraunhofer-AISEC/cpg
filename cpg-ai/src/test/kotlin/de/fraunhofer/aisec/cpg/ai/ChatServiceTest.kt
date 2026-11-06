@@ -190,6 +190,26 @@ class ChatServiceTest {
     }
 
     @Test
+    fun eventsToolCallTest() {
+        val args = buildJsonObject { put("name", "net_send") }
+        val event = Events.toolCall("call-1", "cpg_list_calls_to", args, 2)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("tool_call", json["type"]?.jsonPrimitive?.content)
+        assertEquals("call-1", json["toolCallId"]?.jsonPrimitive?.content)
+        assertEquals("cpg_list_calls_to", json["toolName"]?.jsonPrimitive?.content)
+        assertEquals(2, json["round"]?.jsonPrimitive?.int)
+        assertEquals("net_send", json["args"]?.jsonObject?.get("name")?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun eventsToolResultCarriesTheIdAndRoundOfItsCallTest() {
+        val event = Events.toolResult("cpg_get_node", JsonObject(emptyMap()), JsonNull, "call-1", 3)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("call-1", json["toolCallId"]?.jsonPrimitive?.content)
+        assertEquals(3, json["round"]?.jsonPrimitive?.int)
+    }
+
+    @Test
     fun eventsUsageTest() {
         val event = Events.usage("gpt-4", 100, 20, 120)
         val json = Json.parseToJsonElement(event).jsonObject

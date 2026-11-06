@@ -46,8 +46,10 @@ object ConsoleServiceHelper {
         }
     }
 
-    /** Starts the web console for the given [result], if codyze-console is enabled. */
-    fun startConsole(result: AnalysisResult) {
+    /**
+     * Starts the web console for the given [result], bound to [host], if codyze-console is enabled.
+     */
+    fun startConsole(result: AnalysisResult, host: String = "localhost") {
         if (!isEnabled) {
             log.warn(
                 "The --console option was set, but the codyze-console module is not enabled in " +
@@ -68,7 +70,7 @@ object ConsoleServiceHelper {
             val mainKt = Class.forName("de.fraunhofer.aisec.codyze.console.MainKt")
             val startConsole =
                 mainKt.methods.first { it.name == "startConsole" && it.parameterCount == 3 }
-            startConsole.invoke(null, service, "localhost", 8080)
+            startConsole.invoke(null, service, host, 8080)
         } catch (e: Exception) {
             log.error("Failed to start web console: {}", e.message, e)
         }

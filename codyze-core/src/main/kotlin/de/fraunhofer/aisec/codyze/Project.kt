@@ -58,6 +58,15 @@ class ProjectOptions : OptionGroup("Project Options") {
         option("--console", help = "Starts the Codyze web console after the analysis")
             .boolean()
             .default(false)
+
+    val consoleHost by
+        option(
+                "--console-host",
+                help =
+                    "The host the web console binds to. Use 0.0.0.0 to make it reachable from outside, e.g., in a container",
+                envvar = "CODYZE_CONSOLE_HOST",
+            )
+            .default("localhost")
 }
 
 /** Options common to all subcommands dealing with CPG translation. */

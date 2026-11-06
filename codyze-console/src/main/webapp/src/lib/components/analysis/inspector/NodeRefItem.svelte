@@ -13,6 +13,10 @@
 
   let { ref, onSelect, label, leading }: Props = $props();
 
+  // A concept or operation is named after its class, so its kind (see overlayLabel) is shown
+  // instead of the class
+  const overlay = $derived(label === 'Concept' || !!label?.startsWith('Operation'));
+
   const location = $derived(
     ref.startLine >= 0 ? `${ref.fileName ?? ''}:${ref.startLine}` : (ref.fileName ?? 'no location')
   );
@@ -27,18 +31,13 @@
     title={ref.code}
   >
     <span class="flex min-w-0 items-center gap-1.5">
-      <span class="shrink-0 rounded bg-gray-100 px-1 font-mono text-[10px] text-gray-600"
-        >{ref.type}</span
-      >
+      <span class="shrink-0 rounded bg-gray-100 px-1 font-mono text-[10px] text-gray-600">{overlay ? label : ref.type}</span>
       <span class="truncate text-xs font-medium text-gray-900">{ref.name || ref.code || '—'}</span>
       {#if ref.isInferred}
-        <span
-          class="shrink-0 rounded bg-amber-100 px-1 text-[10px] text-amber-700"
-          title="Inferred: not part of the analysed code">inferred</span
-        >
+        <span class="shrink-0 rounded border border-amber-200 px-1 text-[10px] text-amber-700" title="Inferred: not part of the analysed code">inferred</span>
       {/if}
-      {#if label}
-        <span class="shrink-0 rounded bg-blue-50 px-1 text-[10px] text-blue-700">{label}</span>
+      {#if label && !overlay}
+        <span class="shrink-0 rounded bg-gray-100 px-1 text-[10px] text-gray-600">{label}</span>
       {/if}
     </span>
     <span class="flex min-w-0 gap-2 font-mono text-[10px] text-gray-400">

@@ -103,22 +103,17 @@ internal fun dfgPaths(
     return Page(listOf(paths), page.summary)
 }
 
-/** `cpg_dfg_backward`: the dataflow paths that lead to the node. */
-internal fun dfgBackward(session: CpgSession, payload: CpgDfgPathsPayload): CallToolResult =
-    dfgPathsResult(session, payload, backward = true)
-
-/** `cpg_dfg_forward`: the dataflow paths that start at the node. */
-internal fun dfgForward(session: CpgSession, payload: CpgDfgPathsPayload): CallToolResult =
-    dfgPathsResult(session, payload, backward = false)
-
-private fun dfgPathsResult(
+/**
+ * The result of `cpg_dfg_backward` or `cpg_dfg_forward`: one JSON object with the paths of the
+ * page, and the summary of the page if paths are left.
+ */
+internal fun dfgPathsResult(
     session: CpgSession,
     payload: CpgDfgPathsPayload,
     backward: Boolean,
 ): CallToolResult {
     val start = session.findNodeById(payload.id) ?: return noNodeFoundResult(payload.id)
     val page = dfgPaths(start, backward, payload.interprocedural, payload.limit, payload.offset)
-    // One JSON object with the paths of the page, and the summary of the page if paths are left
     return CallToolResult(
         content =
             listOf(TextContent(Json.encodeToString(page.items.single()))) +
@@ -148,8 +143,9 @@ fun Server.addDfgBackwardTool() =
             - "Which inputs reach this call?"
             """
                 .trimIndent(),
-        handler = ::dfgBackward,
-    )
+    ) { session, payload ->
+        dfgPathsResult(session, payload, backward = true)
+    }
 
 /** Adds `cpg_dfg_forward`: the dataflow paths that start at a node. */
 fun Server.addDfgForwardTool() =
@@ -173,5 +169,6 @@ fun Server.addDfgForwardTool() =
             - "Is this key ever passed to a logging function?"
             """
                 .trimIndent(),
-        handler = ::dfgForward,
-    )
+    ) { session, payload ->
+        dfgPathsResult(session, payload, backward = false)
+    }

@@ -15,14 +15,16 @@ class LLMAgent {
     client: string,
     model: string,
     sessionId: string,
-    callbacks: StreamingCallbacks
+    callbacks: StreamingCallbacks,
+    signal?: AbortSignal
   ): Promise<void> {
     await this.apiService.streamPost(
       '/api/chat',
       { messages, client, model, sessionId },
       callbacks.onChunk,
       callbacks.onError,
-      callbacks.onComplete
+      callbacks.onComplete,
+      signal
     );
   }
   async createSession(): Promise<string> {
