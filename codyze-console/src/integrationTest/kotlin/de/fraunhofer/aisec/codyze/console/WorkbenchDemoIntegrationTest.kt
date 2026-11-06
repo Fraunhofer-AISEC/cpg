@@ -99,8 +99,8 @@ class WorkbenchDemoIntegrationTest {
 
         // The key figures of app_main: get_key is external, and so is the call through the function
         // pointer
-        val annotations = client.get("$base/annotations").body<FileAnnotationsJSON>()
-        val appMain = annotations.functions.first { it.function.name.endsWith("app_main") }
+        val functions = client.get("$base/functions").body<List<FunctionCallStatsJSON>>()
+        val appMain = functions.first { it.function.name.endsWith("app_main") }
         assertTrue(appMain.externalCalls >= 2, "external calls: ${appMain.externalCalls}")
 
         // What affects the call of encrypt: the key (data) and the condition (control)
