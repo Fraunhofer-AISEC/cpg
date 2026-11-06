@@ -25,12 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
+import com.github.javaparser.StaticJavaParser
+import com.github.javaparser.ast.ArrayCreationLevel
+import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.body.MethodDeclaration
+import com.github.javaparser.ast.body.Parameter as JPParameter
 import com.github.javaparser.ast.body.VariableDeclarator
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.expr.Expression as JPExpression
+import com.github.javaparser.ast.stmt.ReturnStmt
+import com.github.javaparser.ast.type.ArrayType as JPArrayType
+import com.github.javaparser.ast.type.ClassOrInterfaceType
+import com.github.javaparser.ast.type.PrimitiveType
+import com.github.javaparser.ast.type.Type as JPType
+import com.github.javaparser.ast.type.UnknownType as JPUnknownType
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
+import com.github.javaparser.resolution.logic.FunctionalInterfaceLogic
 import com.github.javaparser.resolution.types.ResolvedPrimitiveType
 import com.github.javaparser.resolution.types.ResolvedType
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
@@ -80,6 +92,189 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         lambda.function = anonymousFunction
 
         return lambda
+    }
+
+    /**
+     * Translates a method reference (e.g., `Foo::bar`, `obj::bar`, `Foo::new`) by desugaring it
+     * into the equivalent lambda expression in the JavaParser AST and then handling that lambda:
+     * - `Foo::staticMethod` becomes `(arg0, ...) -> Foo.staticMethod(arg0, ...)`
+     * - `Foo::instanceMethod` becomes `(arg0, arg1, ...) -> arg0.instanceMethod(arg1, ...)`
+     * - `expr::method` becomes `(arg0, ...) -> expr.method(arg0, ...)`
+     * - `Foo::new` becomes `(arg0, ...) -> new Foo(arg0, ...)` (or `new Foo[arg0]` for arrays)
+     *
+     * The parameters are derived from the resolved method (or constructor) or, if that is not
+     * possible, from the functional interface the method reference is converted to.
+     */
+    private fun handleMethodReferenceExpr(expr: JPExpression): Expression {
+        val methodRef = expr.asMethodReferenceExpr()
+        val scope = methodRef.scope
+        val identifier = methodRef.identifier
+
+        val resolved =
+            try {
+                methodRef.resolve()
+            } catch (_: Exception) {
+                null
+            }
+        val functionalArity =
+            targetTypeOf(methodRef)?.let {
+                try {
+                    FunctionalInterfaceLogic.getFunctionalMethod(it)
+                        .map { m -> m.noParams }
+                        .getOrNull()
+                } catch (_: Exception) {
+                    null
+                }
+            }
+
+        // JavaParser always parses the scope of `a.b::c` as a type, even if it is an expression,
+        // so we need to check whether it really is a type.
+        val scopeType = (scope as? TypeExpr)?.type
+        val isTypeScope = scopeType != null && isType(scopeType)
+        val args = { from: Int, count: Int ->
+            NodeList<JPExpression>((from until from + count).map { NameExpr("arg$it") })
+        }
+
+        // The parameter types of the resolved method, so that the calls in our lambda match its
+        // signature. If we cannot resolve the method, we fall back to the functional interface.
+        val resolvedTypes =
+            resolved?.let {
+                (0 until it.numberOfParams).map { i -> astTypeOf(it.getParam(i).type) }
+            }
+        val fallbackTypes = List(functionalArity ?: 0) { JPUnknownType() }
+
+        val (parameterTypes, body) =
+            when {
+                identifier == "new" && scopeType is JPArrayType -> {
+                    listOf(PrimitiveType.intType()) to
+                        ArrayCreationExpr(
+                            scopeType.elementType.clone(),
+                            NodeList(ArrayCreationLevel(NameExpr("arg0"))),
+                            null,
+                        )
+                }
+                identifier == "new" && scopeType is ClassOrInterfaceType -> {
+                    // JavaParser cannot resolve constructor references, so we look up the
+                    // constructor ourselves
+                    val types =
+                        constructorParameterTypes(scopeType, functionalArity) ?: fallbackTypes
+                    types to ObjectCreationExpr(null, scopeType.clone(), args(0, types.size))
+                }
+                isTypeScope && resolvedTypes != null && resolved?.isStatic == false -> {
+                    // An unbound receiver, the first parameter is the object to call the method on
+                    listOf(scopeType.clone()) + resolvedTypes to
+                        MethodCallExpr(NameExpr("arg0"), identifier, args(1, resolvedTypes.size))
+                }
+                isTypeScope -> {
+                    val types = resolvedTypes ?: fallbackTypes
+                    val typeName =
+                        (scopeType as? ClassOrInterfaceType)?.nameWithScope ?: scopeType.toString()
+                    types to
+                        MethodCallExpr(
+                            StaticJavaParser.parseExpression(typeName),
+                            identifier,
+                            args(0, types.size),
+                        )
+                }
+                else -> {
+                    // A bound receiver, the scope is an expression (e.g., `this` or a variable)
+                    val receiver =
+                        if (scope is TypeExpr) StaticJavaParser.parseExpression(scope.toString())
+                        else scope.clone()
+                    val types = resolvedTypes ?: fallbackTypes
+                    types to MethodCallExpr(receiver, identifier, args(0, types.size))
+                }
+            }
+
+        val parameters =
+            NodeList(parameterTypes.mapIndexed { i, type -> JPParameter(type, "arg$i") })
+        val lambdaExpr = LambdaExpr(parameters, body)
+
+        // Our synthetic nodes should point to the location of the original method reference
+        lambdaExpr.walk { it.setRange(methodRef.range.getOrNull()) }
+        methodRef.tokenRange.ifPresent { lambdaExpr.setTokenRange(it) }
+
+        // Replace the method reference in the AST, so that symbol resolution in the lambda works
+        methodRef.replace(lambdaExpr)
+
+        return handleLambdaExpr(lambdaExpr)
+    }
+
+    /**
+     * The functional interface type that [methodRef] is converted to. JavaParser can only infer it
+     * if the method reference is an argument of a call, so for other positions we take it from the
+     * context: the declared type of a variable, the target of an assignment, or the return type of
+     * the enclosing method.
+     */
+    private fun targetTypeOf(methodRef: MethodReferenceExpr): ResolvedType? {
+        try {
+            return methodRef.calculateResolvedType()
+        } catch (_: Exception) {
+            // Not an argument of a call, see below
+        }
+
+        return try {
+            when (val parent = methodRef.parentNode.getOrNull()) {
+                is VariableDeclarator -> parent.type.resolve()
+                is AssignExpr -> parent.target.calculateResolvedType()
+                is ReturnStmt ->
+                    parent.findAncestor(MethodDeclaration::class.java).getOrNull()?.type?.resolve()
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * The parameter types of the constructor that `Foo::new` refers to, if there is exactly one
+     * constructor of [type] with [arity] parameters (or exactly one constructor at all, if the
+     * arity is unknown).
+     */
+    private fun constructorParameterTypes(type: ClassOrInterfaceType, arity: Int?): List<JPType>? {
+        return try {
+            val declaration =
+                type.resolve().asReferenceType().typeDeclaration.getOrNull() ?: return null
+            val constructor =
+                declaration.constructors
+                    .filter { arity == null || it.numberOfParams == arity }
+                    .singleOrNull() ?: return null
+            (0 until constructor.numberOfParams).map { astTypeOf(constructor.getParam(it).type) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Converts a [ResolvedType] back into a JavaParser AST type, so that we can use it for the
+     * parameters of a synthetic lambda. Type variables and wildcards cannot be expressed outside of
+     * their declaration, so we leave them unknown.
+     */
+    private fun astTypeOf(type: ResolvedType): JPType {
+        if (type.isTypeVariable || type.isWildcard) {
+            return JPUnknownType()
+        }
+
+        return try {
+            StaticJavaParser.parseType(type.describe())
+        } catch (_: Exception) {
+            JPUnknownType()
+        }
+    }
+
+    /** Checks whether [type], which is the scope of a method reference, really is a type. */
+    private fun isType(type: JPType): Boolean {
+        if (type !is ClassOrInterfaceType) {
+            return true
+        }
+
+        return try {
+            type.resolve()
+            true
+        } catch (_: Exception) {
+            // If we cannot resolve it, we fall back to the naming conventions of Java
+            type.nameAsString.firstOrNull()?.isUpperCase() == true
+        }
     }
 
     private fun handleCastExpr(expr: JPExpression): Expression {
@@ -616,6 +811,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         map[ArrayInitializerExpr::class.java] = HandlerInterface { handleArrayInitializerExpr(it) }
         map[CastExpr::class.java] = HandlerInterface { handleCastExpr(it) }
         map[LambdaExpr::class.java] = HandlerInterface { handleLambdaExpr(it) }
+        map[MethodReferenceExpr::class.java] = HandlerInterface { handleMethodReferenceExpr(it) }
     }
 }
 
