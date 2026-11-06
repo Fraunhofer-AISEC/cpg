@@ -45,8 +45,9 @@
     const content = toolResult.content;
     if (toolResult.isError) return 'error';
     if (skillName) return skillName;
-    if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof content?.name === 'string')
-      return `suggests ${content.name}`;
+    const suggested = (content as { name?: unknown } | null | undefined)?.name;
+    if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof suggested === 'string')
+      return `suggests ${suggested}`;
     if (nodes.length > 0) {
       const files = new Set(nodes.map((n) => n.fileName).filter(Boolean)).size;
       const what = `${nodes.length} ${nodes.length === 1 ? 'node' : 'nodes'}`;

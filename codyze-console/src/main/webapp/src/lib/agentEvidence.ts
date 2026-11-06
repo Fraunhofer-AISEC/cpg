@@ -1,4 +1,4 @@
-import type { NodeJSON, TrustIssueJSON } from '$lib/types';
+import type { NodeJSON, EvidenceDiagnosticJSON } from '$lib/types';
 
 /**
  * The evidence of the agent's answers: the nodes returned by its tool calls and the nodes it cites
@@ -69,19 +69,24 @@ export function citationLabel(ref: NodeJSON): string {
   return ref.startLine >= 1 ? `${name} · ${ref.fileName ?? ''}:${ref.startLine}` : name;
 }
 
-// The trust issues of each set of evidence, by its sorted IDs
-const trustCache = new Map<string, Promise<TrustIssueJSON[]>>();
+/** Where a diagnostic is, e.g. `main.c:13`, or `no source` for nodes without source code. */
+export function diagnosticLocation(ref: NodeJSON): string {
+  return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
+}
+
+// The diagnostics of each set of evidence, by its sorted IDs
+const diagnosticsCache = new Map<string, Promise<EvidenceDiagnosticJSON[]>>();
 
 /**
- * The places where the analysis is uncertain that the given evidence relies on, e.g. unresolved
- * calls in the functions of the nodes. Cached by the set of IDs.
+ * The places where the analysis is incomplete, uncertain or ends that the given evidence relies on,
+ * e.g. unresolved calls in the functions of the nodes. Cached by the set of IDs.
  */
-export function checkTrust(ids: string[]): Promise<TrustIssueJSON[]> {
+export function checkDiagnostics(ids: string[]): Promise<EvidenceDiagnosticJSON[]> {
   const key = [...new Set(ids)].sort().join(',');
   if (!key) return Promise.resolve([]);
-  let issues = trustCache.get(key);
-  if (!issues) {
-    issues = fetch('/api/trust', {
+  let diagnostics = diagnosticsCache.get(key);
+  if (!diagnostics) {
+    diagnostics = fetch('/api/diagnostics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(key.split(','))
@@ -92,10 +97,10 @@ export function checkTrust(ids: string[]): Promise<TrustIssueJSON[]> {
       })
       .catch(() => {
         // Ask again next time instead of keeping the failure
-        trustCache.delete(key);
+        diagnosticsCache.delete(key);
         return [];
       });
-    trustCache.set(key, issues);
+    diagnosticsCache.set(key, diagnostics);
   }
-  return issues;
+  return diagnostics;
 }

@@ -34,6 +34,7 @@
   import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
   import CodeLines from './CodeLines.svelte';
   import Highlight from 'svelte-highlight';
+  import type { ConceptGroup } from '$lib/concepts';
   import python from 'svelte-highlight/languages/python';
   import java from 'svelte-highlight/languages/java';
   import cpp from 'svelte-highlight/languages/cpp';
@@ -46,7 +47,19 @@
   import plaintext from 'svelte-highlight/languages/plaintext';
   import 'svelte-highlight/styles/github.css';
 
-  const languageMap: Record<string, any> = {
+  type Language =
+    | typeof python
+    | typeof java
+    | typeof cpp
+    | typeof csharp
+    | typeof javascript
+    | typeof typescript
+    | typeof go
+    | typeof rust
+    | typeof ruby
+    | typeof plaintext;
+
+  const languageMap: Record<string, Language> = {
     '.py': python,
     '.java': java,
     '.kt': java,
@@ -76,7 +89,7 @@
     /** The nodes listed in the panel next to the code; not needed with an external inspector */
     astNodes?: NodeJSON[];
     overlayNodes?: NodeJSON[];
-    conceptGroups?: any[];
+    conceptGroups?: ConceptGroup[];
     highlightLine?: number;
     finding?: string;
     findingKind?: string;
@@ -587,6 +600,8 @@
   const fileSummary = $derived.by(() => {
     if (!annotations) return null;
     const external = annotations.calls.filter((c) => c.status === 'EXTERNAL');
+    // A temporary count, which is not shown
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const counts = new Map<string, number>();
     for (const { call } of external) counts.set(call.name, (counts.get(call.name) ?? 0) + 1);
     const topExternal = [...counts.entries()]

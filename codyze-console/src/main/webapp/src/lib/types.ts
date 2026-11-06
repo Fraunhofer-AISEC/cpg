@@ -99,13 +99,20 @@ export interface CodeSelection {
   node: NodeJSON | null;
 }
 
-/** Why evidence of the agent may not be reliable, the most severe first. */
-export type TrustIssueKind = 'UNRESOLVED_CALL' | 'ANALYSIS_WARNING' | 'EXTERNAL_CODE';
+/** How much a diagnostic matters, see `DiagnosticSeverity`. */
+export type DiagnosticSeverity = 'WARNING' | 'INFO';
 
-/** A place where the analysis is uncertain that some evidence of the agent relies on. */
-export interface TrustIssueJSON {
-  kind: TrustIssueKind;
-  /** The uncertain node, e.g. the unresolved call */
+/** What a diagnostic is about. */
+export type DiagnosticKind = 'UNRESOLVED_CALL' | 'ANALYSIS_PROBLEM' | 'EXTERNAL_CODE';
+
+/**
+ * A place where the analysis is incomplete or uncertain, or where it ends, that some evidence of
+ * the agent relies on.
+ */
+export interface EvidenceDiagnosticJSON {
+  kind: DiagnosticKind;
+  severity: DiagnosticSeverity;
+  /** The node with the diagnostic, e.g. the unresolved call */
   location: NodeJSON;
   /** What the evidence relies on, phrased to follow "relies on" */
   reason: string;
@@ -165,7 +172,7 @@ export interface McpToolInfo {
   name: string;
   description?: string;
   inputSchema?: {
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     required?: string[];
   };
 }
@@ -226,7 +233,7 @@ export interface LLMMessage {
 export interface ToolResult {
   toolName?: string;
   args?: Record<string, unknown>;
-  content: any;
+  content: unknown;
   isError?: boolean;
 }
 
