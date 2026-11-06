@@ -82,38 +82,17 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         // these will be filled by our create and parse functions later and will be passed as
         // pointer
         val mod = LLVMModuleRef()
-        val buf = LLVMMemoryBufferRef()
 
-        // create a new LLVM context
-        ctxRef = LLVMContextCreate()
-
-        // disable opaque pointers, until all necessary new functions are available in the C API.
-        // See https://llvm.org/docs/OpaquePointers.html
-        LLVMContextSetOpaquePointers(ctxRef, 0)
-
-        // allocate a buffer for a possible error message
-        val errorMessage = ByteBuffer.allocate(10000)
-
-        var result =
-            LLVMCreateMemoryBufferWithContentsOfFile(
-                BytePointer(file.toPath().toString()),
-                buf,
-                errorMessage,
-            )
-        if (result != 0) {
-            // something went wrong
-            val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctxRef)
-            throw TranslationException("Could not create memory buffer: $errorMsg")
-        }
-
-        result = LLVMParseIRInContext(ctxRef, buf, mod, errorMessage)
-        if (result != 0) {
-            // something went wrong
-            val errorMsg = String(errorMessage.array())
-            LLVMContextDispose(ctxRef)
-            throw TranslationException("Could not parse IR: $errorMsg")
-        }
+        // Parse the module. We first try to parse it with typed pointers (LLVM's classic
+        // representation), since that retains the pointee type of every pointer (in function
+        // signatures, struct fields, bitcasts, ...), not just the ones that are reachable from an
+        // explicit type operand. IR/bitcode that already uses the opaque pointer syntax (`ptr`)
+        // fails to parse in a typed-pointer context, so we fall back to an opaque-pointer context
+        // for it. There, pointee types are only recovered where LLVM exposes an explicit type
+        // operand (alloca's allocated type, a global's/function's value type, a GEP's source
+        // element type, a load's result type); everywhere else the pointee type is lost and
+        // becomes [UnknownType]. See https://llvm.org/docs/OpaquePointers.html
+        ctxRef = parseModuleWithFallback(file, mod)
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
@@ -162,6 +141,72 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         return tu
     }
 
+    /**
+     * Parses [file] into [mod], preferring a typed-pointer context (see [parse]). Returns the
+     * [LLVMContextRef] that the module was successfully parsed in.
+     *
+     * This relies on the bundled LLVM (currently 16.0.x, see `libs.versions.toml`) still supporting
+     * typed pointers via [LLVMContextSetOpaquePointers]. LLVM 17 removed typed pointers entirely;
+     * on such a version, `LLVMContextSetOpaquePointers(ctx, 0)` would have no effect (or may not
+     * exist), the typed-pointer attempt would behave like the opaque one, and every file would
+     * effectively be parsed twice for no benefit. [testIdentifiedStruct] (which asserts real,
+     * non-opaque pointee types) acts as the regression check for this in CI.
+     */
+    private fun parseModuleWithFallback(file: File, mod: LLVMModuleRef): LLVMContextRef {
+        val typedCtx = LLVMContextCreate()
+        LLVMContextSetOpaquePointers(typedCtx, 0)
+        val typedError = tryParseIRInContext(typedCtx, file, mod)
+        if (typedError == null) {
+            return typedCtx
+        }
+        LLVMContextDispose(typedCtx)
+
+        val opaqueCtx = LLVMContextCreate()
+        LLVMContextSetOpaquePointers(opaqueCtx, 1)
+        val opaqueError = tryParseIRInContext(opaqueCtx, file, mod)
+        if (opaqueError != null) {
+            LLVMContextDispose(opaqueCtx)
+            // Neither attempt succeeded, so this is not just a typed-vs-opaque mismatch but
+            // genuinely invalid IR. Report both error messages side by side, without implying
+            // either one is the "real" one: whichever context the file was actually meant for,
+            // the other context's message is usually noise (e.g. complaining about `ptr` for a
+            // typed-pointer file with an unrelated syntax error), but we cannot tell which one
+            // that is from here.
+            throw TranslationException(
+                "Could not parse IR.\nTyped-pointer context: $typedError\nOpaque-pointer context: $opaqueError"
+            )
+        }
+
+        return opaqueCtx
+    }
+
+    /** Tries to parse [file] into [mod] using [context]. Returns an error message, or `null`. */
+    private fun tryParseIRInContext(
+        context: LLVMContextRef,
+        file: File,
+        mod: LLVMModuleRef,
+    ): String? {
+        val buf = LLVMMemoryBufferRef()
+        val errorMessage = ByteBuffer.allocate(10000)
+
+        var result =
+            LLVMCreateMemoryBufferWithContentsOfFile(
+                BytePointer(file.toPath().toString()),
+                buf,
+                errorMessage,
+            )
+        if (result != 0) {
+            return errorMessage.toErrorString()
+        }
+
+        result = LLVMParseIRInContext(context, buf, mod, errorMessage)
+        if (result != 0) {
+            return errorMessage.toErrorString()
+        }
+
+        return null
+    }
+
     override fun typeOf(type: LLVMTypeRef): Type {
         return typeOf(type, mutableMapOf())
     }
@@ -186,6 +231,21 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         return typeOf(typeRef)
     }
 
+    /**
+     * Converts an [LLVMTypeRef] to a cpg-core [Type].
+     *
+     * An opaque pointer (see [parse]) maps to plain [UnknownType], not `PointerType(UnknownType)`:
+     * `UnknownType.reference()` (which [de.fraunhofer.aisec.cpg.graph.pointer] calls) returns the
+     * receiver unchanged, since cpg-core has no way to express "a pointer to an unknown type". We
+     * deliberately don't build a real `PointerType(UnknownType)` either: that would make this
+     * no-information type look concrete to cpg-core's type-propagation system, which would then
+     * push it through type observers (e.g. `PointerDereference.typeChanged`) and override pointee
+     * types that [DeclarationHandler]/[StatementHandler] deliberately recovered elsewhere from
+     * explicit type operands (allocated type, GEP source element type, global/function value type,
+     * load result type). Callers that need to tell a known pointer apart from an opaque pointer
+     * with a lost pointee type (e.g. the GEP loop in [ExpressionHandler]) check `is UnknownType` in
+     * addition to `is PointerType`.
+     */
     internal fun typeOf(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf(),
@@ -208,8 +268,14 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
                     elementType.array()
                 }
                 LLVMPointerTypeKind -> {
-                    val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
-                    elementType.pointer()
+                    if (LLVMPointerTypeIsOpaque(typeRef) != 0) {
+                        // Opaque pointers no longer carry a pointee type; see the KDoc above for
+                        // why this collapses to UnknownType rather than PointerType(UnknownType).
+                        unknownType().pointer()
+                    } else {
+                        val elementType = typeOf(LLVMGetElementType(typeRef), alreadyVisited)
+                        elementType.pointer()
+                    }
                 }
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
@@ -303,3 +369,14 @@ inline val LLVMValueRef.opCode: Int
     get() {
         return LLVMGetInstructionOpcode(this)
     }
+
+/**
+ * Decodes an LLVM error message buffer as a string, cutting it off at the first NUL byte. LLVM
+ * writes a short, NUL-terminated message into a fixed-size buffer; decoding the whole buffer
+ * verbatim would include thousands of trailing NUL bytes.
+ */
+private fun ByteBuffer.toErrorString(): String {
+    val message = String(array())
+    val nulIndex = message.indexOf('\u0000')
+    return if (nulIndex >= 0) message.substring(0, nulIndex) else message
+}
