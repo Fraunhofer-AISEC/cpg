@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import jep.JepException
 import jep.python.PyObject
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
@@ -98,9 +99,22 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
             it.set("filename", file.absolutePath)
             it.exec("import ast")
             it.exec("import sys")
-            it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
-            val pyAST = it.getValue("parsed") as PyObject
+            // Only the actual parsing is wrapped: a JepException here means CPython's own `ast`
+            // module rejected the file (e.g. Python-2-only syntax), which we want to treat as one
+            // unparsable file rather than aborting the whole translation. A JepException raised
+            // later, while we are walking the AST in [pythonASTtoCPG], indicates a bug in our own
+            // conversion logic and must keep propagating unchanged, not be mistaken for a syntax
+            // error in the input file.
+            val pyAST =
+                try {
+                    it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
+                    it.getValue("parsed") as PyObject
+                } catch (ex: JepException) {
+                    throw TranslationException(
+                        "Could not parse Python file ${file.absolutePath}: ${ex.message}"
+                    )
+                }
 
             val tud = pythonASTtoCPG(pyAST, file.toPath())
             populateSystemInformation(config, tud)
@@ -110,8 +124,8 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 it.exec("reader = tokenize.open(filename).readline")
                 it.exec("tokens = tokenize.generate_tokens(reader)")
                 it.exec("tokenList = list(tokens)")
-                // This constant has to be retrieved from the system as it was changed in different
-                // Python versions
+                // This constant has to be retrieved from the system as it was changed in
+                // different Python versions
                 it.exec("commentCode = tokenize.COMMENT")
 
                 val pyCommentCode =

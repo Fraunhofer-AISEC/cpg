@@ -1091,8 +1091,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         val symbol = language.overloadedOperatorNames[Pair(op::class, op.operatorCode)]
         if (symbol == null) {
-            log.warn(
-                "Could not resolve operator overloading for unknown operatorCode ${op.operatorCode}"
+            // Not every operator of a language with operator overloading is overloadable - C++
+            // alone has `sizeof`, `.`, `?:` and friends. An operator code that is absent from
+            // overloadedOperatorNames simply means "this one cannot be overloaded", which is the
+            // expected outcome for those and not something worth warning about on every single
+            // occurrence.
+            log.debug(
+                "No overloadable operator is known for operatorCode {}, not resolving it",
+                op.operatorCode,
             )
             return null
         }

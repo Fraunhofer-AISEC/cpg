@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.For
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
@@ -61,6 +62,9 @@ class FrontendHelperTest {
         // The class should have 2 comments: The javadoc and "Class comment"
         val tu = result.components.flatMap { it.translationUnits }.first()
         val classDeclaration = tu.declarations.first() as Record
+        // `System` is visible through the implicit import of `java.lang.*`, so we must not infer a
+        // field for it in our class
+        assertTrue(classDeclaration.fields.none { it.isInferred })
         classDeclaration.comment = "" // Reset the comment of the ClassDerclaration
 
         val comment = "This comment clearly belongs to the class."
@@ -93,7 +97,8 @@ class FrontendHelperTest {
         assertTrue(constructorAssignment.comment?.contains(comment5) == true)
         assertNull(constructor.comment)
 
-        val mainMethod = classDeclaration.declarations[2] as Method
+        val mainMethod = classDeclaration.methods["main"]
+        assertNotNull(mainMethod)
         assertNull(mainMethod.comment)
         val forLoop = (mainMethod.body as Block).statements[0] as For
         forLoop.comment = null

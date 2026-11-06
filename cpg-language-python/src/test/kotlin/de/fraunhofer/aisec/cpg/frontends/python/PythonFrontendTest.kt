@@ -1980,4 +1980,40 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(anotherFunctionCall.astParent)
         assertSame(functionCall, anotherFunctionCall.astParent)
     }
+
+    @Test
+    fun testFileWithSyntaxErrorDoesNotAbortWholeTranslation() {
+        // Regression test for a bug where a Jep/Python `SyntaxError` (e.g. caused by Python-2-only
+        // syntax that CPython's `ast` module refuses to parse) was not caught at the frontend
+        // level. This let the exception escape the per-file error handling in
+        // [de.fraunhofer.aisec.cpg.TranslationManager] and abort the whole translation, instead of
+        // just the single, unparsable file.
+        val topLevel = Path.of("src", "test", "resources", "python", "syntax_error")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("valid.py").toFile(),
+                    topLevel.resolve("invalid.py").toFile(),
+                ),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                // The default test configuration sets failOnError(true). We want to assert the
+                // more lenient, production-like behavior of just skipping the broken file.
+                it.failOnError(false)
+            }
+        assertNotNull(result)
+
+        val translationUnits = result.components.flatMap { it.translationUnits }
+        assertEquals(
+            1,
+            translationUnits.size,
+            "Expected only the valid file to be translated, the invalid one should be skipped",
+        )
+        assertTrue(translationUnits.first().name.toString().contains("valid"))
+
+        val greet = result.functions["greet"]
+        assertNotNull(greet, "The valid file should still have been fully translated")
+    }
 }

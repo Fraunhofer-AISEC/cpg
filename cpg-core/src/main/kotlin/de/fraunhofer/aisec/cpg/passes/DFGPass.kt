@@ -89,13 +89,15 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                             ?.prevDFGEdges
                             ?.addContextSensitive(
                                 param,
-                                callingContext = CallingContextOut(mutableListOf(call)),
+                                callingContexts = listOf(CallingContextOut(mutableListOf(call))),
                             )
                     } else if (param is Parameter) {
-                        val arg = call.arguments[param.argumentIndex]
+                        // A call can have fewer arguments than parameters (e.g. default arguments,
+                        // or a C call that does not fit its function)
+                        val arg = call.arguments.getOrNull(param.argumentIndex) ?: continue
                         arg.prevDFGEdges.addContextSensitive(
                             param,
-                            callingContext = CallingContextOut(mutableListOf(call)),
+                            callingContexts = listOf(CallingContextOut(mutableListOf(call))),
                         )
                         arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
@@ -610,7 +612,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
                 call.prevDFGEdges.addContextSensitive(
                     it,
-                    callingContext = CallingContextOut(mutableListOf(call)),
+                    callingContexts = listOf(CallingContextOut(mutableListOf(call))),
                 )
                 if (it.isInferred) {
                     callsInferredFunctions.add(call)
@@ -637,7 +639,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 Util.attachCallParameters(it, call)
                 call.prevDFGEdges.addContextSensitive(
                     it,
-                    callingContext = CallingContextOut(mutableListOf(call)),
+                    callingContexts = listOf(CallingContextOut(mutableListOf(call))),
                 )
                 if (it.isInferred) {
                     callsInferredFunctions.add(call)

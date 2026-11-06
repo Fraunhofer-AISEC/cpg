@@ -51,14 +51,26 @@ class IfdsDelegationTest {
         val cG = Call()
         val cF = Call()
 
-        q.prevDFGEdges.addContextSensitive(h, callingContext = CallingContextOut(mutableListOf(cG)))
-        h.prevDFGEdges.addContextSensitive(h, callingContext = CallingContextOut(mutableListOf(cF)))
-        h.prevDFGEdges.addContextSensitive(r1, callingContext = CallingContextIn(mutableListOf(cF)))
+        q.prevDFGEdges.addContextSensitive(
+            h,
+            callingContexts = listOf(CallingContextOut(mutableListOf(cG))),
+        )
+        h.prevDFGEdges.addContextSensitive(
+            h,
+            callingContexts = listOf(CallingContextOut(mutableListOf(cF))),
+        )
+        h.prevDFGEdges.addContextSensitive(
+            r1,
+            callingContexts = listOf(CallingContextIn(mutableListOf(cF))),
+        )
         r1.prevDFGEdges.addContextSensitive(
             r2,
-            callingContext = CallingContextIn(mutableListOf(cF)),
+            callingContexts = listOf(CallingContextIn(mutableListOf(cF))),
         )
-        r2.prevDFGEdges.addContextSensitive(s, callingContext = CallingContextIn(mutableListOf(cG)))
+        r2.prevDFGEdges.addContextSensitive(
+            s,
+            callingContexts = listOf(CallingContextIn(mutableListOf(cG))),
+        )
         return q to s
     }
 

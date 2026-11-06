@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -59,9 +58,8 @@ const val HARD_PRIVATE = "#"
  * JavaScript itself has no access modifier *keywords*, but it does have genuine, runtime-enforced
  * access control via *hard private* (`#name`) class members, which map onto [Visibility.PRIVATE];
  * every other member is [Visibility.PUBLIC]. It therefore implements [HasVisibilityModifiers]. It
- * also has `static` class members, which it maps onto [ValueDeclaration.isStatic].
- * [TypeScriptLanguage] extends this with the compile-time `public`/`protected`/`private` access
- * specifiers.
+ * also has `static` class members, which it maps onto [Declaration.isStatic]. [TypeScriptLanguage]
+ * extends this with the compile-time `public`/`protected`/`private` access specifiers.
  */
 open class JavaScriptLanguage :
     Language<TypeScriptLanguageFrontend>(), HasShortCircuitOperators, HasVisibilityModifiers {
@@ -72,7 +70,7 @@ open class JavaScriptLanguage :
      * Projects the JavaScript modifiers kept in [Declaration.modifiers] onto [declaration]'s
      * canonical properties. This only applies to record members (i.e. when [scope] is a
      * [RecordScope]), since JavaScript's `static` and `#name` concepts are meaningful only there:
-     * - [STATIC] marks the member as a class-level (static) member ([ValueDeclaration.isStatic]);
+     * - [STATIC] marks the member as a class-level (static) member ([Declaration.isStatic]);
      * - [HARD_PRIVATE] (a `#name` member) is runtime-private and maps onto [Visibility.PRIVATE];
      * - any other record member left [Visibility.UNKNOWN] defaults to [Visibility.PUBLIC], matching
      *   the default access level of JavaScript (and TypeScript) class members.
@@ -86,7 +84,7 @@ open class JavaScriptLanguage :
         }
 
         if (STATIC in declaration.modifiers) {
-            (declaration as? ValueDeclaration)?.isStatic = true
+            declaration.isStatic = true
         }
 
         if (HARD_PRIVATE in declaration.modifiers) {

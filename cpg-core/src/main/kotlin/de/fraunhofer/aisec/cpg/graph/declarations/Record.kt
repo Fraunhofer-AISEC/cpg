@@ -126,15 +126,6 @@ open class Record :
 
     @Relationship var superTypeDeclarations: Set<Record> = HashSet()
 
-    var importStatements: List<String> = ArrayList()
-
-    @Relationship var imports: MutableSet<Declaration> = HashSet()
-
-    // Methods and fields can be imported statically
-    var staticImportStatements: List<String> = ArrayList()
-
-    @Relationship var staticImports: MutableSet<ValueDeclaration> = HashSet()
-
     @DoNotPersist
     override val declarations: List<Declaration>
         get() {

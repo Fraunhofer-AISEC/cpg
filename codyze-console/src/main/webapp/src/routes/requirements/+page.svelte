@@ -3,14 +3,14 @@
   import { DashboardSection, StatsGrid, CategorySection } from '$lib/components/dashboard';
   import { PageHeader } from '$lib/components/navigation';
   import { LoadingSpinner, EmptyState } from '$lib/components/ui';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { onMount } from 'svelte';
 
   // Correctly access data with $props()
   let { data }: PageProps = $props();
 
   // Get category from URL parameters
-  const expandedCategoryId = $derived($page.url.searchParams.get('category'));
+  const expandedCategoryId = $derived(page.url.searchParams.get('category'));
 
   // Calculate overall requirement stats
   const overallStats = $derived(

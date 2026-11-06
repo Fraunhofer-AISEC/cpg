@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Import as ImportNode
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import kotlin.reflect.KProperty
 
@@ -65,12 +65,13 @@ enum class ImportStyle {
 }
 
 /**
- * This edge represents the import of a [NamespaceScope] into another [Scope]. The [style] of import
- * (e.g., whether only a certain symbol or the whole namespace is imported) is determined by the
- * [declaration].
+ * This edge represents the import of a [NameScope] (usually a namespace, but for languages with
+ * [de.fraunhofer.aisec.cpg.frontends.HasImportsFromRecords] also a record) into another [Scope].
+ * The [style] of import (e.g., whether only a certain symbol or the whole namespace is imported) is
+ * determined by the [declaration].
  */
-class Import(start: Scope, end: NamespaceScope, var declaration: ImportNode? = null) :
-    Edge<NamespaceScope>(start, end) {
+class Import(start: Scope, end: NameScope, var declaration: ImportNode? = null) :
+    Edge<NameScope>(start, end) {
 
     override var labels = LABELS
 
@@ -93,9 +94,9 @@ class Imports(
     override var mirrorProperty: KProperty<MutableCollection<Import>>,
     outgoing: Boolean = true,
 ) :
-    EdgeSet<NamespaceScope, Import>(
+    EdgeSet<NameScope, Import>(
         thisRef = thisRef,
         init = { start, end -> Import(start as Scope, end) },
         outgoing = outgoing,
     ),
-    MirroredEdgeCollection<NamespaceScope, Import>
+    MirroredEdgeCollection<NameScope, Import>

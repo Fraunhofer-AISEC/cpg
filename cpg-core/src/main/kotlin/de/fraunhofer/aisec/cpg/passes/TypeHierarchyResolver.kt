@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -79,6 +80,15 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val allSupertypes =
                 directSupertypeRecords.flatMapTo(mutableSetOf()) { findSupertypeRecords(it) }
             enumDecl.superTypeDeclarations = allSupertypes
+        }
+
+        // Imports from a record also import what the record inherits. Now that we know the
+        // supertypes, the imported symbols need to be updated.
+        for (record in recordMap.values + enums) {
+            val scope = ctx.scopeManager.lookupScope(record) as? NameScope ?: continue
+            for (edge in scope.importedByEdges) {
+                edge.declaration?.let { ctx.scopeManager.updateImportedSymbols(it) }
+            }
         }
     }
 

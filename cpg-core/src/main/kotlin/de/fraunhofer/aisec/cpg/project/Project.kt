@@ -122,6 +122,7 @@ internal constructor(
                 "de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage",
                 "de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage",
                 "de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage",
+                "de.fraunhofer.aisec.cpg.frontends.rust.RustLanguage",
                 "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage",
                 "de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage",
                 "de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage",

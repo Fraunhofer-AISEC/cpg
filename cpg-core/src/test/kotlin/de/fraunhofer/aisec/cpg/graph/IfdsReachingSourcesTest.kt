@@ -63,23 +63,23 @@ class IfdsReachingSourcesTest {
 
             q.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cG)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cG))),
             )
             h.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cF))),
             )
             h.prevDFGEdges.addContextSensitive(
                 r1,
-                callingContext = CallingContextIn(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(cF))),
             )
             r1.prevDFGEdges.addContextSensitive(
                 r2,
-                callingContext = CallingContextIn(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(cF))),
             )
             r2.prevDFGEdges.addContextSensitive(
                 s,
-                callingContext = CallingContextIn(mutableListOf(cG)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(cG))),
             )
 
             val predicate: (Node) -> Boolean = { it === s }
@@ -139,16 +139,16 @@ class IfdsReachingSourcesTest {
 
             q.prevDFGEdges.addContextSensitive(
                 retBody,
-                callingContext = CallingContextOut(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(c1))),
             )
             retBody.prevDFGEdges += param
             param.prevDFGEdges.addContextSensitive(
                 arg1,
-                callingContext = CallingContextIn(mutableListOf(c1)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c1))),
             )
             param.prevDFGEdges.addContextSensitive(
                 arg2,
-                callingContext = CallingContextIn(mutableListOf(c2)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(c2))),
             )
 
             val predicate: (Node) -> Boolean = { it === arg1 || it === arg2 }
@@ -312,11 +312,11 @@ class IfdsReachingSourcesTest {
             // q <-out[cF]- h, and h recurses into itself via cF, with no matching return / source.
             q.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cF))),
             )
             h.prevDFGEdges.addContextSensitive(
                 h,
-                callingContext = CallingContextOut(mutableListOf(cF)),
+                callingContexts = listOf(CallingContextOut(mutableListOf(cF))),
             )
 
             val ifds =
@@ -434,6 +434,131 @@ class IfdsReachingSourcesTest {
                 setOf<Node>(after1),
                 ifds,
                 "forward EOG must pop through the call site back to its successor",
+            )
+        }
+    }
+
+    /**
+     * An edge carrying SEVERAL stack operations must be balanced. This is the shape PointsToPass
+     * produces: the pushes are drawn one call level at a time, while the return out of three nested
+     * calls is summarized into ONE edge. Both the merged call string and one context per call must
+     * balance against the single-call pushes, in both directions.
+     */
+    @Test
+    fun multiOperationEdgeBalances() {
+        for (split in listOf(false, true)) {
+            for (backward in listOf(false, true)) {
+                with(TestLanguageFrontend()) {
+                    val arg = newLiteral(1)
+                    val pOuter = newLiteral(2)
+                    val pInner = newLiteral(3)
+                    val pVeryInner = newLiteral(4)
+                    val deep = newLiteral(5)
+                    val q = newLiteral(6)
+
+                    val cOuter = Call()
+                    val cInner = Call()
+                    val cVeryInner = Call()
+
+                    // one push per call level
+                    pOuter.prevDFGEdges.addContextSensitive(
+                        arg,
+                        callingContexts = listOf(CallingContextIn(mutableListOf(cOuter))),
+                    )
+                    pInner.prevDFGEdges.addContextSensitive(
+                        pOuter,
+                        callingContexts = listOf(CallingContextIn(mutableListOf(cInner))),
+                    )
+                    pVeryInner.prevDFGEdges.addContextSensitive(
+                        pInner,
+                        callingContexts = listOf(CallingContextIn(mutableListOf(cVeryInner))),
+                    )
+                    deep.prevDFGEdges += pVeryInner
+
+                    // the summarized return, in flow order: out of veryInner, then inner, then
+                    // outer
+                    q.prevDFGEdges.addContextSensitive(
+                        deep,
+                        callingContexts =
+                            if (split)
+                                listOf(
+                                    CallingContextOut(mutableListOf(cVeryInner)),
+                                    CallingContextOut(mutableListOf(cInner)),
+                                    CallingContextOut(mutableListOf(cOuter)),
+                                )
+                            else
+                                listOf(CallingContextOut(mutableListOf(cVeryInner, cInner, cOuter))),
+                    )
+
+                    val (start, target) = if (backward) q to arg else arg to q
+                    val ifds =
+                        start.ifdsReachingSourcesDFG(
+                            direction =
+                                if (backward) Backward(GraphToFollow.DFG)
+                                else Forward(GraphToFollow.DFG)
+                        ) {
+                            it === target
+                        }
+                    assertEquals(
+                        setOf<Node>(target),
+                        ifds,
+                        "split=$split backward=$backward must balance the multi-operation edge",
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * The split of a multi-operation edge must not make it permissive: a push from a DIFFERENT call
+     * site than the one the summarized return pops still must not balance.
+     */
+    @Test
+    fun multiOperationEdgeStaysPrecise() {
+        with(TestLanguageFrontend()) {
+            val argGood = newLiteral(1)
+            val argBad = newLiteral(2)
+            val pOuter = newLiteral(3)
+            val pInner = newLiteral(4)
+            val deep = newLiteral(5)
+            val q = newLiteral(6)
+
+            val cOuter = Call()
+            val cOuterOther = Call()
+            val cInner = Call()
+
+            pOuter.prevDFGEdges.addContextSensitive(
+                argGood,
+                callingContexts = listOf(CallingContextIn(mutableListOf(cOuter))),
+            )
+            pOuter.prevDFGEdges.addContextSensitive(
+                argBad,
+                callingContexts = listOf(CallingContextIn(mutableListOf(cOuterOther))),
+            )
+            pInner.prevDFGEdges.addContextSensitive(
+                pOuter,
+                callingContexts = listOf(CallingContextIn(mutableListOf(cInner))),
+            )
+            deep.prevDFGEdges += pInner
+            q.prevDFGEdges.addContextSensitive(
+                deep,
+                callingContexts = listOf(CallingContextOut(mutableListOf(cInner, cOuter))),
+            )
+
+            assertEquals(
+                setOf<Node>(argGood),
+                q.ifdsReachingSourcesDFG { it === argGood || it === argBad },
+                "backward: only the matching call site may balance",
+            )
+            assertEquals(
+                setOf<Node>(q),
+                argGood.ifdsReachingSourcesDFG(direction = Forward(GraphToFollow.DFG)) { it === q },
+                "forward: the matching call site must reach q",
+            )
+            assertEquals(
+                emptySet(),
+                argBad.ifdsReachingSourcesDFG(direction = Forward(GraphToFollow.DFG)) { it === q },
+                "forward: the mismatched call site must NOT reach q",
             )
         }
     }

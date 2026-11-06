@@ -846,7 +846,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
             duplicate.nextDFGEdges.addContextSensitive(
                 edge.end,
                 edge.granularity,
-                edge.callingContext,
+                edge.callingContexts,
             )
         } else {
             duplicate.nextDFGEdges += edge
@@ -857,7 +857,7 @@ fun <T> Literal<T>.duplicate(implicit: Boolean): Literal<T> {
             duplicate.prevDFGEdges.addContextSensitive(
                 edge.start,
                 edge.granularity,
-                edge.callingContext,
+                edge.callingContexts,
             )
         } else {
             duplicate.prevDFGEdges += edge

@@ -145,4 +145,27 @@ class StatementTest {
             assertLocalName("f", it.initializer)
         }
     }
+
+    @Test
+    fun testMultipleReturnValues() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("declare.go").toFile()), topLevel, true) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val test = tu.functions["test"]
+        assertNotNull(test)
+
+        // return 0, nil
+        val ret = test.returns.singleOrNull()
+        assertNotNull(ret)
+        assertEquals(listOf<Any?>(0, null), ret.returnValues.map { (it as? Literal<*>)?.value })
+
+        // The return values are evaluated from left to right before the return itself
+        val (zero, nil) = ret.returnValues
+        assertEquals(listOf<Node>(nil), zero.nextEOG)
+        assertEquals(listOf<Node>(ret), nil.nextEOG)
+    }
 }

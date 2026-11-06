@@ -1,0 +1,19 @@
+# The "build" job is a required status check. A workflow which is skipped because of its path filter
+# never reports a status, so for pull requests which only touch these paths (see the paths-ignore of
+# build.yml) this workflow reports a trivially successful "build" instead, without needing the
+# self-hosted runner.
+name: build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "docs/**"
+      - ".github/**"
+      - "!.github/workflows/build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Only documentation or workflow files changed, nothing to build"

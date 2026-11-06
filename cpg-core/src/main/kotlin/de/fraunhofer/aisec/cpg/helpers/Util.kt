@@ -473,7 +473,7 @@ object Util {
                     ?.nextDFGEdges
                     ?.addContextSensitive(
                         receiver,
-                        callingContext = CallingContextIn(mutableListOf(call)),
+                        callingContexts = listOf(CallingContextIn(mutableListOf(call))),
                     )
             }
         }
@@ -481,7 +481,7 @@ object Util {
         matchArgumentsToCallParameters(target, call).forEach { (argument, param) ->
             param.prevDFGEdges.addContextSensitive(
                 argument,
-                callingContext = CallingContextIn(mutableListOf(call)),
+                callingContexts = listOf(CallingContextIn(mutableListOf(call))),
             )
         }
     }

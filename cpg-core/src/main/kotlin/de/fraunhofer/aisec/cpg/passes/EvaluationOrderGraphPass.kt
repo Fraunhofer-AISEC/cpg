@@ -602,8 +602,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See [Specification for Return](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#return)
      */
     protected fun handleReturn(node: Return) {
-        // analyze the return value
-        handleEOG(node.returnValue)
+        // analyze the return values from left to right
+        node.returnValues.forEach { handleEOG(it) }
 
         // push the statement itself
         attachToEOG(node)
@@ -1081,12 +1081,26 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleEOG(node.statement)
         handleEOG(node.condition)
 
-        nextEdgeBranch = true
-        connectCurrentEOGToLoopStart(node)
+        // `do { ... } while (0)` is the usual macro idiom and never runs its body twice. Without a
+        // back edge it stays straight-line code, instead of a loop that EOG-based fixpoint analyses
+        // (e.g. the PointsToPass) would have to iterate.
+        if (!node.condition.isAlwaysFalsyLiteral()) {
+            nextEdgeBranch = true
+            connectCurrentEOGToLoopStart(node)
+        }
         nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
         attachToEOG(node)
+    }
+
+    /**
+     * Whether this is a [Literal] whose value is falsy in this node's [Language], e.g. `0` in
+     * C/C++. Only literals are recognized, so no constant folding has to run before this pass.
+     */
+    private fun Expression?.isAlwaysFalsyLiteral(): Boolean {
+        val literal = this as? Literal<*> ?: return false
+        return language.isTruthy(literal.value) == false
     }
 
     /**

@@ -149,23 +149,25 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         for ((key, value) in finalState.generalState) {
             value.elements.forEach {
-                // We currently support two properties here: The calling context and the
+                // We currently support two properties here: The chain of calling contexts and the
                 // granularity of the edge. We get the information from the edgePropertiesMap or
-                // use the defaults (no calling context => null and FullGranularity).
-                var callingContext: CallingContext? = null
+                // use the defaults (no calling context and FullGranularity).
+                var callingContexts: List<CallingContext> = listOf()
                 var granularity: Granularity = FullDataflowGranularity
                 edgePropertiesMap[Triple(it, key, true)]?.let {
-                    callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
+                    callingContexts =
+                        it.filterIsInstance<CallingContextChain>().singleOrNull()?.contexts
+                            ?: listOf()
                     granularity =
                         it.filterIsInstance<Granularity>().singleOrNull() ?: FullDataflowGranularity
                 }
 
                 /*if ((it is Variable || it is Parameter) && key == it) {
                     // Nothing to do
-                } else if (callingContext != null) {
+                } else if (callingContexts.isNotEmpty()) {
                     key.prevDFGEdges.addContextSensitive(
                         it,
-                        callingContext = callingContext,
+                        callingContexts = callingContexts,
                         granularity = granularity,
                     )
                 } else if (edgePropertyMapElement is PointerDataflowGranularity) {
@@ -533,6 +535,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 for (invoked in functionsWithSummaries) {
                     val changedParams = ctx.config.functionSummaries.getLastWrites(invoked)
                     for ((param, _) in changedParams) {
+                        // A call can have fewer arguments than parameters (e.g. default arguments,
+                        // or a C call that does not fit its function)
+                        if (
+                            param is Parameter && param.argumentIndex >= currentNode.arguments.size
+                        ) {
+                            continue
+                        }
+
                         val arg =
                             when (param) {
                                 (invoked as? Method)?.receiver ->
@@ -546,7 +556,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
                         if (arg != null) {
                             edgePropertiesMap[Triple(param, arg.refersTo, false)]?.add(
-                                CallingContextOut(mutableListOf(currentNode))
+                                CallingContextChain(
+                                    listOf(CallingContextOut(mutableListOf(currentNode)))
+                                )
                             )
                         }
                     }

@@ -148,7 +148,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             candidates?.forEach {
                 call.prevDFGEdges.addContextSensitive(
                     it,
-                    callingContext = CallingContextOut(mutableListOf(call)),
+                    callingContexts = listOf(CallingContextOut(mutableListOf(call))),
                 )
             }
         }

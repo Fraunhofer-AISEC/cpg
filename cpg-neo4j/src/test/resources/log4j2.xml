@@ -2,11 +2,11 @@
 	<Appenders>
 		<Console name="STDOUT" target="SYSTEM_OUT">
 			<PatternLayout pattern="%d{HH:mm:ss,SSS} %-5p %C{1} %m%n"/>
-			<ThresholdFilter level="DEBUG"/>
+			<ThresholdFilter level="${sys:cpg.log.level:-DEBUG}"/>
 		</Console>
 	</Appenders>
 	<Loggers>
-		<Logger level="DEBUG" name="de.fraunhofer.aisec"/>
+		<Logger level="${sys:cpg.log.level:-DEBUG}" name="de.fraunhofer.aisec"/>
 		<Root level="INFO">
 			<AppenderRef ref="STDOUT"/>
 		</Root>

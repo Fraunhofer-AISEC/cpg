@@ -280,7 +280,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // Note: we cannot just take the already parsed initializer, but instead we need to
                 // reparse the raw AST expression, so that `iota` gets evaluated differently for
                 // each spec
-                if (frontend.declCtx.currentDecl?.tok == 64) {
+                if (frontend.declCtx.currentDecl?.tok == ExpressionHandler.CONST_TOKEN) {
                     var initializerExpr = valueSpec.values.getOrNull(nameIdx)
                     if (initializerExpr != null) {
                         // Set the current initializer

@@ -3,7 +3,7 @@
   import { Navbar, Sidebar } from '$lib/components/navigation';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import type { AnalysisProjectJSON } from '$lib/types';
   import type { Snippet } from 'svelte';
 
@@ -33,7 +33,7 @@
     await fetchProject();
 
     // Redirect to dashboard if on root path
-    if ($page.url.pathname === '/') {
+    if (page.url.pathname === '/') {
       goto('/dashboard');
     }
   });

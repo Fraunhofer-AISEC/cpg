@@ -43,12 +43,12 @@ class ExpressionBuilderTest {
             val node2 = newReference("node2")
             val granularity = FieldDataflowGranularity(Field())
             val callingContextIn = CallingContextIn(mutableListOf(Call()))
-            node1.prevDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
+            node1.prevDFGEdges.addContextSensitive(node2, granularity, listOf(callingContextIn))
 
             val clone = node1.duplicate(false)
             val clonedPrevDFG = clone.prevDFGEdges.single()
             assertTrue(clonedPrevDFG is ContextSensitiveDataflow)
-            assertEquals(callingContextIn, clonedPrevDFG.callingContext)
+            assertEquals(callingContextIn, clonedPrevDFG.callingContexts.singleOrNull())
             assertEquals(granularity, clonedPrevDFG.granularity)
 
             assertEquals(setOf<Node>(node1, clone), node2.nextDFG)
@@ -62,12 +62,12 @@ class ExpressionBuilderTest {
             val node2 = newReference("node2")
             val granularity = FieldDataflowGranularity(Field())
             val callingContextIn = CallingContextIn(mutableListOf(Call()))
-            node1.nextDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
+            node1.nextDFGEdges.addContextSensitive(node2, granularity, listOf(callingContextIn))
 
             val clone = node1.duplicate(false)
             val clonedPrevDFG = clone.nextDFGEdges.single()
             assertTrue(clonedPrevDFG is ContextSensitiveDataflow)
-            assertEquals(callingContextIn, clonedPrevDFG.callingContext)
+            assertEquals(callingContextIn, clonedPrevDFG.callingContexts.singleOrNull())
             assertEquals(granularity, clonedPrevDFG.granularity)
 
             assertEquals(setOf<Node>(node1, clone), node2.prevDFG)

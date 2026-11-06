@@ -26,14 +26,17 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
+import java.lang.reflect.Modifier
 import kotlin.test.*
 import kotlin.test.Test
+import org.eclipse.cdt.core.parser.IncludeFileContentProvider
 
 internal class CXXIncludeTest : BaseTest() {
     @Test
@@ -302,5 +305,31 @@ internal class CXXIncludeTest : BaseTest() {
         val tu = tus.firstOrNull()
         assertNotNull(tu)
         assertFalse(tu.records.isEmpty())
+    }
+
+    /**
+     * CDT remembers include-guarded inclusions (such as `#pragma once`) in the include file content
+     * provider, and these reference the whole CDT translation unit. Since frontends are kept alive
+     * until all files are parsed, the frontend must not hold on to the provider after parsing,
+     * otherwise the CDT AST of every parsed file stays in memory.
+     */
+    @Test
+    @Throws(Exception::class)
+    fun testIncludeFileContentProviderNotRetained() {
+        val frontend = CXXLanguageFrontend(TranslationContext(), CPPLanguage())
+        val tu = frontend.parse(File("src/test/resources/unity/a.cpp"))
+        assertNotNull(tu)
+
+        val retained =
+            generateSequence<Class<*>>(frontend.javaClass) { it.superclass }
+                .flatMap { it.declaredFields.asSequence() }
+                .filterNot { Modifier.isStatic(it.modifiers) }
+                .mapNotNull {
+                    it.isAccessible = true
+                    it.get(frontend)
+                }
+                .filterIsInstance<IncludeFileContentProvider>()
+                .toList()
+        assertTrue(retained.isEmpty(), "Frontend retains an include file content provider")
     }
 }

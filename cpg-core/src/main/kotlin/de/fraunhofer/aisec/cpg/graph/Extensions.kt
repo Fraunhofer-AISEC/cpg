@@ -415,6 +415,31 @@ fun Node.collectAllPrevDFGPaths(): List<NodePath> {
 }
 
 /**
+ * All nodes from which data flows into [this] along the prev DFG edges, [this] first, each once and
+ * in breadth-first order: nearer nodes come first, and the order is the same on every call.
+ *
+ * Unlike [collectAllPrevDFGPaths], this does not enumerate the paths, whose number grows
+ * exponentially with the branching of the data flow; it visits each (node, context) state once.
+ */
+fun Node.collectAllPrevDFGNodes(): List<Node> {
+    val nodes = mutableListOf(this)
+    val seen = identitySetOf(this)
+    // followDFGEdgesUntilHitNodes reports only the nodes matching its predicate and does not follow
+    // a path past them. So the predicate never matches, and the nodes are collected as the
+    // traversal steps to them.
+    followDFGEdgesUntilHitNodes(
+        direction = Backward(GraphToFollow.DFG),
+        earlyTermination = { next, _ ->
+            if (seen.add(next)) nodes += next
+            false
+        },
+    ) {
+        false
+    }
+    return nodes
+}
+
+/**
  * A single incoming data-flow edge to a node, i.e. one immediate `prevDFG` edge ("reaching write").
  * [source] is the node the value flows from, [granularity] is how much of it flows (full, partial,
  * pointer), and [functionSummary] is true if the edge came from a function summary applied at a
@@ -2072,6 +2097,45 @@ fun <T> Collection<T>.splitInto(
     return List(k) { i ->
         val partSize = base + if (i < extra) 1 else 0
         list.subList(index, index + partSize).also { index += partSize }
+    }
+}
+
+/**
+ * Like [forEachMaybeParallel], but [action] does not perform its work directly: it appends it to
+ * the `collect` list it is given, which belongs to its chunk alone and therefore needs no
+ * synchronization. The chunks' lists are returned concatenated, in chunk order.
+ *
+ * Use this when the result of the parallel phase has to be written into a single shared, locked
+ * data structure: collecting first lets the caller apply everything in one batch instead of
+ * contending for that structure's lock once per element.
+ */
+suspend fun <T, R> Collection<T>.collectMaybeParallel(
+    parallelism: Int = CPU_CORES,
+    minChunkSize: Int = MIN_CHUNK_SIZE,
+    action: suspend (T, MutableList<R>) -> Unit,
+): List<R> {
+    if (size < minChunkSize || parallelism <= 1) {
+        val collected = mutableListOf<R>()
+        for (item in this) {
+            currentCoroutineContext().ensureActive()
+            action(item, collected)
+        }
+        return collected
+    }
+    return coroutineScope {
+        this@collectMaybeParallel.splitInto(maxParts = parallelism, minPartSize = minChunkSize)
+            .map { chunk ->
+                async(Dispatchers.Default) {
+                    val collected = mutableListOf<R>()
+                    chunk.forEach {
+                        currentCoroutineContext().ensureActive()
+                        action(it, collected)
+                    }
+                    collected
+                }
+            }
+            .awaitAll()
+            .flatten()
     }
 }
 

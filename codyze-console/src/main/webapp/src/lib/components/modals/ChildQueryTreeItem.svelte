@@ -5,7 +5,7 @@
   import QueryTreeNodeValue from '$lib/components/analysis/QueryTreeNodeValue.svelte';
   import ConfidencePill from '$lib/components/ui/ConfidencePill.svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
 
   interface Props {
     queryTree: QueryTreeJSON;
@@ -30,7 +30,7 @@
     // Check if we're navigating to the same targetNodeId
     const url = new URL(href);
     const targetNodeId = url.searchParams.get('targetNodeId');
-    const currentTargetNodeId = $page.url.searchParams.get('targetNodeId');
+    const currentTargetNodeId = page.url.searchParams.get('targetNodeId');
 
     if (targetNodeId === currentTargetNodeId && targetNodeId) {
       // Same target - just scroll to it without navigation
