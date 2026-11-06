@@ -63,7 +63,7 @@ open class ScanCommand : ProjectCommand() {
         }
 
         if (projectOptions.startConsole) {
-            ConsoleServiceHelper.startConsole(result)
+            ConsoleServiceHelper.startConsole(result, projectOptions.consoleHost)
         }
     }
 }
