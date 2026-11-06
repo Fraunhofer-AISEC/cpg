@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
@@ -4040,8 +4041,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 param.type is PointerType ||
                     forceDerefPMVCreation ||
                     // If the type is unknown we also
-                    // initialize all levels to be sure
+                    // initialize all levels to be sure. A type whose record we only inferred
+                    // (e.g. from a dependency that is not parsed) is unknown as well: it may be a
+                    // pointer-like type, e.g. an interface in Go.
                     param.type is UnknownType ||
+                    (param.type as? ObjectType)?.recordDeclaration?.isInferred == true ||
                     // Another guess we take: If the length is the same as the
                     // addressLength, again, to be sure we initialize all levels
                     (param.type as? NumericType)?.bitWidth ==
