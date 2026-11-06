@@ -30,6 +30,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
@@ -57,13 +59,48 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
+    /**
+     * Maps the local name of an import alias to the name actually imported under it, e.g. `metav1`
+     * to `v1` for `metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"`.
+     *
+     * The alias is registered on the import, but it is only visible from the scope the import lives
+     * in. In a language whose types are scoped to a package rather than to a file -- Go -- a type
+     * written in one file carries the package's scope, from which a file-local alias cannot be
+     * seen, so `metav1.ObjectMeta` fails to resolve and we invent an empty record for it. The real
+     * `v1.ObjectMeta` is sitting right there in the graph, and every member call on the invented
+     * one is then answered by inference or not at all. Across the validation corpus this was the
+     * single largest reason for a call on a *known* receiver type to find nothing.
+     */
+    private val aliasTargets = mutableMapOf<String, Name>()
+
     override fun accept(component: Component) {
         ctx.currentComponent = component
+
+        aliasTargets.clear()
+        for (import in component.allChildren<Import>()) {
+            val alias = import.alias ?: continue
+            if (alias.localName != import.import.localName) {
+                aliasTargets.putIfAbsent(alias.localName, import.import)
+            }
+        }
+
         walker = SubgraphWalker.ScopedWalker(scopeManager, strategy = Strategy::AST_FORWARD)
         walker.registerHandler { handleNode(it) }
         walker.iterate(component)
 
         component.additionalTypes.values.forEach { handleType(it) }
+    }
+
+    /**
+     * Resolves [type] again under the name the alias in its qualifier stands for, so that
+     * `metav1.ObjectMeta` gets a chance to find `v1.ObjectMeta`. Returns `null` if the qualifier is
+     * not a known alias or the rewritten name does not resolve either.
+     */
+    private fun resolveThroughAlias(type: Type): DeclaresType? {
+        val qualifier = type.name.parent?.localName ?: return null
+        val target = aliasTargets[qualifier] ?: return null
+        val rewritten = Name(type.name.localName, target, type.name.delimiter)
+        return scopeManager.lookupTypeSymbolByName(rewritten, type.language, type.scope)
     }
 
     /**
@@ -165,6 +202,12 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // constructor declarations and such with the same name. It seems this is ok since most
         // languages will prefer structs/classes over functions when resolving types.
         var declares = scopeManager.lookupTypeSymbolByName(type.name, type.language, type.scope)
+
+        // Before inventing a type, see whether the qualifier is an import alias and the type is
+        // already in the graph under the name that alias stands for.
+        if (declares == null) {
+            declares = resolveThroughAlias(type)
+        }
 
         // If we did not find any declaration, we can try to infer a record declaration for it
         if (declares == null) {
