@@ -1,10 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
-  import ToolResultBlock from './widgets/ToolResultBlock.svelte';
+  import ToolStep from './ToolStep.svelte';
   import { CodeViewer, ConceptChecklist, FileTree } from '$lib/components/analysis';
   import Outline from '$lib/components/analysis/Outline.svelte';
   import StepBar from '$lib/components/analysis/StepBar.svelte';
@@ -18,18 +17,21 @@
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
   import {
+    checkTrust,
     citationLabel,
-    diagnosticLocation,
     extractCitations,
+    extractNodeIds,
     resolveNodes
   } from '$lib/agentEvidence';
-  import {
-    ConversationEvidence,
-    DIAGNOSTICS_PREVIEW
-  } from '$lib/stores/conversationEvidence.svelte';
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
+  import { PdgPanel } from '$lib/stores/pdgPanel.svelte';
+  import { clearPdgCache, getPdgCounts, type PdgCounts, type PdgNode } from '$lib/pdg';
+  import PdgPanelView from '$lib/components/analysis/pdg/PdgPanel.svelte';
+  import CodeContextMenu, {
+    type ContextMenuItem
+  } from '$lib/components/analysis/CodeContextMenu.svelte';
   import { countByTranslationUnit, getComponentOverlays, type FileOverview } from '$lib/overview';
   import type {
     NodeJSON,
@@ -41,6 +43,7 @@
     Model,
     NodeDetailsJSON,
     OverlayJSON,
+    TrustIssueJSON,
     CodeSelection
   } from '$lib/types';
 
@@ -124,8 +127,10 @@
         if (tu) return tu;
       }
     }
-    if (node.componentName) {
-      const component = analysisResult.components.find((c) => c.name === node.componentName);
+    if ((node as any).componentName) {
+      const component = analysisResult.components.find(
+        (c) => c.name === (node as any).componentName
+      );
       if (component?.translationUnits.length) return component.translationUnits[0];
     }
     return null;
@@ -134,9 +139,15 @@
   async function handleNodeClick(node: NodeJSON) {
     // Compact tool results (nodeId, signature, file:line) carry no translation unit, so look the node up by its ID
     if (!node.translationUnitId && !node.fileName) {
-      const id = (node as NodeJSON & { nodeId?: string }).nodeId ?? node.id;
+      const id = (node as any).nodeId ?? node.id;
       if (!id) return;
-      const resolved = (await resolveNodes([id])).get(id);
+      const [resolved]: NodeJSON[] = await fetch('/api/nodes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([id])
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []);
       if (!resolved) return;
       node = resolved;
     }
@@ -201,7 +212,7 @@
     // The draft in the input stays where it is
     const draft = currentMessage;
     showAgent();
-    conversation.chosenBlock = null;
+    chosenBlock = null;
     onMessageChange(question);
     onSendMessage(describeSelection(selection));
     onMessageChange(draft);
@@ -270,11 +281,21 @@
   );
 
   function handleKeydown(event: KeyboardEvent) {
-    if (isTyping(event)) return;
+    // The palette is also opened from an input, e.g. the question to the agent. It is a shortcut
+    // with a modifier, so it does not get in the way of typing
     if (hasModifier(event) && !event.altKey && event.key.toLowerCase() === 'p') {
-      // Replaces printing the page, like in editors
+      // Replaces printing the page
       event.preventDefault();
       paletteQuery = event.shiftKey ? '>' : '';
+      return;
+    }
+    if (isTyping(event)) return;
+    if (event.key === 'Escape' && !pdg.open) {
+      // Deselects, unless something else used the key (e.g. closing a popup). That is only known
+      // once all listeners have run
+      setTimeout(() => {
+        if (!event.defaultPrevented) focus.clear();
+      });
       return;
     }
     if (event.altKey && !hasModifier(event) && event.key === 'ArrowLeft') {
@@ -303,6 +324,7 @@
     currentMessage: string;
     isLoading: boolean;
     streamingContent: string;
+    isThinking: boolean;
     models?: Model[];
     selectedModel?: Model | null;
     analysisResult?: AnalysisResultJSON | null;
@@ -323,6 +345,7 @@
     currentMessage,
     isLoading,
     streamingContent,
+    isThinking,
     models = [],
     selectedModel = null,
     analysisResult,
@@ -334,14 +357,6 @@
     onModelSelect,
     onPromptSelect
   }: Props = $props();
-
-  // The evidence trail of the conversation: its steps, the nodes they return and the diagnostics
-  const conversation = new ConversationEvidence(() => ({
-    messages,
-    streamingContent,
-    isLoading,
-    agentVisible: layers.visible.agent
-  }));
 
   // The component of the open file, or of the last open file if all tabs were closed
   const selectedComponent: ComponentJSON | null = $derived(
@@ -355,7 +370,7 @@
   const paletteFiles = $derived(
     (selectedComponent?.translationUnits ?? []).map((unit) => ({
       unit,
-      path: relativePath(unit, selectedComponent?.topLevel)
+      path: relativePath(selectedComponent, unit)
     }))
   );
 
@@ -413,6 +428,27 @@
         label: `${layers.visible[layer.id] ? 'Hide' : 'Show'} ${layer.icon} ${layer.label}`,
         run: () => layers.toggle(layer.id)
       })),
+      {
+        id: 'pdg-backward',
+        category: 'Graph',
+        label: `PDG: What affects this?${pdgPreview(pdgCounts?.backward)}`,
+        disabledReason: noSelection ?? pdgDisabledReason(pdgCounts?.backward),
+        run: () => details && pdg.show(details.node.id, 'BACKWARD')
+      },
+      {
+        id: 'pdg-forward',
+        category: 'Graph',
+        label: `PDG: What does this affect?${pdgPreview(pdgCounts?.forward)}`,
+        disabledReason: noSelection ?? pdgDisabledReason(pdgCounts?.forward),
+        run: () => details && pdg.show(details.node.id, 'FORWARD')
+      },
+      {
+        id: 'pdg-close',
+        category: 'Graph',
+        label: 'Close the dependence graph',
+        disabledReason: pdg.open ? undefined : 'No graph is shown',
+        run: () => pdg.close()
+      },
       {
         id: 'path-next',
         category: 'Path',
@@ -523,7 +559,233 @@
     // The applied concepts change the details of the nodes they are attached to, the annotations
     // and the counts in the file tree
     clearNodeDetailsCache();
+    clearPdgCache();
     focus.invalidate();
+  }
+
+  // The dependence graph of a statement, shown next to the code
+  const pdg = new PdgPanel();
+  const pdgWidthKey = 'codyze-agent-pdg-width';
+  let pdgWidth = $state(loadPdgWidth());
+
+  function loadPdgWidth(): number {
+    try {
+      const stored = Number(localStorage.getItem(pdgWidthKey));
+      if (stored >= 360) return stored;
+    } catch {
+      // Storage is not available, e.g. during SSR or in a private window
+    }
+    return 540;
+  }
+
+  function startPdgResize(event: PointerEvent) {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = pdgWidth;
+    const move = (e: PointerEvent) => {
+      const max = Math.max(400, window.innerWidth * 0.6);
+      pdgWidth = Math.round(Math.min(max, Math.max(360, startWidth + startX - e.clientX)));
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      document.body.style.removeProperty('cursor');
+      try {
+        localStorage.setItem(pdgWidthKey, String(pdgWidth));
+      } catch {
+        // Not remembering the width is fine
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    document.body.style.cursor = 'col-resize';
+  }
+
+  // The graph needs room, so the file tree makes way for it while it is shown
+  let sidebarHiddenByGraph = false;
+  $effect(() => {
+    const open = pdg.open;
+    untrack(() => {
+      if (open && sidebarOpen) {
+        sidebarOpen = false;
+        sidebarHiddenByGraph = true;
+      } else if (!open && sidebarHiddenByGraph) {
+        sidebarOpen = true;
+        sidebarHiddenByGraph = false;
+      }
+    });
+  });
+
+  // How many statements are in the slices of the inspected node, to preview them in the commands
+  let pdgCounts = $state.raw<PdgCounts | null>(null);
+  $effect(() => {
+    const id = focus.details?.node.id;
+    void focus.revision;
+    const hops = pdg.hops;
+    pdgCounts = null;
+    if (!id) return;
+    getPdgCounts(id, hops)
+      .then((counts) => {
+        if (id === focus.details?.node.id) pdgCounts = counts;
+      })
+      .catch(() => {});
+  });
+
+  function pdgPreview(count: number | undefined): string {
+    return count === undefined
+      ? ''
+      : count > 0
+        ? ` · ${count} ${count === 1 ? 'node' : 'nodes'}`
+        : '';
+  }
+
+  function pdgDisabledReason(count: number | undefined): string | undefined {
+    return count === 0 ? 'None in this function' : undefined;
+  }
+
+  // The statement of the slice a node belongs to: the statement itself, or the innermost one that
+  // contains the start of the node
+  function sliceNodeFor(node: NodeJSON): PdgNode | null {
+    const nodes = pdg.slice?.nodes ?? [];
+    const exact = nodes.find((n) => n.id === node.id);
+    if (exact || node.startLine < 1) return exact ?? null;
+    return (
+      nodes
+        .filter(
+          (n) =>
+            n.kind !== 'STUB' &&
+            n.node.translationUnitId === node.translationUnitId &&
+            n.startLine <= node.startLine &&
+            node.startLine <= n.endLine
+        )
+        .sort((a, b) => a.endLine - a.startLine - (b.endLine - b.startLine))[0] ?? null
+    );
+  }
+
+  // The graph follows what is inspected: inside the slice it selects the statement, outside of it
+  // the slice is re-rooted at the node, unless the graph is pinned
+  $effect(() => {
+    const details = focus.details;
+    untrack(() => {
+      if (!pdg.open || !details) return;
+      const hit = sliceNodeFor(details.node);
+      if (hit) {
+        if (pdg.selectedId !== hit.id) pdg.select(hit.id);
+        return;
+      }
+      // Functions and nodes outside of functions have no slice of their own
+      const fn = details.enclosingFunction;
+      if (pdg.pinned || !fn || fn.id === details.node.id) return;
+      pdg.show(details.node.id, pdg.direction, pdg.hops);
+    });
+  });
+
+  // Clicking a statement in the graph inspects it, which shows it in the code
+  function selectPdgNode(node: PdgNode) {
+    if (node.kind === 'STUB') return;
+    if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
+    focus.inspect(() => getNodeDetails(node.id), true);
+  }
+
+  // The statements of the slice in the open file, shown as tinted lines in the code
+  const pdgSlice = $derived.by(() => {
+    const slice = pdg.open ? pdg.slice : null;
+    const unit = openedUnit;
+    if (!slice || !unit) return undefined;
+    return {
+      ranges: slice.nodes
+        .filter(
+          (n) => n.kind !== 'STUB' && n.node.translationUnitId === unit.id && n.startLine >= 1
+        )
+        .map((n) => ({
+          id: n.id,
+          first: n.startLine,
+          last: n.endLine,
+          label: `Dependence graph: ${n.code}`
+        })),
+      selectedId: pdg.selectedId,
+      hoveredId: pdg.hoveredId,
+      onHover: (id: string | null) => (pdg.hoveredId = id)
+    };
+  });
+
+  // The menu of a right click in the code, with the size of the slices for its entries
+  let codeMenu = $state.raw<{
+    details: NodeDetailsJSON;
+    x: number;
+    y: number;
+    counts: PdgCounts | null;
+  } | null>(null);
+
+  function openCodeMenu(target: { details: NodeDetailsJSON; x: number; y: number }) {
+    codeMenu = { ...target, counts: null };
+    getPdgCounts(target.details.node.id, pdg.hops)
+      .then((counts) => {
+        if (codeMenu?.details === target.details) codeMenu = { ...codeMenu, counts };
+      })
+      .catch(() => {});
+  }
+
+  // Shows a list of the inspector for a node, e.g. its callers
+  function showSectionOf(details: NodeDetailsJSON, section: InspectorSection) {
+    showInspector();
+    focus.inspect(() => Promise.resolve(details), true, section);
+  }
+
+  const codeMenuItems = $derived.by((): ContextMenuItem[] => {
+    if (!codeMenu) return [];
+    const { details, counts } = codeMenu;
+    const size = (count: number | undefined) =>
+      count === undefined
+        ? undefined
+        : count > 0
+          ? `${count} ${count === 1 ? 'node' : 'nodes'}`
+          : undefined;
+    const none = (count: number | undefined) => (count === 0 ? 'none in this function' : undefined);
+    const hasCallees = details.callTargets.length > 0 || details.callees.length > 0;
+    return [
+      {
+        label: 'PDG: What affects this?',
+        hint: size(counts?.backward),
+        disabledReason: none(counts?.backward),
+        run: () => pdg.show(details.node.id, 'BACKWARD')
+      },
+      {
+        label: 'PDG: What does this affect?',
+        hint: size(counts?.forward),
+        disabledReason: none(counts?.forward),
+        run: () => pdg.show(details.node.id, 'FORWARD')
+      },
+      {
+        label: 'Show callers',
+        separator: true,
+        hint: details.callers.length > 0 ? `${details.callers.length}` : undefined,
+        disabledReason: details.callers.length > 0 ? undefined : 'none',
+        run: () => showSectionOf(details, 'callers')
+      },
+      {
+        label: 'Show callees',
+        hint: hasCallees ? `${details.callTargets.length + details.callees.length}` : undefined,
+        disabledReason: hasCallees ? undefined : 'none',
+        run: () =>
+          showSectionOf(details, details.callTargets.length > 0 ? 'callTargets' : 'callees')
+      },
+      {
+        label: 'Ask agent about this…',
+        separator: true,
+        run: () => {
+          showAgent();
+          askAboutNode(details, nodeQuestions[0].question);
+        }
+      }
+    ];
+  });
+
+  function askAboutPdgNode(node: NodeJSON) {
+    showAgent();
+    onMessageChange(
+      `How does ${describeNode(node)} depend on the rest of its function? Look at its data and control dependences: what affects it, and what does it affect?`
+    );
   }
 
   // The concepts and operations of the selected component, counted per file in the file tree
@@ -540,24 +802,181 @@
     if (selectedComponentName) loadComponentOverlays(selectedComponentName);
   });
 
-  // Selects and reveals a node referenced by a concept suggestion, opening its file if needed. The
-  // agent tab stays open, since the suggestions are shown there
-  function revealSuggestedNode(nodeId: string | null) {
+  // Selects and reveals a node the agent refers to (a citation, a node a tool returned, a
+  // suggestion, ...), opening its file if needed. The agent tab stays open, so the answer stays in
+  // view; the inspector tab is only marked. The location is resolved by the backend, since tool
+  // results only name the file
+  async function revealFromAgent(nodeId: string | null | undefined) {
     if (!nodeId) return;
-    const node = suggestionNodes.get(nodeId);
-    if (node && node.translationUnitId !== selectedTranslationUnit?.id) {
-      const tu = findTranslationUnit(node);
-      if (tu) handleFileSelect(tu);
-    }
+    const details = await getNodeDetails(nodeId).catch(() => null);
+    if (!details) return;
+    const unitId = details.node.translationUnitId;
+    const unit = unitId ? findUnitById(unitId) : null;
+    if (unit && unit.id !== selectedTranslationUnit?.id) handleFileSelect(unit);
     if (contextTab !== 'inspector' || contextCollapsed) markInspectorUnseen();
-    focus.inspect(() => getNodeDetails(nodeId), true);
+    focus.inspect(() => Promise.resolve(details), true);
   }
 
+  // The nodes cited in the answers of the agent, resolved to their locations to label and open them
+  let citedRefs = $state.raw<Map<string, NodeJSON>>(new Map());
+  const citedKey = $derived(
+    [
+      ...new Set([
+        ...messages.flatMap((m) =>
+          m.role === 'assistant' && m.contentType !== 'tool-result'
+            ? extractCitations(m.content)
+            : []
+        ),
+        ...extractCitations(streamingContent)
+      ])
+    ].join(',')
+  );
+
+  $effect(() => {
+    const key = citedKey;
+    if (!key) return;
+    resolveNodes(key.split(',')).then((refs) => {
+      if (key === citedKey) citedRefs = refs;
+    });
+  });
+
   // Inspects a node cited by the agent and shows it in the code
-  async function openCitation(nodeId: string) {
-    const ref =
-      conversation.citedRefs.get(nodeId) ?? (await getNodeDetails(nodeId).catch(() => null))?.node;
-    if (ref) selectRef(ref);
+  function openCitation(nodeId: string) {
+    revealFromAgent(nodeId);
+  }
+
+  // The conversation as a timeline: one block per question, with the tool calls as numbered steps
+  // (the evidence trail) and the answer last
+  interface TimelineEntry {
+    message: ChatMessage;
+    /** The index of the message in [messages] */
+    index: number;
+    /** The number of the step, for tool calls */
+    step?: number;
+  }
+
+  const timeline = $derived.by(() => {
+    const blocks: { question: ChatMessage | null; entries: TimelineEntry[] }[] = [];
+    messages.forEach((message, index) => {
+      if (message.role === 'user') {
+        blocks.push({ question: message, entries: [] });
+        return;
+      }
+      if (blocks.length === 0) blocks.push({ question: null, entries: [] });
+      const block = blocks[blocks.length - 1];
+      const step =
+        message.contentType === 'tool-result'
+          ? block.entries.filter((e) => e.step).length + 1
+          : undefined;
+      block.entries.push({ message, index, step });
+    });
+    return blocks;
+  });
+
+  // The evidence of each block: the node IDs returned by each step, and the IDs that are only
+  // cited in the answer
+  const blockEvidence = $derived(
+    timeline.map((block) => {
+      const steps = block.entries.flatMap((e) =>
+        e.step ? [{ step: e.step, ids: extractNodeIds(e.message.toolResult?.content) }] : []
+      );
+      const returned = new Set(steps.flatMap((s) => s.ids));
+      const cited = block.entries.flatMap((e) =>
+        e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+      );
+      return { steps, claimed: [...new Set(cited)].filter((id) => !returned.has(id)) };
+    })
+  );
+
+  // The nodes of the evidence, resolved to their locations. IDs that are no nodes are missing
+  let evidenceRefs = $state.raw<Map<string, NodeJSON>>(new Map());
+  const evidenceKey = $derived(
+    [...new Set(blockEvidence.flatMap((e) => [...e.steps.flatMap((s) => s.ids), ...e.claimed]))]
+      .sort()
+      .join(',')
+  );
+
+  $effect(() => {
+    const key = evidenceKey;
+    if (!key) return;
+    resolveNodes(key.split(',')).then((refs) => {
+      if (key === evidenceKey) evidenceRefs = refs;
+    });
+  });
+
+  // The block whose evidence is shown in the code: the one the user chose, or else the latest one
+  // with evidence
+  let chosenBlock = $state<number | null>(null);
+  const activeBlock = $derived(
+    chosenBlock !== null && chosenBlock < timeline.length
+      ? chosenBlock
+      : blockEvidence.findLastIndex((e) => e.steps.some((s) => s.ids.length) || e.claimed.length)
+  );
+
+  function stepNodes(ids: string[]): NodeJSON[] {
+    return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
+  }
+
+  // The tool calls of the active block that have evidence in the code, to step through them. Nodes
+  // only cited in the answer are no step: they are marked in the code and named in the trust notes
+  // under the answer
+  const threadSteps = $derived.by(() => {
+    const evidence = blockEvidence[activeBlock];
+    const block = timeline[activeBlock];
+    if (!evidence || !block || !layers.visible.agent) return [];
+    return evidence.steps.flatMap(({ step, ids }) => {
+      const nodes = stepNodes(ids);
+      const entry = block.entries.find((e) => e.step === step);
+      const tool = entry?.message.toolResult?.toolName ?? 'tool';
+      return nodes.length
+        ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
+        : [];
+    });
+  });
+
+  // The steps shown in the code and in the bar above it: the path or the agent's thread
+  const sequence = $derived(focus.sequence(layers.visible.agent));
+
+  // A new question with evidence, or choosing another one, turns to the agent's thread
+  $effect(() => {
+    void activeBlock;
+    untrack(() => (focus.showing = 'thread'));
+  });
+
+  // The places where the analysis is uncertain that the evidence of each block relies on. The block
+  // the agent is still working on is checked once it is done
+  let blockTrust = $state.raw<TrustIssueJSON[][]>([]);
+  $effect(() => {
+    const evidence = blockEvidence;
+    const pending = isLoading ? evidence.length - 1 : -1;
+    Promise.all(
+      evidence.map((e, b) =>
+        b === pending ? [] : checkTrust([...e.steps.flatMap((s) => s.ids), ...e.claimed])
+      )
+    ).then((trust) => {
+      if (evidence === blockEvidence) blockTrust = trust;
+    });
+  });
+
+  // The trust issues shown in full, by block; otherwise only the first few are shown
+  let trustExpanded = $state<Record<number, boolean>>({});
+  const TRUST_PREVIEW = 3;
+
+  // Who relies on an issue, e.g. "Step 1", "Steps 1, 3" or "The answer"
+  function trustSubject(issue: TrustIssueJSON, b: number): { text: string; plural: boolean } {
+    const evidence = blockEvidence[b];
+    const steps = (evidence?.steps ?? [])
+      .filter((s) => s.ids.some((id) => issue.evidence.includes(id)))
+      .map((s) => s.step);
+    if (steps.length === 0) return { text: 'The answer', plural: false };
+    return {
+      text: `${steps.length === 1 ? 'Step' : 'Steps'} ${steps.join(', ')}`,
+      plural: steps.length > 1
+    };
+  }
+
+  function trustLocation(ref: NodeJSON): string {
+    return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
   }
 
   // The files with evidence of the active thread, marked in the file tree
@@ -571,24 +990,24 @@
 
   // The step of the inspected node, if it belongs to the active thread
   const threadStepIndex = $derived(
-    conversation.threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
+    threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
   );
 
   function goToThreadStep(index: number) {
-    const step = conversation.threadSteps[index];
-    if (step) selectRef(step.nodes[0]);
+    const step = threadSteps[index];
+    if (step) revealFromAgent(step.nodes[0].id);
   }
 
   // The evidence of the active block, shown as numbered markers in the code
   $effect(() => {
-    const evidence = conversation.blockEvidence[conversation.activeBlock];
+    const evidence = blockEvidence[activeBlock];
     const nodes: ThreadNode[] = [];
     if (evidence) {
       for (const { step, ids } of evidence.steps) {
-        for (const ref of conversation.stepNodes(ids)) nodes.push({ ref, step, claimed: false });
+        for (const ref of stepNodes(ids)) nodes.push({ ref, step, claimed: false });
       }
       const answerStep = evidence.steps.length + 1;
-      for (const ref of conversation.stepNodes(evidence.claimed)) {
+      for (const ref of stepNodes(evidence.claimed)) {
         nodes.push({ ref, step: answerStep, claimed: true });
       }
     }
@@ -620,16 +1039,16 @@
     {
       id: 'files',
       label: 'Files',
-      icon: 'M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75'
+      icon: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'
     },
     {
       id: 'outline',
       label: 'Outline',
-      icon: 'M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z'
+      icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01'
     }
   ];
 
-  // Like in VS Code, clicking the active view hides the sidebar
+  // Clicking the active view hides the sidebar
   function toggleSidebar(view: SidebarView) {
     if (sidebarOpen && sidebarView === view) {
       sidebarOpen = false;
@@ -650,20 +1069,36 @@
 
   // The segments of the breadcrumb above the code: the folders and the file of the open unit
   const breadcrumbPath = $derived(
-    openedUnit ? relativePath(openedUnit, selectedComponent?.topLevel).split('/') : []
+    openedUnit ? relativePath(selectedComponent, openedUnit).split('/') : []
   );
 
-  // The function containing the inspected node in the open file, or the node if it is a function
+  // The first visible line of the open file
+  let topLine = $state(1);
+
+  // The function containing the inspected node in the open file, or the node if it is a function.
+  // Without a selection in the file, it is the function at the top of what is visible
   const breadcrumbFunction = $derived.by((): NodeJSON | null => {
     const details = focus.details;
-    if (!details || details.node.translationUnitId !== openedUnit?.id) return null;
+    if (details && details.node.translationUnitId === openedUnit?.id) {
+      return (
+        details.enclosingFunction ?? (details.node.type.includes('Function') ? details.node : null)
+      );
+    }
+    const containing = (fileAnnotations?.functions ?? [])
+      .map((f) => f.function)
+      .filter((f) => f.startLine <= topLine && topLine <= f.endLine);
     return (
-      details.enclosingFunction ?? (details.node.type.includes('Function') ? details.node : null)
+      containing.sort((a, b) => a.endLine - a.startLine - (b.endLine - b.startLine))[0] ?? null
     );
   });
 
   // The annotations of the open file, loaded by the code viewer and shown in the outline
   let fileAnnotations = $state.raw<FileOverview | null>(null);
+
+  // The status of the calls of the open file by their node ID
+  const callStatus = $derived(
+    fileAnnotations ? new Map(fileAnnotations.calls.map((c) => [c.call.id, c.status])) : undefined
+  );
 
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
   // its tab stays open and the inspector tab is only marked
@@ -747,19 +1182,14 @@
   function send() {
     showAgent();
     // The new question becomes the active thread
-    conversation.chosenBlock = null;
+    chosenBlock = null;
     onSendMessage(contextNode ? describeNode(contextNode) : undefined);
   }
 
-  // The code is the main view, so a file is open from the start (but not after closing all tabs)
-  let openedInitially = false;
+  // The file tree shows the first component from the start, but no file is opened for the user
   $effect(() => {
-    if (openedInitially || selectedTranslationUnit || !analysisResult) return;
-    openedInitially = true;
-    const first = analysisResult.components
-      .flatMap((c) => c.translationUnits)
-      .sort((a, b) => a.path.localeCompare(b.path))[0];
-    if (first) handleFileSelect(first);
+    if (selectedComponentName || !analysisResult) return;
+    selectedComponentName = analysisResult.components[0]?.name ?? null;
   });
 
   // Questions to start with, as long as the chat is empty
@@ -812,11 +1242,17 @@
   });
 
   async function loadSuggestionNodes(key: string) {
-    const nodes = await resolveNodes(key.split(','));
+    const nodes: NodeJSON[] = await fetch('/api/nodes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(key.split(','))
+    })
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => []);
 
     // Ignore the response if the suggestions changed in the meantime
     if (key !== suggestionNodeIdsKey) return;
-    suggestionNodes = nodes;
+    suggestionNodes = new Map(nodes.map((n) => [n.id, n]));
   }
 
   // Show the first translation unit with suggestions when they arrive, unless the open one has some
@@ -858,21 +1294,23 @@
   }
 
   $effect(() => {
-    void messages.length;
-    void streamingContent;
+    messages.length;
+    streamingContent;
     if (shouldAutoScroll) {
       requestAnimationFrame(() => scrollToBottom());
     }
   });
 
-  const expandedReasoning = new SvelteSet<string>();
+  let expandedReasoning = $state<Set<string>>(new Set());
 
   function toggleReasoning(id: string) {
-    if (expandedReasoning.has(id)) {
-      expandedReasoning.delete(id);
+    const next = new Set(expandedReasoning);
+    if (next.has(id)) {
+      next.delete(id);
     } else {
-      expandedReasoning.add(id);
+      next.add(id);
     }
+    expandedReasoning = next;
   }
 </script>
 
@@ -896,62 +1334,50 @@
 
 <!-- The reasoning of the model before a message, collapsed -->
 <!-- Where the analysis is uncertain for the evidence of a block, in the color of uncertainty -->
-{#snippet diagnosticNotes(b: number)}
-  {@const diagnostics = conversation.blockDiagnostics[b] ?? []}
-  {@const claimed = conversation.stepNodes(conversation.blockEvidence[b]?.claimed ?? [])}
-  {@const shown = conversation.diagnosticsExpanded[b]
-    ? diagnostics
-    : diagnostics.slice(0, DIAGNOSTICS_PREVIEW)}
-  {#if diagnostics.length > 0 || claimed.length > 0}
-    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug">
-      {#each shown as diagnostic (diagnostic.kind + diagnostic.location.id)}
-        {@const subject = conversation.diagnosticSubject(diagnostic, b)}
-        {@const warning = diagnostic.severity === 'WARNING'}
-        <li class={warning ? 'text-red-700' : 'text-gray-500'}>
+{#snippet trustNotes(b: number)}
+  {@const issues = blockTrust[b] ?? []}
+  {@const claimed = stepNodes(blockEvidence[b]?.claimed ?? [])}
+  {@const shown = trustExpanded[b] ? issues : issues.slice(0, TRUST_PREVIEW)}
+  {#if issues.length > 0 || claimed.length > 0}
+    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug text-red-700">
+      {#each shown as issue (issue.kind + issue.location.id)}
+        {@const subject = trustSubject(issue, b)}
+        <li>
           <button
             type="button"
-            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left disabled:hover:bg-transparent {warning
-              ? 'hover:bg-red-50'
-              : 'hover:bg-gray-50'}"
-            disabled={diagnostic.location.startLine < 1}
-            title={diagnostic.location.code || diagnostic.location.name}
+            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left hover:bg-red-50 disabled:hover:bg-transparent"
+            disabled={issue.location.startLine < 1}
+            title={issue.location.code || issue.location.name}
             onclick={() => {
-              conversation.chosenBlock = b;
-              selectRef(diagnostic.location);
+              chosenBlock = b;
+              revealFromAgent(issue.location.id);
             }}
           >
-            <span aria-hidden="true">{warning ? '⚠' : 'ⓘ'}</span>
+            <span aria-hidden="true">⚠</span>
             <span class="min-w-0 flex-1"
               >{subject.text}
-              {subject.plural ? 'rely' : 'relies'} on {diagnostic.reason}
-              <span
-                class="font-mono whitespace-nowrap {warning ? 'text-red-800/80' : 'text-gray-400'}"
-                >· {diagnosticLocation(diagnostic.location)}</span
+              {subject.plural ? 'rely' : 'relies'} on {issue.reason}
+              <span class="font-mono whitespace-nowrap text-red-800/80"
+                >· {trustLocation(issue.location)}</span
               ></span
             >
           </button>
         </li>
       {/each}
-      {#if diagnostics.length > DIAGNOSTICS_PREVIEW}
+      {#if issues.length > TRUST_PREVIEW}
         <li>
           <button
             type="button"
             class="rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-            onclick={() =>
-              (conversation.diagnosticsExpanded = {
-                ...conversation.diagnosticsExpanded,
-                [b]: !conversation.diagnosticsExpanded[b]
-              })}
+            onclick={() => (trustExpanded = { ...trustExpanded, [b]: !trustExpanded[b] })}
           >
-            {conversation.diagnosticsExpanded[b]
-              ? 'Show less'
-              : `+ ${diagnostics.length - DIAGNOSTICS_PREVIEW} more`}
+            {trustExpanded[b] ? 'Show less' : `+ ${issues.length - TRUST_PREVIEW} more`}
           </button>
         </li>
       {/if}
       {#if claimed.length > 0}
         <!-- Cited nodes no tool returned are claims of the model, not results of the analysis -->
-        <li class="flex flex-wrap items-center gap-1 px-1 text-red-700">
+        <li class="flex flex-wrap items-center gap-1 px-1">
           <span aria-hidden="true">⚠</span>
           <span
             >The answer cites {claimed.length === 1 ? 'a node' : `${claimed.length} nodes`} no tool returned:</span
@@ -961,8 +1387,8 @@
               type="button"
               class="rounded border border-dashed border-gray-300 px-1 font-mono text-[10px] text-gray-700 hover:border-gray-500 hover:bg-gray-50"
               onclick={() => {
-                conversation.chosenBlock = b;
-                selectRef(ref);
+                chosenBlock = b;
+                revealFromAgent(ref.id);
               }}
             >
               {citationLabel(ref)}
@@ -1099,30 +1525,25 @@
 
 <div class="flex h-full min-h-0 bg-white">
   <!-- Activity bar: switches the view of the sidebar -->
-  <div
-    class="flex w-10 shrink-0 flex-col items-center gap-1 border-r border-gray-200 bg-gray-50 py-1.5"
-  >
+  <div class="flex w-11 shrink-0 flex-col items-center border-r border-gray-200 bg-gray-100">
     {#each sidebarViews as view (view.id)}
       {@const active = sidebarOpen && sidebarView === view.id}
       <button
         type="button"
-        class="relative flex h-8 w-8 items-center justify-center rounded {active
-          ? 'text-gray-900'
-          : 'text-gray-400 hover:text-gray-700'}"
+        class="flex h-11 w-11 items-center justify-center {active
+          ? 'text-gray-900 shadow-[inset_2px_0_0_#2563eb]'
+          : 'text-gray-500 hover:text-gray-900'}"
         onclick={() => toggleSidebar(view.id)}
         aria-label={active ? `Hide ${view.label}` : `Show ${view.label}`}
         aria-pressed={active}
         title={view.label}
       >
-        {#if active}
-          <span class="absolute top-1 bottom-1 -left-1 w-0.5 bg-gray-900"></span>
-        {/if}
         <svg
           class="h-5 w-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          stroke-width="1.5"
+          stroke-width="1.6"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d={view.icon} />
         </svg>
@@ -1132,7 +1553,7 @@
 
   <!-- Sidebar -->
   {#if sidebarOpen && selectedComponent}
-    <div class="flex min-h-0 w-60 shrink-0 flex-col border-r border-gray-200">
+    <div class="flex min-h-0 w-56 shrink-0 flex-col border-r border-gray-200">
       {#if sidebarView === 'files'}
         <FileTree
           component={selectedComponent}
@@ -1160,11 +1581,11 @@
   {/if}
 
   <!-- Code: the main view -->
-  <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+  <div class="flex min-h-0 min-w-[20rem] flex-1 flex-col">
     {#if tabs.tabs.length > 0}
       <!-- Editor tabs -->
       <div
-        class="flex h-8 shrink-0 items-stretch overflow-x-auto border-b border-gray-200 bg-gray-50"
+        class="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-gray-200 bg-gray-50"
         role="tablist"
         aria-label="Open files"
       >
@@ -1184,7 +1605,7 @@
               type="button"
               role="tab"
               aria-selected={active}
-              class="flex min-w-0 items-center gap-1.5 py-1 pr-1 pl-3 font-mono text-xs"
+              class="flex min-w-0 items-center gap-1.5 py-1 pr-1 pl-3 text-[12.5px]"
               onclick={() => !active && handleFileSelect(unit)}
               onauxclick={(e) => {
                 if (e.button === 1) {
@@ -1213,22 +1634,21 @@
         {/each}
       </div>
     {/if}
-    {#if conversation.threadSteps.length > 0}
+    <!-- One bar for the steps shown in the code: the path or the agent's thread -->
+    {#if sequence === 'thread' && threadSteps.length > 0}
       <StepBar
         title="Agent"
-        steps={conversation.threadSteps.map((s) => ({
-          label: s.label,
-          title: s.title,
-          number: s.step
-        }))}
+        steps={threadSteps.map((s) => ({ label: s.label, title: s.title, number: s.step }))}
         index={threadStepIndex}
         onSelect={goToThreadStep}
         onClose={() => layers.toggle('agent')}
         closeTitle="Hide the agent's evidence (● Agent layer)"
         shape="square"
+        other={focus.path.length >= 2
+          ? { label: 'Path', onSwitch: () => (focus.showing = 'path') }
+          : undefined}
       />
-    {/if}
-    {#if focus.path.length >= 2}
+    {:else if sequence === 'path'}
       <StepBar
         title="Path"
         steps={pathSteps}
@@ -1236,6 +1656,9 @@
         onSelect={goToStep}
         onClose={() => focus.clearPath()}
         closeTitle="Close the dataflow path"
+        other={threadSteps.length > 0
+          ? { label: 'Agent', onSwitch: () => (focus.showing = 'thread') }
+          : undefined}
       />
     {/if}
     <div class="flex min-h-0 flex-1">
@@ -1252,6 +1675,7 @@
           onNavigateToNode={handleNavigateToNode}
           {focus}
           bind:annotations={fileAnnotations}
+          bind:topLine
           {scrollPositions}
           externalInspector
           lanes
@@ -1259,7 +1683,29 @@
           onAsk={askAboutSelection}
           {askDisabledReason}
           {askRequest}
+          slice={pdgSlice}
+          onCodeContextMenu={openCodeMenu}
         >
+          {#snippet layerActions()}
+            {@const details = focus.details}
+            <button
+              type="button"
+              class="h-6 rounded-md border px-2.5 text-[11.5px] disabled:text-gray-300 {pdg.open
+                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                : 'border-gray-200 text-gray-500 hover:text-gray-800'}"
+              aria-pressed={pdg.open}
+              disabled={!pdg.open && !details}
+              title={pdg.open
+                ? 'Close the dependence graph (Esc)'
+                : details
+                  ? 'Show what affects the selected node in the program dependence graph'
+                  : 'Select a node first'}
+              onclick={() =>
+                pdg.open ? pdg.close() : details && pdg.show(details.node.id, 'BACKWARD')}
+            >
+              PDG
+            </button>
+          {/snippet}
           {#snippet headerStart()}
             {@render historyButtons()}
             {@render breadcrumb()}
@@ -1276,6 +1722,24 @@
       {/if}
     </div>
   </div>
+
+  <!-- The dependence graph, which narrows the code -->
+  {#if pdg.open && openedUnit}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="w-1 shrink-0 cursor-col-resize border-l border-gray-200 hover:bg-blue-200"
+      onpointerdown={startPdgResize}
+      title="Drag to resize"
+    ></div>
+    <div class="min-h-0 min-w-[18.75rem]" style:flex="0 1 {pdgWidth}px">
+      <PdgPanelView
+        panel={pdg}
+        onInspect={selectRef}
+        onAsk={askAboutPdgNode}
+        onSelectNode={selectPdgNode}
+      />
+    </div>
+  {/if}
 
   <!-- Context column: inspector and agent -->
   {#if contextCollapsed}
@@ -1352,6 +1816,9 @@
             loading={focus.loading}
             error={focus.error}
             revealSection={focus.revealSection}
+            callFilter={focus.callFilter}
+            {callStatus}
+            onClearCallFilter={() => (focus.callFilter = null)}
             onFollow={(chain, direction) => focus.follow(chain, direction)}
             onSelect={selectRef}
           >
@@ -1391,10 +1858,10 @@
             </div>
           {/if}
 
-          {#each conversation.timeline as block, b (b)}
-            {@const isLast = b === conversation.timeline.length - 1}
-            {@const isActive = b === conversation.activeBlock}
-            {@const evidence = conversation.blockEvidence[b]}
+          {#each timeline as block, b (b)}
+            {@const isLast = b === timeline.length - 1}
+            {@const isActive = b === activeBlock}
+            {@const evidence = blockEvidence[b]}
             {@const hasEvidence =
               evidence.steps.some((s) => s.ids.length) || evidence.claimed.length > 0}
             <section
@@ -1418,14 +1885,17 @@
                         class="mt-0.5 shrink-0 rounded px-1 text-[11px] {isActive
                           ? 'text-slate-800'
                           : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}"
-                        aria-pressed={isActive}
-                        disabled={isActive}
+                        aria-pressed={isActive && sequence === 'thread'}
+                        disabled={isActive && sequence === 'thread'}
                         title={isActive
                           ? 'The evidence of this question is shown in the code'
                           : 'Show the evidence of this question in the code'}
-                        onclick={() => (conversation.chosenBlock = b)}
+                        onclick={() => {
+                          chosenBlock = b;
+                          focus.showing = 'thread';
+                        }}
                       >
-                        {isActive ? '● in code' : '○ show in code'}
+                        {isActive && sequence === 'thread' ? '● in code' : '○ show in code'}
                       </button>
                     {/if}
                   </div>
@@ -1445,44 +1915,32 @@
                   {@render reasoning(message)}
                   {#if message.contentType === 'tool-result' && message.toolResult}
                     <!-- A tool call: a numbered step of the evidence trail -->
-                    <div class="flex min-w-0 items-start gap-1.5">
-                      <span
-                        class="mt-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-slate-700 px-0.5 text-[10px] leading-none font-semibold text-white tabular-nums"
-                        title="Step {entry.step}"
-                      >
-                        {entry.step}
-                      </span>
-                      <div class="min-w-0 flex-1">
-                        <ToolResultBlock
-                          toolResult={message.toolResult}
-                          onItemClick={handleNodeClick}
-                        />
-                      </div>
-                      {#if conversation.stepNodes(evidence.steps.find((s) => s.step === entry.step)?.ids ?? []).length > 0}
-                        {@const nodes = conversation.stepNodes(
-                          evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
-                        )}
-                        <button
-                          type="button"
-                          class="mt-1.5 shrink-0 rounded px-1 text-[11px] text-gray-400 tabular-nums hover:bg-gray-100 hover:text-gray-700"
-                          title="Go to the first of the nodes this step returned"
-                          onclick={() => {
-                            conversation.chosenBlock = b;
-                            selectRef(nodes[0]);
-                          }}
-                        >
-                          {nodes.length}
-                          {nodes.length === 1 ? 'node' : 'nodes'} →
-                        </button>
-                      {/if}
-                    </div>
+                    {@const nodes = stepNodes(
+                      evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
+                    )}
+                    <ToolStep
+                      toolResult={message.toolResult}
+                      step={entry.step ?? 0}
+                      {nodes}
+                      selectedId={focus.details?.node.id}
+                      onSelect={(ref) => revealFromAgent(ref.id)}
+                      onActivate={() => {
+                        chosenBlock = b;
+                        focus.showing = 'thread';
+                        if (nodes[0]) revealFromAgent(nodes[0].id);
+                      }}
+                      onHover={(hovered) => {
+                        // Only the steps of the thread in the code can stand out there
+                        focus.highlightedStep = hovered && isActive ? (entry.step ?? null) : null;
+                      }}
+                    />
                     {#if entry.index === suggestionAnchorIndex}
                       <!-- The pending concept suggestions of the agent, to accept or reject -->
                       <div class="my-1 ml-5 overflow-hidden rounded border border-gray-200">
                         <ConceptChecklist
                           bind:items={suggestions}
                           onApplySuggestions={handleApplyAndReload}
-                          onHighlightNode={revealSuggestedNode}
+                          onHighlightNode={revealFromAgent}
                         />
                       </div>
                     {/if}
@@ -1491,7 +1949,7 @@
                     <div class="prose prose-sm max-w-none py-1.5 text-gray-800">
                       <MarkdownRenderer
                         content={message.content}
-                        citations={conversation.citedRefs}
+                        citations={citedRefs}
                         onCite={openCitation}
                       />
                     </div>
@@ -1508,7 +1966,7 @@
                 {/each}
 
                 {#if !(isLast && isLoading)}
-                  {@render diagnosticNotes(b)}
+                  {@render trustNotes(b)}
                 {/if}
 
                 {#if isLast && (isLoading || displayContent)}
@@ -1517,7 +1975,7 @@
                       <div class="prose prose-sm max-w-none text-gray-800">
                         <MarkdownRenderer
                           content={displayContent}
-                          citations={conversation.citedRefs}
+                          citations={citedRefs}
                           onCite={openCitation}
                         />
                       </div>
@@ -1590,3 +2048,13 @@
     </div>
   {/if}
 </div>
+
+{#if codeMenu}
+  <CodeContextMenu
+    x={codeMenu.x}
+    y={codeMenu.y}
+    items={codeMenuItems}
+    title="{codeMenu.details.node.type} {codeMenu.details.node.code}"
+    onClose={() => (codeMenu = null)}
+  />
+{/if}

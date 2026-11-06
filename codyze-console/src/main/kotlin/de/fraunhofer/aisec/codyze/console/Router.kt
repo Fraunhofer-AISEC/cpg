@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
-import de.fraunhofer.aisec.cpg.sarif.Region
 import io.ktor.http.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
@@ -78,8 +77,11 @@ import kotlinx.serialization.json.JsonObject
  *   the innermost node containing the whole range.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
  *   analysis warnings).
- * - POST `/api/diagnostics`: Retrieves the places where the analysis is incomplete or uncertain
- *   (unresolved or external calls, analysis problems) that the nodes with the given IDs rely on.
+ * - GET `/api/node/{id}/pdg?direction=backward|forward&hops=1..3`: Retrieves the slice of the
+ *   program dependence graph around the statement of the node, limited to its function.
+ * - GET `/api/node/{id}/pdg-counts?hops=1..3`: Retrieves the size of the slice in each direction.
+ * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
+ *   calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
@@ -233,14 +235,14 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                 call.parameters["column"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            // The target is the character at the position, or the range up to the (exclusive) end
-            val endLine = call.parameters["endLine"]?.toIntOrNull() ?: line
-            val endColumn = call.parameters["endColumn"]?.toIntOrNull() ?: (column + 1)
             val details =
                 service.getNodeDetailsAt(
                     componentName,
                     id,
-                    Region(line, column, endLine, endColumn),
+                    line,
+                    column,
+                    call.parameters["endLine"]?.toIntOrNull(),
+                    call.parameters["endColumn"]?.toIntOrNull(),
                 )
             if (details != null) {
                 call.respond(details)
@@ -274,7 +276,7 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
         }
 
         // The endpoint to check where the analysis is uncertain for the evidence of the agent
-        post("/diagnostics") {
+        post("/trust") {
             val nodeIds =
                 try {
                     call.receive<List<String>>()
@@ -284,7 +286,38 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                         mapOf("error" to "Invalid request format: ${e.message}"),
                     )
                 }
-            call.respond(service.getEvidenceDiagnostics(nodeIds))
+            call.respond(service.getTrustIssues(nodeIds))
+        }
+
+        // The endpoint to get the slice of the program dependence graph around a node
+        get("/node/{id}/pdg") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val direction =
+                when (call.parameters["direction"]?.lowercase()) {
+                    null,
+                    "backward" -> PdgDirection.BACKWARD
+                    "forward" -> PdgDirection.FORWARD
+                    else -> return@get call.respond(HttpStatusCode.BadRequest)
+                }
+            val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
+            val slice = service.getPdgSlice(id, direction, hops)
+            if (slice != null) {
+                call.respond(slice)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
+            }
+        }
+
+        // The endpoint to get the size of the slices of the program dependence graph of a node
+        get("/node/{id}/pdg-counts") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val hops = (call.parameters["hops"]?.toIntOrNull() ?: 2).coerceIn(1, 3)
+            val counts = service.getPdgCounts(id, hops)
+            if (counts != null) {
+                call.respond(counts)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
+            }
         }
 
         // The endpoint to add a concept node to the current analysis result

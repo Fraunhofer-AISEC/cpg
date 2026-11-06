@@ -3,7 +3,7 @@
 
   /**
    * A bar above the code with the steps of a path, e.g. `① source → ② a → ③ sink`, and buttons
-   * to step through it like in a debugger. Each step is clickable.
+   * to step through it. Each step is clickable.
    */
   interface Props {
     /** What the steps are, e.g. "Path" */
@@ -18,6 +18,8 @@
     closeTitle?: string;
     /** Round number badges (e.g. for a dataflow path) or square ones (e.g. for the agent) */
     shape?: 'round' | 'square';
+    /** Switches to another sequence of steps that shares the bar, e.g. from the path to the agent */
+    other?: { label: string; onSwitch: () => void };
   }
 
   let {
@@ -27,7 +29,8 @@
     onSelect,
     onClose,
     closeTitle = 'Close',
-    shape = 'round'
+    shape = 'round',
+    other
   }: Props = $props();
 
   let stepElements: HTMLButtonElement[] = $state([]);
@@ -48,6 +51,16 @@
   aria-label={title}
 >
   <span class="shrink-0 font-semibold text-gray-500">{title}</span>
+  {#if other}
+    <button
+      type="button"
+      class="shrink-0 rounded px-1 text-[11px] text-gray-400 hover:bg-gray-200 hover:text-gray-800"
+      title="Show the steps of the {other.label.toLowerCase()} instead"
+      onclick={other.onSwitch}
+    >
+      ⇄ {other.label}
+    </button>
+  {/if}
   <ol class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap">
     {#each steps as step, i (i)}
       {#if i > 0}

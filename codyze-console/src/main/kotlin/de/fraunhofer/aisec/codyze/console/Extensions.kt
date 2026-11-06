@@ -30,21 +30,32 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.sarif.Region
 
 /**
- * Returns the innermost node of this translation unit whose region contains the [target] region, so
+ * Returns the innermost node of this translation unit whose region contains the given position, so
  * that clicking anywhere in the code selects the most specific node. Among nodes with the same
  * region, explicit nodes are preferred over implicit ones and deeper nodes over their parents.
  *
- * The [target] is e.g. the clicked character (a region of one column). Like the regions of the
- * nodes, its end column is exclusive.
+ * If an end position is given, the node has to contain the whole range from the position to the end
+ * (whose column is exclusive), e.g. the call that contains a selected text.
  */
-fun TranslationUnit.nodeAt(target: Region): Node? {
+fun TranslationUnit.nodeAt(
+    line: Int,
+    column: Int,
+    endLine: Int? = null,
+    endColumn: Int? = null,
+): Node? {
     var best: Node? = null
     var bestSpan = Long.MAX_VALUE
     // The nodes are in pre-order, so among nodes with the same region, a later one is deeper
     for (node in nodes) {
         if (node is TranslationUnit || !node.isInFileOf(this)) continue
         val region = node.location?.region ?: continue
-        if (!region.contains(target)) continue
+        if (!region.contains(line, column)) continue
+        if (
+            endLine != null &&
+                endColumn != null &&
+                !region.contains(endLine, maxOf(endColumn - 1, 1))
+        )
+            continue
         // The size of the region, where any additional line outweighs any number of columns
         val span =
             (region.endLine - region.startLine).toLong() * Int.MAX_VALUE +
@@ -57,11 +68,10 @@ fun TranslationUnit.nodeAt(target: Region): Node? {
     return best
 }
 
-/** Whether [other] lies completely within this region. The end columns are exclusive. */
-private fun Region.contains(other: Region): Boolean {
-    if (other.startLine < startLine || other.endLine > endLine) return false
-    if (other.startLine == startLine && other.startColumn < startColumn) return false
-    if (other.endLine == endLine && other.endColumn > endColumn) return false
+private fun Region.contains(line: Int, column: Int): Boolean {
+    if (line < startLine || line > endLine) return false
+    if (line == startLine && column < startColumn) return false
+    if (line == endLine && column >= endColumn) return false
     return true
 }
 

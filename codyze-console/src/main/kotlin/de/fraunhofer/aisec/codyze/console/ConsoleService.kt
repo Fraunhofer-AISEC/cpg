@@ -39,13 +39,14 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
@@ -109,6 +110,9 @@ class ConsoleService {
 
                     translation {
                         it.loadIncludes(true)
+                        // The program dependence graph, shown as a slice of the code in the UI
+                        it.registerPass<ControlDependenceGraphPass>()
+                        it.registerPass<ProgramDependenceGraphPass>()
                         it.registerPass<PythonStdLibConfigurationPass>()
                         it.registerPass<LoadPersistedConcepts>()
 
@@ -262,11 +266,22 @@ class ConsoleService {
     }
 
     /**
-     * Returns the details of the innermost node of a translation unit that contains the [target]
-     * region (e.g. a clicked character), or `null` if there is no such node.
+     * Returns the details of the innermost node at the given position of a translation unit (or the
+     * innermost node containing the range up to the end position), or `null` if there is no such
+     * node.
      */
-    fun getNodeDetailsAt(componentName: String, id: String, target: Region): NodeDetailsJSON? {
-        return findTranslationUnit(componentName, id)?.cpgTU?.nodeAt(target)?.toDetailsJSON()
+    fun getNodeDetailsAt(
+        componentName: String,
+        id: String,
+        line: Int,
+        column: Int,
+        endLine: Int? = null,
+        endColumn: Int? = null,
+    ): NodeDetailsJSON? {
+        return findTranslationUnit(componentName, id)
+            ?.cpgTU
+            ?.nodeAt(line, column, endLine, endColumn)
+            ?.toDetailsJSON()
     }
 
     /**
@@ -279,18 +294,28 @@ class ConsoleService {
 
     /**
      * Returns the places where the analysis is uncertain that the nodes with the given IDs rely on
-     * (see [evidenceDiagnostics]). IDs of nodes that do not exist are ignored, and only the first
-     * [MAX_EVIDENCE_NODES] distinct IDs are considered.
+     * (see [trustIssues]). IDs of nodes that do not exist are ignored.
      */
-    fun getEvidenceDiagnostics(nodeIds: Collection<String>): List<EvidenceDiagnosticJSON> {
-        return evidenceDiagnostics(
-            nodeIds
-                .asSequence()
-                .distinct()
-                .take(MAX_EVIDENCE_NODES)
-                .mapNotNull { id -> findNode(id)?.let { id to it } }
-                .toMap()
+    fun getTrustIssues(nodeIds: Collection<String>): List<TrustIssueJSON> {
+        return trustIssues(
+            nodeIds.toSet().mapNotNull { id -> findNode(id)?.let { id to it } }.toMap()
         )
+    }
+
+    /**
+     * Returns the slice of the program dependence graph around the node with the given ID (see
+     * [pdgSlice]), or `null` if there is no such node.
+     */
+    fun getPdgSlice(nodeId: String, direction: PdgDirection, hops: Int): PdgSliceJSON? {
+        return findNode(nodeId)?.let { pdgSlice(it, direction, hops) }
+    }
+
+    /**
+     * Returns how many statements are in the slice of the program dependence graph around the node
+     * with the given ID in each direction, or `null` if there is no such node.
+     */
+    fun getPdgCounts(nodeId: String, hops: Int): PdgCountsJSON? {
+        return findNode(nodeId)?.let { pdgCounts(it, hops) }
     }
 
     /** Returns the node (or overlay) with the given ID, using [nodeIndex]. */

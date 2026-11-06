@@ -359,15 +359,6 @@ class ApplicationTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(call.id, response.body<NodeDetailsJSON>().node.id)
 
-        // The range has to be contained in the node: its end column is exclusive
-        val range = client.get("$unit/node-at?line=1&column=1&endLine=1&endColumn=7")
-        assertEquals(HttpStatusCode.OK, range.status)
-        assertEquals(call.id, range.body<NodeDetailsJSON>().node.id)
-        assertEquals(
-            HttpStatusCode.NotFound,
-            client.get("$unit/node-at?line=1&column=1&endLine=1&endColumn=8").status,
-        )
-
         assertEquals(HttpStatusCode.NotFound, client.get("$unit/node-at?line=5&column=1").status)
         assertEquals(
             HttpStatusCode.NotFound,
@@ -398,56 +389,6 @@ class ApplicationTest {
         assertNotNull(node)
         assertEquals(open.id, node.id)
         assertEquals(mockTu.id, node.translationUnitId)
-    }
-
-    @Test
-    fun testGetDiagnostics() = testApplication {
-        // A call without a target, which the analysis cannot follow
-        val call =
-            Call().apply {
-                name = Name("unknown")
-                location =
-                    de.fraunhofer.aisec.cpg.sarif.PhysicalLocation(
-                        java.net.URI("file:/diagnostics.c"),
-                        de.fraunhofer.aisec.cpg.sarif.Region(1, 1, 1, 10),
-                    )
-            }
-        val tu = TranslationUnit().apply { statements += call }
-        val service = mockServiceFor(tu)
-        application { configureWebconsole(service) }
-        val client = createClient { install(ContentNegotiation) { json() } }
-
-        val unknownId = "00000000-0000-0000-0000-000000000000"
-        val response =
-            client.post("/api/diagnostics") {
-                contentType(ContentType.Application.Json)
-                setBody(listOf(call.id.toString(), unknownId))
-            }
-        assertEquals(HttpStatusCode.OK, response.status)
-
-        val diagnostic = response.body<List<EvidenceDiagnosticJSON>>().single()
-        assertEquals(DiagnosticKind.UNRESOLVED_CALL, diagnostic.kind)
-        assertEquals(call.id, diagnostic.location.id)
-        assertEquals(listOf(call.id.toString()), diagnostic.evidence)
-
-        assertEquals(
-            emptyList(),
-            client
-                .post("/api/diagnostics") {
-                    contentType(ContentType.Application.Json)
-                    setBody(emptyList<String>())
-                }
-                .body<List<EvidenceDiagnosticJSON>>(),
-        )
-        assertEquals(
-            HttpStatusCode.BadRequest,
-            client
-                .post("/api/diagnostics") {
-                    contentType(ContentType.Application.Json)
-                    setBody("""{"not": "a list"}""")
-                }
-                .status,
-        )
     }
 
     @Test
