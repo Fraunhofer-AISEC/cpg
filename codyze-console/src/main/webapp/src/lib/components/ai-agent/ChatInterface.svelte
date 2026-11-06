@@ -17,7 +17,7 @@
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
   import {
-    checkTrust,
+    checkDiagnostics,
     citationLabel,
     extractCitations,
     extractNodeIds,
@@ -37,7 +37,7 @@
     Model,
     NodeDetailsJSON,
     OverlayJSON,
-    TrustIssueJSON,
+    EvidenceDiagnosticJSON,
     CodeSelection
   } from '$lib/types';
 
@@ -655,7 +655,7 @@
 
   // The tool calls of the active block that have evidence in the code, to step through them like in
   // a debugger. Nodes only cited in the answer are no step: they are marked in the code and named
-  // in the trust notes under the answer
+  // in the diagnostics under the answer
   const threadSteps = $derived.by(() => {
     const evidence = blockEvidence[activeBlock];
     const block = timeline[activeBlock];
@@ -670,30 +670,33 @@
     });
   });
 
-  // The places where the analysis is uncertain that the evidence of each block relies on. The block
-  // the agent is still working on is checked once it is done
-  let blockTrust = $state.raw<TrustIssueJSON[][]>([]);
+  // The places where the analysis is incomplete, uncertain or ends that the evidence of each block
+  // relies on. The block the agent is still working on is checked once it is done
+  let blockDiagnostics = $state.raw<EvidenceDiagnosticJSON[][]>([]);
   $effect(() => {
     const evidence = blockEvidence;
     const pending = isLoading ? evidence.length - 1 : -1;
     Promise.all(
       evidence.map((e, b) =>
-        b === pending ? [] : checkTrust([...e.steps.flatMap((s) => s.ids), ...e.claimed])
+        b === pending ? [] : checkDiagnostics([...e.steps.flatMap((s) => s.ids), ...e.claimed])
       )
-    ).then((trust) => {
-      if (evidence === blockEvidence) blockTrust = trust;
+    ).then((diagnostics) => {
+      if (evidence === blockEvidence) blockDiagnostics = diagnostics;
     });
   });
 
-  // The trust issues shown in full, by block; otherwise only the first few are shown
-  let trustExpanded = $state<Record<number, boolean>>({});
-  const TRUST_PREVIEW = 3;
+  // The diagnostics shown in full, by block; otherwise only the first few are shown
+  let diagnosticsExpanded = $state<Record<number, boolean>>({});
+  const DIAGNOSTICS_PREVIEW = 3;
 
   // Who relies on an issue, e.g. "Step 1", "Steps 1, 3" or "The answer"
-  function trustSubject(issue: TrustIssueJSON, b: number): { text: string; plural: boolean } {
+  function diagnosticSubject(
+    diagnostic: EvidenceDiagnosticJSON,
+    b: number
+  ): { text: string; plural: boolean } {
     const evidence = blockEvidence[b];
     const steps = (evidence?.steps ?? [])
-      .filter((s) => s.ids.some((id) => issue.evidence.includes(id)))
+      .filter((s) => s.ids.some((id) => diagnostic.evidence.includes(id)))
       .map((s) => s.step);
     if (steps.length === 0) return { text: 'The answer', plural: false };
     return {
@@ -702,7 +705,7 @@
     };
   }
 
-  function trustLocation(ref: NodeJSON): string {
+  function diagnosticLocation(ref: NodeJSON): string {
     return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
   }
 
@@ -1050,50 +1053,57 @@
 
 <!-- The reasoning of the model before a message, collapsed -->
 <!-- Where the analysis is uncertain for the evidence of a block, in the color of uncertainty -->
-{#snippet trustNotes(b: number)}
-  {@const issues = blockTrust[b] ?? []}
+{#snippet diagnosticNotes(b: number)}
+  {@const diagnostics = blockDiagnostics[b] ?? []}
   {@const claimed = stepNodes(blockEvidence[b]?.claimed ?? [])}
-  {@const shown = trustExpanded[b] ? issues : issues.slice(0, TRUST_PREVIEW)}
-  {#if issues.length > 0 || claimed.length > 0}
-    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug text-red-700">
-      {#each shown as issue (issue.kind + issue.location.id)}
-        {@const subject = trustSubject(issue, b)}
-        <li>
+  {@const shown = diagnosticsExpanded[b] ? diagnostics : diagnostics.slice(0, DIAGNOSTICS_PREVIEW)}
+  {#if diagnostics.length > 0 || claimed.length > 0}
+    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug">
+      {#each shown as diagnostic (diagnostic.kind + diagnostic.location.id)}
+        {@const subject = diagnosticSubject(diagnostic, b)}
+        {@const warning = diagnostic.severity === 'WARNING'}
+        <li class={warning ? 'text-red-700' : 'text-gray-500'}>
           <button
             type="button"
-            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left hover:bg-red-50 disabled:hover:bg-transparent"
-            disabled={issue.location.startLine < 1}
-            title={issue.location.code || issue.location.name}
+            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left disabled:hover:bg-transparent {warning
+              ? 'hover:bg-red-50'
+              : 'hover:bg-gray-50'}"
+            disabled={diagnostic.location.startLine < 1}
+            title={diagnostic.location.code || diagnostic.location.name}
             onclick={() => {
               chosenBlock = b;
-              selectRef(issue.location);
+              selectRef(diagnostic.location);
             }}
           >
-            <span aria-hidden="true">⚠</span>
+            <span aria-hidden="true">{warning ? '⚠' : 'ⓘ'}</span>
             <span class="min-w-0 flex-1"
               >{subject.text}
-              {subject.plural ? 'rely' : 'relies'} on {issue.reason}
-              <span class="font-mono whitespace-nowrap text-red-800/80"
-                >· {trustLocation(issue.location)}</span
+              {subject.plural ? 'rely' : 'relies'} on {diagnostic.reason}
+              <span
+                class="font-mono whitespace-nowrap {warning ? 'text-red-800/80' : 'text-gray-400'}"
+                >· {diagnosticLocation(diagnostic.location)}</span
               ></span
             >
           </button>
         </li>
       {/each}
-      {#if issues.length > TRUST_PREVIEW}
+      {#if diagnostics.length > DIAGNOSTICS_PREVIEW}
         <li>
           <button
             type="button"
             class="rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-            onclick={() => (trustExpanded = { ...trustExpanded, [b]: !trustExpanded[b] })}
+            onclick={() =>
+              (diagnosticsExpanded = { ...diagnosticsExpanded, [b]: !diagnosticsExpanded[b] })}
           >
-            {trustExpanded[b] ? 'Show less' : `+ ${issues.length - TRUST_PREVIEW} more`}
+            {diagnosticsExpanded[b]
+              ? 'Show less'
+              : `+ ${diagnostics.length - DIAGNOSTICS_PREVIEW} more`}
           </button>
         </li>
       {/if}
       {#if claimed.length > 0}
         <!-- Cited nodes no tool returned are claims of the model, not results of the analysis -->
-        <li class="flex flex-wrap items-center gap-1 px-1">
+        <li class="flex flex-wrap items-center gap-1 px-1 text-red-700">
           <span aria-hidden="true">⚠</span>
           <span
             >The answer cites {claimed.length === 1 ? 'a node' : `${claimed.length} nodes`} no tool returned:</span
@@ -1646,7 +1656,7 @@
                 {/each}
 
                 {#if !(isLast && isLoading)}
-                  {@render trustNotes(b)}
+                  {@render diagnosticNotes(b)}
                 {/if}
 
                 {#if isLast && (isLoading || displayContent)}

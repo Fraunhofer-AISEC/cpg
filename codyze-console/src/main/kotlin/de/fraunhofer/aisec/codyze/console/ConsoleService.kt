@@ -289,10 +289,10 @@ class ConsoleService {
 
     /**
      * Returns the places where the analysis is uncertain that the nodes with the given IDs rely on
-     * (see [trustIssues]). IDs of nodes that do not exist are ignored.
+     * (see [evidenceDiagnostics]). IDs of nodes that do not exist are ignored.
      */
-    fun getTrustIssues(nodeIds: Collection<String>): List<TrustIssueJSON> {
-        return trustIssues(
+    fun getEvidenceDiagnostics(nodeIds: Collection<String>): List<EvidenceDiagnosticJSON> {
+        return evidenceDiagnostics(
             nodeIds.toSet().mapNotNull { id -> findNode(id)?.let { id to it } }.toMap()
         )
     }

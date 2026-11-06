@@ -77,8 +77,8 @@ import kotlinx.serialization.json.JsonObject
  *   the innermost node containing the whole range.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
  *   analysis warnings).
- * - POST `/api/trust`: Retrieves the places where the analysis is uncertain (unresolved or external
- *   calls, analysis problems) that the nodes with the given IDs rely on.
+ * - POST `/api/diagnostics`: Retrieves the places where the analysis is incomplete or uncertain
+ *   (unresolved or external calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
@@ -273,7 +273,7 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
         }
 
         // The endpoint to check where the analysis is uncertain for the evidence of the agent
-        post("/trust") {
+        post("/diagnostics") {
             val nodeIds =
                 try {
                     call.receive<List<String>>()
@@ -283,7 +283,7 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                         mapOf("error" to "Invalid request format: ${e.message}"),
                     )
                 }
-            call.respond(service.getTrustIssues(nodeIds))
+            call.respond(service.getEvidenceDiagnostics(nodeIds))
         }
 
         // The endpoint to add a concept node to the current analysis result
