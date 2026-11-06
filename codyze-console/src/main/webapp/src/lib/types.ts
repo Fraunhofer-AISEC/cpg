@@ -46,21 +46,29 @@ export interface TranslationUnitJSON {
   findings: FindingsJSON[];
 }
 
-export interface NodeJSON {
-  id: string;
-  type: string;
+/** A range of code: 1-based lines and columns, the end column is exclusive. */
+export interface CodeRangeJSON {
   startLine: number;
   startColumn: number;
   endLine: number;
   endColumn: number;
-  code: string;
+}
+
+/** The fields every node has in the JSON of the backend. */
+export interface NodeBaseJSON extends CodeRangeJSON {
+  id: string;
+  type: string;
   name: string;
+  code: string;
   fileName?: string;
+  translationUnitId?: string;
+  componentName?: string;
+}
+
+export interface NodeJSON extends NodeBaseJSON {
   astChildren: NodeJSON[];
   prevDFG: EdgeJSON[];
   nextDFG: EdgeJSON[];
-  translationUnitId?: string;
-  componentName?: string;
   /** Whether the node was inferred by the analysis instead of being parsed from source code */
   isInferred?: boolean;
   /** Whether the node is not written in the source code, e.g. an implicit cast */
@@ -84,17 +92,11 @@ export interface RelatedNodeJSON {
 }
 
 /** A range of code selected by the user, e.g. to ask the agent about it. */
-export interface CodeSelection {
+export interface CodeSelection extends CodeRangeJSON {
   unitId: string;
   /** The name of the file */
   fileName: string;
   text: string;
-  startLine: number;
-  /** 1-based, like the columns of the nodes */
-  startColumn: number;
-  endLine: number;
-  /** 1-based and exclusive */
-  endColumn: number;
   /** The innermost node containing the whole selection, if there is one */
   node: NodeJSON | null;
 }
@@ -158,6 +160,32 @@ export interface NodeDetailsJSON {
   calleeCount: number;
   dataflowFromCount: number;
   dataflowToCount: number;
+}
+
+/** A compact reference to a node in the results of the MCP tools (`NodeInfo` in the backend). */
+export interface NodeInfoJSON {
+  nodeId: string;
+  name: string;
+  code?: string | null;
+  type?: string | null;
+  fileName?: string | null;
+  startLine?: number | null;
+  endLine?: number | null;
+}
+
+/**
+ * Paths through the graph that a tool found (`NodePaths` in the backend), each in the direction of
+ * the flow, e.g. the dataflows to a node.
+ */
+export interface NodePathsJSON {
+  /** What the paths follow, e.g. `dataflow` */
+  kind: string;
+  /** What the paths show, e.g. "where the value of `key` comes from" */
+  description: string;
+  start: NodeInfoJSON;
+  paths: NodeInfoJSON[][];
+  /** Whether paths are missing because of the limits of the search */
+  truncated: boolean;
 }
 
 // MCP capabilities
