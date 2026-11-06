@@ -172,7 +172,7 @@ export interface McpToolInfo {
   name: string;
   description?: string;
   inputSchema?: {
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     required?: string[];
   };
 }
@@ -233,7 +233,7 @@ export interface LLMMessage {
 export interface ToolResult {
   toolName?: string;
   args?: Record<string, unknown>;
-  content: any;
+  content: unknown;
   isError?: boolean;
 }
 

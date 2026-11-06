@@ -1,6 +1,7 @@
 <script lang="ts">
   import CodeItemList, { getItemsArray, isCodeItemContent } from './CodeItemList.svelte';
   import DfgFlowWidget from './DfgFlowWidget.svelte';
+  import type { ComponentProps } from 'svelte';
   import type { ToolResult } from '$lib/types';
 
   // Koog's file tool, which the model uses to "activate" a skill by reading its SKILL.md.
@@ -13,13 +14,13 @@
     return match ? match[1] : null;
   }
 
-  function getResultSummary(toolName: string, content: any, isError?: boolean): string {
+  function getResultSummary(toolName: string, content: unknown, isError?: boolean): string {
     if (isError) return 'Error';
     if (
       toolName === 'cpg_suggest_llm_concepts_and_operations' &&
-      typeof content?.name === 'string'
+      typeof (content as { name?: unknown } | null)?.name === 'string'
     ) {
-      return `suggests ${content.name}`;
+      return `suggests ${(content as { name: string }).name}`;
     }
     const items = getItemsArray(content);
     if (items.length > 0) {
@@ -39,7 +40,7 @@
     onItemClick
   }: {
     toolResult: ToolResult;
-    onItemClick?: (item: any) => void;
+    onItemClick?: ComponentProps<typeof CodeItemList>['onItemClick'];
   } = $props();
 
   let expanded = $state(false);
@@ -92,7 +93,9 @@
         : 'border-gray-200'}"
     >
       {#if isDfg}
-        <DfgFlowWidget content={toolResult.content} />
+        <DfgFlowWidget
+          content={toolResult.content as ComponentProps<typeof DfgFlowWidget>['content']}
+        />
       {:else if isCodeItems}
         <CodeItemList
           data={{
