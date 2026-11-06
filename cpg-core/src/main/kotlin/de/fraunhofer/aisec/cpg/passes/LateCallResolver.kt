@@ -27,10 +27,12 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasFirstClassFunctions
+import de.fraunhofer.aisec.cpg.frontends.HasNameOnlyCallResolution
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
@@ -73,6 +75,9 @@ class LateCallResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     /** Real (not invented) records of the component, indexed by their unqualified name. */
     private val realRecordsByLocalName = mutableMapOf<String, MutableList<Record>>()
 
+    /** Methods declared by a real record, indexed by their unqualified name. */
+    private val realMethodsByName = mutableMapOf<String, MutableList<Function>>()
+
     override fun accept(component: Component) {
         // We only use this instance for its member resolution; it is not walking anything.
         val resolver = SymbolResolver(ctx)
@@ -80,11 +85,17 @@ class LateCallResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         var total = 0
 
         realRecordsByLocalName.clear()
+        realMethodsByName.clear()
         for (record in component.allChildren<Record>()) {
             if (!record.isInferred) {
                 realRecordsByLocalName
                     .getOrPut(record.name.localName) { mutableListOf() }
                     .add(record)
+            }
+        }
+        for (method in component.allChildren<Method>()) {
+            if (!method.isInferred) {
+                realMethodsByName.getOrPut(method.name.localName) { mutableListOf() }.add(method)
             }
         }
 
@@ -124,13 +135,20 @@ class LateCallResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val callee = call.callee as? MemberAccess ?: continue
 
             if (onlyStubs) {
-                retryAgainstRealRecordsOfTheSameName(call, callee, resolver)?.let { resolved += it }
+                val byName = retryAgainstRealRecordsOfTheSameName(call, callee, resolver)
+                if (byName != null) {
+                    resolved += byName
+                } else {
+                    resolved += retryByMemberName(call, callee)
+                }
                 continue
             }
 
             val base = callee.base
             if (base.type is UnknownType) {
-                // Still nothing to go on.
+                // We never worked out what the receiver is. Resolving by the member's name alone
+                // is all that is left; see [retryByMemberName].
+                resolved += retryByMemberName(call, callee)
                 continue
             }
 
@@ -208,6 +226,40 @@ class LateCallResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             call.invokes = before.toMutableList()
             return null
         }
+        return 1
+    }
+
+    /**
+     * Resolves a call whose receiver type we never worked out by the name of the member alone.
+     *
+     * When the base is untyped -- usually because the call that produced it was itself unresolved
+     * -- there is no record to look in, so the call is left without a target and everything behind
+     * it disappears. Every method of that name is therefore taken as a possible target, restricted
+     * to those that could accept this many arguments.
+     *
+     * This is the same answer we already give for a call through an interface, where the receiver
+     * admits any implementation: too many targets, but none missing. It is the last resort, used
+     * only once looking the member up on an actual type has failed.
+     */
+    private fun retryByMemberName(call: Call, callee: MemberAccess): Int {
+        // Only for a language where the name of a call already determines its target. Where a
+        // name can legitimately mean different things -- overloading, static imports -- answering
+        // with every method of that name is not an over-approximation but a wrong answer.
+        if (callee.language !is HasNameOnlyCallResolution) {
+            return 0
+        }
+        val methods = realMethodsByName[callee.name.localName] ?: return 0
+        val arity = call.arguments.size
+        val candidates =
+            methods.filterTo(mutableListOf()) {
+                it.parameters.size == arity || it.parameters.any { p -> p.isVariadic }
+            }
+        if (candidates.isEmpty()) {
+            return 0
+        }
+
+        call.invokes = candidates
+        call.invokeEdges.forEach { it.dynamicInvoke = true }
         return 1
     }
 
