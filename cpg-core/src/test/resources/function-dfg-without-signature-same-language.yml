@@ -1,0 +1,17 @@
+# Two entries without a signature for the same language, once by its fully qualified and once by its
+# simple class name.
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+    methodName: memcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: TestLanguageWithColon
+    methodName: memcpy
+  dataFlows:
+    - from: param2
+      to: param0.deref
+      dfgType: full
