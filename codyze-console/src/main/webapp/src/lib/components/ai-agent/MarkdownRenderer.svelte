@@ -54,8 +54,8 @@
     extensions: [nodeCitation],
     renderer: {
       code({ text, lang }: Tokens.Code): string {
-        const language = lang || 'plaintext';
-        return `<pre><code class="hljs language-${language}">${text}</code></pre>`;
+        const language = escapeHtml(lang || 'plaintext');
+        return `<pre><code class="hljs language-${language}">${escapeHtml(text)}</code></pre>`;
       }
     }
   });
