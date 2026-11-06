@@ -210,11 +210,24 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             handleCallee(call, callee.rhs)
         } else if (callee is MemberAccess && getFunctionPointerType(callee) != null) {
             handleCallee(call, callee)
+        } else if (callee is MemberAccess && callee.refersTo is Field) {
+            // A field we could not type, but a field all the same: `h.cb(x)` is an indirect call
+            // whatever we managed to work out about `cb`.
+            handleCallee(call, callee)
         }
     }
 
     private fun handleCallee(call: Call, expr: Expression) {
-        val pointerType = getFunctionPointerType(expr) ?: return
+        val pointerType = getFunctionPointerType(expr)
+        if (pointerType == null) {
+            // We know this is an indirect call -- the callee is a variable, a parameter or a
+            // field -- but not what its signature is, because the type never resolved. Signature
+            // matching is then impossible and the arity of the call site is the only thing left
+            // to go on. Without this the call keeps no target at all; the remaining function
+            // value misses on the validation corpus are almost all of this shape.
+            fallBackToAddressTaken(call, null)
+            return
+        }
         val invocationCandidates = mutableListOf<Function>()
         val work: Deque<Node> = ArrayDeque()
         val seen = identitySetOf<Node>()
@@ -382,6 +395,27 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).
+        DFGPass(ctx).handlePreviouslyUnresolvedCallExpression(call, inferDfgForUnresolvedCalls)
+    }
+
+    /**
+     * Last resort for an indirect call we could not type: every address-taken function that could
+     * accept this many arguments. With [pointerType] known the signature narrows it down, otherwise
+     * only the arity does.
+     */
+    private fun fallBackToAddressTaken(call: Call, pointerType: FunctionPointerType?) {
+        if (call.invokes.isNotEmpty()) {
+            return
+        }
+        val candidates =
+            addressTakenByArity[call.arguments.size]?.filter {
+                pointerType == null || matchInvokesCandidateSignature(it, pointerType, false)
+            } ?: return
+        if (candidates.isEmpty()) {
+            return
+        }
+        call.invokes = candidates.toMutableList()
+        call.invokeEdges.forEach { it.dynamicInvoke = true }
         DFGPass(ctx).handlePreviouslyUnresolvedCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
