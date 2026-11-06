@@ -135,13 +135,7 @@
     if (!node.translationUnitId && !node.fileName) {
       const id = (node as any).nodeId ?? node.id;
       if (!id) return;
-      const [resolved]: NodeJSON[] = await fetch('/api/nodes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([id])
-      })
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => []);
+      const resolved = (await resolveNodes([id])).get(id);
       if (!resolved) return;
       node = resolved;
     }
@@ -961,17 +955,11 @@
   });
 
   async function loadSuggestionNodes(key: string) {
-    const nodes: NodeJSON[] = await fetch('/api/nodes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(key.split(','))
-    })
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => []);
+    const nodes = await resolveNodes(key.split(','));
 
     // Ignore the response if the suggestions changed in the meantime
     if (key !== suggestionNodeIdsKey) return;
-    suggestionNodes = new Map(nodes.map((n) => [n.id, n]));
+    suggestionNodes = nodes;
   }
 
   // Show the first translation unit with suggestions when they arrive, unless the open one has some
