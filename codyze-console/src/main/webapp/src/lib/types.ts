@@ -61,6 +61,12 @@ export interface NodeJSON {
   nextDFG: EdgeJSON[];
   translationUnitId?: string;
   componentName?: string;
+  /** Whether the node was inferred by the analysis instead of being parsed from source code */
+  isInferred?: boolean;
+  /** Whether the node is not written in the source code, e.g. an implicit cast */
+  isImplicit?: boolean;
+  /** For a node with a type: the name of its type */
+  typeName?: string | null;
 }
 
 export interface EdgeJSON {
@@ -68,6 +74,60 @@ export interface EdgeJSON {
   label: string;
   start: string;
   end: string;
+}
+
+/** A node that is related to the node it was listed for, e.g. a neighbour in the dataflow. */
+export interface RelatedNodeJSON {
+  node: NodeJSON;
+  /** How the node relates to the listed node, e.g. the granularity of a dataflow */
+  label: string | null;
+}
+
+/** A function together with its key figures, see `.../translation-unit/{id}/functions`. */
+export interface FunctionCallStatsJSON {
+  function: NodeJSON;
+  callers: number;
+  callees: number;
+  externalCalls: number;
+  unresolvedCalls: number;
+}
+
+/** How well the analysis knows the target of a call. */
+export type CallStatus = 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
+
+/** A call and how well the analysis knows its target, see `.../translation-unit/{id}/calls`. */
+export interface CallSiteJSON {
+  call: NodeJSON;
+  /** The expression naming the target (e.g. `fopen` in `fopen(path, "r")`), if it has a location */
+  callee?: NodeJSON;
+  status: CallStatus;
+}
+
+/** A concept or operation, see `.../translation-unit/{id}/overlays`. */
+export interface OverlayJSON {
+  overlay: NodeJSON;
+  underlyingNode?: NodeJSON;
+  /** For an operation: the concept it belongs to */
+  concept?: NodeJSON;
+}
+
+/** Everything the backend knows about a single node, see `GET /api/node/{id}`. */
+export interface NodeDetailsJSON {
+  node: NodeJSON;
+  enclosingFunction?: NodeJSON;
+  overlays: OverlayJSON[];
+  callTargets: NodeJSON[];
+  callers: NodeJSON[];
+  callees: NodeJSON[];
+  dataflowFrom: RelatedNodeJSON[];
+  dataflowTo: RelatedNodeJSON[];
+  warnings: string[];
+  /** The number of nodes of each list before the backend limited it */
+  callTargetCount: number;
+  callerCount: number;
+  calleeCount: number;
+  dataflowFromCount: number;
+  dataflowToCount: number;
 }
 
 // MCP capabilities
@@ -147,6 +207,8 @@ export interface ChatMessage {
   contentType?: 'text' | 'tool-result';
   toolResult?: ToolResult;
   reasoning?: string;
+  /** For user messages: the selected code the question refers to, which is sent along with it */
+  context?: string;
   timestamp: Date;
 }
 
@@ -255,12 +317,7 @@ export interface ConstructorInfo {
 
 // QueryTree status determination and styling
 export type QueryTreeStatus =
-  | 'FULFILLED'
-  | 'NOT_FULFILLED'
-  | 'REJECTED'
-  | 'UNDECIDED'
-  | 'NOT_YET_EVALUATED'
-  | 'NON_BOOLEAN';
+  'FULFILLED' | 'NOT_FULFILLED' | 'REJECTED' | 'UNDECIDED' | 'NOT_YET_EVALUATED' | 'NON_BOOLEAN';
 
 export interface QueryTreeStatusConfig {
   bgColor: string;
