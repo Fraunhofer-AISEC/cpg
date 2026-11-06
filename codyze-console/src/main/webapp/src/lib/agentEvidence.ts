@@ -69,6 +69,11 @@ export function citationLabel(ref: NodeJSON): string {
   return ref.startLine >= 1 ? `${name} · ${ref.fileName ?? ''}:${ref.startLine}` : name;
 }
 
+/** Where a diagnostic is, e.g. `main.c:13`, or `no source` for nodes without source code. */
+export function diagnosticLocation(ref: NodeJSON): string {
+  return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
+}
+
 // The diagnostics of each set of evidence, by its sorted IDs
 const diagnosticsCache = new Map<string, Promise<EvidenceDiagnosticJSON[]>>();
 
