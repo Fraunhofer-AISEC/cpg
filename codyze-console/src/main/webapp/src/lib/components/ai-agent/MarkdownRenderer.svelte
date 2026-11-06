@@ -48,11 +48,23 @@
     if (cite?.dataset.nodeId) onCite?.(cite.dataset.nodeId);
   }
 
+  // Only links to web pages, mail addresses and the page itself are kept: a link like
+  // `javascript:...` in an answer would run code when it is clicked
+  const safeUrl = /^(https?:|mailto:|#|\/|\.\.?\/)/i;
+
+  // The answers contain text of the model and of tool results, which can be influenced by the
+  // analysed code. So no HTML in them is rendered as such: marked turns everything else into HTML
   const marked = new Marked({
     gfm: true, // GitHub Flavored Markdown
     breaks: true, // Convert \n to <br>
     extensions: [nodeCitation],
+    walkTokens(token) {
+      if ((token.type === 'link' || token.type === 'image') && !safeUrl.test(token.href)) {
+        token.href = '#';
+      }
+    },
     renderer: {
+      html: ({ text }) => escapeHtml(text),
       code({ text, lang }: Tokens.Code): string {
         const language = escapeHtml(lang || 'plaintext');
         return `<pre><code class="hljs language-${language}">${escapeHtml(text)}</code></pre>`;
@@ -65,6 +77,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="prose prose-sm prose-gray max-w-none" onclick={handleClick}>
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -- the HTML is made safe by the renderer -->
   {@html html}
 </div>
 
