@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { marked } from 'marked';
-  import type { Tokens } from 'marked';
+  import { Marked } from 'marked';
+  import type { Tokens, TokenizerAndRendererExtension } from 'marked';
   import type { NodeJSON } from '$lib/types';
   import { citationLabel, citationPattern } from '$lib/agentEvidence';
 
@@ -16,35 +16,51 @@
 
   const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-  // Replaces the citations of nodes with chips, which are labeled once the nodes are resolved
-  function renderCitations(text: string): string {
-    if (!onCite) return text;
-    return text.replace(citationPattern, (_, id: string) => {
-      const ref = citations?.get(id.toLowerCase());
-      const label = ref ? citationLabel(ref) : `node …${id.slice(-6)}`;
-      const title = ref ? `${ref.type} ${ref.code}` : 'Cited node';
-      return `<button type="button" class="node-cite" data-node-id="${id.toLowerCase()}" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
-    });
+  // The chip of a cited node, which is labeled once the node is resolved
+  function renderCitation(id: string): string {
+    const ref = citations?.get(id);
+    const label = ref ? citationLabel(ref) : `node …${id.slice(-6)}`;
+    const title = ref ? `${ref.type} ${ref.code}` : 'Cited node';
+    return `<button type="button" class="node-cite" data-node-id="${id}" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
   }
+
+  // Citations are tokens of their own, instead of being replaced in the text before it is parsed.
+  // This way a citation in a code span or block stays what it is: code
+  const citationStart = new RegExp(`^${citationPattern.source}`, 'i');
+  const nodeCitation: TokenizerAndRendererExtension = {
+    name: 'nodeCitation',
+    level: 'inline',
+    start: (src) => src.indexOf('[[node:'),
+    tokenizer(src) {
+      const match = citationStart.exec(src);
+      return match
+        ? { type: 'nodeCitation', raw: match[0], id: match[1].toLowerCase() }
+        : undefined;
+    },
+    renderer(token) {
+      // Without a handler for the clicks, a citation is shown as the text it is
+      return onCite ? renderCitation(token.id as string) : escapeHtml(token.raw);
+    }
+  };
 
   function handleClick(event: MouseEvent) {
     const cite = (event.target as HTMLElement).closest<HTMLElement>('[data-node-id]');
     if (cite?.dataset.nodeId) onCite?.(cite.dataset.nodeId);
   }
 
-  const renderer = new marked.Renderer();
-  renderer.code = function ({ text, lang }: Tokens.Code): string {
-    const language = lang || 'plaintext';
-    return `<pre><code class="hljs language-${language}">${text}</code></pre>`;
-  };
-
-  marked.use({
+  const marked = new Marked({
     gfm: true, // GitHub Flavored Markdown
     breaks: true, // Convert \n to <br>
-    renderer
+    extensions: [nodeCitation],
+    renderer: {
+      code({ text, lang }: Tokens.Code): string {
+        const language = lang || 'plaintext';
+        return `<pre><code class="hljs language-${language}">${text}</code></pre>`;
+      }
+    }
   });
 
-  let html = $derived(marked.parse(renderCitations(content)) as string);
+  let html = $derived(marked.parse(content) as string);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
