@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
+import de.fraunhofer.aisec.cpg.sarif.Region
 import io.ktor.http.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
@@ -232,14 +233,14 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                 call.parameters["column"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
+            // The target is the character at the position, or the range up to the (exclusive) end
+            val endLine = call.parameters["endLine"]?.toIntOrNull() ?: line
+            val endColumn = call.parameters["endColumn"]?.toIntOrNull() ?: (column + 1)
             val details =
                 service.getNodeDetailsAt(
                     componentName,
                     id,
-                    line,
-                    column,
-                    call.parameters["endLine"]?.toIntOrNull(),
-                    call.parameters["endColumn"]?.toIntOrNull(),
+                    Region(line, column, endLine, endColumn),
                 )
             if (details != null) {
                 call.respond(details)

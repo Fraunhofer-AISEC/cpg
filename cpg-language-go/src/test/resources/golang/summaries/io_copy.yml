@@ -1,0 +1,7 @@
+- functionDeclaration:
+    language: de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+    methodName: io.Copy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full

@@ -49,6 +49,9 @@ class NodeDetailsTest {
     private fun at(startLine: Int, startColumn: Int, endLine: Int, endColumn: Int) =
         PhysicalLocation(uri, Region(startLine, startColumn, endLine, endColumn))
 
+    private fun TranslationUnit.nodeAtChar(line: Int, column: Int) =
+        nodeAt(Region(line, column, line, column + 1))
+
     // void main() {        line 1
     //   puts(x);           line 2, the call spans the columns 3 to 11, its callee 3 to 7
     // }                    line 3
@@ -87,21 +90,21 @@ class NodeDetailsTest {
 
     @Test
     fun testInnermostNode() {
-        assertSame(callee, tu.nodeAt(2, 4))
-        assertSame(argument, tu.nodeAt(2, 8))
+        assertSame(callee, tu.nodeAtChar(2, 4))
+        assertSame(argument, tu.nodeAtChar(2, 8))
         // Between the argument and the closing parenthesis, only the call contains the position
-        assertSame(call, tu.nodeAt(2, 10))
-        assertSame(body, tu.nodeAt(3, 1))
+        assertSame(call, tu.nodeAtChar(2, 10))
+        assertSame(body, tu.nodeAtChar(3, 1))
     }
 
     @Test
     fun testEndColumnIsExclusive() {
-        assertSame(body, tu.nodeAt(2, 11))
+        assertSame(body, tu.nodeAtChar(2, 11))
     }
 
     @Test
     fun testNoNodeOutsideOfTheCode() {
-        assertNull(tu.nodeAt(10, 1))
+        assertNull(tu.nodeAtChar(10, 1))
     }
 
     @Test
@@ -112,7 +115,7 @@ class NodeDetailsTest {
                 isImplicit = true
                 location = at(2, 3, 2, 11)
             }
-        assertSame(call, tu.nodeAt(2, 10))
+        assertSame(call, tu.nodeAtChar(2, 10))
     }
 
     @Test
@@ -123,14 +126,14 @@ class NodeDetailsTest {
                 name = Name("y")
                 location = PhysicalLocation(URI("file:/details.h"), Region(2, 8, 2, 9))
             }
-        assertSame(argument, tu.nodeAt(2, 8))
+        assertSame(argument, tu.nodeAtChar(2, 8))
     }
 
     @Test
     fun testDeeperNodeIsPreferredWithTheSameRegion() {
         // A callee that spans the whole call, e.g. a call without parentheses
         callee.location = at(2, 3, 2, 11)
-        assertSame(callee, tu.nodeAt(2, 10))
+        assertSame(callee, tu.nodeAtChar(2, 10))
     }
 
     @Test

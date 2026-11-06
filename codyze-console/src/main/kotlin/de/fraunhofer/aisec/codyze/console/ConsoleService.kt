@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedCo
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
@@ -261,22 +262,11 @@ class ConsoleService {
     }
 
     /**
-     * Returns the details of the innermost node at the given position of a translation unit (or the
-     * innermost node containing the range up to the end position), or `null` if there is no such
-     * node.
+     * Returns the details of the innermost node of a translation unit that contains the [target]
+     * region (e.g. a clicked character), or `null` if there is no such node.
      */
-    fun getNodeDetailsAt(
-        componentName: String,
-        id: String,
-        line: Int,
-        column: Int,
-        endLine: Int? = null,
-        endColumn: Int? = null,
-    ): NodeDetailsJSON? {
-        return findTranslationUnit(componentName, id)
-            ?.cpgTU
-            ?.nodeAt(line, column, endLine, endColumn)
-            ?.toDetailsJSON()
+    fun getNodeDetailsAt(componentName: String, id: String, target: Region): NodeDetailsJSON? {
+        return findTranslationUnit(componentName, id)?.cpgTU?.nodeAt(target)?.toDetailsJSON()
     }
 
     /**
