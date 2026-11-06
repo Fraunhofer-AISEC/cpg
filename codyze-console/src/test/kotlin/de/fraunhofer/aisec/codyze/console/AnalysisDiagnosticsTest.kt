@@ -76,7 +76,7 @@ class AnalysisDiagnosticsTest {
     private val f = Function().apply { name = Name("f") }
 
     @Test
-    fun testGapKinds() {
+    fun testDiagnosticKinds() {
         assertEquals(listOf(DiagnosticKind.UNRESOLVED_CALL), callG.diagnostics().map { it.kind })
         assertEquals(
             listOf(DiagnosticKind.ANALYSIS_PROBLEM),
@@ -104,11 +104,11 @@ class AnalysisDiagnosticsTest {
     }
 
     @Test
-    fun testEvidenceGaps() {
+    fun testEvidenceDiagnostics() {
         callF.invokes += f
         val diagnostics = evidenceDiagnostics(mapOf("x" to x))
 
-        // The most severe first
+        // Sorted by their kind
         assertEquals(
             listOf(DiagnosticKind.UNRESOLVED_CALL, DiagnosticKind.EXTERNAL_CODE),
             diagnostics.map { it.kind },
@@ -125,7 +125,7 @@ class AnalysisDiagnosticsTest {
     }
 
     @Test
-    fun testGapsOfSeveralEvidenceAreMerged() {
+    fun testDiagnosticsOfSeveralEvidenceAreMerged() {
         f.body = Block()
         callF.invokes += f
         val diagnostics = evidenceDiagnostics(mapOf("x" to x, "f" to callF))
@@ -137,10 +137,47 @@ class AnalysisDiagnosticsTest {
     }
 
     @Test
-    fun testNoGaps() {
+    fun testNoDiagnostics() {
         f.body = Block()
         callF.invokes += f
         main.body = Block().apply { statements += callF }
         assertEquals(emptyList(), evidenceDiagnostics(mapOf("x" to x)))
     }
+
+    @Test
+    fun testSameKindIsSortedByEvidenceCount() {
+        // The first call is relied on by one node, the second one by two
+        val first = unresolvedCall("first", at(5), Reference().apply { name = Name("a") })
+        val second =
+            unresolvedCall(
+                "second",
+                at(6),
+                Reference().apply { name = Name("b") },
+                Reference().apply { name = Name("c") },
+            )
+        val evidence = (first.arguments + second.arguments).associateBy { it.name.localName }
+
+        val diagnostics = evidenceDiagnostics(evidence)
+
+        assertEquals(listOf(second.id, first.id), diagnostics.map { it.location.id })
+        assertEquals(listOf("b", "c"), diagnostics[0].evidence)
+        assertEquals(listOf("a"), diagnostics[1].evidence)
+    }
+
+    @Test
+    fun testNumberOfDiagnosticsIsLimited() {
+        val calls = (1..MAX_EVIDENCE_DIAGNOSTICS + 5).map { unresolvedCall("call$it", at(it)) }
+
+        val diagnostics = evidenceDiagnostics(calls.associateBy { it.name.localName })
+
+        assertEquals(MAX_EVIDENCE_DIAGNOSTICS, diagnostics.size)
+    }
+
+    private fun unresolvedCall(name: String, location: PhysicalLocation, vararg args: Reference) =
+        Call().apply {
+            callee = Reference().apply { this.name = Name(name) }
+            this.name = Name(name)
+            this.location = location
+            arguments += args
+        }
 }

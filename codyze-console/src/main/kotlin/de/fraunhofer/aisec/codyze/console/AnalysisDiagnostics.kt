@@ -35,8 +35,11 @@ import de.fraunhofer.aisec.cpg.serialization.status
 import de.fraunhofer.aisec.cpg.serialization.toRefJSON
 import kotlinx.serialization.Serializable
 
-/** Upper bound for the diagnostics returned for one set of evidence, the most severe ones first. */
-private const val MAX_EVIDENCE_DIAGNOSTICS = 20
+/** Upper bound for the diagnostics returned for one set of evidence. */
+internal const val MAX_EVIDENCE_DIAGNOSTICS = 20
+
+/** Upper bound for the nodes of one set of evidence that are checked for diagnostics. */
+internal const val MAX_EVIDENCE_NODES = 50
 
 /** How much a [Diagnostic] matters. */
 enum class DiagnosticSeverity {
@@ -46,7 +49,7 @@ enum class DiagnosticSeverity {
     INFO,
 }
 
-/** What kind of [Diagnostic] the analysis has at a node, ordered by severity. */
+/** What kind of [Diagnostic] the analysis has at a node. */
 enum class DiagnosticKind(val severity: DiagnosticSeverity) {
     /** A call whose target is unknown, so dataflows through it are unknown as well. */
     UNRESOLVED_CALL(DiagnosticSeverity.WARNING),
@@ -179,9 +182,10 @@ data class EvidenceDiagnosticJSON(
  * Finds the diagnostics of the analysis that the given evidence relies on, see [reliesOn] and
  * [diagnostics].
  *
- * Gaps at the same place are merged, so that each place is listed once with all the evidence that
- * relies on it. The most severe diagnostics come first, and among those of the same kind the ones
- * that most evidence relies on.
+ * Diagnostics of the same kind at the same place are merged, so that each place is listed once with
+ * all the evidence that relies on it. They are sorted by their kind (in the order of the
+ * [DiagnosticKind]s), and among those of the same kind the ones that most evidence relies on come
+ * first. At most [MAX_EVIDENCE_DIAGNOSTICS] are returned.
  */
 fun evidenceDiagnostics(evidence: Map<String, Node>): List<EvidenceDiagnosticJSON> {
     class Found(val reason: String, val evidence: MutableSet<String> = linkedSetOf())

@@ -102,7 +102,7 @@ export interface CodeSelection {
 /** How much a diagnostic matters, see `DiagnosticSeverity`. */
 export type DiagnosticSeverity = 'WARNING' | 'INFO';
 
-/** What a diagnostic is about, the most severe first. */
+/** What a diagnostic is about. */
 export type DiagnosticKind = 'UNRESOLVED_CALL' | 'ANALYSIS_PROBLEM' | 'EXTERNAL_CODE';
 
 /**

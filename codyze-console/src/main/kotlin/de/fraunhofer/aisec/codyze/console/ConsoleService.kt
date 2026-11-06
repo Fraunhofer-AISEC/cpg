@@ -279,11 +279,17 @@ class ConsoleService {
 
     /**
      * Returns the places where the analysis is uncertain that the nodes with the given IDs rely on
-     * (see [evidenceDiagnostics]). IDs of nodes that do not exist are ignored.
+     * (see [evidenceDiagnostics]). IDs of nodes that do not exist are ignored, and only the first
+     * [MAX_EVIDENCE_NODES] distinct IDs are considered.
      */
     fun getEvidenceDiagnostics(nodeIds: Collection<String>): List<EvidenceDiagnosticJSON> {
         return evidenceDiagnostics(
-            nodeIds.toSet().mapNotNull { id -> findNode(id)?.let { id to it } }.toMap()
+            nodeIds
+                .asSequence()
+                .distinct()
+                .take(MAX_EVIDENCE_NODES)
+                .mapNotNull { id -> findNode(id)?.let { id to it } }
+                .toMap()
         )
     }
 
