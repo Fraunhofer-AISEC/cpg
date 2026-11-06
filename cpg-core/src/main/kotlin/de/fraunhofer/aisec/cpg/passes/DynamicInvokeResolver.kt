@@ -83,15 +83,66 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private var inferDfgForUnresolvedCalls = false
     private var keyedInitializers: Map<Pair<Name, String>, List<Expression>> = mapOf()
 
+    /**
+     * Functions whose address is taken somewhere -- used as a value rather than called directly --
+     * indexed by how many parameters they have, together with every function literal.
+     *
+     * These are the only functions an indirect call can possibly reach: a function that is never
+     * referred to as a value cannot end up in a variable, a field or a container, so it cannot be
+     * what `f(x)` invokes.
+     */
+    private var addressTakenByArity: Map<Int, List<Function>> = mapOf()
+
     override fun accept(component: Component) {
         inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
         collectKeyedInitializers(component)
+        collectAddressTakenFunctions(component)
         walker = ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node -> handle(node) }
 
         for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
+    }
+
+    /**
+     * Collects the functions that are used as a value anywhere in [component], plus every function
+     * literal, indexed by parameter count.
+     *
+     * Following the data flow from an indirect call back to the function it will invoke is a
+     * type-flow analysis in its own right, and in the shapes Go libraries are built from -- a
+     * literal converted to a defined function type, handed to a registry, pulled out of a map and
+     * applied through an interface -- the chain regularly exceeds what the data flow graph models.
+     * When the search comes back empty we would otherwise leave the call with no target at all and
+     * lose everything reachable behind it.
+     *
+     * Falling back to every address-taken function of a compatible signature is the standard
+     * over-approximation for this, and it stays sound: a function nobody ever refers to as a value
+     * cannot be the one being called.
+     */
+    private fun collectAddressTakenFunctions(component: Component) {
+        val byArity = mutableMapOf<Int, MutableList<Function>>()
+        val seen = identitySetOf<Function>()
+
+        fun add(function: Function) {
+            if (seen.add(function)) {
+                byArity.getOrPut(function.parameters.size) { mutableListOf() } += function
+            }
+        }
+
+        for (lambda in component.allChildren<Lambda>()) {
+            lambda.function?.let { add(it) }
+        }
+        for (reference in component.allChildren<Reference>()) {
+            val function = reference.refersTo as? Function ?: continue
+            // The callee of a direct call is not an address being taken.
+            if ((reference.astParent as? Call)?.callee === reference) {
+                continue
+            }
+            add(function)
+        }
+
+        addressTakenByArity = byArity
     }
 
     /**
@@ -309,6 +360,15 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             prevDFGToPush.forEach(Consumer(work::push))
+        }
+
+        // The data flow did not lead anywhere. Rather than leave the call without a target, take
+        // every address-taken function the pointer's signature admits; see
+        // [collectAddressTakenFunctions].
+        if (invocationCandidates.isEmpty()) {
+            addressTakenByArity[pointerType.parameters.size]?.filterTo(invocationCandidates) {
+                matchInvokesCandidateSignature(it, pointerType, false)
+            }
         }
 
         // Keep whatever was there if we found nothing: an inferred target is still better than no
