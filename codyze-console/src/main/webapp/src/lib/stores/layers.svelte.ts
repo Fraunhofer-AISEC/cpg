@@ -1,5 +1,5 @@
 /** A layer of information that is drawn on top of the code and can be toggled. */
-export type Layer = 'concepts' | 'external' | 'uncertain' | 'dataflow';
+export type Layer = 'concepts' | 'external' | 'uncertain' | 'dataflow' | 'agent';
 
 export interface LayerInfo {
   id: Layer;
@@ -47,6 +47,15 @@ export const layerInfos: LayerInfo[] = [
       'The direct dataflows of the selection, as arcs next to the line numbers: arrows point to where the value goes',
     color: 'rgb(71, 85, 105)',
     activeClass: 'border-slate-300 bg-slate-100 text-slate-700'
+  },
+  {
+    id: 'agent',
+    icon: '●',
+    label: 'Agent',
+    description:
+      'The evidence of the active question to the agent, as numbered markers of its steps in the gutter: solid if a tool returned the node, dashed if the answer only cites it',
+    color: 'rgb(15, 23, 42)',
+    activeClass: 'border-slate-400 bg-slate-100 text-slate-800'
   }
 ];
 
@@ -57,7 +66,8 @@ function load(): Record<Layer, boolean> {
     concepts: true,
     external: true,
     uncertain: true,
-    dataflow: true
+    dataflow: true,
+    agent: true
   };
   try {
     const stored = JSON.parse(localStorage.getItem(storageKey) ?? '{}');

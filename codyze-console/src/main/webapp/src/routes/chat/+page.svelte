@@ -41,7 +41,10 @@
     return agentSession.mcpCapabilities?.tools.some((t) => t.name === toolName) ?? false;
   }
 
-  function isConceptSuggestion(toolName: string | undefined, content: any): content is LLMConcept {
+  function isConceptSuggestion(
+    toolName: string | undefined,
+    content: unknown
+  ): content is LLMConcept {
     return (
       toolName === SUGGEST_LLM_CONCEPTS_TOOL &&
       content != null &&
@@ -128,10 +131,12 @@
       };
     try {
       const parsed = JSON.parse(stored);
-      const messages = parsed.messages.map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
-      }));
+      const messages = parsed.messages.map(
+        (msg: Omit<ChatMessage, 'timestamp'> & { timestamp: string }) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })
+      );
       return {
         messages,
         suggestions: parsed.suggestions ?? [],
@@ -419,7 +424,6 @@
       {currentMessage}
       {isLoading}
       {streamingContent}
-      isThinking={streamingReasoning.length > 0}
       {models}
       {selectedModel}
       {analysisResult}

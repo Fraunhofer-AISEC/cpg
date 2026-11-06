@@ -274,13 +274,33 @@ class ConsoleService {
      * analysis warnings), or `null` if there is no such node.
      */
     fun getNodeDetails(nodeId: String): NodeDetailsJSON? {
+        return findNode(nodeId)?.toDetailsJSON()
+    }
+
+    /**
+     * Returns the places where the analysis is uncertain that the nodes with the given IDs rely on
+     * (see [evidenceDiagnostics]). IDs of nodes that do not exist are ignored, and only the first
+     * [MAX_EVIDENCE_NODES] distinct IDs are considered.
+     */
+    fun getEvidenceDiagnostics(nodeIds: Collection<String>): List<EvidenceDiagnosticJSON> {
+        return evidenceDiagnostics(
+            nodeIds
+                .asSequence()
+                .distinct()
+                .take(MAX_EVIDENCE_NODES)
+                .mapNotNull { id -> findNode(id)?.let { id to it } }
+                .toMap()
+        )
+    }
+
+    /** Returns the node (or overlay) with the given ID, using [nodeIndex]. */
+    private fun findNode(nodeId: String): Node? {
         val id = Uuid.parseOrNull(nodeId) ?: return null
         // Overlays can be added to the graph without the console noticing, e.g. by the MCP tools
         // that apply the concepts of the agent, so a missing node leads to a fresh index. Unknown
         // IDs are not remembered: the ID of a node is derived from its hash code and can change
         // when the node changes, so an ID that is unknown now can belong to a node later
-        val node = nodeIndex?.get(id) ?: buildNodeIndex()?.get(id)
-        return node?.toDetailsJSON()
+        return nodeIndex?.get(id) ?: buildNodeIndex()?.get(id)
     }
 
     /** Builds [nodeIndex] from the current analysis result, or returns `null` if there is none. */

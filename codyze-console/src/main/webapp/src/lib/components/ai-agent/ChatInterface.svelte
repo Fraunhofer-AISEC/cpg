@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
@@ -16,6 +17,17 @@
   import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
+  import {
+    citationLabel,
+    diagnosticLocation,
+    extractCitations,
+    resolveNodes
+  } from '$lib/agentEvidence';
+  import {
+    ConversationEvidence,
+    DIAGNOSTICS_PREVIEW
+  } from '$lib/stores/conversationEvidence.svelte';
+  import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails } from '$lib/nodeDetails';
   import { countByTranslationUnit, getComponentOverlays, type FileOverview } from '$lib/overview';
@@ -28,7 +40,8 @@
     ConceptSuggestionItem,
     Model,
     NodeDetailsJSON,
-    OverlayJSON
+    OverlayJSON,
+    CodeSelection
   } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
@@ -111,10 +124,8 @@
         if (tu) return tu;
       }
     }
-    if ((node as any).componentName) {
-      const component = analysisResult.components.find(
-        (c) => c.name === (node as any).componentName
-      );
+    if (node.componentName) {
+      const component = analysisResult.components.find((c) => c.name === node.componentName);
       if (component?.translationUnits.length) return component.translationUnits[0];
     }
     return null;
@@ -123,15 +134,9 @@
   async function handleNodeClick(node: NodeJSON) {
     // Compact tool results (nodeId, signature, file:line) carry no translation unit, so look the node up by its ID
     if (!node.translationUnitId && !node.fileName) {
-      const id = (node as any).nodeId ?? node.id;
+      const id = (node as NodeJSON & { nodeId?: string }).nodeId ?? node.id;
       if (!id) return;
-      const [resolved]: NodeJSON[] = await fetch('/api/nodes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([id])
-      })
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => []);
+      const resolved = (await resolveNodes([id])).get(id);
       if (!resolved) return;
       node = resolved;
     }
@@ -177,6 +182,29 @@
 
   function askAboutNode(details: NodeDetailsJSON, question: (where: string) => string) {
     onMessageChange(question(describeNode(details.node)));
+  }
+
+  // The input next to selected code asks right away. The selection is the context of the question,
+  // instead of the inspected node
+  const maxSelectionLength = 2000;
+
+  function describeSelection(s: CodeSelection): string {
+    const lines = s.startLine === s.endLine ? `${s.startLine}` : `${s.startLine}-${s.endLine}`;
+    const text =
+      s.text.length > maxSelectionLength ? `${s.text.slice(0, maxSelectionLength)}…` : s.text;
+    const node = s.node ? `; the innermost node containing it is ${describeNode(s.node)}` : '';
+    return `${s.fileName}:${lines}, selected code \`${text}\`${node}`;
+  }
+
+  function askAboutSelection(question: string, selection: CodeSelection) {
+    if (isLoading) return;
+    // The draft in the input stays where it is
+    const draft = currentMessage;
+    showAgent();
+    conversation.chosenBlock = null;
+    onMessageChange(question);
+    onSendMessage(describeSelection(selection));
+    onMessageChange(draft);
   }
 
   // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
@@ -275,7 +303,6 @@
     currentMessage: string;
     isLoading: boolean;
     streamingContent: string;
-    isThinking: boolean;
     models?: Model[];
     selectedModel?: Model | null;
     analysisResult?: AnalysisResultJSON | null;
@@ -296,7 +323,6 @@
     currentMessage,
     isLoading,
     streamingContent,
-    isThinking,
     models = [],
     selectedModel = null,
     analysisResult,
@@ -308,6 +334,14 @@
     onModelSelect,
     onPromptSelect
   }: Props = $props();
+
+  // The evidence trail of the conversation: its steps, the nodes they return and the diagnostics
+  const conversation = new ConversationEvidence(() => ({
+    messages,
+    streamingContent,
+    isLoading,
+    agentVisible: layers.visible.agent
+  }));
 
   // The component of the open file, or of the last open file if all tabs were closed
   const selectedComponent: ComponentJSON | null = $derived(
@@ -348,6 +382,14 @@
         label: 'Open file…',
         shortcut: `${mod}P`,
         run: () => (paletteQuery = '')
+      },
+      {
+        id: 'ask',
+        category: 'Selection',
+        label: 'Ask the agent about the selected code',
+        shortcut: `${mod}K`,
+        disabledReason: openedUnit ? undefined : 'No file is open',
+        run: () => askRequest++
       },
       {
         id: 'back',
@@ -511,6 +553,48 @@
     focus.inspect(() => getNodeDetails(nodeId), true);
   }
 
+  // Inspects a node cited by the agent and shows it in the code
+  async function openCitation(nodeId: string) {
+    const ref =
+      conversation.citedRefs.get(nodeId) ?? (await getNodeDetails(nodeId).catch(() => null))?.node;
+    if (ref) selectRef(ref);
+  }
+
+  // The files with evidence of the active thread, marked in the file tree
+  const threadUnits = $derived(
+    new Set(
+      layers.visible.agent
+        ? focus.thread.flatMap((n) => (n.ref.translationUnitId ? [n.ref.translationUnitId] : []))
+        : []
+    )
+  );
+
+  // The step of the inspected node, if it belongs to the active thread
+  const threadStepIndex = $derived(
+    conversation.threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
+  );
+
+  function goToThreadStep(index: number) {
+    const step = conversation.threadSteps[index];
+    if (step) selectRef(step.nodes[0]);
+  }
+
+  // The evidence of the active block, shown as numbered markers in the code
+  $effect(() => {
+    const evidence = conversation.blockEvidence[conversation.activeBlock];
+    const nodes: ThreadNode[] = [];
+    if (evidence) {
+      for (const { step, ids } of evidence.steps) {
+        for (const ref of conversation.stepNodes(ids)) nodes.push({ ref, step, claimed: false });
+      }
+      const answerStep = evidence.steps.length + 1;
+      for (const ref of conversation.stepNodes(evidence.claimed)) {
+        nodes.push({ ref, step: answerStep, claimed: true });
+      }
+    }
+    focus.thread = nodes;
+  });
+
   // The concept suggestions are attached to the last tool result that suggested a concept
   const suggestionAnchorIndex = $derived(
     suggestions.length > 0
@@ -647,6 +731,13 @@
     document.body.style.cursor = 'col-resize';
   }
 
+  // Why the agent cannot be asked right now
+  const askDisabledReason = $derived(
+    isLoading ? 'The agent is still working' : !selectedModel ? 'No LLM provider configured' : null
+  );
+  // Incremented to open the input for the selected code, e.g. from the command palette
+  let askRequest = $state(0);
+
   // The selected node is attached to questions as context, unless the user removed it
   let dismissedContextId = $state<string | null>(null);
   const contextNode = $derived(
@@ -655,6 +746,8 @@
 
   function send() {
     showAgent();
+    // The new question becomes the active thread
+    conversation.chosenBlock = null;
     onSendMessage(contextNode ? describeNode(contextNode) : undefined);
   }
 
@@ -719,17 +812,11 @@
   });
 
   async function loadSuggestionNodes(key: string) {
-    const nodes: NodeJSON[] = await fetch('/api/nodes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(key.split(','))
-    })
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => []);
+    const nodes = await resolveNodes(key.split(','));
 
     // Ignore the response if the suggestions changed in the meantime
     if (key !== suggestionNodeIdsKey) return;
-    suggestionNodes = new Map(nodes.map((n) => [n.id, n]));
+    suggestionNodes = nodes;
   }
 
   // Show the first translation unit with suggestions when they arrive, unless the open one has some
@@ -771,23 +858,21 @@
   }
 
   $effect(() => {
-    messages.length;
-    streamingContent;
+    void messages.length;
+    void streamingContent;
     if (shouldAutoScroll) {
       requestAnimationFrame(() => scrollToBottom());
     }
   });
 
-  let expandedReasoning = $state<Set<string>>(new Set());
+  const expandedReasoning = new SvelteSet<string>();
 
   function toggleReasoning(id: string) {
-    const next = new Set(expandedReasoning);
-    if (next.has(id)) {
-      next.delete(id);
+    if (expandedReasoning.has(id)) {
+      expandedReasoning.delete(id);
     } else {
-      next.add(id);
+      expandedReasoning.add(id);
     }
-    expandedReasoning = next;
   }
 </script>
 
@@ -807,6 +892,117 @@
       {q.label}
     </button>
   {/each}
+{/snippet}
+
+<!-- The reasoning of the model before a message, collapsed -->
+<!-- Where the analysis is uncertain for the evidence of a block, in the color of uncertainty -->
+{#snippet diagnosticNotes(b: number)}
+  {@const diagnostics = conversation.blockDiagnostics[b] ?? []}
+  {@const claimed = conversation.stepNodes(conversation.blockEvidence[b]?.claimed ?? [])}
+  {@const shown = conversation.diagnosticsExpanded[b]
+    ? diagnostics
+    : diagnostics.slice(0, DIAGNOSTICS_PREVIEW)}
+  {#if diagnostics.length > 0 || claimed.length > 0}
+    <ul class="space-y-0.5 border-t border-gray-100 py-1.5 text-[11px] leading-snug">
+      {#each shown as diagnostic (diagnostic.kind + diagnostic.location.id)}
+        {@const subject = conversation.diagnosticSubject(diagnostic, b)}
+        {@const warning = diagnostic.severity === 'WARNING'}
+        <li class={warning ? 'text-red-700' : 'text-gray-500'}>
+          <button
+            type="button"
+            class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left disabled:hover:bg-transparent {warning
+              ? 'hover:bg-red-50'
+              : 'hover:bg-gray-50'}"
+            disabled={diagnostic.location.startLine < 1}
+            title={diagnostic.location.code || diagnostic.location.name}
+            onclick={() => {
+              conversation.chosenBlock = b;
+              selectRef(diagnostic.location);
+            }}
+          >
+            <span aria-hidden="true">{warning ? '⚠' : 'ⓘ'}</span>
+            <span class="min-w-0 flex-1"
+              >{subject.text}
+              {subject.plural ? 'rely' : 'relies'} on {diagnostic.reason}
+              <span
+                class="font-mono whitespace-nowrap {warning ? 'text-red-800/80' : 'text-gray-400'}"
+                >· {diagnosticLocation(diagnostic.location)}</span
+              ></span
+            >
+          </button>
+        </li>
+      {/each}
+      {#if diagnostics.length > DIAGNOSTICS_PREVIEW}
+        <li>
+          <button
+            type="button"
+            class="rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+            onclick={() =>
+              (conversation.diagnosticsExpanded = {
+                ...conversation.diagnosticsExpanded,
+                [b]: !conversation.diagnosticsExpanded[b]
+              })}
+          >
+            {conversation.diagnosticsExpanded[b]
+              ? 'Show less'
+              : `+ ${diagnostics.length - DIAGNOSTICS_PREVIEW} more`}
+          </button>
+        </li>
+      {/if}
+      {#if claimed.length > 0}
+        <!-- Cited nodes no tool returned are claims of the model, not results of the analysis -->
+        <li class="flex flex-wrap items-center gap-1 px-1 text-red-700">
+          <span aria-hidden="true">⚠</span>
+          <span
+            >The answer cites {claimed.length === 1 ? 'a node' : `${claimed.length} nodes`} no tool returned:</span
+          >
+          {#each claimed as ref (ref.id)}
+            <button
+              type="button"
+              class="rounded border border-dashed border-gray-300 px-1 font-mono text-[10px] text-gray-700 hover:border-gray-500 hover:bg-gray-50"
+              onclick={() => {
+                conversation.chosenBlock = b;
+                selectRef(ref);
+              }}
+            >
+              {citationLabel(ref)}
+            </button>
+          {/each}
+        </li>
+      {/if}
+    </ul>
+  {/if}
+{/snippet}
+
+{#snippet reasoning(message: ChatMessage)}
+  {#if message.reasoning}
+    <div class="my-1 inline-block">
+      <button
+        class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
+        onclick={() => toggleReasoning(message.id)}
+      >
+        <svg
+          class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(message.id)
+            ? 'rotate-90'
+            : ''}"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Thought process</span>
+      </button>
+      {#if expandedReasoning.has(message.id)}
+        <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
+          <p class="text-xs leading-relaxed whitespace-pre-wrap text-gray-400 italic">
+            {message.reasoning}
+          </p>
+        </div>
+      {/if}
+    </div>
+  {/if}
 {/snippet}
 
 {#snippet workingDot()}
@@ -946,6 +1142,7 @@
           onComponentSelect={handleComponentSelect}
           conceptSuggestions={tusWithSuggestions}
           {conceptCounts}
+          agentUnits={threadUnits}
           revealUnit={treeReveal}
           embedded
         />
@@ -1016,6 +1213,21 @@
         {/each}
       </div>
     {/if}
+    {#if conversation.threadSteps.length > 0}
+      <StepBar
+        title="Agent"
+        steps={conversation.threadSteps.map((s) => ({
+          label: s.label,
+          title: s.title,
+          number: s.step
+        }))}
+        index={threadStepIndex}
+        onSelect={goToThreadStep}
+        onClose={() => layers.toggle('agent')}
+        closeTitle="Hide the agent's evidence (● Agent layer)"
+        shape="square"
+      />
+    {/if}
     {#if focus.path.length >= 2}
       <StepBar
         title="Path"
@@ -1023,6 +1235,7 @@
         index={focus.pathIndex}
         onSelect={goToStep}
         onClose={() => focus.clearPath()}
+        closeTitle="Close the dataflow path"
       />
     {/if}
     <div class="flex min-h-0 flex-1">
@@ -1034,7 +1247,6 @@
       {:else if selectedTranslationUnit && openedUnit?.id === selectedTranslationUnit.id}
         <CodeViewer
           translationUnit={openedUnit}
-          highlightLine={selectedNode?.startLine ?? undefined}
           componentName={selectedComponentName ?? undefined}
           selectedNodeId={selectedNode?.id}
           onNavigateToNode={handleNavigateToNode}
@@ -1044,6 +1256,9 @@
           externalInspector
           lanes
           onInspect={showInspector}
+          onAsk={askAboutSelection}
+          {askDisabledReason}
+          {askRequest}
         >
           {#snippet headerStart()}
             {@render historyButtons()}
@@ -1150,7 +1365,7 @@
       {:else}
         <!-- Messages -->
         <div
-          class="min-h-0 flex-1 overflow-y-auto"
+          class="min-h-0 flex-1 overflow-y-auto bg-gray-50"
           style="transform: translateZ(0);"
           bind:this={messagesContainer}
           onscroll={handleScroll}
@@ -1176,93 +1391,154 @@
             </div>
           {/if}
 
-          {#each messages as message, i (i)}
-            {#if message.role === 'user'}
-              <div class="flex flex-col items-end gap-1 px-3 py-2">
-                {#if message.context}
-                  <span
-                    class="max-w-[85%] truncate rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500"
-                    title={message.context}>📎 {message.context}</span
-                  >
-                {/if}
-                <div class="max-w-[85%] rounded-2xl bg-blue-600 px-3 py-2 text-white">
-                  <div class="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
-                </div>
-              </div>
-            {:else}
-              <div class={message.contentType === 'tool-result' ? 'px-3 py-1' : 'px-3 py-3'}>
-                {#if message.reasoning}
-                  <div class="mb-2 inline-block">
-                    <button
-                      class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
-                      onclick={() => toggleReasoning(message.id)}
+          {#each conversation.timeline as block, b (b)}
+            {@const isLast = b === conversation.timeline.length - 1}
+            {@const isActive = b === conversation.activeBlock}
+            {@const evidence = conversation.blockEvidence[b]}
+            {@const hasEvidence =
+              evidence.steps.some((s) => s.ids.length) || evidence.claimed.length > 0}
+            <section
+              class="mx-2 my-2 rounded-md border bg-white {isActive && hasEvidence
+                ? 'border-slate-400'
+                : 'border-gray-200'}"
+            >
+              {#if block.question}
+                <!-- The question, with the code it refers to -->
+                <header class="border-b border-gray-100 px-3 py-2">
+                  <div class="flex items-start gap-2">
+                    <p
+                      class="min-w-0 flex-1 text-sm leading-snug font-medium whitespace-pre-wrap text-gray-900"
                     >
-                      <svg
-                        class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(
-                          message.id
-                        )
-                          ? 'rotate-90'
-                          : ''}"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
+                      {block.question.content}
+                    </p>
+                    {#if hasEvidence}
+                      <!-- Only one thread is shown in the code at a time -->
+                      <button
+                        type="button"
+                        class="mt-0.5 shrink-0 rounded px-1 text-[11px] {isActive
+                          ? 'text-slate-800'
+                          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}"
+                        aria-pressed={isActive}
+                        disabled={isActive}
+                        title={isActive
+                          ? 'The evidence of this question is shown in the code'
+                          : 'Show the evidence of this question in the code'}
+                        onclick={() => (conversation.chosenBlock = b)}
                       >
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                      <span>Thought process</span>
-                    </button>
-                    {#if expandedReasoning.has(message.id)}
-                      <div class="mt-1.5 ml-4 border-l-2 border-gray-200 pl-3">
-                        <p class="text-xs leading-relaxed whitespace-pre-wrap text-gray-400 italic">
-                          {message.reasoning}
-                        </p>
+                        {isActive ? '● in code' : '○ show in code'}
+                      </button>
+                    {/if}
+                  </div>
+                  {#if block.question.context}
+                    <p
+                      class="mt-1 truncate font-mono text-[10px] text-gray-500"
+                      title={block.question.context}
+                    >
+                      📎 {block.question.context}
+                    </p>
+                  {/if}
+                </header>
+              {/if}
+              <div class="px-3 py-1.5">
+                {#each block.entries as entry (entry.index)}
+                  {@const message = entry.message}
+                  {@render reasoning(message)}
+                  {#if message.contentType === 'tool-result' && message.toolResult}
+                    <!-- A tool call: a numbered step of the evidence trail -->
+                    <div class="flex min-w-0 items-start gap-1.5">
+                      <span
+                        class="mt-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm bg-slate-700 px-0.5 text-[10px] leading-none font-semibold text-white tabular-nums"
+                        title="Step {entry.step}"
+                      >
+                        {entry.step}
+                      </span>
+                      <div class="min-w-0 flex-1">
+                        <ToolResultBlock
+                          toolResult={message.toolResult}
+                          onItemClick={handleNodeClick}
+                        />
+                      </div>
+                      {#if conversation.stepNodes(evidence.steps.find((s) => s.step === entry.step)?.ids ?? []).length > 0}
+                        {@const nodes = conversation.stepNodes(
+                          evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
+                        )}
+                        <button
+                          type="button"
+                          class="mt-1.5 shrink-0 rounded px-1 text-[11px] text-gray-400 tabular-nums hover:bg-gray-100 hover:text-gray-700"
+                          title="Go to the first of the nodes this step returned"
+                          onclick={() => {
+                            conversation.chosenBlock = b;
+                            selectRef(nodes[0]);
+                          }}
+                        >
+                          {nodes.length}
+                          {nodes.length === 1 ? 'node' : 'nodes'} →
+                        </button>
+                      {/if}
+                    </div>
+                    {#if entry.index === suggestionAnchorIndex}
+                      <!-- The pending concept suggestions of the agent, to accept or reject -->
+                      <div class="my-1 ml-5 overflow-hidden rounded border border-gray-200">
+                        <ConceptChecklist
+                          bind:items={suggestions}
+                          onApplySuggestions={handleApplyAndReload}
+                          onHighlightNode={revealSuggestedNode}
+                        />
+                      </div>
+                    {/if}
+                  {:else if message.content}
+                    <!-- The answer (or an error) -->
+                    <div class="prose prose-sm max-w-none py-1.5 text-gray-800">
+                      <MarkdownRenderer
+                        content={message.content}
+                        citations={conversation.citedRefs}
+                        onCite={openCitation}
+                      />
+                    </div>
+                    {#if message.contentType === 'text' && extractCitations(message.content).length === 0}
+                      <!-- Answers are only verifiable through the nodes they rely on -->
+                      <p
+                        class="pb-1 text-[11px] text-gray-400"
+                        title="The answer cites no nodes of the code, so it is not backed by evidence from the analysis"
+                      >
+                        ○ Unsupported: no nodes cited
+                      </p>
+                    {/if}
+                  {/if}
+                {/each}
+
+                {#if !(isLast && isLoading)}
+                  {@render diagnosticNotes(b)}
+                {/if}
+
+                {#if isLast && (isLoading || displayContent)}
+                  <div class="py-1.5">
+                    {#if displayContent}
+                      <div class="prose prose-sm max-w-none text-gray-800">
+                        <MarkdownRenderer
+                          content={displayContent}
+                          citations={conversation.citedRefs}
+                          onCite={openCitation}
+                        />
+                      </div>
+                    {:else}
+                      <div class="flex gap-1 py-1" title="The agent is working">
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"
+                        ></div>
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"
+                        ></div>
+                        <div
+                          class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"
+                        ></div>
                       </div>
                     {/if}
                   </div>
                 {/if}
-                {#if message.contentType === 'tool-result' && message.toolResult}
-                  <ToolResultBlock toolResult={message.toolResult} onItemClick={handleNodeClick} />
-                  {#if i === suggestionAnchorIndex}
-                    <!-- The pending concept suggestions of the agent, to accept or reject -->
-                    <div class="my-1 overflow-hidden rounded border border-gray-200">
-                      <ConceptChecklist
-                        bind:items={suggestions}
-                        onApplySuggestions={handleApplyAndReload}
-                        onHighlightNode={revealSuggestedNode}
-                      />
-                    </div>
-                  {/if}
-                {:else if message.content}
-                  <div class="prose prose-sm max-w-none text-gray-800">
-                    <MarkdownRenderer content={message.content} />
-                  </div>
-                {/if}
               </div>
-            {/if}
+            </section>
           {/each}
-
-          {#if isLoading || displayContent}
-            <div class="px-3 py-3">
-              {#if displayContent}
-                <div class="prose prose-sm max-w-none text-gray-800">
-                  <MarkdownRenderer content={displayContent} />
-                </div>
-              {:else}
-                <div class="flex gap-1">
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"
-                  ></div>
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"
-                  ></div>
-                  <div
-                    class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          {/if}
         </div>
 
         <!-- Input -->
