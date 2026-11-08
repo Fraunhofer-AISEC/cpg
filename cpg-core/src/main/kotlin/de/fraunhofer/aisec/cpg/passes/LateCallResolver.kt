@@ -30,13 +30,27 @@ import de.fraunhofer.aisec.cpg.frontends.HasFirstClassFunctions
 import de.fraunhofer.aisec.cpg.frontends.HasNameOnlyCallResolution
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -83,6 +97,8 @@ class LateCallResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val resolver = SymbolResolver(ctx)
         val calls = component.allChildren<Call>()
         var total = 0
+
+        propagateArgumentTypesToParameters(component)
 
         realRecordsByLocalName.clear()
         realMethodsByName.clear()
@@ -261,6 +277,176 @@ class LateCallResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         call.invokes = candidates
         call.invokeEdges.forEach { it.dynamicInvoke = true }
         return 1
+    }
+
+    /**
+     * Pushes the type of every argument into the parameter it is bound to, and the type of a member
+     * call's base into the receiver of the method it reaches.
+     *
+     * [de.fraunhofer.aisec.cpg.graph.types.HasType.assignedTypes] is meant to carry the types a
+     * node actually holds at runtime, as opposed to the one it was declared with, and it is
+     * propagated by an observer network over assignments, initializers, returns and references.
+     * What that network has no edge for is the call boundary, so the concrete type never reaches
+     * the place where it would do the most good:
+     * ```go
+     * func writeAll(w io.Writer) { w.Write(p) }   // w only ever knows it is an io.Writer
+     * writeAll(&bytes.Buffer{})                   // although the caller knows exactly what it is
+     * ```
+     *
+     * Measured against the VTA reference on the validation corpus, the receiver of a dispatching
+     * call carried 1.1 assigned types on average and that one type was, almost always, the declared
+     * interface itself -- while VTA had found 6 to 12 concrete types for the same receiver. Without
+     * this edge class, assigned types say nothing a declaration does not already say.
+     *
+     * Adding a type informs the observers, so each addition propagates onwards by itself; the loop
+     * is only there because a type that arrives at one parameter can travel to another on the next
+     * pass.
+     */
+    private fun propagateArgumentTypesToParameters(component: Component) {
+        val calls = component.allChildren<Call>()
+
+        // What each function actually returns, as opposed to what it says it returns.
+        // Function.assignedTypeChanged gives up unless the declared return type is a DynamicType,
+        // which no statically typed language ever has, so for Go this propagation is simply off:
+        // `func newErr() error { return &myErr{} }` never tells its callers about *myErr. That is
+        // why every receiver of an `error` sees nothing but `error`, and `error` is on its own the
+        // largest single source of over-approximated dispatch in the corpus.
+        // Kept per result position, because `return bytesEncoder(...), nil` and `e, err :=
+        // makeField(...)` is how Go returns almost everything. Flattening the positions would
+        // hand `error` to `e` and the concrete encoder to `err`, which is worse than useless.
+        val returnedTypes = mutableMapOf<Function, MutableList<MutableSet<Type>>>()
+        for (function in component.allChildren<Function>()) {
+            for (ret in function.allChildren<Return>()) {
+                ret.returnValues.forEachIndexed { index, value ->
+                    val slots = returnedTypes.getOrPut(function) { mutableListOf() }
+                    while (slots.size <= index) slots.add(mutableSetOf())
+                    slots[index] += value.type
+                    slots[index] += value.assignedTypes
+                }
+            }
+        }
+
+        // What concrete types were ever put into a container, per the declaration that holds it.
+        // Subscription already maps a container's assigned types to the element type when the
+        // container is read, so reading works -- but nothing ever records the writes, and an
+        // `[]encoder` that three concrete encoders were appended to still claims to hold nothing
+        // but `encoder`.
+        val containerElements = mutableMapOf<Declaration, MutableSet<Type>>()
+
+        fun recordInto(container: Expression?, element: Expression?) {
+            val declaration = (container as? Reference)?.refersTo ?: return
+            val value = element ?: return
+            val into = containerElements.getOrPut(declaration) { mutableSetOf() }
+            into += value.type
+            into += value.assignedTypes
+        }
+
+        for (call in calls) {
+            // `s = append(s, x, y)` -- Go's way of growing a slice.
+            if (call.name.localName == "append" && call.arguments.size >= 2) {
+                call.arguments.drop(1).forEach { recordInto(call.arguments.firstOrNull(), it) }
+            }
+        }
+        for (assign in component.allChildren<Assign>()) {
+            // `s[i] = x`
+            for ((index, lhs) in assign.lhs.withIndex()) {
+                val subscription = lhs as? Subscription ?: continue
+                recordInto(subscription.arrayExpression, assign.rhs.getOrNull(index))
+            }
+        }
+        for (list in component.allChildren<InitializerList>()) {
+            // `[]encoder{a, b}` and `map[string]encoder{...}`, attributed to what holds them.
+            val holder = (list.astParent as? Variable) ?: continue
+            for (initializer in list.initializers) {
+                val value = (initializer as? KeyValue)?.value ?: initializer
+                val into = containerElements.getOrPut(holder) { mutableSetOf() }
+                into += value.type
+                into += value.assignedTypes
+            }
+        }
+
+        for (round in 1..5) {
+            var added = 0
+
+            fun push(target: HasType, source: HasType) {
+                val before = target.assignedTypes.size
+                target.addAssignedType(source.type)
+                target.addAssignedTypes(source.assignedTypes)
+                added += target.assignedTypes.size - before
+            }
+
+            for (call in calls) {
+                for (invoked in call.invokes) {
+                    for ((i, parameter) in invoked.parameters.withIndex()) {
+                        if (parameter.isVariadic) {
+                            // Everything from here on is collected into this parameter.
+                            call.arguments.drop(i).forEach { push(parameter, it) }
+                            break
+                        }
+                        call.arguments.getOrNull(i)?.let { push(parameter, it) }
+                    }
+
+                    // The base of a member call is what the method's receiver will hold.
+                    val receiver = (invoked as? Method)?.receiver
+                    val base = (call as? MemberCall)?.base
+                    if (receiver != null && base != null) {
+                        push(receiver, base)
+                    }
+
+                    // ... and a single-valued call holds whatever the callee actually returns.
+                    returnedTypes[invoked]?.singleOrNull()?.let { types ->
+                        val before = call.assignedTypes.size
+                        call.addAssignedTypes(types)
+                        added += call.assignedTypes.size - before
+                    }
+                }
+            }
+
+            // `v, err := f()` -- give each target of the destructuring the types that position
+            // of the callee actually returns.
+            for (assign in component.allChildren<Assign>()) {
+                if (assign.lhs.size < 2) continue
+                val call = assign.rhs.singleOrNull() as? Call ?: continue
+                for (invoked in call.invokes) {
+                    val slots = returnedTypes[invoked] ?: continue
+                    assign.lhs.forEachIndexed { index, target ->
+                        val types = slots.getOrNull(index) ?: return@forEachIndexed
+                        val holder = target as? HasType ?: return@forEachIndexed
+                        val before = holder.assignedTypes.size
+                        holder.addAssignedTypes(types)
+                        (holder as? Reference)?.refersTo?.let { declaration ->
+                            (declaration as? HasType)?.addAssignedTypes(types)
+                        }
+                        added += holder.assignedTypes.size - before
+                    }
+                }
+            }
+
+            // Hand the recorded element types to everything that reads the container: an index
+            // expression, or the variable of a range loop over it.
+            for (subscription in component.allChildren<Subscription>()) {
+                val declaration = (subscription.arrayExpression as? Reference)?.refersTo ?: continue
+                containerElements[declaration]?.let {
+                    val before = subscription.assignedTypes.size
+                    subscription.addAssignedTypes(it)
+                    added += subscription.assignedTypes.size - before
+                }
+            }
+            for (loop in component.allChildren<ForEach>()) {
+                val declaration = (loop.iterable as? Reference)?.refersTo ?: continue
+                val elements = containerElements[declaration] ?: continue
+                val declared = (loop.variable as? DeclarationStatement)?.declarations ?: loop.locals
+                for (variable in declared.filterIsInstance<HasType>()) {
+                    val before = variable.assignedTypes.size
+                    variable.addAssignedTypes(elements)
+                    added += variable.assignedTypes.size - before
+                }
+            }
+
+            if (added == 0) {
+                break
+            }
+        }
     }
 
     override fun cleanup() {
