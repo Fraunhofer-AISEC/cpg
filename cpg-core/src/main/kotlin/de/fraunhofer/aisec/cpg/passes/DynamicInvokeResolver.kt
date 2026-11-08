@@ -84,6 +84,12 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private var keyedInitializers: Map<Pair<Name, String>, List<Expression>> = mapOf()
 
     /**
+     * Largest set of guesses an indirect-call fallback may answer with; see
+     * [fallBackToAddressTaken].
+     */
+    private val fallbackCap: Int = System.getenv("CPG_FALLBACK_CAP")?.toIntOrNull() ?: 40
+
+    /**
      * Functions whose address is taken somewhere -- used as a value rather than called directly --
      * indexed by how many parameters they have, together with every function literal.
      *
@@ -411,7 +417,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             addressTakenByArity[call.arguments.size]?.filter {
                 pointerType == null || matchInvokesCandidateSignature(it, pointerType, false)
             } ?: return
-        if (candidates.isEmpty()) {
+        if (candidates.isEmpty() || candidates.size > fallbackCap) {
             return
         }
         call.invokes = candidates.toMutableList()
