@@ -157,7 +157,7 @@ The **Agent** page (`/chat`) combines a code editor with the AI chat: you read t
 
 - Ask in the chat, or **select code** and press `Ctrl/Cmd+K` (or use the small input next to the selection) to ask about exactly that code.
 - The agent cites the nodes its answer relies on. Citations are links into the code, and the evidence of the active question is marked in the code and can be stepped through like in a debugger.
-- Under an answer, **trust warnings** list the places its evidence relies on where the analysis is uncertain, e.g. unresolved calls or calls to external code such as `printf`.
+- Under an answer, **diagnostics** list the places its evidence relies on where the analysis is uncertain, e.g. unresolved calls or calls to external code such as `printf`.
 
 ### Keyboard
 
@@ -220,4 +220,4 @@ with `ChatMemory`. Besides `text` and `tool_result`, the stream contains further
 The analysis and the agent share one graph: after an analysis, the console registers its `TranslationResult` as the session of
 the project in the MCP server, which runs in the same process. Concepts that the agent applies therefore show up in the UI.
 The agent page itself reads the graph through the REST API of the console (e.g. `/api/node/{id}`, `.../node-at`,
-`.../functions`, `.../calls`, `.../overlays`, `/api/trust` and the graph endpoints); `Router.kt` documents all endpoints.
+`.../functions`, `.../calls`, `.../overlays`, `/api/diagnostics` and the graph endpoints); `Router.kt` documents all endpoints.
