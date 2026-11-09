@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.serialization.CallStatus
+import de.fraunhofer.aisec.cpg.serialization.status
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -85,7 +87,7 @@ fun TranslationResult.overview(): CpgOverview {
     // Calls that do not reach any function with a body, grouped by the name of the callee
     val externalCalls =
         calls
-            .filter { call -> call.invokes.none { it.body != null } }
+            .filter { it.status != CallStatus.RESOLVED }
             .groupingBy { it.name.localName }
             .eachCount()
 

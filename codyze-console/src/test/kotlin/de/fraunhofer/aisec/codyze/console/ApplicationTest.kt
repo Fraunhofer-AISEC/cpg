@@ -81,11 +81,8 @@ val mockTu =
             }
     }
 
-/**
- * A mock version of the [ConsoleService] that returns a mock analysis result containing of a few
- * nodes.
- */
-val mockService =
+/** A [ConsoleService] with a mock analysis result containing the given [units]. */
+fun mockServiceFor(vararg units: TranslationUnit) =
     ConsoleService.fromAnalysisResult(
         AnalysisResult(
             translationResult =
@@ -98,7 +95,7 @@ val mockService =
                         components +=
                             Component().apply {
                                 name = Name("mock")
-                                translationUnits += mockTu
+                                translationUnits += units
                             }
                     },
             project = AnalysisProject(name = "mock", projectDir = null, config = mockConfig),
@@ -140,6 +137,12 @@ val mockService =
                 ),
         )
     )
+
+/**
+ * A mock version of the [ConsoleService] that returns a mock analysis result containing of a few
+ * nodes.
+ */
+val mockService = mockServiceFor(mockTu)
 
 /** A mock version of the [ConsoleService] that returns an empty analysis result. */
 val emptyService = ConsoleService()
@@ -278,6 +281,105 @@ class ApplicationTest {
     }
 
     @Test
+    fun testGetTranslationUnitOverview() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val unit = "/api/component/mock/translation-unit/${mockTu.id}"
+
+        // Only the status codes, as the mock nodes have no locations. The contents are tested in
+        // CodeOverviewTest
+        for (path in listOf("functions", "calls", "overlays")) {
+            assertEquals(HttpStatusCode.OK, client.get("$unit/$path").status, path)
+            assertEquals(
+                HttpStatusCode.NotFound,
+                client.get("/api/component/mock/translation-unit/unknown/$path").status,
+                path,
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, client.get("/api/component/mock/overlays").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/component/unknown/overlays").status)
+    }
+
+    @Test
+    fun testNodeDetailsOfOverlayAddedLater() {
+        val call = Call().apply { name = Name("open") }
+        val service = mockServiceFor(TranslationUnit().apply { statements += call })
+        // The first request builds the node index
+        assertNotNull(service.getNodeDetails(call.id.toString()))
+
+        // Like the MCP tools that apply the concepts of the agent, attach a concept directly
+        val file = File(underlyingNode = call, fileName = "data.txt")
+        val details = assertNotNull(service.getNodeDetails(file.id.toString()))
+        assertEquals(file.id, details.node.id)
+        assertEquals(
+            file.id,
+            service.getNodeDetails(call.id.toString())?.overlays?.single()?.overlay?.id,
+        )
+    }
+
+    @Test
+    fun testGetNodeDetails() = testApplication {
+        application { configureWebconsole(mockService) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+
+        val open = assertNotNull(mockTu.calls["open"])
+        val response = client.get("/api/node/${open.id}")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(open.id, response.body<NodeDetailsJSON>().node.id)
+
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client.get("/api/node/00000000-0000-0000-0000-000000000000").status,
+        )
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/node/not-a-uuid").status)
+    }
+
+    @Test
+    fun testGetNodeAt() = testApplication {
+        val uri = java.net.URI("file:/node-at.c")
+        val call =
+            Call().apply {
+                name = Name("open")
+                location =
+                    de.fraunhofer.aisec.cpg.sarif.PhysicalLocation(
+                        uri,
+                        de.fraunhofer.aisec.cpg.sarif.Region(1, 1, 1, 7),
+                    )
+            }
+        val tu = TranslationUnit().apply { statements += call }
+        // Created before the URL, as adding the unit to a component changes its ID (which is
+        // derived from its AST parent)
+        val service = mockServiceFor(tu)
+        application { configureWebconsole(service) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+        val unit = "/api/component/mock/translation-unit/${tu.id}"
+
+        val response = client.get("$unit/node-at?line=1&column=3")
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(call.id, response.body<NodeDetailsJSON>().node.id)
+
+        // The range has to be contained in the node: its end column is exclusive
+        val range = client.get("$unit/node-at?line=1&column=1&endLine=1&endColumn=7")
+        assertEquals(HttpStatusCode.OK, range.status)
+        assertEquals(call.id, range.body<NodeDetailsJSON>().node.id)
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client.get("$unit/node-at?line=1&column=1&endLine=1&endColumn=8").status,
+        )
+
+        assertEquals(HttpStatusCode.NotFound, client.get("$unit/node-at?line=5&column=1").status)
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client
+                .get("/api/component/mock/translation-unit/unknown/node-at?line=1&column=3")
+                .status,
+        )
+        assertEquals(HttpStatusCode.BadRequest, client.get("$unit/node-at?line=1").status)
+        assertEquals(HttpStatusCode.BadRequest, client.get("$unit/node-at?line=1&column=x").status)
+    }
+
+    @Test
     fun testGetNodes() = testApplication {
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
@@ -296,6 +398,56 @@ class ApplicationTest {
         assertNotNull(node)
         assertEquals(open.id, node.id)
         assertEquals(mockTu.id, node.translationUnitId)
+    }
+
+    @Test
+    fun testGetDiagnostics() = testApplication {
+        // A call without a target, which the analysis cannot follow
+        val call =
+            Call().apply {
+                name = Name("unknown")
+                location =
+                    de.fraunhofer.aisec.cpg.sarif.PhysicalLocation(
+                        java.net.URI("file:/diagnostics.c"),
+                        de.fraunhofer.aisec.cpg.sarif.Region(1, 1, 1, 10),
+                    )
+            }
+        val tu = TranslationUnit().apply { statements += call }
+        val service = mockServiceFor(tu)
+        application { configureWebconsole(service) }
+        val client = createClient { install(ContentNegotiation) { json() } }
+
+        val unknownId = "00000000-0000-0000-0000-000000000000"
+        val response =
+            client.post("/api/diagnostics") {
+                contentType(ContentType.Application.Json)
+                setBody(listOf(call.id.toString(), unknownId))
+            }
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val diagnostic = response.body<List<EvidenceDiagnosticJSON>>().single()
+        assertEquals(DiagnosticKind.UNRESOLVED_CALL, diagnostic.kind)
+        assertEquals(call.id, diagnostic.location.id)
+        assertEquals(listOf(call.id.toString()), diagnostic.evidence)
+
+        assertEquals(
+            emptyList(),
+            client
+                .post("/api/diagnostics") {
+                    contentType(ContentType.Application.Json)
+                    setBody(emptyList<String>())
+                }
+                .body<List<EvidenceDiagnosticJSON>>(),
+        )
+        assertEquals(
+            HttpStatusCode.BadRequest,
+            client
+                .post("/api/diagnostics") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"not": "a list"}""")
+                }
+                .status,
+        )
     }
 
     @Test
