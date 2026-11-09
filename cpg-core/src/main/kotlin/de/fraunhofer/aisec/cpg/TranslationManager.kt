@@ -111,6 +111,10 @@ private constructor(
                     }
             }
             ctx.executedFrontends.addAll(executedFrontends)
+            // The mappings from raw nodes to nodes are only needed while the frontends parse. Their
+            // keys are nodes of the raw AST, which reach the whole raw AST through their parents,
+            // so we must not keep them alive for the time the passes run (which can be long).
+            executedFrontends.forEach { it.clearProcessed() }
             bench.addMeasurement()
 
             executePassesSequentially(ctx, result, executedFrontends, callbacks)

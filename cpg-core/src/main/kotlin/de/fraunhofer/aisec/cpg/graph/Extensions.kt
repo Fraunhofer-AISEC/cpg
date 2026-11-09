@@ -40,8 +40,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.filterIsInstanceAndFilterTo
-import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
+import de.fraunhofer.aisec.cpg.helpers.functional.ParallelismBudget
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
@@ -2078,7 +2078,7 @@ fun Node.isNullCheck(refersTo: Declaration?): Boolean {
  *    division, k ≥ 1) so every subset can have at least [minPartSize] elements.
  */
 fun <T> Collection<T>.splitInto(
-    maxParts: Int = CPU_CORES,
+    maxParts: Int = ParallelismBudget.inner,
     minPartSize: Int = MIN_CHUNK_SIZE,
 ): List<List<T>> {
     require(maxParts > 0) { "maxParts must be positive" }
@@ -2110,7 +2110,7 @@ fun <T> Collection<T>.splitInto(
  * contending for that structure's lock once per element.
  */
 suspend fun <T, R> Collection<T>.collectMaybeParallel(
-    parallelism: Int = CPU_CORES,
+    parallelism: Int = ParallelismBudget.inner,
     minChunkSize: Int = MIN_CHUNK_SIZE,
     action: suspend (T, MutableList<R>) -> Unit,
 ): List<R> {
@@ -2147,7 +2147,7 @@ suspend fun <T, R> Collection<T>.collectMaybeParallel(
  * them in parallel on Dispatchers.Default.
  */
 suspend fun <T> Collection<T>.forEachMaybeParallel(
-    parallelism: Int = CPU_CORES,
+    parallelism: Int = ParallelismBudget.inner,
     minChunkSize: Int = MIN_CHUNK_SIZE,
     action: suspend (T) -> Unit,
 ) {
