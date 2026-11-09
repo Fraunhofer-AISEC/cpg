@@ -72,10 +72,14 @@ import kotlinx.serialization.json.JsonObject
  *   edges).
  * - GET `/api/component/{component_name}/overlays`: Retrieves the concepts and operations of all
  *   translation units of a component.
- * - GET `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=`: Retrieves
- *   the details of the innermost node at the given position.
+ * - GET
+ *   `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=[&endLine=&endColumn=]`:
+ *   Retrieves the details of the innermost node at the given position, or, with an end position, of
+ *   the innermost node containing the whole range.
  * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
  *   analysis warnings).
+ * - POST `/api/diagnostics`: Retrieves the places where the analysis is incomplete or uncertain
+ *   (unresolved or external calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
@@ -229,9 +233,15 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                 call.parameters["column"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-            // The target is the character at the position
+            // The target is the character at the position, or the range up to the (exclusive) end
+            val endLine = call.parameters["endLine"]?.toIntOrNull() ?: line
+            val endColumn = call.parameters["endColumn"]?.toIntOrNull() ?: (column + 1)
             val details =
-                service.getNodeDetailsAt(componentName, id, Region(line, column, line, column + 1))
+                service.getNodeDetailsAt(
+                    componentName,
+                    id,
+                    Region(line, column, endLine, endColumn),
+                )
             if (details != null) {
                 call.respond(details)
             } else {
@@ -261,6 +271,20 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
             }
+        }
+
+        // The endpoint to check where the analysis is uncertain for the evidence of the agent
+        post("/diagnostics") {
+            val nodeIds =
+                try {
+                    call.receive<List<String>>()
+                } catch (e: Exception) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Invalid request format: ${e.message}"),
+                    )
+                }
+            call.respond(service.getEvidenceDiagnostics(nodeIds))
         }
 
         // The endpoint to add a concept node to the current analysis result

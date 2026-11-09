@@ -633,29 +633,7 @@ fun RequirementBuilder.toJSON(
  * its concepts and operations, and warnings where the analysis is incomplete or uncertain.
  */
 fun Node.toDetailsJSON(): NodeDetailsJSON {
-    val warnings = mutableListOf<String>()
-    if (isInferred) {
-        warnings += "This node was inferred by the analysis; it has no source code of its own."
-    }
-    if (this is ProblemNode) {
-        warnings += "The analysis could not handle this code (${problemType}): $problem"
-    }
-
     val callTargets = (this as? Call)?.invokes.orEmpty()
-    if (this is Call && status == CallStatus.UNRESOLVED) {
-        warnings += "The call target could not be resolved; dataflows through it are unknown."
-    }
-    callTargets
-        .filter { it.isInferred }
-        .forEach {
-            warnings +=
-                "The target '${it.name}' is not part of the analysed code (inferred); its behaviour is unknown."
-        }
-    // A declaration whose definition (e.g. in another file) is analysed is not only declared
-    if (this is Function && !(definition ?: this).hasBody()) {
-        warnings +=
-            "This function is only declared, its implementation is not part of the analysis."
-    }
 
     val callers = (this as? Function)?.calledBy.orEmpty()
     val callees = (this as? Function)?.body?.calls.orEmpty()
@@ -669,7 +647,7 @@ fun Node.toDetailsJSON(): NodeDetailsJSON {
         dataflowFrom =
             prevDFGEdges.limited { RelatedNodeJSON(it.start.toRefJSON(), it.describe()) },
         dataflowTo = nextDFGEdges.limited { RelatedNodeJSON(it.end.toRefJSON(), it.describe()) },
-        warnings = warnings,
+        warnings = diagnostics().map { it.message },
         callTargetCount = callTargets.size,
         callerCount = callers.size,
         calleeCount = callees.size,

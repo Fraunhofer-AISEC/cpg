@@ -83,6 +83,43 @@ export interface RelatedNodeJSON {
   label: string | null;
 }
 
+/** A range of code selected by the user, e.g. to ask the agent about it. */
+export interface CodeSelection {
+  unitId: string;
+  /** The name of the file */
+  fileName: string;
+  text: string;
+  startLine: number;
+  /** 1-based, like the columns of the nodes */
+  startColumn: number;
+  endLine: number;
+  /** 1-based and exclusive */
+  endColumn: number;
+  /** The innermost node containing the whole selection, if there is one */
+  node: NodeJSON | null;
+}
+
+/** How much a diagnostic matters, see `DiagnosticSeverity`. */
+export type DiagnosticSeverity = 'WARNING' | 'INFO';
+
+/** What a diagnostic is about. */
+export type DiagnosticKind = 'UNRESOLVED_CALL' | 'ANALYSIS_PROBLEM' | 'EXTERNAL_CODE';
+
+/**
+ * A place where the analysis is incomplete or uncertain, or where it ends, that some evidence of
+ * the agent relies on.
+ */
+export interface EvidenceDiagnosticJSON {
+  kind: DiagnosticKind;
+  severity: DiagnosticSeverity;
+  /** The node with the diagnostic, e.g. the unresolved call */
+  location: NodeJSON;
+  /** What the evidence relies on, phrased to follow "relies on" */
+  reason: string;
+  /** The IDs of the evidence nodes that rely on [location] */
+  evidence: string[];
+}
+
 /** A function together with its key figures, see `.../translation-unit/{id}/functions`. */
 export interface FunctionCallStatsJSON {
   function: NodeJSON;
@@ -135,7 +172,7 @@ export interface McpToolInfo {
   name: string;
   description?: string;
   inputSchema?: {
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     required?: string[];
   };
 }
@@ -196,7 +233,7 @@ export interface LLMMessage {
 export interface ToolResult {
   toolName?: string;
   args?: Record<string, unknown>;
-  content: any;
+  content: unknown;
   isError?: boolean;
 }
 
