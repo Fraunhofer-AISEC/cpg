@@ -4,7 +4,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { nodeHref } from '$lib/nodeDetails';
-  import type { NodeRefJSON } from '$lib/types';
+  import type { NodeJSON } from '$lib/types';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -14,7 +14,7 @@
   const kind = $derived(page.url.searchParams.get('kind'));
   const selectedNode = $derived(page.url.searchParams.get('node'));
 
-  function navigateToNode(ref: NodeRefJSON) {
+  function navigateToNode(ref: NodeJSON) {
     const href = nodeHref(ref, page.params.componentName ?? '');
     if (href) goto(href);
   }

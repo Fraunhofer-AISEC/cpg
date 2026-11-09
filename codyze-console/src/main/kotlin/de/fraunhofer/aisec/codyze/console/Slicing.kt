@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependence
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.serialization.toRefJSON
 import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
 

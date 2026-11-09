@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgPathsPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.noNodeFoundResult
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.ContextSensitive
 import de.fraunhofer.aisec.cpg.graph.FailureReason
@@ -44,7 +46,6 @@ import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import kotlin.uuid.Uuid
 import kotlinx.serialization.json.Json
 
 /** The longest dataflow path that is followed, in steps. */
@@ -98,18 +99,22 @@ internal fun dfgPaths(
     )
 }
 
+/** The result of the tool that follows the dataflow of the node of [payload]. */
+internal fun dfgPathsResult(
+    session: CpgSession,
+    payload: CpgDfgPathsPayload,
+    backward: Boolean,
+): CallToolResult {
+    val start = session.findNodeById(payload.id) ?: return noNodeFoundResult(payload.id)
+    val paths = dfgPaths(start, backward, payload.interprocedural, payload.maxPaths)
+    return CallToolResult(content = listOf(TextContent(Json.encodeToString(paths))))
+}
+
 private fun Server.addDfgPathsTool(name: String, backward: Boolean, description: String) {
-    this.addTool<CpgDfgPathsPayload>(name = name, description = description) {
+    this.addTool<CpgDfgPathsPayload>(name = name, description = description, readOnly = true) {
         session: CpgSession,
         payload: CpgDfgPathsPayload ->
-        val startId = Uuid.parse(payload.id)
-        val start =
-            session.translationResult.nodes.find { it.id == startId }
-                ?: return@addTool CallToolResult(
-                    content = listOf(TextContent("No node found with ID ${payload.id}"))
-                )
-        val paths = dfgPaths(start, backward, payload.interprocedural, payload.maxPaths)
-        CallToolResult(content = listOf(TextContent(Json.encodeToString(paths))))
+        dfgPathsResult(session, payload, backward)
     }
 }
 

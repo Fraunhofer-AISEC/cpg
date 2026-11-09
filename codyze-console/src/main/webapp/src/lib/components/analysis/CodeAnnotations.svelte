@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { FileAnnotationsJSON } from '$lib/types';
-  import { describeConcept } from '$lib/annotations';
+  import { callRegion, describeOverlay, overlayLine, type FileOverview } from '$lib/overview';
   import type { Layer } from '$lib/stores/layers.svelte';
   import type { CallFilter, InspectorSection } from '$lib/stores/codeFocus.svelte';
 
@@ -10,7 +9,7 @@
    * calls and a purple ◆ for the concepts and operations of a line in the gutter.
    */
   interface Props {
-    annotations: FileAnnotationsJSON;
+    annotations: FileOverview;
     /** Which layers are shown */
     layers: Record<Layer, boolean>;
     codeLines: string[];
@@ -102,21 +101,25 @@
     return parts;
   }
 
-  const conceptsByLine = $derived.by(() => {
-    const byLine = new Map<number, typeof annotations.concepts>();
-    for (const concept of annotations.concepts) {
-      byLine.set(concept.line, [...(byLine.get(concept.line) ?? []), concept]);
+  const overlaysByLine = $derived.by(() => {
+    const byLine = new Map<number, typeof annotations.overlays>();
+    for (const overlay of annotations.overlays) {
+      const line = overlayLine(overlay);
+      byLine.set(line, [...(byLine.get(line) ?? []), overlay]);
     }
-    return [...byLine.entries()].map(([line, concepts]) => ({ line, concepts }));
+    return [...byLine.entries()].map(([line, overlays]) => ({ line, overlays }));
   });
 
+  // The calls to mark, each with the region of its callee (or of the whole call)
   const markedCalls = $derived(
-    annotations.calls.filter(
-      (c) =>
-        c.startLine === c.endLine &&
-        ((c.status === 'EXTERNAL' && layers.external) ||
-          (c.status === 'UNRESOLVED' && layers.uncertain))
-    )
+    annotations.calls
+      .filter(
+        (c) =>
+          (c.status === 'EXTERNAL' && layers.external) ||
+          (c.status === 'UNRESOLVED' && layers.uncertain)
+      )
+      .map((c) => ({ id: c.call.id, status: c.status, region: callRegion(c) }))
+      .filter((c) => c.region.startLine === c.region.endLine)
   );
 </script>
 
@@ -157,21 +160,21 @@
 
   <!-- Markers under calls to external code (dashed) and unresolved calls (dotted) -->
   {#each markedCalls as call (call.id)}
-    {#if isVisible(call.startLine, call.startLine)}
+    {#if isVisible(call.region.startLine, call.region.startLine)}
       <div
         class="absolute z-[21] border-b-2 {call.status === 'EXTERNAL'
           ? 'border-dashed border-orange-500'
           : 'border-dotted border-red-500'}"
-        style:top="{top(call.startLine)}rem"
+        style:top="{top(call.region.startLine)}rem"
         style:height="{lineHeight - 0.1}rem"
-        style:left="{call.startColumn * charWidth + offsetLeft}rem"
-        style:width="{Math.max(call.endColumn - call.startColumn, 1) * charWidth}rem"
+        style:left="{call.region.startColumn * charWidth + offsetLeft}rem"
+        style:width="{Math.max(call.region.endColumn - call.region.startColumn, 1) * charWidth}rem"
       ></div>
     {/if}
   {/each}
 
   <!-- Concepts and operations in the gutter: one ◆ per line, the tooltip lists them -->
-  {#each layers.concepts ? conceptsByLine : [] as entry (entry.line)}
+  {#each layers.concepts ? overlaysByLine : [] as entry (entry.line)}
     {#if isVisible(entry.line, entry.line)}
       <button
         type="button"
@@ -180,11 +183,11 @@
         style:height="{lineHeight}rem"
         style:left="{glyphLeft}rem"
         style:width="{glyphWidth}rem"
-        title={entry.concepts.map(describeConcept).join('\n')}
-        aria-label={entry.concepts.map(describeConcept).join(', ')}
+        title={entry.overlays.map(describeOverlay).join('\n')}
+        aria-label={entry.overlays.map(describeOverlay).join(', ')}
         onclick={(e) => {
           e.stopPropagation();
-          onInspect(entry.concepts[0].id);
+          onInspect(entry.overlays[0].overlay.id);
         }}
       >
         ◆

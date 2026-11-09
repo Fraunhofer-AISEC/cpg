@@ -27,20 +27,22 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NoArguments
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addToolWithoutCpg
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
-import de.fraunhofer.aisec.cpg.graph.nodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlinx.serialization.json.add
 
 /** Provides a tool to list all available concepts which can be used to tag nodes in the CPG. */
-fun Server.listAvailableConcepts() {
+fun Server.addListAvailableConceptsTool() {
     val availableConcepts = getAvailableConcepts()
     val toolDescription =
         """
@@ -51,13 +53,17 @@ fun Server.listAvailableConcepts() {
         - "Show me all available concepts"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_available_concepts", description = toolDescription) { _ ->
+    this.addToolWithoutCpg<NoArguments>(
+        name = "cpg_list_available_concepts",
+        readOnly = true,
+        description = toolDescription,
+    ) { _ ->
         CallToolResult(content = availableConcepts.map { TextContent(it.name) })
     }
 }
 
 /** Provides a tool to list all available operations which can be used to tag nodes in the CPG. */
-fun Server.listAvailableOperations() {
+fun Server.addListAvailableOperationsTool() {
     val availableOperations = getAvailableOperations()
     val toolDescription =
         """
@@ -68,7 +74,11 @@ fun Server.listAvailableOperations() {
         - "Show me all available operations"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_available_operations", description = toolDescription) { _ ->
+    this.addToolWithoutCpg<NoArguments>(
+        name = "cpg_list_available_operations",
+        readOnly = true,
+        description = toolDescription,
+    ) { _ ->
         CallToolResult(content = availableOperations.map { TextContent(it.name) })
     }
 }
@@ -80,7 +90,7 @@ fun Server.listAvailableOperations() {
  * This tool can be used to create and attach concepts or operations to nodes identified by their
  * IDs.
  */
-fun Server.addCpgApplyConceptsTool() {
+fun Server.addApplyConceptsTool() {
     val availableConcepts = getAvailableConcepts()
     val availableOperations = getAvailableOperations()
     val toolDescription =
@@ -103,15 +113,15 @@ fun Server.addCpgApplyConceptsTool() {
             .trimIndent()
 
     this.addTool<CpgApplyConceptsPayload>(
+        readOnly = false,
         name = "cpg_apply_concepts",
         description = toolDescription,
     ) { session: CpgSession, payload: CpgApplyConceptsPayload ->
-        val result = session.translationResult
         val applied = mutableListOf<String>()
 
         payload.assignments.forEach { assignment ->
             try {
-                val node = result.nodes.find { it.id.toString() == assignment.nodeId }
+                val node = session.findNodeById(assignment.nodeId)
                 if (node == null) {
                     applied.add("Node ${assignment.nodeId} not found")
                     return@forEach
@@ -119,7 +129,7 @@ fun Server.addCpgApplyConceptsTool() {
 
                 when (assignment.overlayType?.lowercase()) {
                     "concept" -> {
-                        result?.conceptBuildHelper(
+                        session.translationResult?.conceptBuildHelper(
                             name = assignment.overlay,
                             underlyingNode = node,
                             constructorArguments = /*assignment.arguments ?:*/
@@ -139,17 +149,33 @@ fun Server.addCpgApplyConceptsTool() {
                             return@forEach
                         }
 
-                        val conceptNode = result.nodes.find { it.id.toString() == conceptNodeId }
+                        val conceptNode = session.findNodeById(conceptNodeId)
+                        val conceptsOnNode = conceptNode?.overlays?.filterIsInstance<Concept>()
                         val concept =
-                            conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
+                            when (conceptsOnNode?.size) {
+                                null,
+                                0 -> null
+                                1 -> conceptsOnNode.first()
+                                else -> {
+                                    // Multiple concepts on one node: picking the first would
+                                    // silently attach the operation to the wrong concept. Fail
+                                    // explicitly so the caller can disambiguate.
+                                    applied.add(
+                                        "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: node $conceptNodeId carries multiple concepts (${conceptsOnNode.joinToString { it::class.simpleName ?: "?" }}); apply the operation to the concept's own node instead."
+                                    )
+                                    null
+                                }
+                            }
                         if (concept == null) {
-                            applied.add(
-                                "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node $conceptNodeId"
-                            )
+                            if (conceptsOnNode.isNullOrEmpty()) {
+                                applied.add(
+                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node $conceptNodeId"
+                                )
+                            }
                             return@forEach
                         }
 
-                        result?.operationBuildHelper(
+                        session.translationResult?.operationBuildHelper(
                             name = assignment.overlay,
                             underlyingNode = node,
                             concept = concept,

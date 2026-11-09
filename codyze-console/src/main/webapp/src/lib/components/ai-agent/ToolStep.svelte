@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { NodePathsJSON, NodeRefJSON, ToolResult } from '$lib/types';
+  import type { NodeJSON, NodePathsJSON, ToolResult } from '$lib/types';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -11,12 +11,12 @@
     toolResult: ToolResult;
     step: number;
     /** The nodes the tool returned, resolved to their locations */
-    nodes: NodeRefJSON[];
+    nodes: NodeJSON[];
     /** The paths the tool returned, if it searched for paths */
     paths?: NodePathsJSON | null;
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
-    onSelect: (ref: NodeRefJSON) => void;
+    onSelect: (ref: NodeJSON) => void;
     /** Shows the step in the code and goes to its first node */
     onActivate: () => void;
     onHover: (hovered: boolean) => void;
@@ -32,25 +32,25 @@
 
   const toolName = $derived(toolResult.toolName || 'tool');
 
-  function extractSkillName(content: unknown): string | null {
-    const text =
-      typeof content === 'string'
-        ? content
-        : Array.isArray(content) && typeof content[0]?.text === 'string'
-          ? content[0].text
-          : null;
-    return text?.match(/<skill_content\s+name="([^"]+)"/)?.[1] ?? null;
-  }
+  // Koog's file tool, which the model uses to "activate" a skill by reading its SKILL.md
+  const READ_FILE_TOOL = '__read_file__';
+
+  // The name of the skill if the step read a skill's SKILL.md (the name is its directory)
+  const skillName = $derived.by(() => {
+    const path = toolResult.args?.path;
+    if (toolName !== READ_FILE_TOOL || typeof path !== 'string') return null;
+    return path.match(/([^/\\]+)[/\\]SKILL\.md$/)?.[1] ?? null;
+  });
+  const label = $derived(skillName ? 'skill' : toolName);
 
   // What the step found, e.g. "3 nodes in 2 files", or the start of a text result
   const summary = $derived.by(() => {
     const content = toolResult.content;
     if (toolResult.isError) return 'error';
-    // The name of an activated skill, or else the start of the result like for other tools
-    const skill = toolName === 'activate_skill' ? extractSkillName(content) : null;
-    if (skill) return skill;
-    if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof content?.name === 'string')
-      return `suggests ${content.name}`;
+    if (skillName) return skillName;
+    const suggested = (content as { name?: unknown } | null | undefined)?.name;
+    if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof suggested === 'string')
+      return `suggests ${suggested}`;
     if (paths) {
       const count = `${paths.paths.length}${paths.truncated ? '+' : ''}`;
       return `${paths.kind} · ${count} ${paths.paths.length === 1 ? 'path' : 'paths'}`;
@@ -76,7 +76,7 @@
 
   const shownNodes = $derived(showAll ? nodes : nodes.slice(0, preview));
 
-  function location(ref: NodeRefJSON): string {
+  function location(ref: NodeJSON): string {
     return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no location';
   }
 </script>
@@ -107,7 +107,7 @@
       aria-expanded={expanded}
       onclick={() => (expanded = !expanded)}
     >
-      <span class="shrink-0 font-mono">{toolName}</span>
+      <span class="shrink-0 font-mono">{label}</span>
       <span class="min-w-0 truncate text-gray-400" title={summary}>{summary}</span>
       <svg
         class="ml-auto h-3 w-3 shrink-0 text-gray-300 transition-transform {expanded

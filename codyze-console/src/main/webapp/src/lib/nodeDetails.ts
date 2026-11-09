@@ -1,4 +1,4 @@
-import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+import type { NodeDetailsJSON, NodeJSON } from '$lib/types';
 
 // Node details do not change during a session (except for added concepts), so requests are shared
 const cache = new Map<string, Promise<NodeDetailsJSON | null>>();
@@ -58,7 +58,7 @@ export function clearNodeDetailsCache() {
 }
 
 /** The URL of the code viewer showing (and selecting) the referenced node. */
-export function nodeHref(ref: NodeRefJSON, fallbackComponent: string): string | undefined {
+export function nodeHref(ref: NodeJSON, fallbackComponent: string): string | undefined {
   if (!ref.translationUnitId) return undefined;
   const component = ref.componentName ?? fallbackComponent;
   return `/components/${encodeURIComponent(component)}/translation-unit/${ref.translationUnitId}?line=${ref.startLine}&node=${ref.id}`;

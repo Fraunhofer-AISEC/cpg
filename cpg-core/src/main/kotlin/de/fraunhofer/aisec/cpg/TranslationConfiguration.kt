@@ -114,6 +114,8 @@ private constructor(
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
+    /** The [Profile]s that are active for this configuration. */
+    @JsonIgnore val profiles: List<Profile>,
     languages: Set<KClass<out Language<*>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
@@ -268,6 +270,7 @@ private constructor(
         private val replacedPasses =
             mutableMapOf<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>()
         private val functionSummaries = mutableListOf<File>()
+        private val profiles = mutableListOf<Profile>()
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -278,6 +281,7 @@ private constructor(
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
         private var useDefaultPasses = false
+        private var useDefaultProfiles = true
         private var enablePointsToPass = true
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
@@ -467,6 +471,30 @@ private constructor(
 
         fun registerFunctionSummaries(vararg functionSummary: File): Builder {
             this.functionSummaries.addAll(functionSummary)
+            return this
+        }
+
+        /**
+         * Activates a [Profile], which provides the types and the function summaries of code that
+         * is not part of the analysis, e.g., a standard library, so that its sources do not need to
+         * be parsed. What the analyzed code declares itself takes precedence over a profile.
+         *
+         * A frontend can register profiles that are active by default (see
+         * [RegisterDefaultProfile]), e.g., the `stdlib` profile of the C/C++ frontend; this is only
+         * needed for other profiles.
+         */
+        fun profile(profile: Profile): Builder {
+            this.profiles += profile
+            return this
+        }
+
+        /**
+         * Whether the profiles that the frontends of the registered languages register by default
+         * (see [RegisterDefaultProfile]) are active. They are by default; turn them off to get the
+         * behavior of parsing the real sources only, e.g., the headers of the standard library.
+         */
+        fun useDefaultProfiles(enabled: Boolean): Builder {
+            this.useDefaultProfiles = enabled
             return this
         }
 
@@ -672,6 +700,30 @@ private constructor(
             }
         }
 
+        /**
+         * The profiles that the frontends of the registered languages register by default (see
+         * [RegisterDefaultProfile]), or none if [useDefaultProfiles] is off.
+         */
+        private fun defaultProfiles(): List<Profile> {
+            if (!useDefaultProfiles) {
+                return emptyList()
+            }
+
+            return languages
+                .map { it.frontend }
+                .flatMap { it.findAnnotations<RegisterDefaultProfile>() }
+                .mapNotNull {
+                    val profile = it.value.objectInstance
+                    if (profile == null) {
+                        log.error(
+                            "Default profile {} is not an object and cannot be activated",
+                            it.value.simpleName,
+                        )
+                    }
+                    profile
+                }
+        }
+
         private fun registerReplacedPasses() {
             for (frontend in languages.map { it.frontend }) {
                 val replacedPasses = frontend.findAnnotations<ReplacePass>()
@@ -761,6 +813,8 @@ private constructor(
         fun build(): TranslationConfiguration {
             registerExtraFrontendPasses()
             registerReplacedPasses()
+            // Explicitly activated profiles come last, so their types and summaries win.
+            val activeProfiles = (defaultProfiles() + profiles).distinct()
             return TranslationConfiguration(
                 symbols,
                 softwareComponents,
@@ -773,7 +827,8 @@ private constructor(
                 includeBlocklist,
                 orderPasses(),
                 replacedPasses,
-                DFGFunctionSummaries.fromFiles(functionSummaries),
+                DFGFunctionSummaries.fromProfilesAndFiles(activeProfiles, functionSummaries),
+                activeProfiles,
                 languages,
                 codeInNodes,
                 processAnnotations,

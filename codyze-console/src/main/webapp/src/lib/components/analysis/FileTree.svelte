@@ -268,7 +268,6 @@
       onComponentSelect(name);
     } else if (componentHref) {
       // The href is built by the caller
-      // eslint-disable-next-line svelte/no-navigation-without-resolve
       goto(componentHref(name));
     }
   }

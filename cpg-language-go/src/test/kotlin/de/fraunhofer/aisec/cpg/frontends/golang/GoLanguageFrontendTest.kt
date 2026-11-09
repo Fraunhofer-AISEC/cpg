@@ -965,6 +965,30 @@ class GoLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testAliasShadowsPredeclaredType() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("shadow_builtin.go").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        assertLocalName("string", tu.variables["shadowed"]?.type)
+
+        val pointer = assertIs<PointerType>(tu.variables["pointer"]?.type)
+        assertLocalName("string", pointer.elementType)
+
+        val cast = assertIs<Cast>(tu.variables["converted"]?.initializer)
+        assertLocalName("string", cast.castType)
+
+        assertLocalName("error", tu.variables["untouched"]?.type)
+    }
+
+    @Test
     fun testResolveStdLibImport() {
         val stdLib = Path.of("src", "test", "resources", "golang-std")
         val topLevel = Path.of("src", "test", "resources", "golang")

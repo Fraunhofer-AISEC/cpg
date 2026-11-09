@@ -54,21 +54,23 @@ export interface CodeRangeJSON {
   endColumn: number;
 }
 
-/** The fields every node has in the JSON of the backend. */
-export interface NodeBaseJSON extends CodeRangeJSON {
+export interface NodeJSON extends CodeRangeJSON {
   id: string;
   type: string;
   name: string;
   code: string;
   fileName?: string;
-  translationUnitId?: string;
-  componentName?: string;
-}
-
-export interface NodeJSON extends NodeBaseJSON {
   astChildren: NodeJSON[];
   prevDFG: EdgeJSON[];
   nextDFG: EdgeJSON[];
+  translationUnitId?: string;
+  componentName?: string;
+  /** Whether the node was inferred by the analysis instead of being parsed from source code */
+  isInferred?: boolean;
+  /** Whether the node is not written in the source code, e.g. an implicit cast */
+  isImplicit?: boolean;
+  /** For a node with a type: the name of its type */
+  typeName?: string | null;
 }
 
 export interface EdgeJSON {
@@ -78,11 +80,11 @@ export interface EdgeJSON {
   end: string;
 }
 
-/** A compact reference to a node, used to list and navigate to related nodes. */
-export interface NodeRefJSON extends NodeBaseJSON {
-  isInferred: boolean;
-  /** How the node relates to the inspected node, e.g. the granularity of a dataflow */
-  label?: string;
+/** A node that is related to the node it was listed for, e.g. a neighbour in the dataflow. */
+export interface RelatedNodeJSON {
+  node: NodeJSON;
+  /** How the node relates to the listed node, e.g. the granularity of a dataflow */
+  label: string | null;
 }
 
 /** A range of code selected by the user, e.g. to ask the agent about it. */
@@ -92,73 +94,75 @@ export interface CodeSelection extends CodeRangeJSON {
   fileName: string;
   text: string;
   /** The innermost node containing the whole selection, if there is one */
-  node: NodeRefJSON | null;
+  node: NodeJSON | null;
 }
 
-/** Why evidence of the agent may not be reliable, the most severe first. */
-export type TrustIssueKind = 'UNRESOLVED_CALL' | 'ANALYSIS_WARNING' | 'EXTERNAL_CODE';
+/** How much a diagnostic matters, see `DiagnosticSeverity`. */
+export type DiagnosticSeverity = 'WARNING' | 'INFO';
 
-/** A place where the analysis is uncertain that some evidence of the agent relies on. */
-export interface TrustIssueJSON {
-  kind: TrustIssueKind;
-  /** The uncertain node, e.g. the unresolved call */
-  location: NodeRefJSON;
+/** What a diagnostic is about. */
+export type DiagnosticKind = 'UNRESOLVED_CALL' | 'ANALYSIS_PROBLEM' | 'EXTERNAL_CODE';
+
+/**
+ * A place where the analysis is incomplete or uncertain, or where it ends, that some evidence of
+ * the agent relies on.
+ */
+export interface EvidenceDiagnosticJSON {
+  kind: DiagnosticKind;
+  severity: DiagnosticSeverity;
+  /** The node with the diagnostic, e.g. the unresolved call */
+  location: NodeJSON;
   /** What the evidence relies on, phrased to follow "relies on" */
   reason: string;
   /** The IDs of the evidence nodes that rely on [location] */
   evidence: string[];
 }
 
-/** Key figures of a function, shown next to it in the code viewer. */
-export interface FunctionAnnotationJSON {
-  function: NodeRefJSON;
+/** A function together with its key figures, see `.../translation-unit/{id}/functions`. */
+export interface FunctionCallStatsJSON {
+  function: NodeJSON;
   callers: number;
   callees: number;
   externalCalls: number;
   unresolvedCalls: number;
 }
 
-/** A call, located at its callee, and how well the analysis knows its target. */
-export interface CallAnnotationJSON extends CodeRangeJSON {
-  id: string;
-  name: string;
-  status: 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
+/** How well the analysis knows the target of a call. */
+export type CallStatus = 'RESOLVED' | 'EXTERNAL' | 'UNRESOLVED';
+
+/** A call and how well the analysis knows its target, see `.../translation-unit/{id}/calls`. */
+export interface CallSiteJSON {
+  call: NodeJSON;
+  /** The expression naming the target (e.g. `fopen` in `fopen(path, "r")`), if it has a location */
+  callee?: NodeJSON;
+  status: CallStatus;
 }
 
-/** A concept or operation in the code; the category is e.g. `crypto` or `file`. */
-export interface ConceptAnnotationJSON {
-  id: string;
-  type: string;
-  category: string;
-  isOperation: boolean;
-  line: number;
-  /** The name (or else the code) of the node it is attached to */
-  target: string;
-  /** For operations: the type of the concept they belong to */
-  concept?: string | null;
-}
-
-/** Everything the code viewer shows about a file without interaction, see `.../annotations`. */
-export interface FileAnnotationsJSON {
-  functions: FunctionAnnotationJSON[];
-  calls: CallAnnotationJSON[];
-  concepts: ConceptAnnotationJSON[];
+/** A concept or operation, see `.../translation-unit/{id}/overlays`. */
+export interface OverlayJSON {
+  overlay: NodeJSON;
+  underlyingNode?: NodeJSON;
+  /** For an operation: the concept it belongs to */
+  concept?: NodeJSON;
 }
 
 /** Everything the backend knows about a single node, see `GET /api/node/{id}`. */
 export interface NodeDetailsJSON {
-  node: NodeRefJSON;
-  typeName?: string;
-  value?: string;
-  isImplicit: boolean;
-  enclosingFunction?: NodeRefJSON;
-  overlays: NodeRefJSON[];
-  callTargets: NodeRefJSON[];
-  callers: NodeRefJSON[];
-  callees: NodeRefJSON[];
-  dataflowFrom: NodeRefJSON[];
-  dataflowTo: NodeRefJSON[];
+  node: NodeJSON;
+  enclosingFunction?: NodeJSON;
+  overlays: OverlayJSON[];
+  callTargets: NodeJSON[];
+  callers: NodeJSON[];
+  callees: NodeJSON[];
+  dataflowFrom: RelatedNodeJSON[];
+  dataflowTo: RelatedNodeJSON[];
   warnings: string[];
+  /** The number of nodes of each list before the backend limited it */
+  callTargetCount: number;
+  callerCount: number;
+  calleeCount: number;
+  dataflowFromCount: number;
+  dataflowToCount: number;
 }
 
 /** A compact reference to a node in the results of the MCP tools (`NodeInfo` in the backend). */
@@ -192,7 +196,7 @@ export interface McpToolInfo {
   name: string;
   description?: string;
   inputSchema?: {
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
     required?: string[];
   };
 }
@@ -227,7 +231,11 @@ export interface McpCapabilities {
 export interface SkillInfo {
   name: string;
   description: string;
-  body: string;
+  location: string;
+  license?: string | null;
+  compatibility?: string | null;
+  metadata?: Record<string, string>;
+  allowedTools?: string | null;
 }
 
 // AI Agent / Chat interfaces
@@ -248,7 +256,8 @@ export interface LLMMessage {
 
 export interface ToolResult {
   toolName?: string;
-  content: any;
+  args?: Record<string, unknown>;
+  content: unknown;
   isError?: boolean;
 }
 

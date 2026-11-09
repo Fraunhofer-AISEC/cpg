@@ -28,7 +28,10 @@ package de.fraunhofer.aisec.cpg.serialization
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.uuid.Uuid
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
@@ -59,7 +62,14 @@ data class EdgeJSON(
     @Serializable(with = UuidSerializer::class) var end: Uuid,
 )
 
-/** JSON data class for a [Node]. */
+/**
+ * JSON data class for a [Node].
+ *
+ * @property isInferred Whether the node was inferred by the analysis instead of being parsed from
+ *   source code, see [Node.isInferred].
+ * @property isImplicit Whether the node is not written in the source code, see [Node.isImplicit].
+ * @property typeName For a node with a type: the name of its type, see [Type.typeName].
+ */
 @Serializable
 data class NodeJSON(
     @Serializable(with = UuidSerializer::class) val id: Uuid,
@@ -76,10 +86,20 @@ data class NodeJSON(
     @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
     val componentName: String? = null,
     val fileName: String? = null,
+    val isInferred: Boolean = false,
+    val isImplicit: Boolean = false,
+    val typeName: String? = null,
 )
 
-/** Converts a [Node] into its JSON representation. */
-fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
+/**
+ * Converts a [Node] into its JSON representation.
+ *
+ * @param noEdges Whether to omit the DFG edges of the node.
+ * @param maxCodeLength If set, [NodeJSON.code] only contains the first line of the code (trimmed),
+ *   shortened to this many characters followed by `…`. This keeps the JSON small when nodes are
+ *   only referenced, e.g. in lists, where the full code of a function would be too much.
+ */
+fun Node.toJSON(noEdges: Boolean = false, maxCodeLength: Int? = null): NodeJSON {
     return NodeJSON(
         id = this.id,
         type = this.javaClass.simpleName,
@@ -87,7 +107,8 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
         startColumn = location?.region?.startColumn ?: -1,
         endLine = location?.region?.endLine ?: -1,
         endColumn = location?.region?.endColumn ?: -1,
-        code = this.code ?: "",
+        code =
+            (this.code ?: "").let { if (maxCodeLength != null) it.snippet(maxCodeLength) else it },
         name = this.name.toString(),
         fileName =
             this.location?.artifactLocation?.uri?.let { uri ->
@@ -103,7 +124,26 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
         nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,
         componentName = this.component?.name?.toString(),
+        isInferred = this.isInferred,
+        isImplicit = this.isImplicit,
+        typeName = (this as? HasType)?.type?.typeName,
     )
+}
+
+/** Upper bound for the code of a node that is only referenced, see [toRefJSON]. */
+private const val MAX_SNIPPET_LENGTH = 120
+
+/**
+ * This node as [NodeJSON] for a reference to it, e.g. in a list: without its DFG edges and with
+ * only the first line of its code, so that hub nodes and large functions do not blow up the
+ * response.
+ */
+fun Node.toRefJSON(): NodeJSON = toJSON(noEdges = true, maxCodeLength = MAX_SNIPPET_LENGTH)
+
+/** The first line of this code, trimmed and shortened to at most [maxLength] characters. */
+private fun String.snippet(maxLength: Int): String {
+    val firstLine = lineSequence().firstOrNull()?.trim().orEmpty()
+    return if (firstLine.length > maxLength) firstLine.take(maxLength) + "…" else firstLine
 }
 
 /** Converts an [Edge] into its JSON representation. */
@@ -158,3 +198,34 @@ data class NodePaths(
     val paths: List<List<NodeInfo>>,
     val truncated: Boolean,
 )
+
+/** How well the analysis knows what a [Call] does. */
+enum class CallStatus {
+    /**
+     * At least one target has a body, i.e., is part of the analysed code. For a declaration, the
+     * body of its definition counts, e.g. of a function declared in a header and defined in another
+     * file.
+     */
+    RESOLVED,
+    /**
+     * The targets are known, but none of them has a body, e.g. functions that are only declared in
+     * a header or a library, or that were inferred by the analysis.
+     */
+    EXTERNAL,
+    /** No target could be determined at all. */
+    UNRESOLVED,
+}
+
+/**
+ * How well the analysis knows the targets of this call, see [CallStatus].
+ *
+ * A single target with a body is enough for [CallStatus.RESOLVED], since the targets of a virtual
+ * call can include declarations without a body (e.g. a pure virtual method) next to its overrides.
+ */
+val Call.status: CallStatus
+    get() =
+        when {
+            invokes.isEmpty() -> CallStatus.UNRESOLVED
+            invokes.none { (it.definition ?: it).hasBody() } -> CallStatus.EXTERNAL
+            else -> CallStatus.RESOLVED
+        }
