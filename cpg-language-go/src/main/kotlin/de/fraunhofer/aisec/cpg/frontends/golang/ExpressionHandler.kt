@@ -184,6 +184,22 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                     }
                 }
             }
+            is GoStandardLibrary.Ast.StarExpr -> {
+                // A conversion to a pointer type, as in `(*[4]byte)(p)`. Syntactically this is
+                // indistinguishable from dereferencing a value and calling it, so we only treat
+                // it as a conversion if the operand is a type literal, which cannot denote a
+                // value. Were it handled as an expression, the type literal would reach the
+                // expression handler, which has no case for it.
+                if (unwrapped.x.isTypeLiteral) {
+                    return newCast(rawNode = callExpr) { cast ->
+                        cast.castType = frontend.typeOf(unwrapped)
+
+                        if (callExpr.args.isNotEmpty()) {
+                            cast.expression = frontend.expressionHandler.handle(callExpr.args[0])
+                        }
+                    }
+                }
+            }
         }
 
         val typeConstraints = mutableListOf<Node>()
@@ -321,9 +337,22 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val base = handle(selectorExpr.x)
 
         // Check, if this just a regular reference to a variable with a package scope and not a
-        // member expression
-        val isMember = !isPackageName(base.name.localName)
-
+        // member expression.
+        //
+        // A declaration that is visible here shadows a package of the same name (see
+        // https://go.dev/ref/spec#Declarations_and_scope), and such a name is not unusual:
+        // `liner := liner.NewLiner()` makes every later `liner.X` a method call on the variable
+        // rather than a package-qualified reference. Reading it as the package produces a
+        // reference to a function that does not exist, so the call is resolved to an inferred
+        // stub, the value it returns has no type, and everything reached through it is lost as
+        // well. Note that the right-hand side of the declaration itself is handled before the
+        // variable enters the scope, so it still correctly refers to the package.
+        // Note that we deliberately do not ask [isShadowed] here: an imported package is itself a
+        // symbol in scope, so that check answers "yes" for every package name and would turn
+        // every qualified reference into a member access.
+        val isMember =
+            !isPackageName(base.name.localName) ||
+                base.name.localName in frontend.shortVariableNames
         val ref =
             if (isMember) {
                 newMemberAccess(selectorExpr.sel.name, base, rawNode = selectorExpr)
@@ -514,3 +543,17 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             )
     }
 }
+
+/**
+ * Whether this expression is a type literal -- an array, struct, map, channel, function or
+ * interface type written out in place. Such an expression can only denote a type, never a value,
+ * which is what allows a conversion to be told apart from a call.
+ */
+private val GoStandardLibrary.Ast.Expr.isTypeLiteral: Boolean
+    get() =
+        this is GoStandardLibrary.Ast.ArrayType ||
+            this is GoStandardLibrary.Ast.StructType ||
+            this is GoStandardLibrary.Ast.MapType ||
+            this is GoStandardLibrary.Ast.ChanType ||
+            this is GoStandardLibrary.Ast.FuncType ||
+            this is GoStandardLibrary.Ast.InterfaceType

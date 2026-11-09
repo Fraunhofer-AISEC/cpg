@@ -399,10 +399,38 @@ private constructor(
         val futures = mutableListOf<CompletableFuture<LanguageFrontend<*, *>?>>()
         val parallelContexts = mutableListOf<TranslationContext>()
 
-        val futureToFile: MutableMap<CompletableFuture<LanguageFrontend<*, *>?>, File> =
+        val futureToFiles: MutableMap<CompletableFuture<LanguageFrontend<*, *>?>, List<File>> =
             IdentityHashMap()
 
-        for (sourceLocation in sourceLocations) {
+        // Decide what may be parsed independently of what.
+        //
+        // A file of a language whose packages span several files does not stand on its own: in Go,
+        // `type Tree` may live in types.go while its methods live in ztypes.go, and the two see
+        // each other without an import. Parsing them in separate contexts hides every declaration
+        // of the sibling file, so references across them do not resolve and records are invented
+        // for them instead -- which costs far more than the parallelism gains. Such files are
+        // therefore grouped by their directory, i.e. by package, and only the groups are parsed
+        // concurrently. For every other language a group is a single file, as before.
+        val groups =
+            sourceLocations
+                .groupBy { file ->
+                    val language = with(globalCtx) { file.language }
+                    if (language is HasPackagesSpanningMultipleFiles) {
+                        file.absoluteFile.parent
+                    } else {
+                        file.absolutePath
+                    }
+                }
+                .values
+                .toList()
+
+        log.info(
+            "Parallel parsing {} source file(s) in {} independent group(s)",
+            sourceLocations.size,
+            groups.size,
+        )
+
+        for (group in groups) {
             // Build a new translation context for this parallel parsing process. We need to do this
             // until we can use a single scope manager concurrently. We can re-use the global
             // configuration and type manager.
@@ -411,28 +439,37 @@ private constructor(
 
             val future =
                 CompletableFuture.supplyAsync {
-                    try {
-                        return@supplyAsync parse(component, result, ctx, globalCtx, sourceLocation)
-                    } catch (e: TranslationException) {
-                        throw RuntimeException("Error parsing $sourceLocation", e)
+                    var last: LanguageFrontend<*, *>? = null
+                    for (sourceLocation in group) {
+                        try {
+                            // The files of a group share one context, so they have to be parsed
+                            // one after another; the groups themselves run concurrently.
+                            last = parse(component, result, ctx, globalCtx, sourceLocation) ?: last
+                        } catch (e: TranslationException) {
+                            throw RuntimeException("Error parsing $sourceLocation", e)
+                        }
                     }
+                    return@supplyAsync last
                 }
 
             futures.add(future)
-            futureToFile[future] = sourceLocation
+            futureToFiles[future] = group
         }
 
         for (future in futures) {
             try {
                 val f = future.get()
                 if (f != null) {
-                    handleCompletion(result, usedFrontends, futureToFile[future], f)
+                    // Every file of the group was parsed by this frontend.
+                    futureToFiles[future]?.forEach {
+                        handleCompletion(result, usedFrontends, it, f)
+                    }
                 }
             } catch (e: InterruptedException) {
-                log.error("Error parsing ${futureToFile[future]}", e)
+                log.error("Error parsing ${futureToFiles[future]}", e)
                 Thread.currentThread().interrupt()
             } catch (e: ExecutionException) {
-                log.error("Error parsing ${futureToFile[future]}", e)
+                log.error("Error parsing ${futureToFiles[future]}", e)
                 // We previously called Thread.currentThread().interrupt here, however
                 // it is unsure, why. Therefore, instead of just removing this line, we
                 // "disabled" it and left this comment here for future generations. If

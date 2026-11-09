@@ -104,5 +104,15 @@ class PointerType : Type, SecondOrderType {
             pointerOrigin == other.pointerOrigin
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), elementType, pointerOrigin)
+    override fun hashCode(): Int {
+        // We hash the element type's *name* rather than the element type itself. A pointer may
+        // point at a type that (transitively) points back at it -- a struct holding a pointer to
+        // itself -- and hashing the element type would then recurse forever.
+        //
+        // Hashing its identity instead would break the contract with [equals], which compares
+        // element types by value: two pointer types that are equal would land in different hash
+        // buckets, so a set or map of types would no longer find them. Equal element types always
+        // have equal names, so the name keeps the contract intact.
+        return Objects.hash(super.hashCode(), elementType.name, pointerOrigin)
+    }
 }

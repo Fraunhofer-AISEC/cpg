@@ -134,6 +134,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
          * that the regular resolver would resolve.
          */
         val experimentalEOGWorklist: Boolean = false,
+
+        /** Considers all overrides in subclasses. This is an overapproximation. */
+        val includeAllOverrides: Boolean = false,
     ) : PassConfiguration()
 
     protected lateinit var walker: ScopedWalker<Node>
@@ -755,6 +758,20 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // in handleReference.
         val helper = current.resolutionHelper
         if (helper is MemberCall) {
+            // The callee of a member call does not have to be a method. In a language with
+            // first-class functions a field can hold a function, and `srv.MsgInvalidFunc(m, err)`
+            // then calls the value in that field rather than a method of that name. Call
+            // resolution only ever considers Function candidates, so such a call ends up with no
+            // target at all -- and since there is no record member to infer a method from, not
+            // even an inferred one. Bind the access to the field here and take over its type, so
+            // that DynamicInvokeResolver can follow the data flow to whatever was stored in it.
+            if (language is HasFirstClassFunctions && current.candidates.none { it is Function }) {
+                val field = current.candidates.filterIsInstance<Field>().singleOrNull()
+                if (field != null && field.type.isFunctionLike) {
+                    current.refersTo = field
+                    current.type = field.type
+                }
+            }
             return
         }
 
@@ -888,7 +905,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         decideInvokesBasedOnCandidates(callee, call)
     }
 
-    private fun resolveMemberByName(
+    internal fun resolveMemberByName(
         symbol: String,
         possibleContainingTypes: Set<Type>,
     ): Set<Declaration> {
@@ -896,9 +913,42 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val records =
             possibleContainingTypes.mapNotNullTo(mutableSetOf()) { it.root.recordDeclaration }
         for (record in records) {
+            // We know *which* record this is, so look the member up in the scope that record
+            // declares. Going through the fully qualified name instead would go through whichever
+            // scope carries that name, which need not be this one: several records can share a
+            // name, and then we collect the members of all of them.
+            //
+            // Go makes that the normal case rather than a corner case, because a package is named
+            // after the last element of its import path. lego ships about 130 DNS providers, each
+            // with its own `providers/dns/<provider>/internal/client.go` declaring a `Client` --
+            // all of them `internal.Client` to us. Resolving `c.do(req)` by name alone answered
+            // one call with the `do` of every provider, which is where four fifths of that
+            // project's spurious reachability came from.
+            // Both sources are used, not one in preference to the other: the record's own scope
+            // can be missing a member that the name lookup does find -- one promoted from an
+            // embedded type, or declared in a scope the type is spread over -- and dropping it
+            // would lose a call edge, which is the one kind of error we care most about avoiding.
+            // What the name lookup must not contribute is the members of a *different* record
+            // that merely shares the name, so those are filtered out by the package they are
+            // declared in.
             candidates.addAll(
-                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
+                record.declaringScope?.lookupSymbol(symbol, qualifiedLookup = true) ?: listOf()
             )
+
+            val recordPackage = record.packageDirectory
+            for (candidate in
+                ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)) {
+                val candidatePackage = candidate.packageDirectory
+                // Keep it unless we can positively tell it belongs somewhere else. An unknown
+                // origin on either side is not evidence of a mismatch.
+                if (
+                    recordPackage.isEmpty() ||
+                        candidatePackage.isEmpty() ||
+                        candidatePackage == recordPackage
+                ) {
+                    candidates.add(candidate)
+                }
+            }
         }
 
         // Find invokes by supertypes
@@ -1118,8 +1168,15 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun getInvocationCandidatesFromParents(
         name: Symbol,
         possibleTypes: Set<Record>,
+        // The records we already descended into. Excluding only the records of the level we came
+        // from is not enough to terminate: a super type relation may be cyclic, which in Go happens
+        // as soon as two interfaces have the same method set, because each of them then
+        // structurally
+        // satisfies the other and both get the other as a super type.
+        visited: MutableSet<Record> = mutableSetOf(),
     ): List<Declaration> {
         val workingPossibleTypes = mutableSetOf(*possibleTypes.toTypedArray())
+        visited += possibleTypes
         return if (possibleTypes.isEmpty()) {
             listOf()
         } else {
@@ -1142,7 +1199,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 workingPossibleTypes.flatMap {
                     getInvocationCandidatesFromParents(
                         name,
-                        it.superTypeDeclarations.filterTo(mutableSetOf()) { it !in possibleTypes },
+                        it.superTypeDeclarations.filterTo(mutableSetOf()) { it !in visited },
+                        visited,
                     )
                 }
             }
@@ -1158,6 +1216,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         possibleSubTypes: Set<Type>,
         declaration: Function,
     ): Set<Function> {
+        if (passConfig?.includeAllOverrides == true) {
+            return declaration.overriddenBy.toSet()
+        }
+
         return declaration.overriddenBy.filterTo(mutableSetOf()) { f ->
             if (f is Method) {
                 val record = f.recordDeclaration
@@ -1263,6 +1325,15 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
     // We also set the callee's refersTo
     callee.refersTo = call.invokes.firstOrNull()
 }
+
+/**
+ * Whether a value of this type can be called. Next to the function types themselves this covers a
+ * type that is *defined over* a function type, such as Go's `type HandlerFunc func(http.Request)`,
+ * which carries the function type among its super types.
+ */
+internal val Type.isFunctionLike: Boolean
+    get() =
+        this is FunctionType || this is FunctionPointerType || superTypes.any { it is FunctionType }
 
 /**
  * Returns a set of types in which the [Call.callee] (which is a [Reference]) could reside in. More
@@ -1372,10 +1443,31 @@ internal fun Pass<*>.resolveWithArguments(
     }
     result.viableFunctions = result.signatureResults.keys
 
+    // Whether we may fall back to the declarations the name lookup produced when none of them
+    // matches the argument signature. See [HasNameOnlyCallResolution]. We exclude member calls on
+    // a base whose type we do not know, because there the candidates were not found through a
+    // record scope but collected by name across the whole graph, so they really are guesses.
+    val baseType = (source as? MemberCall)?.base?.type
+    val mayFallBackToCandidates =
+        language is HasNameOnlyCallResolution &&
+            !(baseType is DynamicType || baseType is UnknownType || baseType is AutoType) &&
+            // ... and not if the record we would be resolving in is one we invented ourselves.
+            // The fallback is justified by the name lookup having identified *the* declaration,
+            // and that argument does not survive a receiver whose type we never found: there we
+            // end up answering the call with every same-named method in the program. In a
+            // vendored Kubernetes tree a single `m.ObjectMeta.Size()` came back with 1202
+            // targets, one for every generated `Size`, at each of 114 call sites.
+            (baseType?.root as? ObjectType)?.recordDeclaration?.isInferred != true
+
     // If we have a "problematic" result, we can stop here. In this case we cannot really
     // determine anything more.
     if (result.success == PROBLEMATIC) {
-        result.bestViable = result.viableFunctions
+        result.bestViable =
+            if (mayFallBackToCandidates) {
+                result.viableFunctions.ifEmpty { result.candidateFunctions }
+            } else {
+                result.viableFunctions
+            }
         return result
     }
 
@@ -1385,5 +1477,28 @@ internal fun Pass<*>.resolveWithArguments(
     result.bestViable = pair.first
     result.success = pair.second
 
+    // In a language that resolves calls by name only, the symbol lookup has already decided which
+    // declaration is meant, so keep it even if the signature does not match. See
+    // [HasNameOnlyCallResolution].
+    if (result.bestViable.isEmpty() && mayFallBackToCandidates) {
+        result.bestViable = result.candidateFunctions
+        result.success =
+            if (result.candidateFunctions.size == 1) {
+                SUCCESSFUL
+            } else {
+                AMBIGUOUS
+            }
+    }
+
     return result
 }
+
+/**
+ * The directory of the file this node was declared in. For a language whose packages are
+ * directories -- Go, where a package is moreover named only after the last element of its import
+ * path -- this tells apart declarations that share a fully qualified name but belong to different
+ * packages. Empty when we do not know where the node came from, which callers must treat as "no
+ * information" rather than as a mismatch.
+ */
+internal val Node.packageDirectory: String
+    get() = this.location?.artifactLocation?.uri?.path?.substringBeforeLast('/') ?: ""

@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
@@ -56,14 +57,25 @@ fun getFunctionPointerType(expr: Expression): FunctionPointerType? {
         }
         is FunctionPointerType -> type
         else -> {
-            // some languages allow other types to derive from a function type, in this case
-            // we need to look for a super type
-            val superType = type.superTypes.singleOrNull()
-            if (superType is FunctionType) {
-                superType.pointer() as FunctionPointerType
-            } else {
-                null
-            }
+            // Some languages allow other types to derive from a function type, in this case we
+            // need to look for a super type. A named type can have more super types than the one
+            // it is defined over -- in Go a defined function type such as
+            // `type DurationEncoder func(time.Duration, PrimitiveArrayEncoder)` also gets the
+            // interfaces it satisfies as super types -- so look for the function type among them
+            // instead of requiring it to be the only one.
+            // The type the record is defined over is also recorded on the declaration itself. We
+            // have to look there as well, because the hierarchy resolver only propagates super
+            // types that are records, and a function type is not one -- so for
+            // `type Decorator func(Processor) Processor` the function type never reaches
+            // Type.superTypes and every call through such a value loses its target.
+            val superType =
+                type.superTypes.filterIsInstance<FunctionType>().singleOrNull()
+                    ?: (type as? ObjectType)
+                        ?.recordDeclaration
+                        ?.superClasses
+                        ?.filterIsInstance<FunctionType>()
+                        ?.singleOrNull()
+            superType?.pointer() as? FunctionPointerType
         }
     }
 }
