@@ -99,8 +99,8 @@ class WorkbenchDemoIntegrationTest {
 
         // The key figures of app_main: get_key is external, and so is the call through the function
         // pointer
-        val annotations = client.get("$base/annotations").body<FileAnnotationsJSON>()
-        val appMain = annotations.functions.first { it.function.name.endsWith("app_main") }
+        val functions = client.get("$base/functions").body<List<FunctionCallStatsJSON>>()
+        val appMain = functions.first { it.function.name.endsWith("app_main") }
         assertTrue(appMain.externalCalls >= 2, "external calls: ${appMain.externalCalls}")
 
         // What affects the call of encrypt: the key (data) and the condition (control)
@@ -159,13 +159,13 @@ class WorkbenchDemoIntegrationTest {
         assertEquals("Call", getKeyCall.node.type, "node: ${getKeyCall.node.code}")
         val issues =
             client
-                .post("/api/trust") {
+                .post("/api/diagnostics") {
                     contentType(ContentType.Application.Json)
                     setBody(listOf(getKeyCall.node.id.toString()))
                 }
-                .body<List<TrustIssueJSON>>()
+                .body<List<EvidenceDiagnosticJSON>>()
         assertTrue(
-            issues.any { it.kind == TrustIssueKind.EXTERNAL_CODE },
+            issues.any { it.kind == DiagnosticKind.EXTERNAL_CODE },
             "issues: ${issues.map { "${it.kind} ${it.reason}" }}",
         )
 

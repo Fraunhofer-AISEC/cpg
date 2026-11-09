@@ -1,7 +1,8 @@
 <script lang="ts">
   import { tick, type Snippet } from 'svelte';
   import type { CallFilter, InspectorSection } from '$lib/stores/codeFocus.svelte';
-  import type { NodeDetailsJSON, NodeRefJSON } from '$lib/types';
+  import type { NodeDetailsJSON, NodeJSON } from '$lib/types';
+  import { overlayLabel } from '$lib/overview';
   import NodeRefItem from './NodeRefItem.svelte';
   import DataflowTree from './DataflowTree.svelte';
 
@@ -9,9 +10,9 @@
     details: NodeDetailsJSON | null;
     loading?: boolean;
     error?: string | null;
-    onSelect: (ref: NodeRefJSON) => void;
+    onSelect: (ref: NodeJSON) => void;
     /** Called when a node is selected in a dataflow tree, with the chain of hops to it */
-    onFollow?: (chain: NodeRefJSON[], direction: 'from' | 'to') => void;
+    onFollow?: (chain: NodeJSON[], direction: 'from' | 'to') => void;
     /** Additional actions for the inspected node, e.g. adding a concept */
     actions?: Snippet;
     /** A section to expand and scroll into view, e.g. after clicking the code lens of a function */
@@ -60,6 +61,11 @@
   );
   const filtered = $derived(!!callFilter && !!callStatus);
 
+  // The number of shown nodes, and the total if the backend limited the list
+  function count(shown: number, total: number): string {
+    return total > shown ? `${shown} of ${total}` : `${shown}`;
+  }
+
   const calls = $derived(
     details
       ? [
@@ -67,12 +73,14 @@
             id: 'callTargets' as const,
             title: 'Calls',
             refs: details.callTargets,
+            total: details.callTargetCount,
             hint: 'Functions this call invokes'
           },
           {
             id: 'callers' as const,
             title: 'Called by',
             refs: details.callers,
+            total: details.callerCount,
             hint: 'Calls of this function'
           },
           {
@@ -83,6 +91,8 @@
                 ? 'External calls in body'
                 : 'Unresolved calls in body',
             refs: filteredCallees,
+            // The total of a filtered list is unknown, the filter only applies to the listed calls
+            total: filtered ? filteredCallees.length : details.calleeCount,
             hint: 'Calls made by this function'
           }
         ].filter((group) => group.refs.length > 0)
@@ -106,9 +116,7 @@
       <div class="flex items-center gap-1.5">
         <span
           class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-gray-700"
-          >{details.node.label === 'Concept' || details.node.label === 'Operation'
-            ? details.node.label
-            : details.node.type}</span
+          >{details.node.overlayKind ?? details.node.type}</span
         >
         <span class="truncate text-sm font-semibold text-gray-900">{details.node.name || '—'}</span>
       </div>
@@ -120,20 +128,11 @@
         <dd class="truncate font-mono text-gray-700">
           {details.node.fileName}:{details.node.startLine}
         </dd>
-        {#if details.typeName}
+        {#if details.node.typeName}
           <dt class="text-gray-400">Type</dt>
-          <dd class="truncate font-mono text-gray-700">{details.typeName}</dd>
+          <dd class="truncate font-mono text-gray-700">{details.node.typeName}</dd>
         {/if}
-        {#if details.value != null}
-          <dt class="text-gray-400">Value</dt>
-          <dd
-            class="truncate font-mono text-gray-700"
-            title="Constant value computed by the analysis"
-          >
-            {details.value}
-          </dd>
-        {/if}
-        {#if details.isImplicit}
+        {#if details.node.isImplicit}
           <dt class="text-gray-400">Implicit</dt>
           <dd class="text-gray-700">yes (not written in the code)</dd>
         {/if}
@@ -172,8 +171,8 @@
           Concepts & operations ({details.overlays.length})
         </summary>
         <div class="mt-1">
-          {#each details.overlays as overlay (overlay.id)}
-            <NodeRefItem ref={overlay} {onSelect} />
+          {#each details.overlays as overlay (overlay.overlay.id)}
+            <NodeRefItem ref={overlay.overlay} label={overlayLabel(overlay)} {onSelect} />
           {/each}
         </div>
       </details>
@@ -186,7 +185,7 @@
           class="cursor-pointer text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
           title={group.hint}
         >
-          {group.title} ({group.refs.length})
+          {group.title} ({count(group.refs.length, group.total)})
         </summary>
         {#if group.id === 'callees' && filtered}
           <button
@@ -211,7 +210,10 @@
         class="cursor-pointer text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
         title="Direct dataflow predecessors; expand to follow them further back"
       >
-        Where does the value come from? ({details.dataflowFrom.length})
+        Where does the value come from? ({count(
+          details.dataflowFrom.length,
+          details.dataflowFromCount
+        )})
       </summary>
       <div class="mt-1">
         {#key details.node.id}
@@ -230,7 +232,7 @@
         class="cursor-pointer text-[10px] font-semibold tracking-wide text-gray-500 uppercase"
         title="Direct dataflow successors; expand to follow them further"
       >
-        Where does the value go? ({details.dataflowTo.length})
+        Where does the value go? ({count(details.dataflowTo.length, details.dataflowToCount)})
       </summary>
       <div class="mt-1">
         {#key details.node.id}

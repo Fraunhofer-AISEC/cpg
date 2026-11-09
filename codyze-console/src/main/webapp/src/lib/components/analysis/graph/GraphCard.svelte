@@ -44,7 +44,7 @@
       overlayNames.length > 0 && {
         icon: '◆',
         word: overlayNames[0] + (overlayNames.length > 1 ? ` +${overlayNames.length - 1}` : ''),
-        title: statement.overlays.map((o) => `${o.label ?? ''} ${o.name || o.type}`).join('\n'),
+        title: statement.overlays.map((o) => `${o.overlayKind ?? ''} ${o.name || o.type}`).join('\n'),
         cls: 'text-purple-600'
       },
       statement.warning && { icon: '⚠', word: 'warning', cls: 'text-amber-600' },
@@ -97,7 +97,7 @@ graph. Expanding by double click is a shortcut, the button at the border does th
     {:else if overlay}
       <span class="text-purple-600 group-[.graph-far]/flow:text-4xl">◆</span>
       <span class="truncate group-[.graph-far]/flow:hidden"
-        >{statement.node.label ?? 'Overlay'} · L{statement.startLine}</span
+        >{statement.node.overlayKind ?? 'Overlay'} · L{statement.startLine}</span
       >
     {:else}
       <span

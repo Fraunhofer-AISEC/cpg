@@ -181,6 +181,8 @@
       >
         {start + i + 1}
       </span>
+      <!-- The HTML of the syntax highlighter, which escapes the code -->
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
       <span data-code>{@html line}</span>
     </div>
   {/each}

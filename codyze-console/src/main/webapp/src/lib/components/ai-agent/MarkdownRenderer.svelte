@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { marked } from 'marked';
-  import type { Tokens } from 'marked';
-  import type { NodeRefJSON } from '$lib/types';
+  import { Marked } from 'marked';
+  import type { Token, Tokens, TokenizerAndRendererExtension } from 'marked';
+  import type { NodeJSON } from '$lib/types';
   import { citationName, citationPattern } from '$lib/agentEvidence';
 
   interface Props {
     content: string;
     /** The cited nodes by ID, to label the citations `[[node:<id>]]` in the content */
-    citations?: Map<string, NodeRefJSON>;
+    citations?: Map<string, NodeJSON>;
     /** Called when a citation is clicked; without it, citations are shown as plain text */
     onCite?: (nodeId: string) => void;
     /** Called when the mouse enters a citation, with its chip, and with `null` when it leaves it */
@@ -24,24 +24,9 @@
   const codeIcon =
     '<svg class="node-cite-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5"/></svg>';
 
-  // A citation, optionally with the code right before it, e.g. `report_key(key);` [[node:<id>]]
-  const codeCitationPattern = new RegExp(
-    '(?:`([^`\\n]+)`[ \\t]*)?' + citationPattern.source,
-    citationPattern.flags
-  );
-
-  // Moves the citations out of inline code, where they would be shown as text, behind it
-  function citationsOutOfCode(text: string): string {
-    return text.replace(/`([^`\n]*)`/g, (code, inner: string) => {
-      const cited = inner.match(citationPattern);
-      if (!cited) return code;
-      return `\`${inner.replace(citationPattern, '').trim()}\` ${cited.join(' ')}`;
-    });
-  }
-
   // Whether the code an answer writes is the code of the node it cites. Only then may the chip be
   // labeled with it: a citation of another node must stay visible as such
-  function namesNode(code: string, ref: NodeRefJSON): boolean {
+  function namesNode(code: string, ref: NodeJSON): boolean {
     const normalize = (text: string) => text.replace(/\s+/g, ' ').replace(/;$/, '').trim();
     const written = normalize(code);
     const own = normalize(ref.code);
@@ -50,27 +35,64 @@
     return !!written && (own.includes(written) || name === ref.name);
   }
 
-  // Replaces the citations of nodes with chips, which are labeled once the nodes are resolved. The
-  // code the answer writes right before a citation becomes the label of its chip if it is the code
-  // of the cited node, instead of naming the same place twice
-  function renderCitations(text: string): string {
-    if (!onCite) return text;
-    return citationsOutOfCode(text).replace(codeCitationPattern, (_, code: string, id: string) => {
-      const ref = citations?.get(id.toLowerCase());
-      const merged = !!code && !!ref && namesNode(code, ref);
-      const before = code && !merged ? `\`${code}\` ` : '';
-      const name = merged ? code.trim() : ref ? citationName(ref) : `node …${id.slice(-6)}`;
-      const where = ref && ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : '';
-      const title = ref ? `${ref.type} ${ref.code}` : 'Cited node';
-      return (
-        before +
-        `<button type="button" class="node-cite" data-node-id="${id.toLowerCase()}" title="${escapeHtml(title)}">` +
-        codeIcon +
-        `<span class="node-cite-name">${escapeHtml(name)}</span>` +
-        (where ? `<span class="node-cite-where">${escapeHtml(where)}</span>` : '') +
-        `</button>`
-      );
-    });
+  // The chip of a cited node, which is labeled once the node is resolved. The code the answer
+  // writes right before a citation becomes the label of its chip if it is the code of the cited
+  // node, instead of naming the same place twice
+  function renderCitation(id: string, code?: string): string {
+    const ref = citations?.get(id);
+    const merged = !!code && !!ref && namesNode(code, ref);
+    const before = code && !merged ? `<code>${escapeHtml(code)}</code> ` : '';
+    const name = merged ? code!.trim() : ref ? citationName(ref) : `node …${id.slice(-6)}`;
+    const where = ref && ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : '';
+    const title = ref ? `${ref.type} ${ref.code}` : 'Cited node';
+    return (
+      before +
+      `<button type="button" class="node-cite" data-node-id="${id}" title="${escapeHtml(title)}">` +
+      codeIcon +
+      `<span class="node-cite-name">${escapeHtml(name)}</span>` +
+      (where ? `<span class="node-cite-where">${escapeHtml(where)}</span>` : '') +
+      `</button>`
+    );
+  }
+
+  // Citations are tokens of their own, instead of being replaced in the text before it is parsed.
+  // This way a citation in a code span or block stays what it is: code
+  const citationStart = new RegExp(`^${citationPattern.source}`, 'i');
+  const nodeCitation: TokenizerAndRendererExtension = {
+    name: 'nodeCitation',
+    level: 'inline',
+    start: (src) => src.indexOf('[[node:'),
+    tokenizer(src) {
+      const match = citationStart.exec(src);
+      return match
+        ? { type: 'nodeCitation', raw: match[0], id: match[1].toLowerCase() }
+        : undefined;
+    },
+    renderer(token) {
+      // Without a handler for the clicks, a citation is shown as the text it is
+      return onCite
+        ? renderCitation(token.id as string, token.code as string | undefined)
+        : escapeHtml(token.raw);
+    }
+  };
+
+  // Moves the code span right before a citation, e.g. `report_key(key);` [[node:<id>]], into the
+  // citation, which decides whether it labels the chip
+  function codeIntoCitations(tokens: Token[]): Token[] {
+    const result: Token[] = [];
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      const next = tokens[i + 1];
+      const spaced = next?.type === 'text' && /^[ \t]*$/.test(next.raw);
+      const citation = spaced ? tokens[i + 2] : next;
+      if (token.type === 'codespan' && citation?.type === 'nodeCitation') {
+        (citation as Token & { code?: string }).code = (token as Tokens.Codespan).text;
+        i += spaced ? 1 : 0;
+        continue;
+      }
+      result.push(token);
+    }
+    return result;
   }
 
   // The citation under the mouse, so that leaving it is reported once
@@ -94,20 +116,34 @@
     if (cite?.dataset.nodeId) onCite?.(cite.dataset.nodeId);
   }
 
-  const renderer = new marked.Renderer();
-  renderer.code = function ({ text, lang }: Tokens.Code): string {
-    const language = lang || 'plaintext';
-    // The code is text, e.g. `#include <stdio.h>` must not become a tag
-    return `<pre><code class="hljs language-${escapeHtml(language)}">${escapeHtml(text)}</code></pre>`;
-  };
+  // Only links to web pages, mail addresses and the page itself are kept: a link like
+  // `javascript:...` in an answer would run code when it is clicked
+  const safeUrl = /^(https?:|mailto:|#|\/|\.\.?\/)/i;
 
-  marked.use({
+  // The answers contain text of the model and of tool results, which can be influenced by the
+  // analysed code. So no HTML in them is rendered as such: marked turns everything else into HTML
+  const marked = new Marked({
     gfm: true, // GitHub Flavored Markdown
     breaks: true, // Convert \n to <br>
-    renderer
+    extensions: [nodeCitation],
+    walkTokens(token) {
+      if ('tokens' in token && Array.isArray(token.tokens)) {
+        token.tokens = codeIntoCitations(token.tokens);
+      }
+      if ((token.type === 'link' || token.type === 'image') && !safeUrl.test(token.href)) {
+        token.href = '#';
+      }
+    },
+    renderer: {
+      html: ({ text }) => escapeHtml(text),
+      code({ text, lang }: Tokens.Code): string {
+        const language = escapeHtml(lang || 'plaintext');
+        return `<pre><code class="hljs language-${language}">${escapeHtml(text)}</code></pre>`;
+      }
+    }
   });
 
-  let html = $derived(marked.parse(renderCitations(content)) as string);
+  let html = $derived(marked.parse(content) as string);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_mouse_events_have_key_events -->
@@ -117,6 +153,7 @@
   onmouseover={handleMouseOver}
   onmouseleave={handleMouseLeave}
 >
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -- the HTML is made safe by the renderer -->
   {@html html}
 </div>
 

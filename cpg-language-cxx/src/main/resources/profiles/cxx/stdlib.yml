@@ -1,0 +1,92 @@
+# Data flow summaries of the "stdlib" profile (see StdlibProfile). The format is described in
+# docs/docs/CPG/specs/dfg-function-summaries.md. The language CLanguage also covers CPPLanguage.
+# The functions that write to a destination return that destination pointer (param0), not its
+# contents.
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: memcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: memmove
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: memset
+  dataFlows:
+    - from: param1
+      to: param0.deref
+      dfgType: full
+    - from: param0
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strncpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0
+      to: return
+      dfgType: full
+
+# strcat and strncat append, so the previous contents of the destination remain: partial.
+- functionDeclaration:
+    language: CLanguage
+    methodName: strcat
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: partial
+    - from: param0
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CLanguage
+    methodName: strncat
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: partial
+    - from: param0
+      to: return
+      dfgType: full
+
+# strlen's length is derived from the contents of the string (like the result of a + b from its
+# operands), so the contents flow to the return value.
+- functionDeclaration:
+    language: CLanguage
+    methodName: strlen
+  dataFlows:
+    - from: param0.deref
+      to: return
+      dfgType: full

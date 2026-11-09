@@ -57,8 +57,7 @@ enum class GraphNodeKind {
     STUB,
     /**
      * A concept or operation that the dependences pass through. Its node is labelled like the
-     * overlays of a node ([toOverlayRefJSON]), its code and lines are those of the node it is
-     * attached to.
+     * overlays of a node ([toRefJSON]), its code and lines are those of the node it is attached to.
      */
     OVERLAY,
 }
@@ -88,13 +87,13 @@ enum class GraphEdgeKind {
 data class GraphNodeJSON(
     val id: String,
     val kind: GraphNodeKind,
-    val node: NodeRefJSON,
+    val node: NodeJSON,
     val startLine: Int,
     val endLine: Int,
     val code: String,
     val depth: Int,
     val more: Int,
-    val overlays: List<NodeRefJSON>,
+    val overlays: List<NodeJSON>,
     val unresolved: Boolean,
     val external: Boolean,
     val warning: Boolean,
@@ -117,8 +116,8 @@ data class GraphEdgeJSON(
     val to: String,
     val kind: GraphEdgeKind,
     val label: String?,
-    val fromPart: NodeRefJSON? = null,
-    val toPart: NodeRefJSON? = null,
+    val fromPart: NodeJSON? = null,
+    val toPart: NodeJSON? = null,
 )
 
 /**
@@ -131,7 +130,7 @@ data class GraphSliceJSON(
     val direction: SliceDirection,
     val hops: Int,
     /** The function the slice is limited to */
-    val function: NodeRefJSON?,
+    val function: NodeJSON?,
     val nodes: List<GraphNodeJSON>,
     val edges: List<GraphEdgeJSON>,
     /** Whether statements are missing because the slice reached the upper bound of nodes */
@@ -198,7 +197,7 @@ val Node.isBranching: Boolean
     get() = this is IfElse || this is Loop || this is Switch || this is CatchClause
 
 /** This node as a part of [statement], or `null` if it is the statement itself. */
-fun Node.asPartOf(statement: Node): NodeRefJSON? = if (this === statement) null else toRefJSON()
+fun Node.asPartOf(statement: Node): NodeJSON? = if (this === statement) null else toRefJSON()
 
 /** Whether this is a concept or an operation, which a graph shows as an overlay. */
 val Node.isConceptOverlay: Boolean
@@ -263,7 +262,7 @@ fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON 
     return GraphNodeJSON(
         id = id.toString(),
         kind = kind,
-        node = if (overlay) toOverlayRefJSON() else toRefJSON(),
+        node = if (overlay) toRefJSON() else toRefJSON(),
         startLine = startLine,
         endLine = maxOf(endLine, startLine),
         // Code that is not analysed, e.g. a function that is not declared, has no code but a name
@@ -276,7 +275,7 @@ fun Node.toGraphNode(kind: GraphNodeKind, depth: Int, more: Int): GraphNodeJSON 
                 members
                     .flatMap { it.overlays }
                     .filter { it.isConceptOverlay }
-                    .map { it.toOverlayRefJSON() },
+                    .map { it.toRefJSON() },
         unresolved = statuses.any { it == CallStatus.UNRESOLVED },
         external =
             if (kind == GraphNodeKind.STUB) isInferred || location == null

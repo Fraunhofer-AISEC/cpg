@@ -1,4 +1,4 @@
-import type { NodePathsJSON, NodeRefJSON, NodeSliceJSON } from '$lib/types';
+import type { NodeJSON, NodePathsJSON, NodeSliceJSON } from '$lib/types';
 
 /**
  * Slices of the program dependence graph (PDG) of a function: the statements that affect a
@@ -22,8 +22,8 @@ export interface GraphNode {
   /** The ID of the statement, which is also its node ID */
   id: string;
   kind: GraphNodeKind;
-  /** For an overlay: the concept or operation, labelled `Concept` or `Operation` */
-  node: NodeRefJSON;
+  /** For an overlay: the concept or operation itself */
+  node: NodeJSON;
   startLine: number;
   endLine: number;
   code: string;
@@ -32,7 +32,7 @@ export interface GraphNode {
   /** The statements further away that are not part of the slice, to offer expanding it */
   more: number;
   /** The concepts and operations attached to the nodes of the statement */
-  overlays: NodeRefJSON[];
+  overlays: NodeJSON[];
   unresolved: boolean;
   /** A call to code that is not analysed; for a stub: the code is not part of the analysis */
   external: boolean;
@@ -47,16 +47,16 @@ export interface GraphEdge {
   /** The variable of a data dependence, or `true`/`false` for a control dependence */
   label: string | null;
   /** The node of the `from` statement the dependence starts at, if it is not the statement */
-  fromPart?: NodeRefJSON | null;
+  fromPart?: NodeJSON | null;
   /** The node of the `to` statement the dependence ends at, if it is not the statement */
-  toPart?: NodeRefJSON | null;
+  toPart?: NodeJSON | null;
 }
 
 export interface GraphSlice {
   root: string;
   direction: GraphDirection;
   hops: number;
-  function: NodeRefJSON | null;
+  function: NodeJSON | null;
   nodes: GraphNode[];
   edges: GraphEdge[];
   truncated: boolean;

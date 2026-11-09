@@ -25,13 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
+import de.fraunhofer.aisec.cpg.ai.ChatMessageJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
-import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
 
 const val SYSTEM_PROMPT =
@@ -43,36 +44,20 @@ const val SYSTEM_PROMPT =
         "Start with tools that give an overview, then choose more specific ones to get more details (if needed). " +
         "Do not stop at summaries. Inspect the actual code before drawing conclusions. " +
         "If a previous tool result already answers the question, respond without calling tools again. " +
-        "If a tool call fails, do not retry it, instead continue with the information you already have. " +
+        "If a tool call fails, read the error message. If it names an argument you got wrong (a missing " +
+        "or invalid field, a malformed id), correct that argument and call the tool again, at most twice " +
+        "for the same call, and never with identical arguments. If it still fails, or the error is not " +
+        "about your arguments (for example a node that does not exist), do not repeat the call: continue " +
+        "with the information you already have. " +
         "Explain your findings clearly. " +
         "Cite the nodes your answer relies on: right after mentioning a piece of code, add " +
         "[[node:<nodeId>]] with the nodeId (or id) of that node from a tool result, e.g. " +
         "\"the key flows into encrypt() [[node:3f2a...]]\". The user interface shows each citation " +
         "as a link to the code. Only cite IDs that appear in tool results and never invent them. " +
-        "Every statement about specific code should carry a citation."
-
-suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String) -> Unit) {
-    while (!channel.isClosedForRead) {
-        val line =
-            try {
-                channel.readUTF8Line()
-            } catch (_: Exception) {
-                break
-            }
-
-        if (line.isNullOrBlank()) continue
-        if (!line.startsWith("data: ")) continue
-
-        val jsonStr = line.substringAfter("data: ").trim()
-        if (jsonStr == "[DONE]") break
-
-        try {
-            processLine(jsonStr)
-        } catch (_: Exception) {
-            // Continue on parsing errors
-        }
-    }
-}
+        "Every statement about specific code should carry a citation. " +
+        "Always prefer calling tools through your normal function-calling mechanism. Only if that " +
+        "is not available to you, write the call as a fenced JSON code block instead, in this " +
+        "exact shape: ```json\n{\"name\": \"<tool name>\", \"arguments\": {<parameter>: <value>}}\n```."
 
 /** SSE event payloads streamed from [ChatService] to the frontend. */
 object Events {
@@ -96,30 +81,71 @@ object Events {
 
     /**
      * A tool call that starts, before its result is known, so that the frontend can show what the
-     * agent is doing. The arguments are the ones the model passed, or an empty object if they are
-     * no valid JSON object. The [round] counts the responses of the model with tool calls, starting
-     * at 1: the calls of one response share it.
+     * agent is doing. The [round] counts the responses of the model, starting at 1: the calls of
+     * one response share it.
      */
-    fun toolCall(toolName: String, arguments: String, round: Int): String =
+    fun toolCall(toolName: String, args: JsonElement, round: Int): String =
         Json.encodeToString(
             buildJsonObject {
                 put("type", "tool_call")
                 put("toolName", toolName)
                 put("round", round)
-                put(
-                    "arguments",
-                    runCatching { Json.parseToJsonElement(arguments).jsonObject }
-                        .getOrDefault(JsonObject(emptyMap())),
-                )
+                put("args", args)
             }
         )
 
-    fun toolResult(toolName: String, content: JsonElement): String =
+    fun toolResult(toolName: String, args: JsonElement, content: JsonElement): String =
         Json.encodeToString(
             buildJsonObject {
                 put("type", "tool_result")
                 put("toolName", toolName)
+                put("args", args)
                 put("content", content)
+            }
+        )
+
+    /**
+     * A structured completion signal (see [de.fraunhofer.aisec.cpg.ai.TaskStatus]), sent once per
+     * [ChatService.chat] call if the LLM produced one - callers that don't care can simply ignore
+     * this event type, exactly like `reasoning`.
+     */
+    fun taskStatus(done: Boolean, resolvedItems: List<String>): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "task_status")
+                put("done", done)
+                put("resolvedItems", buildJsonArray { resolvedItems.forEach { add(it) } })
+            }
+        )
+
+    /**
+     * The conversation history as it stood at the end of one [ChatService.chat] call - after any
+     * in-call history compression, and including tool-calling turns condensed to just their
+     * non-blank text content (system messages, and any purely tool-call/tool-result turn with no
+     * text part, are omitted - a caller resending this as its next request's `messages` already
+     * gets a fresh system prompt, and a blank-content turn carries nothing a plain user/assistant
+     * transcript can represent anyway). Emitted so a caller that resends the full conversation on
+     * its next call (see [ChatService.chat]'s doc: it is stateless across calls by design) can
+     * reuse *this* instead of its own naively-appended raw history - otherwise any compression
+     * [ChatService] just did is invisible to that caller and gets undone the moment it resends.
+     */
+    fun finalHistory(messages: List<ChatMessageJSON>): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "final_history")
+                put("messages", Json.encodeToJsonElement(messages))
+            }
+        )
+
+    /** LLM token usage summed over an entire [ChatService.chat] call (all its LLM round trips). */
+    fun usage(model: String?, inputTokens: Int, outputTokens: Int, totalTokens: Int): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "usage")
+                put("model", model)
+                put("inputTokens", inputTokens)
+                put("outputTokens", outputTokens)
+                put("totalTokens", totalTokens)
             }
         )
 }

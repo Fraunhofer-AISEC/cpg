@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedCo
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.serialization.DependenceGraph
 import de.fraunhofer.aisec.cpg.serialization.GraphSliceJSON
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
@@ -59,7 +60,6 @@ import de.fraunhofer.aisec.cpg.serialization.sliceCounts
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.script.experimental.api.ResultValue
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.ScriptDiagnostic
@@ -94,12 +94,10 @@ class ConsoleService {
     // Cache for parent relationships to support tree expansion
     private var queryTreeParentMap: Map<String, String> = emptyMap()
 
-    // Lookup of nodes (including overlays) by ID, built lazily on the first node request
-    private var nodeIndex: Map<Uuid, Node>? = null
-
-    // The number of concepts per translation unit by component. Counting them walks all nodes of a
-    // component, so the result is kept until the analysis or its concepts change
-    private val conceptCountsCache = ConcurrentHashMap<String, Map<String, Int>>()
+    // Lookup of nodes (including overlays) by ID, built lazily on the first node request and
+    // rebuilt when a node is missing (see getNodeDetails). Requests are handled concurrently, so
+    // only complete maps are assigned, and @Volatile makes a new map visible to all of them
+    @Volatile private var nodeIndex: Map<Uuid, Node>? = null
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -165,7 +163,6 @@ class ConsoleService {
         val json = result.toJSON()
         this@ConsoleService.analysisResult = json
         nodeIndex = null
-        conceptCountsCache.clear()
         return json
     }
 
@@ -212,10 +209,13 @@ class ConsoleService {
      * [TranslationUnitJSON], including its code.
      */
     fun getTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
-        return getComponent(componentName)
-            ?.translationUnits
-            ?.find { it.id == Uuid.parse(id) }
-            ?.let { it.copy(code = it.cpgTU?.code ?: "") }
+        return findTranslationUnit(componentName, id)?.let { it.copy(code = it.cpgTU?.code ?: "") }
+    }
+
+    /** Finds the translation unit with the given ID in the specified component. */
+    private fun findTranslationUnit(componentName: String, id: String): TranslationUnitJSON? {
+        val uuid = Uuid.parseOrNull(id) ?: return null
+        return getComponent(componentName)?.translationUnits?.find { it.id == uuid }
     }
 
     /**
@@ -227,11 +227,8 @@ class ConsoleService {
         id: String,
         overlayNodes: Boolean,
     ): List<NodeJSON> {
-        return getComponent(componentName)
-            ?.translationUnits
-            ?.find { it.id == Uuid.parse(id) }
-            ?.cpgTU
-            ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
+        return findTranslationUnit(componentName, id)?.cpgTU?.let { extractNodes(it, overlayNodes) }
+            ?: emptyList()
     }
 
     /**
@@ -247,52 +244,42 @@ class ConsoleService {
     }
 
     /**
-     * Returns the annotations of a translation unit (key figures of its functions, the status of
-     * its calls and its concepts), or `null` if there is no such unit.
+     * Returns the functions of a translation unit with their key figures, or `null` if there is no
+     * such unit.
      */
-    fun getAnnotations(componentName: String, id: String): FileAnnotationsJSON? {
-        return getComponent(componentName)
-            ?.translationUnits
-            ?.find { it.id == Uuid.parse(id) }
-            ?.cpgTU
-            ?.toAnnotationsJSON()
-    }
+    fun getFunctionCallStats(componentName: String, id: String): List<FunctionCallStatsJSON>? =
+        findTranslationUnit(componentName, id)?.cpgTU?.toFunctionCallStatsJSON()
 
     /**
-     * Returns the number of concepts and operations in each translation unit of a component, by the
-     * ID of the unit, or `null` if there is no such component.
+     * Returns the calls of a translation unit with the status of their targets, or `null` if there
+     * is no such unit.
      */
-    fun getConceptCounts(componentName: String): Map<String, Int>? {
-        conceptCountsCache[componentName]?.let {
-            return it
+    fun getCallSites(componentName: String, id: String): List<CallSiteJSON>? =
+        findTranslationUnit(componentName, id)?.cpgTU?.toCallSitesJSON()
+
+    /**
+     * Returns the concepts and operations of a translation unit, or `null` if there is no such
+     * unit.
+     */
+    fun getOverlays(componentName: String, id: String): List<OverlayJSON>? =
+        findTranslationUnit(componentName, id)?.cpgTU?.toOverlaysJSON()
+
+    /**
+     * Returns the concepts and operations of all translation units of a component, or `null` if
+     * there is no such component.
+     */
+    fun getComponentOverlays(componentName: String): List<OverlayJSON>? {
+        return getComponent(componentName)?.translationUnits?.flatMap {
+            it.cpgTU?.toOverlaysJSON().orEmpty()
         }
-        val counts =
-            getComponent(componentName)?.translationUnits?.associate {
-                it.id.toString() to (it.cpgTU?.conceptAnnotations()?.size ?: 0)
-            } ?: return null
-        conceptCountsCache[componentName] = counts
-        return counts
     }
 
     /**
-     * Returns the details of the innermost node at the given position of a translation unit (or the
-     * innermost node containing the range up to the end position), or `null` if there is no such
-     * node.
+     * Returns the details of the innermost node of a translation unit that contains the [target]
+     * region (e.g. a clicked character), or `null` if there is no such node.
      */
-    fun getNodeDetailsAt(
-        componentName: String,
-        id: String,
-        line: Int,
-        column: Int,
-        endLine: Int? = null,
-        endColumn: Int? = null,
-    ): NodeDetailsJSON? {
-        return getComponent(componentName)
-            ?.translationUnits
-            ?.find { it.id == Uuid.parse(id) }
-            ?.cpgTU
-            ?.nodeAt(line, column, endLine, endColumn)
-            ?.toDetailsJSON()
+    fun getNodeDetailsAt(componentName: String, id: String, target: Region): NodeDetailsJSON? {
+        return findTranslationUnit(componentName, id)?.cpgTU?.nodeAt(target)?.toDetailsJSON()
     }
 
     /**
@@ -305,11 +292,17 @@ class ConsoleService {
 
     /**
      * Returns the places where the analysis is uncertain that the nodes with the given IDs rely on
-     * (see [trustIssues]). IDs of nodes that do not exist are ignored.
+     * (see [evidenceDiagnostics]). IDs of nodes that do not exist are ignored, and only the first
+     * [MAX_EVIDENCE_NODES] distinct IDs are considered.
      */
-    fun getTrustIssues(nodeIds: Collection<String>): List<TrustIssueJSON> {
-        return trustIssues(
-            nodeIds.toSet().mapNotNull { id -> findNode(id)?.let { id to it } }.toMap()
+    fun getEvidenceDiagnostics(nodeIds: Collection<String>): List<EvidenceDiagnosticJSON> {
+        return evidenceDiagnostics(
+            nodeIds
+                .asSequence()
+                .distinct()
+                .take(MAX_EVIDENCE_NODES)
+                .mapNotNull { id -> findNode(id)?.let { id to it } }
+                .toMap()
         )
     }
 
@@ -348,7 +341,6 @@ class ConsoleService {
         return pathsGraph(nodes.filter { it.isNotEmpty() }, paths.kind)
     }
 
-    /** Returns the node (or overlay) with the given ID, using an index built on first use. */
     /**
      * Returns the evidence of a question to the agent as one graph of statements (see
      * [evidenceGraph]).
@@ -356,21 +348,25 @@ class ConsoleService {
     fun getEvidenceGraph(request: EvidenceRequestJSON): EvidenceGraphJSON =
         evidenceGraph(request, ::findNode)
 
+    /** Returns the node (or overlay) with the given ID, using [nodeIndex]. */
     private fun findNode(nodeId: String): Node? {
-        val id = runCatching { Uuid.parse(nodeId) }.getOrNull() ?: return null
-        val index =
-            nodeIndex
-                ?: analysisResult
-                    ?.analysisResult
-                    ?.translationResult
-                    ?.nodes
-                    ?.flatMap { listOf(it) + it.overlays }
-                    ?.associateBy { it.id }
-                    ?.also { nodeIndex = it }
-                ?: return null
-
-        return index[id]
+        val id = Uuid.parseOrNull(nodeId) ?: return null
+        // Overlays can be added to the graph without the console noticing, e.g. by the MCP tools
+        // that apply the concepts of the agent, so a missing node leads to a fresh index. Unknown
+        // IDs are not remembered: the ID of a node is derived from its hash code and can change
+        // when the node changes, so an ID that is unknown now can belong to a node later
+        return nodeIndex?.get(id) ?: buildNodeIndex()?.get(id)
     }
+
+    /** Builds [nodeIndex] from the current analysis result, or returns `null` if there is none. */
+    private fun buildNodeIndex(): Map<Uuid, Node>? =
+        analysisResult
+            ?.analysisResult
+            ?.translationResult
+            ?.nodes
+            ?.flatMap { listOf(it) + it.overlays }
+            ?.associateBy { it.id }
+            ?.also { nodeIndex = it }
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */
     fun getRequirement(requirementId: String): RequirementJSON? {
@@ -504,8 +500,6 @@ class ConsoleService {
                     connectDFGConceptToUnderlyingNode = request.addDFGFromConcept,
                 )
                 .also { newConceptNodes += it }
-        nodeIndex = nodeIndex?.plus(concept.id to concept)
-        conceptCountsCache.clear()
 
         // Build the new persisted concept entry and store it, so we can export it later
         newPersistedConcepts += request.buildPersistedConcept(concept)

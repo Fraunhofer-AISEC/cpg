@@ -42,7 +42,10 @@
     return agentSession.mcpCapabilities?.tools.some((t) => t.name === toolName) ?? false;
   }
 
-  function isConceptSuggestion(toolName: string | undefined, content: any): content is LLMConcept {
+  function isConceptSuggestion(
+    toolName: string | undefined,
+    content: unknown
+  ): content is LLMConcept {
     return (
       toolName === SUGGEST_LLM_CONCEPTS_TOOL &&
       content != null &&
@@ -110,25 +113,46 @@
   // Load persisted state from sessionStorage
   function loadPersistedState() {
     if (typeof window === 'undefined') {
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     }
     const stored = sessionStorage.getItem('codyze-agent-state');
     if (!stored)
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     try {
       const parsed = JSON.parse(stored);
-      const messages = parsed.messages.map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
-      }));
+      const messages = parsed.messages.map(
+        (msg: Omit<ChatMessage, 'timestamp'> & { timestamp: string }) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })
+      );
       return {
         messages,
         suggestions: parsed.suggestions ?? [],
         selectedClient: parsed.selectedClient ?? null,
-        selectedModel: parsed.selectedModel ?? null
+        selectedModel: parsed.selectedModel ?? null,
+        sessionId: parsed.sessionId ?? null
       };
     } catch {
-      return { messages: [], suggestions: [], selectedClient: null, selectedModel: null };
+      return {
+        messages: [],
+        suggestions: [],
+        selectedClient: null,
+        selectedModel: null,
+        sessionId: null
+      };
     }
   }
 
@@ -146,6 +170,7 @@
   let activity = $state<ToolActivity | null>(null);
   let selectedClient = $state<string | null>(persisted.selectedClient);
   let selectedModelName = $state<string | null>(persisted.selectedModel);
+  let sessionId = $state<string | null>(persisted.sessionId);
   let abortController: AbortController | null = null;
 
   const selectedModel = $derived.by((): Model | null => {
@@ -178,7 +203,8 @@
           messages: chatMessages,
           suggestions,
           selectedClient,
-          selectedModel: selectedModelName
+          selectedModel: selectedModelName,
+          sessionId
         })
       );
     }
@@ -194,6 +220,13 @@
       abortController.abort();
       abortController = null;
     }
+    // The server keeps a session's history until it is deleted.
+    if (sessionId) {
+      llmAgent
+        .deleteSession(sessionId)
+        .catch((e) => console.warn('Could not delete the chat session on the server:', e));
+    }
+    sessionId = null;
     chatMessages = [];
     currentMessage = '';
     streamingContent = '';
@@ -225,7 +258,7 @@
             keepNarration();
             activity = {
               toolName: event.toolName,
-              arguments: event.arguments ?? {},
+              args: event.args ?? {},
               round: event.round
             };
           } else if (event.type === 'tool_result') {
@@ -246,8 +279,8 @@
                 contentType: 'tool-result',
                 toolResult: {
                   toolName: event.toolName,
+                  args: event.args,
                   content: event.content,
-                  arguments: call?.arguments,
                   round: call?.round
                 },
                 timestamp: new Date()
@@ -376,6 +409,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks(signal),
         signal
       );
@@ -430,6 +464,7 @@
         llmMessages,
         selectedModel.client,
         selectedModel.model,
+        (sessionId ??= await llmAgent.createSession()),
         makeStreamingCallbacks(signal),
         signal
       );
@@ -459,7 +494,6 @@
       {currentMessage}
       {isLoading}
       {streamingContent}
-      isThinking={streamingReasoning.length > 0}
       {activity}
       {models}
       {selectedModel}

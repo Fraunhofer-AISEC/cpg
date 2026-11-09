@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { fade, fly, slide } from 'svelte/transition';
+  import { SvelteSet } from 'svelte/reactivity';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
@@ -20,16 +21,21 @@
   import { EditorTabs } from '$lib/stores/editorTabs.svelte';
   import { relativePath } from '$lib/utils/paths';
   import {
-    checkTrust,
     citationLabel,
     citationName,
+    diagnosticLocation,
     extractCitations,
-    extractNodeIds,
     extractToolPaths,
     extractToolSlice,
     pathNodeIds,
     resolveNodes
   } from '$lib/agentEvidence';
+  import {
+    ConversationEvidence,
+    DIAGNOSTICS_PREVIEW,
+    type TimelineBlock,
+    type TimelineEntry
+  } from '$lib/stores/conversationEvidence.svelte';
   import type { ThreadNode } from '$lib/stores/codeFocus.svelte';
   import CommandPalette, { type PaletteCommand } from './CommandPalette.svelte';
   import { clearNodeDetailsCache, getNodeDetails, getNodeDetailsAt } from '$lib/nodeDetails';
@@ -48,10 +54,9 @@
   import CodeContextMenu, {
     type ContextMenuItem
   } from '$lib/components/analysis/CodeContextMenu.svelte';
-  import { getConceptCounts } from '$lib/annotations';
+  import { countByTranslationUnit, getComponentOverlays, type FileOverview } from '$lib/overview';
   import type {
     FindingsJSON,
-    NodeJSON,
     NodePathsJSON,
     NodeSliceJSON,
     RequirementJSON,
@@ -62,9 +67,8 @@
     ConceptSuggestionItem,
     Model,
     NodeDetailsJSON,
-    NodeRefJSON,
-    FileAnnotationsJSON,
-    TrustIssueJSON,
+    NodeJSON,
+    OverlayJSON,
     ToolActivity,
     CodeSelection
   } from '$lib/types';
@@ -150,16 +154,22 @@
         if (tu) return tu;
       }
     }
-    if ((node as any).componentName) {
-      const component = analysisResult.components.find(
-        (c) => c.name === (node as any).componentName
-      );
+    if (node.componentName) {
+      const component = analysisResult.components.find((c) => c.name === node.componentName);
       if (component?.translationUnits.length) return component.translationUnits[0];
     }
     return null;
   }
 
-  function handleNodeClick(node: NodeJSON) {
+  async function handleNodeClick(node: NodeJSON) {
+    // Compact tool results (nodeId, signature, file:line) carry no translation unit, so look the node up by its ID
+    if (!node.translationUnitId && !node.fileName) {
+      const id = (node as NodeJSON & { nodeId?: string }).nodeId ?? node.id;
+      if (!id) return;
+      const resolved = (await resolveNodes([id])).get(id);
+      if (!resolved) return;
+      node = resolved;
+    }
     const tu = findTranslationUnit(node);
     if (!tu) return;
     selectedNode = node;
@@ -167,7 +177,7 @@
   }
 
   // Opens the file of a node selected in the inspector and inspects the node there
-  function handleNavigateToNode(ref: NodeRefJSON) {
+  function handleNavigateToNode(ref: NodeJSON) {
     handleNodeClick({
       ...ref,
       code: ref.code,
@@ -201,7 +211,7 @@
   ];
 
   // How a node is referred to in questions to the agent
-  function describeNode(n: NodeRefJSON): string {
+  function describeNode(n: NodeJSON): string {
     return `the ${n.type} \`${n.code || n.name}\` (node ID ${n.id}, ${n.fileName}:${n.startLine})`;
   }
 
@@ -212,7 +222,7 @@
   const fileName = (path?: string) => path?.split('/').pop() ?? '';
 
   // How the context of a question is shown with it, e.g. `log_debug main.c:10`
-  function nodeLabel(n: NodeRefJSON): string {
+  function nodeLabel(n: NodeJSON): string {
     const where = n.fileName ? ` ${fileName(n.fileName)}:${n.startLine}` : '';
     return `${n.name || n.code}${where}`;
   }
@@ -238,7 +248,7 @@
     // The draft in the input stays where it is
     const draft = currentMessage;
     showAgent();
-    chosenBlock = null;
+    conversation.chosenBlock = null;
     onMessageChange(question);
     onSendMessage(
       describeSelection(selection),
@@ -248,7 +258,7 @@
   }
 
   // Selects a node in the inspector: nodes in the open file are revealed in it, others open their file
-  function selectRef(ref: NodeRefJSON) {
+  function selectRef(ref: NodeJSON) {
     if (ref.translationUnitId && ref.translationUnitId !== selectedTranslationUnit?.id) {
       handleNavigateToNode(ref);
     } else {
@@ -359,7 +369,6 @@
     currentMessage: string;
     isLoading: boolean;
     streamingContent: string;
-    isThinking: boolean;
     /** The tool call the agent is running, until its result arrives */
     activity?: ToolActivity | null;
     models?: Model[];
@@ -387,7 +396,6 @@
     currentMessage,
     isLoading,
     streamingContent,
-    isThinking,
     activity = null,
     models = [],
     selectedModel = null,
@@ -401,6 +409,14 @@
     onModelSelect,
     onPromptSelect
   }: Props = $props();
+
+  // The evidence trail of the conversation: its steps, the nodes they return and the diagnostics
+  const conversation = new ConversationEvidence(() => ({
+    messages,
+    streamingContent,
+    isLoading,
+    agentVisible: layers.visible.agent
+  }));
 
   // The component of the open file, or of the last open file if all tabs were closed
   const selectedComponent: ComponentJSON | null = $derived(
@@ -674,7 +690,7 @@
 
   // The statement of the slice a node belongs to: the statement itself, or the innermost one that
   // contains the start of the node
-  function sliceNodeFor(node: NodeRefJSON): GraphNode | null {
+  function sliceNodeFor(node: NodeJSON): GraphNode | null {
     const nodes = graph.slice?.nodes ?? [];
     const exact = nodes.find((n) => n.id === node.id);
     if (exact || node.startLine < 1) return exact ?? null;
@@ -888,17 +904,18 @@
       }))
   );
 
-  // The number of concepts per file of the selected component, shown in the file tree
-  let conceptCounts = $state.raw<Map<string, number>>(new Map());
+  // The concepts and operations of the selected component, counted per file in the file tree
+  let componentOverlays = $state.raw<OverlayJSON[]>([]);
+  const conceptCounts = $derived(countByTranslationUnit(componentOverlays));
 
-  async function loadConceptCounts(component: string) {
-    const counts = await getConceptCounts(component);
-    if (component === selectedComponentName) conceptCounts = counts;
+  async function loadComponentOverlays(component: string) {
+    const overlays = await getComponentOverlays(component);
+    if (component === selectedComponentName) componentOverlays = overlays;
   }
 
   $effect(() => {
     void focus.revision;
-    if (selectedComponentName) loadConceptCounts(selectedComponentName);
+    if (selectedComponentName) loadComponentOverlays(selectedComponentName);
   });
 
   // Selects and reveals a node the agent refers to (a citation, a node a tool returned, a
@@ -917,29 +934,6 @@
     dismissedContextId = details.node.id;
     focus.inspect(() => Promise.resolve(details), true);
   }
-
-  // The nodes cited in the answers of the agent, resolved to their locations to label and open them
-  let citedRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
-  const citedKey = $derived(
-    [
-      ...new Set([
-        ...messages.flatMap((m) =>
-          m.role === 'assistant' && m.contentType !== 'tool-result'
-            ? extractCitations(m.content)
-            : []
-        ),
-        ...extractCitations(streamingContent)
-      ])
-    ].join(',')
-  );
-
-  $effect(() => {
-    const key = citedKey;
-    if (!key) return;
-    resolveNodes(key.split(',')).then((refs) => {
-      if (key === citedKey) citedRefs = refs;
-    });
-  });
 
   // Inspects a node cited by the agent and shows it in the code
   function openCitation(nodeId: string) {
@@ -961,7 +955,7 @@
   // file is opened later
   async function followCited(nodeId: string) {
     await revealFromAgent(nodeId);
-    const ref = citedRefs.get(nodeId) ?? evidenceRefs.get(nodeId);
+    const ref = conversation.citedRefs.get(nodeId) ?? conversation.evidenceRefs.get(nodeId);
     if (!ref?.translationUnitId || ref.startLine < 1) return;
     citedFlash = {
       ...citedRange(ref),
@@ -975,11 +969,11 @@
   // The citation under the mouse in an answer: its node is shown in a preview next to it, its
   // lines are tinted in the code and its statement stands out in the graph, without changing what
   // is selected. A citation is the only way the answer marks the code
-  let citeHover = $state.raw<{ ref: NodeRefJSON; chip: DOMRect } | null>(null);
+  let citeHover = $state.raw<{ ref: NodeJSON; chip: DOMRect } | null>(null);
   let citeGraphHover = false;
 
   function hoverCitation(nodeId: string | null, chip: HTMLElement | null) {
-    const ref = nodeId ? (citedRefs.get(nodeId) ?? evidenceRefs.get(nodeId)) : undefined;
+    const ref = nodeId ? (conversation.citedRefs.get(nodeId) ?? conversation.evidenceRefs.get(nodeId)) : undefined;
     citeHover = ref && chip ? { ref, chip: chip.getBoundingClientRect() } : null;
     const statement = nodeId ? graph.evidence?.statementOf[nodeId] : undefined;
     if (statement && graph.slice?.nodes.some((n) => n.id === statement)) {
@@ -993,7 +987,7 @@
 
   // The lines a citation refers to: a function only by its head, anything else by at most a few
   // lines, so that a citation never tints a whole body
-  function citedRange(ref: NodeRefJSON): { first: number; last: number } {
+  function citedRange(ref: NodeJSON): { first: number; last: number } {
     const last = ref.type === 'Function' ? ref.startLine : Math.max(ref.endLine, ref.startLine);
     return { first: ref.startLine, last: Math.min(last, ref.startLine + 2) };
   }
@@ -1009,7 +1003,7 @@
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const previewCode = new Map<string, Promise<string[] | null>>();
 
-  function codeOf(ref: NodeRefJSON): Promise<string[] | null> {
+  function codeOf(ref: NodeJSON): Promise<string[] | null> {
     const unitId = ref.translationUnitId;
     const componentName = ref.componentName;
     if (!unitId || !componentName) return Promise.resolve(null);
@@ -1042,125 +1036,6 @@
       }));
     });
   });
-
-  // The conversation as a timeline: one block per question, with the tool calls as numbered steps
-  // (the evidence trail) and the answer last
-  interface TimelineEntry {
-    message: ChatMessage;
-    /** The index of the message in [messages] */
-    index: number;
-    /** The number of the step, for tool calls */
-    step?: number;
-  }
-
-  const timeline = $derived.by(() => {
-    const blocks: { question: ChatMessage | null; entries: TimelineEntry[] }[] = [];
-    messages.forEach((message, index) => {
-      if (message.role === 'user') {
-        blocks.push({ question: message, entries: [] });
-        return;
-      }
-      if (blocks.length === 0) blocks.push({ question: null, entries: [] });
-      const block = blocks[blocks.length - 1];
-      const step =
-        message.contentType === 'tool-result'
-          ? block.entries.filter((e) => e.step).length + 1
-          : undefined;
-      block.entries.push({ message, index, step });
-    });
-    return blocks;
-  });
-
-  // The evidence of each block: the node IDs returned by each step, and the IDs that are only
-  // cited in the answer
-  const blockEvidence = $derived(
-    timeline.map((block) => {
-      const steps = block.entries.flatMap((e) =>
-        e.step ? [{ step: e.step, ids: extractNodeIds(e.message.toolResult?.content) }] : []
-      );
-      const returned = new Set(steps.flatMap((s) => s.ids));
-      const cited = block.entries.flatMap((e) =>
-        e.message.contentType === 'text' ? extractCitations(e.message.content) : []
-      );
-      return { steps, claimed: [...new Set(cited)].filter((id) => !returned.has(id)) };
-    })
-  );
-
-  // The nodes of the evidence, resolved to their locations. IDs that are no nodes are missing
-  let evidenceRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
-  const evidenceKey = $derived(
-    [...new Set(blockEvidence.flatMap((e) => [...e.steps.flatMap((s) => s.ids), ...e.claimed]))]
-      .sort()
-      .join(',')
-  );
-
-  $effect(() => {
-    const key = evidenceKey;
-    if (!key) return;
-    resolveNodes(key.split(',')).then((refs) => {
-      if (key === evidenceKey) evidenceRefs = refs;
-    });
-  });
-
-  // The block whose evidence is shown in the code: the one the user chose, or else the latest one
-  // with evidence
-  let chosenBlock = $state<number | null>(null);
-  const activeBlock = $derived(
-    chosenBlock !== null && chosenBlock < timeline.length
-      ? chosenBlock
-      : blockEvidence.findLastIndex((e) => e.steps.some((s) => s.ids.length) || e.claimed.length)
-  );
-
-  function stepNodes(ids: string[]): NodeRefJSON[] {
-    return ids.flatMap((id) => evidenceRefs.get(id) ?? []);
-  }
-
-  // The places the answer of the active block cites, in the order it cites them, to follow the
-  // answer through the code one place after the other
-  const threadSteps = $derived.by(() => {
-    const block = timeline[activeBlock];
-    if (!block || !layers.visible.agent) return [];
-    const ids = new Set(
-      block.entries.flatMap((e) =>
-        e.message.contentType === 'text' ? extractCitations(e.message.content) : []
-      )
-    );
-    const refs = [...ids].flatMap((id) => {
-      const ref = citedRefs.get(id) ?? evidenceRefs.get(id);
-      return ref && ref.startLine >= 1 ? [ref] : [];
-    });
-    return placesOf(refs).map((nodes) => {
-      // The most complete code of the place, e.g. the statement rather than a part of it
-      const ref = nodes.reduce((a, b) =>
-        (b.code || b.name).length > (a.code || a.name).length ? b : a
-      );
-      const code = ref.code || ref.name;
-      return {
-        nodes,
-        label: code.length > 32 ? `${code.slice(0, 31)}…` : code,
-        title: `${code} · ${ref.fileName ?? ''}:${ref.startLine}`
-      };
-    });
-  });
-
-  // The places of cited nodes, in the order of their citations: nodes cited one after the other on
-  // the same line, e.g. a call and the variable it is assigned to, are one place
-  function placesOf(refs: NodeRefJSON[]): NodeRefJSON[][] {
-    const places: NodeRefJSON[][] = [];
-    for (const ref of refs) {
-      const last = places.at(-1)?.[0];
-      if (
-        last &&
-        last.translationUnitId === ref.translationUnitId &&
-        last.startLine === ref.startLine
-      ) {
-        places.at(-1)!.push(ref);
-      } else {
-        places.push([ref]);
-      }
-    }
-    return places;
-  }
 
   // Shows paths a tool returned: a single path as the path in the code, several ones as a graph next
   // to the code
@@ -1214,7 +1089,7 @@
   }
 
   // The steps of a block that found paths or a slice, which make up its evidence graph
-  function graphSteps(block: (typeof timeline)[number]): EvidenceStep[] {
+  function graphSteps(block: TimelineBlock): EvidenceStep[] {
     return block.entries.flatMap((e): EvidenceStep[] => {
       const content = e.message.toolResult?.content;
       if (!e.step) return [];
@@ -1228,7 +1103,7 @@
   // Shows the evidence of a question as one graph next to the code: the paths and slices of all of
   // its steps, with the statements its answer cites marked
   async function showEvidence(b: number, reveal = true) {
-    const block = timeline[b];
+    const block = conversation.timeline[b];
     if (!block) return;
     const steps = graphSteps(block);
     if (steps.length === 0) return;
@@ -1267,8 +1142,8 @@
   });
 
   function afterAnswer() {
-    const last = timeline.length - 1;
-    const block = timeline[last];
+    const last = conversation.timeline.length - 1;
+    const block = conversation.timeline[last];
     if (!block) return;
     if (graphSteps(block).length > 0) showEvidence(last, false);
     else if (graph.open && graph.evidence) graph.close();
@@ -1287,23 +1162,8 @@
 
   // A new question with evidence, or choosing another one, turns to the agent's thread
   $effect(() => {
-    void activeBlock;
+    void conversation.activeBlock;
     untrack(() => (focus.showing = 'thread'));
-  });
-
-  // The places where the analysis is uncertain that the evidence of each block relies on. The block
-  // the agent is still working on is checked once it is done
-  let blockTrust = $state.raw<TrustIssueJSON[][]>([]);
-  $effect(() => {
-    const evidence = blockEvidence;
-    const pending = isLoading ? evidence.length - 1 : -1;
-    Promise.all(
-      evidence.map((e, b) =>
-        b === pending ? [] : checkTrust([...e.steps.flatMap((s) => s.ids), ...e.claimed])
-      )
-    ).then((trust) => {
-      if (evidence === blockEvidence) blockTrust = trust;
-    });
   });
 
   // Whether the limits of the evidence of a block are listed below its answer
@@ -1336,35 +1196,22 @@
 
   // How long the agent worked on a block, e.g. "52 s" or "2 min 5 s"
   function duration(b: number): string {
-    const block = timeline[b];
+    const block = conversation.timeline[b];
     const start = block?.question?.timestamp;
     if (!start) return '';
-    const running = b === timeline.length - 1 && isLoading;
+    const running = b === conversation.timeline.length - 1 && isLoading;
     const end = running ? now : (block.entries.at(-1)?.message.timestamp.getTime() ?? now);
     const seconds = Math.max(0, Math.round((end - new Date(start).getTime()) / 1000));
     return seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
   }
 
-  // The places in the code the answer of a block cites, in the order it cites them
-  function citedPlaces(b: number): NodeRefJSON[][] {
-    const ids = (timeline[b]?.entries ?? []).flatMap((e) =>
-      e.message.contentType === 'text' ? extractCitations(e.message.content) : []
-    );
-    return placesOf(
-      [...new Set(ids)].flatMap((id) => {
-        const ref = citedRefs.get(id) ?? evidenceRefs.get(id);
-        return ref && ref.startLine >= 1 ? [ref] : [];
-      })
-    );
-  }
-
   // The nodes among the arguments of the tool calls, to name them in the labels of the calls
-  let argRefs = $state.raw<Map<string, NodeRefJSON>>(new Map());
+  let argRefs = $state.raw<Map<string, NodeJSON>>(new Map());
   const argKey = $derived(
     [
       ...new Set([
-        ...toolNodeIds(activity?.arguments),
-        ...messages.flatMap((m) => toolNodeIds(m.toolResult?.arguments))
+        ...toolNodeIds(activity?.args),
+        ...messages.flatMap((m) => toolNodeIds(m.toolResult?.args))
       ])
     ]
       .sort()
@@ -1400,7 +1247,7 @@
     | { kind: 'tools'; key: string; round?: number; entries: TimelineEntry[] }
     | { kind: 'narration'; key: string; entry: TimelineEntry };
 
-  function segmentsOf(block: (typeof timeline)[number]): Segment[] {
+  function segmentsOf(block: TimelineBlock): Segment[] {
     const segments: Segment[] = [];
     for (const entry of block.entries) {
       const message = entry.message;
@@ -1428,7 +1275,7 @@
   // agent neither writes nor runs a call of its next response
   const runningGroup = $derived.by(() => {
     if (!isLoading || displayContent) return null;
-    const block = timeline.at(-1);
+    const block = conversation.timeline.at(-1);
     const last = block ? segmentsOf(block).at(-1) : undefined;
     if (last?.kind !== 'tools') return null;
     if (activity?.round !== undefined && activity.round !== last.round) return null;
@@ -1438,7 +1285,7 @@
   // The calls of the running group, in their order
   const runningCalls = $derived(
     (runningGroup?.entries ?? []).map((e) =>
-      labelOf(e.message.toolResult?.toolName ?? '', e.message.toolResult?.arguments)
+      labelOf(e.message.toolResult?.toolName ?? '', e.message.toolResult?.args)
     )
   );
 
@@ -1475,33 +1322,16 @@
   const liveLabel = $derived.by((): ToolCallLabel | string => {
     const caughtUp = shownCall >= runningCalls.length - 1;
     if (!caughtUp) return runningCalls[shownCall];
-    if (activity) return labelOf(activity.toolName, activity.arguments);
+    if (activity) return labelOf(activity.toolName, activity.args);
     return runningCalls.at(-1) ?? 'Thinking';
   });
 
   // Steps through the places the answer of a block cites, in the code and the bar above it
   function stepThrough(b: number) {
-    chosenBlock = b;
+    conversation.chosenBlock = b;
     focus.showing = 'thread';
     if (!layers.visible.agent) layers.toggle('agent');
     goToThreadStep(0);
-  }
-
-  // Who relies on an issue, e.g. "Step 1", "Steps 1, 3" or "The answer"
-  function trustSubject(issue: TrustIssueJSON, b: number): { text: string; plural: boolean } {
-    const evidence = blockEvidence[b];
-    const steps = (evidence?.steps ?? [])
-      .filter((s) => s.ids.some((id) => issue.evidence.includes(id)))
-      .map((s) => s.step);
-    if (steps.length === 0) return { text: 'The answer', plural: false };
-    return {
-      text: `${steps.length === 1 ? 'Step' : 'Steps'} ${steps.join(', ')}`,
-      plural: steps.length > 1
-    };
-  }
-
-  function trustLocation(ref: NodeRefJSON): string {
-    return ref.startLine >= 1 ? `${ref.fileName ?? ''}:${ref.startLine}` : 'no source';
   }
 
   // The files with evidence of the active thread, marked in the file tree
@@ -1515,24 +1345,24 @@
 
   // The step of the inspected node, if it belongs to the active thread
   const threadStepIndex = $derived(
-    threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
+    conversation.threadSteps.findIndex((s) => s.nodes.some((n) => n.id === focus.details?.node.id))
   );
 
   function goToThreadStep(index: number) {
-    const step = threadSteps[index];
+    const step = conversation.threadSteps[index];
     if (step) followCited(step.nodes[0].id);
   }
 
   // The evidence of the active block, shown as numbered markers in the code
   $effect(() => {
-    const evidence = blockEvidence[activeBlock];
+    const evidence = conversation.blockEvidence[conversation.activeBlock];
     const nodes: ThreadNode[] = [];
     if (evidence) {
       for (const { step, ids } of evidence.steps) {
-        for (const ref of stepNodes(ids)) nodes.push({ ref, step, claimed: false });
+        for (const ref of conversation.stepNodes(ids)) nodes.push({ ref, step, claimed: false });
       }
       const answerStep = evidence.steps.length + 1;
-      for (const ref of stepNodes(evidence.claimed)) {
+      for (const ref of conversation.stepNodes(evidence.claimed)) {
         nodes.push({ ref, step: answerStep, claimed: true });
       }
     }
@@ -1628,7 +1458,7 @@
 
   // The function containing the inspected node in the open file, or the node if it is a function.
   // Without a selection in the file, it is the function at the top of what is visible
-  const breadcrumbFunction = $derived.by((): NodeRefJSON | null => {
+  const breadcrumbFunction = $derived.by((): NodeJSON | null => {
     const details = focus.details;
     if (details && details.node.translationUnitId === openedUnit?.id) {
       return (
@@ -1644,11 +1474,11 @@
   });
 
   // The annotations of the open file, loaded by the code viewer and shown in the outline
-  let fileAnnotations = $state.raw<FileAnnotationsJSON | null>(null);
+  let fileAnnotations = $state.raw<FileOverview | null>(null);
 
   // The status of the calls of the open file by their node ID
   const callStatus = $derived(
-    fileAnnotations ? new Map(fileAnnotations.calls.map((c) => [c.id, c.status])) : undefined
+    fileAnnotations ? new Map(fileAnnotations.calls.map((c) => [c.call.id, c.status])) : undefined
   );
 
   // Switches to the inspector after the user inspected a node, unless the agent is working: then
@@ -1737,7 +1567,7 @@
   function send() {
     showAgent();
     // The new question becomes the active thread
-    chosenBlock = null;
+    conversation.chosenBlock = null;
     onSendMessage(
       contextNode ? describeNode(contextNode) : undefined,
       contextNode ? nodeLabel(contextNode) : undefined
@@ -1800,17 +1630,11 @@
   });
 
   async function loadSuggestionNodes(key: string) {
-    const nodes: NodeJSON[] = await fetch('/api/nodes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(key.split(','))
-    })
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => []);
+    const nodes = await resolveNodes(key.split(','));
 
     // Ignore the response if the suggestions changed in the meantime
     if (key !== suggestionNodeIdsKey) return;
-    suggestionNodes = new Map(nodes.map((n) => [n.id, n]));
+    suggestionNodes = nodes;
   }
 
   // Show the first translation unit with suggestions when they arrive, unless the open one has some
@@ -1852,23 +1676,21 @@
   }
 
   $effect(() => {
-    messages.length;
-    streamingContent;
+    void messages.length;
+    void streamingContent;
     if (shouldAutoScroll) {
       requestAnimationFrame(() => scrollToBottom());
     }
   });
 
-  let expandedReasoning = $state<Set<string>>(new Set());
+  const expandedReasoning = new SvelteSet<string>();
 
   function toggleReasoning(id: string) {
-    const next = new Set(expandedReasoning);
-    if (next.has(id)) {
-      next.delete(id);
+    if (expandedReasoning.has(id)) {
+      expandedReasoning.delete(id);
     } else {
-      next.add(id);
+      expandedReasoning.add(id);
     }
-    expandedReasoning = next;
   }
 </script>
 
@@ -1957,13 +1779,13 @@ or how many calls it ran. [toggle] lists the calls; without it, the line is no b
 <!-- The end of an answer: how many places it cites, to step through them or see them in a graph, and
 where its evidence reaches the limits of the analysis -->
 {#snippet evidenceRow(b: number)}
-  {@const places = citedPlaces(b)}
+  {@const places = conversation.citedPlaces(b)}
   <!-- What the analysis could not resolve and what no tool returned are warnings; code outside of
   the analysis is a note -->
-  {@const issues = blockTrust[b] ?? []}
-  {@const notes = issues.filter((i) => i.kind === 'EXTERNAL_CODE').length}
-  {@const warnings = issues.length - notes + (blockEvidence[b]?.claimed.length ?? 0)}
-  {@const hasGraph = graphSteps(timeline[b]).length > 0}
+  {@const issues = conversation.blockDiagnostics[b] ?? []}
+  {@const notes = issues.filter((i) => i.severity === 'INFO').length}
+  {@const warnings = issues.length - notes + (conversation.blockEvidence[b]?.claimed.length ?? 0)}
+  {@const hasGraph = graphSteps(conversation.timeline[b]).length > 0}
   <div class="mt-1 border-t border-gray-100 pt-1.5 pb-0.5">
     <div class="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs">
       {#if places.length > 0}
@@ -1986,7 +1808,7 @@ where its evidence reaches the limits of the analysis -->
             class="rounded px-1.5 py-0.5 text-blue-700 hover:bg-blue-50"
             title="Show the paths and slices of all steps as one graph, with the dependences the answer relies on"
             onclick={() => {
-              chosenBlock = b;
+              conversation.chosenBlock = b;
               focus.showing = 'thread';
               showEvidence(b);
             }}
@@ -2040,49 +1862,69 @@ where its evidence reaches the limits of the analysis -->
       {/if}
     </div>
     {#if limitsOpen[b]}
-      <div transition:slide={{ duration: motion(150) }}>{@render trustNotes(b)}</div>
+      <div transition:slide={{ duration: motion(150) }}>{@render diagnosticNotes(b)}</div>
     {/if}
   </div>
 {/snippet}
 
 <!-- Where the analysis is uncertain for the evidence of a block, in the color of uncertainty -->
-{#snippet trustNotes(b: number)}
+{#snippet diagnosticNotes(b: number)}
   <!-- The warnings first, then the calls to external code -->
-  {@const issues = (blockTrust[b] ?? []).toSorted(
-    (x, y) => Number(x.kind === 'EXTERNAL_CODE') - Number(y.kind === 'EXTERNAL_CODE')
+  {@const diagnostics = (conversation.blockDiagnostics[b] ?? []).toSorted(
+    (x, y) => Number(x.severity === 'INFO') - Number(y.severity === 'INFO')
   )}
-  {@const claimed = stepNodes(blockEvidence[b]?.claimed ?? [])}
-  {#if issues.length > 0 || claimed.length > 0}
+  {@const claimed = conversation.stepNodes(conversation.blockEvidence[b]?.claimed ?? [])}
+  {@const shown = conversation.diagnosticsExpanded[b]
+    ? diagnostics
+    : diagnostics.slice(0, DIAGNOSTICS_PREVIEW)}
+  {#if diagnostics.length > 0 || claimed.length > 0}
     <!-- Where the evidence reaches the limits of the analysis: code outside of it is a note, what the
     analysis could not resolve or the model claims without a tool is a warning -->
     <ul class="space-y-0.5 pt-1 text-[11px] leading-snug">
-      {#each issues as issue (issue.kind + issue.location.id)}
-        {@const subject = trustSubject(issue, b)}
-        {@const info = issue.kind === 'EXTERNAL_CODE'}
+      {#each shown as diagnostic (diagnostic.kind + diagnostic.location.id)}
+        {@const subject = conversation.diagnosticSubject(diagnostic, b)}
+        {@const info = diagnostic.severity === 'INFO'}
         <li>
           <button
             type="button"
             class="flex w-full min-w-0 items-start gap-1 rounded px-1 text-left disabled:hover:bg-transparent {info
               ? 'text-gray-600 hover:bg-gray-50'
               : 'text-amber-700 hover:bg-amber-50'}"
-            disabled={issue.location.startLine < 1}
-            title={issue.location.code || issue.location.name}
+            disabled={diagnostic.location.startLine < 1}
+            title={diagnostic.location.code || diagnostic.location.name}
             onclick={() => {
-              chosenBlock = b;
-              revealFromAgent(issue.location.id);
+              conversation.chosenBlock = b;
+              revealFromAgent(diagnostic.location.id);
             }}
           >
             <span class={info ? 'text-orange-600' : ''} aria-hidden="true">{info ? '↗' : '⚠'}</span>
             <span class="min-w-0 flex-1"
               >{subject.text}
-              {subject.plural ? 'rely' : 'relies'} on {issue.reason}
+              {subject.plural ? 'rely' : 'relies'} on {diagnostic.reason}
               <span class="font-mono whitespace-nowrap opacity-80"
-                >· {trustLocation(issue.location)}</span
+                >· {diagnosticLocation(diagnostic.location)}</span
               ></span
             >
           </button>
         </li>
       {/each}
+      {#if diagnostics.length > DIAGNOSTICS_PREVIEW}
+        <li>
+          <button
+            type="button"
+            class="rounded px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+            onclick={() =>
+              (conversation.diagnosticsExpanded = {
+                ...conversation.diagnosticsExpanded,
+                [b]: !conversation.diagnosticsExpanded[b]
+              })}
+          >
+            {conversation.diagnosticsExpanded[b]
+              ? 'Show less'
+              : `+ ${diagnostics.length - DIAGNOSTICS_PREVIEW} more`}
+          </button>
+        </li>
+      {/if}
       {#if claimed.length > 0}
         <!-- Cited nodes no tool returned are claims of the model, not results of the analysis -->
         <li class="flex flex-wrap items-center gap-1 px-1 text-amber-700">
@@ -2095,7 +1937,7 @@ where its evidence reaches the limits of the analysis -->
               type="button"
               class="rounded border border-dashed border-gray-300 px-1 font-mono text-[10px] text-gray-700 hover:border-gray-500 hover:bg-gray-50"
               onclick={() => {
-                chosenBlock = b;
+                conversation.chosenBlock = b;
                 revealFromAgent(ref.id);
               }}
             >
@@ -2352,11 +2194,11 @@ where its evidence reaches the limits of the analysis -->
       </div>
     {/if}
     <!-- One bar for the steps shown in the code: the path or the agent's thread -->
-    {#if sequence === 'thread' && threadSteps.length > 0}
+    {#if sequence === 'thread' && conversation.threadSteps.length > 0}
       <StepBar
         agent
         title="Answer"
-        steps={threadSteps.map((s) => ({ label: s.label, title: s.title }))}
+        steps={conversation.threadSteps.map((s) => ({ label: s.label, title: s.title }))}
         index={threadStepIndex}
         onSelect={goToThreadStep}
         onClose={() => layers.toggle('agent')}
@@ -2373,7 +2215,7 @@ where its evidence reaches the limits of the analysis -->
         onSelect={goToStep}
         onClose={() => focus.clearPath()}
         closeTitle="Close the dataflow path"
-        other={threadSteps.length > 0
+        other={conversation.threadSteps.length > 0
           ? { label: 'Answer', onSwitch: () => (focus.showing = 'thread') }
           : undefined}
       />
@@ -2608,11 +2450,11 @@ where its evidence reaches the limits of the analysis -->
             </div>
           {/if}
 
-          {#each timeline as block, b (b)}
-            {@const isLast = b === timeline.length - 1}
+          {#each conversation.timeline as block, b (b)}
+            {@const isLast = b === conversation.timeline.length - 1}
             {@const running = isLast && isLoading}
-            {@const isActive = b === activeBlock}
-            {@const evidence = blockEvidence[b]}
+            {@const isActive = b === conversation.activeBlock}
+            {@const evidence = conversation.blockEvidence[b]}
             {@const hasEvidence =
               evidence.steps.some((s) => s.ids.length) || evidence.claimed.length > 0}
             {@const segments = segmentsOf(block)}
@@ -2689,7 +2531,7 @@ where its evidence reaches the limits of the analysis -->
                           {@const message = entry.message}
                           {#if message.toolResult}
                             <!-- A tool call: a numbered step of the evidence trail -->
-                            {@const nodes = stepNodes(
+                            {@const nodes = conversation.stepNodes(
                               evidence.steps.find((s) => s.step === entry.step)?.ids ?? []
                             )}
                             {@const toolPaths = extractToolPaths(message.toolResult.content)}
@@ -2698,10 +2540,10 @@ where its evidence reaches the limits of the analysis -->
                               {@render reasoning(message)}
                               <ToolStep
                                 toolResult={message.toolResult}
-                                label={message.toolResult.arguments
+                                label={message.toolResult.args
                                   ? labelOf(
                                       message.toolResult.toolName ?? '',
-                                      message.toolResult.arguments
+                                      message.toolResult.args
                                     )
                                   : undefined}
                                 paths={toolPaths}
@@ -2711,7 +2553,7 @@ where its evidence reaches the limits of the analysis -->
                                 selectedId={focus.details?.node.id}
                                 onSelect={(ref) => revealFromAgent(ref.id)}
                                 onActivate={() => {
-                                  chosenBlock = b;
+                                  conversation.chosenBlock = b;
                                   focus.showing = 'thread';
                                   if (!showToolGraph(message.toolResult?.content) && nodes[0])
                                     revealFromAgent(nodes[0].id);
@@ -2753,7 +2595,7 @@ where its evidence reaches the limits of the analysis -->
                   <div class="max-w-none min-w-0 py-1.5 text-gray-800">
                     <MarkdownRenderer
                       content={entry.message.content}
-                      citations={citedRefs}
+                      citations={conversation.citedRefs}
                       onCite={openCitation}
                       onCiteHover={hoverCitation}
                       compact
@@ -2767,7 +2609,7 @@ where its evidence reaches the limits of the analysis -->
                   <div class="max-w-none min-w-0 py-1.5 text-gray-800">
                     <MarkdownRenderer
                       content={displayContent}
-                      citations={citedRefs}
+                      citations={conversation.citedRefs}
                       onCite={openCitation}
                       onCiteHover={hoverCitation}
                       compact
