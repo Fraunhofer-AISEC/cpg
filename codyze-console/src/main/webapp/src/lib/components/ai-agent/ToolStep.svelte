@@ -16,6 +16,8 @@
      */
     label?: ToolCallLabel;
     step: number;
+    /** Whether the answer cites a node the step returned, i.e. relies on the step */
+    used?: boolean;
     /** The nodes the tool returned, resolved to their locations */
     nodes: NodeJSON[];
     /** The paths the tool returned, if it searched for paths */
@@ -34,6 +36,7 @@
     toolResult,
     label,
     step,
+    used = false,
     nodes,
     paths,
     slice,
@@ -106,11 +109,17 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="min-w-0" onmouseenter={() => onHover(true)} onmouseleave={() => onHover(false)}>
   <div class="flex min-w-0 items-center gap-1.5">
+    <!-- The steps the answer relies on carry the sign of the agent's evidence -->
+    <span
+      class="w-2.5 shrink-0 text-center text-[10px] leading-none text-teal-600"
+      title={used ? 'The answer relies on this step' : undefined}
+      aria-hidden={!used}>{used ? '✦' : ''}</span
+    >
     <button
       type="button"
-      class="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-0.5 text-[10px] leading-none font-semibold tabular-nums {nodes.length
-        ? 'bg-slate-700 text-white hover:bg-slate-900'
-        : 'bg-slate-200 text-slate-600'}"
+      class="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-0.5 text-[10px] leading-none font-semibold tabular-nums {used
+        ? 'bg-teal-600 text-white hover:bg-teal-700'
+        : 'bg-slate-200 text-slate-600 enabled:hover:bg-slate-300 enabled:hover:text-slate-900'}"
       title={slice
         ? `Step ${step}: show its slice in the graph`
         : paths
@@ -154,7 +163,7 @@
   </div>
 
   {#if expanded}
-    <div class="mt-0.5 mb-1 ml-[1.375rem] border-l border-gray-200 pl-2">
+    <div class="mt-0.5 mb-1 ml-[2.375rem] border-l border-gray-200 pl-2">
       {#each shownNodes as ref (ref.id)}
         <button
           type="button"

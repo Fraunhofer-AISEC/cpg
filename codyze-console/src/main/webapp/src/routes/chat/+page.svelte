@@ -166,6 +166,8 @@
   let isLoading = $state(false);
   let streamingContent = $state('');
   let streamingReasoning = $state('');
+  // The reasoning of the model before the tool calls it is running, for the first of their results
+  let roundReasoning: string | undefined;
   // The tool call the agent is running, until its result arrives
   let activity = $state<ToolActivity | null>(null);
   let selectedClient = $state<string | null>(persisted.selectedClient);
@@ -231,6 +233,7 @@
     currentMessage = '';
     streamingContent = '';
     streamingReasoning = '';
+    roundReasoning = undefined;
     suggestions = [];
     activity = null;
     isLoading = false;
@@ -256,6 +259,12 @@
             streamingReasoning += event.content;
           } else if (event.type === 'tool_call') {
             keepNarration();
+            // The model reasons before each of its responses, so what arrived since the last
+            // response belongs to the calls of this one
+            if (streamingReasoning) {
+              roundReasoning = streamingReasoning;
+              streamingReasoning = '';
+            }
             activity = {
               toolName: event.toolName,
               args: event.args ?? {},
@@ -270,6 +279,10 @@
             keepNarration();
             const call = activity?.toolName === event.toolName ? activity : null;
             activity = null;
+            // Without the event of the call, the reasoning is still the one that is streaming
+            const reasoning = roundReasoning ?? (streamingReasoning || undefined);
+            roundReasoning = undefined;
+            streamingReasoning = '';
             chatMessages = [
               ...chatMessages,
               {
@@ -277,6 +290,7 @@
                 role: 'assistant' as const,
                 content: '',
                 contentType: 'tool-result',
+                reasoning,
                 toolResult: {
                   toolName: event.toolName,
                   args: event.args,
@@ -331,19 +345,10 @@
   }
 
   // Keeps what the agent wrote for the current question as its answer, with the reasoning of the
-  // model at its first tool call or else at the answer
+  // model before it. The reasoning before tool calls is already kept at their results
   function finishAnswer() {
     activity = null;
     const reasoning = streamingReasoning || undefined;
-    const start = chatMessages.findLastIndex((m) => m.role === 'user') + 1;
-    const firstToolIdx = chatMessages.findIndex(
-      (m, i) => i >= start && m.contentType === 'tool-result'
-    );
-    if (reasoning && firstToolIdx !== -1 && !chatMessages[firstToolIdx].reasoning) {
-      const updated = [...chatMessages];
-      updated[firstToolIdx] = { ...updated[firstToolIdx], reasoning };
-      chatMessages = updated;
-    }
     const content = streamingContent;
     if (content && content.trim().length > 0) {
       chatMessages = [
@@ -353,7 +358,7 @@
           role: 'assistant' as const,
           content,
           contentType: 'text',
-          reasoning: firstToolIdx === -1 ? reasoning : undefined,
+          reasoning,
           timestamp: new Date()
         }
       ];
@@ -361,6 +366,7 @@
     isLoading = false;
     streamingContent = '';
     streamingReasoning = '';
+    roundReasoning = undefined;
   }
 
   // Stops the running question, keeping its steps and what the agent wrote so far
@@ -398,6 +404,7 @@
       isLoading = true;
       streamingContent = '';
       streamingReasoning = '';
+      roundReasoning = undefined;
 
       const llmMessages: LLMMessage[] = resolvedMessages.map((m) => ({
         role: m.role as 'user' | 'assistant',
@@ -445,6 +452,7 @@
     isLoading = true;
     streamingContent = '';
     streamingReasoning = '';
+    roundReasoning = undefined;
 
     try {
       // The earlier questions and answers, without the steps that led to them: the results of the

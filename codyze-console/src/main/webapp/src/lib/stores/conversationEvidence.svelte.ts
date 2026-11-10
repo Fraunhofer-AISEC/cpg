@@ -210,6 +210,26 @@ export class ConversationEvidence {
     return ids.flatMap((id) => this.evidenceRefs.get(id) ?? []);
   }
 
+  /**
+   * The steps the answer of a block relies on. A node the answer cites counts for the most specific
+   * step that returned it, the one with the fewest nodes: an overview that lists all functions
+   * returns most cited nodes too, but the answer relies on the step that looked at them.
+   */
+  usedSteps(block: number): Set<number> {
+    const steps = this.blockEvidence[block]?.steps ?? [];
+    const used = new Set<number>();
+    const cited = (this.timeline[block]?.entries ?? []).flatMap((e) =>
+      e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+    );
+    for (const id of new Set(cited)) {
+      const step = steps
+        .filter((s) => s.ids.includes(id))
+        .reduce<StepEvidence | null>((a, s) => (!a || s.ids.length < a.ids.length ? s : a), null);
+      if (step) used.add(step.step);
+    }
+    return used;
+  }
+
   /** The places in the code the answer of a block cites, in the order it cites them. */
   citedPlaces(block: number): NodeJSON[][] {
     const ids = (this.timeline[block]?.entries ?? []).flatMap((e) =>
