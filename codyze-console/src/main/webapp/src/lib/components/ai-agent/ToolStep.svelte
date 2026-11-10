@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { NodeJSON, ToolResult } from '$lib/types';
+  import type { NodeJSON, NodePathsJSON, ToolResult } from '$lib/types';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -12,6 +12,8 @@
     step: number;
     /** The nodes the tool returned, resolved to their locations */
     nodes: NodeJSON[];
+    /** The paths the tool returned, if it searched for paths */
+    paths?: NodePathsJSON | null;
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
     onSelect: (ref: NodeJSON) => void;
@@ -20,7 +22,8 @@
     onHover: (hovered: boolean) => void;
   }
 
-  let { toolResult, step, nodes, selectedId, onSelect, onActivate, onHover }: Props = $props();
+  let { toolResult, step, nodes, paths, selectedId, onSelect, onActivate, onHover }: Props =
+    $props();
 
   let expanded = $state(false);
   let showAll = $state(false);
@@ -48,6 +51,10 @@
     const suggested = (content as { name?: unknown } | null | undefined)?.name;
     if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof suggested === 'string')
       return `suggests ${suggested}`;
+    if (paths) {
+      const count = `${paths.paths.length}${paths.truncated ? '+' : ''}`;
+      return `${paths.kind} · ${count} ${paths.paths.length === 1 ? 'path' : 'paths'}`;
+    }
     if (nodes.length > 0) {
       const files = new Set(nodes.map((n) => n.fileName).filter(Boolean)).size;
       const what = `${nodes.length} ${nodes.length === 1 ? 'node' : 'nodes'}`;
@@ -82,9 +89,11 @@
       class="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-0.5 text-[10px] leading-none font-semibold tabular-nums {nodes.length
         ? 'bg-slate-700 text-white hover:bg-slate-900'
         : 'bg-slate-200 text-slate-600'}"
-      title={nodes.length
-        ? `Step ${step}: show its nodes in the code`
-        : `Step ${step} returned no nodes of the code`}
+      title={paths
+        ? `Step ${step}: show its ${paths.paths.length === 1 ? 'path' : 'paths'} in the code`
+        : nodes.length
+          ? `Step ${step}: show its nodes in the code`
+          : `Step ${step} returned no nodes of the code`}
       disabled={nodes.length === 0}
       onclick={onActivate}
     >

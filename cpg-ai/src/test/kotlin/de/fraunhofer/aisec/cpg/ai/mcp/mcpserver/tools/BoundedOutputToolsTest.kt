@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDataflowPayload
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgBackwardPayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgDfgPathsPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListCallsToPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgListPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgNamesPayload
@@ -37,11 +37,11 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DEFAULT_LIST_LIMIT
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.DataflowResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.LLMConceptDescription
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.serialization.NodePaths
 import de.fraunhofer.aisec.cpg.test.analyze
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.nio.file.Path
@@ -151,21 +151,24 @@ class BoundedOutputToolsTest {
     }
 
     @Test
-    fun dfgBackwardKeepsOneJsonArrayAndCapsIt(@TempDir dir: Path) {
-        val session = analyze(dir, "int main() { int a = 1; int b = a; return b; }", passes = true)
+    fun dfgBackwardCapsItsPaths(@TempDir dir: Path) {
+        val session =
+            analyze(
+                dir,
+                "int main() { int a = 1; int c = 2; int b = a + c; return b; }",
+                passes = true,
+            )
         val start = session.translationResult.refs.last { it.name.localName == "b" }.id.toString()
 
-        val all = dfgBackward(session, CpgDfgBackwardPayload(start)).content.single() as TextContent
-        val total = Json.decodeFromString<List<NodeInfo>>(all.text).size
-        assertTrue(total > 1, "the slice of b must contain more than one node")
+        val all = dfgPathsResult(session, CpgDfgPathsPayload(start), backward = true)
+        val total = Json.decodeFromString<NodePaths>((all.content.single() as TextContent).text)
+        assertTrue(total.paths.size > 1, "b must have more than one path")
 
-        val capped = dfgBackward(session, CpgDfgBackwardPayload(start, limit = 1)).content
-        assertEquals(2, capped.size, "one JSON array and the summary")
-        assertEquals(
-            1,
-            Json.decodeFromString<List<NodeInfo>>((capped.first() as TextContent).text).size,
-        )
-        assertTrue((capped.last() as TextContent).text.contains("of $total items"))
+        val capped =
+            dfgPathsResult(session, CpgDfgPathsPayload(start, maxPaths = 1), backward = true)
+        val paths = Json.decodeFromString<NodePaths>((capped.content.single() as TextContent).text)
+        assertEquals(1, paths.paths.size)
+        assertTrue(paths.truncated)
     }
 
     @Test
@@ -173,7 +176,11 @@ class BoundedOutputToolsTest {
         val session = analyze(dir, "int main() { return 0; }", passes = false)
 
         val outcome =
-            dfgBackward(session, CpgDfgBackwardPayload("00000000-0000-0000-0000-000000000000"))
+            dfgPathsResult(
+                session,
+                CpgDfgPathsPayload("00000000-0000-0000-0000-000000000000"),
+                backward = true,
+            )
 
         assertTrue((outcome.content.single() as TextContent).text.startsWith("No node found"))
     }
