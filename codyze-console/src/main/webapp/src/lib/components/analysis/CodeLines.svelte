@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { splitHighlightedLines } from '$lib/highlight';
+  import { restoreText, splitHighlightedLines } from '$lib/highlight';
 
   /**
    * Renders highlighted code with line numbers, but only the lines in `[start, end)`. The element
@@ -8,6 +8,8 @@
    */
   interface Props {
     highlighted: string;
+    /** The original text of lines that were highlighted with other characters, by index */
+    plainLines?: Map<number, string>;
     /** 0-based index of the first line to render */
     start: number;
     /** 0-based index after the last line to render */
@@ -41,6 +43,7 @@
 
   let {
     highlighted,
+    plainLines,
     start,
     end,
     highlightedLines,
@@ -74,7 +77,13 @@
     return ranges;
   });
 
-  const lines = $derived(splitHighlightedLines(highlighted));
+  const lines = $derived.by(() => {
+    const result = splitHighlightedLines(highlighted);
+    plainLines?.forEach((text, i) => {
+      if (i < result.length) result[i] = restoreText(result[i], text);
+    });
+    return result;
+  });
   const visibleLines = $derived(lines.slice(start, end));
 
   // Contiguous runs of highlighted lines, so that a highlighted node spanning many lines is a

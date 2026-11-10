@@ -24,6 +24,7 @@
     type CallFilter
   } from '$lib/stores/codeFocus.svelte';
   import { flattenNodes } from '$lib/flatten';
+  import { maskUnparsableNames } from '$lib/highlight';
   import { ScrollViewport, remInPx } from '$lib/scroll-viewport.svelte';
   import CodeLines from './CodeLines.svelte';
   import Highlight from 'svelte-highlight';
@@ -745,6 +746,8 @@
 
   const code = $derived(translationUnit.code ?? '');
   const codeLines = $derived(code.split('\n'));
+  // The syntax highlighter cannot read some names of decompiled code
+  const highlightInput = $derived(maskUnparsableNames(codeLines));
   const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
   // The gutter, from left to right: a lane for the numbered steps (of the path or the agent's
@@ -931,9 +934,14 @@
           }}
         >
           <div class="font-mono">
-            <Highlight language={getLanguage(translationUnit.name)} {code} let:highlighted>
+            <Highlight
+              language={getLanguage(translationUnit.name)}
+              code={highlightInput.code}
+              let:highlighted
+            >
               <CodeLines
                 {highlighted}
+                plainLines={highlightInput.plain}
                 start={visibleLines.start}
                 end={visibleLines.end}
                 highlightedLines={[...allHighlightLines, ...findingLines]}
