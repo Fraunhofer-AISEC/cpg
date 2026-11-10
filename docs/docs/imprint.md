@@ -37,3 +37,21 @@ and as such has no separate legal status.
  
 
 If you have any questions for Fraunhofer AISEC directly, please send us an email to: anfragen(at)aisec.fraunhofer.de.
+
+
+### Vorstand
+
+Prof. Dr.-Ing. Holger Hanselka
+Präsident und Vorstandsvorsitzender | Unternehmensstrategie und -kommunikation
+
+Prof. Dr. Constantin Häfner
+Vorstand für Forschung und Transfer (Vorstandsressort VA)
+
+Prof. Dr. Axel Müller-Groeling
+Vorstand für Forschungsinfrastrukturen und Digitalisierung (Vorstandsressort VB)
+
+Elisabeth Ewen
+Vorständin für Personal, Unternehmenskultur und Recht (Vorstandsressort VC)
+
+Dr. Sandra Krey
+Vorständin für Finanzen und Controlling (Vorstandsressort VD)
