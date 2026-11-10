@@ -5,7 +5,8 @@
     LLMMessage,
     ConceptSuggestionItem,
     LLMConcept,
-    Model
+    Model,
+    ToolActivity
   } from '$lib/types';
   import {
     ChatInterface,
@@ -165,6 +166,10 @@
   let isLoading = $state(false);
   let streamingContent = $state('');
   let streamingReasoning = $state('');
+  // The reasoning of the model before the tool calls it is running, for the first of their results
+  let roundReasoning: string | undefined;
+  // The tool call the agent is running, until its result arrives
+  let activity = $state<ToolActivity | null>(null);
   let selectedClient = $state<string | null>(persisted.selectedClient);
   let selectedModelName = $state<string | null>(persisted.selectedModel);
   let sessionId = $state<string | null>(persisted.sessionId);
@@ -228,25 +233,56 @@
     currentMessage = '';
     streamingContent = '';
     streamingReasoning = '';
+    roundReasoning = undefined;
     suggestions = [];
+    activity = null;
     isLoading = false;
-    selectedClient = null;
-    selectedModelName = null;
   }
 
-  function makeStreamingCallbacks(): StreamingCallbacks {
+  // Starts a request to the agent, which a new chat stops
+  function startRequest(): AbortSignal {
+    abortController?.abort();
+    abortController = new AbortController();
+    return abortController.signal;
+  }
+
+  // The events of a request that was stopped are ignored, e.g. the ones that already arrived
+  function makeStreamingCallbacks(signal: AbortSignal): StreamingCallbacks {
     return {
       onChunk: (chunk: string) => {
+        if (signal.aborted) return;
         try {
           const event = JSON.parse(chunk);
           if (event.type === 'text') {
             streamingContent += event.content;
           } else if (event.type === 'reasoning') {
             streamingReasoning += event.content;
+          } else if (event.type === 'tool_call') {
+            keepNarration();
+            // The model reasons before each of its responses, so what arrived since the last
+            // response belongs to the calls of this one
+            if (streamingReasoning) {
+              roundReasoning = streamingReasoning;
+              streamingReasoning = '';
+            }
+            activity = {
+              toolName: event.toolName,
+              args: event.args ?? {},
+              round: event.round
+            };
           } else if (event.type === 'tool_result') {
             if (isConceptSuggestion(event.toolName, event.content)) {
               addSuggestion(event.content);
             }
+            // Without the event of the call, e.g. from an older server, the text before the call is
+            // kept when its result arrives
+            keepNarration();
+            const call = activity?.toolName === event.toolName ? activity : null;
+            activity = null;
+            // Without the event of the call, the reasoning is still the one that is streaming
+            const reasoning = roundReasoning ?? (streamingReasoning || undefined);
+            roundReasoning = undefined;
+            streamingReasoning = '';
             chatMessages = [
               ...chatMessages,
               {
@@ -254,7 +290,13 @@
                 role: 'assistant' as const,
                 content: '',
                 contentType: 'tool-result',
-                toolResult: { toolName: event.toolName, args: event.args, content: event.content },
+                reasoning,
+                toolResult: {
+                  toolName: event.toolName,
+                  args: event.args,
+                  content: event.content,
+                  round: call?.round
+                },
                 timestamp: new Date()
               }
             ];
@@ -264,6 +306,7 @@
         }
       },
       onError: (error: string) => {
+        if (signal.aborted) return;
         chatMessages = [
           ...chatMessages,
           {
@@ -273,39 +316,65 @@
             timestamp: new Date()
           }
         ];
+        activity = null;
         isLoading = false;
         streamingContent = '';
       },
       onComplete: () => {
-        const reasoning = streamingReasoning || undefined;
-        if (reasoning) {
-          const firstToolIdx = chatMessages.findIndex((m) => m.contentType === 'tool-result');
-          if (firstToolIdx !== -1 && !chatMessages[firstToolIdx].reasoning) {
-            const updated = [...chatMessages];
-            updated[firstToolIdx] = { ...updated[firstToolIdx], reasoning };
-            chatMessages = updated;
-          }
-        }
-        const content = streamingContent;
-        if (content && content.trim().length > 0) {
-          const hasToolResults = chatMessages.some((m) => m.contentType === 'tool-result');
-          chatMessages = [
-            ...chatMessages,
-            {
-              id: (Date.now() + 1).toString(),
-              role: 'assistant' as const,
-              content,
-              contentType: 'text',
-              reasoning: !hasToolResults ? reasoning : undefined,
-              timestamp: new Date()
-            }
-          ];
-        }
-        isLoading = false;
-        streamingContent = '';
-        streamingReasoning = '';
+        if (signal.aborted) return;
+        finishAnswer();
       }
     };
+  }
+
+  // What the model wrote before a tool call belongs to its steps, not to its answer
+  function keepNarration() {
+    const narration = streamingContent.trim();
+    streamingContent = '';
+    if (!narration) return;
+    chatMessages = [
+      ...chatMessages,
+      {
+        id: `${Date.now()}-narration`,
+        role: 'assistant' as const,
+        content: narration,
+        contentType: 'narration' as const,
+        timestamp: new Date()
+      }
+    ];
+  }
+
+  // Keeps what the agent wrote for the current question as its answer, with the reasoning of the
+  // model before it. The reasoning before tool calls is already kept at their results
+  function finishAnswer() {
+    activity = null;
+    const reasoning = streamingReasoning || undefined;
+    const content = streamingContent;
+    if (content && content.trim().length > 0) {
+      chatMessages = [
+        ...chatMessages,
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant' as const,
+          content,
+          contentType: 'text',
+          reasoning,
+          timestamp: new Date()
+        }
+      ];
+    }
+    isLoading = false;
+    streamingContent = '';
+    streamingReasoning = '';
+    roundReasoning = undefined;
+  }
+
+  // Stops the running question, keeping its steps and what the agent wrote so far
+  function stopAnswer() {
+    if (!isLoading) return;
+    abortController?.abort();
+    abortController = null;
+    finishAnswer();
   }
 
   async function handlePromptSelect(name: string, args: Record<string, string>) {
@@ -335,18 +404,21 @@
       isLoading = true;
       streamingContent = '';
       streamingReasoning = '';
+      roundReasoning = undefined;
 
       const llmMessages: LLMMessage[] = resolvedMessages.map((m) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content
       }));
 
+      const signal = startRequest();
       await llmAgent.chat(
         llmMessages,
         selectedModel.client,
         selectedModel.model,
         (sessionId ??= await llmAgent.createSession()),
-        makeStreamingCallbacks()
+        makeStreamingCallbacks(signal),
+        signal
       );
     } catch (error) {
       chatMessages = [
@@ -362,7 +434,7 @@
     }
   }
 
-  async function sendMessage(context?: string) {
+  async function sendMessage(context?: string, contextLabel?: string) {
     if (!currentMessage.trim() || !selectedModel) return;
 
     chatMessages = [
@@ -372,6 +444,7 @@
         role: 'user' as const,
         content: currentMessage,
         context,
+        contextLabel,
         timestamp: new Date()
       }
     ];
@@ -379,24 +452,29 @@
     isLoading = true;
     streamingContent = '';
     streamingReasoning = '';
+    roundReasoning = undefined;
 
     try {
-      const llmMessages: LLMMessage[] = chatMessages.map((msg) => ({
-        role: msg.role as 'user' | 'assistant',
-        content:
-          msg.contentType === 'tool-result' && msg.toolResult
-            ? `[Tool: ${msg.toolResult.toolName}]\n${typeof msg.toolResult.content === 'string' ? msg.toolResult.content : JSON.stringify(msg.toolResult.content)}`
-            : msg.context
-              ? `${msg.content}\n\n(This refers to the code selected by the user: ${msg.context})`
-              : msg.content
-      }));
+      // The earlier questions and answers, without the steps that led to them: the results of the
+      // tool calls, sent as text, are taken by the model for its own words, and it writes tool
+      // calls as text instead of calling the tools. The answers cite the nodes they rely on
+      const llmMessages: LLMMessage[] = chatMessages
+        .filter((msg) => msg.contentType !== 'tool-result' && msg.contentType !== 'narration')
+        .map((msg) => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.context
+            ? `${msg.content}\n\n(This refers to the code selected by the user: ${msg.context})`
+            : msg.content
+        }));
 
+      const signal = startRequest();
       await llmAgent.chat(
         llmMessages,
         selectedModel.client,
         selectedModel.model,
         (sessionId ??= await llmAgent.createSession()),
-        makeStreamingCallbacks()
+        makeStreamingCallbacks(signal),
+        signal
       );
     } catch (error) {
       chatMessages = [
@@ -424,6 +502,7 @@
       {currentMessage}
       {isLoading}
       {streamingContent}
+      {activity}
       {models}
       {selectedModel}
       {analysisResult}
@@ -431,6 +510,7 @@
       onApplySuggestions={handleApplySuggestions}
       onSendMessage={sendMessage}
       onReset={resetChat}
+      onStop={stopAnswer}
       onMessageChange={(message) => (currentMessage = message)}
       onModelSelect={selectModel}
       onPromptSelect={handlePromptSelect}

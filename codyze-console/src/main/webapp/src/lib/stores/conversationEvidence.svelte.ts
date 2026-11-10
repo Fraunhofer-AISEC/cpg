@@ -37,9 +37,9 @@ export interface BlockEvidence {
   claimed: string[];
 }
 
-/** A tool call of the active block that has evidence in the code. */
+/** A place the answer of the active block cites, to follow the answer through the code. */
 export interface ThreadStep {
-  step: number;
+  /** The nodes of the place: those cited one after the other on the same line */
   nodes: NodeJSON[];
   label: string;
   title: string;
@@ -129,21 +129,23 @@ export class ConversationEvidence {
   );
 
   /**
-   * The tool calls of the active block that have evidence in the code, to step through them like in
-   * a debugger. Nodes only cited in the answer are no step: they are marked in the code and named
-   * in the diagnostics under the answer.
+   * The places the answer of the active block cites, in the order it cites them, to follow the
+   * answer through the code one place after the other. Nodes only returned by the tool calls are no
+   * place: they are named in the diagnostics under the answer.
    */
   threadSteps: ThreadStep[] = $derived.by(() => {
-    const evidence = this.blockEvidence[this.activeBlock];
-    const block = this.timeline[this.activeBlock];
-    if (!evidence || !block || !this.source().agentVisible) return [];
-    return evidence.steps.flatMap(({ step, ids }) => {
-      const nodes = this.stepNodes(ids);
-      const entry = block.entries.find((e) => e.step === step);
-      const tool = entry?.message.toolResult?.toolName ?? 'tool';
-      return nodes.length
-        ? [{ step, nodes, label: tool, title: `Step ${step}: ${tool}, ${nodes.length} nodes` }]
-        : [];
+    if (!this.source().agentVisible) return [];
+    return this.citedPlaces(this.activeBlock).map((nodes) => {
+      // The most complete code of the place, e.g. the statement rather than a part of it
+      const ref = nodes.reduce((a, b) =>
+        (b.code || b.name).length > (a.code || a.name).length ? b : a
+      );
+      const code = ref.code || ref.name;
+      return {
+        nodes,
+        label: code.length > 32 ? `${code.slice(0, 31)}…` : code,
+        title: `${code} · ${ref.fileName ?? ''}:${ref.startLine}`
+      };
     });
   });
 
@@ -208,6 +210,39 @@ export class ConversationEvidence {
     return ids.flatMap((id) => this.evidenceRefs.get(id) ?? []);
   }
 
+  /**
+   * The steps the answer of a block relies on. A node the answer cites counts for the most specific
+   * step that returned it, the one with the fewest nodes: an overview that lists all functions
+   * returns most cited nodes too, but the answer relies on the step that looked at them.
+   */
+  usedSteps(block: number): Set<number> {
+    const steps = this.blockEvidence[block]?.steps ?? [];
+    const used = new Set<number>();
+    const cited = (this.timeline[block]?.entries ?? []).flatMap((e) =>
+      e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+    );
+    for (const id of new Set(cited)) {
+      const step = steps
+        .filter((s) => s.ids.includes(id))
+        .reduce<StepEvidence | null>((a, s) => (!a || s.ids.length < a.ids.length ? s : a), null);
+      if (step) used.add(step.step);
+    }
+    return used;
+  }
+
+  /** The places in the code the answer of a block cites, in the order it cites them. */
+  citedPlaces(block: number): NodeJSON[][] {
+    const ids = (this.timeline[block]?.entries ?? []).flatMap((e) =>
+      e.message.contentType === 'text' ? extractCitations(e.message.content) : []
+    );
+    return placesOf(
+      [...new Set(ids)].flatMap((id) => {
+        const ref = this.citedRefs.get(id) ?? this.evidenceRefs.get(id);
+        return ref && ref.startLine >= 1 ? [ref] : [];
+      })
+    );
+  }
+
   /** Who relies on a diagnostic of a block, e.g. "Step 1", "Steps 1, 3" or "The answer". */
   diagnosticSubject(
     diagnostic: EvidenceDiagnosticJSON,
@@ -222,4 +257,25 @@ export class ConversationEvidence {
       plural: steps.length > 1
     };
   }
+}
+
+/**
+ * The places of cited nodes, in the order of their citations: nodes cited one after the other on
+ * the same line, e.g. a call and the variable it is assigned to, are one place.
+ */
+function placesOf(refs: NodeJSON[]): NodeJSON[][] {
+  const places: NodeJSON[][] = [];
+  for (const ref of refs) {
+    const last = places.at(-1)?.[0];
+    if (
+      last &&
+      last.translationUnitId === ref.translationUnitId &&
+      last.startLine === ref.startLine
+    ) {
+      places.at(-1)!.push(ref);
+    } else {
+      places.push([ref]);
+    }
+  }
+  return places;
 }

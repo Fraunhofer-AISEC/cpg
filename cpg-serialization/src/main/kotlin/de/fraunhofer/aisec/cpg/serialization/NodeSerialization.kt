@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.serialization
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.translationUnit
@@ -69,6 +71,8 @@ data class EdgeJSON(
  *   source code, see [Node.isInferred].
  * @property isImplicit Whether the node is not written in the source code, see [Node.isImplicit].
  * @property typeName For a node with a type: the name of its type, see [Type.typeName].
+ * @property overlayKind `Concept` or `Operation` if the node is one of them, otherwise `null`. A
+ *   concept or operation is named after its class, so this tells what kind of overlay it is.
  */
 @Serializable
 data class NodeJSON(
@@ -89,6 +93,7 @@ data class NodeJSON(
     val isInferred: Boolean = false,
     val isImplicit: Boolean = false,
     val typeName: String? = null,
+    val overlayKind: String? = null,
 )
 
 /**
@@ -127,6 +132,12 @@ fun Node.toJSON(noEdges: Boolean = false, maxCodeLength: Int? = null): NodeJSON 
         isInferred = this.isInferred,
         isImplicit = this.isImplicit,
         typeName = (this as? HasType)?.type?.typeName,
+        overlayKind =
+            when (this) {
+                is Operation -> "Operation"
+                is Concept -> "Concept"
+                else -> null
+            },
     )
 }
 

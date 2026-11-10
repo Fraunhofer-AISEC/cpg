@@ -167,6 +167,17 @@ class ChatServiceTest {
     }
 
     @Test
+    fun eventsToolCallTest() {
+        val args = buildJsonObject { put("name", "net_send") }
+        val event = Events.toolCall("cpg_list_calls_to", args, 2)
+        val json = Json.parseToJsonElement(event).jsonObject
+        assertEquals("tool_call", json["type"]?.jsonPrimitive?.content)
+        assertEquals("cpg_list_calls_to", json["toolName"]?.jsonPrimitive?.content)
+        assertEquals(2, json["round"]?.jsonPrimitive?.int)
+        assertEquals("net_send", json["args"]?.jsonObject?.get("name")?.jsonPrimitive?.content)
+    }
+
+    @Test
     fun eventsToolResultTest() {
         val args = buildJsonObject { put("nodeId", "42") }
         val content = buildJsonObject { put("result", "data") }

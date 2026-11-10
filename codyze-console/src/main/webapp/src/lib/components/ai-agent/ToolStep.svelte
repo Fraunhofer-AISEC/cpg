@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { NodeJSON, NodePathsJSON, ToolResult } from '$lib/types';
+  import type { NodeJSON, NodePathsJSON, NodeSliceJSON, ToolResult } from '$lib/types';
+  import type { ToolCallLabel } from '$lib/toolLabels';
 
   /**
    * A tool call of the agent as a numbered step of its evidence trail: the tool, a short summary,
@@ -9,11 +10,20 @@
    */
   interface Props {
     toolResult: ToolResult;
+    /**
+     * The call with its main argument; without it, only the tool is named. How it was called, e.g.
+     * the graph of a slice, is part of the summary
+     */
+    label?: ToolCallLabel;
     step: number;
+    /** Whether the answer cites a node the step returned, i.e. relies on the step */
+    used?: boolean;
     /** The nodes the tool returned, resolved to their locations */
     nodes: NodeJSON[];
     /** The paths the tool returned, if it searched for paths */
     paths?: NodePathsJSON | null;
+    /** The slice the tool computed, if it computed one */
+    slice?: NodeSliceJSON | null;
     /** The inspected node, which is highlighted among the rows */
     selectedId?: string | null;
     onSelect: (ref: NodeJSON) => void;
@@ -22,8 +32,19 @@
     onHover: (hovered: boolean) => void;
   }
 
-  let { toolResult, step, nodes, paths, selectedId, onSelect, onActivate, onHover }: Props =
-    $props();
+  let {
+    toolResult,
+    label,
+    step,
+    used = false,
+    nodes,
+    paths,
+    slice,
+    selectedId,
+    onSelect,
+    onActivate,
+    onHover
+  }: Props = $props();
 
   let expanded = $state(false);
   let showAll = $state(false);
@@ -41,7 +62,7 @@
     if (toolName !== READ_FILE_TOOL || typeof path !== 'string') return null;
     return path.match(/([^/\\]+)[/\\]SKILL\.md$/)?.[1] ?? null;
   });
-  const label = $derived(skillName ? 'skill' : toolName);
+  const toolLabel = $derived(skillName ? 'skill' : toolName);
 
   // What the step found, e.g. "3 nodes in 2 files", or the start of a text result
   const summary = $derived.by(() => {
@@ -51,6 +72,10 @@
     const suggested = (content as { name?: unknown } | null | undefined)?.name;
     if (toolName === 'cpg_suggest_llm_concepts_and_operations' && typeof suggested === 'string')
       return `suggests ${suggested}`;
+    if (slice) {
+      const count = `${slice.statements.length}${slice.truncated ? '+' : ''}`;
+      return `${slice.graph} ${slice.direction.toLowerCase()} · ${count} ${slice.statements.length === 1 ? 'statement' : 'statements'}`;
+    }
     if (paths) {
       const count = `${paths.paths.length}${paths.truncated ? '+' : ''}`;
       return `${paths.kind} · ${count} ${paths.paths.length === 1 ? 'path' : 'paths'}`;
@@ -84,16 +109,24 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="min-w-0" onmouseenter={() => onHover(true)} onmouseleave={() => onHover(false)}>
   <div class="flex min-w-0 items-center gap-1.5">
+    <!-- The steps the answer relies on carry the sign of the agent's evidence -->
+    <span
+      class="w-2.5 shrink-0 text-center text-[10px] leading-none text-teal-600"
+      title={used ? 'The answer relies on this step' : undefined}
+      aria-hidden={!used}>{used ? '✦' : ''}</span
+    >
     <button
       type="button"
-      class="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-0.5 text-[10px] leading-none font-semibold tabular-nums {nodes.length
-        ? 'bg-slate-700 text-white hover:bg-slate-900'
-        : 'bg-slate-200 text-slate-600'}"
-      title={paths
-        ? `Step ${step}: show its ${paths.paths.length === 1 ? 'path' : 'paths'} in the code`
-        : nodes.length
-          ? `Step ${step}: show its nodes in the code`
-          : `Step ${step} returned no nodes of the code`}
+      class="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-sm px-0.5 text-[10px] leading-none font-semibold tabular-nums {used
+        ? 'bg-teal-600 text-white hover:bg-teal-700'
+        : 'bg-slate-200 text-slate-600 enabled:hover:bg-slate-300 enabled:hover:text-slate-900'}"
+      title={slice
+        ? `Step ${step}: show its slice in the graph`
+        : paths
+          ? `Step ${step}: show its ${paths.paths.length === 1 ? 'path' : 'paths'} in the code`
+          : nodes.length
+            ? `Step ${step}: show its nodes in the code`
+            : `Step ${step} returned no nodes of the code`}
       disabled={nodes.length === 0}
       onclick={onActivate}
     >
@@ -105,9 +138,15 @@
         ? 'text-red-600'
         : 'text-gray-700'}"
       aria-expanded={expanded}
+      title={toolName}
       onclick={() => (expanded = !expanded)}
     >
-      <span class="shrink-0 font-mono">{label}</span>
+      <span class="shrink-0 font-mono">{toolLabel}</span>
+      {#if label?.argument}
+        <span class="max-w-[60%] min-w-0 shrink-0 truncate font-mono text-gray-900"
+          >{label.argument}</span
+        >
+      {/if}
       <span class="min-w-0 truncate text-gray-400" title={summary}>{summary}</span>
       <svg
         class="ml-auto h-3 w-3 shrink-0 text-gray-300 transition-transform {expanded
@@ -124,7 +163,7 @@
   </div>
 
   {#if expanded}
-    <div class="mt-0.5 mb-1 ml-[1.375rem] border-l border-gray-200 pl-2">
+    <div class="mt-0.5 mb-1 ml-[2.375rem] border-l border-gray-200 pl-2">
       {#each shownNodes as ref (ref.id)}
         <button
           type="button"

@@ -71,6 +71,8 @@ export interface NodeJSON extends CodeRangeJSON {
   isImplicit?: boolean;
   /** For a node with a type: the name of its type */
   typeName?: string | null;
+  /** `Concept` or `Operation` if the node is one of them, which it is named after its class */
+  overlayKind?: 'Concept' | 'Operation' | null;
 }
 
 export interface EdgeJSON {
@@ -191,6 +193,23 @@ export interface NodePathsJSON {
   truncated: boolean;
 }
 
+/**
+ * A slice of the program dependence graph a tool computed (see NodeSlice in the backend), with the
+ * parameters to show it in the graph panel
+ */
+export interface NodeSliceJSON {
+  kind: 'slice';
+  /** What the slice shows, e.g. "what affects `x`" */
+  description: string;
+  start: NodeInfoJSON;
+  graph: 'PDG' | 'DFG' | 'CDG';
+  direction: 'BACKWARD' | 'FORWARD';
+  hops: number;
+  interprocedural: boolean;
+  statements: { nodeId: string }[];
+  truncated: boolean;
+}
+
 // MCP capabilities
 export interface McpToolInfo {
   name: string;
@@ -256,20 +275,36 @@ export interface LLMMessage {
 
 export interface ToolResult {
   toolName?: string;
+  /** The arguments the model called the tool with */
   args?: Record<string, unknown>;
   content: unknown;
   isError?: boolean;
+  /** The response of the model that called the tool, counted from 1, if it is known */
+  round?: number;
+}
+
+/** A tool call of the agent that is running, before its result is known. */
+export interface ToolActivity {
+  toolName: string;
+  args: Record<string, unknown>;
+  round?: number;
 }
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  contentType?: 'text' | 'tool-result';
+  /**
+   * What an assistant message is: its answer, the result of a tool call, or what the model wrote
+   * before a tool call, e.g. what it is about to do
+   */
+  contentType?: 'text' | 'tool-result' | 'narration';
   toolResult?: ToolResult;
   reasoning?: string;
   /** For user messages: the selected code the question refers to, which is sent along with it */
   context?: string;
+  /** A short name of the context, e.g. `log_debug main.c:10`, shown with the question */
+  contextLabel?: string;
   timestamp: Date;
 }
 

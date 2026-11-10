@@ -205,8 +205,10 @@ Other useful methods: `getSkills()`, `getPrompt(name, arguments)`, `callTool(nam
 ### What happens inside a call
 
 - **Loop:** the model calls tools until it answers in plain text; at most `maxAgentIterations`
-  (default 100) round trips. A text-only reply gets one nudge to continue before it counts as done,
-  then the model is asked for a structured `task_status`. Tool calls that a weaker model writes as
+  (default 100) round trips. A short text-only reply is checked in a small request with only the
+  question and the reply: if it only announced the next step, the model is nudged once to continue;
+  otherwise, and for every longer reply, it is the answer. With `reportTaskStatus` in the request,
+  the turn ends with a structured `task_status` (one more request with the whole history). Tool calls that a weaker model writes as
   fenced JSON or `<tool_call>` text instead of using function calling are recognized as well.
 - **History compression:** once the prompt exceeds 100 messages, or about a third of the context
   window, older turns are compressed into extracted facts (`defaultHistoryCompressionConcepts`; pass

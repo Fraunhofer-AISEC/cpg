@@ -124,6 +124,53 @@ Currently, only Gemini and OpenAI-compatible endpoints are supported.
 
 The MCP server is automatically started on port `8081` whenever codyze-console starts. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
 
+## Using the agent page
+
+The **Agent** page (`/chat`) combines a code editor with the AI chat: you read the code, inspect what the analysis knows about it, and ask the agent about it, all in one place.
+
+### Layout
+
+- **Left:** the files of the selected component (with the number of concepts per file), the outline of the open file (its functions with their callers, external calls, and concepts and operations), and the findings of the requirements.
+- **Middle:** the code, with editor tabs and a breadcrumb (component, path, and the enclosing function).
+- **Right:** the **Inspector** and the **Agent** tabs. While the agent works, the inspector tab is only marked when you inspect something, so the conversation stays in view.
+- **Graph panel:** the dependence graph (PDG) of a statement, opened from the context menu or the command palette.
+
+### Inspecting code
+
+- **Click** anywhere in the code to inspect the innermost node there. The inspector shows its type, location, calls (targets, callers, calls in its body), concepts and operations, direct dataflows (expandable into a tree), and warnings where the analysis is uncertain, e.g. unresolved calls or code that is not part of the analysis. Long lists are limited and show e.g. "200 of 1234".
+- **Hover** over the code for a short summary of the node.
+- The **code lens** after the first line of a function shows its callers, calls and external calls; each part opens the matching section of the inspector.
+- **Right-click** for the context menu: what affects a statement or what it affects (PDG), callers and callees, and asking the agent about it.
+- **Layers** in the code header toggle what is shown in the code:
+
+  | Layer | Shows |
+  |---|---|
+  | ◆ Concepts | Concepts and operations, as icons in the gutter |
+  | ↗ External | Calls to code that is not part of the analysis, underlined |
+  | ▲ Findings | Places that violate a requirement |
+  | → Dataflow | The direct dataflows of the selection, as arcs next to the line numbers |
+  | ● Agent | The steps of the active question to the agent, in the bar above the code |
+
+- **Dataflow paths:** following a dataflow in the inspector shows it as a path with numbered steps, which you can step through.
+
+### Asking the agent
+
+- Ask in the chat, or **select code** and press `Ctrl/Cmd+K` (or use the small input next to the selection) to ask about exactly that code.
+- The agent cites the nodes its answer relies on. Citations are links into the code, and the evidence of the active question is marked in the code and can be stepped through like in a debugger.
+- Under an answer, **diagnostics** list the places its evidence relies on where the analysis is uncertain, e.g. unresolved calls or calls to external code such as `printf`.
+
+### Keyboard
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl/Cmd+P` | Open a file by name |
+| `Ctrl/Cmd+Shift+P` | Command palette |
+| `Ctrl/Cmd+K` | Ask the agent about the selected code |
+| `Alt+←` / `Alt+→` | Back / forward through the visited locations |
+| `Esc` | Close the open popup or panel |
+
+The command palette lists all commands with their shortcuts, e.g. to toggle layers, step through a dataflow path, open the dependence graph, or show and hide the parts of the layout.
+
 ## Architecture
 
 The following diagram shows the interaction between the main components during a chat request:
@@ -136,7 +183,7 @@ Frontend            Backend              LLM               MCP Server
    | {messages}         |                    |                   |
    |------------------->|                    |                   |
    |                    |                    |                   |
-   |                    |  sendPrompt()      |                   |
+   |                    |  AIAgent (Koog)    |                   |
    |                    |  (messages + tools)|                   |
    |                    |------------------->|                   |
    |                    |                    |                   |
@@ -153,7 +200,7 @@ Frontend            Backend              LLM               MCP Server
    |   tool_result      |                    |                   |
    |<-------------------|                    |                   |
    |                    |                    |                   |
-   |                    |  sendPrompt()      |                   |
+   |                    |  AIAgent (Koog)    |                   |
    |                    |  (+ tool results)  |                   |
    |                    |------------------->|                   |
    |                    |                    |                   |
@@ -164,5 +211,13 @@ Frontend            Backend              LLM               MCP Server
    |<-------------------|                    |                   |
 ```
 
-The LLM decides which tools to call and the backend executes the tool calls on the MCP server, and streams results back to both the 
-LLM (for the next iteration) and the frontend. This loop continues until the LLM responds with text instead of tool calls.
+The LLM decides which tools to call and the backend executes the tool calls on the MCP server, and streams results back to both the
+LLM (for the next iteration) and the frontend. This loop continues until the LLM responds with text instead of tool calls, or
+until a limit of iterations is reached. The loop runs on Koog's `AIAgent`, and the history of a conversation is kept per session
+with `ChatMemory`. Besides `text` and `tool_result`, the stream contains further events such as `reasoning` and `usage`; see the
+[event table of cpg-ai](../cpg-ai/README.md#using-it).
+
+The analysis and the agent share one graph: after an analysis, the console registers its `TranslationResult` as the session of
+the project in the MCP server, which runs in the same process. Concepts that the agent applies therefore show up in the UI.
+The agent page itself reads the graph through the REST API of the console (e.g. `/api/node/{id}`, `.../node-at`,
+`.../functions`, `.../calls`, `.../overlays`, `/api/diagnostics` and the graph endpoints); `Router.kt` documents all endpoints.

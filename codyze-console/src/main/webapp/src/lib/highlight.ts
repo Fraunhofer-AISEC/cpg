@@ -40,3 +40,63 @@ export function splitHighlightedLines(html: string): string[] {
   lines.push(current + html.slice(pos));
   return lines;
 }
+
+/**
+ * Declarations of constants that Ghidra names after the text of a string, e.g.
+ * `string s_(cpu_divider_<=_ahb_divider)_&&_(_ram_40818890;`.
+ */
+const STRING_DECLARATION = /^(?:string|unicode)[ \t]+\S+;[ \t\r]*$/;
+
+/**
+ * Prepares the lines of a file for the syntax highlighter. The names of the string constants of
+ * decompiled code can contain any character of the string. The highlighter reads such a line as
+ * the head of a function, and an unbalanced parenthesis in the name keeps its parameter list open
+ * until the end of the file.
+ *
+ * The characters of these names are replaced, which keeps the length of every line. The original
+ * text is put back into the highlighted line afterwards (see [restoreText]).
+ *
+ * @param lines The lines of the file.
+ * @returns The code to highlight, and the original text of the lines that were replaced by their
+ *   index.
+ */
+export function maskUnparsableNames(lines: string[]): { code: string; plain: Map<number, string> } {
+  const plain = new Map<number, string>();
+  const masked = lines.map((line, i) => {
+    if (!STRING_DECLARATION.test(line)) return line;
+    plain.set(i, line);
+    return line.replace(/[^A-Za-z0-9_;\s]/g, '_');
+  });
+  return { code: plain.size > 0 ? masked.join('\n') : lines.join('\n'), plain };
+}
+
+/** Escapes text the way the syntax highlighter does, to show it as HTML. */
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
+ * Puts the original text into the highlighted HTML of a line that was highlighted with other
+ * characters of the same length (see [maskUnparsableNames]), keeping its tags.
+ */
+export function restoreText(html: string, original: string): string {
+  let result = '';
+  let index = 0;
+  let pos = 0;
+  while (pos < html.length) {
+    if (html[pos] === '<') {
+      const end = html.indexOf('>', pos) + 1;
+      result += html.slice(pos, end);
+      pos = end;
+    } else {
+      result += escapeHtml(original[index++] ?? '');
+      pos++;
+    }
+  }
+  return result;
+}

@@ -45,6 +45,17 @@ import org.slf4j.LoggerFactory
 private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.codyze.console.Main")
 
 /**
+ * Instructions for the agent's answers, which the console shows with each cited node as a link to
+ * its code (see `MarkdownRenderer.svelte`).
+ */
+internal const val CITATION_INSTRUCTIONS =
+    "Cite the nodes your answer relies on: right after mentioning a piece of code, add " +
+        "[[node:<nodeId>]] with the nodeId (or id) of that node from a tool result, e.g. " +
+        "\"the key flows into encrypt() [[node:3f2a...]]\". The user interface shows each " +
+        "citation as a link to the code. Only cite IDs that appear in tool results and never " +
+        "invent them. Every statement about specific code should carry a citation."
+
+/**
  * This function starts the embedded server for the web console. It uses the Netty engine and
  * listens on [host] (default: localhost) at [port] (default: 8080). The server is configured using
  * the [configureWebconsole] function.
@@ -58,7 +69,8 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
 }
 
 private suspend fun ConsoleService.initChatService(): ChatService? {
-    val chatService = ChatService.createIfConfigExist() ?: return null
+    val chatService =
+        ChatService.createIfConfigExist(instructions = CITATION_INSTRUCTIONS) ?: return null
 
     return try {
         log.info("Starting MCP server with streamable HTTP on port {}...", 8081)

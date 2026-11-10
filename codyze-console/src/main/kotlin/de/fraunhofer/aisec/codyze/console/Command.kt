@@ -26,11 +26,22 @@
 package de.fraunhofer.aisec.codyze.console
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
 
 /** The 'console' command. This will start the web console server. */
 class ConsoleCommand : CliktCommand() {
+    private val host by
+        option(
+                "--host",
+                help =
+                    "The host the web console binds to. Use 0.0.0.0 to make it reachable from outside",
+                envvar = "CODYZE_CONSOLE_HOST",
+            )
+            .default("localhost")
+
     override fun run() {
-        ConsoleService().startConsole()
+        ConsoleService().startConsole(host = host)
     }
 }
 

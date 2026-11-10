@@ -48,8 +48,15 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigu
 import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.serialization.DependenceGraph
+import de.fraunhofer.aisec.cpg.serialization.GraphSliceJSON
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.NodePaths
+import de.fraunhofer.aisec.cpg.serialization.SliceCountsJSON
+import de.fraunhofer.aisec.cpg.serialization.SliceDirection
+import de.fraunhofer.aisec.cpg.serialization.pathsGraph
+import de.fraunhofer.aisec.cpg.serialization.slice
+import de.fraunhofer.aisec.cpg.serialization.sliceCounts
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
@@ -333,6 +340,13 @@ class ConsoleService {
         val nodes = paths.paths.map { path -> path.mapNotNull { findNode(it.nodeId) } }
         return pathsGraph(nodes.filter { it.isNotEmpty() }, paths.kind)
     }
+
+    /**
+     * Returns the evidence of a question to the agent as one graph of statements (see
+     * [evidenceGraph]).
+     */
+    fun getEvidenceGraph(request: EvidenceRequestJSON): EvidenceGraphJSON =
+        evidenceGraph(request, ::findNode)
 
     /** Returns the node (or overlay) with the given ID, using [nodeIndex]. */
     private fun findNode(nodeId: String): Node? {
