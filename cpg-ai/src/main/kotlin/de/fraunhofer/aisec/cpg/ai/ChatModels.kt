@@ -43,6 +43,12 @@ data class ChatRequestJSON(
      * history is stored for this id yet, [ChatService.chat] seeds history from [messages].
      */
     val sessionId: String? = null,
+    /**
+     * Whether the finished turn ends with a structured [TaskStatus], sent as a `task_status` event.
+     * It costs one more request with the whole history of the run, so it is off unless a caller
+     * uses it, e.g. to see which items of a skill run were resolved.
+     */
+    val reportTaskStatus: Boolean = false,
 )
 
 @Serializable data class ToolSchemaJSON(val properties: JsonObject?, val required: List<String>?)
@@ -89,6 +95,20 @@ data class McpCapabilitiesJSON(
  * tagged/skipped function names and match-library's matched/unmatched ones - matching the existing
  * [ChatService]-level design principle (see `historyCompressionConcepts`).
  */
+/**
+ * Whether a text reply of the agent only announced its next step, see `ChatService.isAnnouncement`.
+ */
+@Serializable
+@LLMDescription("Whether the reply of the agent answers the question.")
+data class ReplyAssessment(
+    @property:LLMDescription(
+        "True if the reply only announces a next step (e.g. a tool it is about to use) without " +
+            "answering the question. False if it answers the question, also partly or by " +
+            "explaining why it cannot be answered."
+    )
+    val isAnnouncement: Boolean
+)
+
 @Serializable
 @LLMDescription(
     "The current status of the requested task, reported once you believe you have finished (or " +

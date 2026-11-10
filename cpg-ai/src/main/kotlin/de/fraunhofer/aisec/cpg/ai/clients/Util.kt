@@ -42,6 +42,7 @@ const val SYSTEM_PROMPT =
         "Choose the tools that fit the task and read their descriptions to understand when each one applies. " +
         "Use tools directly without asking for confirmation, and do not ask the user to run the analysis themselves. " +
         "Start with tools that give an overview, then choose more specific ones to get more details (if needed). " +
+        "Do not announce a tool call in text: either call the tool, or give your final answer. " +
         "Do not stop at summaries. Inspect the actual code before drawing conclusions. " +
         "If a previous tool result already answers the question, respond without calling tools again. " +
         "If a tool call fails, read the error message. If it names an argument you got wrong (a missing " +
@@ -50,11 +51,6 @@ const val SYSTEM_PROMPT =
         "about your arguments (for example a node that does not exist), do not repeat the call: continue " +
         "with the information you already have. " +
         "Explain your findings clearly. " +
-        "Cite the nodes your answer relies on: right after mentioning a piece of code, add " +
-        "[[node:<nodeId>]] with the nodeId (or id) of that node from a tool result, e.g. " +
-        "\"the key flows into encrypt() [[node:3f2a...]]\". The user interface shows each citation " +
-        "as a link to the code. Only cite IDs that appear in tool results and never invent them. " +
-        "Every statement about specific code should carry a citation. " +
         "Always prefer calling tools through your normal function-calling mechanism. Only if that " +
         "is not available to you, write the call as a fenced JSON code block instead, in this " +
         "exact shape: ```json\n{\"name\": \"<tool name>\", \"arguments\": {<parameter>: <value>}}\n```."

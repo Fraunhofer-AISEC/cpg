@@ -29,6 +29,8 @@ import ai.koog.agents.chatMemory.feature.ChatMemory
 import ai.koog.agents.chatMemory.feature.ChatMemoryPreProcessor
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
+import ai.koog.agents.core.agent.entity.createStorageKey
+import ai.koog.agents.core.agent.session.AIAgentLLMWriteSession
 import ai.koog.agents.core.dsl.builder.node
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.*
@@ -118,6 +120,15 @@ val defaultHistoryCompressionConcepts: List<Concept> =
         ),
     )
 
+/** What the agent does after a text reply of the model. */
+private sealed interface ReplyDecision {
+    /** The reply is the answer, and the turn ends. */
+    data object Finish : ReplyDecision
+
+    /** The reply only announced the next step, and the model is nudged to continue. */
+    data object Continue : ReplyDecision
+}
+
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService(
     private val httpClient: HttpClient,
@@ -144,6 +155,11 @@ class ChatService(
      * to call a tool.
      */
     generationParams: LLMParams = LLMParams(),
+    /**
+     * Instructions appended to the system prompt, e.g. how the user interface of a caller wants the
+     * answers to be written. `null` if the caller has none.
+     */
+    private val instructions: String? = null,
 ) {
     /** [generationParams] with tool choice fixed to auto, reused for every [chat] call. */
     private val chatParams: LLMParams =
@@ -342,22 +358,37 @@ class ChatService(
     private val historyCompressionKeepLastN = 30
 
     /**
-     * Nudge sent to the model when it replies with plain text instead of calling a tool, to
-     * distinguish "narrating the next step" from a genuine final answer (see the `buildNudge` node
-     * in [chatStrategy]).
+     * Nudge sent to the model when its text reply only announced its next step instead of answering
+     * (see `checkReply` in [chatStrategy]).
      */
     private val continueNudgeMessage =
-        "If your task is not yet complete, call the appropriate tool now instead of describing " +
-            "what you would do. If you are done, just confirm that no further tool calls are " +
-            "needed."
+        "Your task is not complete yet. Continue by calling the appropriate tool now instead of " +
+            "describing what you would do."
 
     /**
-     * Follow-up message sent once [chatStrategy] believes a turn is finished, requesting a
-     * [TaskStatus] via structured output (see `requestTaskStatus`/`finishWithTaskStatus` in
-     * [chatStrategy]) - a more reliable completion signal for callers than inferring "done" from
-     * whatever the skill happened to persist to disk. The model's own final answer is already in
-     * its history by this point (appended automatically when it was produced), so this only needs
-     * to ask for the status, not restate the question.
+     * A text reply at least this long is taken as an answer without asking the model: an
+     * announcement of the next step is a sentence or two, e.g. "Let me check the callers of
+     * encrypt:". Only shorter replies cost the small extra request of [isAnnouncement].
+     */
+    private val announcementMaxLength = 600
+
+    /**
+     * How often [chatStrategy] nudges the model to continue within one [chat] call. Once used up,
+     * the next text reply ends the turn, so a model that keeps checking its answer again after
+     * every nudge cannot loop until [maxAgentIterations].
+     */
+    private val maxContinueNudges = 1
+
+    /** The number of nudges [chatStrategy] has sent in the running [chat] call. */
+    private val continueNudgesKey = createStorageKey<Int>("continueNudges")
+
+    /**
+     * Follow-up message sent once a turn is finished if the caller asked for a [TaskStatus]
+     * ([ChatRequestJSON.reportTaskStatus]), requesting it via structured output (see
+     * `requestTaskStatus` in [chatStrategy]) - a more reliable completion signal for callers than
+     * inferring "done" from whatever the skill happened to persist to disk. The model's own final
+     * answer is already in its history by this point (appended automatically when it was produced),
+     * so this only needs to ask for the status, not restate the question.
      */
     private val taskStatusRequestMessage =
         "Report your current task status now via the structured response format requested."
@@ -414,11 +445,57 @@ class ChatService(
      *   messages, or [tokenizer]'s estimate exceeds [historyCompressionTokenFraction] of the
      *   request model's context window (see [contextLengthOf]), so long tool-calling loops don't
      *   blow the LLM's context window either - whichever of the two fires first.
+     * - a check of every text reply (`checkReply`): a reply that only announced the next step gets
+     *   one nudge to continue (see [isAnnouncement]).
+     * - if [reportTaskStatus], a structured [TaskStatus] request once the turn is finished.
      *
-     * Built once and reused across [chat] calls, since the graph itself carries no per-request
-     * state.
+     * Built once per value of [reportTaskStatus] and reused across [chat] calls, since the graph
+     * itself carries no per-request state.
      */
-    private val chatStrategy =
+    private fun chatStrategy(reportTaskStatus: Boolean) =
+        if (reportTaskStatus) chatStrategyWithTaskStatus else chatStrategyWithoutTaskStatus
+
+    private val chatStrategyWithTaskStatus by lazy { buildChatStrategy(reportTaskStatus = true) }
+    private val chatStrategyWithoutTaskStatus by lazy {
+        buildChatStrategy(reportTaskStatus = false)
+    }
+
+    /**
+     * Whether [reply], a text reply of the model to [question], only announces its next step (e.g.
+     * "Let me check the callers of encrypt:") instead of answering. A long reply is taken as an
+     * answer (see [announcementMaxLength]); a short one is judged by the model in a small request
+     * that holds only the question and the reply, not the history of the run. If that request
+     * fails, the reply counts as an announcement, so the model is nudged rather than cut off.
+     */
+    private suspend fun AIAgentLLMWriteSession.isAnnouncement(
+        question: String,
+        reply: String,
+    ): Boolean {
+        if (reply.length >= announcementMaxLength) return false
+        val saved = prompt
+        rewritePrompt {
+            prompt("reply-check", params = saved.params.copy(toolChoice = null)) {
+                system(
+                    "You judge the last reply of a code analysis agent. Decide whether it answers " +
+                        "the question, or only announces a next step that the agent has not done " +
+                        "yet (e.g. \"Let me check the callers of encrypt:\")."
+                )
+                user("Question:\n$question\n\nReply of the agent:\n${reply.ifBlank { "(empty)" }}")
+            }
+        }
+        return try {
+            requestLLMStructured<ReplyAssessment>().getOrNull()?.data?.isAnnouncement ?: true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Checking the reply of the model failed: {}", e.message)
+            true
+        } finally {
+            rewritePrompt { saved }
+        }
+    }
+
+    private fun buildChatStrategy(reportTaskStatus: Boolean) =
         strategy<String, String>("chat-with-history-compression") {
             val requestLlmStream by nodeLLMRequestStreaming()
             val requestLlm by
@@ -479,20 +556,17 @@ class ChatService(
                 nodeLLMCompressHistory<ReceivedToolResults>(strategy = compressionStrategy)
             // Some models (esp. smaller/local ones) narrate their next step in plain text instead
             // of calling a tool in the same turn (e.g. "Let me check what functions are
-            // available:" with no accompanying tool call). Rather than accepting that prose as the
-            // final answer, give the model one nudge to actually continue; only if it replies with
-            // text *again* do we treat it as truly final. This costs one extra round trip on every
-            // genuinely-final answer too, but avoids silently truncating still-in-progress work.
-            val buildNudge by node<String, String>("buildNudge") { _ -> continueNudgeMessage }
+            // available:" with no accompanying tool call), while others give a complete answer.
+            // checkReply tells the two apart (see isAnnouncement), and only an announcement is
+            // nudged to continue - at most maxContinueNudges times per chat call.
+            val buildNudge by node<Unit, String>("buildNudge") { _ -> continueNudgeMessage }
             // onToolCalls/onTextMessage below only match a response with tool calls or a text
             // part; a response with neither (parts=[], finishReason=stop - seen from some
             // providers) would otherwise leave Koog unable to route the message anywhere, throwing
-            // AIAgentStuckInTheNodeException. These two transform nodes let such an empty response
-            // join the existing buildNudge/nodeFinish paths, which both expect a String input.
-            val emptyResponseToNudge by
-                node<Message.Assistant, String>("emptyResponseToNudge") { _ -> "" }
-            val emptyResponseToFinish by
-                node<Message.Assistant, String>("emptyResponseToFinish") { _ -> "" }
+            // AIAgentStuckInTheNodeException. This transform node lets such an empty response join
+            // the path of a text reply, which expects a String input.
+            val emptyResponseToText by
+                node<Message.Assistant, String>("emptyResponseToText") { _ -> "" }
             val nudgeRequestStream by nodeLLMRequestStreaming("nudgeRequestStream")
             val nudgeRequest by
                 node<Flow<StreamFrame>, Message.Assistant>("collectNudgeRequestStream") { frames ->
@@ -501,13 +575,38 @@ class ChatService(
                     }
                 }
 
-            // Once the model believes a turn is finished (both paths above that used to go
-            // straight to nodeFinish), ask once more for a structured TaskStatus instead of
-            // letting callers infer completion by re-parsing whatever the skill persisted to
-            // disk. The model's final answer is already in its history (appended automatically
-            // when produced) and was already streamed out via onLLMStreamingFrameReceived before
-            // this point, so the text input here is intentionally discarded - only the request
-            // for status matters.
+            // After every text reply: an announcement of the next step is nudged to continue,
+            // anything else ends the turn. The reply was already streamed out and is part of the
+            // history of the model.
+            val checkReply by
+                node<String, ReplyDecision>("checkReply") { reply ->
+                    val nudges = storage.get(continueNudgesKey) ?: 0
+                    if (nudges >= maxContinueNudges) return@node ReplyDecision.Finish
+                    val announcement =
+                        llm.writeSession {
+                            val question =
+                                prompt.messages
+                                    .lastOrNull {
+                                        it is Message.User &&
+                                            it.parts.none { part ->
+                                                part is MessagePart.Tool.Result
+                                            } &&
+                                            it.textContent() !in controlMessages
+                                    }
+                                    ?.textContent()
+                                    .orEmpty()
+                            isAnnouncement(question, reply)
+                        }
+                    if (!announcement) return@node ReplyDecision.Finish
+                    storage.set(continueNudgesKey, nudges + 1)
+                    ReplyDecision.Continue
+                }
+
+            // If the caller asked for it, the finished turn ends with a structured TaskStatus, a
+            // completion signal instead of re-parsing whatever the skill persisted to disk. The
+            // model's answer is already in its history (appended automatically when produced) and
+            // was already streamed out, so only the request for status matters. Without it, the
+            // turn ends right away: the request repeats the whole history of the run.
             //
             // Two things to handle here:
             // 1) toolChoice=Auto is inherited from the session prompt but requestLLMStructured
@@ -518,7 +617,10 @@ class ChatService(
             //    call, so HTTP errors throw instead of returning Result.failure. Wrap in our own
             //    try-catch to guarantee the strategy completes and ChatMemory can store history.
             val requestTaskStatus by
-                node<String, Result<StructuredResponse<TaskStatus>>>("requestTaskStatus") { _ ->
+                node<Unit, Result<StructuredResponse<TaskStatus>>>("requestTaskStatus") { _ ->
+                    if (!reportTaskStatus) {
+                        return@node Result.failure(IllegalStateException("No task status asked"))
+                    }
                     llm.writeSession {
                         appendPrompt { user(taskStatusRequestMessage) }
                         val savedParams = prompt.params
@@ -556,12 +658,11 @@ class ChatService(
             // "any Text part present", regardless of tool calls), checking onTextMessage first
             // would let that empty text part win the race and silently skip the tool call.
             edge(requestLlm forwardTo executeTool onToolCalls { true })
-            edge(requestLlm forwardTo buildNudge onTextMessage { true })
-            // See emptyResponseToNudge/emptyResponseToFinish docs above: treat a genuinely empty
-            // response the same as unhelpful text - nudge the model to actually continue.
+            edge(requestLlm forwardTo checkReply onTextMessage { true })
+            // See emptyResponseToText above: treat a genuinely empty response like a text reply.
             edge(
                 requestLlm forwardTo
-                    emptyResponseToNudge onCondition
+                    emptyResponseToText onCondition
                     { message ->
                         message.parts.isEmpty()
                     }
@@ -594,34 +695,45 @@ class ChatService(
             )
             edge(sendToolResultStream forwardTo sendToolResult)
             edge(sendToolResult forwardTo executeTool onToolCalls { true })
-            edge(sendToolResult forwardTo buildNudge onTextMessage { true })
+            edge(sendToolResult forwardTo checkReply onTextMessage { true })
             // Same empty-response fallback as after requestLlm above.
             edge(
                 sendToolResult forwardTo
-                    emptyResponseToNudge onCondition
+                    emptyResponseToText onCondition
                     { message ->
                         message.parts.isEmpty()
                     }
             )
 
-            edge(emptyResponseToNudge forwardTo buildNudge)
+            edge(emptyResponseToText forwardTo checkReply)
+
+            edge(
+                checkReply forwardTo
+                    requestTaskStatus onIsInstance
+                    ReplyDecision.Finish::class transformed
+                    {}
+            )
+            edge(
+                checkReply forwardTo
+                    buildNudge onIsInstance
+                    ReplyDecision.Continue::class transformed
+                    {}
+            )
 
             edge(buildNudge forwardTo nudgeRequestStream)
             edge(nudgeRequestStream forwardTo nudgeRequest)
             edge(nudgeRequest forwardTo executeTool onToolCalls { true })
-            edge(nudgeRequest forwardTo requestTaskStatus onTextMessage { true })
-            // Same empty-response case as above, but this is already the nudge response - there's
-            // no further nudge to give, so end the turn, matching how unhelpful text after the
-            // nudge already ends at nodeFinish below.
+            // A text reply after the nudge goes through checkReply like any other, which ends the
+            // turn once maxContinueNudges is used up
+            edge(nudgeRequest forwardTo checkReply onTextMessage { true })
             edge(
                 nudgeRequest forwardTo
-                    emptyResponseToFinish onCondition
+                    emptyResponseToText onCondition
                     { message ->
                         message.parts.isEmpty()
                     }
             )
 
-            edge(emptyResponseToFinish forwardTo requestTaskStatus)
             edge(requestTaskStatus forwardTo finishWithTaskStatus)
             edge(finishWithTaskStatus forwardTo nodeFinish)
         }
@@ -667,7 +779,10 @@ class ChatService(
                     }
                 }
 
-            val toolRegistry = mcpToolRegistry + skillFileToolRegistry
+            // The file tools only serve to read the skills. Without skills, the system prompt
+            // does not explain them, and models use them to look for the sources of the project
+            val toolRegistry =
+                if (skills.isEmpty()) mcpToolRegistry else mcpToolRegistry + skillFileToolRegistry
             val usage = TokenUsage()
 
             val agent =
@@ -679,7 +794,7 @@ class ChatService(
                             model = chatLlm.model,
                             maxAgentIterations = maxAgentIterations,
                         ),
-                    strategy = chatStrategy,
+                    strategy = chatStrategy(request.reportTaskStatus),
                     toolRegistry = toolRegistry,
                 ) {
                     if (sessionId != null) {
@@ -785,10 +900,8 @@ class ChatService(
      * Compose the system prompt sent to the LLM: the base prompt followed by the skill catalog when
      * skills are available.
      */
-    private fun buildSystemPrompt(skills: List<Skill>): String {
-        val catalog = buildSkillCatalog(skills) ?: return SYSTEM_PROMPT
-        return "$SYSTEM_PROMPT\n\n$catalog"
-    }
+    private fun buildSystemPrompt(skills: List<Skill>): String =
+        listOfNotNull(SYSTEM_PROMPT, instructions, buildSkillCatalog(skills)).joinToString("\n\n")
 
     /** Return the MCP capabilities: tools, prompts, and resources. */
     fun getMcpCapabilities(): McpCapabilitiesJSON =
@@ -961,7 +1074,12 @@ class ChatService(
             return listOfNotNull(system) + window
         }
 
-        fun createIfConfigExist(): ChatService? {
+        /**
+         * Creates a [ChatService] from `application.conf`, or returns `null` if it configures no
+         * LLM clients. [instructions] are appended to the system prompt (see
+         * [ChatService.instructions]).
+         */
+        fun createIfConfigExist(instructions: String? = null): ChatService? {
             val config = ConfigFactory.load()
             if (!config.hasPath("llm.clients")) {
                 log.warn(
@@ -970,10 +1088,10 @@ class ChatService(
                 )
                 return null
             }
-            return fromConfig(config)
+            return fromConfig(config, instructions)
         }
 
-        private fun fromConfig(config: Config): ChatService {
+        private fun fromConfig(config: Config, instructions: String?): ChatService {
             val mcpServerUrl = config.getString("mcp.serverUrl")
 
             val httpClient =
@@ -999,6 +1117,7 @@ class ChatService(
                 llmProviderConfig = config.toLlmProviderConfig(httpClient),
                 mcpServerUrl = mcpServerUrl,
                 generationParams = config.toGenerationParams(),
+                instructions = instructions,
             )
         }
     }
