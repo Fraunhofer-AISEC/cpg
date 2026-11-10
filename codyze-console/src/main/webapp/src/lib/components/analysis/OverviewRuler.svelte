@@ -17,7 +17,7 @@
 <script lang="ts">
   /**
    * A thin strip next to the code that shows the marks of a whole file at their relative position,
-   * like the marks in the scrollbar of VS Code, and the visible part of the file. Clicking a mark
+   * and the visible part of the file. Clicking a mark
    * (or anywhere in the strip) scrolls the code there.
    */
   interface Props {

@@ -39,6 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.mapFlatMapped
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -109,6 +111,9 @@ class ConsoleService {
 
                     translation {
                         it.loadIncludes(true)
+                        // The program dependence graph, shown as a slice of the code in the UI
+                        it.registerPass<ControlDependenceGraphPass>()
+                        it.registerPass<ProgramDependenceGraphPass>()
                         it.registerPass<PythonStdLibConfigurationPass>()
                         it.registerPass<LoadPersistedConcepts>()
 
@@ -291,6 +296,22 @@ class ConsoleService {
                 .mapNotNull { id -> findNode(id)?.let { id to it } }
                 .toMap()
         )
+    }
+
+    /**
+     * Returns the slice of the program dependence graph around the node with the given ID (see
+     * [pdgSlice]), or `null` if there is no such node.
+     */
+    fun getPdgSlice(nodeId: String, direction: PdgDirection, hops: Int): PdgSliceJSON? {
+        return findNode(nodeId)?.let { pdgSlice(it, direction, hops) }
+    }
+
+    /**
+     * Returns how many statements are in the slice of the program dependence graph around the node
+     * with the given ID in each direction, or `null` if there is no such node.
+     */
+    fun getPdgCounts(nodeId: String, hops: Int): PdgCountsJSON? {
+        return findNode(nodeId)?.let { pdgCounts(it, hops) }
     }
 
     /** Returns the node (or overlay) with the given ID, using [nodeIndex]. */

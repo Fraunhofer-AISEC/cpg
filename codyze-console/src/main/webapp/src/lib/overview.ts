@@ -7,11 +7,16 @@ export interface FileOverview {
   overlays: OverlayJSON[];
 }
 
-/** Describes the overlay, e.g. `Concept File` or `Operation OpenFile of File`. */
+/**
+ * Describes a concept (a thing, e.g. a secret) or an operation (what the code does with it, e.g.
+ * getting the secret) and the node it is attached to, e.g. `Operation GetSecret of Secret · key`.
+ */
 export function describeOverlay(overlay: OverlayJSON): string {
+  const node = overlay.underlyingNode;
+  const target = node ? ` · ${node.name || node.code.split('\n')[0]}` : '';
   return overlay.concept
-    ? `Operation ${overlay.overlay.type} of ${overlay.concept.type}`
-    : `Concept ${overlay.overlay.type}`;
+    ? `Operation ${overlay.overlay.type} of ${overlay.concept.type}${target}`
+    : `Concept ${overlay.overlay.type}${target}`;
 }
 
 /** A short label for the kind of the overlay, e.g. `Concept` or `Operation of File`. */

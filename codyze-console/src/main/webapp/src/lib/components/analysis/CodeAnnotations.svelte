@@ -1,7 +1,7 @@
 <script lang="ts">
   import { callRegion, describeOverlay, overlayLine, type FileOverview } from '$lib/overview';
   import type { Layer } from '$lib/stores/layers.svelte';
-  import type { InspectorSection } from '$lib/stores/codeFocus.svelte';
+  import type { CallFilter, InspectorSection } from '$lib/stores/codeFocus.svelte';
 
   /**
    * Draws the annotations of a file on top of the code: the key figures of each function at the end
@@ -21,8 +21,11 @@
     charWidth: number;
     offsetTop: number;
     offsetLeft: number;
+    /** The left edge and the width of the lane of the concept icons in rem */
+    glyphLeft: number;
+    glyphWidth: number;
     /** Inspects a node, revealing a section of the inspector if given */
-    onInspect: (nodeId: string, section?: InspectorSection) => void;
+    onInspect: (nodeId: string, section?: InspectorSection, filter?: CallFilter) => void;
     /** Draws the annotations faintly, e.g. while a path is shown */
     dimmed?: boolean;
   }
@@ -37,6 +40,8 @@
     charWidth,
     offsetTop,
     offsetLeft,
+    glyphLeft,
+    glyphWidth,
     onInspect,
     dimmed = false
   }: Props = $props();
@@ -55,7 +60,13 @@
 
   // The parts of the code lens of a function, each revealing its section of the inspector
   function lensParts(fn: (typeof functions)[number]) {
-    const parts: { label: string; count: number; section: InspectorSection; title: string }[] = [
+    const parts: {
+      label: string;
+      count: number;
+      section: InspectorSection;
+      filter?: CallFilter;
+      title: string;
+    }[] = [
       {
         label: `${fn.callers} callers`,
         count: fn.callers,
@@ -74,6 +85,7 @@
         label: `${fn.externalCalls} external`,
         count: fn.externalCalls,
         section: 'callees',
+        filter: 'EXTERNAL',
         title: `Show the calls in ${fn.function.name}, ${fn.externalCalls} of them to external code`
       });
     }
@@ -82,6 +94,7 @@
         label: `⚠ ${fn.unresolvedCalls} unresolved`,
         count: fn.unresolvedCalls,
         section: 'callees',
+        filter: 'UNRESOLVED',
         title: `Show the calls in ${fn.function.name}, ${fn.unresolvedCalls} of them unresolved`
       });
     }
@@ -132,7 +145,7 @@
               title={part.title}
               onclick={(e) => {
                 e.stopPropagation();
-                onInspect(fn.function.id, part.section);
+                onInspect(fn.function.id, part.section, part.filter);
               }}
             >
               {part.label}
@@ -165,9 +178,11 @@
     {#if isVisible(entry.line, entry.line)}
       <button
         type="button"
-        class="pointer-events-auto absolute left-1.5 z-[26] cursor-pointer font-sans text-[11px] text-purple-600 hover:text-purple-800"
+        class="pointer-events-auto absolute z-[26] flex cursor-pointer items-center justify-center font-sans text-[11px] text-purple-600 hover:text-purple-800"
         style:top="{top(entry.line)}rem"
-        style:line-height="{lineHeight}rem"
+        style:height="{lineHeight}rem"
+        style:left="{glyphLeft}rem"
+        style:width="{glyphWidth}rem"
         title={entry.overlays.map(describeOverlay).join('\n')}
         aria-label={entry.overlays.map(describeOverlay).join(', ')}
         onclick={(e) => {
