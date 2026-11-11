@@ -696,6 +696,87 @@ class IncrementalUpdateTest {
     }
 
     @Test
+    fun testAddSourceLeavesOrphanedStubAttachedWhenFunctionSummaryCannotBeSoundlyRemoved() {
+        // Regression test for the "zombie stub" branch in reconcileCalls (IncrementalUpdate.kt):
+        // when DFGPass itself owns argument/parameter edges (dfgHandlesArgumentEdgesItself ==
+        // true, i.e. neither PointsToPass nor ControlFlowSensitiveDFGPass is registered) AND the
+        // now-orphaned stub already has a non-empty functionSummary -- populated here via an
+        // external DFG function summary file, exactly like DFGPass.connectInferredCallArguments
+        // would in production -- its function-summary-derived DFG edges cannot be soundly removed,
+        // so the stub must be deliberately left attached instead of detached.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-zombie-stub-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val summaryFile =
+            File.createTempFile("zombie-stub-summary", ".yml").apply {
+                writeText(
+                    """
+                    - functionDeclaration:
+                        language: de.fraunhofer.aisec.cpg.StaleStubTestLanguage
+                        methodName: foo
+                      dataFlows:
+                        - from: param0
+                          to: return
+                          dfgType: full
+                    """
+                        .trimIndent()
+                )
+                deleteOnExit()
+            }
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .registerFunctionSummaries(summaryFile)
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+        val tu = component.translationUnits.first()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        val stub = fooCall.invokes.singleOrNull()
+        assertNotNull(stub, "Expected the unresolved call to 'foo' to create an inferred stub")
+        assertTrue(
+            stub.functionSummary.isNotEmpty(),
+            "Expected the registered DFG function summary to populate the inferred stub's " +
+                "functionSummary, exactly like DFGPass.connectInferredCallArguments would",
+        )
+
+        val second = tempSource(topLevel, "foo.stale", "define:foo")
+        val addedTu = manager.addSource(result, component, second)
+        assertNotNull(addedTu)
+
+        // The call must now point at the real definition, not the stale stub.
+        assertFalse(fooCall.invokes.contains(stub))
+        assertTrue(stub.calledBy.isEmpty(), "Expected the stub to be fully orphaned")
+
+        // Unlike testAddSourceCleansUpStaleInferredStub, the stub must NOT have been detached: it
+        // is still declared in its original TranslationUnit and still resolvable via the scope
+        // manager.
+        assertTrue(
+            tu.declarations.contains(stub),
+            "Expected the orphaned stub to remain attached because its function-summary-derived " +
+                "DFG edges could not be soundly removed",
+        )
+        val remaining =
+            result.finalCtx.scopeManager.lookupSymbolByName(
+                Name("foo"),
+                result.finalCtx.availableLanguage<StaleStubTestLanguage>()!!,
+                startScope = result.finalCtx.scopeManager.globalScope,
+            )
+        assertTrue(remaining.contains(stub))
+    }
+
+    @Test
     fun testAddSourceReconcilesInferredStubAcrossSiblingNamespace() {
         // Regression test for the cross-module reachability gap introduced by the batched
         // reconciliation in reconcileCalls: isReachableFrom mirrors SymbolResolver's lexical
