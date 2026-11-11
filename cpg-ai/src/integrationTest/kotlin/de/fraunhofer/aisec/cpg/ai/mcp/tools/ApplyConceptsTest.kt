@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgApplyConceptsTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.listConceptsAndOperations
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addApplyConceptsTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addListConceptsAndOperationsTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
@@ -62,8 +62,8 @@ class ApplyConceptsTest {
     fun applyConceptAndListAgain() =
         withClient(
             registerTools = {
-                listConceptsAndOperations()
-                addCpgApplyConceptsTool()
+                addListConceptsAndOperationsTool()
+                addApplyConceptsTool()
             }
         ) { client ->
             val secretInitializer =

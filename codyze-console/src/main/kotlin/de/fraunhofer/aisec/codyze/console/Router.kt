@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
+import de.fraunhofer.aisec.cpg.sarif.Region
 import io.ktor.http.*
 import io.ktor.server.http.content.*
 import io.ktor.server.request.*
@@ -61,6 +62,24 @@ import kotlinx.serialization.json.JsonObject
  *   overlay nodes for a translation unit.
  * - POST `/api/nodes`: Retrieves the nodes with the given IDs (without DFG edges). Unknown node IDs
  *   are omitted.
+ * - GET `/api/component/{component_name}/translation-unit/{id}/functions`: Retrieves the functions
+ *   of a translation unit with their key figures (callers, callees, external and unresolved calls).
+ * - GET `/api/component/{component_name}/translation-unit/{id}/calls`: Retrieves the calls of a
+ *   translation unit with the status of their targets (resolved, external, unresolved).
+ * - GET `/api/component/{component_name}/translation-unit/{id}/overlays`: Retrieves the concepts
+ *   and operations of a translation unit, with the nodes they are attached to and, for operations,
+ *   their concept. Unlike `overlay-nodes`, which returns the raw overlay nodes (including their DFG
+ *   edges).
+ * - GET `/api/component/{component_name}/overlays`: Retrieves the concepts and operations of all
+ *   translation units of a component.
+ * - GET
+ *   `/api/component/{component_name}/translation-unit/{id}/node-at?line=&column=[&endLine=&endColumn=]`:
+ *   Retrieves the details of the innermost node at the given position, or, with an end position, of
+ *   the innermost node containing the whole range.
+ * - GET `/api/node/{id}`: Retrieves the details of a node (calls, direct dataflows, overlays and
+ *   analysis warnings).
+ * - POST `/api/diagnostics`: Retrieves the places where the analysis is incomplete or uncertain
+ *   (unresolved or external calls, analysis problems) that the nodes with the given IDs rely on.
  * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
@@ -176,6 +195,60 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
             call.respond(nodes)
         }
 
+        // The endpoints to get the functions, calls and overlays of a translation unit
+        get("/component/{component_name}/translation-unit/{id}/functions") {
+            respondForTranslationUnit(service::getFunctionCallStats)
+        }
+        get("/component/{component_name}/translation-unit/{id}/calls") {
+            respondForTranslationUnit(service::getCallSites)
+        }
+        get("/component/{component_name}/translation-unit/{id}/overlays") {
+            respondForTranslationUnit(service::getOverlays)
+        }
+
+        // The endpoint to get the concepts and operations of all translation units of a component
+        get("/component/{component_name}/overlays") {
+            val componentName =
+                call.parameters["component_name"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+            val overlays = service.getComponentOverlays(componentName)
+            if (overlays != null) {
+                call.respond(overlays)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Component not found"))
+            }
+        }
+
+        // The endpoint to get the details of the innermost node at a position in a translation unit
+        get("/component/{component_name}/translation-unit/{id}/node-at") {
+            val componentName =
+                call.parameters["component_name"]
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val line =
+                call.parameters["line"]?.toIntOrNull()
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val column =
+                call.parameters["column"]?.toIntOrNull()
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+            // The target is the character at the position, or the range up to the (exclusive) end
+            val endLine = call.parameters["endLine"]?.toIntOrNull() ?: line
+            val endColumn = call.parameters["endColumn"]?.toIntOrNull() ?: (column + 1)
+            val details =
+                service.getNodeDetailsAt(
+                    componentName,
+                    id,
+                    Region(line, column, endLine, endColumn),
+                )
+            if (details != null) {
+                call.respond(details)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "No node at this position"))
+            }
+        }
+
         // The endpoint to get multiple nodes by IDs (batch fetch)
         post("/nodes") {
             try {
@@ -187,6 +260,31 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
                     mapOf("error" to "Invalid request format: ${e.message}"),
                 )
             }
+        }
+
+        // The endpoint to get the details of a single node (calls, dataflows, overlays, warnings)
+        get("/node/{id}") {
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val details = service.getNodeDetails(id)
+            if (details != null) {
+                call.respond(details)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Node not found"))
+            }
+        }
+
+        // The endpoint to check where the analysis is uncertain for the evidence of the agent
+        post("/diagnostics") {
+            val nodeIds =
+                try {
+                    call.receive<List<String>>()
+                } catch (e: Exception) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Invalid request format: ${e.message}"),
+                    )
+                }
+            call.respond(service.getEvidenceDiagnostics(nodeIds))
         }
 
         // The endpoint to add a concept node to the current analysis result
@@ -301,6 +399,25 @@ fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
     }
 }
 
+/**
+ * Responds with what [get] returns for the `component_name` and `id` parameters of the request, or
+ * with 404 if there is no such translation unit.
+ */
+private suspend inline fun <reified T : Any> RoutingContext.respondForTranslationUnit(
+    get: (componentName: String, id: String) -> T?
+) {
+    val componentName =
+        call.parameters["component_name"] ?: return call.respond(HttpStatusCode.BadRequest)
+    val id = call.parameters["id"] ?: return call.respond(HttpStatusCode.BadRequest)
+
+    val result = get(componentName, id)
+    if (result != null) {
+        call.respond(result)
+    } else {
+        call.respond(HttpStatusCode.NotFound, mapOf("error" to "Translation unit not found"))
+    }
+}
+
 /** Chat and MCP routes — only registered when [ChatService] is available. */
 fun Route.chatRoutes(chatService: ChatService) {
     route("/api/chat") {
@@ -327,6 +444,15 @@ fun Route.chatRoutes(chatService: ChatService) {
                     } catch (ignored: Exception) {}
                 }
             }
+        }
+
+        post("/sessions") { call.respond(mapOf("sessionId" to chatService.createSession())) }
+
+        // The chat histories are kept until evicted, so the frontend ends a session explicitly.
+        delete("/sessions/{id}") {
+            val id = call.parameters["id"] ?: return@delete call.respond(HttpStatusCode.BadRequest)
+            chatService.evictSession(id)
+            call.respond(HttpStatusCode.NoContent)
         }
 
         get("/providers") { call.respond(chatService.listAvailableProviders()) }

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.ai.mcp.tools
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAddCodeTool
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addCpgAnalyzeTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.addAnalyzeTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.analysisSessions
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
@@ -58,7 +58,7 @@ class AddCodeToolTest {
     fun cpgAnalyzeToolIntegrationTest() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
+                addAnalyzeTool()
                 addAddCodeTool()
             }
         ) { client ->
@@ -125,7 +125,7 @@ class AddCodeToolTest {
     fun cpgAddCodeFailsGracefullyWhenProjectWasNotKeptLive() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
+                addAnalyzeTool()
                 addAddCodeTool()
             }
         ) { client ->
@@ -235,7 +235,7 @@ class AddCodeToolTest {
     fun cpgAddCodeResolvesCallsAcrossChainedAdds() =
         withClient(
             registerTools = {
-                addCpgAnalyzeTool()
+                addAnalyzeTool()
                 addAddCodeTool()
             }
         ) { client ->

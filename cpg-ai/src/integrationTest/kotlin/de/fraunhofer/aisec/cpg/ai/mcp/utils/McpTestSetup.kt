@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.ai.mcp.utils
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.CpgMcpServer
 import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
 import io.modelcontextprotocol.kotlin.sdk.client.Client
+import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
@@ -47,15 +47,15 @@ import kotlinx.coroutines.withTimeout
  */
 @OptIn(ExperimentalMcpApi::class)
 fun withClient(
-    registerTools: CpgMcpServer.() -> Unit = {},
-    registerPrompts: CpgMcpServer.() -> Unit = {},
+    registerTools: Server.() -> Unit = {},
+    registerPrompts: Server.() -> Unit = {},
     test: suspend (Client) -> Unit,
 ): Unit =
     runBlocking(Dispatchers.Default) {
         val serverReady = CompletableDeferred<Unit>()
 
         val server =
-            CpgMcpServer(
+            Server(
                 Implementation(name = "test-cpg-server", version = "1.0.0"),
                 ServerOptions(
                     capabilities =
@@ -88,8 +88,8 @@ fun withClient(
         }
     }
 
-fun testServer(): CpgMcpServer =
-    CpgMcpServer(
+fun testServer(): Server =
+    Server(
         Implementation(name = "test-cpg-server", version = "1.0.0"),
         ServerOptions(
             capabilities =

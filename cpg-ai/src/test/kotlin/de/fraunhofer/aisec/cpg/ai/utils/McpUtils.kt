@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.ai.utils
 
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.CpgMcpServer
+import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 
-fun testServer(): CpgMcpServer =
-    CpgMcpServer(
+fun testServer(): Server =
+    Server(
         Implementation(name = "test-cpg-server", version = "1.0.0"),
         ServerOptions(
             capabilities =

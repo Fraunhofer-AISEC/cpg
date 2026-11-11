@@ -25,31 +25,6 @@
  */
 @file:Suppress("UNCHECKED_CAST")
 
-/*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
- *
- */
 package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
@@ -57,15 +32,16 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAddCodePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgLock
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgRunPassPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgSession
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.NoArguments
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addToolWithoutCpg
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.findNodeById
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.registerSession
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
-import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
-import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -105,14 +81,11 @@ import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.softDependencies
 import de.fraunhofer.aisec.cpg.project.Project
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import java.nio.file.Paths
-import java.util.Collections
+import java.util.IdentityHashMap
 import kotlin.String
 import kotlin.io.path.exists
 import kotlin.reflect.KClass
@@ -120,25 +93,6 @@ import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import org.slf4j.LoggerFactory
-
-open class CpgMcpServer(
-    serverInfo: Implementation,
-    options: ServerOptions,
-    instructionsProvider: (() -> String)? = null,
-    block: Server.() -> Unit = {},
-) :
-    Server(
-        serverInfo = serverInfo,
-        options = options,
-        instructionsProvider = instructionsProvider,
-        block = block,
-    ) {
-    var languages: MutableList<String> = Project.defaultLanguages.toMutableList()
-}
-
-val log = LoggerFactory.getLogger(CpgMcpServer::class.java)
 
 val toolDescription =
     """
@@ -165,16 +119,15 @@ val toolDescription =
     """
         .trimIndent()
 
-fun CpgMcpServer.addCpgAnalyzeTool() {
-    this.addTool(
+fun Server.addAnalyzeTool() {
+    this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_analyze",
+        readOnly = false,
         description = toolDescription,
-        inputSchema = CpgAnalyzePayload::class.toSchema(),
-    ) { request ->
+    ) { payload ->
         try {
-            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult =
-                runCpgAnalyze(payload, runPasses = true, cleanup = payload?.keepLive != true)
+                runCpgAnalyze(payload, runPasses = true, cleanup = payload.keepLive != true)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
@@ -191,8 +144,23 @@ fun CpgMcpServer.addCpgAnalyzeTool() {
  *
  * If [runPasses] is true, all default passes will be run, otherwise no pass will be run. If
  * [cleanup] is true, we clean up the [TypeManager] memory after analysis.
+ *
+ * Kept as a [Server] extension (rather than a plain top-level function) so that existing callers
+ * invoking it as `server.runCpgAnalyze(...)` / `testServer().runCpgAnalyze(...)` (e.g. in tests)
+ * keep working unchanged; the receiver itself is unused, since [analyzeAndStore] needs nothing
+ * [Server]-specific.
  */
-fun CpgMcpServer.runCpgAnalyze(
+fun Server.runCpgAnalyze(
+    payload: CpgAnalyzePayload?,
+    runPasses: Boolean,
+    cleanup: Boolean,
+): CpgAnalysisResult = analyzeAndStore(payload, runPasses, cleanup)
+
+// Holds the write lock of the project's previous session (if any) for the whole analysis, not just
+// the swap of the result: the previous graph's frontends are cleaned up first (its memory is needed
+// for the new one on large projects), which leaves nothing useful for a reader to see in the
+// meantime. Other projects are not affected.
+private fun analyzeAndStore(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
     cleanup: Boolean,
@@ -227,16 +195,6 @@ fun CpgMcpServer.runCpgAnalyze(
 
     val project =
         Project.from(path) {
-            languages {
-                for (language in languages) {
-                    try {
-                        use(Class.forName(language).kotlin as KClass<out Language<*>>)
-                    } catch (_: ClassNotFoundException) {
-                        log.warn("Class not found: $language")
-                    }
-                }
-            }
-
             if (!runPasses) passes {}
             translation {
                 it.debugParser(true)
@@ -258,15 +216,20 @@ fun CpgMcpServer.runCpgAnalyze(
 
     // The project is identified by the last segment of the analyzed path (see ProjectBuilder.name)
     val projectName = project.name
+    val previous = getSession(projectName)
 
-    // If this project has been analyzed before, its session is replaced below, so clean up the
-    // frontends it still holds on to.
-    getSession(projectName)?.translationContext?.executedFrontends?.forEach { frontend ->
-        frontend.cleanup()
-    }
+    // If this project has been analyzed before, clean up the frontends it still holds on to; its
+    // session is replaced by the new one. The old session's write lock keeps tools from reading it
+    // meanwhile (see runOnSession).
+    val result =
+        (previous?.lock ?: CpgLock()).write {
+            previous?.translationContext?.executedFrontends?.forEach { frontend ->
+                frontend.cleanup()
+            }
+            previous?.nodeIndex?.invalidate()
 
-    val result = project.analyze()
-    registerSession(projectName, result)
+            project.analyze().also { registerSession(projectName, it) }
+        }
 
     val allNodes = result.nodes
     val functions = result.functions
@@ -294,9 +257,10 @@ fun CpgMcpServer.runCpgAnalyze(
  */
 
 /** Translate source code into the AST of the CPG (Code Property Graph). */
-fun CpgMcpServer.addCpgTranslate() {
-    this.addTool(
+fun Server.addTranslateTool() {
+    this.addToolWithoutCpg<CpgAnalyzePayload>(
         name = "cpg_translate",
+        readOnly = false,
         description =
             """
         Translates the source code into the AST of the CPG (Code Property Graph). This serves as a basis for subsequent passes and analyses.
@@ -321,10 +285,8 @@ fun CpgMcpServer.addCpgTranslate() {
         - "Analyze the project in /path/to/repo"
     """
                 .trimIndent(),
-        inputSchema = CpgAnalyzePayload::class.toSchema(),
-    ) { request ->
+    ) { payload ->
         try {
-            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload, runPasses = false, cleanup = false)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -337,13 +299,13 @@ fun CpgMcpServer.addCpgTranslate() {
 }
 
 /** Provide a list of all passes that can be applied to the CPG. */
-fun Server.addListPasses() {
-    this.addTool(
+fun Server.addListPassesTool() {
+    this.addToolWithoutCpg<NoArguments>(
         name = "cpg_list_passes",
+        readOnly = true,
         description =
             """Provides a list of all available passes that can be applied to the CPG. It also lists dependencies and what kind of node the pass expects."""
                 .trimIndent(),
-        inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
     ) { _ ->
         try {
             fun passToInfo(pass: KClass<out Pass<*>>): PassInfo {
@@ -371,11 +333,7 @@ fun Server.addListPasses() {
             }
 
             fun optionalPassToInfo(passName: String): PassInfo? {
-                return try {
-                    (Class.forName(passName).kotlin as? KClass<out Pass<*>>)?.let { passToInfo(it) }
-                } catch (_: ClassNotFoundException) {
-                    null
-                }
+                return loadPassClass(passName)?.let { passToInfo(it) }
             }
 
             val passesList =
@@ -447,98 +405,113 @@ fun Server.addListPasses() {
  * the pass by first searching upwards and then (in case no suitable node was found) downwards the
  * AST. The tool further takes care of dependencies between the passes.
  */
-fun Server.addRunPass() {
+fun Server.addRunPassTool() {
     this.addTool<CpgRunPassPayload>(
+        readOnly = false,
         name = "cpg_run_pass",
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
-    ) { session: CpgSession, payload: CpgRunPassPayload ->
-        val translationResult = session.translationResult
-        val translationContext = session.translationContext
-        if (translationResult == null || translationContext == null) {
-            return@addTool CallToolResult(
-                content = listOf(TextContent("No CPG available, so no passes could be executed."))
-            )
-        }
-        val passClass =
-            try {
-                (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(TextContent("Could not find the pass ${payload.passName}."))
-                    )
-            } catch (_: ClassNotFoundException) {
-                return@addTool CallToolResult(
-                    content = listOf(TextContent("Could not find the pass ${payload.passName}."))
-                )
-            }
+        handler = ::runPass,
+    )
+}
 
-        val nodes = session.translationResult.nodes.filter { it.id.toString() == payload.nodeId }
+/** Marker for the class loader that loads pass classes by name, see [loadPassClass]. */
+private object PassClassLoading
 
-        if (nodes.isEmpty())
-            return@addTool CallToolResult(
-                content =
-                    listOf(TextContent("Could not find any node with the ID ${payload.nodeId}."))
-            )
-        val executedPasses = mutableListOf<TextContent>()
-        // Check if all required passes have been run before executing this pass.
-        val orderingHelper = PassOrderingHelper(listOf(passClass))
-        val orderedPassesToExecute =
-            try {
-                orderingHelper.order().flatten()
-            } catch (_: ConfigurationException) {
-                // There was an exception while ordering the passes (e.g., cyclic dependency).
-                // We just add the requested pass and hope that the AI knows what it is doing.
-                // Note: We do not log this error because it has led to problems with the MCP
-                // server via stdio in the past.
-                listOf(passClass)
-            }
+/**
+ * Loads the class named [name] if it exists and is a [Pass], otherwise returns null. The class is
+ * only loaded, not initialized, until it has been checked: the name comes from a tool caller, and
+ * initializing an arbitrary class runs its static initializers.
+ */
+internal fun loadPassClass(name: String): KClass<out Pass<*>>? =
+    try {
+        Class.forName(name, false, PassClassLoading::class.java.classLoader)
+            .asSubclass(Pass::class.java)
+            .kotlin
+    } catch (_: ClassNotFoundException) {
+        null
+    } catch (_: ClassCastException) {
+        null
+    }
 
-        for (node in nodes) {
-            for (passToExecute in orderedPassesToExecute) {
-                // Check if pass has already been executed for the respective node
-                if (
-                    passToExecute !in
-                        session.nodeToPass.computeIfAbsent(node) {
-                            Collections.synchronizedSet(mutableSetOf())
-                        }
-                ) {
-                    // Execute the pass for the node
-                    val passResult =
-                        runPassForNode(
-                            session.nodeToPass,
-                            translationResult,
-                            node,
-                            passToExecute,
-                            translationContext,
-                        )
-                    if (passResult.success) {
-                        executedPasses.add(TextContent(passResult.message))
-                    } else {
-                        // Return if there was an error during pass execution
-                        return@addTool CallToolResult(
-                            content =
-                                listOf(
-                                    TextContent(passResult.message),
-                                    *executedPasses.toTypedArray(),
-                                )
-                        )
-                    }
-                    // Mark pass as executed
-                    session.nodeToPass[node]?.add(passToExecute)
-                }
-            }
-        }
+/**
+ * Runs the pass named by [payload] (plus any of its dependencies not yet run) on the node it names,
+ * using the [TranslationContext] of [session]. Mutates the graph, so callers must hold the
+ * session's [CpgLock.write] - the tool registration does.
+ */
+internal fun runPass(session: CpgSession, payload: CpgRunPassPayload): CallToolResult =
+    try {
+        runPassOnNodes(session, payload)
+    } finally {
+        // A pass can add AST nodes (e.g. inferred declarations), so lookups by id must see them,
+        // also when it failed half way.
+        session.nodeIndex.invalidate()
+    }
 
-        CallToolResult(
-            content =
-                listOf(
-                    TextContent("Successfully ran ${payload.passName} on node ${payload.nodeId}."),
-                    *executedPasses.toTypedArray(),
-                )
+private fun runPassOnNodes(session: CpgSession, payload: CpgRunPassPayload): CallToolResult {
+    val result = session.translationResult
+    val context = session.translationContext ?: result?.ctx
+    if (result == null || context == null) {
+        return CallToolResult(
+            content = listOf(TextContent("No CPG available, so no passes could be executed."))
         )
     }
+    val passClass =
+        loadPassClass(payload.passName)
+            ?: return CallToolResult(
+                content = listOf(TextContent("Could not find the pass ${payload.passName}."))
+            )
+
+    val nodes = listOfNotNull(session.findNodeById(payload.nodeId))
+
+    if (nodes.isEmpty())
+        return CallToolResult(
+            content = listOf(TextContent("Could not find any node with the ID ${payload.nodeId}."))
+        )
+    val executedPasses = mutableListOf<TextContent>()
+    // Check if all required passes have been run before executing this pass.
+    val orderingHelper = PassOrderingHelper(listOf(passClass))
+    val orderedPassesToExecute =
+        try {
+            orderingHelper.order().flatten()
+        } catch (_: ConfigurationException) {
+            // There was an exception while ordering the passes (e.g., cyclic dependency).
+            // We just add the requested pass and hope that the AI knows what it is doing.
+            // Note: We do not log this error because it has led to problems with the MCP
+            // server via stdio in the past.
+            listOf(passClass)
+        }
+
+    for (node in nodes) {
+        for (passToExecute in orderedPassesToExecute) {
+            // Check if pass has already been executed for the respective node
+            if (passToExecute !in session.nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+                // Execute the pass for the node
+                val passResult =
+                    runPassForNode(session.nodeToPass, result, node, passToExecute, context)
+                if (passResult.success) {
+                    executedPasses.add(TextContent(passResult.message))
+                } else {
+                    // Return if there was an error during pass execution
+                    return CallToolResult(
+                        content =
+                            listOf(TextContent(passResult.message), *executedPasses.toTypedArray())
+                    )
+                }
+                // Mark pass as executed
+                session.nodeToPass[node]?.add(passToExecute)
+            }
+        }
+    }
+
+    return CallToolResult(
+        content =
+            listOf(
+                TextContent("Successfully ran ${payload.passName} on node ${payload.nodeId}."),
+                *executedPasses.toTypedArray(),
+            )
+    )
 }
 
 data class PassExecutionResult(val success: Boolean, val message: String)
@@ -552,7 +525,7 @@ data class PassExecutionResult(val success: Boolean, val message: String)
  * extending the server.
  */
 inline fun <reified T : Node> runPassForNodeInternal(
-    nodeToPass: MutableMap<Node, MutableSet<KClass<out Pass<*>>>>,
+    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
     result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<T>>,
@@ -572,17 +545,16 @@ inline fun <reified T : Node> runPassForNodeInternal(
                 (language::class.findAnnotations<ReplacePass>().find { it.old == passClass }?.with
                     as? KClass<out Pass<T>>) ?: passClass
 
-            consumeTargets(
-                cls = actualClass,
-                ctx = ctx,
-                targets =
-                    nodes.filter {
-                        nodeToPass
-                            .computeIfAbsent(it) { Collections.synchronizedSet(mutableSetOf()) }
-                            .add(actualClass)
-                    },
-                result = result,
-            )
+            // Select the nodes this pass has not run on yet. Marking them as done only after
+            // consumeTargets returns: if it throws, the nodes are not left recorded as having
+            // run actualClass, so a later cpg_run_pass can retry instead of silently skipping
+            // them.
+            val targets =
+                nodes.filter { actualClass !in nodeToPass.computeIfAbsent(it) { mutableSetOf() } }
+            if (targets.isNotEmpty()) {
+                consumeTargets(cls = actualClass, ctx = ctx, targets = targets, result = result)
+                targets.forEach { nodeToPass[it]!!.add(actualClass) }
+            }
             messages +=
                 "Ran pass ${actualClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}."
         }
@@ -612,7 +584,7 @@ inline fun <reified T : Node> runPassForNodeInternal(
  * Returns a [CallToolResult] if there was an error during execution, otherwise returns null.
  */
 fun runPassForNode(
-    nodeToPass: MutableMap<Node, MutableSet<KClass<out Pass<*>>>>,
+    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
     result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<*>>,
@@ -668,9 +640,10 @@ fun runPassForNode(
  * Registers a tool which adds new code to an existing [TranslationResult]. It runs the respective
  * frontend and the passes in a targeted way.
  */
-fun CpgMcpServer.addAddCodeTool() {
+fun Server.addAddCodeTool() {
     this.addTool<CpgAddCodePayload>(
         name = "cpg_add_code",
+        readOnly = false,
         description =
             """Adds the given code to an existing CPG/TranslationResult. The language is required to identify the respective language frontend. It also triggers the passes which were registered before with a focus on only the new code and the dependents/dependencies."""
                 .trimIndent(),
@@ -738,6 +711,11 @@ fun CpgMcpServer.addAddCodeTool() {
             CallToolResult(
                 content = listOf(TextContent("Error: ${e.message ?: e::class.simpleName}"))
             )
+        } finally {
+            // addSource/runDirtyPasses can add or detach AST nodes (e.g. inferred declarations),
+            // so lookups by id must see the change, also when it failed half way (mirrors
+            // runPass's own nodeIndex invalidation above).
+            session.nodeIndex.invalidate()
         }
     }
 }

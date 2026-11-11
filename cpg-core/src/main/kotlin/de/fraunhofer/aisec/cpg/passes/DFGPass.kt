@@ -92,7 +92,9 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                                 callingContexts = listOf(CallingContextOut(mutableListOf(call))),
                             )
                     } else if (param is Parameter) {
-                        val arg = call.arguments[param.argumentIndex]
+                        // A call can have fewer arguments than parameters (e.g. default arguments,
+                        // or a C call that does not fit its function)
+                        val arg = call.arguments.getOrNull(param.argumentIndex) ?: continue
                         arg.prevDFGEdges.addContextSensitive(
                             param,
                             callingContexts = listOf(CallingContextOut(mutableListOf(call))),
