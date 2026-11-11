@@ -135,9 +135,7 @@ class AddCodeToolTest {
             client.callTool(
                 name = "cpg_analyze",
                 arguments =
-                    mapOf(
-                        "path" to "src/integrationTest/resources/addCodeTool/simple_config.py"
-                    ),
+                    mapOf("path" to "src/integrationTest/resources/addCodeTool/simple_config.py"),
             )
 
             val addResult =
