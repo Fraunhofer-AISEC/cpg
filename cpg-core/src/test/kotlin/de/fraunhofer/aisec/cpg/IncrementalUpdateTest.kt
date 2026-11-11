@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
@@ -575,6 +576,91 @@ class StaleStubTestLanguageFrontend(
                             block.statements += newReturn { it.returnValue = call }
                         }
                 }
+            }
+            content.startsWith("definewithsummary:") -> {
+                // "definewithsummary:<name>" declares a real, top-level, single-parameter function
+                // <name>(p), but with [Function.isInferred] set to `true` and a non-empty (if
+                // otherwise empty-valued) [Function.functionSummary] -- simulating, without a real
+                // pass, the one precondition under which [attachStandardDfgEdges] calls
+                // attachFunctionSummaryDerivedDfgEdges for a *newly reconciled* candidate (normally
+                // unreachable via addSource, since every real candidate reconcileCalls considers
+                // comes from TranslationUnit.collectNewNonLocalSymbols and is therefore never
+                // itself inferred).
+                val name = content.removePrefix("definewithsummary:")
+                newFunction(name, holder = tu, enterScope = true) { function ->
+                    val param = newParameter("p", holder = function)
+                    function.isInferred = true
+                    function.functionSummary.put(param, mutableSetOf())
+                }
+            }
+            content.startsWith("refwriteunresolved:") -> {
+                // "refwriteunresolved:<name>" creates a top-level function "main(p)" whose body
+                // WRITES to an unresolved, unqualified reference <name> via a simple ("=")
+                // assignment ("<name> = p"). Assign.lhsEdges's `onAdd` sets the lhs reference's
+                // access to AccessValues.WRITE as soon as the assignment is built, so no pass needs
+                // to run first -- unlike "refunresolved:", whose bare read leaves access at its
+                // default.
+                val name = content.removePrefix("refwriteunresolved:")
+                newFunction("main", holder = tu, enterScope = true) { main ->
+                    newParameter("p", holder = main)
+                    main.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements +=
+                                newAssign(
+                                    operatorCode = "=",
+                                    lhs = listOf(newReference(name)),
+                                    rhs = listOf(newReference("p")),
+                                )
+                        }
+                }
+            }
+            content.startsWith("refreadwriteunresolved:") -> {
+                // "refreadwriteunresolved:<name>" mirrors "refwriteunresolved:", but uses a
+                // COMPOUND ("+=") assignment instead of a simple one. Since "+=" is one of
+                // TestLanguage's compoundAssignmentOperators (not a simpleAssignmentOperator),
+                // Assign.lhsEdges's `onAdd` sets the lhs reference's access to
+                // AccessValues.READWRITE instead of WRITE.
+                val name = content.removePrefix("refreadwriteunresolved:")
+                newFunction("main", holder = tu, enterScope = true) { main ->
+                    newParameter("p", holder = main)
+                    main.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements +=
+                                newAssign(
+                                    operatorCode = "+=",
+                                    lhs = listOf(newReference(name)),
+                                    rhs = listOf(newLiteral(1)),
+                                )
+                        }
+                }
+            }
+            content.startsWith("defineprotectedmethod:") -> {
+                // "defineprotectedmethod:ClassName:methodName" mirrors "defineprivatemethod:", but
+                // the added method has Visibility.PROTECTED -- used to exercise
+                // isAccessibleFrom's PROTECTED branch, which (unlike PRIVATE) also permits access
+                // from a record that only transitively inherits from the declaring record.
+                val (className, methodName) =
+                    content.removePrefix("defineprotectedmethod:").split(":")
+                val record =
+                    scopeManager
+                        .lookupSymbolByName(
+                            Name(className),
+                            language,
+                            startScope = scopeManager.globalScope,
+                        )
+                        .filterIsInstance<Record>()
+                        .single()
+
+                scopeManager.enterScope(record)
+                val method =
+                    newMethod(methodName, recordDeclaration = record, enterScope = true) { m ->
+                        m.receiver = newVariable("this", record.toType())
+                        m.visibility = Visibility.PROTECTED
+                    }
+                scopeManager.addDeclaration(method)
+                scopeManager.leaveScope(record)
+
+                tu.addDeclaration(method)
             }
         }
 
@@ -1923,5 +2009,332 @@ class IncrementalUpdateTest {
 
         result.markClean(seed, SymbolResolver::class)
         assertFalse(result.dirtyNodes[seed]?.contains(SymbolResolver::class) == true)
+    }
+
+    @Test
+    fun testAddSourceLinksPrivateMethodAccessedFromItsOwnDeclaringClass() {
+        // Positive counterpart of testAddSourceDoesNotLinkPrivateBaseMethodToCallFromDerivedClass:
+        // isAccessibleFrom's Visibility.PRIVATE branch requires an EXACT match between the
+        // accessing record and the declaring record -- satisfied here by adding the private method
+        // directly to Derived (the class the pre-existing call's enclosing "caller" method itself
+        // belongs to), rather than to Base.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-private-exact-match-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile =
+            tempSource(topLevel, "caller.stale", "membercallwithinderived:Base:Derived:secret")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val secretCall = result.calls.single { it.name.localName == "secret" }
+        val stub = secretCall.invokes.singleOrNull()
+        assertNotNull(stub)
+
+        // Add a PRIVATE method named 'secret' directly to DERIVED -- the exact same record
+        // "caller" (also declared in Derived) belongs to.
+        val second =
+            tempSource(topLevel, "derived_secret.stale", "defineprivatemethod:Derived:secret")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val privateSecret = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(privateSecret.isInferred)
+
+        // Unlike the base-class case, this private method IS accessible -- the call must now
+        // resolve to it, and the stale stub must be gone.
+        assertEquals(listOf(privateSecret), secretCall.invokes)
+        assertTrue(stub.calledBy.isEmpty())
+    }
+
+    @Test
+    fun testAddSourceLinksProtectedBaseMethodToCallFromDerivedClass() {
+        // isAccessibleFrom's Visibility.PROTECTED branch: unlike PRIVATE, a protected member added
+        // to the BASE class must become accessible from a method declared in a class that
+        // transitively inherits from it (Derived extends Base), via isSameOrAncestorRecord.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-protected-ancestor-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile =
+            tempSource(topLevel, "caller.stale", "membercallwithinderived:Base:Derived:secret")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .defaultPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val secretCall = result.calls.single { it.name.localName == "secret" }
+        val stub = secretCall.invokes.singleOrNull()
+        assertNotNull(stub)
+
+        val second = tempSource(topLevel, "base_secret.stale", "defineprotectedmethod:Base:secret")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val protectedSecret = tu.declarations.filterIsInstance<Function>().single()
+        assertFalse(protectedSecret.isInferred)
+
+        assertEquals(listOf(protectedSecret), secretCall.invokes)
+        assertTrue(stub.calledBy.isEmpty())
+    }
+
+    @Test
+    fun testAddSourceAttachesFunctionSummaryDerivedDfgEdgesForInferredRealCandidate() {
+        // attachFunctionSummaryDerivedDfgEdges is only reached from attachStandardDfgEdges when a
+        // reconciled candidate is itself isInferred with a non-empty functionSummary -- a
+        // combination that cannot occur via a real addSource call (every real candidate comes from
+        // collectNewNonLocalSymbols, never an Inference-created declaration), so
+        // "definewithsummary:" simulates it directly. The distinguishing side effect (beyond what
+        // attachCallParameters alone already does) is the AccessValues.READWRITE flip on the
+        // argument.
+        //
+        // Side note, NOT asserted on below: because the synthetic candidate is itself isInferred,
+        // reconcileCalls's own stale-stub cleanup (further down in the very same pass over it)
+        // treats it as a stale stub too and removes it from `invokes` right alongside the original
+        // stub -- but, since its functionSummary is non-empty and dfgHandlesArgumentEdgesItself is
+        // true here, that is exactly the "zombie stub" condition that skips tearing its
+        // function-summary-derived edges back down (see the zombie-stub test below), so the edges
+        // this test checks survive regardless.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-function-summary-attach-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        val arg = fooCall.arguments.single()
+        assertEquals(AccessValues.READ, arg.access)
+
+        val second = tempSource(topLevel, "foo.stale", "definewithsummary:foo")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realFoo = tu.declarations.filterIsInstance<Function>().single()
+        assertTrue(realFoo.isInferred)
+
+        assertEquals(
+            AccessValues.READWRITE,
+            arg.access,
+            "Expected attachFunctionSummaryDerivedDfgEdges to flip the argument's access",
+        )
+        assertTrue(arg.prevDFG.contains(realFoo.parameters.single()))
+    }
+
+    @Test
+    fun testAddSourceAttachesWriteOnlyReferenceDfgEdgeImmediately() {
+        // Write path of attachReferenceDfgEdges: a reference used only as a WRITE target must get
+        // exactly the forward (target -> ref) edge, not the read edge too.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-write-ref-dfg-test").toFile().apply {
+                deleteOnExit()
+            }
+        val callerFile = tempSource(topLevel, "caller.stale", "refwriteunresolved:x")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val ref = result.allChildren<Reference>().single { it.name.localName == "x" }
+        assertEquals(AccessValues.WRITE, ref.access)
+        assertNull(ref.refersTo)
+
+        val second = tempSource(topLevel, "x.stale", "defineglobal:x")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realX = tu.declarations.filterIsInstance<Variable>().single()
+
+        assertSame(realX, ref.refersTo)
+        assertTrue(
+            ref.nextDFG.contains(realX),
+            "Expected the write edge to the resolved declaration to be attached",
+        )
+        assertFalse(
+            ref.prevDFG.contains(realX),
+            "A write-only reference must not also get a read edge",
+        )
+    }
+
+    @Test
+    fun testAddSourceAttachesReadWriteReferenceDfgEdgesImmediately() {
+        // The "else" (READWRITE) branch of attachReferenceDfgEdges: a compound-assignment target
+        // must get BOTH the read and the write edge.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-readwrite-ref-dfg-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "refreadwriteunresolved:x")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val ref = result.allChildren<Reference>().single { it.name.localName == "x" }
+        assertEquals(AccessValues.READWRITE, ref.access)
+        assertNull(ref.refersTo)
+
+        val second = tempSource(topLevel, "x.stale", "defineglobal:x")
+        val tu = manager.addSource(result, component, second)
+        assertNotNull(tu)
+        val realX = tu.declarations.filterIsInstance<Variable>().single()
+
+        assertSame(realX, ref.refersTo)
+        assertTrue(ref.nextDFG.contains(realX), "Expected the write edge to be attached")
+        assertTrue(ref.prevDFG.contains(realX), "Expected the read edge to also be attached")
+    }
+
+    @Test
+    fun testAddSourceTearsDownFunctionSummaryDerivedParameterEdgeForOrphanedStub() {
+        // tearDownFunctionSummaryDerivedDfgEdges's Parameter branch: only reached when the
+        // orphaned stub's functionSummary is non-empty AND dfgHandlesArgumentEdgesItself is false
+        // -- the skipDfgTeardown ("zombie stub") condition requires BOTH to be true to skip
+        // teardown. Registering ControlFlowSensitiveDFGPass instead of PointsToPass gives
+        // dfgHandlesArgumentEdgesItself == false (so teardown is not skipped) while deliberately
+        // leaving PointsToPass unregistered -- otherwise reconcileCalls's own
+        // tearDownPointsToPassCallEdges (gated on PointsToPass specifically, and run earlier in
+        // the very same pass) would already have swept up the same ContextSensitiveDataflow edge
+        // this test manually attaches below, making it impossible to tell whether
+        // tearDownFunctionSummaryDerivedDfgEdges itself did anything at all.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-teardown-summary-param-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "call:foo")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .registerPass<ControlFlowSensitiveDFGPass>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val fooCall = result.calls.single { it.name.localName == "foo" }
+        val stub = fooCall.invokes.single()
+        val stubParam = stub.parameters.single()
+        val arg = fooCall.arguments.single()
+
+        // Simulate PointsToPass having derived a function-summary-based reverse arg<-param edge.
+        stub.functionSummary.put(stubParam, mutableSetOf())
+        arg.prevDFGEdges.addContextSensitive(
+            stubParam,
+            callingContexts = listOf(CallingContextOut(mutableListOf(fooCall))),
+        )
+        assertTrue(arg.prevDFG.contains(stubParam))
+
+        val second = tempSource(topLevel, "foo.stale", "define:foo")
+        manager.addSource(result, component, second)
+
+        assertTrue(stub.calledBy.isEmpty())
+        assertFalse(
+            arg.prevDFG.contains(stubParam),
+            "Expected the function-summary-derived edge to the orphaned stub to be torn down",
+        )
+    }
+
+    @Test
+    fun testAddSourceTearsDownFunctionSummaryDerivedReceiverEdgeForOrphanedStub() {
+        // tearDownFunctionSummaryDerivedDfgEdges's receiver branch: mirrors the Parameter-branch
+        // test above, but for a Method stub's receiver (base.prevDFG <- stub.receiver), which
+        // requires an explicit-receiver MemberCall (unlike "classcall:"'s implicit-receiver call,
+        // which has no `.base` at all). See that test for why ControlFlowSensitiveDFGPass (not
+        // PointsToPass) is registered.
+        val topLevel =
+            Files.createTempDirectory("cpg-incremental-update-teardown-summary-receiver-test")
+                .toFile()
+                .apply { deleteOnExit() }
+        val callerFile = tempSource(topLevel, "caller.stale", "membercall:Widget:render")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(callerFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .minimalPasses()
+                .registerPass<ControlFlowSensitiveDFGPass>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val renderCall = result.calls.single { it.name.localName == "render" } as MemberCall
+        val stub = renderCall.invokes.single() as Method
+        val stubReceiver = stub.receiver
+        assertNotNull(stubReceiver)
+        val base = renderCall.base
+        assertNotNull(base)
+
+        // Simulate PointsToPass having derived a function-summary-based reverse base<-receiver
+        // edge.
+        stub.functionSummary.put(stubReceiver, mutableSetOf())
+        base.prevDFGEdges.addContextSensitive(
+            stubReceiver,
+            callingContexts = listOf(CallingContextOut(mutableListOf(renderCall))),
+        )
+        assertTrue(base.prevDFG.contains(stubReceiver))
+
+        val second = tempSource(topLevel, "widget.stale", "definemethod:Widget:render")
+        manager.addSource(result, component, second)
+
+        assertTrue(stub.calledBy.isEmpty())
+        assertFalse(
+            base.prevDFG.contains(stubReceiver),
+            "Expected the function-summary-derived receiver edge to the orphaned stub to be torn down",
+        )
     }
 }

@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.SccPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.passes.markDirty
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -436,5 +437,111 @@ class PartialPassExecutionTest {
         assertEquals(listOf(realBar), barCall.invokes)
         assertSame(barInvokeEdgeBefore, barCall.invokeEdges.single())
         assertEquals(barParamPrevDfgBefore, barParam.prevDFGEdges.toList())
+    }
+
+    @Test
+    fun testResolveEOGStarterTargetsFindsEnclosingFunctionForNestedDirtyNode() {
+        // The ancestor branch of resolveEOGStarterTargets (the lines after its first `if` /
+        // `return`): a dirty node that is itself NOT an EOGStarterHolder (here, the Call nested
+        // inside "caller"'s body) must resolve to its nearest enclosing EOGStarterHolder ancestor
+        // (the Function), not the dirty node itself. Both Function and TranslationUnit are
+        // themselves EOGStarterHolders, so every actual markDirty call site for an EOGStarterPass
+        // in this codebase (see IncrementalUpdate.kt) already resolves to one of those two before
+        // marking -- always hitting the very first `if`, never this branch. Marking the Call
+        // directly, bypassing those helpers, exercises it here.
+        //
+        // SymbolResolver has a hard @DependsOn EvaluationOrderGraphPass/TypeResolver/
+        // TypeHierarchyResolver/ImportResolver, so those four (but deliberately NOT
+        // SymbolResolver itself) are registered for the initial analyze() -- otherwise
+        // SymbolResolver's own EOGStarterPass traversal has no EOG graph to walk at all and
+        // silently resolves nothing, regardless of which target resolveEOGStarterTargets picks.
+        // The call to 'callee' is still genuinely unresolved afterward, since SymbolResolver
+        // itself never ran.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-eog-ancestor-test").toFile().apply {
+                deleteOnExit()
+            }
+        val sourceFile = tempSource(topLevel, "both.stale", "twofuncs:caller:callee")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(sourceFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .registerPass<TypeHierarchyResolver>()
+                .registerPass<ImportResolver>()
+                .registerPass<EvaluationOrderGraphPass>()
+                .registerPass<TypeResolver>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+
+        val calleeCall = result.calls.single { it.name.localName == "callee" }
+        assertTrue(calleeCall.invokes.isEmpty(), "SymbolResolver must not have run yet")
+
+        calleeCall.markDirty<SymbolResolver>()
+
+        runDirtyPasses(result)
+
+        val callee = result.functions.single { it.name.localName == "callee" }
+        assertEquals(
+            listOf(callee),
+            calleeCall.invokes,
+            "Expected SymbolResolver to have run on the enclosing function and resolved the call",
+        )
+    }
+
+    @Test
+    fun testResolveEOGStarterTargetsScansDescendantsWhenNoAncestorQualifies() {
+        // The descendant-fallback branch of resolveEOGStarterTargets: since both Function and
+        // TranslationUnit are themselves EOGStarterHolders, a dirty node only ever reaches this
+        // branch if NEITHER it NOR any of its ancestors qualify -- i.e. there is no enclosing
+        // Function/TranslationUnit/Namespace/Record/CatchClause at all. No real markDirty call
+        // site produces that (every one resolves to a Function/TranslationUnit first), so this is
+        // exercised here by marking the Component itself dirty directly: a Component is not an
+        // EOGStarterHolder, and nothing above it in the AST is either, so resolution falls all the
+        // way through to the allChildrenWithOverlays scan of its entire subtree.
+        //
+        // See the ancestor-branch test above for why TypeHierarchyResolver/ImportResolver/
+        // EvaluationOrderGraphPass/TypeResolver (SymbolResolver's hard @DependsOn passes) are
+        // registered for the initial analyze(), but deliberately not SymbolResolver itself.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-eog-descendant-test").toFile().apply {
+                deleteOnExit()
+            }
+        val sourceFile = tempSource(topLevel, "both.stale", "twofuncs:caller:callee")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(sourceFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .registerPass<TypeHierarchyResolver>()
+                .registerPass<ImportResolver>()
+                .registerPass<EvaluationOrderGraphPass>()
+                .registerPass<TypeResolver>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val calleeCall = result.calls.single { it.name.localName == "callee" }
+        assertTrue(calleeCall.invokes.isEmpty(), "SymbolResolver must not have run yet")
+
+        component.markDirty<SymbolResolver>()
+
+        runDirtyPasses(result)
+
+        val callee = result.functions.single { it.name.localName == "callee" }
+        assertEquals(
+            listOf(callee),
+            calleeCall.invokes,
+            "Expected the descendant scan to find 'caller' inside the dirty component and run " +
+                "SymbolResolver on it",
+        )
     }
 }
