@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.getSession
-import de.fraunhofer.aisec.cpg.ai.mcp.utils.testServer
 import de.fraunhofer.aisec.cpg.graph.assigns
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
@@ -57,12 +56,11 @@ class CpgGetLastWriteToolTest {
                 .trimIndent()
 
         val analysis =
-            testServer()
-                .runCpgAnalyze(
-                    CpgAnalyzePayload(content = source, extension = "py"),
-                    runPasses = true,
-                    cleanup = true,
-                )
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = source, extension = "py"),
+                runPasses = true,
+                cleanup = true,
+            )
         val session = getSession(analysis.projectName)
         assertNotNull(session)
 
@@ -87,12 +85,11 @@ class CpgGetLastWriteToolTest {
         val source = "def foo():\n    return 1"
 
         val analysis =
-            testServer()
-                .runCpgAnalyze(
-                    CpgAnalyzePayload(content = source, extension = "py"),
-                    runPasses = true,
-                    cleanup = true,
-                )
+            runCpgAnalyze(
+                CpgAnalyzePayload(content = source, extension = "py"),
+                runPasses = true,
+                cleanup = true,
+            )
         val session = getSession(analysis.projectName)
         assertNotNull(session)
 

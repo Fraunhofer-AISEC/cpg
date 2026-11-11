@@ -144,13 +144,8 @@ fun Server.addAnalyzeTool() {
  *
  * If [runPasses] is true, all default passes will be run, otherwise no pass will be run. If
  * [cleanup] is true, we clean up the [TypeManager] memory after analysis.
- *
- * Kept as a [Server] extension (rather than a plain top-level function) so that existing callers
- * invoking it as `server.runCpgAnalyze(...)` / `testServer().runCpgAnalyze(...)` (e.g. in tests)
- * keep working unchanged; the receiver itself is unused, since [analyzeAndStore] needs nothing
- * [Server]-specific.
  */
-fun Server.runCpgAnalyze(
+fun runCpgAnalyze(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
     cleanup: Boolean,

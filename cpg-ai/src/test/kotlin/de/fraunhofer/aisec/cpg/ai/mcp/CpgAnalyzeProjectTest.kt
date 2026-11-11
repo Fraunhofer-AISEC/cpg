@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.ai.mcp
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.ai.utils.testServer
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
@@ -78,12 +77,11 @@ class CpgAnalyzeProjectTest {
             )
 
         val result =
-            testServer()
-                .runCpgAnalyze(
-                    CpgAnalyzePayload(path = tmp.toString()),
-                    runPasses = true,
-                    cleanup = true,
-                )
+            runCpgAnalyze(
+                CpgAnalyzePayload(path = tmp.toString()),
+                runPasses = true,
+                cleanup = true,
+            )
 
         // The components are derived from the compilation database
         assertEquals(listOf("libfoo", "tool"), result.components.sorted())
@@ -98,12 +96,11 @@ class CpgAnalyzeProjectTest {
     @Test
     fun testAnalyzeInvalidPath() {
         assertFailsWith<IllegalArgumentException> {
-            testServer()
-                .runCpgAnalyze(
-                    CpgAnalyzePayload(path = "/does/not/exist"),
-                    runPasses = false,
-                    cleanup = true,
-                )
+            runCpgAnalyze(
+                CpgAnalyzePayload(path = "/does/not/exist"),
+                runPasses = false,
+                cleanup = true,
+            )
         }
     }
 }
