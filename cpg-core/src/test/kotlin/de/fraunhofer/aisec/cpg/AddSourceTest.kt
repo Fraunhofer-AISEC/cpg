@@ -45,6 +45,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class IncrementalTestLanguage : TestLanguage() {
@@ -74,6 +75,47 @@ class IncrementalTestLanguageFrontend(
         newFunction(content.trim(), holder = tu)
         return tu
     }
+
+    override fun typeOf(type: Any): Type {
+        return unknownType()
+    }
+
+    override fun codeOf(astNode: Any): String? {
+        return null
+    }
+
+    override fun locationOf(astNode: Any): PhysicalLocation? {
+        return null
+    }
+
+    override fun setComment(node: Node, astNode: Any) {}
+}
+
+class ThrowingTestLanguage : TestLanguage() {
+    override val fileExtensions: List<String>
+        get() = listOf("boom")
+
+    override val frontend: KClass<out ThrowingTestLanguageFrontend>
+        get() = ThrowingTestLanguageFrontend::class
+}
+
+/**
+ * A frontend whose primary constructor always throws, so that [TranslationManager.addSource] (via
+ * [Language.newFrontend]) exercises the reflective-instantiation-failure path of
+ * [TranslationManager.newFrontendOrNull].
+ */
+class ThrowingTestLanguageFrontend(
+    ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
+    language: Language<TestLanguageFrontend> = ThrowingTestLanguage(),
+) : TestLanguageFrontend(ctx, language), SupportsNewParse {
+    init {
+        throw UnsupportedOperationException("deliberately broken frontend constructor")
+    }
+
+    override fun parse(file: File): TranslationUnit = throw UnsupportedOperationException()
+
+    override fun parse(content: String, path: java.nio.file.Path?): TranslationUnit =
+        throw UnsupportedOperationException()
 
     override fun typeOf(type: Any): Type {
         return unknownType()
@@ -321,5 +363,38 @@ class AddSourceTest {
 
         val unknown = tempSource(topLevel, "unknown.doesnotexist", "content")
         assertFailsWith<TranslationException> { manager.addSource(result, component, unknown) }
+    }
+
+    @Test
+    fun testAddSourceWithContentAndLanguageReturnsNullWhenFrontendConstructorThrows() {
+        // TranslationManager.newFrontendOrNull is documented to catch a
+        // ReflectiveOperationException
+        // from Language.newFrontend's reflective construction and return null (logging an error)
+        // instead of crashing -- exercised here via a frontend whose constructor itself throws.
+        // failOnError defaults to false, so addSource should return null rather than propagate.
+        val topLevel =
+            Files.createTempDirectory("cpg-add-source-throwing-frontend-test").toFile().apply {
+                deleteOnExit()
+            }
+        val first = tempSource(topLevel, "first.inc", "firstFunction")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(first)
+                .registerLanguage<IncrementalTestLanguage>()
+                .registerLanguage<ThrowingTestLanguage>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        val language = result.finalCtx.availableLanguage<ThrowingTestLanguage>()
+        assertNotNull(language)
+
+        val tu = manager.addSource(result, component, "someFunction", language)
+        assertNull(tu, "Expected addSource to return null instead of crashing")
     }
 }

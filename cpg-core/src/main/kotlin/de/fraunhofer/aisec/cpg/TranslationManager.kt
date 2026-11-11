@@ -789,7 +789,9 @@ private constructor(
     /**
      * Constructs a new frontend for [language] via [Language.newFrontend], returning `null` (and
      * logging) instead of throwing if the frontend could not be instantiated, e.g. because it has
-     * no accessible no-arg-equivalent constructor. Other exceptions propagate.
+     * no accessible no-arg-equivalent constructor. [InstantiationException],
+     * [IllegalAccessException], [InvocationTargetException], and [NoSuchMethodException] are all
+     * [ReflectiveOperationException]s; other exceptions propagate.
      */
     private fun newFrontendOrNull(
         language: Language<*>,
@@ -797,21 +799,9 @@ private constructor(
     ): LanguageFrontend<*, *>? {
         return try {
             language.newFrontend(ctx)
-        } catch (e: Exception) {
-            when (e) {
-                is InstantiationException,
-                is IllegalAccessException,
-                is InvocationTargetException,
-                is NoSuchMethodException -> {
-                    log.error(
-                        "Could not instantiate language frontend {}",
-                        language.frontend.simpleName,
-                        e,
-                    )
-                    null
-                }
-                else -> throw e
-            }
+        } catch (e: ReflectiveOperationException) {
+            log.error("Could not instantiate language frontend {}", language.frontend.simpleName, e)
+            null
         }
     }
 
