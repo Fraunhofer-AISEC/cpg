@@ -6,7 +6,8 @@
     ConceptSuggestionItem,
     LLMConcept,
     Model,
-    ToolActivity
+    ToolActivity,
+    ContextUsageJSON
   } from '$lib/types';
   import {
     ChatInterface,
@@ -168,6 +169,8 @@
   let streamingReasoning = $state('');
   // The reasoning of the model before the tool calls it is running, for the first of their results
   let roundReasoning: string | undefined;
+  // How full the context window of the model was in its latest request
+  let contextUsage = $state<ContextUsageJSON | null>(null);
   // The tool call the agent is running, until its result arrives
   let activity = $state<ToolActivity | null>(null);
   let selectedClient = $state<string | null>(persisted.selectedClient);
@@ -234,6 +237,7 @@
     streamingContent = '';
     streamingReasoning = '';
     roundReasoning = undefined;
+    contextUsage = null;
     suggestions = [];
     activity = null;
     isLoading = false;
@@ -255,6 +259,8 @@
           const event = JSON.parse(chunk);
           if (event.type === 'text') {
             streamingContent += event.content;
+          } else if (event.type === 'context') {
+            contextUsage = event.usage;
           } else if (event.type === 'reasoning') {
             streamingReasoning += event.content;
           } else if (event.type === 'tool_call') {
@@ -502,6 +508,7 @@
       {currentMessage}
       {isLoading}
       {streamingContent}
+      {contextUsage}
       {activity}
       {models}
       {selectedModel}

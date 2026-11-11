@@ -283,6 +283,23 @@ export interface ToolResult {
   round?: number;
 }
 
+/** A part of the context window of the model, e.g. the tool definitions, with its tokens. */
+export interface ContextCategoryJSON {
+  name: string;
+  tokens: number;
+}
+
+/**
+ * How full the context window of the model was in its latest request, split into its parts. The
+ * split is estimated; the total is the one the provider reported, unless `estimated`.
+ */
+export interface ContextUsageJSON {
+  usedTokens: number;
+  windowTokens: number;
+  estimated: boolean;
+  categories: ContextCategoryJSON[];
+}
+
 /** A tool call of the agent that is running, before its result is known. */
 export interface ToolActivity {
   toolName: string;

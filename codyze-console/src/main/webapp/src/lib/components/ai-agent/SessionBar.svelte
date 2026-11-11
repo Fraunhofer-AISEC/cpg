@@ -1,23 +1,25 @@
 <script lang="ts">
-  import type { Model } from '$lib/types';
+  import type { ContextUsageJSON, Model } from '$lib/types';
   import { agentSession } from '$lib/stores/agentSession.svelte';
 
   interface Props {
     models?: Model[];
     selectedModel?: Model | null;
     onModelSelect?: (model: Model) => void;
+    /** How full the context window of the model was in its latest request */
+    contextUsage?: ContextUsageJSON | null;
   }
 
-  let { models = [], selectedModel = null, onModelSelect }: Props = $props();
+  let { models = [], selectedModel = null, onModelSelect, contextUsage = null }: Props = $props();
 
-  let open = $state<'model' | 'tools' | null>(null);
+  let open = $state<'model' | 'tools' | 'context' | null>(null);
   let filter = $state('');
   let container = $state<HTMLDivElement | undefined>();
 
   // Lists with more entries get a filter
   const filterFrom = 8;
 
-  function toggle(popover: 'model' | 'tools') {
+  function toggle(popover: 'model' | 'tools' | 'context') {
     open = open === popover ? null : popover;
     filter = '';
   }
@@ -64,6 +66,31 @@
     agentSession.skills.filter((s) => !query || s.name.toLowerCase().includes(query))
   );
   const toolsEntries = $derived((server ? 1 : 0) + agentSession.skills.length);
+
+  // The share of the context window at which the server summarizes the older steps of a run
+  const COMPRESSION_SHARE = 1 / 3;
+
+  // Tokens in short, e.g. "58k" or "4.2k"
+  function tokens(n: number): string {
+    if (n < 1000) return `${n}`;
+    return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
+  }
+
+  const contextShare = $derived(
+    contextUsage ? Math.min(1, contextUsage.usedTokens / contextUsage.windowTokens) : 0
+  );
+
+  // The parts of the context in shades of one color, from the largest one down
+  const contextShades = [
+    'bg-slate-600',
+    'bg-slate-500',
+    'bg-slate-400',
+    'bg-slate-300',
+    'bg-slate-200'
+  ];
+  const contextParts = $derived(
+    [...(contextUsage?.categories ?? [])].sort((a, b) => b.tokens - a.tokens)
+  );
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -259,4 +286,86 @@
       </div>
     {/if}
   </div>
+
+  {#if contextUsage}
+    <!-- How full the context window of the model is, with its parts on click -->
+    <div class="ml-auto shrink-0">
+      <button
+        type="button"
+        class="flex h-6 items-center gap-1 rounded px-1.5 tabular-nums hover:bg-gray-100 hover:text-gray-800 {open ===
+        'context'
+          ? 'bg-gray-100 text-gray-800'
+          : ''}"
+        onclick={() => toggle('context')}
+        aria-haspopup="dialog"
+        aria-expanded={open === 'context'}
+        title="Context of the model: {contextUsage.usedTokens.toLocaleString()} of {contextUsage.windowTokens.toLocaleString()} tokens"
+      >
+        <svg class="h-3 w-3 shrink-0 -rotate-90" viewBox="0 0 16 16" aria-hidden="true">
+          <circle
+            cx="8"
+            cy="8"
+            r="6"
+            fill="none"
+            stroke="currentColor"
+            stroke-opacity="0.25"
+            stroke-width="2.5"
+          />
+          <circle
+            cx="8"
+            cy="8"
+            r="6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-dasharray="{contextShare * 37.7} 37.7"
+          />
+        </svg>
+        {contextUsage.estimated ? '≈' : ''}{tokens(contextUsage.usedTokens)} / {tokens(
+          contextUsage.windowTokens
+        )}
+      </button>
+
+      {#if open === 'context'}
+        <div
+          class="absolute right-0 bottom-full z-20 mb-1 w-64 rounded-md border border-gray-200 bg-white p-2.5 shadow-lg"
+          role="dialog"
+          aria-label="Context of the model"
+        >
+          <p class="text-xs text-gray-800 tabular-nums">
+            {contextUsage.estimated ? 'About ' : ''}{contextUsage.usedTokens.toLocaleString()} of
+            {contextUsage.windowTokens.toLocaleString()} tokens ({Math.round(contextShare * 100)}%)
+          </p>
+          <!-- The parts of the context, with the share at which older steps are summarized -->
+          <div class="relative mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-gray-100">
+            {#each contextParts as part, i (part.name)}
+              <span
+                class="h-full {contextShades[i] ?? 'bg-slate-200'}"
+                style="width: {(part.tokens / contextUsage.windowTokens) * 100}%"
+              ></span>
+            {/each}
+            <span
+              class="absolute inset-y-0 w-px bg-gray-400"
+              style="left: {COMPRESSION_SHARE * 100}%"
+              aria-hidden="true"
+            ></span>
+          </div>
+          <ul class="mt-2 space-y-0.5">
+            {#each contextParts as part, i (part.name)}
+              <li class="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <span class="h-2 w-2 shrink-0 rounded-sm {contextShades[i] ?? 'bg-slate-200'}"
+                ></span>
+                <span class="min-w-0 flex-1 truncate">{part.name}</span>
+                <span class="shrink-0 text-gray-400 tabular-nums">{tokens(part.tokens)}</span>
+              </li>
+            {/each}
+          </ul>
+          <p class="mt-2 text-[11px] leading-snug text-gray-400">
+            The split is estimated. Once a third of the window is used, older steps are summarized
+            (the line on the bar).
+          </p>
+        </div>
+      {/if}
+    </div>
+  {/if}
 </div>

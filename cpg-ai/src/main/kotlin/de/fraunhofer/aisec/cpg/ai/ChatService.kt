@@ -35,6 +35,7 @@ import ai.koog.agents.core.dsl.builder.node
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.extension.*
 import ai.koog.agents.core.environment.ReceivedToolResult
+import ai.koog.agents.core.tools.ToolDescriptor
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.features.eventHandler.feature.handleEvents
 import ai.koog.agents.mcp.McpToolRegistryProvider
@@ -829,7 +830,13 @@ class ChatService(
                         // The frontend shows what the agent is doing while a tool runs, and groups
                         // the calls of one response of the model
                         var round = 0
-                        onLLMStreamingStarting { round++ }
+                        // The tools sent with the running request, whose definitions are part of
+                        // its context
+                        var requestTools: List<ToolDescriptor> = emptyList()
+                        onLLMStreamingStarting { ctx ->
+                            round++
+                            requestTools = ctx.tools
+                        }
                         onToolCallStarting { ctx ->
                             send(
                                 Events.toolCall(
@@ -844,6 +851,20 @@ class ChatService(
                                 is StreamFrame.TextDelta -> send(Events.text(frame.text))
                                 is StreamFrame.ReasoningDelta ->
                                     frame.text?.let { send(Events.reasoning(it)) }
+                                // Each response tells how full the context of its request was
+                                is StreamFrame.End ->
+                                    send(
+                                        Events.context(
+                                            contextUsage(
+                                                prompt = ctx.prompt,
+                                                tools = requestTools,
+                                                skillCatalog = buildSkillCatalog(skills),
+                                                reportedTokens = frame.metaInfo.inputTokensCount,
+                                                windowTokens = contextLengthOf(ctx.model),
+                                                tokenizer = rawTokenizer,
+                                            )
+                                        )
+                                    )
                                 else -> {}
                             }
                         }

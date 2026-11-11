@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.ai.clients
 
 import de.fraunhofer.aisec.cpg.ai.ChatMessageJSON
 import de.fraunhofer.aisec.cpg.ai.ChatService
+import de.fraunhofer.aisec.cpg.ai.ContextUsageJSON
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.add
@@ -130,6 +131,15 @@ object Events {
             buildJsonObject {
                 put("type", "final_history")
                 put("messages", Json.encodeToJsonElement(messages))
+            }
+        )
+
+    /** How full the context window of the model is after one of its responses. */
+    fun context(usage: ContextUsageJSON): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "context")
+                put("usage", Json.encodeToJsonElement(usage))
             }
         )
 

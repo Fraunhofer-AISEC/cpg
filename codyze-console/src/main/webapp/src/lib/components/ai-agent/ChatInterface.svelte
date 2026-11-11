@@ -71,6 +71,7 @@
     NodeJSON,
     OverlayJSON,
     ToolActivity,
+    ContextUsageJSON,
     CodeSelection
   } from '$lib/types';
   import { toolCallLabel, toolNodeIds, type ToolCallLabel } from '$lib/toolLabels';
@@ -370,6 +371,8 @@
     currentMessage: string;
     isLoading: boolean;
     streamingContent: string;
+    /** How full the context window of the model was in its latest request */
+    contextUsage?: ContextUsageJSON | null;
     /** The tool call the agent is running, until its result arrives */
     activity?: ToolActivity | null;
     models?: Model[];
@@ -397,6 +400,7 @@
     currentMessage,
     isLoading,
     streamingContent,
+    contextUsage = null,
     activity = null,
     models = [],
     selectedModel = null,
@@ -2680,7 +2684,7 @@ folded, so that it does not read like what the model wrote in between; opened, i
             onNewChat={onReset}
           >
             {#snippet toolbar()}
-              <SessionBar {models} {selectedModel} {onModelSelect} />
+              <SessionBar {models} {selectedModel} {onModelSelect} {contextUsage} />
             {/snippet}
           </MessageInput>
         </div>
