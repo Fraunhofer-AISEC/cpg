@@ -152,6 +152,20 @@ private constructor(
     }
 
     /**
+     * Requests that the currently running (or a subsequent) pass execution loop -- whether the
+     * batch driver ([de.fraunhofer.aisec.cpg.passes.executePassesSequentially]) or the incremental
+     * one ([de.fraunhofer.aisec.cpg.runDirtyPasses]) -- stop processing further passes as soon as
+     * it next checks [TranslationResult.isCancelled], instead of running the remaining queued
+     * passes to completion. Already-completed work is not rolled back; the [TranslationResult]
+     * returned by [analyze] (or the one passed to `runDirtyPasses`) simply reflects however much
+     * was processed before the cancellation was observed. Irreversible: there is no way to resume
+     * or un-cancel this [TranslationManager].
+     */
+    fun cancel() {
+        isCancelled.set(true)
+    }
+
+    /**
      * Parses all language files using the respective [LanguageFrontend] and creates the initial set
      * of AST nodes.
      *

@@ -38,8 +38,10 @@ import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.SccPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.markDirty
 import java.io.File
 import java.nio.file.Files
@@ -50,6 +52,104 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+
+/**
+ * Two passes with a circular hard dependency on each other, so [PassOrderingHelper.order] can never
+ * find a valid order for them -- used to force the [ConfigurationException] fallback in
+ * [runDirtyPasses].
+ */
+@DependsOn(CyclicPassB::class)
+class CyclicPassA(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(t: TranslationResult) {}
+
+    override fun cleanup() {}
+}
+
+@DependsOn(CyclicPassA::class)
+class CyclicPassB(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(t: TranslationResult) {}
+
+    override fun cleanup() {}
+}
+
+/**
+ * A pass that never settles: every time it runs, it marks a DIFFERENT one of [proxyA]/[proxyB]
+ * dirty for itself again, alternating forever -- used to exercise [runDirtyPasses]'s
+ * `maxExecutions` guard against infinite loops.
+ */
+class PingPongPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(t: TranslationResult) {
+        val proxy = if (executionCount % 2 == 0) proxyB else proxyA
+        executionCount++
+        t.markDirty(proxy, PingPongPass::class)
+    }
+
+    override fun cleanup() {}
+
+    companion object {
+        var executionCount = 0
+        lateinit var proxyA: Node
+        lateinit var proxyB: Node
+    }
+}
+
+/**
+ * When run, marks [TriggeredPass] dirty -- never itself -- so that a pass which was never part of
+ * the originally-dirty set gets picked up and run within the SAME [runDirtyPasses] call.
+ */
+class DirtiesOtherPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(t: TranslationResult) {
+        t.markDirty(t, TriggeredPass::class)
+    }
+
+    override fun cleanup() {}
+}
+
+/** Only ever marked dirty as a side effect of [DirtiesOtherPass] running, never directly. */
+class TriggeredPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(t: TranslationResult) {
+        ran = true
+    }
+
+    override fun cleanup() {}
+
+    companion object {
+        var ran = false
+    }
+}
+
+/**
+ * Simulates a host application cancelling the analysis mid-run: dirties [NeverRunsPass] (so there
+ * is something left in the queue afterward) and calls [TranslationManager.cancel] in the same
+ * breath, so [runDirtyPasses] must stop before ever dequeuing/running that newly-queued pass.
+ */
+class CancellingPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(t: TranslationResult) {
+        ran = true
+        t.markDirty(t, NeverRunsPass::class)
+        manager.cancel()
+    }
+
+    override fun cleanup() {}
+
+    companion object {
+        var ran = false
+        lateinit var manager: TranslationManager
+    }
+}
+
+/** Must never run if [CancellingPass] correctly stops [runDirtyPasses] early. */
+class NeverRunsPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
+    override fun accept(t: TranslationResult) {
+        ran = true
+    }
+
+    override fun cleanup() {}
+
+    companion object {
+        var ran = false
+    }
+}
 
 /**
  * Tests for [runDirtyPasses]: after [TranslationManager.addSource] marks nodes dirty (see
@@ -542,6 +642,169 @@ class PartialPassExecutionTest {
             calleeCall.invokes,
             "Expected the descendant scan to find 'caller' inside the dirty component and run " +
                 "SymbolResolver on it",
+        )
+    }
+
+    @Test
+    fun testRunDirtyPassesFallsBackToUnorderedExecutionOnCyclicDependency() {
+        // PartialPassExecution.kt:95-102: PassOrderingHelper.order() throws a
+        // ConfigurationException for a dirty pass set with an unsatisfiable (here: circular)
+        // dependency. runDirtyPasses must not propagate that exception -- it logs a warning and
+        // falls back to running the dirty passes unordered, so both still get processed and
+        // cleaned instead of being silently dropped or crashing the whole incremental update.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-cyclic-order-test").toFile().apply {
+                deleteOnExit()
+            }
+        val sourceFile = tempSource(topLevel, "caller.stale", "define:seed")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(sourceFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+
+        result.markDirty(result, CyclicPassA::class)
+        result.markDirty(result, CyclicPassB::class)
+
+        runDirtyPasses(result)
+
+        // Despite the ordering failure, the fallback (unordered) execution still ran -- and
+        // cleaned up -- both passes.
+        assertFalse(result.dirtyNodes[result]?.contains(CyclicPassA::class) == true)
+        assertFalse(result.dirtyNodes[result]?.contains(CyclicPassB::class) == true)
+    }
+
+    @Test
+    fun testRunDirtyPassesStopsRequeueingAPassOnceMaxExecutionsIsReached() {
+        // PartialPassExecution.kt:113-115: a pass that keeps re-dirtying itself (here: alternating
+        // between two proxy nodes every time it runs) would otherwise loop forever; maxExecutions
+        // caps how many times runDirtyPasses reruns the SAME pass class within one call, logging a
+        // warning and skipping it (leaving it dirty) once the cap is reached.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-max-executions-test").toFile().apply {
+                deleteOnExit()
+            }
+        val sourceFile = tempSource(topLevel, "caller.stale", "define:seed")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(sourceFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .maxPassExecutions(2)
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        val component = result.components.single()
+
+        PingPongPass.executionCount = 0
+        PingPongPass.proxyA = result
+        PingPongPass.proxyB = component
+
+        result.markDirty(PingPongPass.proxyA, PingPongPass::class)
+
+        runDirtyPasses(result)
+
+        assertEquals(
+            2,
+            PingPongPass.executionCount,
+            "Expected exactly maxExecutions runs, not more",
+        )
+        assertTrue(
+            result.dirtyNodes[PingPongPass.proxyA]?.contains(PingPongPass::class) == true,
+            "Expected the pass to be left dirty once the execution cap was hit",
+        )
+    }
+
+    @Test
+    fun testRunDirtyPassesImmediatelyProcessesAPassDirtiedDuringTheSameRun() {
+        // PartialPassExecution.kt:143: a pass dirtied as a side effect of running another pass
+        // (here: DirtiesOtherPass marking TriggeredPass dirty) must be picked up and run within the
+        // SAME runDirtyPasses call, even though it was never part of the originally-dirty pass set
+        // computed at the start of the call.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-cascading-dirty-test").toFile().apply {
+                deleteOnExit()
+            }
+        val sourceFile = tempSource(topLevel, "caller.stale", "define:seed")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(sourceFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+
+        TriggeredPass.ran = false
+        result.markDirty(result, DirtiesOtherPass::class)
+
+        runDirtyPasses(result)
+
+        assertTrue(
+            TriggeredPass.ran,
+            "Expected TriggeredPass to run as a cascading effect within the same call",
+        )
+        assertFalse(result.dirtyNodes[result]?.contains(TriggeredPass::class) == true)
+    }
+
+    @Test
+    fun testRunDirtyPassesStopsEarlyWhenAnalysisIsCancelled() {
+        // PartialPassExecution.kt:146-149 (mirrors the batch driver's identical check in
+        // Pass.kt:357): if TranslationManager.cancel() is called while runDirtyPasses is still
+        // processing its queue, it must stop before running any further queued passes, instead of
+        // finishing the remaining work anyway.
+        //
+        // CancellingPass dirties NeverRunsPass AND cancels in the same accept() call, so there is
+        // no dependency on queue/pass ordering: NeverRunsPass only becomes known to the queue AFTER
+        // cancellation has already been requested, exactly once runDirtyPasses's own isCancelled
+        // check (reached right after) is about to see it.
+        val topLevel =
+            Files.createTempDirectory("cpg-partial-pass-cancel-test").toFile().apply {
+                deleteOnExit()
+            }
+        val sourceFile = tempSource(topLevel, "caller.stale", "define:seed")
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(sourceFile)
+                .registerLanguage<StaleStubTestLanguage>()
+                .disableCleanup()
+                .build()
+
+        val manager = TranslationManager.builder().config(config).build()
+        val result = manager.analyze().get()
+        assertFalse(result.isCancelled)
+
+        CancellingPass.ran = false
+        CancellingPass.manager = manager
+        NeverRunsPass.ran = false
+
+        result.markDirty(result, CancellingPass::class)
+
+        runDirtyPasses(result)
+
+        assertTrue(CancellingPass.ran, "Expected CancellingPass to run and trigger cancellation")
+        assertTrue(result.isCancelled)
+        assertFalse(
+            NeverRunsPass.ran,
+            "Expected the pass dirtied after cancellation to never actually run",
+        )
+        assertTrue(
+            result.dirtyNodes[result]?.contains(NeverRunsPass::class) == true,
+            "Expected it to remain queued/dirty, just never processed",
         )
     }
 }
