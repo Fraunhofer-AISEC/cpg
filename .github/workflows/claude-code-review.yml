@@ -33,6 +33,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: claude[bot]
           # We deliberately do not use the code-review plugin: it only reports bugs that are
           # certain from the diff alone and drops everything else, so it never raised design,
           # consistency or AGENTS.md findings. This prompt reviews against our own guidelines.
