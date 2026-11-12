@@ -108,7 +108,21 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             if (namespace != null) {
                 // We can directly take the "real" namespace name then
                 return namespace.name.localName
-            } else {
+            }
+
+            // The namespace is only in the scope manager once the imported package has been
+            // parsed, which holds when the files are parsed one after another in dependency
+            // order, but not when they are parsed concurrently. Read the package clause from the
+            // imported package's own source instead, which gives the same answer regardless of
+            // the order in which anything is parsed. gopkg.in/alecthomas/kingpin.v2 is the
+            // typical case: the path ends in `kingpin.v2` while the package is called `kingpin`,
+            // and guessing from the path turns every `kingpin.X` into a member access on an
+            // unknown base.
+            packageNameFromSource(filename)?.let {
+                return it
+            }
+
+            run {
                 val path = frontend.expressionHandler.handle(this.path) as? Literal<*>
                 val paths = (path?.value as? String)?.split("/") ?: listOf()
 
@@ -125,4 +139,63 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
                 return last ?: ""
             }
         }
+
+    /**
+     * Determines the name a package declares for itself, by reading the `package` clause of one of
+     * its source files. Returns `null` if the package's directory cannot be located or holds no
+     * readable Go file.
+     *
+     * The answer only depends on the files on disk, so it is stable no matter in which order -- or
+     * on how many threads -- the project is parsed. Results are cached per import path, because the
+     * same package is imported many times across a project.
+     */
+    private fun packageNameFromSource(importPath: String): String? {
+        return packageNameCache
+            .computeIfAbsent(importPath) { path ->
+                val dir = locatePackageDirectory(path) ?: return@computeIfAbsent ""
+                val file =
+                    dir.listFiles { f: java.io.File ->
+                            f.isFile && f.name.endsWith(".go") && !f.name.endsWith("_test.go")
+                        }
+                        ?.minByOrNull { it.name } ?: return@computeIfAbsent ""
+                val clause =
+                    try {
+                        file.useLines { lines ->
+                            lines.firstNotNullOfOrNull { line ->
+                                PACKAGE_CLAUSE.matchEntire(line.trim())?.groupValues?.get(1)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                clause ?: ""
+            }
+            .ifEmpty { null }
+    }
+
+    /**
+     * Finds the directory holding the package [importPath], by walking up from the file currently
+     * being parsed and looking in each `vendor` directory, and finally in the Go standard library.
+     */
+    private fun locatePackageDirectory(importPath: String): java.io.File? {
+        var dir = frontend.currentFilePath?.absoluteFile?.parentFile
+        while (dir != null) {
+            val vendored = java.io.File(java.io.File(dir, "vendor"), importPath)
+            if (vendored.isDirectory) {
+                return vendored
+            }
+            dir = dir.parentFile
+        }
+
+        val goRoot = System.getenv("GOROOT") ?: "/usr/local/go"
+        val inStdlib = java.io.File(java.io.File(goRoot, "src"), importPath)
+        return if (inStdlib.isDirectory) inStdlib else null
+    }
+
+    companion object {
+        private val PACKAGE_CLAUSE = Regex("""package\s+([A-Za-z_][A-Za-z0-9_]*).*""")
+
+        /** Package name per import path; the same package is imported many times. */
+        private val packageNameCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    }
 }

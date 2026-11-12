@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
+import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
@@ -1171,11 +1172,26 @@ data object IncompatibleSignature : SignatureResult()
 data class SignatureMatches(override val casts: List<CastResult>) : SignatureResult(casts)
 
 fun Function.matchesSignature(
-    signature: List<Type>,
+    rawSignature: List<Type>,
     arguments: List<Expression>? = null,
     useDefaultArguments: Boolean = false,
 ): SignatureResult {
     val casts = mutableListOf<CastResult>()
+
+    // A call may pass the results of another call as its complete argument list, in which case
+    // the single argument carries all of them as a tuple: Go's `f(g())` binds g's return values
+    // to f's parameters in order, provided there are as many of them (see
+    // https://go.dev/ref/spec#Calls). Comparing the tuple against the first parameter instead
+    // makes the arity look wrong, the call stops matching its declaration and a body-less stub is
+    // inferred in its place. text/template does this throughout, e.g.
+    // `t.newIf(t.parseControl(true, "if"))`.
+    val singleTuple = (rawSignature.singleOrNull() as? TupleType)?.types
+    val signature =
+        if (singleTuple != null && singleTuple.size == this.parameters.size) singleTuple
+        else rawSignature
+    // Once the tuple is spread, the single argument expression no longer lines up with the
+    // parameters index by index, so it must not be offered as a cast hint for them.
+    val hints = if (signature !== rawSignature) null else arguments
 
     var remainingArguments = signature.size
 
@@ -1195,7 +1211,7 @@ fun Function.matchesSignature(
             // Check, if we can cast the arg into our target type; and if, yes, what is
             // the "distance" to the base type. We need this to narrow down the type during
             // resolving
-            val match = type.tryCast(param.type, arguments?.getOrNull(i), param)
+            val match = type.tryCast(param.type, hints?.getOrNull(i), param)
             if (match == CastNotPossible) {
                 return IncompatibleSignature
             }
