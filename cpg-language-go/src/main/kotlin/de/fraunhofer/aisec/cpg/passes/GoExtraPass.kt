@@ -99,7 +99,7 @@ private const val BUILTIN_GO = "builtin.go"
  * to a fully-qualified name that contains the name of the [ObjectType] that the expression is
  * creating. This way we can resolve the static references to the field to the actual field.
  *
- * ## Add Methods of Embedded Structs to the Record's Scope
+ * ## Add Methods and Fields of Embedded Structs to the Record's Scope
  *
  * This pass also adds methods of [Record.embeddedStructs] into the scope of the [Record] itself, so
  * that it can be resolved using the regular [SymbolResolver].
@@ -110,7 +110,7 @@ private const val BUILTIN_GO = "builtin.go"
 @DependsOn(TypeResolver::class)
 @RequiresLanguage(GoLanguage::class)
 @Description(
-    "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods of Embedded Structs to the Record's Scope."
+    "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods and Fields of Embedded Structs to the Record's Scope."
 )
 class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
@@ -159,22 +159,143 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      * ```
      */
     private fun handleRecord(record: Record) {
-        // We are only interest in structs, not interfaces
-        if (record.kind != "struct") {
+        val promoted =
+            when (record.kind) {
+                "struct" -> promotedDeclarations(record)
+                // An interface composes other interfaces by embedding them, and every method of an
+                // embedded interface belongs to the embedding one's method set:
+                //
+                //     type ArrayEncoder interface {
+                //         PrimitiveArrayEncoder
+                //         AppendArray(ArrayMarshaler) error
+                //     }
+                //
+                // A call to `AppendInt` -- declared by PrimitiveArrayEncoder -- on something typed
+                // as ArrayEncoder has to find that declaration. Without it the resolver invents an
+                // inferred method on ArrayEncoder instead, which has no body and no
+                // implementations, so every call through the embedding interface stops there.
+                "interface" -> promotedInterfaceMethods(record)
+                else -> return
+            }
+        if (promoted.isEmpty()) {
             return
         }
 
         // Enter our record's scope
         scopeManager.enterScope(record)
 
-        // Loop through the embedded struct and add their methods to the record's scope.
-        for (method in record.embeddedStructs.flatMap { it.toType().methods }) {
-            // Add it to the scope, but do NOT add it to the underlying AST field (methods),
-            // otherwise we would duplicate the method in the AST
-            scopeManager.addDeclaration(method)
+        for (declaration in promoted) {
+            // Only the scope is extended. Adding the declaration to the AST as well would
+            // duplicate something that belongs to the embedded struct.
+            scopeManager.addDeclaration(declaration)
         }
 
         scopeManager.leaveScope(record)
+    }
+
+    /**
+     * Collects the methods that [record], an interface, obtains from the interfaces it embeds.
+     *
+     * An embedded interface is modelled as a super type of the embedding one (see
+     * `SpecificationHandler.handleInterfaceTypeSpec`), and embedding is transitive. A method the
+     * interface declares itself takes precedence, so names it already owns are not promoted.
+     */
+    private fun promotedInterfaceMethods(record: Record): List<Declaration> {
+        val claimed = record.methods.mapTo(mutableSetOf()) { it.name.localName }
+        val promoted = mutableListOf<Declaration>()
+        val visited = mutableSetOf(record)
+        val frontier = ArrayDeque(record.embeddedInterfaces.filter { visited.add(it) })
+
+        while (frontier.isNotEmpty()) {
+            val embedded = frontier.removeFirst()
+            for (method in embedded.methods) {
+                if (claimed.add(method.name.localName)) {
+                    promoted += method
+                }
+            }
+            frontier.addAll(embedded.embeddedInterfaces.filter { visited.add(it) })
+        }
+
+        return promoted
+    }
+
+    /** The interfaces that this record embeds, i.e. its super types that are interfaces. */
+    private val Record.embeddedInterfaces: List<Record>
+        get() =
+            this.superTypes.mapNotNull {
+                ((it as? ObjectType)?.recordDeclaration)?.takeIf { r -> r.kind == "interface" }
+            }
+
+    /**
+     * Collects the fields and methods that [record] promotes from the structs it embeds, following
+     * Go's selector rules (see https://go.dev/ref/spec#Selectors).
+     *
+     * Promotion is transitive, so a struct `A` embedding `B` which itself embeds `C` promotes `C`'s
+     * members as well, at depth two. The rule for choosing between several members of the same name
+     * is "shallowest wins": `x.f` denotes the `f` at the smallest depth at which one exists. If
+     * more than one `f` exists at that smallest depth, the selector is illegal in Go, and a deeper
+     * `f` does not rescue it -- so such a name is not promoted at all.
+     *
+     * We therefore walk the embedding graph breadth first, one depth at a time, and only promote a
+     * name that is neither already taken at a shallower depth nor ambiguous at the current one.
+     * Embedding may be cyclic through pointers (`type A struct { *A }`), so visited records are
+     * tracked.
+     */
+    /**
+     * The methods declared on this record itself. [de.fraunhofer.aisec.cpg.graph.types.ObjectType]
+     * `.methods` also walks the super types, which for Go includes the interfaces the struct
+     * satisfies, so it cannot be used to decide what a record genuinely owns. [Record.methods] is
+     * no alternative either: a Go method is a top-level declaration carrying a receiver and is
+     * therefore not an AST child of its record. We go through the type and keep only what points
+     * back at this record.
+     */
+    private val Record.declaredMethods: List<Method>
+        get() = this.toType().methods.filter { it.recordDeclaration == this }
+
+    private fun promotedDeclarations(record: Record): List<Declaration> {
+        // Depth 0: everything the record declares itself shadows anything promoted.
+        val claimed = mutableSetOf<String>()
+        record.fields.mapTo(claimed) { it.name.localName }
+        // Only the methods this record declares itself. ObjectType.methods also returns the
+        // methods of the super types, which for Go includes every interface the struct satisfies
+        // -- claiming those names here would shadow the embedded struct's own members.
+        record.declaredMethods.mapTo(claimed) { it.name.localName }
+
+        val promoted = mutableListOf<Declaration>()
+        val visited = mutableSetOf(record)
+        var frontier = record.embeddedStructs.filterTo(mutableListOf()) { visited.add(it) }
+
+        while (frontier.isNotEmpty()) {
+            // Group everything visible at this depth by name, so that a name occurring in more
+            // than one embedded struct can be recognised as ambiguous.
+            val byName = mutableMapOf<String, MutableList<Declaration>>()
+            for (embedded in frontier) {
+                for (field in embedded.fields) {
+                    byName.getOrPut(field.name.localName) { mutableListOf() } += field
+                }
+                for (method in embedded.declaredMethods) {
+                    byName.getOrPut(method.name.localName) { mutableListOf() } += method
+                }
+            }
+
+            for ((name, declarations) in byName) {
+                if (name in claimed) {
+                    // Shadowed by a shallower member.
+                    continue
+                }
+                // Claim the name either way: an ambiguous name stays ambiguous, a deeper member
+                // of the same name does not become selectable.
+                claimed += name
+                declarations.singleOrNull()?.let { promoted += it }
+            }
+
+            frontier =
+                frontier
+                    .flatMapTo(mutableListOf()) { it.embeddedStructs }
+                    .filterTo(mutableListOf()) { visited.add(it) }
+        }
+
+        return promoted
     }
 
     private fun addBuiltIn(): TranslationUnit {
@@ -220,12 +341,24 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             panic.returnTypes = listOf(primitiveType("any"))
             addBuiltInFunction(recover)
 
+            // The `error` record has to be a declaration of the builtin translation unit, not just
+            // a node hanging off its own method. If it is not reachable through the AST, no pass
+            // can see it -- in particular it is not recognized as an interface -- and the type
+            // resolver later synthesizes a second, structurally empty `error` record of kind
+            // "struct" for the `error` type that is used everywhere. Calls through `error` then
+            // dispatch against that placeholder and stop at the body-less `error.Error`.
             val error = newRecord("error", "interface")
+            scopeManager.addDeclaration(error)
+            this.declarations += error
+
             scopeManager.enterScope(error)
 
             val errorFunc = newMethod("Error", recordDeclaration = error)
             errorFunc.returnTypes = listOf(primitiveType("string"))
             addBuiltInFunction(errorFunc)
+            // `addBuiltInFunction` registers the method with the translation unit, but the record
+            // also has to list it, because the structural-satisfaction check compares method sets.
+            error.methods += errorFunc
 
             scopeManager.leaveScope(error)
             builtin
@@ -334,14 +467,33 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
                     val variable = forEach.variable
                     if (variable is DeclarationStatement) {
-                        // The key is the first variable. It is always an int
                         val keyVariable = variable.declarations.firstOrNull() as? Variable
-                        keyVariable?.type = forEach.primitiveType("int")
-
-                        // The value is the second one. Its type depends on the array type
                         val valueVariable = variable.declarations.getOrNull(1) as? Variable
-                        ((forEach.iterable as? HasType)?.type as? PointerType)?.let {
-                            valueVariable?.type = it.elementType
+
+                        when (val iterated = (forEach.iterable as? HasType)?.type?.iterated) {
+                            is MapType -> {
+                                // Ranging over a map yields its keys and values. Only the value
+                                // type is modelled by MapType, so the key is left alone rather
+                                // than being forced to int, which it only is for a slice.
+                                valueVariable?.type = iterated.elementType
+                            }
+                            is ObjectType -> {
+                                // The Go frontend does not build a MapType: a map is an object
+                                // type named "map" carrying its key and value type as generics.
+                                // Ranging over it yields both, and unlike a slice the key is not
+                                // an int.
+                                iterated.generics.getOrNull(0)?.let { keyVariable?.type = it }
+                                iterated.generics.getOrNull(1)?.let { valueVariable?.type = it }
+                            }
+                            is PointerType -> {
+                                // Slices and arrays are modelled as pointers, and are indexed by
+                                // an int.
+                                keyVariable?.type = forEach.primitiveType("int")
+                                valueVariable?.type = iterated.elementType
+                            }
+                            else -> {
+                                // Nothing we can say about the element type.
+                            }
                         }
                     }
                 }
@@ -395,3 +547,24 @@ class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // Nothing to do
     }
 }
+
+/**
+ * The type actually iterated over by a `range` clause. A named type -- `type PADataSequence
+ * []PAData` -- carries its slice or map nature in its super types rather than in the type itself,
+ * so we look there as well.
+ *
+ * We deliberately do not use `underlyingType`, which expects a single super type: a named type may
+ * have several once the interfaces it satisfies are known, and we only care about the one that
+ * makes it iterable.
+ */
+private val Type.iterated: Type?
+    get() {
+        // A map is represented as an object type named "map" whose generics are its key and
+        // value type, rather than as a MapType.
+        fun Type.isIterable() =
+            this is MapType ||
+                this is PointerType ||
+                (this is ObjectType && this.name.localName == "map" && this.generics.size == 2)
+
+        return if (this.isIterable()) this else this.superTypes.firstOrNull { it.isIterable() }
+    }

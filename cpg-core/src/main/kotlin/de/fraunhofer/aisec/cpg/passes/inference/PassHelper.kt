@@ -93,6 +93,21 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): Namespace? {
  * not possible, or if it was turned off in the [InferenceConfiguration].
  */
 internal fun Pass<*>.tryRecordInference(type: Type, source: Node): Record? {
+    // Never infer a record that would shadow a namespace we already know about. The qualifier of
+    // a qualified name is a namespace in many languages -- `bytes.NewBuffer` names the function
+    // `NewBuffer` of the package `bytes` -- and when such a qualifier reaches us as a type we
+    // cannot resolve, inferring a record for it replaces the package with an empty type of the
+    // same name. Every later lookup of `bytes.X` then descends into that record instead of the
+    // package, finds nothing, and the call is left without a target at all, so one unresolved
+    // reference costs every symbol of the package.
+    //
+    // Leaving the type unresolved is far less damaging: it only affects the reference that
+    // produced it.
+    val existingScope = scopeManager.lookupScope(type.name)
+    if (existingScope is NameScope && existingScope !is RecordScope) {
+        return null
+    }
+
     val kind =
         if (type.language is HasStructs) {
             "struct"

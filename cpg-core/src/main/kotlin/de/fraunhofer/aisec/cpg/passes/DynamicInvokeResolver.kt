@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
@@ -156,12 +157,31 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     continue
                 }
             }
-            // Do not consider the base for member expressions, we have to know possible values of
-            // the member (e.g. field).
+            // A function can also reach the call site as part of a container rather than on its
+            // own: stored in an array or a map, as in a table of constructors
+            // `var TypeToRR = map[uint16]func() RR{...}` that is later read back and invoked. The
+            // DFG does record that flow, but with a partial granularity naming the index, so
+            // following only full flows stops at the container and the call appears to have no
+            // target at all.
+            //
+            // We therefore follow partial flows out of a container as well. This
+            // over-approximates -- a value stored under one index may be reported for a read of
+            // another -- but the candidate still has to match the function pointer's signature,
+            // and for a call graph an additional possible target is the safe direction while a
+            // missing one silently removes everything reachable through it.
+            //
+            // We deliberately do not do the same for a member access. Its partial flow leads to
+            // the *base*, i.e. to the whole object, which would merge every field of that object
+            // into one set of candidates and lose which function pointer a particular field was
+            // assigned. The write-usages of the field below are the precise answer for that case.
+            val followPartial = curr !is MemberAccess
             val prevDFGToPush =
                 curr.prevDFGEdges.mapFilteredTo(
                     mutableListOf(),
-                    { it.granularity is FullDataflowGranularity },
+                    {
+                        it.granularity is FullDataflowGranularity ||
+                            (followPartial && it.granularity is PartialDataflowGranularity<*>)
+                    },
                 ) {
                     it.start
                 }

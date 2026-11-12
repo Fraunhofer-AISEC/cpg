@@ -271,6 +271,20 @@ interface HasFunctionStyleConstruction : HasCallAmbiguity
  */
 interface HasFunctionOverloading : LanguageTrait
 
+/**
+ * A language trait for languages that implicitly dereference a pointer to an array when it is
+ * indexed, i.e. where `a[i]` means `(*a)[i]` for an `a` pointing to an array.
+ *
+ * Go is such a language: for `s *[16]uint32`, `s[0]` has type `uint32`. Without this, indexing
+ * takes a single dereference step and yields the array type instead of the element type; passing
+ * the result on then makes the arguments mismatch the callee's parameters, so the call is not
+ * resolved to the real declaration.
+ *
+ * In C the same syntax means something else -- for `int (*p)[16]`, `p[0]` is the array `int[16]` --
+ * so this must not be applied to every language.
+ */
+interface HasImplicitPointerToArrayIndexing : LanguageTrait
+
 /** A language trait that specifies that this language allows overloading of operators. */
 interface HasOperatorOverloading : LanguageTrait {
 
