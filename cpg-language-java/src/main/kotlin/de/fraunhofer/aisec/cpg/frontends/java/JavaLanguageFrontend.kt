@@ -475,7 +475,10 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
     }
 
     override fun cleanup() {
-        JavaParserFacade.clearInstances()
+        // Share get()'s monitor until JavaParser also synchronizes clearInstances().
+        synchronized(JavaParserFacade::class.java) {
+            JavaParserFacade.clearInstances()
+        }
         super.cleanup()
 
         context = null
