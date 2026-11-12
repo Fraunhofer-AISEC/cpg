@@ -4039,6 +4039,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val paramDepth =
             if (
                 param.type is PointerType ||
+                    param.language.hasReferenceSemantics(param.type) ||
                     forceDerefPMVCreation ||
                     // If the type is unknown we also
                     // initialize all levels to be sure. A type whose record we only inferred
