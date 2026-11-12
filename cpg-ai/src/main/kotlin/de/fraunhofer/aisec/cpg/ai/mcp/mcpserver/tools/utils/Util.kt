@@ -497,6 +497,8 @@ inline fun <reified T> JsonObject?.toPayload(): T = (this ?: JsonObject(emptyMap
  * The [lock] guards the graph of this session, and [nodeIndex] looks nodes up by id (see
  * [findNodeById]). Whatever replaces or changes the AST of the session must call
  * [NodeIndex.invalidate]; [nodeToPass] is keyed by the session's nodes and so belongs to its graph.
+ * Every mutating tool call runs under [lock]'s exclusive [CpgLock.write], which already serializes
+ * access to [nodeToPass] across tool calls, so it does not need its own synchronization.
  */
 open class CpgSession(
     var translationResult: TranslationResult?,

@@ -1,29 +1,83 @@
 <script lang="ts">
-  import { marked } from 'marked';
-  import type { Tokens } from 'marked';
+  import { Marked } from 'marked';
+  import type { Tokens, TokenizerAndRendererExtension } from 'marked';
+  import type { NodeJSON } from '$lib/types';
+  import { citationLabel, citationPattern } from '$lib/agentEvidence';
 
   interface Props {
     content: string;
+    /** The cited nodes by ID, to label the citations `[[node:<id>]]` in the content */
+    citations?: Map<string, NodeJSON>;
+    /** Called when a citation is clicked; without it, citations are shown as plain text */
+    onCite?: (nodeId: string) => void;
   }
 
-  let { content }: Props = $props();
+  let { content, citations, onCite }: Props = $props();
 
-  const renderer = new marked.Renderer();
-  renderer.code = function ({ text, lang }: Tokens.Code): string {
-    const language = lang || 'plaintext';
-    return `<pre><code class="hljs language-${language}">${text}</code></pre>`;
+  const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+  // The chip of a cited node, which is labeled once the node is resolved
+  function renderCitation(id: string): string {
+    const ref = citations?.get(id);
+    const label = ref ? citationLabel(ref) : `node …${id.slice(-6)}`;
+    const title = ref ? `${ref.type} ${ref.code}` : 'Cited node';
+    return `<button type="button" class="node-cite" data-node-id="${id}" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`;
+  }
+
+  // Citations are tokens of their own, instead of being replaced in the text before it is parsed.
+  // This way a citation in a code span or block stays what it is: code
+  const citationStart = new RegExp(`^${citationPattern.source}`, 'i');
+  const nodeCitation: TokenizerAndRendererExtension = {
+    name: 'nodeCitation',
+    level: 'inline',
+    start: (src) => src.indexOf('[[node:'),
+    tokenizer(src) {
+      const match = citationStart.exec(src);
+      return match
+        ? { type: 'nodeCitation', raw: match[0], id: match[1].toLowerCase() }
+        : undefined;
+    },
+    renderer(token) {
+      // Without a handler for the clicks, a citation is shown as the text it is
+      return onCite ? renderCitation(token.id as string) : escapeHtml(token.raw);
+    }
   };
 
-  marked.use({
+  function handleClick(event: MouseEvent) {
+    const cite = (event.target as HTMLElement).closest<HTMLElement>('[data-node-id]');
+    if (cite?.dataset.nodeId) onCite?.(cite.dataset.nodeId);
+  }
+
+  // Only links to web pages, mail addresses and the page itself are kept: a link like
+  // `javascript:...` in an answer would run code when it is clicked
+  const safeUrl = /^(https?:|mailto:|#|\/|\.\.?\/)/i;
+
+  // The answers contain text of the model and of tool results, which can be influenced by the
+  // analysed code. So no HTML in them is rendered as such: marked turns everything else into HTML
+  const marked = new Marked({
     gfm: true, // GitHub Flavored Markdown
     breaks: true, // Convert \n to <br>
-    renderer
+    extensions: [nodeCitation],
+    walkTokens(token) {
+      if ((token.type === 'link' || token.type === 'image') && !safeUrl.test(token.href)) {
+        token.href = '#';
+      }
+    },
+    renderer: {
+      html: ({ text }) => escapeHtml(text),
+      code({ text, lang }: Tokens.Code): string {
+        const language = escapeHtml(lang || 'plaintext');
+        return `<pre><code class="hljs language-${language}">${escapeHtml(text)}</code></pre>`;
+      }
+    }
   });
 
   let html = $derived(marked.parse(content) as string);
 </script>
 
-<div class="prose prose-sm prose-gray max-w-none">
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="prose prose-sm prose-gray max-w-none" onclick={handleClick}>
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -- the HTML is made safe by the renderer -->
   {@html html}
 </div>
 
@@ -140,5 +194,27 @@
 
   :global(.prose em) {
     font-style: italic;
+  }
+
+  /* A cited node, see renderCitations */
+  :global(.prose .node-cite) {
+    display: inline-block;
+    margin: 0 0.125rem;
+    padding: 0 0.375rem;
+    border: 1px solid rgb(209, 213, 219);
+    border-radius: 0.25rem;
+    background-color: rgb(249, 250, 251);
+    color: rgb(55, 65, 81);
+    font-family: 'Noto Sans Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    vertical-align: baseline;
+    cursor: pointer;
+  }
+
+  :global(.prose .node-cite:hover) {
+    border-color: rgb(37, 99, 235);
+    color: rgb(29, 78, 216);
   }
 </style>
