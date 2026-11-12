@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.cpgDescription
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAddCodePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgLock
@@ -125,7 +126,8 @@ fun Server.addAnalyzeTool() {
         description = toolDescription,
     ) { payload ->
         try {
-            val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
+            val analysisResult =
+                runCpgAnalyze(payload, runPasses = true, cleanup = payload.keepLive != true)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
@@ -625,6 +627,90 @@ fun runPassForNode(
                 ctx,
                 preList = eogStarters,
             )
+        }
+    }
+}
+
+/**
+ * Registers a tool which adds new code to an existing [TranslationResult]. It runs the respective
+ * frontend and the passes in a targeted way.
+ */
+fun Server.addAddCodeTool() {
+    this.addTool<CpgAddCodePayload>(
+        name = "cpg_add_code",
+        readOnly = false,
+        description =
+            """Adds the given code to an existing CPG/TranslationResult. The language is required to identify the respective language frontend. It also triggers the passes which were registered before with a focus on only the new code and the dependents/dependencies."""
+                .trimIndent(),
+    ) { session: CpgSession, payload: CpgAddCodePayload ->
+        val result = session.translationResult
+        val translationContext = session.translationContext
+        if (result == null || translationContext == null) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("No CPG available, so no code could be added."))
+            )
+        }
+
+        // Reuse the canonical Language instance already registered on this context (instead of
+        // constructing a new one), since addSource(..., language) requires identity with one of
+        // ctx.availableLanguages.
+        val language =
+            translationContext.availableLanguages.firstOrNull {
+                it.handlesExtension(payload.languageFileEnding)
+            }
+                ?: return@addTool CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "No matching Language class found or registered for ${payload.languageFileEnding}."
+                            )
+                        )
+                )
+
+        val components = result.components
+        val targetComponent =
+            if (payload.component != null) {
+                components.singleOrNull { it.name.toString() == payload.component }
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Unknown component '${payload.component}'. Available components: ${components.map { it.name }}."
+                                )
+                            )
+                    )
+            } else {
+                components.singleOrNull()
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Several components are analyzed, so 'component' is required. Available components: ${components.map { it.name }}."
+                                )
+                            )
+                    )
+            }
+
+        try {
+            val newTu =
+                result.translationManager.addSource(result, targetComponent, payload.code, language)
+            if (newTu == null) {
+                CallToolResult(content = listOf(TextContent("Could not translate the input.")))
+            } else {
+                runDirtyPasses(result)
+                CallToolResult(
+                    content = listOf(TextContent("The source code has been added to the CPG."))
+                )
+            }
+        } catch (e: Exception) {
+            CallToolResult(
+                content = listOf(TextContent("Error: ${e.message ?: e::class.simpleName}"))
+            )
+        } finally {
+            // addSource/runDirtyPasses can add or detach AST nodes (e.g. inferred declarations),
+            // so lookups by id must see the change, also when it failed half way (mirrors
+            // runPass's own nodeIndex invalidation above).
+            session.nodeIndex.invalidate()
         }
     }
 }

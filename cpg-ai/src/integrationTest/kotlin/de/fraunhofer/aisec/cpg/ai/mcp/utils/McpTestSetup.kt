@@ -87,3 +87,16 @@ fun withClient(
             server.close()
         }
     }
+
+fun testServer(): Server =
+    Server(
+        Implementation(name = "test-cpg-server", version = "1.0.0"),
+        ServerOptions(
+            capabilities =
+                ServerCapabilities(
+                    tools = ServerCapabilities.Tools(),
+                    resources = ServerCapabilities.Resources(),
+                    prompts = ServerCapabilities.Prompts(),
+                )
+        ),
+    )

@@ -61,6 +61,10 @@ data class CpgAnalyzePayload(
     // untrusted model turns this into arbitrary host-source exfiltration. Hosts that expose the
     // server beyond loopback must treat cpg_analyze as an explicit, auditable trust decision.
     val path: String? = null,
+    @Description(
+        "If true, keeps the analyzed project's frontends and scope manager alive (at the cost of extra memory) instead of cleaning them up after analysis, so that cpg_add_code can later add code to this project. Required for cpg_add_code to work; leave false otherwise."
+    )
+    val keepLive: Boolean = false,
 )
 
 @Serializable
@@ -176,6 +180,20 @@ data class CpgApplyConceptsPayload(
 data class CpgRunPassPayload(
     @Description("The FQN of the pass to run.") val passName: String,
     @Description("The ID of the node which should be analyzed by the pass.") val nodeId: String,
+    @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
+) : HasProjectNamePayload
+
+@Serializable
+data class CpgAddCodePayload(
+    @Description("The code to add to the existing project.") val code: String,
+    @Description(
+        "The file language of the programming language to use. Example options: [c, cpp, java, py, java, go, ini, ll, rb, rs, js, jsx, ts, tsx, class, jimple, jar, apk]."
+    )
+    val languageFileEnding: String,
+    @Description(
+        "The name of the Component the code should be added to, as returned in cpg_analyze's/cpg_translate's 'components' list. Required if the project has more than one component."
+    )
+    val component: String? = null,
     @Description(PROJECT_NAME_DESCRIPTION) override val projectName: String? = null,
 ) : HasProjectNamePayload
 
