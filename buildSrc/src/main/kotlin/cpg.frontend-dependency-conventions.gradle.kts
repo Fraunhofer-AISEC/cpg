@@ -13,6 +13,7 @@ val enableRubyFrontend: Boolean by rootProject.extra
 val enableRustFrontend: Boolean by rootProject.extra
 val enableJVMFrontend: Boolean by rootProject.extra
 val enableINIFrontend: Boolean by rootProject.extra
+val enableCSharpFrontend: Boolean by rootProject.extra
 
 dependencies {
     if (enableJavaFrontend) {
@@ -44,5 +45,8 @@ dependencies {
     }
     if (enableINIFrontend) {
         implementation(project(":cpg-language-ini"))
+    }
+    if (enableCSharpFrontend) {
+        implementation(project(":cpg-language-csharp"))
     }
 }

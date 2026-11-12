@@ -129,6 +129,12 @@ val enableJVMFrontend: Boolean by extra {
 }
 project.logger.lifecycle("JVM frontend is ${if (enableJVMFrontend) "enabled" else "disabled"}")
 
+val enableCSharpFrontend: Boolean by extra {
+    val enableCSharpFrontend: String? by project
+    enableCSharpFrontend.toBoolean()
+}
+project.logger.lifecycle("C# frontend is ${if (enableCSharpFrontend) "enabled" else "disabled"}")
+
 val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by project
     enableINIFrontend.toBoolean()

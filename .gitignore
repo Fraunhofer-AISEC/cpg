@@ -21,6 +21,11 @@ logs
 *.dylib
 *.so
 *.log
+*.dll
+
+# .NET build artifacts
+obj/
+bin/
 
 gradle.properties
 LibrariesTest.kt
