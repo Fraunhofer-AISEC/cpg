@@ -26,7 +26,6 @@ public class StaticCalls {
         // a call on a statically imported field, which is a value and not a type name
         LOG.info(s);
 
-
         // a static field of a class that we only know from its import
         int constant = Util.CONSTANT;
         // a static field of a class in java.lang (which is imported implicitly)
