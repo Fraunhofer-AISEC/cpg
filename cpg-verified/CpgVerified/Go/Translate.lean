@@ -1,0 +1,209 @@
+/-
+Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
+Licensed under the Apache License, Version 2.0.
+-/
+import CpgVerified.Go.Literal
+import CpgVerified.Cpg.Expr
+
+/-!
+# Translation of Go expressions into CPG nodes
+
+The verified counterpart of `ExpressionHandler` in `cpg-language-go`. Everything the Kotlin
+handler reads from mutable frontend state (current scope, imports, `iota`) is an explicit
+input (`Ctx`), so the translation is a pure, total function.
+
+Intentional deviations from the Kotlin handler: calls of anything but a named function, a
+conversion or a (non-parenthesized) selector, and literals whose value is not modelled (floating-point, imaginary, escape sequences)
+become `ProblemExpression`s, i.e. they are outside the verified subset. Shadowing of predeclared
+identifiers is taken from the context (`Ctx.shadowed`).
+-/
+
+namespace Go
+
+open Cpg (Span Value TypeRef)
+
+/-- Everything the translation needs to know about the surrounding code. -/
+structure Ctx where
+  /--
+  The fully qualified name of the current scope, if it is a name scope (i.e. we are at package
+  level rather than inside a function).
+  -/
+  nameScope : Option String
+  /-- Names under which imported packages are visible in the current file. -/
+  packages : List String
+  /-- The value of `iota`, if we are inside a constant declaration. -/
+  iota : Option Int
+  /--
+  Predeclared identifiers (such as `true` or `make`) that are shadowed by a visible declaration and
+  therefore refer to that declaration.
+  -/
+  shadowed : List String := []
+
+/-- Predeclared identifiers that are never qualified with the current namespace. -/
+def builtins : List String :=
+  [ "bool", "uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64", "float32",
+    "float64", "complex64", "complex128", "string", "int", "uint", "uintptr", "byte", "rune",
+    "any", "comparable", "iota", "nil", "append", "copy", "delete", "len", "cap", "make", "max",
+    "min", "new", "complex", "real", "imag", "clear", "close", "panic", "recover", "print",
+    "println", "error" ]
+
+/-- The name a `Reference` to the identifier `name` gets. -/
+def resolveName (ctx : Ctx) (name : String) : String :=
+  if name ∈ builtins ∨ name ∈ ctx.packages then name
+  else
+    match ctx.nameScope with
+    | some ns => ns ++ "." ++ name
+    | none => name
+
+/-- The type the frontend assigns to a literal of the given kind. -/
+def litType : LitKind → TypeRef
+  | .int => .primitive "int"
+  | .float => .primitive "float64"
+  | .imag => .primitive "complex128"
+  | .char => .primitive "rune"
+  | .string => .primitive "string"
+
+/-- Translates an identifier: predeclared constants become literals, everything else a reference. -/
+def translateIdent (ctx : Ctx) (span : Span) (name : String) : Cpg.Expr :=
+  if name ∈ ctx.shadowed then .reference span (resolveName ctx name) else
+  match name with
+  | "true" => .literal span (.bool true) (.primitive "bool") (some name)
+  | "false" => .literal span (.bool false) (.primitive "bool") (some name)
+  | "nil" => .literal span .nil .unknown (some name)
+  | "iota" =>
+    match ctx.iota with
+    | some i => .literal span (.int i) (.primitive "int") (some name)
+    | none => .problem span "iota outside of constant declaration"
+  | _ => .reference span (resolveName ctx name)
+
+/--
+The name of the called function, if the callee is a (parenthesized) identifier. Other callees,
+e.g. type expressions in conversions like `[]byte(s)`, are not in the verified subset yet.
+-/
+def calleeName? (fn : Expr) : Option String :=
+  match fn.unparen with
+  | .ident _ name => some name
+  | _ => none
+
+/--
+The type that the frontend builds for a type expression (`GoLanguageFrontend.typeOf`), including
+where it resolves aliases, or `none` if the type expression is not in the verified subset. Anonymous
+struct, interface and function types (which create declarations or need formatted names) and
+generic instantiations are not.
+-/
+def typeOf? : Expr → Option TypeRef
+  | .ident _ name => some (.resolved (.object name []))
+  | .selector _ (.ident _ base) sel => some (.object (base ++ "." ++ sel) [])
+  | .selector _ _ sel => some (.object sel [])
+  | .arrayType _ elt => .array <$> typeOf? elt
+  | .chanType _ value => do pure (.object "chan" [← typeOf? value])
+  | .mapType _ key value => do pure (.object "map" [← typeOf? key, ← typeOf? value])
+  | .star _ x => (.resolved ∘ .pointer) <$> typeOf? x
+  | _ => none
+
+/-- Translates a conversion to the type `t` with the (translated) arguments `args`. -/
+def translateConversion (span : Span) : Option TypeRef → List Cpg.Expr → Cpg.Expr
+  | some t, [arg] => .cast span t arg
+  | _, _ => .problem span "conversion is not in the verified subset"
+
+/--
+Translates a call of the built-in `new` or `make` with the raw arguments `args`, of which `tail` are
+all but the first one, translated. The Go frontend drops the capacity of `make([]T, n, c)`, so
+`make` with a capacity is not in the verified subset.
+-/
+def translateAllocation (span : Span) (name : String) (args : List Expr) (tail : List Cpg.Expr) :
+    Cpg.Expr :=
+  match name, args with
+  | "new", [type] =>
+    match typeOf? type with
+    | some t => .new span (.pointer t) (.construction span t [])
+    | none => .problem span "new is not in the verified subset"
+  | "make", type :: _ =>
+    match typeOf? type with
+    | some t =>
+      if isArrayType type then
+        if args.length ≤ 2 then .arrayConstruction span t tail
+        else .problem span "make with a capacity is not in the verified subset"
+      else .construction span t tail
+    | none => .problem span "make is not in the verified subset"
+  | _, _ => .problem span "new and make are not in the verified subset"
+
+mutual
+
+/-- Translates a Go expression into a CPG expression. -/
+def translate (ctx : Ctx) : Expr → Cpg.Expr
+  | .basicLit span kind value =>
+    match litValue kind value with
+    | some v => .literal span v (litType kind) none
+    | none => .problem span s!"literal {value} is not in the verified subset"
+  | .ident span name => translateIdent ctx span name
+  | .binary span x op y => .binaryOperator span op.token (translate ctx x) (translate ctx y)
+  | .unary span op x => .unaryOperator span op.token (translate ctx x)
+  | .paren _ x => translate ctx x
+  | .selector span x sel =>
+    match packageOf? ctx.packages x with
+    -- A member of an imported package is referred to by its qualified name
+    | some p => .reference span (p ++ "." ++ sel)
+    | none => .memberAccess span sel (translate ctx x)
+  | .call span fn@(.selector _ x _) args =>
+    match packageOf? ctx.packages x with
+    | some _ => .call span (translate ctx fn) (translateList ctx args)
+    | none => .memberCall span (translate ctx fn) (translateList ctx args)
+  | .call span fn args =>
+    if isConversion fn.unparen then
+      translateConversion span (typeOf? fn.unparen) (translateList ctx args)
+    else
+    match calleeName? fn with
+    | some name =>
+      if (name == "new" || name == "make") && !ctx.shadowed.contains name then
+        translateAllocation span name args (translateTail ctx args)
+      else .call span (translate ctx fn) (translateList ctx args)
+    | none => .problem span "only calls of named functions and methods are in the verified subset"
+  | .index span x i => .subscription span (translate ctx x) (translate ctx i)
+  | .slice span x low high max =>
+    .subscription span (translate ctx x)
+      (.range span (translateOpt ctx low) (translateOpt ctx high) (translateOpt ctx max))
+  | .star span x => .pointerDereference span (translate ctx x)
+  | .typeAssert span x (some type) =>
+    match typeOf? type with
+    | some t => .cast span t (translate ctx x)
+    | none => .problem span "type assertion is not in the verified subset"
+  | .typeAssert span _ none => .problem span "type switch guards are not in the verified subset"
+  | .compositeLit span (some type) elts =>
+    match typeOf? type with
+    | some t =>
+      if keysSupported elts then .initializerList span t (translateElems ctx elts)
+      else .problem span "composite literal keys are not in the verified subset"
+    | none => .problem span "composite literal type is not in the verified subset"
+  | .compositeLit span none _ =>
+    .problem span "composite literals with elided types are not in the verified subset"
+  | .keyValue span .. => .problem span "key-value pairs only occur in composite literals"
+  | .arrayType span _ | .mapType span .. | .chanType span _ =>
+    .problem span "type expressions are not values"
+  | .unsupported span goType => .problem span s!"{goType} is not in the verified subset"
+
+/-- Translates an optional expression. -/
+def translateOpt (ctx : Ctx) : Option Expr → Option Cpg.Expr
+  | none => none
+  | some e => some (translate ctx e)
+
+/-- Translates the elements of a composite literal. -/
+def translateElems (ctx : Ctx) : List Expr → List Cpg.Expr
+  | [] => []
+  | .keyValue span key value :: rest =>
+    .keyValue span (translate ctx key) (translate ctx value) :: translateElems ctx rest
+  | e :: rest => translate ctx e :: translateElems ctx rest
+
+/-- Translates all but the first expression of a list. -/
+def translateTail (ctx : Ctx) : List Expr → List Cpg.Expr
+  | [] => []
+  | _ :: rest => translateList ctx rest
+
+/-- Translates a list of expressions. -/
+def translateList (ctx : Ctx) : List Expr → List Cpg.Expr
+  | [] => []
+  | e :: es => translate ctx e :: translateList ctx es
+
+end
+
+end Go
