@@ -1,9 +1,15 @@
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import com.example.Util;
 import static com.example.Logging.LOG;
 
 public class StaticCalls {
+    enum Color {
+        RED,
+        GREEN
+    }
+
     static int helper() {
         return 1;
     }
@@ -19,5 +25,14 @@ public class StaticCalls {
         list.size();
         // a call on a statically imported field, which is a value and not a type name
         LOG.info(s);
+
+        // a static field of a class that we only know from its import
+        int constant = Util.CONSTANT;
+        // a static field of a class in java.lang (which is imported implicitly)
+        int max = Integer.MAX_VALUE;
+        // a method reference to a static method of a class in java.lang
+        Function<String, Boolean> parse = Boolean::parseBoolean;
+        // a call on an enum constant
+        String color = Color.RED.name();
     }
 }
