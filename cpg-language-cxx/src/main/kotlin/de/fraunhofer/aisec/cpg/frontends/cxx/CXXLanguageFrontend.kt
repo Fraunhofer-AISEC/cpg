@@ -256,6 +256,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         }
 
         val symbols: HashMap<String, String> = HashMap()
+        config.profiles.forEach { symbols.putAll(it.symbols(language)) }
         symbols.putAll(config.symbols)
 
         // We aim to behave like clang

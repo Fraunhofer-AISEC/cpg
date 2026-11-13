@@ -387,6 +387,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleUnaryExpression(ctx: IASTUnaryExpression): Expression {
+        ctx.vaArgType()?.let { type ->
+            return handleVaArg(ctx, type)
+        }
+
         var input: Expression? = null
         if (ctx.operand != null) { // can be null e.g. for "throw;"
             input = handle(ctx.operand)
@@ -456,6 +460,55 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     unaryOperator.input = input
                 }
             }
+        }
+    }
+
+    /**
+     * CDT defines `__builtin_va_arg(ap, type)`, which is what `va_arg` of a `<stdarg.h>` expands to
+     * in GCC and Clang, as a builtin macro that expands to `*(typeof(type) *) ap`. If [this] is
+     * such an expansion, this returns the requested `type`, otherwise `null`.
+     *
+     * The shape alone is not enough, because `*(__typeof__(int) *) p` is a valid expression on its
+     * own. In the expansion of the macro, however, the dereference, the cast and the operand all
+     * stem from the macro (instead of from source code), and the macro is one of the expansions
+     * that lead to this expression.
+     */
+    private fun IASTUnaryExpression.vaArgType(): Type? {
+        if (operator != IASTUnaryExpression.op_star) {
+            return null
+        }
+
+        val cast = operand as? IASTCastExpression ?: return null
+        val specifier = cast.typeId?.declSpecifier as? IASTSimpleDeclSpecifier ?: return null
+        val typeofExpression = specifier.declTypeExpression as? IASTTypeIdExpression ?: return null
+        if (
+            specifier.type != IASTSimpleDeclSpecifier.t_typeof ||
+                typeofExpression.operator != IASTTypeIdExpression.op_typeof
+        ) {
+            return null
+        }
+
+        // All macros that lead to this expression, i.e., the outermost one (e.g., `va_arg`) and the
+        // ones nested in it.
+        val expansion = (nodeLocations.firstOrNull() as? IASTMacroExpansionLocation)?.expansion
+        val macros = expansion?.let { listOf(it.macroReference) + it.nestedMacroReferences }
+        if (macros == null || macros.none { it.toString() == "__builtin_va_arg" }) {
+            return null
+        }
+
+        return frontend.typeOf(typeofExpression.typeId)
+    }
+
+    /**
+     * Translates the expansion of `__builtin_va_arg(ap, type)` into a [Cast] of `ap` to `type`.
+     * This keeps the `va_list`, so that data flowing through it reaches the result.
+     */
+    private fun handleVaArg(ctx: IASTUnaryExpression, type: Type): Expression {
+        val operand = (ctx.operand as IASTCastExpression).operand
+        return newCast(rawNode = ctx) { cast ->
+            cast.expression = handle(operand) ?: ProblemExpression("could not parse va_list")
+            cast.castType = type
+            cast.type = type
         }
     }
 
