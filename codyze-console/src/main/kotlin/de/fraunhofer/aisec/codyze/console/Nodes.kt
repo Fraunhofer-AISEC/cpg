@@ -35,7 +35,16 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
+import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.serialization.*
@@ -277,6 +286,81 @@ data class ConceptRequestJSON(
 
 /** Request body for the `/api/execute-query` endpoint. */
 @Serializable data class ExecuteQueryRequestJSON(val scriptCode: String)
+
+/**
+ * Upper bound for each list in [NodeDetailsJSON], so that hub nodes do not blow up the response.
+ */
+private const val MAX_RELATED_NODES = 200
+
+/**
+ * A node that is related to the node it was listed for, e.g. a neighbour in the dataflow.
+ *
+ * @property label Describes the relation, if it is not a plain one, e.g. the granularity and
+ *   calling context of a dataflow.
+ */
+@Serializable data class RelatedNodeJSON(val node: NodeJSON, val label: String?)
+
+/**
+ * Everything the console knows about a single node that is relevant when inspecting it: its calls,
+ * its direct dataflows, attached concepts and operations, and where the analysis is uncertain.
+ *
+ * The dataflows only contain the direct neighbours, so that the frontend can expand them lazily
+ * into a tree. Each list holds at most [MAX_RELATED_NODES] nodes; the `…Count` properties have the
+ * number of nodes before this limit, so that the UI can tell that a list is incomplete.
+ *
+ * @property callTargets For a [Call]: the functions it invokes.
+ * @property callers For a [Function]: the calls that invoke it.
+ * @property callees For a [Function]: the calls in its body.
+ * @property warnings Places where the analysis is incomplete or uncertain for this node.
+ */
+@Serializable
+data class NodeDetailsJSON(
+    val node: NodeJSON,
+    val enclosingFunction: NodeJSON?,
+    val overlays: List<OverlayJSON>,
+    val callTargets: List<NodeJSON>,
+    val callers: List<NodeJSON>,
+    val callees: List<NodeJSON>,
+    val dataflowFrom: List<RelatedNodeJSON>,
+    val dataflowTo: List<RelatedNodeJSON>,
+    val warnings: List<String>,
+    val callTargetCount: Int,
+    val callerCount: Int,
+    val calleeCount: Int,
+    val dataflowFromCount: Int,
+    val dataflowToCount: Int,
+)
+
+/** A function together with its key figures. */
+@Serializable
+data class FunctionCallStatsJSON(
+    val function: NodeJSON,
+    val callers: Int,
+    val callees: Int,
+    val externalCalls: Int,
+    val unresolvedCalls: Int,
+)
+
+/**
+ * A call and how well the analysis knows its target.
+ *
+ * @property callee The expression naming the target (e.g. `fopen` in `fopen(path, "r")`), if it has
+ *   a location.
+ */
+@Serializable
+data class CallSiteJSON(val call: NodeJSON, val callee: NodeJSON?, val status: CallStatus)
+
+/**
+ * A concept or operation and the node it is attached to.
+ *
+ * @property concept For an operation: the concept it belongs to. `null` for a concept.
+ */
+@Serializable
+data class OverlayJSON(
+    val overlay: NodeJSON,
+    val underlyingNode: NodeJSON?,
+    val concept: NodeJSON?,
+)
 
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
@@ -541,5 +625,105 @@ fun RequirementBuilder.toJSON(
         status = status,
         categoryId = categoryId,
         queryTree = queryTree?.toJSON(),
+    )
+}
+
+/**
+ * Everything relevant to inspect this node, see [NodeDetailsJSON]: its calls, its direct dataflows,
+ * its concepts and operations, and warnings where the analysis is incomplete or uncertain.
+ */
+fun Node.toDetailsJSON(): NodeDetailsJSON {
+    val callTargets = (this as? Call)?.invokes.orEmpty()
+
+    val callers = (this as? Function)?.calledBy.orEmpty()
+    val callees = (this as? Function)?.body?.calls.orEmpty()
+    return NodeDetailsJSON(
+        node = toRefJSON(),
+        enclosingFunction = (this as? Function ?: firstParentOrNull<Function>())?.toRefJSON(),
+        overlays = overlays.mapNotNull { it.toOverlayJSON() },
+        callTargets = callTargets.limited { it.toRefJSON() },
+        callers = callers.limited { it.toRefJSON() },
+        callees = callees.limited { it.toRefJSON() },
+        dataflowFrom =
+            prevDFGEdges.limited { RelatedNodeJSON(it.start.toRefJSON(), it.describe()) },
+        dataflowTo = nextDFGEdges.limited { RelatedNodeJSON(it.end.toRefJSON(), it.describe()) },
+        warnings = diagnostics().map { it.message },
+        callTargetCount = callTargets.size,
+        callerCount = callers.size,
+        calleeCount = callees.size,
+        dataflowFromCount = prevDFGEdges.size,
+        dataflowToCount = nextDFGEdges.size,
+    )
+}
+
+/** Describes the granularity and calling context of a dataflow, if it is not a plain one. */
+private fun Dataflow.describe(): String? {
+    val parts = mutableListOf<String>()
+    (granularity as? PartialDataflowGranularity<*>)?.partialTarget?.let { target ->
+        parts += "partial: ${(target as? Node)?.name ?: target}"
+    }
+    if (this is ContextSensitiveDataflow) {
+        // The contexts in the order of the flow, e.g. out of one call and into the next one
+        for (context in callingContexts) {
+            when (context) {
+                is CallingContextIn -> parts += "into call"
+                is CallingContextOut -> parts += "out of call"
+            }
+        }
+    }
+    return parts.joinToString(", ").ifEmpty { null }
+}
+
+private fun <T, R> Collection<T>.limited(transform: (T) -> R): List<R> =
+    asSequence().take(MAX_RELATED_NODES).map(transform).toList()
+
+/** The functions of this translation unit that have a body, with their key figures. */
+fun TranslationUnit.toFunctionCallStatsJSON(): List<FunctionCallStatsJSON> =
+    functions
+        .filter { !it.isImplicit && it.body != null && it.isInFileOf(this) }
+        .map { function ->
+            // The calls written in the code, like the call sites (see toCallSitesJSON)
+            val statuses =
+                function.body.calls
+                    .filter { it !is OperatorCall && !it.isImplicit }
+                    .map { it.status }
+            FunctionCallStatsJSON(
+                function = function.toRefJSON(),
+                callers = function.calledBy.size,
+                callees = statuses.size,
+                externalCalls = statuses.count { it == CallStatus.EXTERNAL },
+                unresolvedCalls = statuses.count { it == CallStatus.UNRESOLVED },
+            )
+        }
+
+/**
+ * The calls written in this translation unit, with the status of their targets. Operator calls and
+ * implicit calls are left out, since they are not written as calls in the code.
+ */
+fun TranslationUnit.toCallSitesJSON(): List<CallSiteJSON> =
+    nodes
+        .filterIsInstance<Call>()
+        .filter { it !is OperatorCall && !it.isImplicit && it.isInFileOf(this) }
+        .map { call ->
+            CallSiteJSON(
+                call = call.toRefJSON(),
+                callee = call.callee.takeIf { it.location != null }?.toRefJSON(),
+                status = call.status,
+            )
+        }
+
+/** The concepts and operations attached to the nodes of this translation unit. */
+fun TranslationUnit.toOverlaysJSON(): List<OverlayJSON> =
+    nodes
+        .filter { it.isInFileOf(this) }
+        .flatMap { node -> node.overlays.mapNotNull { it.toOverlayJSON() } }
+
+/** This node as [OverlayJSON], or `null` if it is neither a [Concept] nor an [Operation]. */
+fun Node.toOverlayJSON(): OverlayJSON? {
+    if (this !is Concept && this !is Operation) return null
+    return OverlayJSON(
+        overlay = toRefJSON(),
+        underlyingNode = (this as OverlayNode).underlyingNode?.toRefJSON(),
+        concept = (this as? Operation)?.concept?.toRefJSON(),
     )
 }

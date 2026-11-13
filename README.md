@@ -144,6 +144,19 @@ The current state of languages is:
 
 Note that several languages can be compiled to LLVM IR and thus, can be analyzed using the `cpg-language-llvm` module (see [7]). This includes, but is not limited to, Rust, Swift, Objective-C, and Haskell (see https://llvm.org/ for more information). 
 
+#### Incremental Analysis
+
+The following frontends support adding new source files to an already-analyzed project (`TranslationManager.addSource`) without a full re-analysis:
+
+| Language | Module               |
+|----------|----------------------|
+| Java     | cpg-language-java    |
+| C/C++    | cpg-language-cxx     |
+| Python   | cpg-language-python  |
+| Ruby     | cpg-language-ruby    |
+
+**Caveat:** this only covers *adding* new files; modifying or removing already-analyzed files is not supported.
+
 ### Languages and Configuration
 `cpg-core` contains the graph nodes, language-independent passes that add semantics to the cpg-AST. Languages are developed in separate gradle submodules. 
 To include the desired language submodules, simply toggle them on in your local `gradle.properties` file by setting the properties to `true`, e.g., (`enableGoFrontend=true`).

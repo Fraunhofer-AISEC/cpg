@@ -17,7 +17,7 @@ sarif4k = "0.8.0"
 ktor = "3.6.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
-jline = "3.30.7"
+jline = "3.30.15"
 koog = "1.2.0"
 
 [libraries]
