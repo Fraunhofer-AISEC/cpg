@@ -655,6 +655,16 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             if (base is Reference && base.refersTo is Record) {
                 isStatic = true
             }
+
+            // If the scope is the name of a type (e.g., `Arrays` in `Arrays.asList()`), we set the
+            // type of the base to the (fully qualified) declaring type, so that the call can be
+            // resolved (or inferred) even if the type is not part of our graph.
+            val declaringType = staticScopeType(scope, resolved)
+            if (base is Reference && declaringType != null) {
+                isStatic = true
+                base.isStaticAccess = true
+                base.type = this.objectType(declaringType)
+            }
         } else {
             // If the call does not have any base, there are two possibilities:
             // a) The "this" could be omitted, making it a member call to the current class
@@ -698,6 +708,51 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             )
         }
         return callExpression
+    }
+
+    /**
+     * Returns the fully qualified name of the type that [scope] refers to, if the [scope] of a
+     * method call is the name of a type rather than a value, e.g., `Arrays` in `Arrays.asList()`.
+     * We use the [resolved] method if JavaParser could resolve it, and the imports otherwise.
+     */
+    private fun staticScopeType(
+        scope: JPExpression,
+        resolved: ResolvedMethodDeclaration?,
+    ): String? {
+        if (scope !is NameExpr) {
+            return null
+        }
+
+        // An instance method can never be called on a type name, so we can skip the (expensive)
+        // resolution of the scope in this case
+        if (resolved != null && !resolved.isStatic) {
+            return null
+        }
+
+        // If the name resolves to a value (e.g., a variable), it is not a type
+        val isValue =
+            try {
+                scope.resolve()
+                true
+            } catch (_: RuntimeException) {
+                false
+            } catch (_: NoClassDefFoundError) {
+                // JavaParser can throw this with a partial classpath. We cannot tell, so we assume
+                // it is not a value
+                false
+            }
+        if (isValue) {
+            return null
+        }
+
+        if (resolved != null) {
+            return resolved.declaringType().qualifiedName
+        }
+
+        // Static imports (`import static a.B.LOG;`) import a member and not a type
+        return frontend
+            .getQualifiedNameFromImports(scope.nameAsString, includeStatic = false)
+            ?.toString()
     }
 
     /**
