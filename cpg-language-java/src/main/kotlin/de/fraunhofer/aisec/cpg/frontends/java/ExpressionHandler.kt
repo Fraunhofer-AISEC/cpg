@@ -426,10 +426,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val symbol =
             try {
                 fieldAccessExpr.resolve()
-            } catch (_: RuntimeException) {
+            } catch (ex: RuntimeException) {
+                log.debug("Could not resolve field access {}: {}", fieldAccessExpr, ex.message)
                 null
-            } catch (_: NoClassDefFoundError) {
+            } catch (ex: NoClassDefFoundError) {
                 // JavaParser throws this (an Error) if the classpath is incomplete
+                log.debug("Could not resolve field access {}: {}", fieldAccessExpr, ex.message)
                 null
             }
         val declaringType =
@@ -780,11 +782,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     else -> return null
                 }
                 true
-            } catch (_: RuntimeException) {
+            } catch (ex: RuntimeException) {
+                log.debug("Could not resolve scope {} as a value: {}", scope, ex.message)
                 false
-            } catch (_: NoClassDefFoundError) {
+            } catch (ex: NoClassDefFoundError) {
                 // JavaParser can throw this with a partial classpath. We cannot tell, so we assume
                 // it is not a value
+                log.debug("Could not resolve scope {} as a value: {}", scope, ex.message)
                 false
             }
         if (isValue) {
