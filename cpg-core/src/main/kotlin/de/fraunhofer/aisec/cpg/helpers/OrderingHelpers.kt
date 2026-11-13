@@ -169,3 +169,103 @@ fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node>
 
     return orderedList
 }
+
+/**
+ * Groups the [eogStarters] into "waves" that can be analyzed one after the other, where everything
+ * inside one wave is independent and can be analyzed in parallel.
+ *
+ * The functions are partitioned into the strongly connected components of the call graph (a group
+ * of mutually recursive functions is one task, which has to be analyzed sequentially), and the
+ * components are sorted by their distance from the leaves of the call graph: wave 0 contains the
+ * components which do not call anything outside of themselves, and wave n the components whose
+ * callees all are in earlier waves. A function therefore only ever depends on functions which have
+ * already been analyzed completely when it is analyzed, except for recursion inside of its own
+ * task.
+ *
+ * Everything which is not a function is put into a last wave, one task per node. The tasks and the
+ * members of a task are sorted by name so that the result does not depend on the iteration order of
+ * hash sets.
+ */
+fun orderEOGStartersInWaves(eogStarters: Iterable<Node>): List<List<List<Node>>> {
+    val functions = eogStarters.filterIsInstance<Function>()
+    val others = eogStarters.filter { it !is Function }
+
+    val indexOf = IdentityHashMap<Function, Int>()
+    functions.forEachIndexed { i, f -> indexOf[f] = i }
+    val callees =
+        Array(functions.size) { i ->
+            functions[i].callees.mapNotNull { indexOf[it] }.distinct().sorted()
+        }
+
+    // Tarjan's algorithm without recursion (call graphs can be very deep). The components are
+    // numbered in the order in which they are completed, which has the callees first.
+    val index = IntArray(functions.size) { -1 }
+    val low = IntArray(functions.size)
+    val onStack = BooleanArray(functions.size)
+    val componentOf = IntArray(functions.size) { -1 }
+    val components = mutableListOf<List<Int>>()
+    val stack = ArrayDeque<Int>()
+    var counter = 0
+    for (root in functions.indices) {
+        if (index[root] != -1) continue
+        val work = ArrayDeque<IntArray>() // (node, next callee position)
+        index[root] = counter
+        low[root] = counter++
+        stack.addLast(root)
+        onStack[root] = true
+        work.addLast(intArrayOf(root, 0))
+        while (work.isNotEmpty()) {
+            val frame = work.last()
+            val v = frame[0]
+            if (frame[1] < callees[v].size) {
+                val w = callees[v][frame[1]++]
+                if (index[w] == -1) {
+                    index[w] = counter
+                    low[w] = counter++
+                    stack.addLast(w)
+                    onStack[w] = true
+                    work.addLast(intArrayOf(w, 0))
+                } else if (onStack[w]) {
+                    low[v] = minOf(low[v], index[w])
+                }
+            } else {
+                work.removeLast()
+                work.lastOrNull()?.let { low[it[0]] = minOf(low[it[0]], low[v]) }
+                if (low[v] == index[v]) {
+                    val members = mutableListOf<Int>()
+                    do {
+                        val w = stack.removeLast()
+                        onStack[w] = false
+                        componentOf[w] = components.size
+                        members.add(w)
+                    } while (w != v)
+                    components.add(members)
+                }
+            }
+        }
+    }
+
+    // One more than the highest level of what a component calls. Callees come first.
+    val level = IntArray(components.size)
+    components.forEachIndexed { c, members ->
+        var l = 0
+        for (m in members) for (callee in callees[m]) {
+            if (componentOf[callee] != c) l = maxOf(l, level[componentOf[callee]] + 1)
+        }
+        level[c] = l
+    }
+
+    val waves = mutableListOf<MutableList<List<Node>>>()
+    components.forEachIndexed { c, members ->
+        while (waves.size <= level[c]) waves.add(mutableListOf())
+        waves[level[c]].add(members.map { functions[it] }.sortedBy { it.name.toString() })
+    }
+    val sortedWaves =
+        waves.map { wave -> wave.sortedBy { it.first().name.toString() } }.toMutableList()
+    if (others.isNotEmpty()) sortedWaves.add(others.map { listOf(it) })
+
+    log.info(
+        "Ordered ${functions.size} functions into ${components.size} components in ${waves.size} waves"
+    )
+    return sortedWaves
+}

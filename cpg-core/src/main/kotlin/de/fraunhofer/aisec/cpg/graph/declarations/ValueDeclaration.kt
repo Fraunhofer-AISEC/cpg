@@ -79,7 +79,7 @@ abstract class ValueDeclaration : Declaration(), HasType, HasMemoryAddress, HasM
             }
         }
 
-    override var assignedTypes: Set<Type> = mutableSetOf()
+    override var assignedTypes: Set<Type> = java.util.LinkedHashSet<Type>(2)
         set(value) {
             if (field == value) {
                 return

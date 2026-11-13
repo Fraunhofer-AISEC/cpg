@@ -62,6 +62,18 @@ import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
+
+/**
+ * The number of coroutines the lattice operations and the `...MaybeParallel` helpers may use for
+ * the work *inside* one analysis task. It is [CPU_CORES] unless the tasks of a pass run in parallel
+ * themselves (see [de.fraunhofer.aisec.cpg.passes.consumeTargetsInWaves]): then the scheduler sets
+ * it to the share of cores that is left for each task, so that outer and inner parallelism together
+ * stay within the available cores.
+ */
+object ParallelismBudget {
+    @Volatile var inner: Int = CPU_CORES
+}
+
 val MIN_CHUNK_SIZE = 100
 
 /**
@@ -684,7 +696,36 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     }
 }
 
-class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
+/**
+ * An immutable set which keeps its (few) elements in an array in the order they were given, so that
+ * it needs a fraction of the memory of a [LinkedHashSet]. Lookups are linear, therefore [of] only
+ * creates it for up to [MAX_SIZE] elements.
+ */
+class SmallSet<T> private constructor(private val items: Array<Any?>) :
+    kotlin.collections.AbstractSet<T>() {
+    override val size: Int
+        get() = items.size
+
+    @Suppress("UNCHECKED_CAST")
+    override fun iterator(): Iterator<T> = (items.asList() as List<T>).iterator()
+
+    override fun contains(element: T): Boolean = items.any { it == element }
+
+    companion object {
+        const val MAX_SIZE = 8
+
+        /**
+         * Copies [elements] into a [SmallSet] or, if there are too many, into a [LinkedHashSet].
+         */
+        fun <T> of(elements: Set<T>): Set<T> {
+            if (elements.size > MAX_SIZE)
+                return java.util.Collections.unmodifiableSet(LinkedHashSet(elements))
+            return SmallSet(elements.toTypedArray<Any?>())
+        }
+    }
+}
+
+class EqualLinkedHashSet<T> : LinkedHashSet<T>(2) {
     override fun equals(other: Any?): Boolean {
         return super.equals(other)
     }
@@ -898,7 +939,7 @@ interface Lattice<T : Lattice.Element> {
         allowModify: Boolean = false,
         widen: Boolean = false,
         // On how many cores do we want to do the work?
-        concurrencyCounter: Int = CPU_CORES,
+        concurrencyCounter: Int = ParallelismBudget.inner,
     ): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
