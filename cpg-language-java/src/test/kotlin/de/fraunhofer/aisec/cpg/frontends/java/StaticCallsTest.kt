@@ -76,6 +76,14 @@ class StaticCallsTest {
         assertIs<MemberCall>(size)
         assertTrue(!size.isStatic)
 
+        // a call on a statically imported field is not a static call on a type named after the
+        // field
+        val info = result.calls["info"]
+        assertIs<MemberCall>(info)
+        assertTrue(!info.isStatic)
+        assertTrue((info.base as? Reference)?.isStaticAccess != true)
+        assertTrue(info.base?.type?.name.toString() != "com.example.Logging.LOG")
+
         // we must not infer fields for the type names used as scope
         assertTrue(result.fields.none { it.name.localName in listOf("Arrays", "Util") })
     }

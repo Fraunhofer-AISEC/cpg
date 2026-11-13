@@ -372,7 +372,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
         return null
     }
 
-    fun getQualifiedNameFromImports(className: String?): Name? {
+    fun getQualifiedNameFromImports(className: String?, includeStatic: Boolean = true): Name? {
         if (context != null && className != null) {
             val name = parseName(className)
 
@@ -381,6 +381,10 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 // Skip asterisk imports, otherwise the name comparison below will get confused
                 // and we are looking for directly imported classes here only
                 if (importDeclaration.isAsterisk) {
+                    continue
+                }
+
+                if (!includeStatic && importDeclaration.isStatic) {
                     continue
                 }
 

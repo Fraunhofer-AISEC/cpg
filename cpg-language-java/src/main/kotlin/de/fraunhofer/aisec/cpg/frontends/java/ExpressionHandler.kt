@@ -723,6 +723,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             return null
         }
 
+        // An instance method can never be called on a type name, so we can skip the (expensive)
+        // resolution of the scope in this case
+        if (resolved != null && !resolved.isStatic) {
+            return null
+        }
+
         // If the name resolves to a value (e.g., a variable), it is not a type
         val isValue =
             try {
@@ -730,16 +736,23 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 true
             } catch (_: RuntimeException) {
                 false
+            } catch (_: NoClassDefFoundError) {
+                // JavaParser can throw this with a partial classpath. We cannot tell, so we assume
+                // it is not a value
+                false
             }
         if (isValue) {
             return null
         }
 
         if (resolved != null) {
-            return if (resolved.isStatic) resolved.declaringType().qualifiedName else null
+            return resolved.declaringType().qualifiedName
         }
 
-        return frontend.getQualifiedNameFromImports(scope.nameAsString)?.toString()
+        // Static imports (`import static a.B.LOG;`) import a member and not a type
+        return frontend
+            .getQualifiedNameFromImports(scope.nameAsString, includeStatic = false)
+            ?.toString()
     }
 
     /**

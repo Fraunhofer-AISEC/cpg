@@ -1,6 +1,7 @@
 import java.util.Arrays;
 import java.util.List;
 import com.example.Util;
+import static com.example.Logging.LOG;
 
 public class StaticCalls {
     static int helper() {
@@ -16,5 +17,7 @@ public class StaticCalls {
         StaticCalls.helper();
         // a regular call on a variable
         list.size();
+        // a call on a statically imported field, which is a value and not a type name
+        LOG.info(s);
     }
 }
