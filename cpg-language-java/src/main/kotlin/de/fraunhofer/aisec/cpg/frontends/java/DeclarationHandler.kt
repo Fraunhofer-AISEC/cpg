@@ -464,12 +464,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     frontend.scopeManager.addDeclaration(c)
                     recordDeclaration.constructors += c
                 }
-                is ClassOrInterfaceDeclaration -> {
-                    val cls = handle(decl) as Record
-                    frontend.scopeManager.addDeclaration(cls)
-                    recordDeclaration.records += cls
-                }
-                is EnumDeclaration -> {
+                // RecordDeclaration is not a ClassOrInterfaceDeclaration but a sibling of it (both
+                // are TypeDeclarations), so nested records need to be listed explicitly
+                is ClassOrInterfaceDeclaration,
+                is EnumDeclaration,
+                is RecordDeclaration -> {
                     val cls = handle(decl) as Record
                     frontend.scopeManager.addDeclaration(cls)
                     recordDeclaration.records += cls
