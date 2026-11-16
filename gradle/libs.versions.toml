@@ -11,7 +11,7 @@ publish = "0.37.0"
 # rebuilt on new pushes; pin a tag/commit for a reproducible build.
 sootup = "3.0.0-alpha3"
 slf4j = "2.0.16"
-clikt = "5.1.0"
+clikt = "5.2.0"
 kaml = "0.104.0"
 sarif4k = "0.8.0"
 ktor = "3.6.0"
