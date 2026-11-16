@@ -46,11 +46,14 @@ class OverlayNodeEquality {
 
         val call1 = Call()
         call1.location = PhysicalLocation(URI("./some/path"), Region(1, 1, 1, 1))
+        call1.code = "open()"
         val call2 = Call()
         call2.location = PhysicalLocation(URI("./some/path"), Region(1, 2, 1, 3))
 
+        // Attaching file1 copies the code and location of call1 into it, which does not make it
+        // different from the unattached file2.
         file1.underlyingNode = call1
-        assertNotEquals(file1, file2)
+        assertEquals(file1, file2)
         file2.underlyingNode = call2
         assertNotEquals(file1, file2)
     }

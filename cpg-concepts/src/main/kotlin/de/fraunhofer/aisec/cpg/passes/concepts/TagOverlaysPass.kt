@@ -58,7 +58,17 @@ import java.util.WeakHashMap
 @Description("Tags overlay nodes to underlying nodes based on a tagging context.")
 open class TagOverlaysPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
-    open class Configuration(var tag: TaggingContext) : PassConfiguration()
+    /**
+     * @param tag The tagging rules.
+     * @param iterateToFixpoint Executes the pass again as long as it attaches new overlay nodes, so
+     *   that rules can build upon overlays of EOG starters processed later, see
+     *   [EOGConceptPass.iterateToFixpoint].
+     */
+    open class Configuration(var tag: TaggingContext, var iterateToFixpoint: Boolean = false) :
+        PassConfiguration()
+
+    override val iterateToFixpoint: Boolean
+        get() = passConfig<Configuration>()?.iterateToFixpoint == true
 
     /**
      * Installs an [IfdsSummaryCache] on the current [Component] (once per component) before running

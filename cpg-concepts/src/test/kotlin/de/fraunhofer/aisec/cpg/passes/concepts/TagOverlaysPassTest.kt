@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
@@ -42,11 +43,13 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class TagOverlaysPassTest {
 
@@ -80,6 +83,64 @@ class TagOverlaysPassTest {
         }
 
         override fun hashCode() = Objects.hash(super.hashCode())
+    }
+
+    class Release(underlyingNode: Node? = null) : Concept(underlyingNode) {
+        override fun equals(other: Any?): Boolean {
+            return other is Release && super.equals(other)
+        }
+
+        override fun hashCode() = Objects.hash(super.hashCode())
+    }
+
+    /**
+     * Tags `release()` in `early` only if `acquire()` in `later`, a function processed after
+     * `early`, already has its [Resource]. Returns the result and how often the pass visited
+     * `acquire()`, i.e., how often it was executed.
+     */
+    private fun tagAcrossFunctions(iterateToFixpoint: Boolean): Pair<TranslationResult, Int> {
+        val acquireVisits = AtomicInteger()
+        val tagging = tag {
+            each<Call>("acquire").with {
+                acquireVisits.incrementAndGet()
+                Resource()
+            }
+            each<Call>("release").with {
+                val resources =
+                    node.translationUnit.allChildrenWithOverlays<Resource>() +
+                        state.values.flatten().filterIsInstance<Resource>()
+                if (resources.isNotEmpty()) Release() else null
+            }
+        }
+        val result =
+            with(
+                TestLanguageFrontend(
+                    ctx =
+                        TranslationContext(
+                            config =
+                                TranslationConfiguration.builder()
+                                    .registerPass<TagOverlaysPass>()
+                                    .configurePass<TagOverlaysPass>(
+                                        TagOverlaysPass.Configuration(tagging, iterateToFixpoint)
+                                    )
+                                    .build()
+                        )
+                )
+            ) {
+                build {
+                    singleTranslationUnit { tu ->
+                        for ((name, callee) in listOf("early" to "release", "later" to "acquire")) {
+                            newFunction(name, holder = tu, enterScope = true) { function ->
+                                function.body =
+                                    newBlock(enterScope = true) { block ->
+                                        block.statements += newCall(newReference(callee))
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
+        return Pair(result, acquireVisits.get())
     }
 
     @Test
@@ -197,36 +258,100 @@ class TagOverlaysPassTest {
     }
 
     @Test
-    fun testEqualOverlaysAreAttachedOnce() {
-        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+    fun testEqualOverlaysAreInternedPerNode() {
+        val lattice = NodeToOverlayState()
         val call = Call()
 
-        // E.g. from the states of two EOG paths to the call, see EOGConceptPass.attachOverlays
+        // E.g. from the states of two EOG paths to the call, or from evaluating it again
         val first = Resource()
-        val attached = pass.attachOverlays(call, listOf(first, Resource()))
-        assertEquals(listOf<Node>(first), attached)
-        assertEquals(listOf<Node>(first), call.overlays.toList())
+        assertEquals(listOf<Node>(first), lattice.intern(call, listOf(first, Resource())))
+        assertEquals(listOf<Node>(first), lattice.intern(call, listOf(Resource())))
 
-        // An equal one in a later execution of the pass is not attached either
-        assertEquals(emptyList(), pass.attachOverlays(call, listOf(Resource())))
-        assertEquals(listOf<Node>(first), call.overlays.toList())
+        // Overlays of another node are not shared
+        val other = Call()
+        val second = Resource()
+        assertEquals(listOf<Node>(second), lattice.intern(other, listOf(second)))
     }
 
     @Test
-    fun testEqualOperationsAreAttachedOnce() {
+    fun testAttachedOverlaysTakePrecedence() {
+        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+        val call = Call()
+        val attached = Resource()
+        pass.attachOverlays(call, listOf(attached))
+
+        // E.g. in a later execution of the pass
+        val lattice = NodeToOverlayState()
+        assertEquals(listOf<Node>(attached), lattice.intern(call, listOf(Resource())))
+        assertEquals(
+            emptyList(),
+            pass.attachOverlays(call, lattice.intern(call, listOf(Resource()))),
+        )
+        assertEquals(listOf<Node>(attached), call.overlays.toList())
+    }
+
+    @Test
+    fun testOperationsReferToTheInternedConcept() {
+        val lattice = NodeToOverlayState()
+        val acquire = Call()
+        val release = Call()
+        val resource = Resource()
+        assertEquals(listOf<Node>(resource), lattice.intern(acquire, listOf(resource)))
+
+        // An operation built upon the equal resource of another evaluation is equal to one built
+        // upon the interned resource, so it is replaced by that one
+        val use = Use(resource)
+        assertEquals(listOf<Node>(use), lattice.intern(release, listOf(use, Use(Resource()))))
+    }
+
+    @Test
+    fun testNewOperationsKeepTheirConcept() {
+        val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
+        val call = Call()
+        pass.attachOverlays(call, listOf(Resource()))
+
+        // The resource is equal to the attached one, but the new operation refers to it, so it is
+        // kept rather than leaving the operation with a concept that is never attached
+        val resource = Resource()
+        val use = Use(resource)
+        val interned = NodeToOverlayState().intern(call, listOf(resource, use))
+        assertEquals(listOf<Node>(resource, use), interned)
+    }
+
+    @Test
+    fun testOperationsAreAttachedOnce() {
         val pass = TagOverlaysPass(TranslationContext(TranslationConfiguration.builder().build()))
         val call = Call()
         val next = Reference()
         call.nextEOGEdges += EvaluationOrder(call, next)
         val resource = Resource()
+        val use = Use(resource)
+        assertEquals(listOf<Node>(resource, use), pass.attachOverlays(call, listOf(resource, use)))
 
-        val first = Use(resource)
-        val attached = pass.attachOverlays(call, listOf(first, Use(resource)))
-        assertEquals(listOf<Node>(first), attached)
+        // A later execution of the pass holds the same instances, which are skipped
+        assertEquals(emptyList(), pass.attachOverlays(call, listOf(resource, use)))
+        assertEquals(listOf<Node>(use), call.nextEOG.toList())
+        assertEquals(listOf<Node>(next), use.nextEOG.toList())
+        assertEquals(setOf<Operation>(use), resource.ops)
+    }
 
-        // The operation is inserted into the EOG and added to its concept only once
-        assertEquals(listOf<Node>(first), call.nextEOG.toList())
-        assertEquals(listOf<Node>(next), first.nextEOG.toList())
-        assertEquals(setOf<Operation>(first), resource.ops)
+    @Test
+    fun testOverlaysOfLaterFunctionsNeedFixpoint() {
+        val (result, executions) = tagAcrossFunctions(iterateToFixpoint = false)
+
+        assertEquals(1, executions)
+        assertNotNull(result.calls["acquire"]?.conceptNodes?.singleOrNull() as? Resource)
+        assertTrue(result.calls["release"]?.conceptNodes.isNullOrEmpty())
+    }
+
+    @Test
+    fun testIterateToFixpoint() {
+        val (result, executions) = tagAcrossFunctions(iterateToFixpoint = true)
+
+        // The first execution tags acquire, the second one release, the third one nothing new
+        assertEquals(3, executions)
+        assertNotNull(result.calls["acquire"]?.conceptNodes?.singleOrNull() as? Resource)
+        assertNotNull(result.calls["release"]?.conceptNodes?.singleOrNull() as? Release)
+        assertTrue(result.dirtyNodes.values.none { TagOverlaysPass::class in it })
     }
 }
