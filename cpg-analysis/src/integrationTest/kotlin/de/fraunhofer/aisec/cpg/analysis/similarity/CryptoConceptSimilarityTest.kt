@@ -89,9 +89,9 @@ class CryptoConceptSimilarityTest {
         assertTrue(asymmetric.isNotEmpty())
         assertTrue(decrypt.isNotEmpty())
 
-        val simSame = compareSequenceSets(c, same, listSimilarity)
-        val simAsymmetric = compareSequenceSets(c, asymmetric, listSimilarity)
-        val simDecrypt = compareSequenceSets(c, decrypt, listSimilarity)
+        val simSame = compareSequenceSets(c, same, listSimilarity).score
+        val simAsymmetric = compareSequenceSets(c, asymmetric, listSimilarity).score
+        val simDecrypt = compareSequenceSets(c, decrypt, listSimilarity).score
 
         assertTrue(
             simSame > simAsymmetric,
@@ -224,7 +224,7 @@ class CryptoConceptSimilarityTest {
             }
         }
 
-        val result = compareSequenceSets(a, b, listSimilarity)
+        val result = compareSequenceSets(a, b, listSimilarity).score
         println("    weakest trace : $worstLa  ->  $worstLb  =  ${"%.3f".format(worstScore)}")
         println("    SetSimilarity = ${"%.3f".format(result)}")
         return result

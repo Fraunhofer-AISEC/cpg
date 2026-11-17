@@ -42,7 +42,7 @@ class SetSimilarityTest {
     // an empty first set is vacuously similar
     @Test
     fun emptyFirstSetIsVacuouslySimilar() {
-        assertEquals(1.0, compareSequenceSets(emptySet(), setOf(listOf("A")), listSim))
+        assertEquals(1.0, compareSequenceSets(emptySet(), setOf(listOf("A")), listSim).score)
     }
 
     // default aggregate is the minimum of the per-a best matches
@@ -54,7 +54,7 @@ class SetSimilarityTest {
         // ["X"] matches ["X"] perfectly (1.0); ["M"] has nothing to match (-1.0). The default
         // (min) should report the worst-represented sequence in a, i.e. -1.0.
         val result = compareSequenceSets(a, b, listSim)
-        assertApprox(-1.0, result)
+        assertApprox(-1.0, result.score)
     }
 
     // aggregate is configurable
@@ -64,7 +64,7 @@ class SetSimilarityTest {
         val b = setOf(listOf("X"))
 
         val average = compareSequenceSets(a, b, listSim, aggregate = { it.average() })
-        assertApprox(0.0, average) // (1.0 + -1.0) / 2
+        assertApprox(0.0, average.score) // (1.0 + -1.0) / 2
     }
 
     // by default b-sequences can be matched by more than one a-sequence
@@ -76,7 +76,7 @@ class SetSimilarityTest {
         // Both a-sequences share the same best match in b (["X"]), scoring 0.0 each; nothing
         // forces them to spread out over different b-sequences.
         val result = compareSequenceSets(a, b, listSim)
-        assertApprox(0.0, result)
+        assertApprox(0.0, result.score)
     }
 
     // consumeMatches forces a greedy one-to-one matching
@@ -88,12 +88,70 @@ class SetSimilarityTest {
         // With consumeMatches, only the first a-sequence gets the (shared) best match ["X"]; the
         // second is forced onto ["Z"], which is a much worse match.
         val result = compareSequenceSets(a, b, listSim, consumeMatches = true)
-        assertApprox(-1.0, result)
+        assertApprox(-1.0, result.score)
 
         val withoutConsuming = compareSequenceSets(a, b, listSim, consumeMatches = false)
         assertTrue(
-            result < withoutConsuming,
-            "consuming matches should never score higher than allowing reuse ($result vs $withoutConsuming)",
+            result.score < withoutConsuming.score,
+            "consuming matches should never score higher than allowing reuse " +
+                "(${result.score} vs ${withoutConsuming.score})",
         )
+    }
+
+    // by default, no outlier detector is applied, so a statistical outlier still sets the floor
+    @Test
+    fun defaultDetectOutliersExcludesNothing() {
+        val a = setOf(listOf("A"), listOf("B"), listOf("C"), listOf("D"), listOf("M"))
+        val b = setOf(listOf("A"), listOf("B"), listOf("C"), listOf("D"))
+
+        // A/B/C/D match perfectly (1.0 each); M has nothing to match (-1.0). Without an
+        // outlier detector, the plain min still reports -1.0 and nothing is excluded.
+        val result = compareSequenceSets(a, b, listSim)
+        assertApprox(-1.0, result.score)
+        assertTrue(result.outliers.isEmpty())
+    }
+
+    // a supplied detectOutliers excludes the flagged scores from aggregate, and reports them
+    @Test
+    fun detectOutliersExcludesFlaggedScoresFromTheScoreButReportsThem() {
+        val a = setOf(listOf("A"), listOf("B"), listOf("C"), listOf("D"), listOf("M"))
+        val b = setOf(listOf("A"), listOf("B"), listOf("C"), listOf("D"))
+
+        // A/B/C/D score 1.0 each; M scores -1.0 (no match). A detector that flags only the
+        // single lowest score should leave the min of the remaining (1.0) as the final score,
+        // while still reporting M's best match as the excluded outlier.
+        val result =
+            compareSequenceSets(
+                a,
+                b,
+                listSim,
+                detectOutliers = { scores -> setOf(scores.indices.minBy { scores[it] }) },
+            )
+
+        assertApprox(1.0, result.score)
+        assertEquals(1, result.outliers.size)
+        assertEquals(listOf("M"), result.outliers.single().a)
+        assertApprox(-1.0, result.outliers.single().score)
+    }
+
+    // if detectOutliers flags every score, aggregate falls back to running over all of them
+    // instead of a vacuous empty-list result, and outliers is reported as empty
+    @Test
+    fun detectOutliersFlaggingEverythingFallsBackToAggregatingAllScores() {
+        val a = setOf(listOf("X"), listOf("M"))
+        val b = setOf(listOf("X"))
+
+        val result =
+            compareSequenceSets(
+                a,
+                b,
+                listSim,
+                detectOutliers = { scores -> scores.indices.toSet() },
+            )
+
+        // Same as the no-outliers-detected case: min(1.0, -1.0) == -1.0, and nothing is reported
+        // as excluded since nothing was actually excluded from the score.
+        assertApprox(-1.0, result.score)
+        assertTrue(result.outliers.isEmpty())
     }
 }

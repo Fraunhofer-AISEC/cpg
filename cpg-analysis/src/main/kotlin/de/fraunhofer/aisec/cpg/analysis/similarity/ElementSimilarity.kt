@@ -47,7 +47,7 @@ fun lexicographicSimilarity(
 ): (String, String) -> Double = { a, b ->
     val fieldsA = a.split(delimiter)
     val fieldsB = b.split(delimiter)
-
+    // Here we may need something more relaxed than to fail hard every time the strings are just a bit mismatched.
     if (fieldsA[0] != fieldsB[0]) {
         mismatchScore
     } else {
