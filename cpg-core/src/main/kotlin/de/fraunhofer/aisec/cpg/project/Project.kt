@@ -450,6 +450,9 @@ class ProjectBuilder(
             builder.symbols(symbols)
         }
         detectionResults.flatMap { it.includePaths }.forEach { builder.includePath(it) }
+        if (detectionResults.any { it.loadIncludes }) {
+            builder.loadIncludes(true)
+        }
         detectionResults
             .firstNotNullOfOrNull { it.compilationDatabase }
             ?.let { builder.useCompilationDatabase(it) }
