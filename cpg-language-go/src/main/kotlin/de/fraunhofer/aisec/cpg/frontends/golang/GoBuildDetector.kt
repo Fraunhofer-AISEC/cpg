@@ -85,8 +85,11 @@ class GoBuildDetector(
                     stdLib.resolve(it)
                 } else if (it.startsWith("vendor")) {
                     null
-                } else if (module != null && it.startsWith(module.path)) {
-                    topLevel.resolve(it.substringAfter(module.path))
+                } else if (
+                    module != null && (it == module.path || it.startsWith(module.path + "/"))
+                ) {
+                    // the path starts with a slash, which would make `resolve` absolute
+                    topLevel.resolve(it.substringAfter(module.path).removePrefix("/"))
                 } else {
                     topLevel.resolve("vendor").resolve(it)
                 }

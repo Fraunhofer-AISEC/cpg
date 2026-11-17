@@ -93,6 +93,7 @@ class GoBuildDetectorTest {
         // The standard library, the module itself and its vendored dependencies are sources...
         val sources = result.components.single().sources.map { it.toRealPath().toString() }
         assertTrue(sources.any { it.endsWith("src/fmt/print.go") }, sources.toString())
+        assertTrue(sources.any { it.endsWith("internal/util/util.go") }, sources.toString())
         assertTrue(
             sources.any { it.endsWith("vendor/github.com/foo/bar/bar.go") },
             sources.toString(),
@@ -122,6 +123,29 @@ class GoBuildDetectorTest {
         // `go` is not available at all
         assertNull(
             GoBuildDetector(runner = { _, _, _ -> null }).detect(tmp, TargetEnvironment.host())
+        )
+    }
+
+    @Test
+    fun testPackagesOfOtherModulesWithTheSamePrefix(@TempDir tmp: Path, @TempDir goRoot: Path) {
+        tmp.file("go.mod", "module example.com/app\n\ngo 1.22\n")
+        tmp.file("main.go")
+        tmp.file("vendor/example.com/app2/x/x.go")
+        val go = FakeGo(goRoot, listOf("example.com/app", "example.com/app2/x"))
+
+        val result =
+            assertNotNull(GoBuildDetector(runner = go).detect(tmp, TargetEnvironment.host()))
+
+        // `example.com/app2` is another module, which is vendored, and not part of this one
+        val sources = result.components.single().sources.map { it.toRealPath().toString() }
+        assertTrue(
+            sources.any { it.endsWith("vendor/example.com/app2/x/x.go") },
+            sources.toString(),
+        )
+        // The package in the root of the module is
+        assertTrue(
+            sources.any { it.endsWith("${tmp.toRealPath().fileName}/main.go") },
+            sources.toString(),
         )
     }
 }
