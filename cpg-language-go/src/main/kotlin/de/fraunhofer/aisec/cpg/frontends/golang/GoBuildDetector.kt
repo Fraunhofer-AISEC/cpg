@@ -28,10 +28,12 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.project.ComponentDefinition
 import de.fraunhofer.aisec.cpg.project.DetectionResult
 import de.fraunhofer.aisec.cpg.project.Detector
+import de.fraunhofer.aisec.cpg.project.ProcessToolRunner
 import de.fraunhofer.aisec.cpg.project.TargetEnvironment
+import de.fraunhofer.aisec.cpg.project.ToolRunner
 import java.io.File
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 import kotlin.io.path.exists
 import kotlin.io.path.name
 import org.slf4j.LoggerFactory
@@ -53,7 +55,9 @@ import org.slf4j.LoggerFactory
  */
 class GoBuildDetector(
     /** Additional build tags to pass to `go list` and the build constraint evaluation. */
-    private val extraTags: List<String> = listOf()
+    private val extraTags: List<String> = listOf(),
+    /** Runs the `go` tool. */
+    private val runner: ToolRunner = ProcessToolRunner(Duration.ofMinutes(5)),
 ) : Detector {
 
     /** The Go installation root, determined by `go env GOROOT`. */
@@ -145,32 +149,12 @@ class GoBuildDetector(
         directory: File?,
         environment: TargetEnvironment? = null,
     ): List<String>? {
-        return try {
-            val pb = ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.PIPE)
-            directory?.let { pb.directory(it) }
-            environment?.os?.goos?.let { pb.environment()["GOOS"] = it }
-            environment?.architecture?.goarch?.let { pb.environment()["GOARCH"] = it }
-
-            val proc = pb.start()
-            if (!proc.waitFor(5, TimeUnit.MINUTES)) {
-                proc.destroyForcibly()
-                log.warn("'{}' timed out after 5 minutes", command.joinToString(" "))
-                return null
-            }
-            if (proc.exitValue() != 0) {
-                log.warn(
-                    "'{}' failed: {}",
-                    command.joinToString(" "),
-                    proc.errorStream.bufferedReader().readLine(),
-                )
-                return null
-            }
-
-            proc.inputStream.bufferedReader().readLines()
-        } catch (e: Exception) {
-            log.warn("Could not run '{}': {}", command.joinToString(" "), e.message)
-            null
+        val env = buildMap {
+            environment?.os?.goos?.let { put("GOOS", it) }
+            environment?.architecture?.goarch?.let { put("GOARCH", it) }
         }
+
+        return runner.run(command, directory?.toPath(), env)
     }
 
     companion object {
