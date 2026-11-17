@@ -148,4 +148,19 @@ class GoBuildDetectorTest {
             sources.toString(),
         )
     }
+
+    @Test
+    fun testPackageInCmdIsOnlyASourceOnce(@TempDir tmp: Path, @TempDir goRoot: Path) {
+        tmp.file("go.mod", "module example.com/app\n\ngo 1.22\n")
+        tmp.file("cmd/tool/main.go")
+        // `go list` reports the package, and the files in `cmd` are gathered anyway
+        val go = FakeGo(goRoot, listOf("example.com/app/cmd/tool"))
+
+        val result =
+            assertNotNull(GoBuildDetector(runner = go).detect(tmp, TargetEnvironment.host()))
+
+        val sources = result.components.single().sources.map { it.toRealPath() }
+        assertEquals(sources.distinct(), sources)
+        assertEquals(1, sources.count { it.endsWith("cmd/tool/main.go") })
+    }
 }

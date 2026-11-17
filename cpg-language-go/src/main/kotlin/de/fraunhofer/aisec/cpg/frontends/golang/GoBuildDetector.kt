@@ -97,7 +97,8 @@ class GoBuildDetector(
 
         var files = dirs.flatMap { gatherGoFiles(it, false) }.toMutableList()
         files += gatherGoFiles(topLevel.resolve("cmd"))
-        val sources = files.filter { shouldBeBuild(it, syms) }.map(File::toPath)
+        // A package in `cmd` is part of the dependencies and of the walk of `cmd`
+        val sources = files.filter { shouldBeBuild(it, syms) }.map(File::toPath).distinct()
 
         return DetectionResult(
             detector = "go-build",
