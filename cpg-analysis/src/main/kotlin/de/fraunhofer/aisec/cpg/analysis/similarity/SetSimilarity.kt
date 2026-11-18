@@ -28,17 +28,30 @@ package de.fraunhofer.aisec.cpg.analysis.similarity
 /**
  * One `a`-sequence's best match against `b` in [compareSequenceSets]: the sequence itself ([a]),
  * its best match in `b` ([b], `null` only when `b` had no candidates at all), and that pair's
- * [compareSequenceSets]-supplied similarity [score].
+ * [compareSequenceSets]-supplied similarity [score]. [alignment] is the optimal element-by-element
+ * alignment ([SequenceAlignmentResult.elements]) behind that [score] - only populated when
+ * [compareSequenceSets] was given an `alignmentOf` function; `null` otherwise, or when [b] is
+ * `null`.
  */
-data class BestMatch(val a: List<String>, val b: List<String>?, val score: Double)
+data class BestMatch(
+    val a: List<String>,
+    val b: List<String>?,
+    val score: Double,
+    val alignment: List<AlignedElement>? = null,
+)
 
 /**
  * [compareSequenceSets]'s result: the [score] actually used, aggregated over every non-outlier best
- * match, and the [outliers] that were excluded from it. [outliers] is empty unless a
- * `detectOutliers` was supplied and found something to exclude -- by default, nothing is ever
- * excluded (see [compareSequenceSets]'s `detectOutliers` parameter).
+ * match, the [outliers] that were excluded from it, and every per-`a`-sequence best match
+ * ([matches], outliers included, one per sequence in `a`, in `a`'s iteration order). [outliers] is
+ * empty unless a `detectOutliers` was supplied and found something to exclude -- by default,
+ * nothing is ever excluded (see [compareSequenceSets]'s `detectOutliers` parameter).
  */
-data class SetSimilarityResult(val score: Double, val outliers: List<BestMatch>)
+data class SetSimilarityResult(
+    val score: Double,
+    val outliers: List<BestMatch>,
+    val matches: List<BestMatch> = emptyList(),
+)
 
 /**
  * Compares two sets of sequences [a] and [b]: for every sequence in [a], the most similar sequence
@@ -68,6 +81,10 @@ data class SetSimilarityResult(val score: Double, val outliers: List<BestMatch>)
  *   behavior. If this flags *every* score, [aggregate] falls back to running over all of them
  *   instead of a vacuous empty list, and [SetSimilarityResult.outliers] reports empty in that case
  *   too -- nothing was actually excluded from the score, so nothing should be reported as excluded.
+ * @param alignmentOf If given, computes the optimal element-by-element alignment (e.g.
+ *   [sequenceAlignment]'s `.elements`) for each `a`-sequence's winning `b`-match only -- not for
+ *   every `a`/`b` pair considered, just the one [listSimilarity] ended up picking -- and attaches it
+ *   to that [BestMatch.alignment]. `null` by default, i.e. [BestMatch.alignment] stays `null`.
  */
 fun compareSequenceSets(
     a: Set<List<String>>,
@@ -78,6 +95,7 @@ fun compareSequenceSets(
         it.minOrNull() ?: 1.0
     }, // what happens if a is empty? vacuously similar, nothing to compare
     detectOutliers: (List<Double>) -> Set<Int> = { emptySet() },
+    alignmentOf: ((List<String>, List<String>) -> List<AlignedElement>)? = null,
 ): SetSimilarityResult {
     val pool = if (consumeMatches) b.toMutableList() else null
 
@@ -87,15 +105,20 @@ fun compareSequenceSets(
             val bestB = candidates.maxByOrNull { lb -> listSimilarity(la, lb) }
             if (consumeMatches && bestB != null) pool?.remove(bestB)
             val score = bestB?.let { listSimilarity(la, it) } ?: -1.0
-            BestMatch(la, bestB, score)
+            val alignment = bestB?.let { alignmentOf?.invoke(la, it) }
+            BestMatch(la, bestB, score, alignment)
         }
 
     val outlierIndices = detectOutliers(bestPerA.map { it.score })
     val inlierScores = bestPerA.filterIndexed { i, _ -> i !in outlierIndices }.map { it.score }
 
     return if (inlierScores.isEmpty() && bestPerA.isNotEmpty()) {
-        SetSimilarityResult(aggregate(bestPerA.map { it.score }), emptyList())
+        SetSimilarityResult(aggregate(bestPerA.map { it.score }), emptyList(), matches = bestPerA)
     } else {
-        SetSimilarityResult(aggregate(inlierScores), outlierIndices.map { bestPerA[it] })
+        SetSimilarityResult(
+            aggregate(inlierScores),
+            outlierIndices.map { bestPerA[it] },
+            matches = bestPerA,
+        )
     }
 }

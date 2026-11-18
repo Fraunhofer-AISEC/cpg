@@ -25,6 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.similarity
 
+import org.slf4j.LoggerFactory
+
+private val log =
+    LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.analysis.similarity.ElementSimilarity")
+
 /**
  * Element-similarity for structured labels of the form
  * `"<conceptClass><delimiter><attr1><delimiter>...<attrN>"` (e.g. produced by [mapElements] from
@@ -47,17 +52,21 @@ fun lexicographicSimilarity(
 ): (String, String) -> Double = { a, b ->
     val fieldsA = a.split(delimiter)
     val fieldsB = b.split(delimiter)
-    // Here we may need something more relaxed than to fail hard every time the strings are just a bit mismatched.
-    if (fieldsA[0] != fieldsB[0]) {
-        mismatchScore
-    } else {
-        val attributeCount = maxOf(fieldsA.size, fieldsB.size) - 1
-        if (attributeCount <= 0) {
-            1.0
+    // Here we may need something more relaxed than to fail hard every time the strings are just a
+    // bit mismatched.
+    val score =
+        if (fieldsA[0] != fieldsB[0]) {
+            mismatchScore
         } else {
-            val matches =
-                (1..attributeCount).count { i -> fieldsA.getOrNull(i) == fieldsB.getOrNull(i) }
-            matches.toDouble() / attributeCount
+            val attributeCount = maxOf(fieldsA.size, fieldsB.size) - 1
+            if (attributeCount <= 0) {
+                1.0
+            } else {
+                val matches =
+                    (1..attributeCount).count { i -> fieldsA.getOrNull(i) == fieldsB.getOrNull(i) }
+                matches.toDouble() / attributeCount
+            }
         }
-    }
+    log.trace("concept similarity \"{}\" vs \"{}\" = {}", a, b, score)
+    score
 }

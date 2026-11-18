@@ -26,6 +26,17 @@
 package de.fraunhofer.aisec.cpg.analysis.similarity
 
 /**
+ * One position of a [sequenceAlignment]'s optimal (traceback) path: either a substitution/match
+ * (both [a] and [b] non-null), a deletion (only [a], [b] is a gap), or an insertion (only [b], [a]
+ * is a gap). [score] is the [sequenceAlignment]'s `elementSimilarity` result for a substitution, or
+ * its `gapPenalty` for a gap. In sequence order (index 0 is the alignment's first position).
+ */
+data class AlignedElement(val a: String?, val b: String?, val score: Double)
+
+/** [sequenceAlignment]'s result: the same normalized [score] [sequenceSimilarity] returns, plus the optimal alignment itself as [elements]. */
+data class SequenceAlignmentResult(val score: Double, val elements: List<AlignedElement>)
+
+/**
  * Compares two sequences [a] and [b] with a generalized global sequence alignment (Needleman &
  * Wunsch, 1970): the classic edit-distance recurrence, but with a real-valued [elementSimilarity]
  * (in `[-1.0, 1.0]`, e.g. [lexicographicSimilarity]) instead of a binary match/mismatch, and a
@@ -62,27 +73,86 @@ package de.fraunhofer.aisec.cpg.analysis.similarity
  * dissimilarity. If this ends up over-penalizing sequences that mostly agree but differ a lot in
  * length, consider an affine scheme (separate, cheaper, per-element extension cost after an initial
  * gap-open cost) instead.
+ *
+ * Only the final score is kept - the DP table itself is discarded, so the optimal alignment (which
+ * element paired with which) isn't recoverable afterwards. Use [sequenceAlignment] instead if that
+ * alignment itself is needed.
  */
 fun sequenceSimilarity(
     a: List<String>,
     b: List<String>,
     elementSimilarity: (String, String) -> Double,
     gapPenalty: Double = -1.0,
-): Double {
-    if (a.isEmpty() && b.isEmpty()) return 1.0
+): Double = sequenceAlignment(a, b, elementSimilarity, gapPenalty).score
+
+/**
+ * Same global alignment as [sequenceSimilarity], but additionally reconstructs (via traceback
+ * through the DP table) and returns the optimal alignment path itself, not just its score - see
+ * [SequenceAlignmentResult]. Ties between substitute/delete/insert at a DP cell are broken in that
+ * order (substitution preferred, then deletion, then insertion), so the result is deterministic.
+ */
+fun sequenceAlignment(
+    a: List<String>,
+    b: List<String>,
+    elementSimilarity: (String, String) -> Double,
+    gapPenalty: Double = -1.0,
+): SequenceAlignmentResult {
+    if (a.isEmpty() && b.isEmpty()) return SequenceAlignmentResult(1.0, emptyList())
 
     val h = Array(a.size + 1) { DoubleArray(b.size + 1) }
-    for (i in 1..a.size) h[i][0] = i * gapPenalty
-    for (j in 1..b.size) h[0][j] = j * gapPenalty
+    // 0 = substitute (diagonal), 1 = delete (from above, gap in b), 2 = insert (from the left, gap
+    // in a) - the move that produced h[i][j], so the optimal path can be traced back afterwards.
+    val move = Array(a.size + 1) { IntArray(b.size + 1) }
+    for (i in 1..a.size) {
+        h[i][0] = i * gapPenalty
+        move[i][0] = 1
+    }
+    for (j in 1..b.size) {
+        h[0][j] = j * gapPenalty
+        move[0][j] = 2
+    }
 
     for (i in 1..a.size) {
         for (j in 1..b.size) {
             val substitute = h[i - 1][j - 1] + elementSimilarity(a[i - 1], b[j - 1])
             val delete = h[i - 1][j] + gapPenalty
             val insert = h[i][j - 1] + gapPenalty
-            h[i][j] = maxOf(substitute, delete, insert)
+            var best = substitute
+            var bestMove = 0
+            if (delete > best) {
+                best = delete
+                bestMove = 1
+            }
+            if (insert > best) {
+                best = insert
+                bestMove = 2
+            }
+            h[i][j] = best
+            move[i][j] = bestMove
         }
     }
 
-    return h[a.size][b.size] / maxOf(a.size, b.size)
+    val elements = mutableListOf<AlignedElement>()
+    var i = a.size
+    var j = b.size
+    while (i > 0 || j > 0) {
+        when {
+            i > 0 && j > 0 && move[i][j] == 0 -> {
+                elements += AlignedElement(a[i - 1], b[j - 1], elementSimilarity(a[i - 1], b[j - 1]))
+                i--
+                j--
+            }
+            i > 0 && (j == 0 || move[i][j] == 1) -> {
+                elements += AlignedElement(a[i - 1], null, gapPenalty)
+                i--
+            }
+            else -> {
+                elements += AlignedElement(null, b[j - 1], gapPenalty)
+                j--
+            }
+        }
+    }
+    elements.reverse()
+
+    return SequenceAlignmentResult(h[a.size][b.size] / maxOf(a.size, b.size), elements)
 }
