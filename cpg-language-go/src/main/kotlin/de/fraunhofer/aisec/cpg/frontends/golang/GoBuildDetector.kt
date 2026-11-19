@@ -152,11 +152,26 @@ class GoBuildDetector(
             environment?.architecture?.goarch?.let { pb.environment()["GOARCH"] = it }
 
             val proc = pb.start()
+
+            // Drain the output while the process is still running. Waiting for it to exit first
+            // deadlocks as soon as it writes more than fits into the pipe buffer: the process
+            // blocks on its write, we block on the wait, and the command looks as if it had timed
+            // out when it was only verbose. `go list -deps all` on a module that vendors a few
+            // hundred dependencies produces megabytes of it, so detection failed on exactly the
+            // projects where it matters most -- and when detection fails nothing is recognised as
+            // a dependency, which makes every function of the program a root.
+            var lines: List<String> = listOf()
+            val reader = Thread { lines = proc.inputStream.bufferedReader().readLines() }
+            reader.isDaemon = true
+            reader.start()
+
             if (!proc.waitFor(5, TimeUnit.MINUTES)) {
                 proc.destroyForcibly()
                 log.warn("'{}' timed out after 5 minutes", command.joinToString(" "))
                 return null
             }
+            reader.join(TimeUnit.MINUTES.toMillis(1))
+
             if (proc.exitValue() != 0) {
                 log.warn(
                     "'{}' failed: {}",
@@ -166,7 +181,7 @@ class GoBuildDetector(
                 return null
             }
 
-            proc.inputStream.bufferedReader().readLines()
+            lines
         } catch (e: Exception) {
             log.warn("Could not run '{}': {}", command.joinToString(" "), e.message)
             null

@@ -271,6 +271,52 @@ interface HasFunctionStyleConstruction : HasCallAmbiguity
  */
 interface HasFunctionOverloading : LanguageTrait
 
+/**
+ * A language trait for languages in which the name of a call already determines its target: there
+ * is no function overloading and no inheritance that could supply a second declaration of the same
+ * name, so a name lookup that found a declaration has found *the* declaration.
+ *
+ * For such a language, a declaration that was found by name but whose parameters do not match the
+ * arguments is still the target of the call. The mismatch says something about our type modelling
+ * -- a type alias we did not resolve, an untyped constant that ended up with a different type than
+ * the parameter, an argument whose type we could not infer -- and nothing about whether this is the
+ * right callee. Inferring a new declaration instead would be wrong twice over: it invents a
+ * function the program does not have, and it silently drops everything reachable through the call.
+ *
+ * Go is such a language. Note that the trait is deliberately *not* the negation of
+ * [HasFunctionOverloading]: a language without overloading may still have inheritance, where a
+ * signature mismatch legitimately means "not this one, keep looking further up the hierarchy".
+ */
+interface HasNameOnlyCallResolution : LanguageTrait
+
+/**
+ * A language trait for languages whose files do not stand on their own, but form a larger unit -- a
+ * package -- together with the other files of their directory.
+ *
+ * Go is such a language: `type Tree` may be declared in `types.go` while its methods live in
+ * `ztypes.go`, and both see each other without an import. Parsing such files independently of one
+ * another hides every declaration of a sibling file, so references across them cannot be resolved
+ * and records get invented for them instead.
+ *
+ * Parallel parsing therefore has to keep the files of one directory together in a single
+ * [de.fraunhofer.aisec.cpg.TranslationContext], and may only parallelize across directories.
+ */
+interface HasPackagesSpanningMultipleFiles : LanguageTrait
+
+/**
+ * A language trait for languages that implicitly dereference a pointer to an array when it is
+ * indexed, i.e. where `a[i]` means `(*a)[i]` for an `a` pointing to an array.
+ *
+ * Go is such a language: for `s *[16]uint32`, `s[0]` has type `uint32`. Without this, indexing
+ * takes a single dereference step and yields the array type instead of the element type; passing
+ * the result on then makes the arguments mismatch the callee's parameters, so the call is not
+ * resolved to the real declaration.
+ *
+ * In C the same syntax means something else -- for `int (*p)[16]`, `p[0]` is the array `int[16]` --
+ * so this must not be applied to every language.
+ */
+interface HasImplicitPointerToArrayIndexing : LanguageTrait
+
 /** A language trait that specifies that this language allows overloading of operators. */
 interface HasOperatorOverloading : LanguageTrait {
 

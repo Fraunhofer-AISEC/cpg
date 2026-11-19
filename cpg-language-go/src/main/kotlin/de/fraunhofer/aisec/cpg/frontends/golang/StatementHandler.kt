@@ -53,6 +53,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.RangeStmt -> handleRangeStmt(node)
             is GoStandardLibrary.Ast.ReturnStmt -> handleReturnStmt(node)
             is GoStandardLibrary.Ast.SendStmt -> handleSendStmt(node)
+            is GoStandardLibrary.Ast.SelectStmt -> handleSelectStmt(node)
+            is GoStandardLibrary.Ast.CommClause -> handleCommClause(node)
             is GoStandardLibrary.Ast.SwitchStmt -> handleSwitchStmt(node)
             is GoStandardLibrary.Ast.TypeSwitchStmt -> handleTypeSwitchStmt(node)
             else -> handleNotSupported(node, node.goType)
@@ -73,6 +75,15 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 "="
             }
 
+        if (assignStmt.tok == 47) {
+            // Remember the declared names, so that a later selector on one of them is read as a
+            // member access rather than as a package qualifier. We do this after the right-hand
+            // side has been handled, because the new name is not in scope within its own
+            // initializer: in `liner := liner.NewLiner()` the right-hand side still refers to the
+            // package.
+            lhs.forEach { frontend.shortVariableNames += it.name.localName }
+        }
+
         return newAssign(operatorCode, lhs, rhs, rawNode = assignStmt)
     }
 
@@ -92,6 +103,10 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 return newGoto(rawNode = branchStmt) { stmt ->
                     branchStmt.label?.let { stmt.labelName = it.name }
                 }
+            }
+            "fallthrough" -> {
+                // It continues with the next case which is the default behavior in the EOG.
+                return newEmpty(rawNode = branchStmt)
             }
         }
 
@@ -115,8 +130,13 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         caseClause: GoStandardLibrary.Ast.CaseClause,
         typeSwitchLhs: Node? = null,
         typeSwitchRhs: Expression? = null,
+        // Whether this clause belongs to a type switch. This cannot be derived from
+        // `typeSwitchRhs`, because the guard of a type switch need not bind the value to a
+        // variable: in `switch v.(type)` -- as opposed to `switch x := v.(type)` -- there is no
+        // assignment and hence no right-hand side, yet the case list still holds types rather
+        // than expressions.
+        isTypeSwitch: Boolean = typeSwitchRhs != null,
     ): Expression {
-        val isTypeSwitch = typeSwitchRhs != null
 
         val case =
             if (caseClause.list.isEmpty()) {
@@ -145,10 +165,25 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         // Add the case statement
         currentBlock.statements += case
 
-        // Wrap everything inside the case in a block statement, if this is a type-switch, so that
-        // we can re-declare the variable locally in the block.
+        // Go gives every case clause its own implicit block (see "Expression switches" and
+        // "Type switches" in the language specification), so a declaration in one arm is not
+        // visible in any other. Without a scope, the declarations of all arms land in the
+        // enclosing function scope, and a name that several arms re-declare -- the
+        // `var et SomeEType` idiom of a factory function, for instance -- produces several
+        // candidates for a single reference. That is reported as an ambiguous resolution and
+        // leaves the reference, and with it its type, unresolved.
+        //
+        // We only introduce the block when the arm actually declares something, so that the much
+        // more common declaration-free arm keeps its flat representation and the evaluation order
+        // of the switch is left untouched.
+        val declaresSomething =
+            caseClause.body.any {
+                it is GoStandardLibrary.Ast.DeclStmt ||
+                    // 47 is the DEFINE token, i.e. a short variable declaration.
+                    (it is GoStandardLibrary.Ast.AssignStmt && it.tok == 47)
+            }
         val block =
-            if (isTypeSwitch) {
+            if (isTypeSwitch || declaresSomething) {
                 newBlock()
             } else {
                 null
@@ -167,7 +202,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             } else {
                 // We need to work with type listeners here because they might not have their type
                 // yet
-                typeSwitchRhs.registerTypeObserver(
+                typeSwitchRhs?.registerTypeObserver(
                     object : HasType.TypeObserver {
                         override fun typeChanged(newType: Type, src: HasType) {
                             decl.type = newType
@@ -340,6 +375,66 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         }
     }
 
+    /**
+     * Handles a `select` statement, which waits for one of several channel operations to become
+     * ready. Control flow wise this behaves like a `switch` whose cases are the communication
+     * operations, so we model it as a [Switch] with one case per [GoStandardLibrary.Ast.CommClause]
+     * and no selector -- there is no single value being switched on.
+     */
+    private fun handleSelectStmt(selectStmt: GoStandardLibrary.Ast.SelectStmt): Expression {
+        val switch = newSwitch(rawNode = selectStmt)
+
+        frontend.scopeManager.enterScope(switch)
+
+        val block =
+            handle(selectStmt.body) as? Block
+                ?: run {
+                    frontend.scopeManager.leaveScope(switch)
+                    return newProblemExpression("missing select body")
+                }
+        switch.statement = block
+
+        frontend.scopeManager.leaveScope(switch)
+
+        return switch
+    }
+
+    /**
+     * Handles one arm of a `select`. The guarding communication operation becomes the case
+     * expression, so that a receive such as `case v := <-ch:` still contributes its declaration and
+     * its data flow. An arm without a communication operation is the `default` arm.
+     */
+    private fun handleCommClause(commClause: GoStandardLibrary.Ast.CommClause): Expression {
+        val comm = commClause.comm
+        val case =
+            if (comm == null) {
+                newDefault(rawNode = commClause)
+            } else {
+                newCase(rawNode = commClause) { case ->
+                    // The guard is a send or a receive (possibly assigning, as in
+                    // `case v := <-ch:`). Statements are expressions in the graph, so it can be
+                    // used as the case expression directly, which keeps its calls and
+                    // declarations reachable.
+                    case.caseExpression = handle(comm)
+                }
+            }
+
+        val currentBlock = frontend.scopeManager.currentBlock
+        if (currentBlock == null) {
+            log.error("could not find block to add comm clauses")
+            return newProblemExpression("could not find block to add comm clauses")
+        }
+
+        currentBlock.statements += case
+
+        for (statement in commClause.body) {
+            currentBlock.statements += handle(statement)
+        }
+
+        // The case was already added to the enclosing block, so the caller must not add it again.
+        return case
+    }
+
     private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Expression {
         val switch = newSwitch(rawNode = switchStmt)
 
@@ -369,6 +464,11 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                     switch.selector = rhs
                     Pair(assign.lhs.singleOrNull(), (rhs as? UnaryOperator)?.input)
                 } else {
+                    // A type switch does not have to bind the value to a variable; `switch
+                    // v.(type)` is a guard without an assignment. The handled statement is then
+                    // the type assertion itself, which we still use as the switch's selector --
+                    // otherwise it would be dropped from the graph entirely.
+                    switch.selector = assign as? Expression
                     Pair(null, null)
                 }
 
@@ -378,7 +478,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                         typeSwitchStmt.body.list.filterIsInstance<
                             GoStandardLibrary.Ast.CaseClause
                         >()) {
-                        handleCaseClause(c, lhs, rhs)
+                        handleCaseClause(c, lhs, rhs, isTypeSwitch = true)
                     }
                 }
         }

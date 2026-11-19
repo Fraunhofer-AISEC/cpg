@@ -191,9 +191,20 @@ open class Function :
         get() = buildSignature(this, returnTypes)
 
     fun isOverrideCandidate(other: Function): Boolean {
-        return other.name.localName == name.localName &&
-            other.type == type &&
-            other.signature == signature
+        // [signature] is built from the local name, the resolved parameter types and the resolved
+        // return types, so it already compares everything that decides whether one function can
+        // override another.
+        //
+        // We deliberately do not compare the [type] of the two functions as well. A FunctionType
+        // is equal to another by its name, and that name is rendered when the function is parsed,
+        // from the type as it is spelled in the source. The same parameter is spelled differently
+        // depending on the package it is written in -- `Encoder` inside the package declaring it
+        // and `core.Encoder` outside -- so two functions with identical resolved signatures end up
+        // with function types named `func(Encoder) error` and `func(core.Encoder) error`. Unlike
+        // PointerType, FunctionType does not refresh its name once its parameters are resolved,
+        // so comparing it rejected every implementation of an interface that is declared in a
+        // different package than the implementing type.
+        return other.name.localName == name.localName && other.signature == signature
     }
 
     fun addOverriddenBy(c: Collection<Function>) {

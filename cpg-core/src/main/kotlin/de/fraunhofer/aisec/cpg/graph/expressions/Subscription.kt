@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+import de.fraunhofer.aisec.cpg.frontends.HasImplicitPointerToArrayIndexing
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 
@@ -81,7 +84,40 @@ class Subscription : Expression(), HasBase, HasType.TypeObserver {
     private fun getSubscriptType(arrayType: Type): Type {
         return when (subscriptExpression) {
             is Range -> arrayType
-            else -> arrayType.dereference()
+            else -> {
+                val dereferenced = arrayType.dereference()
+                // In a language that implicitly dereferences a pointer to an array on indexing,
+                // `a[i]` means `(*a)[i]`, so a single step only gets us from the pointer to the
+                // array and we still have to index it. Go's `s *[16]uint32` is the common case:
+                // `s[0]` is a `uint32`, not a `[16]uint32`.
+                // Both arrays and pointers are modelled as a PointerType, so the origin has to be
+                // checked: this applies to a *pointer* holding an *array*, and must not fire for a
+                // slice of slices such as `[][]byte`, where one step is correct.
+                if (
+                    language is HasImplicitPointerToArrayIndexing &&
+                        arrayType is PointerType &&
+                        arrayType.pointerOrigin == PointerType.PointerOrigin.POINTER &&
+                        dereferenced is PointerType &&
+                        dereferenced.pointerOrigin == PointerType.PointerOrigin.ARRAY
+                ) {
+                    dereferenced.dereference()
+                } else if (dereferenced is UnknownType) {
+                    // A type that cannot be indexed itself may still be a *defined* type whose
+                    // underlying type can: Go's `type ints []int` is indexed like the `[]int` it
+                    // is defined as. The underlying type is modelled as a super type, so we fall
+                    // back to the first super type that yields something when indexed.
+                    //
+                    // This only ever replaces an unknown result, so a type that genuinely cannot
+                    // be indexed is unaffected. Leaving it unknown is not harmless: the value
+                    // flows on untyped, and a call it is passed to can no longer be matched
+                    // against its declaration, so it resolves to an inferred stub instead.
+                    arrayType.superTypes.firstNotNullOfOrNull { superType ->
+                        superType.dereference().takeIf { it !is UnknownType }
+                    } ?: dereferenced
+                } else {
+                    dereferenced
+                }
+            }
         }
     }
 
