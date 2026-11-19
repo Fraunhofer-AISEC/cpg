@@ -291,6 +291,21 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected open fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
         with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
+
+        // Only functions with a declared summary are covered above, so for an ordinary parsed
+        // function nothing connected it to the values it returns. [handleCall] compensates for
+        // the disabled passes in the incoming direction -- it attaches arguments to parameters
+        // when neither PointsToPass nor ControlFlowSensitiveDFGPass runs -- and the outgoing
+        // direction needs the same compensation. Without it a backward traversal from a call
+        // result reaches the Function node and stops, so no value flows out of a call
+        // interprocedurally and the behaviour this method documents does not happen.
+        if (!runsPointsToPassOrCfsDFG) {
+            // A return inside a nested function literal belongs to that literal, not to this
+            // function, so the search must not descend past a nested Function.
+            node.allChildren<Return>(stopAtNode = { it is Function && it !== node }).forEach {
+                node.prevDFGEdges += it
+            }
+        }
     }
 
     /** Adds the DFG edge for a [Field]. The data flows from the initializer to the field. */
