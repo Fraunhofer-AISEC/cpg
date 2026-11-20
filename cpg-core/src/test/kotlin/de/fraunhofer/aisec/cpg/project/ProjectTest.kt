@@ -34,6 +34,7 @@ import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -59,6 +60,13 @@ class DetectingTestLanguage : TestLanguage(), Detector {
 class ConflictingStandaloneDetector : Detector {
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
         return DetectionResult(detector = "conflicting", symbols = mapOf("TEST_OS" to "standalone"))
+    }
+}
+
+/** A standalone [Detector] that only contributes the [loadIncludes] hint. */
+class LoadIncludesDetector(private val loadIncludes: Boolean) : Detector {
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        return DetectionResult(detector = "load-includes", loadIncludes = loadIncludes)
     }
 }
 
@@ -281,5 +289,23 @@ class ProjectTest {
 
         assertTrue(project.detectionResults.isEmpty())
         assertEquals(listOf(DEFAULT_APPLICATION_NAME), project.components.map { it.name })
+    }
+
+    @Test
+    fun testDetectorCanRequestLoadingIncludes(@TempDir tmp: Path) {
+        assertFalse(Project.from(tmp) {}.config.loadIncludes)
+        assertFalse(Project.from(tmp) { detector(LoadIncludesDetector(false)) }.config.loadIncludes)
+        assertTrue(Project.from(tmp) { detector(LoadIncludesDetector(true)) }.config.loadIncludes)
+    }
+
+    @Test
+    fun testUserConfigurationWinsOverLoadIncludesOfDetector(@TempDir tmp: Path) {
+        val project =
+            Project.from(tmp) {
+                detector(LoadIncludesDetector(true))
+                translation { it.loadIncludes(false) }
+            }
+
+        assertFalse(project.config.loadIncludes)
     }
 }

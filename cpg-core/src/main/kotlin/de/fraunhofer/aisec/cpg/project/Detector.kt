@@ -89,6 +89,14 @@ class DetectionResult(
     /** Additional include paths, e.g., derived from a build configuration. */
     val includePaths: List<Path> = listOf(),
     /**
+     * Whether the code in [includePaths] should be translated into the graph, see
+     * [de.fraunhofer.aisec.cpg.TranslationConfiguration.loadIncludes]. Frontends that resolve
+     * imports lazily, such as Python, only translate the modules that are actually imported, but
+     * otherwise only create inferred declarations for them. If any detector asks for it, it is
+     * enabled; an explicit configuration by the user still takes precedence.
+     */
+    val loadIncludes: Boolean = false,
+    /**
      * A detected [CompilationDatabase] (e.g., from a `compile_commands.json`), which supplies
      * per-file include paths and defines to the C/C++ frontend.
      */
