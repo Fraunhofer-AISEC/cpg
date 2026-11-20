@@ -256,7 +256,8 @@ class PythonBuildDetector(
         // If neither the requirements nor the command changed, a previous installation is reused.
         // The requirements path is excluded from the fingerprint because it is a freshly created
         // temporary file with a random name for `uv.lock` projects, which would otherwise make the
-        // fingerprint differ on every run even though the requirements content (`text`) is the same.
+        // fingerprint differ on every run even though the requirements content (`text`) is the
+        // same.
         val marker = target.resolve(MARKER)
         val fingerprint =
             sha256(
