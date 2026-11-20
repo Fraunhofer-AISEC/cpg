@@ -253,9 +253,17 @@ class PythonBuildDetector(
                 listOf("python3", "-m", "pip", "install") + common
             }
 
-        // If neither the requirements nor the command changed, a previous installation is reused
+        // If neither the requirements nor the command changed, a previous installation is reused.
+        // The requirements path is excluded from the fingerprint because it is a freshly created
+        // temporary file with a random name for `uv.lock` projects, which would otherwise make the
+        // fingerprint differ on every run even though the requirements content (`text`) is the same.
         val marker = target.resolve(MARKER)
-        val fingerprint = sha256(text + "\u0000" + command.joinToString(" "))
+        val fingerprint =
+            sha256(
+                text +
+                    "\u0000" +
+                    command.filterNot { it == requirements.toString() }.joinToString(" ")
+            )
         if (marker.exists() && marker.readText() == fingerprint) {
             return sitePackagesOf(target)
         }
