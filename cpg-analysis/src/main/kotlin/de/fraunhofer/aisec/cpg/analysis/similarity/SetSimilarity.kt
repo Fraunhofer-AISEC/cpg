@@ -83,8 +83,8 @@ data class SetSimilarityResult(
  *   too -- nothing was actually excluded from the score, so nothing should be reported as excluded.
  * @param alignmentOf If given, computes the optimal element-by-element alignment (e.g.
  *   [sequenceAlignment]'s `.elements`) for each `a`-sequence's winning `b`-match only -- not for
- *   every `a`/`b` pair considered, just the one [listSimilarity] ended up picking -- and attaches it
- *   to that [BestMatch.alignment]. `null` by default, i.e. [BestMatch.alignment] stays `null`.
+ *   every `a`/`b` pair considered, just the one [listSimilarity] ended up picking -- and attaches
+ *   it to that [BestMatch.alignment]. `null` by default, i.e. [BestMatch.alignment] stays `null`.
  */
 fun compareSequenceSets(
     a: Set<List<String>>,

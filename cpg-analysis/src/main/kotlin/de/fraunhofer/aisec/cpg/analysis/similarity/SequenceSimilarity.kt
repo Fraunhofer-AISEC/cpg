@@ -33,7 +33,10 @@ package de.fraunhofer.aisec.cpg.analysis.similarity
  */
 data class AlignedElement(val a: String?, val b: String?, val score: Double)
 
-/** [sequenceAlignment]'s result: the same normalized [score] [sequenceSimilarity] returns, plus the optimal alignment itself as [elements]. */
+/**
+ * [sequenceAlignment]'s result: the same normalized [score] [sequenceSimilarity] returns, plus the
+ * optimal alignment itself as [elements].
+ */
 data class SequenceAlignmentResult(val score: Double, val elements: List<AlignedElement>)
 
 /**
@@ -81,7 +84,7 @@ data class SequenceAlignmentResult(val score: Double, val elements: List<Aligned
 fun sequenceSimilarity(
     a: List<String>,
     b: List<String>,
-    elementSimilarity: (String, String) -> Double,
+    elementSimilarity: ElementSimilarity,
     gapPenalty: Double = -1.0,
 ): Double = sequenceAlignment(a, b, elementSimilarity, gapPenalty).score
 
@@ -94,7 +97,7 @@ fun sequenceSimilarity(
 fun sequenceAlignment(
     a: List<String>,
     b: List<String>,
-    elementSimilarity: (String, String) -> Double,
+    elementSimilarity: ElementSimilarity,
     gapPenalty: Double = -1.0,
 ): SequenceAlignmentResult {
     if (a.isEmpty() && b.isEmpty()) return SequenceAlignmentResult(1.0, emptyList())
@@ -138,7 +141,8 @@ fun sequenceAlignment(
     while (i > 0 || j > 0) {
         when {
             i > 0 && j > 0 && move[i][j] == 0 -> {
-                elements += AlignedElement(a[i - 1], b[j - 1], elementSimilarity(a[i - 1], b[j - 1]))
+                elements +=
+                    AlignedElement(a[i - 1], b[j - 1], elementSimilarity(a[i - 1], b[j - 1]))
                 i--
                 j--
             }
