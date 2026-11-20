@@ -85,8 +85,11 @@ class GoBuildDetector(
                     stdLib.resolve(it)
                 } else if (it.startsWith("vendor")) {
                     null
-                } else if (module != null && it.startsWith(module.path)) {
-                    topLevel.resolve(it.substringAfter(module.path))
+                } else if (
+                    module != null && (it == module.path || it.startsWith(module.path + "/"))
+                ) {
+                    // the path starts with a slash, which would make `resolve` absolute
+                    topLevel.resolve(it.substringAfter(module.path).removePrefix("/"))
                 } else {
                     topLevel.resolve("vendor").resolve(it)
                 }
@@ -94,7 +97,8 @@ class GoBuildDetector(
 
         var files = dirs.flatMap { gatherGoFiles(it, false) }.toMutableList()
         files += gatherGoFiles(topLevel.resolve("cmd"))
-        val sources = files.filter { shouldBeBuild(it, syms) }.map(File::toPath)
+        // A package in `cmd` is part of the dependencies and of the walk of `cmd`
+        val sources = files.filter { shouldBeBuild(it, syms) }.map(File::toPath).distinct()
 
         return DetectionResult(
             detector = "go-build",
