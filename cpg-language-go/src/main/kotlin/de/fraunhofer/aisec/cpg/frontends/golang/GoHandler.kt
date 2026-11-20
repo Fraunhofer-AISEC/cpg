@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
@@ -109,8 +108,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
                 // We can directly take the "real" namespace name then
                 return namespace.name.localName
             } else {
-                val path = frontend.expressionHandler.handle(this.path) as? Literal<*>
-                val paths = (path?.value as? String)?.split("/") ?: listOf()
+                val paths = parseGoStringLiteral(this.path.value)?.split("/") ?: listOf()
 
                 // Return the last name in the path as the import name. However, if the last name is
                 // a module version (e.g., v5), then we need to return the second-to-last

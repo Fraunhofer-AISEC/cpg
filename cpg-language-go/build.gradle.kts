@@ -63,5 +63,12 @@ tasks {
 
     processResources { dependsOn(downloadLibGoAST) }
 
+    // Allows running the tests with the verified translation of cpg-verified
+    test {
+        providers.systemProperty("cpg.go.verifiedLibrary").orNull?.let {
+            systemProperty("cpg.go.verifiedLibrary", it)
+        }
+    }
+
     sourcesJar { dependsOn(downloadLibGoAST) }
 }

@@ -1,0 +1,622 @@
+/-
+Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
+Licensed under the Apache License, Version 2.0.
+-/
+import CpgVerified.Go.Translate
+import CpgVerified.Go.Semantics
+import CpgVerified.Cpg.Semantics
+
+/-!
+# Correctness of the Go expression translation
+
+The main result, `translate_correct`, states that evaluating the CPG produced by `translate`
+gives exactly the value that the Go semantics gives the original expression, including
+failures (run-time errors, unbound names, constructs outside the subset).
+
+It requires that the Go environment and the CPG environment agree up to name resolution, and
+that the predeclared identifiers which the translation treats specially are not shadowed.
+-/
+
+namespace Go
+
+open Cpg (Value)
+
+/-- The meaning of language-dependent CPG operators in Go. -/
+def semantics : Cpg.LanguageSemantics where
+  intQuo := Cpg.IntOps.quo
+  intRem := Cpg.IntOps.rem
+
+/-- The key of a composite literal element in the CPG, where identifiers are resolved. -/
+def resolveKey (ctx : Ctx) : Option Cpg.Key × Value → Option Cpg.Key × Value
+  | (some (.name n), v) => (some (.name (resolveName ctx n)), v)
+  | kv => kv
+
+/-- The Go environment and the CPG environment describe the same state. -/
+structure EnvAgree (ctx : Ctx) (genv : Env) (cenv : Cpg.Env) : Prop where
+  /-- A reference to `resolveName ctx name` refers to the Go variable `name`. -/
+  vars : ∀ name, cenv.vars (resolveName ctx name) = genv.vars name
+  /-- A call of `resolveName ctx name` calls the Go function `name`. -/
+  funcs : ∀ name, cenv.funcs (resolveName ctx name) = genv.funcs name
+  /-- Predeclared constants that the context does not mark as shadowed are not declared. -/
+  constsUnshadowed : ∀ name ∈ ["true", "false", "nil", "iota"], name ∉ ctx.shadowed →
+    genv.vars name = none ∧ genv.funcs name = none
+  /-- Built-in allocation functions that the context does not mark as shadowed are not declared. -/
+  allocUnshadowed : ∀ name ∈ ["new", "make"], name ∉ ctx.shadowed → genv.funcs name = none
+  /-- Built-in allocation functions that the context marks as shadowed are declared functions. -/
+  allocShadowed : ∀ name ∈ ["new", "make"], name ∈ ctx.shadowed → genv.funcs name ≠ none
+  /-- A shadowed predeclared identifier refers to its declaration, never to the predeclared value. -/
+  shadowedDeclared : ∀ name ∈ ctx.shadowed, genv.vars name = none → predeclared ctx.iota name = none
+  /-- Members of imported packages have the same qualified name in both environments. -/
+  qualifiedVars : ∀ p ∈ ctx.packages, ∀ sel,
+    cenv.vars (p ++ "." ++ sel) = genv.vars (p ++ "." ++ sel)
+  /-- Functions of imported packages have the same qualified name in both environments. -/
+  qualifiedFuncs : ∀ p ∈ ctx.packages, ∀ sel,
+    cenv.funcs (p ++ "." ++ sel) = genv.funcs (p ++ "." ++ sel)
+  /-- Both environments have the same heap. -/
+  fields : cenv.fields = genv.fields
+  /-- Both environments have the same methods. -/
+  methods : cenv.methods = genv.methods
+  /-- Both environments index, slice and dereference in the same way. -/
+  index : cenv.index = genv.index
+  slice : cenv.slice = genv.slice
+  deref : cenv.deref = genv.deref
+  /-- Casting to a type expression means casting to the type it is translated to. -/
+  cast : ∀ te t, typeOf? te = some t → cenv.cast t = genv.cast te
+  /-- Types outside the verified subset are never cast to. -/
+  castUnmodelled : ∀ te, typeOf? te = none → ∀ v, genv.cast te v = none
+  /-- `new(T)` is a `New` of `T*` initialized with a `Construction` of `T`. -/
+  new : ∀ te t, typeOf? te = some t →
+    (do cenv.new (.pointer t) (← cenv.construct t [])) = genv.new te
+  /-- `make(T, args...)` of a non-array type is a `Construction` of `T`. -/
+  make : ∀ te t vs, typeOf? te = some t → isArrayType te = false →
+    cenv.construct t vs = genv.make te vs
+  /-- `make([]T, n)` is an `ArrayConstruction` with the dimension `n`. -/
+  makeArray : ∀ te t vs, typeOf? te = some t → isArrayType te = true →
+    cenv.constructArray t vs = genv.make te vs
+  /-- Types outside the verified subset are never allocated. -/
+  allocUnmodelled : ∀ te, typeOf? te = none → genv.new te = none ∧ ∀ vs, genv.make te vs = none
+  /-- A composite literal is an initializer list, whose keys are resolved names. -/
+  composite : ∀ te t elems, typeOf? te = some t →
+    cenv.composite t (elems.map (resolveKey ctx)) = genv.composite te elems
+  /-- Composite literals of types outside the verified subset are never created. -/
+  compositeUnmodelled : ∀ te, typeOf? te = none → ∀ elems, genv.composite te elems = none
+
+/-- Every strict Go binary operator means the same as the CPG operator code it is mapped to. -/
+theorem evalBinaryOp_token (op : BinaryOp) (hand : op ≠ .land) (hor : op ≠ .lor) (a b : Value) :
+    Cpg.evalBinaryOp semantics op.token a b = evalBinary op a b := by
+  cases op <;> cases a <;> cases b <;> first | contradiction | rfl
+
+/-- Every Go unary operator means the same as the CPG operator code it is mapped to. -/
+theorem evalUnaryOp_token (op : UnaryOp) (a : Value) :
+    Cpg.evalUnaryOp op.token a = evalUnary op a := by
+  cases op <;> cases a <;> rfl
+
+theorem token_eq_land (op : BinaryOp) : op.token = "&&" ↔ op = .land := by
+  cases op <;> decide
+
+theorem token_eq_lor (op : BinaryOp) : op.token = "||" ↔ op = .lor := by
+  cases op <;> decide
+
+/-- Parentheses do not leave a trace in the CPG. -/
+theorem translate_unparen (ctx : Ctx) : ∀ e : Expr, translate ctx e.unparen = translate ctx e
+  | .paren _ x => by simp only [Expr.unparen, translate]; exact translate_unparen ctx x
+  | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
+  | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType ..
+  | .mapType .. | .chanType .. | .unsupported .. => rfl
+
+theorem unparen_not_paren (span : Cpg.Span) (x : Expr) : ∀ e : Expr, e.unparen ≠ .paren span x
+  | .paren _ y => by simp only [Expr.unparen]; exact unparen_not_paren span x y
+  | .basicLit .. | .ident .. | .binary .. | .unary .. | .call .. | .selector .. | .index ..
+  | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType ..
+  | .mapType .. | .chanType .. | .unsupported .. => by simp [Expr.unparen]
+
+theorem translateConversion_ne_range (span : Cpg.Span) (t : Option Cpg.TypeRef)
+    (args : List Cpg.Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
+    translateConversion span t args ≠ .range loc a b c := by
+  unfold translateConversion
+  split <;> simp
+
+theorem translateAllocation_ne_range (span : Cpg.Span) (name : String) (args : List Expr)
+    (tail : List Cpg.Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
+    translateAllocation span name args tail ≠ .range loc a b c := by
+  unfold translateAllocation
+  repeat' split
+  all_goals simp
+
+theorem translateAllocation_loc (span : Cpg.Span) (name : String) (args : List Expr)
+    (tail : List Cpg.Expr) : (translateAllocation span name args tail).loc = span := by
+  unfold translateAllocation
+  repeat' split
+  all_goals rfl
+
+/-- The translation never produces a bare `Range`; ranges only occur inside subscriptions. -/
+theorem translate_ne_range (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (a b c : Option Cpg.Expr) :
+    translate ctx e ≠ .range loc a b c := by
+  cases e with
+  | ident => simp only [translate, translateIdent]; split <;> (try split) <;> (try split) <;> simp
+  | basicLit => simp only [translate]; split <;> simp
+  | call _ fn _ =>
+    cases fn <;> simp only [translate] <;> (repeat' split) <;>
+      simp [translateConversion_ne_range, translateAllocation_ne_range]
+  | typeAssert _ _ t => cases t <;> simp only [translate] <;> (try split) <;> simp
+  | compositeLit _ t _ => cases t <;> simp only [translate] <;> (repeat' split) <;> simp
+  | selector => simp only [translate]; split <;> simp
+  | paren _ x => simp only [translate]; exact translate_ne_range ctx x loc a b c
+  | _ => simp [translate]
+
+theorem translateConversion_ne_keyValue (span : Cpg.Span) (t : Option Cpg.TypeRef)
+    (args : List Cpg.Expr) (loc : Cpg.Span) (k v : Cpg.Expr) :
+    translateConversion span t args ≠ .keyValue loc k v := by
+  unfold translateConversion
+  split <;> simp
+
+theorem translateAllocation_ne_keyValue (span : Cpg.Span) (name : String) (args : List Expr)
+    (tail : List Cpg.Expr) (loc : Cpg.Span) (k v : Cpg.Expr) :
+    translateAllocation span name args tail ≠ .keyValue loc k v := by
+  unfold translateAllocation
+  repeat' split
+  all_goals simp
+
+/-- The translation never produces a bare `KeyValue`; they only occur in initializer lists. -/
+theorem translate_ne_keyValue (ctx : Ctx) (e : Expr) (loc : Cpg.Span) (k v : Cpg.Expr) :
+    translate ctx e ≠ .keyValue loc k v := by
+  cases e with
+  | ident => simp only [translate, translateIdent]; split <;> (try split) <;> (try split) <;> simp
+  | basicLit => simp only [translate]; split <;> simp
+  | call _ fn _ =>
+    cases fn <;> simp only [translate] <;> (repeat' split) <;>
+      simp [translateConversion_ne_keyValue, translateAllocation_ne_keyValue]
+  | typeAssert _ _ t => cases t <;> simp only [translate] <;> (try split) <;> simp
+  | compositeLit _ t _ => cases t <;> simp only [translate] <;> (repeat' split) <;> simp
+  | selector => simp only [translate]; split <;> simp
+  | paren _ x => simp only [translate]; exact translate_ne_keyValue ctx x loc k v
+  | _ => simp [translate]
+
+theorem translateElems_cons (ctx : Ctx) (e : Expr) (rest : List Expr)
+    (he : ∀ s k v, e ≠ .keyValue s k v) :
+    translateElems ctx (e :: rest) = translate ctx e :: translateElems ctx rest := by
+  cases e <;> first | exact absurd rfl (he _ _ _) | simp only [translateElems]
+
+theorem evalInits_cons (L : Cpg.LanguageSemantics) (env : Cpg.Env) (x : Cpg.Expr)
+    (rest : List Cpg.Expr) (hx : ∀ s k v, x ≠ .keyValue s k v) :
+    Cpg.Expr.evalInits L env (x :: rest)
+      = (do
+        let v ← x.eval L env
+        let vs ← Cpg.Expr.evalInits L env rest
+        pure ((none, v) :: vs)) := by
+  cases x <;> first | exact absurd rfl (hx _ _ _) | simp only [Cpg.Expr.evalInits]
+
+theorem evalElems_cons (iota : Option Int) (packages : List String) (env : Env) (e : Expr)
+    (rest : List Expr) (he : ∀ s k v, e ≠ .keyValue s k v) :
+    Expr.evalElems iota packages env (e :: rest)
+      = (do
+        let v ← e.eval iota packages env
+        let vs ← Expr.evalElems iota packages env rest
+        pure ((none, v) :: vs)) := by
+  cases e <;> first | exact absurd rfl (he _ _ _) | simp only [Expr.evalElems]
+
+theorem keysSupported_tail {e : Expr} {rest : List Expr} (h : keysSupported (e :: rest) = true) :
+    keysSupported rest = true := by
+  simp only [keysSupported, List.all_cons, Bool.and_eq_true] at h ⊢
+  exact h.2
+
+/-- An identifier that is not a predeclared constant is a reference. -/
+theorem translateIdent_reference (ctx : Ctx) (s : Cpg.Span) (n : String)
+    (hn : n ∉ ["true", "false", "nil", "iota"]) :
+    translateIdent ctx s n = .reference s (resolveName ctx n) := by
+  unfold translateIdent
+  split
+  · rfl
+  · split <;> simp_all
+
+theorem packageOf?_mem {packages : List String} {x : Expr} {p : String}
+    (h : packageOf? packages x = some p) : p ∈ packages := by
+  unfold packageOf? at h
+  split at h
+  · split at h <;> simp_all
+  · contradiction
+
+/-- A predeclared identifier that is not one of the special constants has no value. -/
+theorem predeclared_other (iota : Option Int) (name : String)
+    (h : name ∉ ["true", "false", "nil", "iota"]) : predeclared iota name = none := by
+  unfold predeclared
+  split <;> simp_all
+
+/-- The value of an identifier is preserved. -/
+theorem translateIdent_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (name : String) :
+    (translateIdent ctx span name).eval semantics cenv
+      = (Expr.ident span name).eval ctx.iota ctx.packages genv := by
+  unfold translateIdent
+  by_cases hs : name ∈ ctx.shadowed
+  · simp only [hs, ite_true, Cpg.Expr.eval, Expr.eval, h.vars]
+    cases hv : genv.vars name
+    · simp [h.shadowedDeclared name hs hv]
+    · rfl
+  simp only [hs, ite_false]
+  split
+  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "true" (by simp) hs).1, predeclared]
+  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "false" (by simp) hs).1, predeclared]
+  · simp [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "nil" (by simp) hs).1, predeclared]
+  · split <;>
+      simp_all [Cpg.Expr.eval, Expr.eval, (h.constsUnshadowed "iota" (by simp) hs).1, predeclared]
+  · rename_i h1 h2 h3 h4
+    have hp := predeclared_other ctx.iota name (by simp_all)
+    simp only [Cpg.Expr.eval, Expr.eval, h.vars, hp]
+    split <;> simp_all
+
+/-- A subscription whose subscript is not a `Range` is an indexing. -/
+theorem eval_subscription_index (L : Cpg.LanguageSemantics) (env : Cpg.Env) (loc : Cpg.Span)
+    (arr idx : Cpg.Expr) (h : ∀ l a b c, idx ≠ .range l a b c) :
+    (Cpg.Expr.subscription loc arr idx).eval L env
+      = (do env.index (← arr.eval L env) (← idx.eval L env)) := by
+  cases idx with
+  | range l a b c => exact absurd rfl (h l a b c)
+  | _ => simp only [Cpg.Expr.eval]
+
+/-- The built-ins `new` and `make` are preserved, given that their arguments are. -/
+theorem allocation_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (name : String)
+    (hn : name = "new" ∨ name = "make") (args : List Expr) (tail : List Cpg.Expr)
+    (htail : Cpg.Expr.evalList semantics cenv tail = Expr.evalTail ctx.iota ctx.packages genv args) :
+    (translateAllocation span name args tail).eval semantics cenv
+      = evalBuiltin genv name args (Expr.evalTail ctx.iota ctx.packages genv args) := by
+  rw [← htail]
+  rcases hn with rfl | rfl
+  · match args with
+    | [te] =>
+      cases ht : typeOf? te with
+      | some t =>
+        simp only [translateAllocation, ht, evalBuiltin, Cpg.Expr.eval, Cpg.Expr.evalList]
+        rw [← h.new te t ht]
+        rfl
+      | none =>
+        simp [translateAllocation, ht, evalBuiltin, Cpg.Expr.eval, (h.allocUnmodelled te ht).1]
+    | [] => simp [translateAllocation, evalBuiltin, Cpg.Expr.eval]
+    | _ :: _ :: _ => simp [translateAllocation, evalBuiltin, Cpg.Expr.eval]
+  · match args with
+    | te :: rest =>
+      cases ht : typeOf? te with
+      | some t =>
+        cases ha : isArrayType te
+        · simp [translateAllocation, ht, ha, evalBuiltin, Cpg.Expr.eval, h.make te t _ ht ha]
+        · by_cases hl : rest.length ≤ 1
+          · have hl' : ¬ 2 < rest.length + 1 := by omega
+            simp [translateAllocation, ht, ha, hl, evalBuiltin, hl', Cpg.Expr.eval,
+              h.makeArray te t _ ht ha]
+          · have hl' : 2 < rest.length + 1 := by omega
+            simp [translateAllocation, ht, ha, hl, evalBuiltin, hl', Cpg.Expr.eval]
+      | none =>
+        simp only [translateAllocation, ht, evalBuiltin, Cpg.Expr.eval]
+        split
+        · rfl
+        · cases Cpg.Expr.evalList semantics cenv tail <;> simp [(h.allocUnmodelled te ht).2]
+    | [] => simp [translateAllocation, evalBuiltin, Cpg.Expr.eval]
+
+theorem evalBuiltin_other (genv : Env) (name : String) (args : List Expr)
+    (tail : Option (List Value)) (hn : name ≠ "new" ∧ name ≠ "make") :
+    evalBuiltin genv name args tail = none := by
+  unfold evalBuiltin
+  split <;> simp_all
+
+/-- A call of a named function (or of a built-in) is preserved, given that its arguments are. -/
+theorem call_ident_full_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span s : Cpg.Span) (name : String) (args : List Expr)
+    (hargs : Cpg.Expr.evalList semantics cenv (translateList ctx args)
+      = Expr.evalList ctx.iota ctx.packages genv args)
+    (htail : Cpg.Expr.evalList semantics cenv (translateTail ctx args)
+      = Expr.evalTail ctx.iota ctx.packages genv args) :
+    (if (name == "new" || name == "make") && !ctx.shadowed.contains name then
+        translateAllocation span name args (translateTail ctx args)
+      else Cpg.Expr.call span (translateIdent ctx s name) (translateList ctx args)).eval semantics cenv
+      = (match genv.funcs name with
+        | some f => do f (← Expr.evalList ctx.iota ctx.packages genv args)
+        | none => evalBuiltin genv name args (Expr.evalTail ctx.iota ctx.packages genv args)) := by
+  split
+  · rename_i halloc
+    simp only [Bool.and_eq_true, Bool.not_eq_true'] at halloc
+    obtain ⟨hname, hs⟩ := halloc
+    have hs' : name ∉ ctx.shadowed := by simpa using hs
+    have hn : name = "new" ∨ name = "make" := by simpa using hname
+    have hf := h.allocUnshadowed name (by rcases hn with rfl | rfl <;> simp) hs'
+    simp only [hf]
+    exact allocation_correct ctx genv cenv h span name hn args _ htail
+  · rename_i halloc
+    unfold translateIdent
+    by_cases hs : name ∈ ctx.shadowed
+    · simp only [hs, ite_true, Cpg.Expr.eval, h.funcs, hargs]
+      cases hf : genv.funcs name with
+      | some f => rfl
+      | none =>
+        have hn : name ≠ "new" ∧ name ≠ "make" := by
+          constructor <;> intro e <;> subst e <;> exact h.allocShadowed _ (by simp) hs hf
+        simp [evalBuiltin_other genv name args _ hn]
+    · have hn : name ≠ "new" ∧ name ≠ "make" := by
+        constructor <;> intro e <;> subst e <;> simp_all
+      simp only [hs, ite_false]
+      split
+      · simp [Cpg.Expr.eval, (h.constsUnshadowed "true" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · simp [Cpg.Expr.eval, (h.constsUnshadowed "false" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · simp [Cpg.Expr.eval, (h.constsUnshadowed "nil" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · split <;> simp [Cpg.Expr.eval, (h.constsUnshadowed "iota" (by simp) hs).2,
+          evalBuiltin_other _ _ _ _ hn]
+      · simp only [Cpg.Expr.eval, h.funcs, hargs]
+        cases genv.funcs name <;> simp [evalBuiltin_other _ _ _ _ hn]
+
+/-- A conversion is preserved, given that its arguments are. -/
+theorem conversion_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (te : Expr) (args : List Expr)
+    (ihargs : Cpg.Expr.evalList semantics cenv (translateList ctx args)
+      = Expr.evalList ctx.iota ctx.packages genv args) :
+    (translateConversion span (typeOf? te) (translateList ctx args)).eval semantics cenv
+      = (do evalConversion genv te (← Expr.evalList ctx.iota ctx.packages genv args)) := by
+  rw [← ihargs]
+  match translateList ctx args with
+  | [] => cases typeOf? te <;> simp [translateConversion, Cpg.Expr.eval, Cpg.Expr.evalList,
+      evalConversion]
+  | [arg] =>
+    simp only [Cpg.Expr.evalList]
+    cases ht : typeOf? te with
+    | some t =>
+      cases hv : arg.eval semantics cenv <;>
+        simp [hv, translateConversion, Cpg.Expr.eval, evalConversion, h.cast te t ht]
+    | none =>
+      cases hv : arg.eval semantics cenv <;>
+        simp [hv, translateConversion, Cpg.Expr.eval, evalConversion, h.castUnmodelled te ht]
+  | a :: b :: rest =>
+    cases typeOf? te <;> simp only [translateConversion, Cpg.Expr.eval] <;>
+      simp [Cpg.Expr.evalList, evalConversion] <;>
+      cases a.eval semantics cenv <;> simp <;> cases b.eval semantics cenv <;> simp <;>
+      cases Cpg.Expr.evalList semantics cenv rest <;> simp
+
+/-- A call whose callee is not a selector is preserved, given that its arguments are. -/
+theorem call_other_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) (span : Cpg.Span) (fn : Expr) (args : List Expr)
+    (hfn : ∀ s x sel, fn ≠ .selector s x sel)
+    (ihargs : Cpg.Expr.evalList semantics cenv (translateList ctx args)
+      = Expr.evalList ctx.iota ctx.packages genv args)
+    (ihtail : Cpg.Expr.evalList semantics cenv (translateTail ctx args)
+      = Expr.evalTail ctx.iota ctx.packages genv args) :
+    (translate ctx (.call span fn args)).eval semantics cenv
+      = (Expr.call span fn args).eval ctx.iota ctx.packages genv := by
+  cases fn with
+  | selector s x sel => exact absurd rfl (hfn s x sel)
+  | ident s name =>
+    simp only [translate, Expr.eval, calleeName?, Expr.unparen, isConversion, Bool.false_eq_true,
+      ite_false]
+    exact call_ident_full_correct ctx genv cenv h span s name args ihargs ihtail
+  | arrayType | chanType | mapType =>
+    simp only [translate, Expr.eval, Expr.unparen, isConversion, ite_true]
+    exact conversion_correct ctx genv cenv h span _ args ihargs
+  | paren s y =>
+    simp only [translate, Expr.eval, calleeName?, Expr.unparen]
+    by_cases hc : isConversion y.unparen = true
+    · simp only [hc, ite_true]
+      exact conversion_correct ctx genv cenv h span _ args ihargs
+    simp only [hc, Bool.false_eq_true, ite_false]
+    rw [← translate_unparen ctx y]
+    generalize hu : y.unparen = u at hc
+    cases u with
+    | ident s' name =>
+      simp only [translate]
+      exact call_ident_full_correct ctx genv cenv h span s' name args ihargs ihtail
+    | paren s' x => exact absurd hu (unparen_not_paren s' x y)
+    | arrayType | chanType | mapType => simp [isConversion] at hc
+    | _ => simp [Cpg.Expr.eval]
+  | _ =>
+    simp [translate, calleeName?, Expr.unparen, Expr.eval, Cpg.Expr.eval, isConversion]
+
+mutual
+
+/--
+**Semantic preservation.** Evaluating the translated CPG expression yields the same result as
+evaluating the Go expression.
+-/
+theorem translate_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ e : Expr, (translate ctx e).eval semantics cenv = e.eval ctx.iota ctx.packages genv
+  | .basicLit span kind value => by
+    simp only [translate, Expr.eval]
+    split <;> simp_all [Cpg.Expr.eval]
+  | .ident span name => by
+    simp only [translate]
+    exact translateIdent_correct ctx genv cenv h span name
+  | .binary span x op y => by
+    have ihx := translate_correct ctx genv cenv h x
+    have ihy := translate_correct ctx genv cenv h y
+    by_cases hl : op = .land
+    · subst hl
+      simp only [translate, BinaryOp.token, Cpg.Expr.eval, Expr.eval, ihx, ihy]
+      rfl
+    by_cases hr : op = .lor
+    · subst hr
+      simp only [translate, BinaryOp.token, Cpg.Expr.eval, Expr.eval, ihx, ihy]
+      rfl
+    have hl' : op.token ≠ "&&" := fun e => hl ((token_eq_land op).1 e)
+    have hr' : op.token ≠ "||" := fun e => hr ((token_eq_lor op).1 e)
+    have hgo : (Expr.binary span x op y).eval ctx.iota ctx.packages genv
+        = (do evalBinary op (← x.eval ctx.iota ctx.packages genv) (← y.eval ctx.iota ctx.packages genv)) := by
+      cases op <;> first | contradiction | rfl
+    rw [hgo]
+    simp only [translate, Cpg.Expr.eval, hl', hr', ite_false, ihx, ihy,
+      evalBinaryOp_token op hl hr]
+  | .unary span op x => by
+    have ihx := translate_correct ctx genv cenv h x
+    simp only [translate, Cpg.Expr.eval, Expr.eval, ihx, evalUnaryOp_token]
+  | .paren span x => by
+    simp only [translate, Expr.eval]
+    exact translate_correct ctx genv cenv h x
+  | .selector span x sel => by
+    have ihx := translate_correct ctx genv cenv h x
+    simp only [translate, Expr.eval]
+    cases hp : packageOf? ctx.packages x with
+    | some p => simp only [Cpg.Expr.eval, h.qualifiedVars p (packageOf?_mem hp) sel]
+    | none => simp only [Cpg.Expr.eval, ihx, h.fields]; rfl
+  | .call span fn args => by
+    have ihargs := translateList_correct ctx genv cenv h args
+    match fn with
+    | .selector s x sel =>
+      have ihx := translate_correct ctx genv cenv h x
+      simp only [translate, Expr.eval]
+      cases hp : packageOf? ctx.packages x with
+      | some p =>
+        simp only [Cpg.Expr.eval, ihargs, h.qualifiedFuncs p (packageOf?_mem hp) sel]
+      | none => simp only [Cpg.Expr.eval, ihx, ihargs, h.methods]
+    | .basicLit .. | .ident .. | .binary .. | .unary .. | .paren .. | .call .. | .index ..
+    | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType ..
+    | .mapType .. | .chanType .. | .unsupported .. =>
+      exact call_other_correct ctx genv cenv h span _ args (by simp) ihargs
+        (translateTail_correct ctx genv cenv h args)
+  | .index span x i => by
+    have ihx := translate_correct ctx genv cenv h x
+    have ihi := translate_correct ctx genv cenv h i
+    simp only [translate, Expr.eval]
+    rw [eval_subscription_index _ _ _ _ _ (translate_ne_range ctx i)]
+    simp only [ihx, ihi, h.index]
+  | .slice span x low high max => by
+    have ihx := translate_correct ctx genv cenv h x
+    have ihl := translateOpt_correct ctx genv cenv h low
+    have ihh := translateOpt_correct ctx genv cenv h high
+    have ihm := translateOpt_correct ctx genv cenv h max
+    simp only [translate, Cpg.Expr.eval, Expr.eval, ihx, ihl, ihh, ihm, h.slice]
+  | .star span x => by
+    have ihx := translate_correct ctx genv cenv h x
+    simp only [translate, Cpg.Expr.eval, Expr.eval, ihx, h.deref]
+  | .typeAssert span x (some te) => by
+    have ihx := translate_correct ctx genv cenv h x
+    simp only [translate, Expr.eval]
+    cases ht : typeOf? te with
+    | some t => simp only [Cpg.Expr.eval, ihx, h.cast te t ht]
+    | none =>
+      simp only [Cpg.Expr.eval]
+      cases x.eval ctx.iota ctx.packages genv <;> simp [h.castUnmodelled te ht]
+  | .typeAssert span x none => by simp [translate, Cpg.Expr.eval, Expr.eval]
+  | .compositeLit span (some te) elts => by
+    simp only [translate, Expr.eval]
+    by_cases hk : keysSupported elts = true
+    · have ihelts := translateElems_correct ctx genv cenv h elts hk
+      cases ht : typeOf? te with
+      | some t =>
+        simp only [hk, ite_true, Cpg.Expr.eval, ihelts]
+        cases Expr.evalElems ctx.iota ctx.packages genv elts <;> simp [h.composite te t _ ht]
+      | none =>
+        simp only [hk, ite_true, Cpg.Expr.eval]
+        cases Expr.evalElems ctx.iota ctx.packages genv elts <;>
+          simp [h.compositeUnmodelled te ht]
+    · cases typeOf? te <;> simp [hk, Cpg.Expr.eval]
+  | .compositeLit span none elts => by simp [translate, Cpg.Expr.eval, Expr.eval]
+  | .keyValue .. => by simp [translate, Cpg.Expr.eval, Expr.eval]
+  | .arrayType .. | .mapType .. | .chanType .. => by simp [translate, Cpg.Expr.eval, Expr.eval]
+  | .unsupported span goType => by simp [translate, Cpg.Expr.eval, Expr.eval]
+
+/-- Semantic preservation for optional expressions. -/
+theorem translateOpt_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ e : Option Expr,
+      Cpg.Expr.evalOpt semantics cenv (translateOpt ctx e)
+        = Expr.evalOpt ctx.iota ctx.packages genv e
+  | none => by simp [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt]
+  | some e => by
+    simp only [translateOpt, Cpg.Expr.evalOpt, Expr.evalOpt, translate_correct ctx genv cenv h e]
+
+/-- Semantic preservation for the elements of a composite literal. -/
+theorem translateElems_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ elts : List Expr, keysSupported elts = true →
+      Cpg.Expr.evalInits semantics cenv (translateElems ctx elts)
+        = (Expr.evalElems ctx.iota ctx.packages genv elts).map (List.map (resolveKey ctx))
+  | [], _ => by simp [translateElems, Cpg.Expr.evalInits, Expr.evalElems]
+  | e :: rest, hk => by
+    have ihrest := translateElems_correct ctx genv cenv h rest (keysSupported_tail hk)
+    match e with
+    | .keyValue s key value =>
+      have ihv := translate_correct ctx genv cenv h value
+      match key with
+      | .ident s' n =>
+        have hn : n ∉ ["true", "false", "nil", "iota"] := by
+          simp only [keysSupported, List.all_cons, Bool.and_eq_true] at hk
+          simpa using hk.1
+        simp only [translateElems, translate, translateIdent_reference ctx s' n hn,
+          Cpg.Expr.evalInits, Expr.evalElems, ihv, ihrest]
+        cases Expr.eval ctx.iota ctx.packages genv value <;>
+          cases Expr.evalElems ctx.iota ctx.packages genv rest <;> simp [resolveKey]
+      | .basicLit s' kind lit =>
+        have ihk := translate_correct ctx genv cenv h (.basicLit s' kind lit)
+        simp only [translateElems, Expr.evalElems]
+        simp only [translate] at ihk ⊢
+        split at ihk <;> simp only [Cpg.Expr.evalInits, ihk, ihv, ihrest] <;>
+          cases Expr.eval ctx.iota ctx.packages genv (.basicLit s' kind lit) <;>
+          cases Expr.eval ctx.iota ctx.packages genv value <;>
+          cases Expr.evalElems ctx.iota ctx.packages genv rest <;> simp [resolveKey]
+      | .binary .. | .unary .. | .paren .. | .call .. | .selector .. | .index .. | .slice ..
+      | .star .. | .typeAssert .. | .compositeLit .. | .keyValue .. | .arrayType .. | .mapType ..
+      | .chanType .. | .unsupported .. => simp [keysSupported] at hk
+    | .basicLit .. | .ident .. | .binary .. | .unary .. | .paren .. | .call .. | .selector ..
+    | .index .. | .slice .. | .star .. | .typeAssert .. | .compositeLit .. | .arrayType ..
+    | .mapType .. | .chanType .. | .unsupported .. =>
+      rw [translateElems_cons ctx _ rest (by simp), evalElems_cons _ _ _ _ rest (by simp),
+        evalInits_cons _ _ _ _ (translate_ne_keyValue ctx _), ihrest,
+        translate_correct ctx genv cenv h _]
+      cases Expr.eval ctx.iota ctx.packages genv _ <;>
+        cases Expr.evalElems ctx.iota ctx.packages genv rest <;> simp [resolveKey]
+
+/-- Semantic preservation for all but the first expression of a list. -/
+theorem translateTail_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ es : List Expr,
+      Cpg.Expr.evalList semantics cenv (translateTail ctx es)
+        = Expr.evalTail ctx.iota ctx.packages genv es
+  | [] => by simp [translateTail, Cpg.Expr.evalList, Expr.evalTail]
+  | _ :: rest => by
+    simp only [translateTail, Expr.evalTail, translateList_correct ctx genv cenv h rest]
+
+/-- Semantic preservation for lists of expressions. -/
+theorem translateList_correct (ctx : Ctx) (genv : Env) (cenv : Cpg.Env)
+    (h : EnvAgree ctx genv cenv) :
+    ∀ es : List Expr,
+      Cpg.Expr.evalList semantics cenv (translateList ctx es)
+        = Expr.evalList ctx.iota ctx.packages genv es
+  | [] => by simp [translateList, Cpg.Expr.evalList, Expr.evalList]
+  | e :: es => by
+    simp only [translateList, Cpg.Expr.evalList, Expr.evalList,
+      translate_correct ctx genv cenv h e, translateList_correct ctx genv cenv h es]
+
+end
+
+theorem translateConversion_loc (span : Cpg.Span) (t : Option Cpg.TypeRef)
+    (args : List Cpg.Expr) : (translateConversion span t args).loc = span := by
+  unfold translateConversion
+  split <;> rfl
+
+/-- **Location preservation.** Every translated node is located at its (unparenthesized) source. -/
+theorem translate_loc (ctx : Ctx) : ∀ e : Expr, (translate ctx e).loc = e.unparen.span
+  | .basicLit .. => by simp only [translate]; split <;> rfl
+  | .ident span name => by
+    simp only [translate, translateIdent]
+    split
+    · rfl
+    split <;> try rfl
+    split <;> rfl
+  | .binary .. | .unary .. | .index .. | .slice .. | .star .. | .unsupported .. => by
+    simp only [translate, Cpg.Expr.loc, Expr.unparen, Expr.span]
+  | .paren _ x => by simpa [translate, Expr.unparen] using translate_loc ctx x
+  | .selector .. => by
+    simp only [translate]
+    split <;> rfl
+  | .call _ fn _ => by
+    cases fn <;> simp only [translate] <;> (repeat' split) <;>
+      first
+      | exact translateConversion_loc _ _ _
+      | exact translateAllocation_loc _ _ _ _
+      | simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
+  | .typeAssert _ _ t => by
+    cases t <;> simp only [translate] <;> (try split) <;> simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
+  | .compositeLit _ t _ => by
+    cases t <;> simp only [translate] <;> (repeat' split) <;> simp [Cpg.Expr.loc, Expr.unparen, Expr.span]
+  | .keyValue .. | .arrayType .. | .mapType .. | .chanType .. => by
+    simp only [translate, Cpg.Expr.loc, Expr.unparen, Expr.span]
+
+end Go
