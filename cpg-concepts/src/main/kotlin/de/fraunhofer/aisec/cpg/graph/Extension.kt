@@ -59,7 +59,7 @@ val Node.operationNodes: Set<Operation>
  * this is an [AstNode], see [AstNode.nodes]).
  */
 inline fun <reified T : OverlayNode> Node.allOverlays(): Set<T> {
-    return (this as? AstNode)?.nodes?.flatMap { it.overlays }?.filterIsInstance<T>()?.toSet()
+    return (this as? AstNode)?.nodes?.flatMap { it.overlaysIfAny }?.filterIsInstance<T>()?.toSet()
         ?: emptySet()
 }
 

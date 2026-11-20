@@ -106,7 +106,7 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             }
         }
 
-    override var assignedTypes: Set<Type> = mutableSetOf()
+    override var assignedTypes: Set<Type> = java.util.LinkedHashSet<Type>(2)
         set(value) {
             if (field == value) {
                 return

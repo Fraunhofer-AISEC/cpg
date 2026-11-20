@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -180,19 +179,55 @@ abstract class Node() :
             cachedHashCode = 0
         }
 
-    /** Incoming control flow edges. */
+    /** Lazy backing field for [prevEOGEdges]. */
+    @Volatile private var _prevEOGEdges: EvaluationOrders<Node>? = null
+
+    /**
+     * Incoming control flow edges.
+     *
+     * The backing container is allocated on first access (see [edgeInitLock]): many nodes never
+     * take part in the EOG (e.g. the synthetic ones the PointsToPass creates), and a container is a
+     * considerable amount of memory.
+     */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var prevEOGEdges: EvaluationOrders<Node> =
-        EvaluationOrders<Node>(this, mirrorProperty = Node::nextEOGEdges, outgoing = false)
-        protected set
+    var prevEOGEdges: EvaluationOrders<Node>
+        get() =
+            _prevEOGEdges
+                ?: synchronized(edgeInitLock(this)) {
+                    _prevEOGEdges
+                        ?: EvaluationOrders<Node>(
+                                this,
+                                mirrorProperty = Node::nextEOGEdges,
+                                outgoing = false,
+                            )
+                            .also { _prevEOGEdges = it }
+                }
+        protected set(value) {
+            _prevEOGEdges = value
+        }
 
-    /** Outgoing control flow edges. */
+    /** Lazy backing field for [nextEOGEdges]. */
+    @Volatile private var _nextEOGEdges: EvaluationOrders<Node>? = null
+
+    /** Outgoing control flow edges. Allocated on first access, see [prevEOGEdges]. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
-    var nextEOGEdges: EvaluationOrders<Node> =
-        EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
-        protected set
+    var nextEOGEdges: EvaluationOrders<Node>
+        get() =
+            _nextEOGEdges
+                ?: synchronized(edgeInitLock(this)) {
+                    _nextEOGEdges
+                        ?: EvaluationOrders<Node>(
+                                this,
+                                mirrorProperty = Node::prevEOGEdges,
+                                outgoing = true,
+                            )
+                            .also { _nextEOGEdges = it }
+                }
+        protected set(value) {
+            _nextEOGEdges = value
+        }
 
     /** Lazy backing field for [basicBlockEdges]. */
     private var _basicBlockEdges: BasicBlockEdgeList<Node>? = null
@@ -220,7 +255,10 @@ abstract class Node() :
         }
 
     /** The basic block this node belongs to. */
-    var basicBlock by unwrapping(Node::basicBlockEdges)
+    @DoNotPersist
+    var basicBlock: MutableList<Node>
+        get() = basicBlockEdges.unwrap()
+        set(value) = basicBlockEdges.unwrap().resetTo(value)
 
     /** Lazy backing field for [nextCDGEdges]. */
     private var _nextCDGEdges: ControlDependences<Node>? = null
@@ -285,21 +323,47 @@ abstract class Node() :
     @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
+    @DoNotPersist
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    var prevEOG: MutableList<Node>
+        get() = prevEOGEdges.unwrap()
+        set(value) = prevEOGEdges.unwrap().resetTo(value)
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var nextEOG by unwrapping(Node::nextEOGEdges)
+    @DoNotPersist
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    var nextEOG: MutableList<Node>
+        get() = nextEOGEdges.unwrap()
+        set(value) = nextEOGEdges.unwrap().resetTo(value)
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
-    var prevDFGEdges: Dataflows<Node> =
-        Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
-        protected set
+    var prevDFGEdges: Dataflows<Node>
+        get() =
+            _prevDFGEdges
+                ?: synchronized(edgeInitLock(this)) {
+                    _prevDFGEdges
+                        ?: Dataflows<Node>(
+                                this,
+                                mirrorProperty = Node::nextDFGEdges,
+                                outgoing = false,
+                            )
+                            .also { _prevDFGEdges = it }
+                }
+        protected set(value) {
+            _prevDFGEdges = value
+        }
+
+    /** Lazy backing field for [prevDFGEdges], allocated on first access (see [prevEOGEdges]). */
+    @Volatile private var _prevDFGEdges: Dataflows<Node>? = null
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
-    var prevDFG by unwrapping(Node::prevDFGEdges)
+    var prevDFG: MutableSet<Node>
+        get() = prevDFGEdges.unwrap()
+        set(value) = prevDFGEdges.unwrap().resetTo(value)
 
     /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
@@ -326,13 +390,31 @@ abstract class Node() :
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
-    var nextDFGEdges: Dataflows<Node> =
-        Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
-        protected set
+    var nextDFGEdges: Dataflows<Node>
+        get() =
+            _nextDFGEdges
+                ?: synchronized(edgeInitLock(this)) {
+                    _nextDFGEdges
+                        ?: Dataflows<Node>(
+                                this,
+                                mirrorProperty = Node::prevDFGEdges,
+                                outgoing = true,
+                            )
+                            .also { _nextDFGEdges = it }
+                }
+        protected set(value) {
+            _nextDFGEdges = value
+        }
+
+    /** Lazy backing field for [nextDFGEdges], allocated on first access (see [prevEOGEdges]). */
+    @Volatile private var _nextDFGEdges: Dataflows<Node>? = null
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
-    var nextDFG by unwrapping(Node::nextDFGEdges)
+    var nextDFG: MutableSet<Node>
+        get() = nextDFGEdges.unwrap()
+        set(value) = nextDFGEdges.unwrap().resetTo(value)
 
     /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
@@ -414,7 +496,20 @@ abstract class Node() :
     val prevPDG: MutableSet<Node>
         get() = prevPDGEdges.unwrap()
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = smallMutableSetOf()
+    /** Lazy backing field for [assumptions]. */
+    @Volatile private var _assumptions: MutableSet<Assumption>? = null
+
+    /**
+     * The assumptions attached to this node. The backing set is allocated on first access: almost
+     * no node carries assumptions, and there are a great many nodes.
+     */
+    @DoNotPersist
+    override val assumptions: MutableSet<Assumption>
+        get() =
+            _assumptions
+                ?: synchronized(edgeInitLock(this)) {
+                    _assumptions ?: smallMutableSetOf<Assumption>().also { _assumptions = it }
+                }
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -455,7 +550,16 @@ abstract class Node() :
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
      */
-    val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
+    val additionalProblems: MutableSet<ProblemNode>
+        get() =
+            _additionalProblems
+                ?: synchronized(edgeInitLock(this)) {
+                    _additionalProblems
+                        ?: smallMutableSetOf<ProblemNode>().also { _additionalProblems = it }
+                }
+
+    /** Lazy backing field for [additionalProblems], allocated on first access. */
+    @Volatile private var _additionalProblems: MutableSet<ProblemNode>? = null
 
     /** Lazy backing field for [overlayEdges]. */
     private var _overlayEdges: Overlays? = null
@@ -477,6 +581,14 @@ abstract class Node() :
     @DoNotPersist
     val overlays: MutableSet<Node>
         get() = overlayEdges.unwrap()
+
+    /**
+     * Like [overlays], but for reading only: it does not allocate the container of a node which has
+     * no overlays. Use this when looking at the overlays of (many) nodes.
+     */
+    @DoNotPersist
+    val overlaysIfAny: Set<Node>
+        get() = _overlayEdges?.unwrap() ?: emptySet()
 
     /**
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
@@ -603,3 +715,14 @@ inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
         (provider).ctx.scopeManager.leaveScope(this)
     }
 }
+
+/**
+ * The locks which guard the lazy allocation of the edge containers of a [Node]. They are shared by
+ * all nodes (striped by identity) instead of one object per node, and they are only held while a
+ * container is created, never while another lock is requested, so they cannot take part in a
+ * deadlock - unlike locking on the node itself, which other code may do.
+ */
+private val edgeInitLocks = Array(64) { Any() }
+
+private fun edgeInitLock(node: Node): Any =
+    edgeInitLocks[(System.identityHashCode(node) and 0x7fffffff) % edgeInitLocks.size]

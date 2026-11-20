@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util.matchArgumentsToCallParameters
 import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
 import de.fraunhofer.aisec.cpg.helpers.functional.*
@@ -71,6 +70,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The key of [nodesCreatingUnknownValues]. The [node] is compared by identity, the [name] by
@@ -316,7 +316,7 @@ class PointsToState(
                 two = two,
                 allowModify = allowModify,
                 widen = widen,
-                concurrencyCounter = CPU_CORES,
+                concurrencyCounter = ParallelismBudget.inner,
             )
         return result as? PointsToState.Element ?: Element(result)
     }
@@ -430,6 +430,39 @@ fun clearFSDummies(functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<F
         .filter { (it.key as? Literal<*>)?.value == "dummy" }
         .keys
         .forEach { functionSummary.remove(it) }
+}
+
+/**
+ * Gives this node its [MemoryAddress] if it does not have one yet. Nodes which several functions
+ * use, such as global variables, can get here from different threads at the same time, and they
+ * must all end up with the same single address.
+ */
+/**
+ * Whether [node] is [root] or part of the AST below it. This only follows the AST parents of [node]
+ * instead of flattening the whole subtree of [root], which would also visit all the edge sets of
+ * these nodes - including their DFG edges, which other threads write while they analyze their own
+ * function - for every single value we look at.
+ */
+private val postProcessingMutex = kotlinx.coroutines.sync.Mutex()
+
+private fun isWithin(node: Node, root: Node?): Boolean {
+    if (root == null) return false
+    var current: Node? = node
+    while (current != null) {
+        if (current === root) return true
+        current = current.astParent
+    }
+    return false
+}
+
+private fun HasMemoryAddress.ensureMemoryAddress(create: () -> MemoryAddress) {
+    if (memoryAddresses.isEmpty()) {
+        synchronized(this) {
+            if (memoryAddresses.isEmpty()) {
+                memoryAddresses += create()
+            }
+        }
+    }
 }
 
 private val CallToMemAddrMap =
@@ -690,7 +723,35 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          * them
          */
         var drawCurrentDerefDFG: Boolean = true,
+        /**
+         * The number of functions which are analyzed at the same time. With a value larger than 1,
+         * the functions are grouped into waves of independent components of the call graph (see
+         * [de.fraunhofer.aisec.cpg.helpers.orderEOGStartersInWaves]) and the components of one wave
+         * are analyzed in parallel, callees before callers. A callee is then analyzed in its own
+         * turn and not on demand inside the time budget of its caller. The cores that are not used
+         * by the tasks of a wave are used for the work inside the tasks. 1 (the default) analyzes
+         * the functions one after the other. 0 chooses the number of available cores, but at most
+         * one per gigabyte of the maximum heap size, as every function which is analyzed at the
+         * same time keeps its own state in memory.
+         *
+         * Note: The result of a parallel analysis is not (yet) the same as the one of a sequential
+         * analysis. On large inputs which hit the [timeout], it contains noticeably fewer
+         * context-sensitive edges.
+         */
+        var parallelism: Int = 1,
     ) : PassConfiguration()
+
+    override val maxParallelism: Int
+        get() =
+            passConfig<Configuration>()?.parallelism.let {
+                if (it == null) 1 else if (it == 0) autoParallelism() else it.coerceAtLeast(1)
+            }
+
+    /** The number of cores, but at most one for every gigabyte of heap we may use. */
+    private fun autoParallelism(): Int {
+        val gigabytes = (Runtime.getRuntime().maxMemory() / (1L shl 30)).toInt()
+        return CPU_CORES.coerceAtMost(gigabytes).coerceAtLeast(1)
+    }
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
     // circles. Therefore, we store the chain of Functions we currently analyze
@@ -789,13 +850,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var inserted: FSEntry? = null
         val stored =
             index.computeIfAbsent(newEntry) {
-                (if (copyLastWritesOnInsert)
-                        it.copy(
-                            lastWrites =
-                                PowersetLattice.Element<NodeWithPropertiesKey>().apply {
-                                    addAll(it.lastWrites)
-                                }
-                        )
+                (if (copyLastWritesOnInsert || it.lastWrites is PowersetLattice.Element<*>)
+                    // A plain concurrent set is enough here: NodeWithPropertiesKey has a
+                    // structural equals/hashCode, so we do not need the wrapper objects of
+                    // the lattice element for every single write-site.
+                    it.copy(lastWrites = concurrentCopyOfLastWrites(it.lastWrites))
                     else it)
                     .also { entry -> inserted = entry }
             }
@@ -1005,19 +1064,26 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // justify. That is a loss of completeness rather than of correctness, and it is the
             // same
             // kind of loss that configuring a timeout at all already accepts.
+            // Writing the edges and deriving the summary from the graph is done by one function at
+            // a time: the summary follows the DFG edges of other functions (the callees and
+            // callers), which would be modified by the analyses of other functions in the meantime.
+            // The fixpoint iteration above, which is where most of the time is spent, still runs in
+            // parallel. Waiting for the lock does not count against the timeout.
             val postProcessingFinished =
-                withTimeoutOrNull(passConfig<Configuration>()?.timeout ?: Duration.INFINITE) {
-                    drawDataflowEdges(finalState)
+                postProcessingMutex.withLock {
+                    withTimeoutOrNull(passConfig<Configuration>()?.timeout ?: Duration.INFINITE) {
+                        drawDataflowEdges(finalState)
 
-                    if (log.isTraceEnabled) {
-                        log.trace("Finished drawing DFG Edges")
-                    }
+                        if (log.isTraceEnabled) {
+                            log.trace("Finished drawing DFG Edges")
+                        }
 
-                    /* Store function summary for this Function. */
-                    if (node is Function && node.body != null && !analysisTimeout) {
-                        storeFunctionSummary(node, finalState)
+                        /* Store function summary for this Function. */
+                        if (node is Function && node.body != null && !analysisTimeout) {
+                            storeFunctionSummary(node, finalState)
+                        }
+                        true
                     }
-                    true
                 }
             if (postProcessingFinished == null) {
                 log.warn(
@@ -1090,7 +1156,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // In case the key is a global variable, there's no need to add the address, we already
             // have it
             if (key is HasMemoryAddress && (key !is Variable || !key.isGlobal)) {
-                key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
+                synchronized(key) {
+                    key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
+                }
             }
 
             // Then the memoryValues
@@ -1110,7 +1178,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 else -> TODO()
                             }
                         }
-                        key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
+                        synchronized(key) {
+                            key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
+                        }
                     }
                 }
             }
@@ -1135,18 +1205,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
                 }
 
-                if (
-                    callingContexts.isEmpty()
-                ) // TODO: add functionSummary flag for contextSensitive DFs
-                 key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary, derefDepth)
-                else
-                    key.prevDFGEdges.addContextSensitive(
-                        prev,
-                        granularity,
-                        callingContexts,
-                        functionSummary,
-                        derefDepth,
-                    )
+                // The key can be a node of another function, for example the parameter of a callee
+                // which gets an edge from each of its callers
+                synchronized(key) {
+                    if (
+                        callingContexts.isEmpty()
+                    ) // TODO: add functionSummary flag for contextSensitive DFs
+                        key.prevDFGEdges +=
+                            Dataflow(prev, key, granularity, functionSummary, derefDepth)
+                    else
+                        key.prevDFGEdges.addContextSensitive(
+                            prev,
+                            granularity,
+                            callingContexts,
+                            functionSummary,
+                            derefDepth,
+                        )
+                }
             }
         }
     }
@@ -1506,8 +1581,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // In order not to launch an immense amount of coroutines, we calculate their number before
         val outerCoroutineCounter = node.parameters.size
         val innerCoroutineCounter =
-            if (outerCoroutineCounter == 0) CPU_CORES
-            else if (outerCoroutineCounter > CPU_CORES) 1 else CPU_CORES / outerCoroutineCounter
+            if (outerCoroutineCounter == 0) ParallelismBudget.inner
+            else if (outerCoroutineCounter > ParallelismBudget.inner) 1
+            else ParallelismBudget.inner / outerCoroutineCounter
         coroutineScope {
             node.parameters.forEach { param ->
                 launch(Dispatchers.Default) {
@@ -1919,9 +1995,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // entry.
                             val lastWrite =
                                 depthLastWrites
-                                    ?: PowersetLattice.Element(
-                                        NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
-                                    )
+                                    ?: ConcurrentHashMap.newKeySet<NodeWithPropertiesKey>().apply {
+                                        add(NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf()))
+                                    }
                             mergeFSEntry(
                                 parentFD.functionSummary,
                                 currentNode,
@@ -2071,22 +2147,28 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     /* If the PMV will be written to, we don't draw an incoming DFG-Edge */
                     if (functionSummaryWritesToPMV(p, 2)) emptyList()
                     else {
-                        p.memoryValueEdges.mapFiltered({
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefvalue"
-                        }) {
-                            it.start
+                        // Other callers write the edges of this parameter at the same time
+                        synchronized(p) {
+                            p.memoryValueEdges.mapFiltered({
+                                (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                                    "derefvalue"
+                            }) {
+                                it.start
+                            }
                         }
                     }
                 val derefderefPMVs =
                     /* If the PMV will be written to, we don't draw an incoming DFG-Edge */
                     if (functionSummaryWritesToPMV(p, 3)) emptyList()
                     else {
-                        p.memoryValueEdges.mapFiltered({
-                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefderefvalue"
-                        }) {
-                            it.start
+                        // Other callers write the edges of this parameter at the same time
+                        synchronized(p) {
+                            p.memoryValueEdges.mapFiltered({
+                                (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                                    "derefderefvalue"
+                            }) {
+                                it.start
+                            }
                         }
                     }
                 // These tasks all add to the one state which [push] modifies in place, so the
@@ -2838,7 +2920,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         override fun hashCode(): Int = System.identityHashCode(ref) // identity hash
     }
 
-    data class NodeWithPropertiesKey(val node: Node, val properties: Set<Any> = emptySet<Any>()) {
+    /**
+     * A [node] together with the [properties] of the dataflow that led to it (flags, granularities,
+     * calling contexts, ...).
+     *
+     * There are millions of these keys during an analysis but only a few distinct property sets, so
+     * the properties are kept as a shared, immutable copy (see [internProperties]) instead of one
+     * mutable set per key.
+     */
+    class NodeWithPropertiesKey(val node: Node, properties: Set<Any> = emptySet<Any>()) {
+        val properties: Set<Any> = internProperties(properties)
+
+        operator fun component1(): Node = node
+
+        operator fun component2(): Set<Any> = this.properties
+
         // Since we are dealing with pairs, carefully check if we already have them
         override fun equals(other: Any?): Boolean =
             other is NodeWithPropertiesKey && node === other.node && properties == other.properties
@@ -2848,6 +2944,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // The order of the properties doesn't matter
             for (p in properties) h += p.hashCode()
             return h
+        }
+    }
+
+    private companion object PropertySets {
+        /** Stop interning when there are this many distinct sets, so that the table stays small. */
+        private const val MAX_INTERNED_PROPERTY_SETS = 100_000
+        private val internedProperties = ConcurrentHashMap<Set<Any>, Set<Any>>()
+
+        /**
+         * Returns an immutable set with the elements (and the iteration order) of [properties].
+         * Most sets have only a few elements, so they are kept in an array instead of a hash map,
+         * and equal sets are shared as long as there are not too many of them.
+         */
+        fun internProperties(properties: Set<Any>): Set<Any> {
+            if (properties.isEmpty()) return emptySet()
+            val copy: Set<Any> = SmallSet.of(properties)
+            if (copy !is SmallSet<*>) return copy
+            if (internedProperties.size >= MAX_INTERNED_PROPERTY_SETS) {
+                return internedProperties[copy] ?: copy
+            }
+            return internedProperties.putIfAbsent(copy, copy) ?: copy
         }
     }
 
@@ -4706,9 +4823,7 @@ fun PointsToState.Element.getValues(
             /* For value declarations, we have to look up the last value written to it. Only
              * value declarations carry a memory address (see HasMemoryAddress on ValueDeclaration).
              */
-            if (node.memoryAddresses.isEmpty()) {
-                node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
-            }
+            node.ensureMemoryAddress { MemoryAddress(node.name, isGlobal(node)) }
             node.memoryAddresses.mapFlatMappedTo(
                 PowersetLattice.Element(),
                 { fetchValueFromDeclarationState(it) },
@@ -4765,7 +4880,7 @@ fun PointsToState.Element.getValues(
                         while (
                             valueParentAssign !is Assign && valueParentAssign != null
                         ) valueParentAssign = valueParentAssign.astParent
-                        if (node !in SubgraphWalker.flattenAST(valueParentAssign)) retVals.add(v)
+                        if (!isWithin(node, valueParentAssign)) retVals.add(v)
                     }
                 }
             }
@@ -4843,9 +4958,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
              * For value declarations, we created a new MemoryAddress node, so that's the one we use
              * here. Only value declarations carry a memory address.
              */
-            if (node.memoryAddresses.isEmpty()) {
-                node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
-            }
+            node.ensureMemoryAddress { MemoryAddress(node.name, isGlobal(node)) }
 
             node.memoryAddresses.toIdentitySet()
         }
@@ -4916,10 +5029,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
                     identitySetOf(refersTo)
                 } else if (refersTo is ValueDeclaration) {
                     /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a Function. So let's do this here */
-                    if (refersTo.memoryAddresses.isEmpty()) {
-                        val newAddress = MemoryAddress(node.name, isGlobal(node))
-                        refersTo.memoryAddresses += newAddress
-                    }
+                    refersTo.ensureMemoryAddress { MemoryAddress(node.name, isGlobal(node)) }
 
                     refersTo.memoryAddresses.toIdentitySet()
                 } else {
@@ -4957,9 +5067,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
         // TODO: This should work for all HasMemoryAddresses
         //        is HasMemoryAddress -> {
         is BinaryOperator -> {
-            if (node.memoryAddresses.isEmpty()) {
-                node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
-            }
+            node.ensureMemoryAddress { MemoryAddress(node.name, isGlobal(node)) }
             node.memoryAddresses.toIdentitySet()
         }
         else -> identitySetOf(node)

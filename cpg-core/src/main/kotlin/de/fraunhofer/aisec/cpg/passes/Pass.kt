@@ -37,8 +37,11 @@ import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
+import de.fraunhofer.aisec.cpg.helpers.functional.ParallelismBudget
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
+import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersInWaves
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -48,6 +51,8 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
@@ -94,7 +99,18 @@ abstract class EOGStarterPass(
     ctx: TranslationContext,
     sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
     val orderDependencies: Boolean = false,
-) : Pass<Node>(ctx, sort)
+) : Pass<Node>(ctx, sort) {
+    /**
+     * The number of targets that may be consumed at the same time. Only used together with
+     * [orderDependencies]: the targets are then grouped into waves of independent call graph
+     * components (see [orderEOGStartersInWaves]), and the components of one wave are consumed in
+     * parallel. A value of 1 (the default) consumes all targets one after the other in the order of
+     * [orderEOGStartersBasedOnDependencies]. A pass which sets a larger value has to be safe to run
+     * on different targets at the same time.
+     */
+    open val maxParallelism: Int
+        get() = 1
+}
 
 open class PassConfiguration
 
@@ -415,17 +431,35 @@ fun executePass(
                 callbacks,
             )
         is EOGStarterPass -> {
-            consumeTargets(
-                (prototype as EOGStarterPass)::class,
-                ctx,
-                if (prototype.orderDependencies) {
-                    orderEOGStartersBasedOnDependencies(prototype.sort(result))
+            // Waves only pay off if at least one of them has more than one independent task
+            val waves =
+                if (prototype.orderDependencies && prototype.maxParallelism > 1) {
+                    orderEOGStartersInWaves(prototype.sort(result))
                 } else {
-                    prototype.sort(result)
-                },
-                result,
-                callbacks,
-            )
+                    null
+                }
+            if (waves != null && waves.any { it.size > 1 }) {
+                consumeTargetsInWaves(
+                    (prototype as EOGStarterPass)::class,
+                    ctx,
+                    waves,
+                    prototype.maxParallelism,
+                    result,
+                    callbacks,
+                )
+            } else {
+                consumeTargets(
+                    (prototype as EOGStarterPass)::class,
+                    ctx,
+                    if (prototype.orderDependencies) {
+                        orderEOGStartersBasedOnDependencies(prototype.sort(result))
+                    } else {
+                        prototype.sort(result)
+                    },
+                    result,
+                    callbacks,
+                )
+            }
         }
     }
 
@@ -447,6 +481,58 @@ inline fun <reified T : Node> consumeTargets(
     callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     targets.forEach { consumeTarget(cls, ctx, it) }
+    callbacks?.forEach { callback ->
+        runCatching { callback.afterPass(cls, ctx, result, targets) }
+            .onFailure {
+                log.warn(
+                    "Progress callback {} failed after pass {}",
+                    callback::class.simpleName ?: callback.javaClass.simpleName,
+                    cls.simpleName,
+                    it,
+                )
+            }
+    }
+}
+
+/**
+ * Consumes the targets in [waves] (see [orderEOGStartersInWaves]): the waves one after the other,
+ * and the tasks of a wave in parallel on at most [parallelism] threads. The targets of one task are
+ * consumed sequentially in the given order.
+ *
+ * The threads are our own and not the ones of the coroutine dispatchers: a pass may use these
+ * itself while it consumes a target and must not find them all blocked by us.
+ */
+fun consumeTargetsInWaves(
+    cls: KClass<out Pass<Node>>,
+    ctx: TranslationContext,
+    waves: List<List<List<Node>>>,
+    parallelism: Int,
+    result: TranslationResult,
+    callbacks: Collection<TranslationProgressCallback>? = null,
+) {
+    val counter = AtomicInteger()
+    val executor =
+        Executors.newFixedThreadPool(parallelism) { r ->
+            Thread(null, r, "${cls.simpleName}-${counter.incrementAndGet()}", 64L * 1024 * 1024)
+                .apply { isDaemon = true }
+        }
+    try {
+        for (wave in waves) {
+            // The cores that the tasks of this wave do not occupy are left to the work inside them
+            ParallelismBudget.inner = maxOf(1, CPU_CORES / minOf(wave.size, parallelism))
+            val futures =
+                wave.map { task ->
+                    executor.submit { task.forEach { consumeTarget(cls, ctx, it) } }
+                }
+            // Get all of them, so that nothing is still running when we leave, then rethrow
+            val failures = futures.mapNotNull { runCatching { it.get() }.exceptionOrNull() }
+            failures.firstOrNull()?.let { throw (it.cause ?: it) }
+        }
+    } finally {
+        ParallelismBudget.inner = CPU_CORES
+        executor.shutdown()
+    }
+    val targets = waves.flatten().flatten()
     callbacks?.forEach { callback ->
         runCatching { callback.afterPass(cls, ctx, result, targets) }
             .onFailure {
