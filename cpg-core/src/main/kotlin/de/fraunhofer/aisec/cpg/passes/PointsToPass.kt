@@ -4243,13 +4243,14 @@ suspend fun PointsToState.push(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    newLatticeElement.third.forEachMaybeParallel { existingEntry ->
-        if (
-            currentState.generalState[newNode]?.third?.any {
-                it.node === existingEntry.node && it.properties == existingEntry.properties
-            } == true
-        ) {
-            newLatticeCopy.third.remove(existingEntry)
+    // The set is keyed by the node and its properties, so this is a lookup and not a scan of all
+    // the entries we already have for this node.
+    val existingLastWrites = currentState.generalState[newNode]?.third
+    if (existingLastWrites != null) {
+        for (existingEntry in newLatticeElement.third) {
+            if (existingEntry in existingLastWrites) {
+                newLatticeCopy.third.remove(existingEntry)
+            }
         }
     }
 
