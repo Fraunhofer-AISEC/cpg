@@ -370,5 +370,12 @@ fun Reference.nameIsType(): Type? {
     }
 
     // Lastly, check if the reference contains a symbol that points to type (declaration)
-    return pass.scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
+    return pass.scopeManager
+        .lookupTypeSymbolByName(
+            name,
+            language,
+            scope,
+            fileScope = pass.scopeManager.fileScopeOf(this),
+        )
+        ?.declaredType
 }

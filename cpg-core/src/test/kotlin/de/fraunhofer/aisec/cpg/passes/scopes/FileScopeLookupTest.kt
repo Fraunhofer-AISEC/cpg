@@ -159,4 +159,103 @@ class FileScopeLookupTest {
         assertEquals(result.variables["r.bar"], result.ref("useB", "bar").refersTo)
         assertNotEquals(result.variables["q.foo"], result.ref("useB", "foo").refersTo)
     }
+
+    @Test
+    fun testTypeResolvedThroughFileScope() {
+        // The type resolver also considers the imports of the file, e.g., `using q;` in C#
+        val result =
+            frontend().build {
+                val targets = newTranslationUnit("targets.file")
+                scopeManager.resetToGlobal(targets)
+                newNamespace("q", holder = targets, enterScope = true) {
+                    newRecord(parseName("q.Bar"), "class", holder = it)
+                }
+
+                val tuA = newTranslationUnit("a.file")
+                scopeManager.resetToGlobal(tuA)
+                newNamespace("p", holder = tuA, enterScope = true) { pkg ->
+                    newFunction("useA", holder = pkg, enterScope = true) {
+                        it.returnTypes = listOf(objectType("Bar"))
+                    }
+                }
+                scopeManager.enterScope(tuA)
+                newImport(
+                    parseName("q"),
+                    ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    holder = tuA,
+                )
+                scopeManager.leaveScope(tuA)
+
+                translationResult {
+                    components.firstOrNull()?.translationUnits?.addAll(listOf(targets, tuA))
+                }
+            }
+
+        val returnType = result.functions["useA"]?.returnTypes?.singleOrNull()
+        assertNotNull(returnType)
+        assertEquals("q.Bar", returnType.name.toString())
+    }
+
+    @Test
+    fun testNamespaceShadowsFileWildcardImport() {
+        // A declaration of the surrounding namespace shadows a declaration with the same name that
+        // is imported by a wildcard import of the file, e.g., `using q;` in C#
+        val result =
+            frontend().build {
+                val targets = declareTargets()
+
+                val tuA = newTranslationUnit("a.file")
+                scopeManager.resetToGlobal(tuA)
+                newNamespace("p", holder = tuA, enterScope = true) { pkg ->
+                    newVariable(parseName("p.foo"), holder = pkg)
+                    functionWithRefs("useA", pkg, "foo")
+                }
+                scopeManager.enterScope(tuA)
+                newImport(
+                    parseName("q"),
+                    ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    holder = tuA,
+                )
+                scopeManager.leaveScope(tuA)
+
+                translationResult {
+                    components.firstOrNull()?.translationUnits?.addAll(listOf(targets, tuA))
+                }
+            }
+
+        assertEquals(result.variables["p.foo"], result.ref("useA", "foo").refersTo)
+    }
+
+    @Test
+    fun testFileWildcardImportShadowsGlobal() {
+        // A wildcard import of the file shadows a declaration of the global scope, e.g., one that
+        // was inferred for an unresolved name of another file
+        val result =
+            frontend().build {
+                val targets = declareTargets()
+
+                val other = newTranslationUnit("other.file")
+                scopeManager.resetToGlobal(other)
+                newVariable("foo", holder = other)
+
+                val tuA = newTranslationUnit("a.file")
+                scopeManager.resetToGlobal(tuA)
+                newNamespace("p", holder = tuA, enterScope = true) { pkg ->
+                    functionWithRefs("useA", pkg, "foo")
+                }
+                scopeManager.enterScope(tuA)
+                newImport(
+                    parseName("q"),
+                    ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    holder = tuA,
+                )
+                scopeManager.leaveScope(tuA)
+
+                translationResult {
+                    components.firstOrNull()?.translationUnits?.addAll(listOf(targets, other, tuA))
+                }
+            }
+
+        assertEquals(result.variables["q.foo"], result.ref("useA", "foo").refersTo)
+    }
 }
