@@ -1055,6 +1055,32 @@ interface Lattice<T : Lattice.Element> {
         // current basic block and the next branches have been processed to reduce the amount of
         // merges.
         val mergePointsEdgesMap = IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>()
+        // Edges that have been transferred, i.e. taken as `nextEdge` from a worklist (incl. start
+        // edges). Unlike globalState, this set is never pruned: a pruned edge was still
+        // transferred, so a merge point must not keep waiting for it. This is the event a
+        // merge-point waitlist is cleared against (see [removeIncomingEdgeFromMergePoint] and
+        // [removeIncomingEdgeIfExists]), so the criterion must measure the same event — recording
+        // an edge here when it is merely *dispatched* (its state written while processing the
+        // predecessor) would mark both branches of an if/else as "done" before either reaches the
+        // merge, emptying the waitlist and firing the merge with only one branch's state.
+        val transferredEdges = IdentitySet<EvaluationOrder>()
+        for (startEdge in startEdges) transferredEdges.add(startEdge)
+        // Edges that leave a loop, deferred until no other work is pending except the merge
+        // fallback. Processed as soon as they are ready, they would run the code after the loop
+        // before the loop body has stabilised, so that code would be transferred once per
+        // iteration. Such an edge has no scc, but its start node has an outgoing edge with an scc
+        // (the one that stays in the loop).
+        val deferredExitEdgesList = mutableListOf<EvaluationOrder>()
+        fun EvaluationOrder.isLoopExit(): Boolean =
+            this.scc == null && this.start.nextEOGEdges.any { it.scc != null }
+        // The order in which the keys of mergePointsEdgesMap were inserted, for the tie-breaks in
+        // removeCandidate. The map's iteration order derives from identityHashCode and differs
+        // between JVM runs, so breaking ties by it would make the processing order, and with it
+        // the number of transfers, vary from run to run. The map keeps its identity semantics.
+        var mergePointInsertionCounter = 0L
+        val mergePointInsertionOrder = IdentityHashMap<EvaluationOrder, Long>()
+        fun insertionOrderOf(key: EvaluationOrder): Long =
+            mergePointInsertionOrder[key] ?: Long.MAX_VALUE
 
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.hasCandidate(): Boolean {
             return this.entries.any { (_, v) -> v.isEmpty() }
@@ -1066,11 +1092,33 @@ interface Lattice<T : Lattice.Element> {
             incomingEdge: EvaluationOrder,
         ) {
             if (mergePointNextEdge !in this) {
+                mergePointInsertionOrder[mergePointNextEdge] = mergePointInsertionCounter++
                 this[mergePointNextEdge] =
-                    mergePointNextEdge.start.prevEOGEdges.mapTo(mutableSetOf()) {
-                        Pair(it.end, it.start)
-                    }
+                    mergePointNextEdge.start.prevEOGEdges
+                        // A loop's back edge is re-processed each iteration anyway, so a merge
+                        // point (notably the loop head) must not wait for it — otherwise the head
+                        // never becomes ready and the worklist falls back to an arbitrary key.
+                        // An edge already transferred has delivered its state, so waiting for it
+                        // again would deadlock the merge.
+                        .filter { !it.isLoopBackEdge && it !in transferredEdges }
+                        .mapTo(mutableSetOf()) { Pair(it.end, it.start) }
             }
+            this[mergePointNextEdge]?.removeIf {
+                it.first == incomingEdge.end && it.second == incomingEdge.start
+            }
+        }
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>
+            .removeIncomingEdgeIfExists(
+            mergePointNextEdge: EvaluationOrder,
+            incomingEdge: EvaluationOrder,
+        ) {
+            // Removes [incomingEdge] from the waitlist of [mergePointNextEdge], if there is one,
+            // without creating a waitlist. A transferred edge has delivered its state even if it
+            // did not change the successor's state, so the merge point must not wait for it any
+            // longer. Waitlists are only created on a state change (see
+            // [removeIncomingEdgeFromMergePoint]), so this does not change which edges are routed
+            // as merge points.
             this[mergePointNextEdge]?.removeIf {
                 it.first == incomingEdge.end && it.second == incomingEdge.start
             }
@@ -1079,13 +1127,21 @@ interface Lattice<T : Lattice.Element> {
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.removeCandidate():
             EvaluationOrder {
             // We want an element that were we erased all values
-            // If there are multiple, we take the one with the highest scc
+            // If there are multiple, we take the one with the highest scc, and of those the one
+            // inserted first (see mergePointInsertionOrder). Without a ready one, the one
+            // inserted first.
             val key =
                 this.entries
                     .filter { (_, v) -> v.isEmpty() }
-                    .maxByOrNull { (k, _) -> k.scc ?: 0 }
-                    ?.key ?: this.keys.first()
+                    .minWithOrNull(
+                        compareByDescending<MutableMap.MutableEntry<EvaluationOrder, *>> {
+                                it.key.scc ?: 0
+                            }
+                            .thenBy { insertionOrderOf(it.key) }
+                    )
+                    ?.key ?: this.keys.minBy { insertionOrderOf(it) }
             this.remove(key)
+            mergePointInsertionOrder.remove(key)
             return key
         }
 
@@ -1145,6 +1201,7 @@ interface Lattice<T : Lattice.Element> {
             nextBranchEdgesList.forEach(::markLive)
             sccEdgesQueue.forEach { (_, edge) -> markLive(edge) }
             mergePointsEdgesMap.keys.forEach(::markLive)
+            deferredExitEdgesList.forEach(::markLive)
 
             while (stack.isNotEmpty()) {
                 stack.removeLast().end.nextEOGEdges.forEach(::markLive)
@@ -1168,7 +1225,8 @@ interface Lattice<T : Lattice.Element> {
             currentBBEdgesList.isNotEmpty() ||
                 nextBranchEdgesList.isNotEmpty() ||
                 mergePointsEdgesMap.isNotEmpty() ||
-                sccEdgesQueue.isNotEmpty()
+                sccEdgesQueue.isNotEmpty() ||
+                deferredExitEdgesList.isNotEmpty()
         ) {
             currentCoroutineContext().ensureActive()
             // Sample the retention before pruning: that high-water mark is what actually has to fit
@@ -1200,9 +1258,18 @@ interface Lattice<T : Lattice.Element> {
                     // that we have to compute and that we hopefully reduce the number of
                     // re-processing the same basic blocks.
                     nextBranchEdgesList.removeFirst()
+                } else if (deferredExitEdgesList.isNotEmpty()) {
+                    // Before the fallback: a loop head does not need the fallback to iterate (its
+                    // waitlist ignores back edges), and a merge point that waits for one of these
+                    // edges must get it before the fallback forces it with partial state. The
+                    // fallback is left for merge points with unreachable predecessors.
+                    deferredExitEdgesList.removeFirst()
                 } else {
                     mergePointsEdgesMap.removeCandidate()
                 }
+            // Record the edge as transferred before building any waitlists for its successors —
+            // this is the event a merge-point waitlist is cleared against, so it must precede that.
+            transferredEdges.add(nextEdge)
 
             // Compute the effects of "nextEdge" on the state by applying the transformation to
             // its state.
@@ -1317,6 +1384,12 @@ interface Lattice<T : Lattice.Element> {
 
                         globalState.put(it, newGlobalIt)
 
+                        // nextEdge has been transferred, so it leaves the waitlist of the merge
+                        // point `it` starts at, also if the state did not change: otherwise the
+                        // merge point would wait for it forever. Whether `it` is queued below
+                        // still depends on a state change.
+                        mergePointsEdgesMap.removeIncomingEdgeIfExists(it, nextEdge)
+
                         if (
                             it !in currentBBEdgesList &&
                                 it !in nextBranchEdgesList &&
@@ -1333,7 +1406,11 @@ interface Lattice<T : Lattice.Element> {
                                         ?: newGlobalIt.compare(oldGlobalIt)) in
                                         setOf(Order.GREATER, Order.UNEQUAL))
                         ) {
-                            if (
+                            if (it.isLoopExit()) {
+                                // See deferredExitEdgesList. Its latest state is in globalState, so
+                                // an edge that is already waiting is not queued again.
+                                if (it !in deferredExitEdgesList) deferredExitEdgesList.add(it)
+                            } else if (
                                 // We might be at the merge point.
                                 // In comparison to a loop entry, a merge point has multiple
                                 // prevEOGEdges without SCC-Label and at least one nextEOGEdge

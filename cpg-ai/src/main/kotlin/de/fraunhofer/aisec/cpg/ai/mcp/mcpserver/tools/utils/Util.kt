@@ -118,12 +118,30 @@ internal inline fun <reified T> decodeArguments(
 
 /**
  * The answer to a call whose argument string was not a JSON object ([UNPARSABLE_ARGUMENTS_KEY]).
+ *
+ * Arguments that end like an object were not cut off but are malformed, e.g. GLM on vLLM sends
+ * `"projectName": ogg"` (opening quote lost). The parser's complaint then shows the model where.
  */
 @PublishedApi
-internal fun describeUnparsableArguments(tool: String, received: String?): String =
-    "Invalid arguments for $tool: the arguments did not arrive as complete JSON (received: " +
-        "${received?.take(200)?.let { "`$it`" } ?: "nothing"}; probably cut off). " +
-        "Send the complete call again."
+internal fun describeUnparsableArguments(tool: String, received: String?): String {
+    val shown = received?.take(200)?.let { "`$it`" } ?: "nothing"
+    return if (received != null && received.trimEnd().endsWith("}")) {
+        "Invalid arguments for $tool: the arguments are not a valid JSON object (received: " +
+            "$shown; ${jsonObjectProblem(received)}). Send the corrected call again."
+    } else {
+        "Invalid arguments for $tool: the arguments did not arrive as complete JSON (received: " +
+            "$shown; probably cut off). Send the complete call again."
+    }
+}
+
+/** Why [text] is not a JSON object: the parser's message, without the input it repeats. */
+private fun jsonObjectProblem(text: String): String =
+    try {
+        Json.parseToJsonElement(text)
+        "it is JSON, but not an object"
+    } catch (e: SerializationException) {
+        e.message?.lineSequence()?.firstOrNull() ?: "it does not parse"
+    }
 
 /** [description] followed by one line per parameter in [schema], if it has any. */
 @PublishedApi

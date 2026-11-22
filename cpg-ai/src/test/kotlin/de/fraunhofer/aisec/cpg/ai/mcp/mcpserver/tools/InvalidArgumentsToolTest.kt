@@ -152,4 +152,27 @@ class InvalidArgumentsToolTest {
             text,
         )
     }
+
+    @Test
+    fun malformedArgumentsAreReportedWithTheProblem(@TempDir dir: Path) {
+        val server = server()
+        server.addAddLLMConceptAndOperationsTool(File(dir.toFile(), "concepts.yaml"))
+
+        // As GLM on vLLM sends them: the opening quote of the last value is lost
+        val text =
+            call(
+                    server,
+                    "cpg_add_llm_concept_and_operations",
+                    """{"cpg_ai_unparsable_arguments": "{\"concepts\": [], \"projectName\": ogg\"}"}""",
+                )
+                .text()
+
+        assertEquals(
+            "Invalid arguments for cpg_add_llm_concept_and_operations: the arguments are not a " +
+                "valid JSON object (received: `{\"concepts\": [], \"projectName\": ogg\"}`; " +
+                "Unexpected JSON token at offset 36: Expected end of the object or comma at " +
+                "path: $). Send the corrected call again.",
+            text,
+        )
+    }
 }
