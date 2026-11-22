@@ -134,6 +134,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
          * that the regular resolver would resolve.
          */
         val experimentalEOGWorklist: Boolean = false,
+
+        /** Considers all overrides in subclasses. This is an overapproximation. */
+        val includeAllOverrides: Boolean = false,
     ) : PassConfiguration()
 
     protected lateinit var walker: ScopedWalker<Node>
@@ -1158,6 +1161,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         possibleSubTypes: Set<Type>,
         declaration: Function,
     ): Set<Function> {
+        if (passConfig?.includeAllOverrides == true) {
+            return declaration.overriddenBy.toSet()
+        }
+
         return declaration.overriddenBy.filterTo(mutableSetOf()) { f ->
             if (f is Method) {
                 val record = f.recordDeclaration

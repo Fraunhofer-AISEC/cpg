@@ -27,13 +27,14 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
-import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
 @Description("This pass contains fine-grained improvements to the EOG for the go language.")
@@ -112,13 +113,39 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
 
         // We need to follow the path from the defer statement to all return statements that are
         // reachable from this point.
+        //
+        // Only the return statements themselves matter here, not the paths that lead to them.
+        // Enumerating the paths is exponential in the number of branches between the defer and
+        // the returns -- a defer followed by a handful of conditionals, which is ordinary Go,
+        // already yields more paths than can be walked -- while each of them contributes nothing
+        // but its last node. Collecting the reachable returns directly visits every node at most
+        // once and produces the same set of edges.
         for (defer in defers ?: listOf()) {
-            val paths = defer.followEOGEdgesUntilHit { it is Return }
-            for (path in paths.fulfilled) {
+            val returns = identitySetOf<Node>()
+            val seen = identitySetOf<Node>()
+            val work = ArrayDeque<Node>()
+            work += defer
+            seen += defer
+
+            while (work.isNotEmpty()) {
+                for (next in work.removeFirst().nextEOG) {
+                    if (!seen.add(next)) {
+                        continue
+                    }
+                    // Stop at a return, exactly as following the EOG until a hit does.
+                    if (next is Return) {
+                        returns += next
+                    } else {
+                        work += next
+                    }
+                }
+            }
+
+            for (returnStatement in returns) {
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
-                addEOGEdge(path.nodes.last(), defer.input)
+                addEOGEdge(returnStatement, defer.input)
             }
         }
     }

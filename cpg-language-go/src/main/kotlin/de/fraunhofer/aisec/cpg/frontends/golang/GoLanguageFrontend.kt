@@ -47,6 +47,8 @@ import de.fraunhofer.aisec.cpg.helpers.mapNotNullFiltered
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
+import de.fraunhofer.aisec.cpg.passes.GoInterfaceSatisfactionPass
+import de.fraunhofer.aisec.cpg.passes.GoMethodBindingPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -61,6 +63,8 @@ import java.net.URI
  * This is needed because we cannot directly export Go structs and pointers to C.
  */
 @RegisterExtraPass(GoExtraPass::class)
+@RegisterExtraPass(GoMethodBindingPass::class)
+@RegisterExtraPass(GoInterfaceSatisfactionPass::class)
 @ReplacePass(
     lang = GoLanguage::class,
     old = EvaluationOrderGraphPass::class,
@@ -74,6 +78,19 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     private var currentModule: GoStandardLibrary.Modfile.File? = null
     private var commentMap: GoStandardLibrary.Ast.CommentMap? = null
     var currentFile: GoStandardLibrary.Ast.File? = null
+
+    /**
+     * The names introduced by a short variable declaration (`x := ...`) in the function currently
+     * being parsed.
+     *
+     * Such a declaration shadows a package of the same name from that point on, and `liner :=
+     * liner.NewLiner()` is ordinary Go. The declaration itself is only turned into a
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Variable] later, by
+     * [de.fraunhofer.aisec.cpg.passes.GoExtraPass], so the scope manager cannot answer the question
+     * while we are still parsing. We therefore remember the names ourselves, in the order they
+     * appear, which is exactly what deciding between a package qualifier and a member access needs.
+     */
+    val shortVariableNames = mutableSetOf<String>()
 
     override val frontendConfiguration: GoFrontendConfiguration by lazy {
         this.ctx.config.frontendConfigurations[this::class] as? GoFrontendConfiguration
@@ -226,16 +243,23 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
             } else {
                 // We need to be careful with method declarations. We need to put them in the
                 // respective name scope of the record and NOT on the global scope / namespace scope
-                // TODO: this is broken if we see the declaration of the method before the class :(
                 if (declaration is Method) {
-                    declaration.recordDeclaration?.let {
-                        scopeManager.enterScope(it)
+                    val record = declaration.recordDeclaration
+                    if (record != null) {
+                        scopeManager.enterScope(record)
                         scopeManager.addDeclaration(declaration)
-                        scopeManager.leaveScope(it)
-                        // But still add it to the AST of the namespace so our AST walker can find
-                        // it
-                        p.declarations += declaration
+                        scopeManager.leaveScope(record)
                     }
+                    // The method has to end up in the AST of the namespace in either case, so that
+                    // the AST walker can find it. The receiver's record is only known here if it
+                    // has already been parsed, and within a Go package a method routinely precedes
+                    // the type it belongs to -- miekg/dns declares the methods of nearly every RR
+                    // type in the generated ztypes.go while the types themselves live in types.go.
+                    // Keying this on the record meant such a method was added neither to a scope
+                    // nor to the AST, i.e. it was dropped from the graph, and whether that happened
+                    // depended on the order in which the files were parsed. GoMethodBindingPass
+                    // binds the ones left over once the whole component has been parsed.
+                    p.declarations += declaration
                 } else if (declaration != null) {
                     scopeManager.addDeclaration(declaration)
                     p.addDeclaration(declaration)
@@ -364,9 +388,13 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     objectType(parts.joinToString("; ", "interface{", "}"))
                 }
                 is GoStandardLibrary.Ast.MapType -> {
-                    // We cannot properly represent Go's built-in map types, yet so we have
-                    // to make a shortcut here and represent it as a Java-like map<K, V> type.
-                    return objectType("map", listOf(typeOf(type.key), typeOf(type.value)))
+                    // We represent Go's built-in map as a Java-like map<K, V> type. It needs its
+                    // own type rather than a plain object type so that subscripting it yields the
+                    // value type; an ObjectType dereferences to an unknown type, which leaves
+                    // every `m[k]` untyped.
+                    val mapType = GoMapType("map", typeOf(type.key), typeOf(type.value), language)
+                    mapType.applyMetadata(this, "map", rawNode = type, doNotPrependNamespace = true)
+                    return mapType
                 }
                 is GoStandardLibrary.Ast.StarExpr -> {
                     typeOf(type.x).pointer()
@@ -489,7 +517,17 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
 val Type?.underlyingType: Type?
     get() {
         return if (namedType) {
-            this?.superTypes?.singleOrNull()
+            // The underlying type of a named type is kept among its super types. The interfaces
+            // the type satisfies are recorded there as well -- satisfaction in Go is structural,
+            // so it is established from the method sets rather than from the declaration -- and
+            // those must not be mistaken for the underlying type. We therefore skip interfaces
+            // instead of expecting the super types to hold exactly one entry.
+            //
+            // Note that a named type whose underlying type is itself an interface
+            // (`type MyReader io.Reader`) cannot be told apart this way.
+            this?.superTypes?.firstOrNull {
+                (it as? ObjectType)?.recordDeclaration?.kind != "interface"
+            }
         } else {
             this
         }
