@@ -53,6 +53,10 @@ val enableJVMFrontend: Boolean by extra {
     val enableJVMFrontend: String? by settings
     enableJVMFrontend.toBoolean()
 }
+val enableCSharpFrontend: Boolean by extra {
+    val enableCSharpFrontend: String? by settings
+    enableCSharpFrontend.toBoolean()
+}
 val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
@@ -83,6 +87,7 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
+if (enableCSharpFrontend) include(":cpg-language-csharp")
 if (enableAIModule) include(":cpg-ai")
 if (enableCodyzeConsole) include(":codyze-console")
 

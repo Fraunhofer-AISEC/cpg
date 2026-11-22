@@ -1,0 +1,14 @@
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="STDOUT" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss,SSS} %-5p %C{1} %m%n"/>
+            <ThresholdFilter level="TRACE"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger level="DEBUG" name="de.fraunhofer.aisec.cpg"/>
+        <Root level="DEBUG">
+            <AppenderRef ref="STDOUT"/>
+        </Root>
+    </Loggers>
+</Configuration>
