@@ -13,7 +13,7 @@ Guidance for AI coding agents (Claude Code, Copilot, Cursor, Codex, Gemini CLI, 
 | `cpg-concepts` | Concept and operation definitions |
 | `cpg-language-*` | One language frontend per module (e.g. `cpg-language-go`, `cpg-language-python`) |
 | `cpg-serialization` | JSON serialization for CPG nodes |
-| `cpg-neo4j` | Export of the CPG to Neo4j |
+| `cpg-neo4j` / `cpg-falkordb` | CLI tools that persist a translated CPG into a Neo4j resp. FalkorDB graph database, both built on the `GraphDatabaseBackend` abstraction in `cpg-core` |
 | `cpg-ai` | MCP server exposing CPG analysis tools to LLMs, plus chat/skills integration |
 | `codyze-core` | Codyze analysis core (project API, queries, results) |
 | `codyze-compliance` | Compliance checking and reporting |
