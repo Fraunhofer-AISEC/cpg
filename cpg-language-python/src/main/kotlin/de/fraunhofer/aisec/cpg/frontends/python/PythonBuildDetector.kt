@@ -160,8 +160,8 @@ class PythonBuildDetector(
         val pyprojectFile = root.resolve("pyproject.toml").takeIf { it.exists() }
 
         val uv = runner.run(listOf("uv", "--version")) != null
-        // A lone pyproject.toml only helps if uv can compile it into a requirements list; pip has
-        // no equivalent, so without uv it is as good as absent.
+        // A lone pyproject.toml only helps if uv can export it as a requirements list; pip has no
+        // equivalent, so without uv it is as good as absent.
         val usablePyproject = pyprojectFile.takeIf { uv && requirementsFile == null }
 
         if (lockFile == null && requirementsFile == null && usablePyproject == null) {
@@ -183,9 +183,9 @@ class PythonBuildDetector(
             return null
         }
 
-        // A lock file is preferred, because it pins all dependencies including their hashes. A
+        // A lock file is preferred, because reading it is faster than resolving fresh. A
         // pyproject.toml without a lock or requirements file is resolved fresh as a last resort,
-        // only with uv (pip has no equivalent of `uv pip compile` to turn PEP 621 metadata into a
+        // only with uv (pip has no equivalent of `uv export` to turn PEP 621 metadata into a
         // requirements list). Either way the export goes to a file of its own, because nothing
         // must be written to the install folder before it is known that it can be used.
         val exported =
@@ -233,13 +233,15 @@ class PythonBuildDetector(
     }
 
     /**
-     * Compiles the `pyproject.toml` of the project in [root] into a plain requirements file, for
-     * projects that declare dependencies via PEP 621 (`[project.dependencies]`) but have no lock
-     * file. Unlike [exportLock], there is nothing pinned to export here -- `uv pip compile`
-     * resolves the dependencies fresh against the package index -- so the result has no hashes and
-     * is not reproducible across runs the same way a lock file is. Projects using the legacy Poetry
-     * format (`[tool.poetry.dependencies]`) are not covered, since `uv pip compile` only
-     * understands PEP 621 metadata.
+     * Resolves the `pyproject.toml` of the project in [root] into a requirements file, for projects
+     * that declare dependencies via PEP 621 (`[project.dependencies]`) but have no lock file. This
+     * is [exportLock] without `--frozen`: `uv export` resolves and locks on the fly when there is
+     * no `uv.lock` to read instead, which is slower than reading a committed lock but otherwise
+     * behaves the same -- including the hashes, and `--no-emit-project` excluding the project's own
+     * package from the result (without it, a project with optional extras is exported as an
+     * editable self-reference, e.g. `-e .[cli,http2]`, which [PythonRequirements.findUnsupported]
+     * then rejects). Projects using the legacy Poetry format (`[tool.poetry.dependencies]`) are not
+     * covered, since `uv export` only understands PEP 621 metadata.
      */
     private fun exportPyproject(root: Path): Path? {
         val exported = createTempFile("cpg-requirements", ".txt")
@@ -247,10 +249,11 @@ class PythonBuildDetector(
             runner.run(
                 listOf(
                     "uv",
-                    "pip",
-                    "compile",
-                    "pyproject.toml",
-                    "--quiet",
+                    "export",
+                    "--no-dev",
+                    "--no-emit-project",
+                    "--format",
+                    "requirements-txt",
                     "--output-file",
                     exported.toString(),
                 ),

@@ -163,7 +163,7 @@ class PythonBuildDetectorTest {
                 val exists = command.first() in available || command.getOrNull(2) in available
                 return if (exists) listOf() else null
             }
-            if (command.contains("export") || command.contains("compile")) {
+            if (command.contains("export")) {
                 Path.of(command[command.indexOf("--output-file") + 1]).file("", "requirements")
                 return listOf()
             }
@@ -237,7 +237,10 @@ class PythonBuildDetectorTest {
             )
 
         assertEquals(listOf(target.toRealPath()), result.includePaths.map { it.toRealPath() })
-        assertTrue(runner.commands.any { it.take(3) == listOf("uv", "pip", "compile") })
+        val export = runner.commands.single { it.take(2) == listOf("uv", "export") }
+        // Without this, a project with optional extras is exported as an editable self-reference
+        // (e.g. `-e .[cli,http2]`), which is then rejected as not a plain package from an index
+        assertContains(export, "--no-emit-project")
         assertTrue(runner.commands.any { "install" in it })
     }
 
@@ -249,8 +252,8 @@ class PythonBuildDetectorTest {
 
         PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
 
-        // pip has no equivalent of `uv pip compile`, so a lone pyproject.toml is as good as absent
-        assertTrue(runner.commands.none { "compile" in it || "install" in it })
+        // pip has no equivalent of `uv export`, so a lone pyproject.toml is as good as absent
+        assertTrue(runner.commands.none { "export" in it || "install" in it })
         assertFalse(target.exists())
     }
 
@@ -263,7 +266,7 @@ class PythonBuildDetectorTest {
         PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
 
         // requirements.txt is a stated dependency set; pyproject.toml would only be a fallback
-        assertTrue(runner.commands.none { "compile" in it })
+        assertTrue(runner.commands.none { it.take(2) == listOf("uv", "export") })
     }
 
     @Test
