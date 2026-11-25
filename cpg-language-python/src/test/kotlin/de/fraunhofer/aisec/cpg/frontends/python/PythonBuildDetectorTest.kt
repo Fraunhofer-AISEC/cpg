@@ -163,7 +163,7 @@ class PythonBuildDetectorTest {
                 val exists = command.first() in available || command.getOrNull(2) in available
                 return if (exists) listOf() else null
             }
-            if (command.contains("export")) {
+            if (command.contains("export") || command.contains("compile")) {
                 Path.of(command[command.indexOf("--output-file") + 1]).file("", "requirements")
                 return listOf()
             }
@@ -223,6 +223,47 @@ class PythonBuildDetectorTest {
         assertEquals(listOf("uv", "pip", "install"), command.take(3))
         // The packages are chosen for the target environment, not the host
         assertEquals("aarch64-unknown-linux-gnu", command[command.indexOf("--python-platform") + 1])
+    }
+
+    @Test
+    fun testInstallWithUvFromPyproject(@TempDir tmp: Path, @TempDir target: Path) {
+        tmp.file("pyproject.toml")
+        val runner = FakeRunner(available = setOf("uv"))
+
+        val result =
+            assertNotNull(
+                PythonBuildDetector(installDirectory = target, runner = runner)
+                    .detect(tmp, environment)
+            )
+
+        assertEquals(listOf(target.toRealPath()), result.includePaths.map { it.toRealPath() })
+        assertTrue(runner.commands.any { it.take(3) == listOf("uv", "pip", "compile") })
+        assertTrue(runner.commands.any { "install" in it })
+    }
+
+    @Test
+    fun testPyprojectIsIgnoredWithoutUv(@TempDir tmp: Path, @TempDir parent: Path) {
+        tmp.file("pyproject.toml")
+        val target = parent.resolve("not-created")
+        val runner = FakeRunner(available = setOf("pip"))
+
+        PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
+
+        // pip has no equivalent of `uv pip compile`, so a lone pyproject.toml is as good as absent
+        assertTrue(runner.commands.none { "compile" in it || "install" in it })
+        assertFalse(target.exists())
+    }
+
+    @Test
+    fun testPyprojectIsIgnoredWhenRequirementsTxtExists(@TempDir tmp: Path, @TempDir target: Path) {
+        tmp.file("pyproject.toml")
+        tmp.file("requirements.txt", "pynacl==1.5.0\n")
+        val runner = FakeRunner(available = setOf("uv"))
+
+        PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
+
+        // requirements.txt is a stated dependency set; pyproject.toml would only be a fallback
+        assertTrue(runner.commands.none { "compile" in it })
     }
 
     @Test
@@ -320,7 +361,9 @@ class PythonBuildDetectorTest {
 
         PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
 
-        assertEquals(listOf(), runner.commands)
+        // A lone pyproject.toml without uv still costs a feasibility check (`uv --version`), but
+        // nothing is ever installed and no folder is created for it
+        assertTrue(runner.commands.none { "install" in it })
         assertFalse(target.exists())
     }
 
