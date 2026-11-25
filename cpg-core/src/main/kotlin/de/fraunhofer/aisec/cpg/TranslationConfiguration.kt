@@ -641,6 +641,7 @@ private constructor(
         fun defaultPasses(): Builder {
             registerPass<TypeHierarchyResolver>()
             registerPass<SymbolResolver>()
+            registerPass<LateCallResolver>()
             registerPass<ImportResolver>()
             registerPass<DFGPass>()
             registerPass<DynamicInvokeResolver>()
