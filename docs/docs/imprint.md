@@ -12,17 +12,18 @@ description: >
     The CPG library is a language-agnostic graph representation of source code.
 ---
 
-# Website Provider
+# Imprint
+
+## Website Provider
 The website www.codyze.io is provided by Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
 
 Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.<br />
 Hansastraße 27 c<br />
 80686 München, Germany<br />
 Internet: [www.fraunhofer.de](https://www.fraunhofer.de/)<br />
-E-Mail:info(at)zv.fraunhofer.de
+E-Mail: info(at)zv.fraunhofer.de
 
 ## Institute and Contact
-
 The website is operated by the Fraunhofer Institute for Applied and Integrated Security AISEC, a constituent entity of Fraunhofer-Gesellschaft with no separate legal status.
 
 Fraunhofer Institute for Applied and Integrated Security AISEC<br />
@@ -32,7 +33,6 @@ Phone: +49 89 322 99 86-0<br />
 E-Mail: anfragen(at)aisec.fraunhofer.de
 
 ## Responsible Editor
-
 Prof. Dr. Georg Sigl<br />
 Managing Director<br />
 Fraunhofer Institute for Applied and Integrated Security AISEC<br />
@@ -42,7 +42,6 @@ Phone: +49 89 3229986-159<br />
 E-Mail: georg.sigl(at)aisec.fraunhofer.de
 
 ## Registration and VAT Identification Number
-
 VAT identification number in accordance with section 27 a of the German Value-Added Tax Act (Umsatzsteuergesetz, UStG): DE 129515865
 
 Registered nonprofit association.<br />
@@ -50,7 +49,6 @@ Register court: Amtsgericht München (district court).<br />
 Registration number: VR 4461.<br />
 
 ## Executive Board
-
 Prof. Holger Hanselka<br />
 President and Chairman of the Board | Corporate Strategy and Communications
 
@@ -60,10 +58,10 @@ Executive Board Member for Research and Transfer (executive unit VA)
 Prof. Axel Müller-Groeling<br />
 Executive Board Member for Research Infrastructures and Digital Transformation (executive unit VB)
 
-Elisabeth Ewen<br>
+Elisabeth Ewen<br />
 Executive Board Member for Human Resources, Corporate Culture and Legal Affairs (executive unit VC)
 
-Dr. Sandra Krey<br>
+Dr. Sandra Krey<br />
 Executive Board Member for Finances and Controlling (executive unit VD) 
 
 
@@ -81,4 +79,4 @@ We make every reasonable effort to ensure that the content of this website is ke
 
 Registered trademarks and proprietary names, and copyrighted text and images, are not generally indicated as such on our webpages. But the absence of such indications in no way implies that these names, images or text belong to the public domain in the context of trademark or copyright law.
 
-For more information on how we handle personal data, please see our Privacy Policy. 
+For more information on how we handle personal data, please see our [Privacy Policy](privacy.md). 
