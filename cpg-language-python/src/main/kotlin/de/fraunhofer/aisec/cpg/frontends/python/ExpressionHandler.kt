@@ -64,7 +64,16 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.SetComp -> handleSetComprehension(node)
             is Python.AST.DictComp -> handleDictComprehension(node)
             is Python.AST.GeneratorExp -> handleGeneratorExp(node)
-            is Python.AST.Await,
+            // `await e` evaluates `e` and suspends until it completes, so below the expression
+            // level it simply is `e`. Turning the whole thing into a problem expression discards
+            // the operand, and with it every call inside it: `await client.send(request)` leaves
+            // no call in the graph at all, not even an unresolved one. Async libraries lose most
+            // of their call graph that way, and no measure comparing resolved against unresolved
+            // call sites can see it, because the calls never reach the graph to be counted. The
+            // suspension carries nothing this graph represents, so handing back the operand
+            // loses no information.
+            is Python.AST.Await -> handle(node.value)
+
             is Python.AST.Yield,
             is Python.AST.YieldFrom ->
                 newProblemExpression(

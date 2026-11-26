@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
@@ -152,7 +153,21 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
                             "We still have {} items with import dependency problems. We will just pick the one with the least dependencies",
                             remaining.size,
                         )
-                        tu = remaining.sortedBy { this[it]?.size }.firstOrNull()
+                        // The dependency count alone does not order the remaining modules: most
+                        // of them tie, and `remaining` comes out of an identity-keyed map, whose
+                        // iteration order differs between JVM runs. A stable sort then hands the
+                        // tie to whichever module hashed first, so a cyclic import graph is
+                        // broken at a different place on every run, the modules are resolved in a
+                        // different order, and a type that was known in time for a call in one
+                        // run is not in the next.
+                        // Breaking the tie on the name makes the choice arbitrary but
+                        // reproducible.
+                        tu =
+                            remaining
+                                .sortedWith(
+                                    compareBy({ this[it]?.size ?: 0 }, { it.name.toString() })
+                                )
+                                .firstOrNull()
                         if (tu == null) {
                             break
                         }
@@ -205,6 +220,11 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
  */
 class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
+    companion object {
+        /** Upper bound on the import retry rounds; a re-export chain is only a few links long. */
+        private const val MAX_IMPORT_ROUNDS = 5
+    }
+
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
     lateinit var tr: TranslationResult
 
@@ -243,6 +263,30 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             }) {
             log.debug("Resolving imports for translation unit {}", tu.name)
             walker.iterate(tu)
+        }
+
+        // An import can only bind to symbols that already exist when it is visited, so a package
+        // that re-exports what its subpackages define depends on the order the modules happen to
+        // come in. Ordering alone cannot fix that: dependencies are tracked per component (see
+        // collectImportDependencies), while a project and its installed dependencies are separate
+        // components, so the edge from one to the other is never recorded. Retrying the imports
+        // that bound to nothing, until no further one binds, removes the order dependence. It is
+        // additive -- an import that already found its symbols is never revisited -- and bounded,
+        // because each round has to resolve at least one more import to continue.
+        for (round in 1..MAX_IMPORT_ROUNDS) {
+            val unresolved =
+                tr.allChildren<Import> { imp -> imp.importedSymbols.values.all { it.isEmpty() } }
+            if (unresolved.isEmpty()) {
+                break
+            }
+            unresolved.forEach { handleImport(it) }
+            val left =
+                tr.allChildren<Import> { imp -> imp.importedSymbols.values.all { it.isEmpty() } }
+                    .size
+            log.debug("Import retry round {}: {} -> {} unresolved", round, unresolved.size, left)
+            if (left == unresolved.size) {
+                break
+            }
         }
     }
 

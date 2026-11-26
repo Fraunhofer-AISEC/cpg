@@ -123,6 +123,20 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 // Set the type and return type(s)
                 val returnType =
                     if (
+                        record != null &&
+                            name in ENTER_METHODS &&
+                            (incomingReturnType == null || incomingReturnType is UnknownType)
+                    ) {
+                        // A context manager's `__enter__` is almost always `return self`, and it is
+                        // almost always inferred rather than parsed, because it lives in a
+                        // dependency. Leaving its return type unknown unties `with x() as y` from
+                        // the type of `x()`, so every method called on `y` loses its receiver and
+                        // the whole chain below it stops resolving. Binding it to the record keeps
+                        // that chain intact; a manager that returns something else is corrected as
+                        // soon as its real `__enter__` is parsed, since this only ever applies to
+                        // an inferred one.
+                        record.toType()
+                    } else if (
                         ctx.config.inferenceConfiguration.inferReturnTypes &&
                             incomingReturnType is UnknownType &&
                             hint != null
@@ -641,6 +655,12 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(Inference::class.java)
+
+        /**
+         * The method a `with` statement calls on its context manager. No language other than Python
+         * names a method this way, so keying on the name needs no language trait.
+         */
+        val ENTER_METHODS = setOf("__enter__", "__aenter__")
     }
 
     init {

@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -1223,7 +1224,27 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         return declaration.overriddenBy.filterTo(mutableSetOf()) { f ->
             if (f is Method) {
                 val record = f.recordDeclaration
-                record != null && record.toType() in possibleSubTypes
+                if (record == null) {
+                    false
+                } else {
+                    val overrideType = record.toType()
+                    // Accept the override if its type is one of the possible subtypes (exact
+                    // match) OR if it is a descendant of one — the receiver is typed as the
+                    // base, but the actual object is a subclass whose method overrides the
+                    // base's. Without the subtype check, `Event.set()` is invoked but
+                    // `EventAdapter.set()` is silently dropped even though the type system
+                    // knows `EventAdapter` extends `Event`.
+                    //
+                    // `possible.ancestors` gives the supertypes of `possible` (the base
+                    // type), so checking whether the override's type appears there would
+                    // mean "is the override a supertype of the base?" — the wrong direction.
+                    // We need "is the base a supertype of the override?", i.e. is `possible`
+                    // in the override's ancestors.
+                    overrideType in possibleSubTypes ||
+                        possibleSubTypes.any { possible ->
+                            possible in overrideType.ancestors.map { it.type }
+                        }
+                }
             } else {
                 false
             }
@@ -1251,10 +1272,37 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 ) != IncompatibleSignature
             }
 
-        return constructorCandidate
-            ?: recordDeclaration
-                .startInference(ctx)
-                ?.createInferredConstructor(constructExpression.signature)
+        if (constructorCandidate != null) {
+            return constructorCandidate
+        }
+
+        // Walk up the supertype chain (MRO). A subclass like `LocalProtocolError(ProtocolError)`
+        // usually does not define its own `__init__`; the constructor lives on the base class.
+        // Without this walk, the call is answered with an inferred stub that has no body, so
+        // nothing behind it is reachable — even though the base `__init__` is right there in
+        // the graph.
+        val visited = mutableSetOf<Record>()
+        visited.add(recordDeclaration)
+        for (superType in recordDeclaration.toType().ancestors) {
+            val superRecord = superType.type.recordDeclaration ?: continue
+            if (superRecord in visited) continue
+            visited.add(superRecord)
+            val inherited =
+                superRecord.constructors.firstOrNull {
+                    it.matchesSignature(
+                        signature,
+                        constructExpression.arguments,
+                        constructExpression.language is HasDefaultArguments,
+                    ) != IncompatibleSignature
+                }
+            if (inherited != null) {
+                return inherited
+            }
+        }
+
+        return recordDeclaration
+            .startInference(ctx)
+            ?.createInferredConstructor(constructExpression.signature)
     }
 
     companion object {
