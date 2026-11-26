@@ -12,46 +12,73 @@ description: >
     The CPG library is a language-agnostic graph representation of source code.
 ---
 
+# Website Provider
+The website www.codyze.io is provided by Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
 
-The
+Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.<br />
+Hansastraße 27 c<br />
+80686 München, Germany<br />
+Internet: [www.fraunhofer.de](https://www.fraunhofer.de/)<br />
+E-Mail:info(at)zv.fraunhofer.de
 
-Fraunhofer Institute for Applied and Integrated Security AISEC<br>
-Lichtenbergstraße 11<br>
-85748 Garching<br>
-Germany<br>
-Phone +49 89 322 99 86-0<br>
+## Institute and Contact
 
+The website is operated by the Fraunhofer Institute for Applied and Integrated Security AISEC, a constituent entity of Fraunhofer-Gesellschaft with no separate legal status.
 
-is a constituent entity of the
+Fraunhofer Institute for Applied and Integrated Security AISEC<br />
+Lichtenbergstraße 11<br />
+85748 Garching, Germany<br />
+Phone: +49 89 322 99 86-0<br />
+E-Mail: anfragen(at)aisec.fraunhofer.de
 
-Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.<br>
-Hansastraße 27 c<br>
-80686 München<br>
-Germany<br>
-Internet: www.fraunhofer.de<br>
-E-Mail: info(at)zv.fraunhofer.de<br>
+## Responsible Editor
 
+Prof. Dr. Georg Sigl<br />
+Managing Director<br />
+Fraunhofer Institute for Applied and Integrated Security AISEC<br />
+Lichtenbergstraße 11<br />
+85748 Garching near Munich<br />
+Phone: +49 89 3229986-159<br />
+E-Mail: georg.sigl(at)aisec.fraunhofer.de
 
-and as such has no separate legal status.
+## Registration and VAT Identification Number
 
- 
+VAT identification number in accordance with section 27 a of the German Value-Added Tax Act (Umsatzsteuergesetz, UStG): DE 129515865
 
-If you have any questions for Fraunhofer AISEC directly, please send us an email to: anfragen(at)aisec.fraunhofer.de.
+Registered nonprofit association.<br />
+Register court: Amtsgericht München (district court).<br />
+Registration number: VR 4461.<br />
 
+## Executive Board
 
-### Vorstand
+Prof. Holger Hanselka<br />
+President and Chairman of the Board | Corporate Strategy and Communications
 
-Prof. Dr.-Ing. Holger Hanselka<br>
-Präsident und Vorstandsvorsitzender | Unternehmensstrategie und -kommunikation
+Prof. Constantin Häfner<br />
+Executive Board Member for Research and Transfer (executive unit VA)
 
-Prof. Dr. Constantin Häfner<br>
-Vorstand für Forschung und Transfer (Vorstandsressort VA)
-
-Prof. Dr. Axel Müller-Groeling<br>
-Vorstand für Forschungsinfrastrukturen und Digitalisierung (Vorstandsressort VB)
+Prof. Axel Müller-Groeling<br />
+Executive Board Member for Research Infrastructures and Digital Transformation (executive unit VB)
 
 Elisabeth Ewen<br>
-Vorständin für Personal, Unternehmenskultur und Recht (Vorstandsressort VC)
+Executive Board Member for Human Resources, Corporate Culture and Legal Affairs (executive unit VC)
 
 Dr. Sandra Krey<br>
-Vorständin für Finanzen und Controlling (Vorstandsressort VD)
+Executive Board Member for Finances and Controlling (executive unit VD) 
+
+
+# Usage Rights
+© Fraunhofer-Gesellschaft e. V., Munich
+
+The source code of Codyze and the CPG is licensed under the Apache License, Version 2.0. See the [LICENSE](https://github.com/fraunhofer-aisec/codyze/blob/main/LICENSE) file for the full license text.
+You may use, modify, and distribute it, including for commercial purposes, subject to the terms of that license. Third-party components remain subject to their respective licenses.
+
+
+# Disclaimer
+We cannot assume any liability for the content of external pages. Solely the operators of those linked pages are responsible for their content.
+
+We make every reasonable effort to ensure that the content of this website is kept up to date and that it is accurate and complete. Nevertheless, the possibility of errors cannot be entirely ruled out. We do not give any warranty in respect of the timeliness, accuracy or completeness of material published on this website and disclaim all liability for (material or non-material) loss or damage incurred by third parties arising from the use of content obtained from the website.
+
+Registered trademarks and proprietary names, and copyrighted text and images, are not generally indicated as such on our webpages. But the absence of such indications in no way implies that these names, images or text belong to the public domain in the context of trademark or copyright law.
+
+For more information on how we handle personal data, please see our Privacy Policy. 
