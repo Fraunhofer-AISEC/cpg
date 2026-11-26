@@ -367,6 +367,47 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
 
     /** Resolves a [Type] based on its string identifier. */
     fun typeOf(typeId: String): Type {
+        // `from __future__ import annotations` (PEP 563) makes ALL annotations strings.
+        // So `list[AsyncConnectionInterface]` arrives here as the string
+        // "list[AsyncConnectionInterface]" rather than as a Subscript AST node. Without
+        // parsing this, the whole string becomes a single ObjectType name and the element
+        // type is lost — which is why 70% of httpx vendor files (all using PEP 563) had
+        // unresolved loop variable calls.
+        val trimmed = typeId.trim()
+        val bracketIdx = trimmed.indexOf('[')
+        if (bracketIdx > 0 && trimmed.endsWith(']')) {
+            val containerName = trimmed.substring(0, bracketIdx).trim()
+            val elementPart = trimmed.substring(bracketIdx + 1, trimmed.length - 1).trim()
+            val builtin = CONTAINER_TYPES[containerName]
+            if (builtin != null) {
+                val elemType = typeOf(elementPart)
+                return when (builtin) {
+                    "dict" -> {
+                        // dict[K, V] — elementType is the value type
+                        val commaIdx = elementPart.indexOf(',')
+                        if (commaIdx > 0) {
+                            val valType = typeOf(elementPart.substring(commaIdx + 1).trim())
+                            MapType(builtin, valType, language)
+                        } else {
+                            MapType(builtin, elemType, language)
+                        }
+                    }
+                    "set",
+                    "frozenset" -> SetType(builtin, elemType, language)
+                    else -> ListType(builtin, elemType, language)
+                }
+            }
+            // Optional[X] / Union[X, None] as string
+            if (containerName in OPTIONAL_TYPES) {
+                // Union[X, None] — take the first non-None element
+                val commaIdx = elementPart.indexOf(',')
+                val first =
+                    if (commaIdx > 0) elementPart.substring(0, commaIdx).trim() else elementPart
+                val firstType = typeOf(first)
+                return firstType.takeIf { it !is UnknownType } ?: objectType(containerName)
+            }
+        }
+
         // Check if the typeId contains a namespace delimiter for qualified types
         val name =
             if (language.namespaceDelimiter in typeId) {

@@ -644,6 +644,7 @@ private constructor(
             registerPass<LateCallResolver>()
             registerPass<ImportResolver>()
             registerPass<DFGPass>()
+            registerPass<PostDFGCallResolver>()
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()

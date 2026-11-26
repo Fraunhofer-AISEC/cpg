@@ -275,20 +275,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) :
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                // Propagate type annotations from the LHS reference itself. An annotated
-                // assignment `self._connections: list[AsyncConnectionInterface] = []` stores
-                // the parsed annotation type on the reference's `assignedTypes`. The value
-                // side (`[]`) only knows it is a `list`, not what it contains, so without this
-                // the field's type is `list` and every member call on an element is unresolved.
-                if (target.assignedTypes.isNotEmpty()) {
-                    log.debug(
-                        "Propagating {} assigned types from {} to field {}: {}",
-                        target.assignedTypes.size,
-                        target.name,
-                        handled.name,
-                        target.assignedTypes,
-                    )
-                    handled.addAssignedTypes(target.assignedTypes)
+                // Propagate type annotations from the LHS reference and the Assign node itself.
+                // handleAnnAssign stores the annotation type on both the LHS reference and the
+                // Assign node. The MemberAccess may be recreated between frontend parsing and
+                // this pass, so checking the Assign's assignedTypes is the reliable path.
+                val allTypes = mutableSetOf<Type>()
+                allTypes.addAll(target.assignedTypes)
+                allTypes.addAll(assignExpression.assignedTypes)
+                if (allTypes.isNotEmpty()) {
+                    handled.addAssignedTypes(allTypes)
                 }
 
                 if (handled !is Field) {
