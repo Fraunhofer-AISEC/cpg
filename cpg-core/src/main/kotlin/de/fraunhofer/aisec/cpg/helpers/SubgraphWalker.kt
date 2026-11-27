@@ -87,6 +87,7 @@ object SubgraphWalker {
      * @param classType the class type
      * @return its fields, including the ones from its superclass
      */
+    @Synchronized
     fun getAllEdgeFields(classType: Class<*>): Collection<Field> {
         if (classType.superclass != null) {
             val cacheKey = classType.name
