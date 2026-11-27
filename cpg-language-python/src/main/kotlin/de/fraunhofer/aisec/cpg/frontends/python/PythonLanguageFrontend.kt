@@ -811,7 +811,13 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "complex" -> Python.Complex(pyObject)
             "ellipsis" -> Python.Ellipsis(pyObject)
             else -> {
-                TODO("Implement for ${pyObject.getAttr("__class__")}")
+                // Instead of crashing with TODO, return a Pass statement so the analysis
+                // can continue. Unknown AST node types (e.g. ast.TypeAlias from PEP 695,
+                // ast.TypeVar, ast.ParamSpec, ast.TypeVarTuple) will be silently skipped,
+                // which is safe — they declare type aliases, not executable code.
+                org.slf4j.LoggerFactory.getLogger("PythonLanguageFrontend")
+                    .warn("Unhandled Python AST node type: {}", pyObject.getAttr("__class__"))
+                Python.AST.Pass(pyObject)
             }
         }
     }
