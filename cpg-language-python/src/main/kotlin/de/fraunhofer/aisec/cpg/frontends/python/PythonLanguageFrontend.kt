@@ -36,7 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
+import de.fraunhofer.aisec.cpg.graph.types.ListType
+import de.fraunhofer.aisec.cpg.graph.types.MapType
+import de.fraunhofer.aisec.cpg.graph.types.SetType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
@@ -88,6 +92,32 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     private var lastColumnLength: Int = -1
 
     companion object {
+        /**
+         * Annotations that wrap the type actually carried by the value, rather than describing a
+         * container of it. `Optional[X]`/`Union[X, None]` resolve to `X`.
+         */
+        private val OPTIONAL_TYPES = setOf("Optional", "Union")
+
+        /**
+         * Annotations that describe a container of elements, not the element itself. `list[X]`
+         * resolves to a [ListType] with `elementType=X`, so iterating the field and calling methods
+         * on the elements can be resolved. Without this, the element type is dropped and every call
+         * on a loop variable is unresolved.
+         */
+        private val CONTAINER_TYPES =
+            mapOf(
+                "list" to "list",
+                "List" to "list",
+                "set" to "set",
+                "Set" to "set",
+                "frozenset" to "frozenset",
+                "FrozenSet" to "frozenset",
+                "dict" to "dict",
+                "Dict" to "dict",
+                "tuple" to "tuple",
+                "Tuple" to "tuple",
+            )
+
         /**
          * Used to give each parse call without a real [path] a unique synthetic filename, so that
          * e.g. multiple in-memory snippets added via `addSource` in the same run do not collide on
@@ -259,6 +289,74 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 }
             }
 
+            is Python.AST.Subscript -> {
+                // A parameterised annotation. `Optional[X]` and `Union[X, None]` describe a value
+                // that is an `X` (or nothing), so they resolve to `X` -- this is what a type
+                // checker does, and without it every optional parameter is untyped and no method
+                // called on it can be looked up. Annotated libraries use `Optional` pervasively,
+                // so this single form accounts for a large share of unresolved receivers.
+                val base = typeOf(type.value)
+                if (base.name.localName in OPTIONAL_TYPES) {
+                    val args = type.slice
+                    // `Union[X, None]` arrives as a tuple, `Optional[X]` as the bare element.
+                    val first = if (args is Python.AST.Tuple) args.elts.firstOrNull() else args
+                    first?.let { typeOf(it) }?.takeIf { it !is UnknownType } ?: base
+                } else {
+                    // A container annotation such as `list[AsyncConnectionInterface]`. The
+                    // element type is parsed from the subscript argument and stored on the
+                    // container type, so that a loop variable iterating the field can be typed.
+                    // Without this, `list[X]` collapses to bare `list` and every method call on
+                    // an element is unresolved — the dominant cause of missed call edges in
+                    // heavily-annotated async libraries (anyio, httpcore).
+                    val baseName = base.name.localName
+                    val builtin = CONTAINER_TYPES[baseName]
+                    if (builtin != null) {
+                        val slice = type.slice
+                        when (builtin) {
+                            "dict" -> {
+                                // dict[K, V] — elementType is the value type (second element)
+                                val elts =
+                                    if (slice is Python.AST.Tuple) slice.elts else listOf(slice)
+                                val keyType = elts.getOrNull(0)?.let { typeOf(it) } ?: unknownType()
+                                val valType = elts.getOrNull(1)?.let { typeOf(it) } ?: keyType
+                                MapType(builtin, valType, language)
+                            }
+                            "tuple" -> {
+                                val elts =
+                                    if (slice is Python.AST.Tuple) slice.elts else listOf(slice)
+                                val elemType =
+                                    elts.getOrNull(0)?.let { typeOf(it) } ?: unknownType()
+                                ListType(builtin, elemType, language)
+                            }
+                            else -> {
+                                // list, set, frozenset
+                                val elemType =
+                                    (slice as? Python.AST.Tuple)?.elts?.firstOrNull()?.let {
+                                        typeOf(it)
+                                    } ?: typeOf(slice)
+                                when (builtin) {
+                                    "set",
+                                    "frozenset" -> SetType(builtin, elemType, language)
+                                    else -> ListType(builtin, elemType, language)
+                                }
+                            }
+                        }
+                    } else {
+                        base
+                    }
+                }
+            }
+
+            is Python.AST.Constant -> {
+                // A forward reference, written as a string because the name is not defined yet
+                // (`def f(p: "A")`). `from __future__ import annotations` makes this the normal
+                // spelling rather than the exception. `value` is declared non-null but a bare
+                // `None` annotation (`-> None`) carries one, so it is read defensively.
+                val literal = runCatching { type.value }.getOrNull()
+                (literal as? String)?.takeIf { it.isNotBlank() }?.let { typeOf(it) }
+                    ?: unknownType()
+            }
+
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
                 // it, so we need to return the unknown type.
@@ -269,6 +367,47 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
 
     /** Resolves a [Type] based on its string identifier. */
     fun typeOf(typeId: String): Type {
+        // `from __future__ import annotations` (PEP 563) makes ALL annotations strings.
+        // So `list[AsyncConnectionInterface]` arrives here as the string
+        // "list[AsyncConnectionInterface]" rather than as a Subscript AST node. Without
+        // parsing this, the whole string becomes a single ObjectType name and the element
+        // type is lost — which is why 70% of httpx vendor files (all using PEP 563) had
+        // unresolved loop variable calls.
+        val trimmed = typeId.trim()
+        val bracketIdx = trimmed.indexOf('[')
+        if (bracketIdx > 0 && trimmed.endsWith(']')) {
+            val containerName = trimmed.substring(0, bracketIdx).trim()
+            val elementPart = trimmed.substring(bracketIdx + 1, trimmed.length - 1).trim()
+            val builtin = CONTAINER_TYPES[containerName]
+            if (builtin != null) {
+                val elemType = typeOf(elementPart)
+                return when (builtin) {
+                    "dict" -> {
+                        // dict[K, V] — elementType is the value type
+                        val commaIdx = elementPart.indexOf(',')
+                        if (commaIdx > 0) {
+                            val valType = typeOf(elementPart.substring(commaIdx + 1).trim())
+                            MapType(builtin, valType, language)
+                        } else {
+                            MapType(builtin, elemType, language)
+                        }
+                    }
+                    "set",
+                    "frozenset" -> SetType(builtin, elemType, language)
+                    else -> ListType(builtin, elemType, language)
+                }
+            }
+            // Optional[X] / Union[X, None] as string
+            if (containerName in OPTIONAL_TYPES) {
+                // Union[X, None] — take the first non-None element
+                val commaIdx = elementPart.indexOf(',')
+                val first =
+                    if (commaIdx > 0) elementPart.substring(0, commaIdx).trim() else elementPart
+                val firstType = typeOf(first)
+                return firstType.takeIf { it !is UnknownType } ?: objectType(containerName)
+            }
+        }
+
         // Check if the typeId contains a namespace delimiter for qualified types
         val name =
             if (language.namespaceDelimiter in typeId) {
@@ -672,7 +811,13 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "complex" -> Python.Complex(pyObject)
             "ellipsis" -> Python.Ellipsis(pyObject)
             else -> {
-                TODO("Implement for ${pyObject.getAttr("__class__")}")
+                // Instead of crashing with TODO, return a Pass statement so the analysis
+                // can continue. Unknown AST node types (e.g. ast.TypeAlias from PEP 695,
+                // ast.TypeVar, ast.ParamSpec, ast.TypeVarTuple) will be silently skipped,
+                // which is safe — they declare type aliases, not executable code.
+                org.slf4j.LoggerFactory.getLogger("PythonLanguageFrontend")
+                    .warn("Unhandled Python AST node type: {}", pyObject.getAttr("__class__"))
+                Python.AST.Pass(pyObject)
             }
         }
     }

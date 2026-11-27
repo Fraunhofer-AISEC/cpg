@@ -157,12 +157,21 @@ class PythonBuildDetector(
     private fun installDependencies(root: Path, environment: TargetEnvironment): Path? {
         val lockFile = root.resolve("uv.lock").takeIf { it.exists() }
         val requirementsFile = root.resolve("requirements.txt").takeIf { it.exists() }
-        if (lockFile == null && requirementsFile == null) {
-            log.info("No uv.lock or requirements.txt in {}, nothing to install", root)
+        val pyprojectFile = root.resolve("pyproject.toml").takeIf { it.exists() }
+
+        val uv = runner.run(listOf("uv", "--version")) != null
+        // A lone pyproject.toml only helps if uv can export it as a requirements list; pip has no
+        // equivalent, so without uv it is as good as absent.
+        val usablePyproject = pyprojectFile.takeIf { uv && requirementsFile == null }
+
+        if (lockFile == null && requirementsFile == null && usablePyproject == null) {
+            log.info(
+                "No uv.lock, requirements.txt or pyproject.toml in {}, nothing to install",
+                root,
+            )
             return null
         }
 
-        val uv = runner.run(listOf("uv", "--version")) != null
         if (!uv && runner.run(listOf("python3", "-m", "pip", "--version")) == null) {
             log.warn("Neither uv nor pip is available, cannot install the dependencies")
             return null
@@ -174,10 +183,17 @@ class PythonBuildDetector(
             return null
         }
 
-        // A lock file is preferred, because it pins all dependencies including their hashes. It is
-        // exported to a file of its own, because nothing must be written to the install folder
-        // before it is known that it can be used.
-        val exported = if (uv && lockFile != null) exportLock(root) else null
+        // A lock file is preferred, because reading it is faster than resolving fresh. A
+        // pyproject.toml without a lock or requirements file is resolved fresh as a last resort,
+        // only with uv (pip has no equivalent of `uv export` to turn PEP 621 metadata into a
+        // requirements list). Either way the export goes to a file of its own, because nothing
+        // must be written to the install folder before it is known that it can be used.
+        val exported =
+            when {
+                uv && lockFile != null -> exportLock(root)
+                usablePyproject != null -> exportPyproject(root)
+                else -> null
+            }
         try {
             val requirements = exported ?: requirementsFile ?: return null
             return install(root, target, uv, requirements, environment)
@@ -199,6 +215,41 @@ class PythonBuildDetector(
                     "uv",
                     "export",
                     "--frozen",
+                    "--no-dev",
+                    "--no-emit-project",
+                    "--format",
+                    "requirements-txt",
+                    "--output-file",
+                    exported.toString(),
+                ),
+                root,
+            ) != null
+        if (!ok) {
+            exported.deleteIfExists()
+            return null
+        }
+
+        return exported
+    }
+
+    /**
+     * Resolves the `pyproject.toml` of the project in [root] into a requirements file, for projects
+     * that declare dependencies via PEP 621 (`[project.dependencies]`) but have no lock file. This
+     * is [exportLock] without `--frozen`: `uv export` resolves and locks on the fly when there is
+     * no `uv.lock` to read instead, which is slower than reading a committed lock but otherwise
+     * behaves the same -- including the hashes, and `--no-emit-project` excluding the project's own
+     * package from the result (without it, a project with optional extras is exported as an
+     * editable self-reference, e.g. `-e .[cli,http2]`, which [PythonRequirements.findUnsupported]
+     * then rejects). Projects using the legacy Poetry format (`[tool.poetry.dependencies]`) are not
+     * covered, since `uv export` only understands PEP 621 metadata.
+     */
+    private fun exportPyproject(root: Path): Path? {
+        val exported = createTempFile("cpg-requirements", ".txt")
+        val ok =
+            runner.run(
+                listOf(
+                    "uv",
+                    "export",
                     "--no-dev",
                     "--no-emit-project",
                     "--format",

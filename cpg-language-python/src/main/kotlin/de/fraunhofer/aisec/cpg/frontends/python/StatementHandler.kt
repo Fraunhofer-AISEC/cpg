@@ -249,6 +249,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * ```
      */
     private fun handleWithStatement(node: Python.AST.NormalOrAsyncWith): Block {
+        // `async with` drives the asynchronous variant of the protocol. Desugaring it to
+        // `__enter__`/`__exit__` looks up methods the context manager does not have -- an async
+        // one defines `__aenter__`/`__aexit__` -- so the lookup fails and, because the `as`
+        // variable then has no type, every call on it below fails with it.
+        val isAsync = node is Python.AST.AsyncWith
+        val enterName = if (isAsync) "__aenter__" else "__enter__"
+        val exitName = if (isAsync) "__aexit__" else "__exit__"
         /**
          * Prepares the `manager = ContextManager()` and returns the random name for the "manager"
          * as well as the assignment.
@@ -277,7 +284,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newMemberCall(
                         callee =
                             newMemberAccess(
-                                    name = "__exit__",
+                                    name = exitName,
                                     base = newReference(name = managerName).implicit(),
                                 )
                                 .implicit(),
@@ -299,7 +306,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newMemberCall(
                         callee =
                             newMemberAccess(
-                                    name = "__exit__",
+                                    name = exitName,
                                     base = newReference(name = managerName).implicit(),
                                 )
                                 .implicit(),
@@ -338,7 +345,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 newMemberCall(
                         callee =
                             newMemberAccess(
-                                    name = "__enter__",
+                                    name = enterName,
                                     base = newReference(name = managerName).implicit(),
                                 )
                                 .implicit(),
@@ -597,7 +604,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             module =
                 if (module.localName != "") {
-                    parent.fqn(module.localName)
+                    // The module of a relative import may be dotted, as in
+                    // `from ._sync.connection_pool import ConnectionPool`. Appending only the
+                    // local name drops every component before it and yields
+                    // `httpcore.connection_pool` instead of `httpcore._sync.connection_pool`, so
+                    // the symbol never binds to the class that was actually parsed and the import
+                    // is answered with an inferred stub. Packages that re-export a public API
+                    // through such imports -- which is the normal way to write one -- therefore
+                    // expose nothing resolvable to their dependents.
+                    module.toString().split(module.delimiter).fold(parent) { acc, part ->
+                        acc?.fqn(part)
+                    } ?: Name("")
                 } else {
                     parent ?: Name("")
                 }
@@ -778,9 +795,20 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleAnnAssign(node: Python.AST.AnnAssign): Assign {
         val lhs = frontend.expressionHandler.handle(node.target)
-        lhs.assignedTypes += frontend.typeOf(node.annotation)
+        val annType = frontend.typeOf(node.annotation)
+        // Store the annotation type directly on the reference's type, not just assignedTypes.
+        // The assignedTypes set can be overwritten by later passes (e.g. when the RHS value's
+        // type resolves to the built-in list), but the assignedTypes added via addAssignedTypes
+        // should persist. However, the MemberAccess may be recreated between frontend parsing
+        // and PythonAddDeclarationsPass, so we also register a type observer on the RHS value
+        // to propagate the annotation type to whatever declaration the pass creates.
+        lhs.addAssignedTypes(setOf(annType))
         val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
-        return newAssign(lhs = listOf(lhs), rhs = rhs, rawNode = node)
+        val assign = newAssign(lhs = listOf(lhs), rhs = rhs, rawNode = node)
+        // Store the annotation type on the assign so PythonAddDeclarationsPass can retrieve it
+        // even if the MemberAccess is recreated.
+        assign.assignedTypes += annType
+        return assign
     }
 
     private fun handleIf(node: Python.AST.If): Expression {
@@ -815,7 +843,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         node.type_comment?.let { typeComment ->
             val tpe = frontend.typeOf(typeComment)
-            lhs.forEach { it.assignedTypes += tpe }
+            lhs.forEach { it.addAssignedTypes(setOf(tpe)) }
         }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)

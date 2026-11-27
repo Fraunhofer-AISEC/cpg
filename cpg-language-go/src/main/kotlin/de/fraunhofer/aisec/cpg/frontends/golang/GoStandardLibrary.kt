@@ -386,6 +386,8 @@ interface GoStandardLibrary : Library {
                     "*ast.BlockStmt" -> BlockStmt(nativeValue)
                     "*ast.BranchStmt" -> BranchStmt(nativeValue)
                     "*ast.CaseClause" -> CaseClause(nativeValue)
+                    "*ast.SelectStmt" -> SelectStmt(nativeValue)
+                    "*ast.CommClause" -> CommClause(nativeValue)
                     "*ast.DeferStmt" -> DeferStmt(nativeValue)
                     "*ast.DeclStmt" -> DeclStmt(nativeValue)
                     "*ast.ExprStmt" -> ExprStmt(nativeValue)
@@ -436,6 +438,23 @@ interface GoStandardLibrary : Library {
 
             val body: List<Stmt> by lazy {
                 this.list(INSTANCE::GetNumCaseClauseBody, INSTANCE::GetCaseClauseBody)
+            }
+        }
+
+        /**
+         * A `select` statement. Its body holds [CommClause]s, which play the same role for channel
+         * operations that [CaseClause] plays for a `switch`.
+         */
+        class SelectStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
+            val body: BlockStmt by lazy { INSTANCE.GetSelectStmtBody(this) }
+        }
+
+        /** One arm of a `select`. [comm] is the send or receive statement guarding the arm. */
+        class CommClause(p: Pointer? = Pointer.NULL) : Stmt(p) {
+            val comm: Stmt? by lazy { INSTANCE.GetCommClauseComm(this) }
+
+            val body: List<Stmt> by lazy {
+                this.list(INSTANCE::GetNumCommClauseBody, INSTANCE::GetCommClauseBody)
             }
         }
 
@@ -728,6 +747,14 @@ interface GoStandardLibrary : Library {
     fun GetNumCaseClauseBody(caseClause: Ast.CaseClause): Int
 
     fun GetCaseClauseBody(caseClause: Ast.CaseClause, i: Int): Ast.Stmt
+
+    fun GetSelectStmtBody(selectStmt: Ast.SelectStmt): Ast.BlockStmt
+
+    fun GetCommClauseComm(commClause: Ast.CommClause): Ast.Stmt?
+
+    fun GetNumCommClauseBody(commClause: Ast.CommClause): Int
+
+    fun GetCommClauseBody(commClause: Ast.CommClause, i: Int): Ast.Stmt
 
     fun GetDeclStmtDecl(declStmt: Ast.DeclStmt): Ast.Decl
 

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 /** A c-style dereference, such as *i->f. */
@@ -57,7 +58,17 @@ open class PointerDereference : Reference() {
             return
         }
 
-        // Apply our operator to all assigned types and forward them to us
-        this.addAssignedTypes(assignedTypes.mapTo(mutableSetOf(), Type::dereference))
+        // Apply our operator to all assigned types and forward them to us -- but only to those we
+        // can actually dereference. ObjectType.dereference() answers an unknown type, so mapping a
+        // non-pointer through it turns a precise statement ("a bytes.Buffer reached here") into
+        // "this could be anything", which is worse than contributing nothing at all. A set of
+        // assigned types regularly holds both `*T` and `T`, so this is the common case rather than
+        // a corner one: once the types actually propagate, it accounted for an unknown type in
+        // nearly a fifth of all dispatching receivers.
+        this.addAssignedTypes(
+            assignedTypes.mapNotNullTo(mutableSetOf()) { type ->
+                type.dereference().takeIf { it !is UnknownType }
+            }
+        )
     }
 }

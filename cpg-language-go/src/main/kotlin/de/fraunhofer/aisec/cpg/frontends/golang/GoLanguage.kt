@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -50,6 +51,9 @@ open class GoLanguage :
     HasGenerics,
     HasStructs,
     HasFirstClassFunctions,
+    HasImplicitPointerToArrayIndexing,
+    HasPackagesSpanningMultipleFiles,
+    HasNameOnlyCallResolution,
     HasAnonymousIdentifier,
     HasFunctionStyleCasts,
     HasVisibilityModifiers,
@@ -183,12 +187,39 @@ open class GoLanguage :
             return DirectMatch
         }
 
+        // A value is assignable to a variable whose type has the same underlying type, as long as
+        // at least one of the two is not a named type (see https://go.dev/ref/spec#Assignability).
+        // Both directions occur constantly in practice: `encoding/asn1` passes an
+        // `ObjectIdentifier` to a `[]int` parameter, and `crypto/cryptobyte` passes a `[]byte` to
+        // a `String` parameter.
+        //
+        // Requiring the types to be written identically instead does not merely lose precision:
+        // the call no longer matches its declaration, a body-less stub is inferred in its place,
+        // and everything reachable through that call is lost. Two *different* named types sharing
+        // an underlying type stay incompatible, as Go requires.
+        if (!type.namedType || !targetType.namedType) {
+            val underlying = type.underlyingType
+            if (underlying != null && underlying == targetType.underlyingType) {
+                return DirectMatch
+            }
+        }
+
         // If we encounter an auto type as part of the function declaration, we accept this as any
         // type
         if (
             (type is ObjectType && targetType is AutoType) ||
                 (type is PointerType && type.isArray && targetType.root is AutoType)
         ) {
+            return DirectMatch
+        }
+
+        // The same has to hold the other way round. A value whose type we could not determine --
+        // the result of a two-value map lookup, say, whose type is only established later when the
+        // data flow is known -- must not rule a candidate out. Not knowing the type is a gap on
+        // our side, and treating it as a mismatch does not merely lose precision: the call stops
+        // matching its target, a stub is inferred in its place, and with it every edge behind that
+        // call.
+        if (type is AutoType || type.root is AutoType) {
             return DirectMatch
         }
 
@@ -213,8 +244,14 @@ open class GoLanguage :
             }
         }
 
-        // We accept all kind of numbers if the literal is part of the call expression
-        if (targetHint is Parameter && hint is Literal<*>) {
+        // We accept all kind of numbers if the literal is part of the call expression.
+        //
+        // The same has to hold for a named untyped constant: `const bpTagData = 0x40` is untyped
+        // and converts implicitly to the parameter's type, so passing it to a `uint8` parameter is
+        // legal even though the declaration itself only carries the default type `int` of its
+        // initializer. Without this, such a call does not match its target and a stub is inferred
+        // instead.
+        if (targetHint is Parameter && hint.isUntypedConstant) {
             return if (type is NumericType && targetType is NumericType) {
                 DirectMatch
             } else {
@@ -349,4 +386,72 @@ open class GoLanguage :
                 else -> Visibility.PACKAGE
             }
     }
+
+    /**
+     * In Go a package is a directory, and two packages in different directories may well carry the
+     * same name. A vendored dependency that forks a standard library package is the common case:
+     * `vendor/.../gofork/encoding/asn1` and the standard library's `encoding/asn1` are both named
+     * `asn1` and declare the same symbols. A lookup by name therefore finds candidates from both,
+     * which the default implementation reports as ambiguous and resolves to `null` -- leaving the
+     * reference unresolved, and with it any member call that uses it as a base.
+     *
+     * Go resolves this unambiguously: an unqualified identifier refers to the declaration in the
+     * package it is written in. We reproduce that by preferring candidates declared in the same
+     * directory as the reference, and only fall back to the default behaviour if that does not
+     * single one out.
+     */
+    override fun bestViableReferenceCandidate(ref: Reference): Declaration? {
+        if (ref.candidates.size > 1) {
+            val refPackage = ref.packageDirectory
+            if (refPackage != null) {
+                val samePackage =
+                    ref.candidates.filterTo(mutableSetOf()) { it.packageDirectory == refPackage }
+                if (samePackage.isNotEmpty()) {
+                    ref.candidates = samePackage
+                }
+            }
+        }
+
+        return super.bestViableReferenceCandidate(ref)
+    }
 }
+
+/** Marks a declaration that was declared in a `const` block. */
+const val CONST_MODIFIER = "const"
+
+/**
+ * Marks a constant declared without an explicit type. Such a constant is *untyped* in Go and
+ * converts implicitly to any type it is representable in.
+ */
+const val UNTYPED_CONST_MODIFIER = "untyped"
+
+/**
+ * Whether this expression is an untyped constant in the sense of https://go.dev/ref/spec#Constants,
+ * i.e. a constant whose type is only determined by the context it is used in. That is the case for
+ * a literal, and for a reference to a constant that was declared without an explicit type.
+ */
+private val HasType?.isUntypedConstant: Boolean
+    get() =
+        when (this) {
+            is Literal<*> -> true
+            is Reference -> {
+                val target = this.refersTo
+                target != null &&
+                    CONST_MODIFIER in target.modifiers &&
+                    UNTYPED_CONST_MODIFIER in target.modifiers
+            }
+            else -> false
+        }
+
+/**
+ * The directory a node is declared in, which for Go is the same thing as the package it belongs to.
+ * Returns `null` for nodes without a location, which therefore never match any package.
+ */
+private val de.fraunhofer.aisec.cpg.graph.Node.packageDirectory: String?
+    get() =
+        this.location
+            ?.artifactLocation
+            ?.uri
+            ?.path
+            ?.substringBeforeLast('/', missingDelimiterValue = "")
+            ?.ifEmpty { null }

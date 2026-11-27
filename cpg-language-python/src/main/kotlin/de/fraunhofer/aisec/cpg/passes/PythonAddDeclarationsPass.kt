@@ -35,7 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.SecondOrderType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -138,8 +142,18 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) :
                         return null
                     }
                     // We need to temporarily jump into the scope of the current record to
-                    // add the field. These are instance attributes
-                    scopeManager.withScope(recordScope) { newField(ref.name) }
+                    // add the field. These are instance attributes.
+                    //
+                    // The name is built from the record rather than taken from `ref`, because the
+                    // name of a member access is qualified by the type of its base: `self` has no
+                    // annotation, so `self._pool` arrives as `UNKNOWN._pool`. A field stored under
+                    // that name is never found by a lookup on the record, so every later
+                    // `self._pool.<method>()` resolves against an unknown receiver -- even where
+                    // the field's own assigned type is perfectly well known. The class-attribute
+                    // branch below already names its fields this way.
+                    scopeManager.withScope(recordScope) {
+                        newField(scopeManager.currentNamespace.fqn(ref.name.localName))
+                    }
                 }
                 scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberAccess -> {
                     // If this is any other member expression, we are usually not interested in
@@ -261,6 +275,17 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) :
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
 
+                // Propagate type annotations from the LHS reference and the Assign node itself.
+                // handleAnnAssign stores the annotation type on both the LHS reference and the
+                // Assign node. The MemberAccess may be recreated between frontend parsing and
+                // this pass, so checking the Assign's assignedTypes is the reliable path.
+                val allTypes = mutableSetOf<Type>()
+                allTypes.addAll(target.assignedTypes)
+                allTypes.addAll(assignExpression.assignedTypes)
+                if (allTypes.isNotEmpty()) {
+                    handled.addAssignedTypes(allTypes)
+                }
+
                 if (handled !is Field) {
                     // Add it to our assign expression, so that we can find it in the AST
                     assignExpression.declarations += handled
@@ -301,8 +326,30 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) :
         when (val forVar = node.variable) {
             is Reference -> {
                 val handled = handleWriteToReference(forVar)
-                if (handled != null && handled !is Field) {
-                    handled.let { node.addDeclaration(it) }
+                if (handled != null) {
+                    if (handled !is Field) {
+                        node.addDeclaration(handled)
+                    }
+                    // Register a type observer on the iterable so the loop variable gets the
+                    // element type when the iterable's type is resolved. At pass time the type
+                    // is usually UnknownType because SymbolResolver hasn't run yet; the observer
+                    // fires later when the type becomes a ListType/SetType/MapType.
+                    val iterable = node.iterable
+                    if (iterable != null) {
+                        val observer = ElementTypePropagation(handled, iterable)
+                        iterable.registerTypeObserver(observer)
+                        // If the iterable is a container constructor call like `list(self._items)`,
+                        // the call's return type is ListType(elementType=object) — the built-in
+                        // default. The real element type is on the argument (the annotated field).
+                        // Register the observer on the argument too, so when the field's type is
+                        // resolved the element type propagates to the loop variable.
+                        if (iterable is Call) {
+                            val arg = iterable.arguments.firstOrNull()
+                            if (arg is HasType) {
+                                arg.registerTypeObserver(observer)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -310,4 +357,61 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) :
 
     override val language: Language<*>
         get() = ctx.availableLanguage<PythonLanguage>() ?: UnknownLanguage
+}
+
+/**
+ * A type observer that extracts the element type from a container (ListType, SetType, MapType) and
+ * propagates it to the loop variable's [assignedTypes].
+ *
+ * At the time [PythonAddDeclarationsPass] runs, the iterable's type is usually [UnknownType]
+ * because [SymbolResolver] hasn't run yet. This observer fires later, when the type is resolved to
+ * a [SecondOrderType], and propagates the element type to the declaration.
+ *
+ * Without this, `for conn in self._connections` (where `_connections` is annotated
+ * `list[AsyncConnectionInterface]`) leaves `conn` untyped and `conn.is_closed()` is unresolved,
+ * even though the annotation spells out exactly what `conn` is.
+ */
+private class ElementTypePropagation(
+    private val decl: HasType,
+    private val iterable: Expression? = null,
+) : HasType.TypeObserver {
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        propagateElementType(newType)
+        // Handle `for x in list(self.items):` — the list() call returns
+        // ListType(elementType=object), but the argument carries the real element type.
+        propagateFromCallArgument()
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        for (t in assignedTypes) {
+            propagateElementType(t)
+        }
+        propagateFromCallArgument()
+    }
+
+    private fun propagateFromCallArgument() {
+        val call = iterable as? Call ?: return
+        val arg = call.arguments.firstOrNull() ?: return
+        for (t in arg.assignedTypes) {
+            propagateElementType(t)
+        }
+        propagateElementType(arg.type)
+    }
+
+    private fun propagateElementType(type: Type) {
+        if (type is SecondOrderType) {
+            val elemType = type.elementType
+            // Skip UnknownType and bare "object" — these carry no useful information.
+            // The real element type may arrive later via propagateFromCallArgument().
+            if (elemType !is UnknownType && elemType.name.localName != "object") {
+                decl.addAssignedTypes(setOf(elemType))
+            } else if (type is ObjectType && type.generics.isNotEmpty()) {
+                val g = type.generics.first()
+                if (g !is UnknownType && g.name.localName != "object") {
+                    decl.addAssignedTypes(setOf(g))
+                }
+            }
+        }
+    }
 }

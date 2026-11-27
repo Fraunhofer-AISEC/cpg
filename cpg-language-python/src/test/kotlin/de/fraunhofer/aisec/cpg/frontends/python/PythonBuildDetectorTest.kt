@@ -226,6 +226,50 @@ class PythonBuildDetectorTest {
     }
 
     @Test
+    fun testInstallWithUvFromPyproject(@TempDir tmp: Path, @TempDir target: Path) {
+        tmp.file("pyproject.toml")
+        val runner = FakeRunner(available = setOf("uv"))
+
+        val result =
+            assertNotNull(
+                PythonBuildDetector(installDirectory = target, runner = runner)
+                    .detect(tmp, environment)
+            )
+
+        assertEquals(listOf(target.toRealPath()), result.includePaths.map { it.toRealPath() })
+        val export = runner.commands.single { it.take(2) == listOf("uv", "export") }
+        // Without this, a project with optional extras is exported as an editable self-reference
+        // (e.g. `-e .[cli,http2]`), which is then rejected as not a plain package from an index
+        assertContains(export, "--no-emit-project")
+        assertTrue(runner.commands.any { "install" in it })
+    }
+
+    @Test
+    fun testPyprojectIsIgnoredWithoutUv(@TempDir tmp: Path, @TempDir parent: Path) {
+        tmp.file("pyproject.toml")
+        val target = parent.resolve("not-created")
+        val runner = FakeRunner(available = setOf("pip"))
+
+        PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
+
+        // pip has no equivalent of `uv export`, so a lone pyproject.toml is as good as absent
+        assertTrue(runner.commands.none { "export" in it || "install" in it })
+        assertFalse(target.exists())
+    }
+
+    @Test
+    fun testPyprojectIsIgnoredWhenRequirementsTxtExists(@TempDir tmp: Path, @TempDir target: Path) {
+        tmp.file("pyproject.toml")
+        tmp.file("requirements.txt", "pynacl==1.5.0\n")
+        val runner = FakeRunner(available = setOf("uv"))
+
+        PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
+
+        // requirements.txt is a stated dependency set; pyproject.toml would only be a fallback
+        assertTrue(runner.commands.none { it.take(2) == listOf("uv", "export") })
+    }
+
+    @Test
     fun testInstallIsReused(@TempDir tmp: Path, @TempDir target: Path) {
         tmp.file("requirements.txt", "pynacl==1.5.0\n")
         val runner = FakeRunner(available = setOf("pip"))
@@ -320,7 +364,9 @@ class PythonBuildDetectorTest {
 
         PythonBuildDetector(installDirectory = target, runner = runner).detect(tmp, environment)
 
-        assertEquals(listOf(), runner.commands)
+        // A lone pyproject.toml without uv still costs a feasibility check (`uv --version`), but
+        // nothing is ever installed and no folder is created for it
+        assertTrue(runner.commands.none { "install" in it })
         assertFalse(target.exists())
     }
 
