@@ -30,9 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class StatementTest {
 
@@ -105,6 +107,68 @@ class StatementTest {
 
         // Its call expression should connect to the return statement
         op.input.prevEOG.all { it is Return }
+    }
+
+    @Test
+    fun testDeferAndGoCallsResolve() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("defer_go_calls.go").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val closeSilent = tu.functions["closeSilent"]
+        assertNotNull(closeSilent)
+        val handle = tu.functions["handle"]
+        assertNotNull(handle)
+
+        val deferred = tu.calls["closeSilent"]
+        assertNotNull(deferred)
+        assertEquals(listOf(closeSilent), deferred.invokes, "deferred call")
+
+        val started = tu.calls["handle"]
+        assertNotNull(started)
+        assertEquals(listOf(handle), started.invokes, "call started as goroutine")
+
+        // No duplicate, inferred functions next to the real ones
+        assertTrue(
+            tu.functions.none {
+                it.isInferred && it.name.localName in setOf("closeSilent", "handle")
+            }
+        )
+
+        // The arguments flow into the parameters of the real functions
+        val conn = deferred.arguments.single()
+        assertContains(closeSilent.parameters.single().prevDFG, conn)
+        assertContains(handle.parameters.single().prevDFG, started.arguments.single())
+    }
+
+    @Test
+    fun testCallWithWrongArgumentCountResolvesToTheDeclaredFunction() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("wrong_argument_count.go").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val pair = tu.functions["pair"]
+        assertNotNull(pair)
+        val call = tu.calls["pair"]
+        assertNotNull(call)
+
+        // The name alone determines the function, the arguments do not choose among candidates
+        assertEquals(listOf(pair), call.invokes)
+        assertTrue(tu.functions.none { it.isInferred && it.name.localName == "pair" })
     }
 
     @Test

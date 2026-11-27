@@ -25,11 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
+import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -57,6 +61,36 @@ open class GoLanguage :
 
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
         return detectGo(root, environment)
+    }
+
+    /**
+     * If no function is viable, the only candidate is the target: Go has no overloading, so the
+     * name alone determines the called function. The arguments can still look incompatible to us,
+     * e.g. if we do not know that a type implements an interface (Go's interfaces are satisfied
+     * implicitly) or if the type of an argument is unknown because a dependency was not parsed.
+     * Inferring a function instead would create a duplicate, body-less function next to the real
+     * one.
+     */
+    context(provider: ContextProvider)
+    override fun bestViableResolution(
+        result: CallResolutionResult
+    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
+        val resolution = super.bestViableResolution(result)
+        if (
+            resolution.second != CallResolutionResult.SuccessKind.UNRESOLVED ||
+                result.source !is Call
+        ) {
+            return resolution
+        }
+
+        // Without overloading, there is at most one candidate here: with several,
+        // resolveWithArguments already stops as PROBLEMATIC
+        val targets = result.candidateFunctions
+        return if (targets.size == 1) {
+            Pair(targets, CallResolutionResult.SuccessKind.SUCCESSFUL)
+        } else {
+            resolution
+        }
     }
 
     override val fileExtensions = listOf("go")
